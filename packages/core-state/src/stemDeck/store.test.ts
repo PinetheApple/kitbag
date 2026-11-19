@@ -280,7 +280,10 @@ describe('picking and importing', () => {
     const { store, native, emit, addFetchedBundle } = await connected([A]);
     store.getState().selectSongs([A, B]);
     await store.getState().importSelected();
-    expect(store.getState().replacePrompt).toEqual({ titles: ['Way Maker'] });
+    expect(store.getState().replacePrompt).toEqual({
+      match: 'job',
+      titles: ['Way Maker'],
+    });
     expect(native.startImport).not.toHaveBeenCalled();
     await store.getState().replaceInLibrary();
     expect(native.startImport.mock.calls[0]?.[1]).toHaveLength(2);

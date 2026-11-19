@@ -8,6 +8,7 @@ import type {
   BundleRefusal,
   FailureKind,
   LibraryNotice,
+  ReplaceMatch,
 } from '@kitbag/core-state';
 
 export interface NoticeText {
@@ -190,6 +191,17 @@ export function copyingText(names: readonly string[]): string {
   return `Copying ${countLabel(names.length, 'file', 'files')} into your library…`;
 }
 
-export function replaceText(name: string, title: string): string {
-  return `“${name}” is the same StemDeck song as “${title}” in your library. Replacing it removes that song’s stems, analysis and mix, and adds this copy; your names for the song and its stems are kept. This cannot be undone.`;
+const REPLACE_KEEPS =
+  'Replacing it removes that song’s stems and analysis and adds this copy; your names for the song and its stems are kept, and so are its speed and meter, and its mix unless this copy brings its own. This cannot be undone.';
+
+export function replaceText(
+  name: string,
+  title: string,
+  match: ReplaceMatch,
+): string {
+  const same =
+    match === 'job'
+      ? `“${name}” is the same StemDeck song as “${title}” in your library.`
+      : `“${name}” looks like “${title}” in your library, separated again in StemDeck. Keep both to add it as a second song.`;
+  return `${same} ${REPLACE_KEEPS}`;
 }

@@ -1,3 +1,4 @@
+import type { ExistingStemSet } from '@kitbag/core-db';
 import type { StemDeckConstants } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
@@ -6,6 +7,7 @@ import {
   songLibraryStore,
   type SongLibraryActions,
 } from '../songLibrary/store.ts';
+import type { CatalogSong } from './catalog.ts';
 import {
   connectionActions,
   type ConnectionActions,
@@ -53,6 +55,9 @@ export interface StemDeckDeps {
   readonly unityNotice: () => UnityNoticePersistence;
   readonly addFetchedBundle: SongLibraryActions['addFetchedBundle'];
   readonly inLibrary: (jobId: string) => Promise<boolean>;
+  readonly findSameSong: (
+    song: CatalogSong,
+  ) => Promise<ExistingStemSet | undefined>;
   readonly camera: () => StemDeckCamera;
 }
 
@@ -63,6 +68,15 @@ const defaultDeps: StemDeckDeps = {
     songLibraryStore.getState().addFetchedBundle(source, options),
   inLibrary: async (jobId) =>
     (await getSongLibrary().records.findStemSetByJobId(jobId)) !== undefined,
+  findSameSong: async ({ title, artist, durationSec }) => {
+    if (durationSec === null) return undefined;
+    const [newest] = await getSongLibrary().records.findStemSetMatches({
+      title,
+      artist,
+      durationSec,
+    });
+    return newest;
+  },
   camera: () => getStemDeck().camera,
 };
 

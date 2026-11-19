@@ -1,4 +1,4 @@
-import type { StemSetFiles } from '@kitbag/core-db';
+import type { ExistingStemSet, StemSetFiles } from '@kitbag/core-db';
 import type {
   ImportedStemBundle,
   LibraryConstants,
@@ -17,7 +17,7 @@ import {
   type BundleRefusalReason,
 } from './stemBundleLogic.ts';
 import type { ImportTracker } from './stemFolderSweep.ts';
-import type { LibraryNotice, SongLibraryDeps } from './store.ts';
+import type { LibraryNotice, ReplaceMatch, SongLibraryDeps } from './store.ts';
 import {
   deleteLeftovers,
   loadCodes,
@@ -33,17 +33,32 @@ export interface BundleSource {
   readonly isFolder: boolean;
 }
 
-interface Pending {
+export interface FetchedBundleOptions {
+  readonly replace: boolean;
+  readonly targetId?: number;
+}
+
+interface Job {
   readonly source: BundleSource;
   readonly check: StemBundleCheck;
   readonly announce: boolean;
+}
+
+interface Pending {
+  readonly job: Job;
+  readonly targetId: number;
+}
+
+interface Match {
+  readonly set: ExistingStemSet;
+  readonly kind: ReplaceMatch;
 }
 
 type Inspected =
   | {
       readonly ok: true;
       readonly check: StemBundleCheck;
-      readonly existing: Awaited<ReturnType<typeof findExisting>>;
+      readonly existing: ExistingStemSet | undefined;
     }
   | { readonly ok: false; readonly refusal: BundleRefusal };
 
@@ -92,6 +107,40 @@ async function findExisting(deps: SongLibraryDeps, jobId: string) {
   }
 }
 
+async function findSameSong(
+  deps: SongLibraryDeps,
+  { title, artist, durationSec }: StemBundleCheck,
+): Promise<ExistingStemSet | undefined> {
+  if (durationSec === null) return undefined;
+  try {
+    const [newest] = await deps
+      .records()
+      .findStemSetMatches({ title, artist, durationSec });
+    return newest;
+  } catch (error) {
+    warn(`matching ${title} failed`, error);
+    return undefined;
+  }
+}
+
+async function findMatch(
+  deps: SongLibraryDeps,
+  check: StemBundleCheck,
+  byJob: ExistingStemSet | undefined,
+): Promise<Match | null> {
+  if (byJob !== undefined) return { set: byJob, kind: 'job' };
+  const sameSong = await findSameSong(deps, check);
+  return sameSong === undefined ? null : { set: sameSong, kind: 'song' };
+}
+
+function fetchedTarget(
+  byJob: ExistingStemSet | undefined,
+  { replace, targetId }: FetchedBundleOptions,
+): number | null {
+  if (byJob !== undefined) return byJob.id;
+  return replace ? (targetId ?? null) : null;
+}
+
 async function copyBundle(
   deps: SongLibraryDeps,
   source: BundleSource,
@@ -111,15 +160,15 @@ async function copyBundle(
 async function persistBundle(
   deps: SongLibraryDeps,
   imported: ImportedStemBundle,
-  replace: boolean,
+  targetId: number | null,
 ): Promise<StemSetFiles | null> {
   const bundle = newStemBundle(imported, deps.newUuid());
   const records = deps.records();
-  if (!replace) {
+  if (targetId === null) {
     await records.insertStemBundle(bundle);
     return null;
   }
-  return (await records.replaceStemBundle(bundle)).replaced;
+  return (await records.replaceStemBundle(bundle, targetId)).replaced;
 }
 
 export function stemBundleActions(
@@ -139,9 +188,9 @@ export function stemBundleActions(
   };
 
   const copyAndStore = async (
-    { source, check }: Pick<Pending, 'source' | 'check'>,
+    { source, check }: Pick<Job, 'source' | 'check'>,
     codes: LibraryConstants,
-    replace: boolean,
+    targetId: number | null,
   ): Promise<BundleAddOutcome> => {
     const copied = await copyBundle(deps, source, codes);
     if (!copied.ok)
@@ -151,7 +200,7 @@ export function stemBundleActions(
     const files = deps.files();
     let replaced: StemSetFiles | null;
     try {
-      replaced = await persistBundle(deps, copied.imported, replace);
+      replaced = await persistBundle(deps, copied.imported, targetId);
     } catch (error) {
       warn(`adding ${source.name} failed`, error);
       const name = stemFolderName(copied.imported.relativeDir, codes.stemsDir);
@@ -172,11 +221,11 @@ export function stemBundleActions(
     return { kind: 'added' };
   };
 
-  const run = async (job: Pending, replace: boolean) => {
+  const run = async (job: Job, targetId: number | null) => {
     const codes = codesFor(job.source);
     if (codes === null) return;
     const outcome = await whileImporting(set, get, job.source.name, () =>
-      imports.track(() => copyAndStore(job, codes, replace)),
+      imports.track(() => copyAndStore(job, codes, targetId)),
     );
     const notice = noticeFor(job.source.name, outcome, job.announce);
     if (notice !== null) set({ notice });
@@ -201,7 +250,11 @@ export function stemBundleActions(
     const codes = codesFor(source);
     if (codes === null) return null;
     const inspected = await inspect(source, codes);
-    if (inspected.ok) return inspected;
+    if (inspected.ok)
+      return {
+        check: inspected.check,
+        match: await findMatch(deps, inspected.check, inspected.existing),
+      };
     set({
       notice: {
         kind: 'bundleRefused',
@@ -215,24 +268,31 @@ export function stemBundleActions(
   // Unattended: no prompt and no notice; the caller reports the outcome.
   const addFetchedBundle = async (
     source: BundleSource,
-    { replace }: { readonly replace: boolean },
+    options: FetchedBundleOptions,
   ): Promise<BundleAddOutcome> => {
     const codes = loadCodes(deps, get);
     set({ codes });
     if (codes === null) return { kind: 'copyFailed' };
     const inspected = await inspect(source, codes);
     if (!inspected.ok) return { kind: 'refused', refusal: inspected.refusal };
-    if (inspected.existing !== undefined && !replace)
+    if (inspected.existing !== undefined && !options.replace)
       return { kind: 'alreadyInLibrary' };
     const outcome = await imports.track(() =>
       copyAndStore(
         { source, check: inspected.check },
         codes,
-        inspected.existing !== undefined,
+        fetchedTarget(inspected.existing, options),
       ),
     );
     await get().refresh();
     return outcome;
+  };
+
+  const takePending = () => {
+    const taken = pending;
+    pending = null;
+    set({ replacePrompt: null });
+    return taken;
   };
 
   return {
@@ -245,24 +305,30 @@ export function stemBundleActions(
       );
       if (examined === null) return;
       const job = { source, check: examined.check, announce };
-      if (examined.existing === undefined) {
-        await run(job, false);
+      const { match } = examined;
+      if (match === null) {
+        await run(job, null);
         return;
       }
-      pending = job;
+      pending = { job, targetId: match.set.id };
       set({
-        replacePrompt: { name: source.name, title: examined.existing.title },
+        replacePrompt: {
+          name: source.name,
+          title: match.set.title,
+          match: match.kind,
+        },
       });
     },
     confirmReplace: async () => {
-      const job = pending;
-      pending = null;
-      set({ replacePrompt: null });
-      if (job !== null) await run(job, true);
+      const taken = takePending();
+      if (taken !== null) await run(taken.job, taken.targetId);
+    },
+    keepBoth: async () => {
+      const taken = takePending();
+      if (taken !== null) await run(taken.job, null);
     },
     cancelReplace: () => {
-      pending = null;
-      set({ replacePrompt: null });
+      takePending();
     },
     addFetchedBundle,
   };

@@ -94,6 +94,51 @@ describe('importing a song already in the library', () => {
   });
 });
 
+describe('importing a song StemDeck separated again', () => {
+  const LIBRARY_SONG = { id: 41, title: 'Gratitude' };
+  const SEPARATED_AGAIN = 'Replace “Gratitude”?';
+
+  async function picked() {
+    connected({
+      ...CATALOG,
+      songs: CATALOG.songs.map((song) =>
+        song.jobId === SONG_B ? { ...song, sameSong: LIBRARY_SONG } : song,
+      ),
+    });
+    const onImporting = vi.fn();
+    const screen = await mount(songList(onImporting));
+    await screen.press(GRATITUDE);
+    await screen.press('Import 1 song');
+    return { screen, onImporting, native: live().native };
+  }
+
+  it('asks Cancel, Keep both or Replace before downloading', async () => {
+    const { screen, onImporting, native } = await picked();
+    expect(screen.has(SEPARATED_AGAIN)).toBe(true);
+    expect(screen.labelled('Keep both')).toHaveLength(1);
+    expect(screen.labelled('Keep current')).toHaveLength(0);
+    expect(native.startImport).not.toHaveBeenCalled();
+    expect(onImporting).not.toHaveBeenCalled();
+  });
+
+  it('keeps both by importing it as a new song', async () => {
+    const { screen, onImporting, native } = await picked();
+    await screen.press('Keep both');
+    expect(native.startImport.mock.calls[0]?.[1]).toEqual([
+      expect.objectContaining({ jobId: SONG_B }),
+    ]);
+    expect(onImporting).toHaveBeenCalledOnce();
+  });
+
+  it('imports nothing on Cancel', async () => {
+    const { screen, onImporting, native } = await picked();
+    await screen.press('Cancel');
+    expect(screen.has(SEPARATED_AGAIN)).toBe(false);
+    expect(native.startImport).not.toHaveBeenCalled();
+    expect(onImporting).not.toHaveBeenCalled();
+  });
+});
+
 describe('the StemDeck song list', () => {
   it('counts every song StemDeck has in the subtitle', async () => {
     const screen = await mount(songList());

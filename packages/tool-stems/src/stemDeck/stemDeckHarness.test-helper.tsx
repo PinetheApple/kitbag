@@ -38,6 +38,7 @@ export const CATALOG: StemDeckCatalog = {
       durationSec: 311,
       lanes: ['vocals', 'drums', 'bass', 'guitar', 'piano', 'other'],
       inLibrary: true,
+      sameSong: null,
     },
     {
       jobId: SONG_A,
@@ -46,6 +47,7 @@ export const CATALOG: StemDeckCatalog = {
       durationSec: 481,
       lanes: ['vocals', 'drums', 'bass', 'guitar', 'piano', 'other'],
       inLibrary: false,
+      sameSong: null,
     },
     {
       jobId: SONG_B,
@@ -54,6 +56,7 @@ export const CATALOG: StemDeckCatalog = {
       durationSec: 352,
       lanes: ['vocals', 'drums', 'bass'],
       inLibrary: false,
+      sameSong: null,
     },
   ],
   setlists: [{ id: 's1', name: 'Sunday worship', songIds: [SONG_B] }],

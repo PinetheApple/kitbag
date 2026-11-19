@@ -24,8 +24,10 @@ const records: SongLibraryRecords = {
   deleteSong: (id) => library().deleteSong(id),
   deleteStemSet: (id) => library().deleteStemSet(id),
   findStemSetByJobId: (jobId) => library().findStemSetByJobId(jobId),
+  findStemSetMatches: (identity) => library().findStemSetMatches(identity),
   insertStemBundle: (bundle) => library().insertStemBundle(bundle),
-  replaceStemBundle: (bundle) => library().replaceStemBundle(bundle),
+  replaceStemBundle: (bundle, targetId) =>
+    library().replaceStemBundle(bundle, targetId),
   listStemSetFolders: () => library().listStemSetFolders(),
   renameSong: (id, title) => library().renameSong(id, title),
   renameStemSet: (id, title) => library().renameStemSet(id, title),

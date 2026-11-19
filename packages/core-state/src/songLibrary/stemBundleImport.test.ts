@@ -207,6 +207,7 @@ describe('StemDeck bundle import', () => {
     expect(store.getState().replacePrompt).toEqual({
       name: ZIP.name,
       title: 'Redbone',
+      match: 'job',
     });
     expect(files.importStemBundle).toHaveBeenCalledTimes(1);
     store.getState().cancelReplace();

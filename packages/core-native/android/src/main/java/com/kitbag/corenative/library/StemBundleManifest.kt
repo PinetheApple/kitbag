@@ -39,6 +39,9 @@ class ManifestCheck(
   val manifest: BundleManifest? = null,
   val stemFormat: String = "",
 ) {
+  val artist: String? get() = manifest?.artist
+  val durationSec: Double? get() = manifest?.durationSec
+
   fun copyWith(
     refusal: String?,
     manifest: BundleManifest? = this.manifest,

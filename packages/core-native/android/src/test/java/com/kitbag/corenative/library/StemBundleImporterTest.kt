@@ -62,6 +62,7 @@ class StemBundleImporterTest {
     assertEquals(0.8, imported.stems[1].mix.volume, 0.0)
     assertTrue(imported.stems[1].mix.muted)
     assertEquals(1.0, imported.stems[0].mix.volume, 0.0)
+    assertTrue(imported.hasMix)
     assertEquals(123.0, imported.metadata.bpm!!, 0.0)
     assertEquals("Intro", imported.metadata.sections.single().name)
     assertArrayEquals(doubleArrayOf(0.5, 1.0), imported.grid.beats, 0.0)
@@ -78,6 +79,29 @@ class StemBundleImporterTest {
     assertEquals(0, imported.grid.beats.size)
     assertNull(imported.lyrics)
     assertTrue(written.isEmpty())
+    assertFalse(imported.hasMix)
+    assertEquals(1.0, imported.stems[0].mix.volume, 0.0)
+  }
+
+  @Test
+  fun `the check carries the artist and duration a re-separated song is matched by`() {
+    val manifest = BundleFixtures.manifestJson(stems).put("artist", "Charity Gayle").toString()
+    val bundle = BundleFixtures.zip(
+      StemBundleManifest.FILE_NAME to manifest.toByteArray(),
+      *stems.map { "stems/$it.flac" to BundleFixtures.stemBytes(it) }.toTypedArray(),
+    )
+    val check = importer().check(BundleFixtures.source(bundle))
+    assertNull(check.refusal)
+    assertEquals("Charity Gayle", check.artist)
+    assertEquals(311.0, check.durationSec!!, 0.0)
+  }
+
+  @Test
+  fun `a refused check carries no artist or duration`() {
+    val check = importer().check(BundleFixtures.source(BundleFixtures.zip("readme.txt" to "x".toByteArray())))
+    assertEquals(StemBundleRefusal.NOT_A_BUNDLE, check.refusal)
+    assertNull(check.artist)
+    assertNull(check.durationSec)
   }
 
   @Test
@@ -87,11 +111,13 @@ class StemBundleImporterTest {
       "metadata.json" to "{".toByteArray(),
       "beats.json" to "[".toByteArray(),
       "peaks.json" to "nope".toByteArray(),
+      "mix.json" to "{".toByteArray(),
     )
     val imported = importer().import(BundleFixtures.source(bundle))
     assertNull(imported.metadata.bpm)
     assertEquals(0, imported.grid.beats.size)
     assertNull(imported.stems[0].waveformRelativePath)
+    assertFalse(imported.hasMix)
   }
 
   @Test

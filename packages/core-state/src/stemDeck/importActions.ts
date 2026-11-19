@@ -11,12 +11,15 @@ import { errorCode } from '../songLibrary/stemBundleLogic.ts';
 import { warn } from '../songLibrary/storeSupport.ts';
 import type { CatalogSong } from './catalog.ts';
 import { nativeFailure, type StemDeckFailure } from './failures.ts';
-import { createHandOff } from './handOff.ts';
+import { createHandOff, type ReplaceTargets } from './handOff.ts';
 import { importView, type ImportView, type SkippedSong } from './importView.ts';
 import { stemDeckCodes } from './runtime.ts';
 import type { Get, SetState, StemDeckDeps } from './store.ts';
 
+export type StemDeckReplaceMatch = 'job' | 'song';
+
 export interface StemDeckReplacePrompt {
+  readonly match: StemDeckReplaceMatch;
   readonly titles: readonly string[];
 }
 
@@ -32,6 +35,7 @@ export interface ImportActions {
   importSelected: () => Promise<boolean>;
   replaceInLibrary: () => Promise<boolean>;
   keepInLibrary: () => Promise<boolean>;
+  keepBoth: () => Promise<boolean>;
   dismissReplace: () => void;
   cancelImport: () => void;
   retryImport: () => Promise<void>;
@@ -42,6 +46,30 @@ export interface ImportActions {
 interface PendingImport {
   readonly origin: string;
   readonly songs: readonly CatalogSong[];
+  readonly kept: readonly CatalogSong[];
+  readonly targets: ReplaceTargets;
+  readonly stages: readonly StemDeckReplaceMatch[];
+}
+
+const isSameSong = (s: CatalogSong) => !s.inLibrary && s.sameSong !== null;
+
+function stageSongs(
+  songs: readonly CatalogSong[],
+  stage: StemDeckReplaceMatch,
+): CatalogSong[] {
+  return songs.filter(stage === 'job' ? (s) => s.inLibrary : isSameSong);
+}
+
+function stagesFor(songs: readonly CatalogSong[]): StemDeckReplaceMatch[] {
+  const stages: StemDeckReplaceMatch[] = ['job', 'song'];
+  return stages.filter((stage) => stageSongs(songs, stage).length > 0);
+}
+
+function replaceTarget(
+  song: CatalogSong,
+  stage: StemDeckReplaceMatch,
+): number | null {
+  return stage === 'job' ? null : (song.sameSong?.id ?? null);
 }
 
 export function importActions(
@@ -64,7 +92,7 @@ export function importActions(
     const { catalog } = get();
     if (catalog === null) return;
     const songs = catalog.songs.map((s) =>
-      s.jobId === jobId ? { ...s, inLibrary: true } : s,
+      s.jobId === jobId ? { ...s, inLibrary: true, sameSong: null } : s,
     );
     set({ catalog: { ...catalog, songs } });
   };
@@ -94,13 +122,13 @@ export function importActions(
     origin: string,
     songs: readonly CatalogSong[],
     kept: readonly CatalogSong[],
-    replace: readonly CatalogSong[],
+    targets: ReplaceTargets,
   ) => {
     const known = codes();
     if (known === null) return false;
     skipped = kept.map(({ jobId, title }) => ({ jobId, title }));
     refusals.clear();
-    handOff.replacing(replace.map((s) => s.jobId));
+    handOff.replacing(targets);
     set({ selected: [], importFailure: null, replacePrompt: null });
     if (songs.length === 0) {
       const empty = { origin, running: false, stopReason: null, items: [] };
@@ -126,6 +154,28 @@ export function importActions(
     pending = null;
     set({ replacePrompt: null });
     return job;
+  };
+
+  const proceed = async (job: PendingImport): Promise<boolean> => {
+    const [stage] = job.stages;
+    if (stage === undefined) {
+      const kept = new Set(job.kept.map((s) => s.jobId));
+      const songs = job.songs.filter((s) => !kept.has(s.jobId));
+      return begin(job.origin, songs, job.kept, job.targets);
+    }
+    pending = job;
+    const titles = stageSongs(job.songs, stage).map((s) => s.title);
+    set({ replacePrompt: { match: stage, titles } });
+    return false;
+  };
+
+  const answer = async (
+    choose: (job: PendingImport, stage: StemDeckReplaceMatch) => PendingImport,
+  ): Promise<boolean> => {
+    const job = takePending();
+    const stage = job?.stages[0];
+    if (job === null || stage === undefined) return false;
+    return proceed({ ...choose(job, stage), stages: job.stages.slice(1) });
   };
 
   return {
@@ -156,25 +206,27 @@ export function importActions(
       if (catalog === null || connection.status !== 'connected') return false;
       const songs = catalog.songs.filter((s) => selected.includes(s.jobId));
       if (songs.length === 0) return false;
-      const owned = songs.filter((s) => s.inLibrary);
-      if (owned.length === 0) return begin(connection.origin, songs, [], []);
-      pending = { origin: connection.origin, songs };
-      set({ replacePrompt: { titles: owned.map((s) => s.title) } });
-      return false;
+      return proceed({
+        origin: connection.origin,
+        songs,
+        kept: [],
+        targets: new Map(),
+        stages: stagesFor(songs),
+      });
     },
-    replaceInLibrary: async () => {
-      const job = takePending();
-      if (job === null) return false;
-      const owned = job.songs.filter((s) => s.inLibrary);
-      return begin(job.origin, job.songs, [], owned);
-    },
-    keepInLibrary: async () => {
-      const job = takePending();
-      if (job === null) return false;
-      const fresh = job.songs.filter((s) => !s.inLibrary);
-      const owned = job.songs.filter((s) => s.inLibrary);
-      return begin(job.origin, fresh, owned, []);
-    },
+    replaceInLibrary: () =>
+      answer((job, stage) => {
+        const targets = new Map(job.targets);
+        for (const song of stageSongs(job.songs, stage))
+          targets.set(song.jobId, replaceTarget(song, stage));
+        return { ...job, targets };
+      }),
+    keepInLibrary: () =>
+      answer((job, stage) => ({
+        ...job,
+        kept: [...job.kept, ...stageSongs(job.songs, stage)],
+      })),
+    keepBoth: () => answer((job) => job),
     dismissReplace: () => {
       takePending();
     },

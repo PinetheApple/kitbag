@@ -210,6 +210,7 @@ export {
   createSongLibraryStore,
   songLibraryStore,
   type LibraryNotice,
+  type ReplaceMatch,
   type ReplacePrompt,
   type SongLibraryStore,
 } from './songLibrary/store.ts';
@@ -269,7 +270,10 @@ export {
   type CatalogSong as StemDeckSong,
 } from './stemDeck/catalog.ts';
 export type { StemDeckFailure } from './stemDeck/failures.ts';
-export type { StemDeckReplacePrompt } from './stemDeck/importActions.ts';
+export type {
+  StemDeckReplaceMatch,
+  StemDeckReplacePrompt,
+} from './stemDeck/importActions.ts';
 export type {
   ImportPhase as StemDeckImportPhase,
   ImportRow as StemDeckImportRow,

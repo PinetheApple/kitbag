@@ -1,8 +1,7 @@
-import { asc, eq, isNotNull } from 'drizzle-orm';
+import { and, asc, eq, isNotNull } from 'drizzle-orm';
 
 import {
   meterOverrideOf,
-  NO_METER_OVERRIDE,
   saveMeterOverride,
   type MeterOverride,
 } from './meter-override';
@@ -10,7 +9,7 @@ import { found, type Database } from './repository';
 import { stems, stemSets } from './schema';
 import { packFloat32, packInt32, unpackFloat32, unpackInt32 } from './packing';
 import { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
-import { applyUserNames, readUserNames } from './stem-rename';
+import { applyUserNames, readUserNames, type UserNames } from './stem-rename';
 import {
   parseRetimedLyrics,
   retainedRetime,
@@ -62,6 +61,7 @@ export interface NewStemBundle {
   readonly sampleRate: number;
   readonly channels: number;
   readonly stems: readonly BundleStem[];
+  readonly hasMix: boolean;
   readonly bpm: number | null;
   readonly key: string | null;
   readonly scale: string | null;
@@ -87,7 +87,7 @@ export interface StemSetRecord
   extends
     Omit<
       NewStemBundle,
-      'jobId' | 'folder' | 'stems' | 'sampleRate' | 'channels'
+      'jobId' | 'folder' | 'stems' | 'sampleRate' | 'channels' | 'hasMix'
     >,
     MeterOverride {
   readonly id: number;
@@ -121,6 +121,21 @@ export interface StemMix {
 export interface StemBundleReplacement {
   readonly id: number;
   readonly replaced: StemSetFiles | null;
+}
+
+interface RoleMix {
+  readonly role: string;
+  readonly gain: number;
+  readonly muted: boolean;
+  readonly soloed: boolean;
+}
+
+interface KeptOnReplace {
+  readonly names: UserNames;
+  readonly retimed: LyricLineTimes | null;
+  readonly meter: MeterOverride;
+  readonly speed: number;
+  readonly mixes: readonly RoleMix[];
 }
 
 function packBars(bars: readonly BarMark[]): Uint8Array {
@@ -264,35 +279,85 @@ export async function deleteStemSet(
   };
 }
 
-async function readMeterOverride(
+async function readRoleMixes(db: Database, id: number): Promise<RoleMix[]> {
+  return db
+    .select({
+      role: stems.role,
+      gain: stems.gain,
+      muted: stems.muted,
+      soloed: stems.soloed,
+    })
+    .from(stems)
+    .where(eq(stems.stemSetId, id));
+}
+
+async function applyRoleMixes(
   db: Database,
   id: number,
-): Promise<MeterOverride> {
+  mixes: readonly RoleMix[],
+): Promise<void> {
+  for (const { role, ...mix } of mixes)
+    await db
+      .update(stems)
+      .set(mix)
+      .where(and(eq(stems.stemSetId, id), eq(stems.role, role)));
+}
+
+// Bar one is a time in the old job's audio, so only the same job keeps it.
+function carriedMeter(meter: MeterOverride, sameJob: boolean): MeterOverride {
+  return sameJob ? meter : { ...meter, barOneSeconds: null };
+}
+
+async function readKept(
+  db: Database,
+  id: number,
+  bundle: NewStemBundle,
+): Promise<KeptOnReplace | undefined> {
   const [row] = await db
     .select({
       meterBeatsPerBar: stemSets.meterBeatsPerBar,
       barOneSeconds: stemSets.barOneSeconds,
+      speed: stemSets.speed,
+      jobId: stemSets.stemdeckJobId,
     })
     .from(stemSets)
     .where(eq(stemSets.id, id));
-  return meterOverrideOf(row ?? NO_METER_OVERRIDE);
+  if (row === undefined) return undefined;
+  return {
+    names: await readUserNames(db, id),
+    retimed: await retainedRetime(db, id, bundle.lyrics),
+    meter: carriedMeter(meterOverrideOf(row), row.jobId === bundle.jobId),
+    speed: row.speed,
+    mixes: bundle.hasMix ? [] : await readRoleMixes(db, id),
+  };
+}
+
+async function applyKept(
+  db: Database,
+  id: number,
+  kept: KeptOnReplace,
+): Promise<void> {
+  await applyUserNames(db, id, kept.names);
+  await saveLyricsRetimed(db, id, kept.retimed);
+  await saveMeterOverride(db, stemSets, id, kept.meter);
+  await db
+    .update(stemSets)
+    .set({ speed: kept.speed })
+    .where(eq(stemSets.id, id));
+  await applyRoleMixes(db, id, kept.mixes);
 }
 
 export async function replaceStemBundle(
   db: Database,
   bundle: NewStemBundle,
+  targetId: number,
 ): Promise<StemBundleReplacement> {
-  const existing = await findStemSetByJobId(db, bundle.jobId);
-  if (existing === undefined)
+  const kept = await readKept(db, targetId, bundle);
+  if (kept === undefined)
     return { id: await insertStemBundle(db, bundle), replaced: null };
-  const names = await readUserNames(db, existing.id);
-  const retimed = await retainedRetime(db, existing.id, bundle.lyrics);
-  const meter = await readMeterOverride(db, existing.id);
-  const replaced = await deleteStemSet(db, existing.id);
+  const replaced = await deleteStemSet(db, targetId);
   const id = await insertStemBundle(db, bundle);
-  await applyUserNames(db, id, names);
-  await saveLyricsRetimed(db, id, retimed);
-  await saveMeterOverride(db, stemSets, id, meter);
+  await applyKept(db, id, kept);
   return { id, replaced };
 }
 

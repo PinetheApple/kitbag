@@ -24,6 +24,7 @@ class ImportedBundle(
   val grid: BundleGrid,
   val bpm: Double?,
   val lyrics: BundleLyrics?,
+  val hasMix: Boolean,
 ) {
   val artist: String? get() = manifest.artist ?: metadata.heading?.artist
 }
@@ -78,13 +79,14 @@ class StemBundleImporter(
             relativePath = LibraryPaths.relativize(base, File(folder, stem.fileName)),
             waveformRelativePath = waveforms[stem.name]?.let { LibraryPaths.relativize(base, File(folder, it)) },
             frames = stem.frames,
-            mix = mix.getValue(stem.name),
+            mix = mix?.getValue(stem.name) ?: StemMix(),
           )
         },
         metadata = metadata,
         grid = grid,
         bpm = members.bpm(metadata, grid),
         lyrics = lyrics,
+        hasMix = mix != null,
       )
     } finally {
       staging.deleteRecursively()

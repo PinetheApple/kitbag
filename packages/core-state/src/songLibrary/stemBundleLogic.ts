@@ -100,6 +100,7 @@ export function newStemBundle(
       soloed: stem.soloed,
       pitch: stem.pitch,
     })),
+    hasMix: imported.hasMix,
     bpm: imported.bpm,
     key: imported.key,
     scale: imported.scale,

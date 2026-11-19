@@ -14,6 +14,7 @@ configureSongLibrary({
     deleteSong: () => Promise.resolve(undefined),
     deleteStemSet: () => Promise.resolve({ folder: null, files: [] }),
     findStemSetByJobId: () => Promise.resolve(undefined),
+    findStemSetMatches: () => Promise.resolve([]),
     insertStemBundle: unavailable,
     replaceStemBundle: unavailable,
     listStemSetFolders: () => Promise.resolve([]),

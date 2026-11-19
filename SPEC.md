@@ -1127,7 +1127,23 @@ phone. That page defines the format; this spec does not copy it.
   per-stem key) are stored with the stem set; the mix is applied on first
   open.
 - **Re-import** of the same StemDeck job replaces the stem set after a
-  confirm.
+  confirm: Replace or Keep current. StemDeck gives a song separated again a
+  new job id, so when the job id misses, a StemDeck stem set whose title (or
+  song title) and artist match, trimmed and case-insensitive, and whose
+  longest stem is within 2 s, is offered as the same song: Cancel, Keep both
+  or Replace. Two different songs sharing title, artist and length within
+  2 s are offered too; Keep both is the way out. A song the user renamed no
+  longer matches by title. The StemDeck song list applies the same rule to
+  `/api/jobs` (title, `display_artist`, duration) and asks before the
+  download: IN LIBRARY songs (same job) first, then matched ones. Replace
+  hands the matched library song to the import as its target; IN LIBRARY
+  stays job-id based. The choice lives in JS memory only (#413).
+- **A replace keeps** the user's song and stem names, speed, meter and the
+  lyric retiming when the lyrics are unchanged; bar one only for the same
+  job, since it is a time in the old audio. The mix comes from the new
+  bundle's `mix.json`; without one, each stem keeps its saved mix by name and
+  a new stem starts at unity. Key, sections and grid come from the bundle.
+  On failure nothing changes: the swap is one transaction.
 - Out of scope: separation, lead/backing vocal split, lyric transcription,
   search and download — StemDeck's job, on hardware built for it.
 

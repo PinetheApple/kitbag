@@ -52,6 +52,8 @@ export type StemBundleCheck = Readonly<{
   supportedVersion: Int32;
   jobId: string;
   title: string;
+  artist: string | null;
+  durationSec: Double | null;
   stemCount: Int32;
   maxStems: Int32;
   stemFormat: string;
@@ -99,6 +101,7 @@ export type ImportedStemBundle = Readonly<{
   sampleRate: Int32;
   channels: Int32;
   stems: readonly ImportedStem[];
+  hasMix: boolean;
   bpm: Double | null;
   key: string | null;
   scale: string | null;
