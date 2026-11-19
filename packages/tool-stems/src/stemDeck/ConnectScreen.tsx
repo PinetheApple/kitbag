@@ -51,11 +51,13 @@ function isReady(state: StemDeckStore): boolean {
 function useEntry(onConnected: () => void) {
   const loadRecents = useStemDeck((s) => s.loadRecents);
   const disconnect = useStemDeck((s) => s.disconnect);
+  const reopenCatalog = useStemDeck((s) => s.reopenCatalog);
   const ready = useStemDeck(isReady);
   useEffect(() => {
-    if (!isReady(stemDeckStore.getState())) disconnect();
+    if (isReady(stemDeckStore.getState())) void reopenCatalog();
+    else disconnect();
     void loadRecents();
-  }, [disconnect, loadRecents]);
+  }, [disconnect, reopenCatalog, loadRecents]);
   useEffect(() => {
     if (ready && isReady(stemDeckStore.getState())) onConnected();
   }, [ready, onConnected]);

@@ -70,6 +70,7 @@ export interface ConnectionActions {
   forgetServer: (origin: string) => Promise<void>;
   disconnect: () => void;
   refreshCatalog: () => Promise<void>;
+  reopenCatalog: () => Promise<void>;
 }
 
 function recent(server: StemDeckServer): RecentServer {
@@ -307,6 +308,10 @@ export function connectionActions(
       const codes = stemDeckCodes(deps.native, get().codes);
       if (connection.status !== 'connected' || codes === null) return;
       await openCatalog(attempt, connection.origin, connection.version, codes);
+    },
+    reopenCatalog: async () => {
+      set({ selected: [], setlistId: null, query: '' });
+      await get().refreshCatalog();
     },
   };
 }

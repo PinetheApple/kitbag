@@ -13,6 +13,7 @@ import {
   mount,
   ORIGIN,
   resetStemDeck,
+  SONG_A,
 } from './stemDeckHarness.test-helper.tsx';
 
 const INSETS = { top: 0, bottom: 0 };
@@ -61,19 +62,31 @@ describe('opening Connect', () => {
   const LOADING = 'Getting the song list from StemDeck…';
   const WAY_MAKER = 'Way Maker, Sinach · 8:01 · 6 stems';
 
-  it('goes straight to the song list when already connected', async () => {
-    resetStemDeck();
+  function reopened() {
+    const { native } = resetStemDeck();
+    native.getJson.mockReturnValue(new Promise(() => undefined));
     connected();
+    stemDeckStore.setState({ selected: [SONG_A], setlistId: 's1', query: 'w' });
+    return native;
+  }
+
+  it('goes straight to the song list when already connected', async () => {
+    const native = reopened();
     const onConnected = vi.fn();
     await mount(connectScreen(vi.fn(), onConnected));
     expect(onConnected).toHaveBeenCalledOnce();
-    expect(stemDeckStore.getState().connection.status).toBe('connected');
-    expect(stemDeckStore.getState().catalog).toBe(CATALOG);
+    expect(stemDeckStore.getState()).toMatchObject({
+      connection: { status: 'connected' },
+      catalog: CATALOG,
+      selected: [],
+      setlistId: null,
+      query: '',
+    });
+    expect(native.getJson).toHaveBeenCalled();
   });
 
-  it('shows the songs rather than loading once it has moved on', async () => {
-    resetStemDeck();
-    connected();
+  it('shows the cached songs while the list reloads', async () => {
+    reopened();
     const screen = await mount(
       <>
         {connectScreen()}
