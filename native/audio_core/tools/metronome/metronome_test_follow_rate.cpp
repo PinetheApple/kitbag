@@ -2,8 +2,12 @@
 
 #include "click_take.h"
 #include "metronome_test_support.h"
+#include "zero_clock.h"
 
 namespace metronome_test {
+
+using kitbag_test::kZeroClock;
+
 namespace {
 
 using click_take::kGapFrames;
@@ -71,7 +75,7 @@ struct Fixture {
     for (double beat : beats) {
       grid->beat_times_sec.push_back(beat / kSampleRate);
     }
-    metronome.SetGrid(std::move(grid), 0, true);
+    metronome.SetGrid(std::move(grid), kZeroClock, true);
     metronome.SetFollowMixer(true);
     metronome.Start();
     records.Reserve(8);

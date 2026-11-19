@@ -6,6 +6,12 @@ data class LibraryAudioUsage(val songs: Int, val bytes: Long)
 
 data class StemSetUsage(val count: Int, val bytes: Long)
 
+data class LibraryAvailability(
+  val missing: List<String>,
+  val unavailable: List<String>,
+  val rootAvailable: Boolean,
+)
+
 data class StorageUsage(
   val libraryAudio: LibraryAudioUsage,
   val stemSets: StemSetUsage,
@@ -40,15 +46,28 @@ object LibraryUsage {
     )
   }
 
-  fun missing(base: File, relativePaths: Sequence<String>): Sequence<String> =
-    relativePaths.filterNot { isLibraryFile(base, it) }
-
-  private fun isLibraryFile(base: File, relativePath: String): Boolean =
-    try {
-      LibraryPaths.resolve(base, relativePath).isFile
-    } catch (e: UnsafeLibraryPathException) {
-      false
+  fun availability(root: RootState, relativePaths: Sequence<String>): LibraryAvailability {
+    val missing = mutableListOf<String>()
+    val unavailable = mutableListOf<String>()
+    for (path in relativePaths) {
+      when (fileOf(root, path)) {
+        is LibraryFile.Present -> Unit
+        LibraryFile.Missing -> missing.add(path)
+        is LibraryFile.Unavailable, LibraryFile.Unknown -> unavailable.add(path)
+      }
     }
+    val rootAvailable = root is RootState.Mounted && root.known
+    return LibraryAvailability(missing, unavailable, rootAvailable)
+  }
+
+  private fun fileOf(root: RootState, relativePath: String): LibraryFile {
+    val resolved = try {
+      root.resolve(relativePath)
+    } catch (e: UnsafeLibraryPathException) {
+      return LibraryFile.Missing
+    }
+    return if (resolved is LibraryFile.Present && !resolved.file.isFile) LibraryFile.Missing else resolved
+  }
 
   private fun databaseBytes(database: File): Long {
     val dir = database.absoluteFile.parentFile?.canonicalFile ?: return 0

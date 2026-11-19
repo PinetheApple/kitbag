@@ -46,7 +46,7 @@ struct Rig {
       grid->beat_times_sec.push_back(kFirstBeatSec + kBeatSec * b);
     }
     metronome.SetTimeSignature(4, 4);
-    metronome.SetGrid(std::move(grid), 0, true);
+    metronome.SetGrid(std::move(grid), kZeroClock, true);
     metronome.SetFollowMixer(true);
     metronome.Start();
     mixer.SetRate(kSpeed, kZeroClock, false);

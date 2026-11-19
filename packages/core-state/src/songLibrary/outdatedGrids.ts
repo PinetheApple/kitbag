@@ -7,6 +7,7 @@ import { enqueue, warn, type Get } from './storeSupport.ts';
 export interface OutdatedGridQueue {
   readonly resume: () => Promise<void>;
   readonly settled: (filePath: string) => Promise<void>;
+  readonly restart: () => Promise<void>;
 }
 
 export async function requeueAndRefresh(
@@ -60,6 +61,12 @@ export function outdatedGridQueue(
     settled: (filePath: string) =>
       serially(async () => {
         if (filePath === running) await startNext();
+      }),
+    // An analysis enqueued while the card was out never ran, so nothing settles it.
+    restart: () =>
+      serially(async () => {
+        tried.clear();
+        await startNext();
       }),
   };
 }

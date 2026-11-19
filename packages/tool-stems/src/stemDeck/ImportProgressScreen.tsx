@@ -11,6 +11,7 @@ import { ImportRowView } from './ImportRowView.tsx';
 import {
   addedText,
   finishedText,
+  importClearable,
   retryLabel,
   stopNotice,
 } from './logic/progressText.ts';
@@ -24,6 +25,8 @@ import {
 const LEAVE_HINT =
   'You can leave Kitbag. Songs keep coming in, and the notification shows how far along they are.';
 const CLOSE = 'Close';
+const CLEAR = 'Clear';
+const CLEAR_LABEL = 'Clear the unfinished import';
 const EMPTY_VIEW: StemDeckImportView = {
   origin: null,
   rows: [],
@@ -70,6 +73,62 @@ function useStems() {
   );
 }
 
+function useClear(onCleared: () => void) {
+  const clearImport = useStemDeck((s) => s.clearImport);
+  return useCallback(() => {
+    void clearImport().then((cleared) => {
+      if (cleared) onCleared();
+    });
+  }, [clearImport, onCleared]);
+}
+
+function StoppedActions({
+  view,
+  onBack,
+}: {
+  readonly view: StemDeckImportView;
+  readonly onBack: () => void;
+}) {
+  const styles = useStemDeckStyles();
+  const retryImport = useStemDeck((s) => s.retryImport);
+  const retry = useCallback(() => {
+    void retryImport();
+  }, [retryImport]);
+  const clear = useClear(onBack);
+  return (
+    <>
+      <View style={styles.actions}>
+        <Button
+          fill
+          variant="ghost"
+          size="target"
+          label={CLOSE}
+          onPress={onBack}
+        />
+        {view.retryCount === 0 ? null : (
+          <Button
+            fill
+            variant="primary"
+            size="target"
+            icon="reset"
+            label={retryLabel(view.retryCount)}
+            onPress={retry}
+          />
+        )}
+      </View>
+      {importClearable(view) ? (
+        <Button
+          variant="ghost"
+          size="target"
+          label={CLEAR}
+          accessibilityLabel={CLEAR_LABEL}
+          onPress={clear}
+        />
+      ) : null}
+    </>
+  );
+}
+
 interface DockProps {
   readonly view: StemDeckImportView;
   readonly bottomInset: number;
@@ -80,10 +139,6 @@ interface DockProps {
 function Dock({ view, bottomInset, onBack, onOpenStemSongs }: DockProps) {
   const styles = useStemDeckStyles();
   const cancelImport = useStemDeck((s) => s.cancelImport);
-  const retryImport = useStemDeck((s) => s.retryImport);
-  const retry = useCallback(() => {
-    void retryImport();
-  }, [retryImport]);
   const dock = useInset(styles.dock, 'paddingBottom', bottomInset);
   if (view.running)
     return (
@@ -109,25 +164,7 @@ function Dock({ view, bottomInset, onBack, onOpenStemSongs }: DockProps) {
     );
   return (
     <View style={dock}>
-      <View style={styles.actions}>
-        <Button
-          fill
-          variant="ghost"
-          size="target"
-          label={CLOSE}
-          onPress={onBack}
-        />
-        {view.retryCount === 0 ? null : (
-          <Button
-            fill
-            variant="primary"
-            size="target"
-            icon="reset"
-            label={retryLabel(view.retryCount)}
-            onPress={retry}
-          />
-        )}
-      </View>
+      <StoppedActions view={view} onBack={onBack} />
     </View>
   );
 }

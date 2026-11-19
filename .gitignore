@@ -1,6 +1,7 @@
 # Native
 build/
 native/audio_core/build
+native/audio_core/build-tsan
 # CMake per-module intermediates (core-native's android module has no
 # prebuild-written .gitignore; app-shell's android/.gitignore covers its own).
 .cxx/

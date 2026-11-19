@@ -2,6 +2,7 @@ import type { EmptyStateOption, IconName } from '@kitbag/core-design';
 import type { LibraryView } from '@kitbag/core-state';
 
 export const REANALYZE_LABEL = 'Re-analyse';
+export const BACK_TO_SONGS = 'Back to songs';
 export const LOOP_KEY_TEXT = 'A|B';
 export const SPEED_KEY_TEXT = '1.0×';
 export const SPEED_KEY_LABEL = `Speed ${SPEED_KEY_TEXT}, not built yet`;

@@ -27,7 +27,13 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-add_library(kitbag_core SHARED
+option(KITBAG_TSAN "Build everything under ThreadSanitizer" OFF)
+if(KITBAG_TSAN)
+  add_compile_options(-fsanitize=thread -g)
+  add_link_options(-fsanitize=thread)
+endif()
+
+set(KITBAG_CORE_SOURCES
   src/api/api.cpp
   src/api/api_analysis.cpp
   src/api/api_grid_click.cpp
@@ -48,7 +54,6 @@ add_library(kitbag_core SHARED
   src/media/file_audio_reader.cpp
   src/media/miniaudio_decoder.cpp
   src/media/resampling_source_reader.cpp
-  src/engine.cpp
   src/dsp/fft.cpp
   src/metronome/click_voices.cpp
   src/metronome/grid_bars.cpp
@@ -88,20 +93,31 @@ add_library(kitbag_core SHARED
   src/tuner/tuning_rules.cpp
   src/tuner/wrong_string_hint.cpp
   src/analysis/waveform_peaks.cpp
+  src/api/api_click_sound.cpp
+  src/media/mono_file_stream.cpp
+  src/media/part_file.cpp
+  src/metronome/click_sound_prepare.cpp
+  src/metronome/sample_voices.cpp
 )
+# engine.cpp stays out of the object library so a tool can rebuild just the
+# engine with a different frame tick (retire_race_relaxed_tick).
+function(kitbag_core_flags target)
+  target_include_directories(${target} PUBLIC include PRIVATE src third_party)
+  # -Werror=switch and nothing else: the exhaustive switch over CommandType
+  # (metronome.cpp) is load-bearing — a new command must not compile to a silent drop.
+  target_compile_options(${target} PRIVATE -Wall -Wextra -Werror=switch)
+  set_target_properties(${target} PROPERTIES
+    C_VISIBILITY_PRESET hidden
+    CXX_VISIBILITY_PRESET hidden
+    INTERPROCEDURAL_OPTIMIZATION_RELEASE ${KITBAG_IPO_SUPPORTED}
+    INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO ${KITBAG_IPO_SUPPORTED})
+endfunction()
 
-target_include_directories(kitbag_core
-  PUBLIC include
-  PRIVATE src third_party
-)
-
-# -Werror=switch and nothing else: the exhaustive switch over CommandType
-# (metronome.cpp) is load-bearing — a new command must not compile to a silent drop.
-target_compile_options(kitbag_core PRIVATE -Wall -Wextra -Werror=switch)
-set_target_properties(kitbag_core PROPERTIES C_VISIBILITY_PRESET hidden CXX_VISIBILITY_PRESET hidden)
-set_target_properties(kitbag_core PROPERTIES
-  INTERPROCEDURAL_OPTIMIZATION_RELEASE ${KITBAG_IPO_SUPPORTED}
-  INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO ${KITBAG_IPO_SUPPORTED})
+add_library(kitbag_core_objects OBJECT ${KITBAG_CORE_SOURCES})
+kitbag_core_flags(kitbag_core_objects)
+add_library(kitbag_core SHARED src/engine.cpp)
+kitbag_core_flags(kitbag_core)
+target_link_libraries(kitbag_core PRIVATE kitbag_core_objects)
 
 if(ANDROID)
   target_link_libraries(kitbag_core PRIVATE log OpenSLES)
@@ -135,12 +151,14 @@ target_compile_definitions(qm_dsp PUBLIC kiss_fft_scalar=double)
 
 # song_analysis.cpp's downbeat labelling calls DownBeat; kissfft's include roots
 # come transitively from qm_dsp's PUBLIC dirs.
+target_link_libraries(kitbag_core_objects PRIVATE qm_dsp)
 target_link_libraries(kitbag_core PRIVATE qm_dsp)
 
 add_library(signalsmith_stretch INTERFACE)
 target_include_directories(signalsmith_stretch SYSTEM INTERFACE
   third_party/signalsmith/stretch
   third_party/signalsmith/linear)
+target_link_libraries(kitbag_core_objects PRIVATE signalsmith_stretch)
 target_link_libraries(kitbag_core PRIVATE signalsmith_stretch)
 # The vendor warns -O0 runs up to 10x slower; AGP debug builds are Debug.
 set_source_files_properties(src/stretch/time_stretch.cpp
@@ -153,6 +171,7 @@ if(KITBAG_BUILD_TOOLS)
   # sees it too. Absent from a production build, so no PCM crosses the shipped
   # ABI (SPEC.md §4.1) — the render pull is a verify-only symbol by construction.
   target_compile_definitions(kitbag_core PUBLIC KITBAG_BUILD_TOOLS)
+  target_compile_definitions(kitbag_core_objects PUBLIC KITBAG_BUILD_TOOLS)
 
   set(KITBAG_METRONOME_SOURCES
     src/metronome/click_voices.cpp
@@ -166,6 +185,7 @@ if(KITBAG_BUILD_TOOLS)
     src/metronome/metronome_trainer_mirrors.cpp
     src/metronome/metronome_transport.cpp
     src/metronome/rig_click.cpp
+    src/metronome/sample_voices.cpp
     src/metronome/tempo_ramp.cpp)
 
   add_executable(metronome_verify
@@ -186,6 +206,9 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_poly_transport.cpp
     tools/metronome/metronome_test_poly_phase.cpp
     tools/metronome/metronome_test_sound.cpp
+    tools/metronome/metronome_test_custom_sound.cpp
+    tools/metronome/metronome_test_custom_sound_cut.cpp
+    tools/metronome/metronome_test_custom_sound_song.cpp
     tools/metronome/metronome_test_tick.cpp
     tools/metronome/metronome_test_subdivision_accents.cpp
     tools/metronome/metronome_test_rig_click.cpp
@@ -562,6 +585,22 @@ if(KITBAG_BUILD_TOOLS)
   target_include_directories(prime_bench PRIVATE src tools tools/media third_party)
   target_link_libraries(prime_bench PRIVATE signalsmith_stretch Threads::Threads m ${CMAKE_DL_LIBS})
 
+  set(KITBAG_RETIRE_RACE_TOOLS retire_race_verify)
+  if(KITBAG_TSAN)
+    list(APPEND KITBAG_RETIRE_RACE_TOOLS retire_race_relaxed_tick)
+  endif()
+  foreach(tool IN LISTS KITBAG_RETIRE_RACE_TOOLS)
+    add_executable(${tool} tools/rt/retire_race_verify.cpp src/engine.cpp)
+    kitbag_core_flags(${tool})
+    target_include_directories(${tool} PRIVATE tools)
+    target_link_libraries(${tool} PRIVATE kitbag_core_objects qm_dsp
+      signalsmith_stretch Threads::Threads ${CMAKE_DL_LIBS} m)
+  endforeach()
+  if(KITBAG_TSAN)
+    target_compile_definitions(retire_race_relaxed_tick
+      PRIVATE KITBAG_TSAN_CONTROL_RELAXED_TICK)
+  endif()
+
   add_executable(click_soak_verify
     tools/soak/click_soak_verify.cpp
     tools/soak/click_soak_test_classify.cpp
@@ -574,13 +613,6 @@ if(KITBAG_BUILD_TOOLS)
   target_include_directories(click_soak_verify PRIVATE tools/media)
   target_link_libraries(click_soak_verify PRIVATE click_soak_lib)
 endif()
-
-target_sources(kitbag_core PRIVATE
-  src/api/api_click_sound.cpp
-  src/media/mono_file_stream.cpp
-  src/media/part_file.cpp
-  src/metronome/click_sound_prepare.cpp
-  src/metronome/sample_voices.cpp)
 
 if(KITBAG_BUILD_TOOLS)
   add_executable(click_sound_verify

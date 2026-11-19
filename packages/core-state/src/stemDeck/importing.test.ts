@@ -183,6 +183,32 @@ describe('picking and importing', () => {
     });
   });
 
+  it('forgets a stopped import once native clears it', async () => {
+    const context = setup();
+    context.native.importSnapshot.mockResolvedValue(
+      snapshot([item(A, CODES.stateNotStarted)], {
+        running: false,
+        stopReason: CODES.failureInterrupted,
+      }),
+    );
+    await context.store.getState().start();
+    expect(context.store.getState().importView?.retryCount).toBe(1);
+    expect(await context.store.getState().clearImport()).toBe(true);
+    expect(context.native.clearImport).toHaveBeenCalledOnce();
+    expect(context.store.getState().importView).toBeNull();
+  });
+
+  it('keeps the import when native refuses to clear it', async () => {
+    const context = setup();
+    context.native.importSnapshot.mockResolvedValue(
+      snapshot([item(A, CODES.stateDownloading)]),
+    );
+    context.native.clearImport.mockResolvedValue(false);
+    await context.store.getState().start();
+    expect(await context.store.getState().clearImport()).toBe(false);
+    expect(context.store.getState().importView?.running).toBe(true);
+  });
+
   it('starts listening once', async () => {
     const { store, native } = setup();
     const stop = await store.getState().start();

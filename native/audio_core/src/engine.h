@@ -10,7 +10,6 @@
 #include "kitbag_engine_hold_api.h"
 #include "media/decoder.h"
 #include "metronome/metronome.h"
-#include "metronome/sample_voices.h"
 #include "miniaudio.h"
 #include "mixdown/mixdown_job.h"
 #include "mixer/mixer.h"
@@ -86,7 +85,7 @@ class Engine {
     return device_running_.load(std::memory_order_acquire);
   }
   uint64_t frames_rendered() const {
-    return frames_rendered_.load(std::memory_order_relaxed);
+    return frame_clock().Now();
   }
   FrameClock frame_clock() const {
     return FrameClock::Reading(frames_rendered_);
@@ -113,13 +112,6 @@ class Engine {
   }
   const Metronome& metronome() const {
     return metronome_;
-  }
-
-  SampleVoices& custom_sounds() {
-    return custom_sounds_;
-  }
-  const SampleVoices& custom_sounds() const {
-    return custom_sounds_;
   }
 
   Tuner& tuner() {
@@ -210,7 +202,6 @@ class Engine {
   std::atomic<uint32_t> idle_grace_ms_{kDefaultIdleGraceMs};
 
   Metronome metronome_;
-  SampleVoices custom_sounds_;
   Tuner tuner_;
   Decoder decoder_;
   Mixer mixer_{kSampleRate};
@@ -218,6 +209,11 @@ class Engine {
   // Last, so it is destroyed first: the render is cancelled and joined.
   MixdownJob mixdown_{kSampleRate};
 };
+
+static_assert(
+    kCustomSoundRate == Engine::kSampleRate,
+    "custom sounds are prepared and faded at the engine rate"
+);
 
 }  // namespace kitbag
 

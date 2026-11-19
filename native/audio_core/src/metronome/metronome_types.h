@@ -12,6 +12,15 @@ inline constexpr double kMaxBpm = 400.0;
 
 enum class Accent : uint8_t { kMuted = 0, kNormal = 1, kAccented = 2 };
 
+enum class ClickRole : uint8_t {
+  kBeat,
+  kAccent,
+  kSubdivision,
+  kAccentedSubdivision,
+  kPoly,
+  kPolyAccent
+};
+
 struct GridBar {
   static constexpr int32_t kNoBar = -1;
   // kNoBar before the first downbeat, and on every beat of a grid without any.

@@ -55,6 +55,7 @@ export const CODES: StemDeckConstants = {
   failureHttpError: 'httpError',
   failureTooLarge: 'tooLarge',
   failureNoSpace: 'noSpace',
+  failureLibraryUnavailable: 'libraryUnavailable',
   failureDropped: 'dropped',
   failureCancelled: 'cancelled',
   failureInterrupted: 'interrupted',
@@ -163,6 +164,7 @@ export function fakeNative() {
     ),
     cancelImport: vi.fn(),
     retryImport: vi.fn(() => Promise.resolve(true)),
+    clearImport: vi.fn(() => Promise.resolve(true)),
     importSnapshot: vi.fn(() =>
       Promise.resolve(snapshot([], { running: false })),
     ),

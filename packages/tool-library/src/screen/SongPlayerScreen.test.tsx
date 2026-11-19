@@ -31,9 +31,10 @@ const display = vi.hoisted(() => ({
   analysis: { analysisStatus: 'done', beats: [0] as readonly number[] },
 }));
 const library = vi.hoisted(
-  (): { rows: readonly unknown[]; failure: unknown } => ({
+  (): { rows: readonly unknown[]; failure: unknown; files: unknown } => ({
     rows: [],
     failure: null,
+    files: null,
   }),
 );
 const commands = vi.hoisted(() => ({ close: vi.fn(), reanalyze: vi.fn() }));
@@ -83,7 +84,8 @@ vi.mock('@kitbag/core-design', async (original) => {
     Chip: () => h('Chip'),
     createThemedStyles: (build: (theme: unknown) => unknown) => () =>
       build({ color: {} }),
-    EmptyState: (props: Props) => h('EmptyState', { reason: props.reason }),
+    EmptyState: (props: Props) =>
+      h('EmptyState', { title: props.title, reason: props.reason }),
     PlayerDock: parent,
     PlayerTransport: (props: Props) =>
       h('PlayerTransport', props, props.extraKey as ReactNode),
@@ -125,6 +127,7 @@ vi.mock('@kitbag/core-state', async (original) => {
   };
   return {
     analysisFailure: () => library.failure,
+    rowFilesOf: () => library.files,
     beatBeside,
     formatClockSeconds,
     bpmFact: (bpm: number | null) =>
@@ -217,6 +220,7 @@ beforeEach(() => {
   display.analysis = { analysisStatus: 'done', beats: [0] };
   library.rows = [];
   library.failure = null;
+  library.files = null;
   Object.assign(mixer, { session: 0, opens: 0, displaced: 0, releases: 0 });
 });
 
@@ -240,6 +244,17 @@ describe('the song player layout', () => {
     expect(mount().root.findByType('EmptyState' as never).props.reason).toBe(
       'OGG isn’t supported. Kitbag plays WAV.',
     );
+  });
+
+  it('says the song waits for its SD card when the card is out', () => {
+    display.status = 'failed';
+    failWith(null);
+    library.files = 'unavailable';
+    const box = mount().root.findByType('EmptyState' as never).props;
+    expect([box.title, box.reason]).toEqual([
+      'SD card not found',
+      'This song is on the SD card, so it can’t play until the card is back.',
+    ]);
   });
 
   it('keeps the general reason when the format is not to blame', () => {

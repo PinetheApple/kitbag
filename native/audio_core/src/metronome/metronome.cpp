@@ -155,22 +155,27 @@ void Metronome::SetFollowMixer(bool enabled) {
 
 void Metronome::SetGrid(
     std::unique_ptr<BeatGrid> grid,
-    uint64_t now_frame,
+    FrameClock clock,
     bool engine_running
 ) {
   if (grid != nullptr && grid->bars.size() != grid->beat_times_sec.size()) {
     grid->bars = GridBars({}, grid->beat_times_sec.size());
   }
   if (grid != nullptr) grid->click_epoch = ++click_epoch_;
-  grid_.Publish(std::move(grid), now_frame, engine_running);
+  grid_.Publish(std::move(grid), clock, engine_running);
 }
 
-void Metronome::ClearGrid(uint64_t now_frame, bool engine_running) {
-  grid_.Publish(nullptr, now_frame, engine_running);
+void Metronome::ClearGrid(FrameClock clock, bool engine_running) {
+  grid_.Publish(nullptr, clock, engine_running);
 }
 
-void Metronome::ReleaseRetiredGrids() {
+size_t Metronome::retired_grids() const {
+  return grid_.retired_size();
+}
+
+void Metronome::ReleaseRetired() {
   grid_.ReclaimAll();
+  custom_sounds_.ReclaimAll();
 }
 
 void Metronome::ApplyPendingCommands() {

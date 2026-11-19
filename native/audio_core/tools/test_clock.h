@@ -1,0 +1,16 @@
+#ifndef KITBAG_TOOLS_TEST_CLOCK_H
+#define KITBAG_TOOLS_TEST_CLOCK_H
+
+#include <cstdint>
+
+#include "rt/frame_clock.h"
+
+namespace kitbag_test {
+
+inline constexpr kitbag::FrameClock ClockAt(int64_t frame) {
+  return kitbag::FrameClock(static_cast<uint64_t>(frame));
+}
+
+}  // namespace kitbag_test
+
+#endif  // KITBAG_TOOLS_TEST_CLOCK_H

@@ -7,6 +7,8 @@ using kitbag::Accent;
 
 constexpr int kWoodblock = 1;
 constexpr int kCowbell = 5;
+constexpr int kPastCustomSounds =
+    kitbag::Metronome::kFirstCustomSound + kitbag::kCustomSoundSlots;
 
 constexpr int64_t kBarFrames = 4 * kBeatFrames;
 constexpr int64_t kHalfBeatFrames = kBeatFrames / 2;
@@ -44,11 +46,11 @@ void TestNormalAndAccentSoundsIndependent() {
 void TestInvalidSoundIdsKeepPrior() {
   kitbag::Metronome metronome;
   metronome.SetSounds(kTom, kClickSound);
-  metronome.SetSounds(-1, kitbag::Metronome::kSoundCount);
+  metronome.SetSounds(-1, kPastCustomSounds);
   StartFourFour(metronome);
   const auto left = RenderLeft(metronome, kBarFrames, [&](int64_t at) {
     if (at == (kBeatFrames / kBlockFrames + 1) * kBlockFrames) {
-      metronome.SetSounds(kitbag::Metronome::kSoundCount, kCowbell);
+      metronome.SetSounds(kPastCustomSounds, kCowbell);
     }
   });
 
@@ -142,7 +144,7 @@ void TestPreviewPlaysOneClickWhileStopped() {
   kitbag::Metronome metronome;
   metronome.SetVolume(kPreviewVolume);
   metronome.PreviewSound(kTom, false);
-  metronome.PreviewSound(kitbag::Metronome::kSoundCount, true);
+  metronome.PreviewSound(kPastCustomSounds, true);
   const auto left = RenderLeft(metronome, kBeatFrames, [&](int64_t at) {
     if (at == kBeatFrames / 2 / kBlockFrames * kBlockFrames) {
       metronome.PreviewSound(kClickSound, true);
@@ -188,7 +190,7 @@ void TestPreviewInvalidIdsIgnored() {
   StartFourFour(plain);
   const auto plain_left = RenderLeft(plain, kBarFrames);
   kitbag::Metronome previewed;
-  previewed.PreviewSound(kitbag::Metronome::kSoundCount, false);
+  previewed.PreviewSound(kPastCustomSounds, false);
   previewed.PreviewSound(-1, true);
   StartFourFour(previewed);
   const auto left = RenderLeft(previewed, kBarFrames);

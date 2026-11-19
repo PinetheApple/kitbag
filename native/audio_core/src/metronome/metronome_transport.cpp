@@ -1,6 +1,10 @@
 #include "metronome/metronome.h"
+#include "metronome/metronome_internal.h"
 
 namespace kitbag {
+
+using metronome_detail::Clamp;
+using metronome_detail::kSecondsPerMinute;
 
 void Metronome::Start() {
   commands_.Push({CommandType::kStart});
@@ -105,6 +109,7 @@ void Metronome::StopRun() {
   count_in_at_.Clear();
   current_beat_.store(-1, std::memory_order_relaxed);
   current_poly_beat_.store(-1, std::memory_order_relaxed);
+  custom_sounds_.CutAll();
 }
 
 void Metronome::BeginRun() {
@@ -166,6 +171,32 @@ void Metronome::RenderPendingStart(
   if (index != CountInSchedule::kNoBeat) {
     OnCountInBeat(index, count_in_at_.voice(), sample_rate);
   }
+}
+
+void Metronome::BeginAnchorExternal(
+    uint64_t now,
+    uint32_t sample_rate,
+    BlockTempo* tempo
+) {
+  has_pending_anchor_ = false;
+  has_pending_start_ = false;  // an anchor supersedes a deferred start
+  ramp_.Disable();
+  bpm_ = Clamp(pending_anchor_bpm_, kMinBpm, kMaxBpm);
+  const double song_seconds =
+      pending_anchor_song_pos_ +
+      (static_cast<double>(now) - static_cast<double>(pending_anchor_frame_)) /
+          sample_rate;
+  // Song beats in this signature's unit, with no latency term: the per-sample
+  // bias in AdvanceConstantTempo adds it back (§4.7).
+  beat_position_ = song_seconds * bpm_ * BeatUnitScale() / kSecondsPerMinute;
+  if (!running_) grid_state_.last_onset = {};
+  running_ = true;
+  running_flag_.store(true, std::memory_order_relaxed);
+  counting_in_ = false;
+  count_in_armed_ = false;
+  ReacquireGrid();
+  *tempo = BlockTempoFor(sample_rate);
+  SyncBarFromPosition(tempo->beats_per_sample);
 }
 
 }  // namespace kitbag

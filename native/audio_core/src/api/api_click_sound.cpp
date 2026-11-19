@@ -7,11 +7,6 @@
 
 using kitbag::ToEngine;
 
-static_assert(
-    kitbag::kCustomSoundSlots == 2,
-    "kb_metronome_*_custom_sound docs say slot 0 or 1"
-);
-
 extern "C" {
 
 kb_result kb_click_sound_prepare(const char* in_path, const char* out_path) {
@@ -31,10 +26,10 @@ kb_result kb_metronome_load_custom_sound(
   const kb_result loaded =
       kitbag::LoadClickSound(path, core->sample_rate(), &frames);
   if (loaded != KB_OK) return loaded;
-  core->custom_sounds().Publish(
+  core->metronome().custom_sounds().Publish(
       slot,
       std::move(frames),
-      core->frames_rendered(),
+      core->frame_clock(),
       core->is_running()
   );
   return KB_OK;
@@ -43,13 +38,17 @@ kb_result kb_metronome_load_custom_sound(
 void kb_metronome_clear_custom_sound(kb_engine* engine, int32_t slot) {
   if (engine == nullptr) return;
   kitbag::Engine* core = ToEngine(engine);
-  core->custom_sounds()
-      .Clear(slot, core->frames_rendered(), core->is_running());
+  core->metronome().custom_sounds().Clear(
+      slot,
+      core->frame_clock(),
+      core->is_running()
+  );
 }
 
 int32_t
 kb_metronome_custom_sound_loaded(const kb_engine* engine, int32_t slot) {
-  return engine != nullptr && ToEngine(engine)->custom_sounds().loaded(slot)
+  return engine != nullptr &&
+                 ToEngine(engine)->metronome().custom_sounds().loaded(slot)
              ? 1
              : 0;
 }

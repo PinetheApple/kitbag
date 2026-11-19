@@ -83,6 +83,8 @@ class KitbagStemDeckModule(reactContext: ReactApplicationContext) : NativeKitbag
 
   override fun retryImport(promise: Promise) = request(promise) { launch { session.queue.retry() } }
 
+  override fun clearImport(promise: Promise) = request(promise) { session.clearImport() }
+
   private fun launch(change: () -> Boolean): Boolean =
     ImportLaunch.launch(
       session.queue,

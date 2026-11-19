@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <limits>
 
+#include "metronome/metronome.h"
 #include "metronome/metronome_types.h"
 
 namespace kitbag {
@@ -55,6 +56,27 @@ inline double BarFraction(double position, int beats_per_bar) {
 inline double OnsetFloorSec(const BeatGrid& grid, const GridOnset& onset) {
   if (grid.anchor_frame != onset.anchor_frame) return kNoFloorSec;
   return onset.song_sec + kGridEpsilon + kGridEpsilon;
+}
+
+inline bool IsBuiltInSound(int32_t sound) {
+  return sound >= 0 && sound < Metronome::kSoundCount;
+}
+
+inline bool IsValidSound(int32_t sound) {
+  return sound >= 0 && sound < Metronome::kFirstCustomSound + kCustomSoundSlots;
+}
+
+inline int BuiltInOrTick(int32_t sound) {
+  return IsBuiltInSound(sound) ? sound : Metronome::kTickSound;
+}
+
+// Following the mixer, the click is the song's and keeps the built-ins (§5.3).
+inline int PlayedSound(bool follow_mixer, int32_t sound) {
+  return follow_mixer ? BuiltInOrTick(sound) : sound;
+}
+
+inline ClickRole BeatRole(bool accented) {
+  return accented ? ClickRole::kAccent : ClickRole::kBeat;
 }
 
 template <std::size_t N>

@@ -16,7 +16,8 @@ vi.mock('../runtime/database.ts', () => ({
 vi.mock('@kitbag/core-native', async (actual) => ({
   ...(await actual<typeof import('@kitbag/core-native')>()),
   storageReport: (name: string) => Promise.resolve({ ...library.report, name }),
-  missingFiles: (paths: readonly string[]) => Promise.resolve(paths),
+  fileAvailability: (paths: readonly string[]) =>
+    Promise.resolve({ missing: paths, unavailable: [], rootAvailable: true }),
 }));
 
 const SONG = {

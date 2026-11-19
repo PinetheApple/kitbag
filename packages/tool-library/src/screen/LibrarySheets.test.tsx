@@ -31,6 +31,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
   useSongLibrary: (select: (state: unknown) => unknown) =>
     select({ codes: {}, replacePrompt: null }),
   analysisFailure: () => shown.failure,
+  rowFilesOf: () => null,
   cleanName: (name: string) => name,
 }));
 

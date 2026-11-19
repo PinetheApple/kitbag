@@ -126,6 +126,7 @@ export type StemDeckConstants = Readonly<{
   failureHttpError: string;
   failureTooLarge: string;
   failureNoSpace: string;
+  failureLibraryUnavailable: string;
   failureDropped: string;
   failureCancelled: string;
   failureInterrupted: string;
@@ -148,6 +149,7 @@ export interface Spec extends TurboModule {
   ): Promise<boolean>;
   cancelImport(): void;
   retryImport(): Promise<boolean>;
+  clearImport(): Promise<boolean>;
   importSnapshot(): Promise<StemDeckImportSnapshot>;
   settleDownload(jobId: string, outcome: string): void;
   setWatching(watching: boolean): void;

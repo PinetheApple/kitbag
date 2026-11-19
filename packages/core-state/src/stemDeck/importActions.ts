@@ -40,6 +40,7 @@ export interface ImportActions {
   dismissReplace: () => void;
   cancelImport: () => void;
   retryImport: () => Promise<void>;
+  clearImport: () => Promise<boolean>;
   setWatching: (watching: boolean) => void;
   markUnityNoticeSeen: () => void;
 }
@@ -151,6 +152,17 @@ export function importActions(
     }
   };
 
+  const failed = (error: unknown, known: StemDeckConstants | null) => {
+    if (known !== null)
+      set({ importFailure: nativeFailure(errorCode(error), known) });
+  };
+
+  const forgetImport = () => {
+    skipped = [];
+    refusals.clear();
+    set({ importView: null, importFailure: null });
+  };
+
   const takePending = () => {
     const job = pending;
     pending = null;
@@ -240,8 +252,18 @@ export function importActions(
       try {
         await deps.native().retryImport();
       } catch (error) {
-        if (known !== null)
-          set({ importFailure: nativeFailure(errorCode(error), known) });
+        failed(error, known);
+      }
+    },
+    clearImport: async () => {
+      const known = codes();
+      try {
+        const cleared = await deps.native().clearImport();
+        if (cleared) forgetImport();
+        return cleared;
+      } catch (error) {
+        failed(error, known);
+        return false;
       }
     },
     setWatching: (watching: boolean) => {

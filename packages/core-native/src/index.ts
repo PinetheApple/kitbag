@@ -18,6 +18,7 @@ export type {
   LibraryAudioUsage,
   ImportedStem,
   ImportedStemBundle,
+  LibraryAvailability,
   LibraryConstants,
   PickedBackup,
   PickedDocument,
@@ -42,7 +43,11 @@ export type {
   StemDeckServer,
   StemDeckText,
 } from './NativeKitbagStemDeck';
-export { missingFiles, storageReport } from './libraryStorage';
+export {
+  fileAvailability,
+  storageReport,
+  watchDataFolder,
+} from './libraryStorage';
 export { backupFilesAvailable, pickBackup, shareBackup } from './backupFiles';
 export {
   mixdownCancel,

@@ -7,6 +7,7 @@ namespace kitbag {
 
 using metronome_detail::Clamp;
 using metronome_detail::IsOneOf;
+using metronome_detail::IsValidSound;
 
 namespace {
 

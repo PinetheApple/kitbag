@@ -1,6 +1,12 @@
 #include "metronome_test_audio.h"
+#include "test_clock.h"
+#include "zero_clock.h"
 
 namespace metronome_test {
+
+using kitbag_test::ClockAt;
+using kitbag_test::kZeroClock;
+
 namespace {
 
 constexpr int kWoodblock = 1;
@@ -190,12 +196,12 @@ void TestGridSkipsCountIn() {
   kitbag::Metronome gridded;
   gridded.SetSounds(kBeepSound, kBeepSound);
   gridded.SetCountIn(1, true, kWoodblock);
-  gridded.SetGrid(MakeShiftedGrid(16, 1.0, 0.5), 0, true);
+  gridded.SetGrid(MakeShiftedGrid(16, 1.0, 0.5), kZeroClock, true);
   gridded.Start();
   bool counting = false;
   const auto left = RenderLeft(gridded, kCommonBarFrames, [&](int64_t at) {
     counting = counting || gridded.trainer_mirrors().counting_in();
-    if (at == Block(100)) gridded.ClearGrid(static_cast<uint64_t>(at), true);
+    if (at == Block(100)) gridded.ClearGrid(ClockAt(at), true);
   });
   Check(!counting, "count-in: grid mode never reports a count");
   Check(

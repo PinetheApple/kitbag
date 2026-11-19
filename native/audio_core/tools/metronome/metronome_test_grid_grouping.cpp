@@ -1,8 +1,12 @@
 #include <string>
 
 #include "grid_click_fixture.h"
+#include "zero_clock.h"
 
 namespace metronome_test {
+
+using kitbag_test::kZeroClock;
+
 namespace {
 
 using grid_click::Configure;
@@ -173,7 +177,8 @@ void TestSetGridResets() {
       kThreeTwoTwo,
       KB_GRID_RATE_DOUBLE
   );
-  metronome.SetGrid(grid_click::Grid(kBeatsSec, kSevenBeatBars), 0, true);
+  metronome
+      .SetGrid(grid_click::Grid(kBeatsSec, kSevenBeatBars), kZeroClock, true);
   const std::string got = grid_levels::Levels(
       grid_click::TakeAll(metronome, kBeatsSec),
       EventFrames(true)

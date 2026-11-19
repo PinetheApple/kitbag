@@ -43,8 +43,9 @@ inventory; the open issues carry what is still missing.
 Two carry the working loop:
 
 ```sh
-bash scripts/preflight.sh            # every gate CI runs, plus auto-fixes
+bash scripts/preflight.sh            # every gate CI runs but TSan, plus auto-fixes
 bash scripts/preflight.sh --no-fix   # check only — what CI does
+bash scripts/preflight.sh --tsan     # adds CI's TSan gate, off by default (second native build)
 bash scripts/install-on-device.sh    # build, install, launch, report signing + runtime state
 ```
 
@@ -130,7 +131,7 @@ rebuilding the tools on top. What is here now:
 | `legacy/` | `android/MediaSessionPlugin.kt` + `AndroidManifest.xml`, the Flutter-era media-session detection that play-along (§8.2, §13.9) still has to port. **Reference only — do not build against them.** Delete them once `MediaNotificationListenerService.kt` stops being a skeleton. |
 | `docs/` | `decisions.md` (why things were decided), `tuner-functional-spec.md`, research notes, and `archive/` (retired trackers and runbooks, historical only). GitHub issues are the tickets. **Read `docs/tuner-research.md`'s warning banner before touching the tuner.** |
 | `e2e/` | Device flows (Maestro): `flows/` one per checked behaviour, `subflows/` the shared steps, `make_click_song.py` the fixture song `scripts/e2e.sh` pushes. Dev-only; nothing here enters the APK. |
-| `scripts/` | `preflight.sh` (every CI gate locally), `version.sh` + `release-gate.sh` + `verify-apk-signature.sh` (the release path, run by `release.yml`), `install-on-device.sh`, `e2e.sh` + `install-maestro.sh` (device flows), `lint.sh`/`format.sh`/`install-hooks.sh` (native gate), `changelog.sh`, `run-loop.sh`. |
+| `scripts/` | `preflight.sh` (every CI gate locally), `version.sh` + `release-gate.sh` + `verify-apk-signature.sh` (the release path, run by `release.yml`), `install-on-device.sh`, `e2e.sh` + `install-maestro.sh` (device flows), `lint.sh`/`format.sh`/`install-hooks.sh` (native gate), `tsan-check.sh` (the TSan retire-race gate and its control), `changelog.sh`, `run-loop.sh`. |
 
 The old Flutter guide's references — Melos, `pubspec.yaml`, `dart analyze`,
 `custom_lint`, `scripts/lint_check.sh` — are gone. Do not restore them.

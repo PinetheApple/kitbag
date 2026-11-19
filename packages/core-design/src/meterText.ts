@@ -18,6 +18,9 @@ export const meterCopy = {
   close: 'Close the meter sheet',
   pending: 'Available once the beat is found',
   barOneOverridden: 'Yours. Set with the playhead.',
+  playhead: 'Playhead',
+  playheadExplanation: 'Its nearest beat becomes bar 1',
+  playheadExplanationSpoken: 'The beat nearest the playhead becomes bar 1',
 } as const;
 
 export interface MeterChoice {
@@ -76,7 +79,7 @@ export function barOneLabel(seconds: number): string {
   return `${meterCopy.barOne} at ${tenthsClock(seconds)}`;
 }
 
-export function playheadDetail(seconds: number): string {
+export function playheadValue(seconds: number): string {
   'worklet';
-  return `Playhead ${tenthsClock(seconds)}: its nearest beat becomes bar 1`;
+  return `${meterCopy.playhead} ${tenthsClock(seconds)}`;
 }
