@@ -9,14 +9,24 @@ tags:
     env:
       POSITION: 2
       BPM: 120
+- runFlow:
+    file: ../../subflows/set-tempo.yaml
+    env:
+      BPM: 140
+- runFlow:
+    file: ../../subflows/set-time-signature.yaml
+    env:
+      BEATS: 7
+      UNIT: 8
 - tapOn: 'New song, Setlist Gig, song 2 of 2'
 - tapOn: 'Leave setlist'
 - extendedWaitUntil:
     visible: 'Setlists, none active'
     timeout: 10000
-- assertVisible: 'Tempo, 120 BPM'
+- assertVisible: 'Tempo, 140 BPM'
 - runFlow:
     file: ../../subflows/relaunch-expect-tempo.yaml
     env:
-      BPM: 120
+      BPM: 140
+- assertVisible: 'Time signature, 7 over 8'
 - assertVisible: 'Setlists, none active'
