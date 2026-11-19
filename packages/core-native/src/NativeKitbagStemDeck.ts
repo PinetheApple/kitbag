@@ -31,11 +31,15 @@ export type StemDeckImportRequest = Readonly<{
   jobId: string;
   title: string;
   stems: readonly string[];
+  replace: string;
+  replaceTarget: Double | null;
 }>;
 
 export type StemDeckImportItem = Readonly<{
   jobId: string;
   title: string;
+  replace: string;
+  replaceTarget: Double | null;
   state: string;
   failure: string | null;
   bytesDone: Double;
@@ -107,6 +111,9 @@ export type StemDeckConstants = Readonly<{
   settleSkipped: string;
   settleRefused: string;
   settleFailed: string;
+  replaceAdd: string;
+  replaceJob: string;
+  replaceSet: string;
   failureBadAddress: string;
   failureUnreachable: string;
   failureTimedOut: string;

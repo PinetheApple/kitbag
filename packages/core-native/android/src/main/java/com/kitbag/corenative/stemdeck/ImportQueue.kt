@@ -1,6 +1,11 @@
 package com.kitbag.corenative.stemdeck
 
-class ImportItem(val jobId: String, val title: String, val stems: List<String>) {
+class ImportItem(
+  val jobId: String,
+  val title: String,
+  val stems: List<String>,
+  val replace: ReplaceChoice = ReplaceChoice.ADD,
+) {
   init {
     require(JOB_ID.matches(jobId)) { "Not a StemDeck job id" }
     require(stems.all(STEM_NAME::matches)) { "Not a StemDeck stem name" }

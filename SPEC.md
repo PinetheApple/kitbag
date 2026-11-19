@@ -1155,7 +1155,9 @@ phone. That page defines the format; this spec does not copy it.
   target; IN LIBRARY stays job-id based. Two songs in one download that match
   the same library song both offer it: the first replaces it, the second
   finds it gone and is added as a new song, so nothing is lost. The choice
-  lives in JS memory only (#413).
+  and its target are stored with each item in the import journal, so Retry
+  after a restart replaces as chosen; a journal written before this loads
+  its items as plain adds (#413).
 - **A replace keeps** the user's song and stem names, speed and meter. Bar
   one and the lyric retiming are times in the old audio, so only a re-import
   of the same job keeps them (the retiming only while the lyrics are
