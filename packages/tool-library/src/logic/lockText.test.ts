@@ -9,7 +9,7 @@ import {
 
 describe('lockText', () => {
   it('headlines the lock while the click runs', () => {
-    expect(lockText('grid', true, '158 BPM')).toEqual({
+    expect(lockText('grid', true, '158 BPM', null)).toEqual({
       title: 'Metronome locked',
       detail: '158 BPM · phase auto · from beat grid',
       action: 'click',
@@ -17,18 +17,18 @@ describe('lockText', () => {
   });
 
   it('reads click off, grid ready, while the click is off', () => {
-    expect(lockText('grid', false, '158 BPM')).toEqual({
+    expect(lockText('grid', false, '158 BPM', null)).toEqual({
       title: 'Click off',
       detail: '158 BPM · grid ready',
       action: 'click',
     });
-    expect(lockText('grid', false, null).detail).toBe('grid ready');
+    expect(lockText('grid', false, null, null).detail).toBe('grid ready');
   });
 
   it.each(['pending', 'analyzing'] as const)(
     'says the beat is still being found while %s',
     (badge) => {
-      expect(lockText(badge, false, null)).toEqual({
+      expect(lockText(badge, false, null, null)).toEqual({
         title: 'Finding the beat',
         detail: 'The click is ready once analysis ends',
         action: 'none',
@@ -37,15 +37,36 @@ describe('lockText', () => {
   );
 
   it('names a failed analysis and offers Re-analyse', () => {
-    expect(lockText('failed', false, null)).toEqual({
+    expect(lockText('failed', false, null, null)).toEqual({
       title: 'No beat grid',
       detail: 'Analysis failed, so no click',
       action: 'reanalyze',
     });
   });
 
+  it('says a file that would not decode may be damaged and offers Re-analyse', () => {
+    expect(
+      lockText('failed', false, null, { kind: 'damaged', keptGrid: false }),
+    ).toEqual({
+      title: 'No beat grid',
+      detail: 'File may be damaged, so no click',
+      action: 'reanalyze',
+    });
+  });
+
+  it.each([
+    { kind: 'missingFile', keptGrid: false },
+    { kind: 'unsupported', keptGrid: false, format: 'ogg', supported: ['WAV'] },
+  ] as const)('offers no Re-analyse where it cannot help: $kind', (failure) => {
+    expect(lockText('failed', false, null, failure)).toEqual({
+      title: 'No beat grid',
+      detail: 'Analysis failed, so no click',
+      action: 'none',
+    });
+  });
+
   it('names an analysis that found no beat and offers Re-analyse', () => {
-    expect(lockText('noGrid', false, null)).toEqual({
+    expect(lockText('noGrid', false, null, null)).toEqual({
       title: 'No beat grid',
       detail: 'Analysis found no beat, so no click',
       action: 'reanalyze',
