@@ -11,6 +11,7 @@ import {
   type Category,
   type Conflict,
   type ImportMode,
+  type LibrarySongRecord,
   type Resolutions,
 } from './backup-format';
 import type { Snapshot } from './backup-snapshot';
@@ -46,10 +47,21 @@ export interface Write {
 
 export type Writes = Partial<Record<Category, Write[]>>;
 
-function canonical(record: BackupRecord, mode: ImportMode): string {
+function canonical(
+  record: BackupRecord,
+  mode: ImportMode,
+  fields: readonly string[],
+): string {
   const copy: Record<string, unknown> = { ...record };
   if (mode === 'merge') delete copy.active;
-  return JSON.stringify(copy, Object.keys(copy).sort());
+  return JSON.stringify(copy, [...fields].sort());
+}
+
+function sameRecord(mine: BackupRecord, theirs: BackupRecord) {
+  const fields = Object.keys(theirs);
+  return (
+    canonical(mine, 'merge', fields) === canonical(theirs, 'merge', fields)
+  );
 }
 
 function selectCategories(
@@ -151,8 +163,7 @@ function planMerge(
     if (mine === undefined) {
       state.summary.new += 1;
       state.writes.push({ record, localId: undefined });
-    } else if (canonical(mine, 'merge') === canonical(record, 'merge'))
-      state.summary.unchanged += 1;
+    } else if (sameRecord(mine, record)) state.summary.unchanged += 1;
     else {
       const localId = snapshot.ids[category].get(key);
       mergeConflict(category, record, localId, resolutions, state);
@@ -171,13 +182,30 @@ function resolvedRef(
   return snapshot.ids[target].has(uuid) ? uuid : null;
 }
 
+function withLocalOverride(
+  record: LibrarySongRecord,
+  snapshot: Snapshot,
+): LibrarySongRecord {
+  const local = snapshot.records.librarySongs.find(
+    (song) => song.uuid === record.uuid,
+  );
+  return {
+    meterBeatsPerBar: local?.meterBeatsPerBar ?? null,
+    barOneSeconds: local?.barOneSeconds ?? null,
+    ...record,
+  };
+}
+
 function effective(
   category: Category,
   record: BackupRecord,
   categories: readonly Category[],
   snapshot: Snapshot,
 ): BackupRecord {
-  let resolved = record;
+  let resolved =
+    category === 'librarySongs'
+      ? withLocalOverride(record as LibrarySongRecord, snapshot)
+      : record;
   for (const reference of REFERENCES) {
     if (reference.source !== category) continue;
     const uuid = referenceOf(record, reference);

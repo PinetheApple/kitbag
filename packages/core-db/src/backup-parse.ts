@@ -34,9 +34,27 @@ import {
   presetViolation,
   RAMP_UNITS,
 } from './preset-rules';
+import { meterOverrideViolation, type GridMeter } from './meter-override';
 import { INSTRUMENTS, tuningViolation } from './tuning-rules';
 
 const FLOAT32_BYTES = 4;
+
+function readSongGrid(r: Reader, path: string) {
+  const fields = {
+    ...(r.present('analysisVersion') && {
+      analysisVersion: r.nullableCount('analysisVersion'),
+    }),
+    ...(r.present('meterBeatsPerBar') && {
+      meterBeatsPerBar: r.nullableCount('meterBeatsPerBar'),
+    }),
+    ...(r.present('barOneSeconds') && {
+      barOneSeconds: r.nullableNumber('barOneSeconds'),
+    }),
+  };
+  const violation = meterOverrideViolation(fields);
+  if (violation) invalidField(`${path}.${violation.field}`, violation.reason);
+  return fields as typeof fields & { meterBeatsPerBar?: GridMeter | null };
+}
 
 function readLibrarySong(value: unknown, path: string): LibrarySongRecord {
   const r = reader(value, path);
@@ -52,6 +70,7 @@ function readLibrarySong(value: unknown, path: string): LibrarySongRecord {
     downbeatIndices: r.nullableBlob('downbeatIndices'),
     bpm: r.nullableNumber('bpm'),
     waveformPath: r.nullableString('waveformPath'),
+    ...readSongGrid(r, path),
   };
   if (
     record.beatGrid !== null &&

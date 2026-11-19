@@ -41,7 +41,7 @@ function librarySongValues(record: LibrarySongRecord) {
     createdAt: fromSeconds(record.createdAt),
     beatGrid: nullableBytes(record.beatGrid),
     downbeatIndices: nullableBytes(record.downbeatIndices),
-    analysisVersion: null,
+    analysisVersion: record.analysisVersion ?? null,
   };
 }
 

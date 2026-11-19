@@ -58,6 +58,7 @@ function fieldReader(value: unknown, path: string) {
 export function reader(value: unknown, path: string) {
   const { object, get, nullable } = fieldReader(value, path);
   return {
+    present: (key: string) => object[key] !== undefined,
     array: (key: string) => asArray(object[key], `${path}.${key}`),
     string: (key: string) => get(key, isString, 'expected a string'),
     number: (key: string) => get(key, isNumber, 'expected a finite number'),
