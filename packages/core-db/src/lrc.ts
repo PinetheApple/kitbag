@@ -1,4 +1,4 @@
-import { MS_PER_SECOND, SECONDS_PER_MINUTE } from './backup-format';
+import { MS_PER_SECOND, SECONDS_PER_MINUTE } from './units';
 
 const TIME_TAG = /^\s*\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\]/;
 const OFFSET_TAG = /^\[offset:\s*([+-]?\d+)\s*\]$/i;

@@ -1,7 +1,6 @@
 import { asc, inArray, sql } from 'drizzle-orm';
 
 import {
-  MS_PER_SECOND,
   PREFERENCE_KEYS,
   type Category,
   type LibrarySongRecord,
@@ -15,6 +14,7 @@ import { encodeBase64, nullableBase64, presetBase64 } from './base64';
 import { loadStemSongs } from './backup-stem-songs';
 import { meterOverrideOf } from './meter-override';
 import type { Database } from './repository';
+import { MS_PER_SECOND } from './units';
 import {
   clickSounds,
   practiceSessions,

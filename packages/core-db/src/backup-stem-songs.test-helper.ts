@@ -41,7 +41,9 @@ export const EDITED = {
   vocals: { gain: 0.25, muted: true, soloed: false },
 } as const;
 
-export function bundle(jobId: string): NewStemBundle {
+export const ROLES = ['vocals', 'drums'];
+
+export function bundle(jobId: string, roles = ROLES): NewStemBundle {
   const folder = `stems/${jobId}`;
   return {
     uuid: crypto.randomUUID(),
@@ -52,7 +54,7 @@ export function bundle(jobId: string): NewStemBundle {
     folder,
     sampleRate: RATE,
     channels: 2,
-    stems: ['vocals', 'drums'].map((role) => ({
+    stems: roles.map((role) => ({
       name: role,
       filePath: `${folder}/${role}.flac`,
       waveformPath: null,
@@ -100,8 +102,10 @@ export async function addStemDeckSong(
   return library.insertStemBundle(bundle(jobId));
 }
 
-export async function addFolderSong(database: StemSongDatabase) {
-  const id = await database.library.insertStemBundle(bundle('folder-import'));
+export async function addFolderSong(database: StemSongDatabase, roles = ROLES) {
+  const id = await database.library.insertStemBundle(
+    bundle('folder-import', roles),
+  );
   await database.handle.db
     .update(stemSets)
     .set({

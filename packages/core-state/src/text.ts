@@ -1,4 +1,4 @@
-import { SECONDS_PER_MINUTE } from '@kitbag/core-db';
+import { SECONDS_PER_MINUTE } from '@kitbag/core-db/src/units';
 
 export const MINUS = '−';
 export { SECONDS_PER_MINUTE };

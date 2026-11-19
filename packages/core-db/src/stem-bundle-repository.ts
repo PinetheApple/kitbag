@@ -16,7 +16,6 @@ import {
 } from './stem-tempo';
 
 const STEM_FORMAT = 'flac';
-export const UNITY_GAIN = 1;
 const BAR_MARK_FIELDS = 2;
 
 export interface BundleStem {

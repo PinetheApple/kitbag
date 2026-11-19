@@ -64,12 +64,14 @@ function stemSongRecord(
     chosenTempoMode: stemSetTempoOf(row).chosenTempoMode,
     stems: mixes.map(mixRecord),
     lyrics: lyricsOf(row),
+    tempo: stemSetTempoOf(row).tempo,
   };
 }
 
 export function portableStemSong(song: LocalStemSong): StemSongRecord {
   const copy: Partial<LocalStemSong> = { ...song };
   delete copy.lyrics;
+  delete copy.tempo;
   return copy as StemSongRecord;
 }
 
@@ -114,10 +116,10 @@ async function restoreMixes(
   id: number,
   mixes: readonly StemMixRecord[],
 ) {
-  for (const { role, ...mix } of mixes)
+  for (const { role, name, ...mix } of mixes)
     await db
       .update(stems)
-      .set(mix)
+      .set(name === null ? mix : { ...mix, name })
       .where(and(eq(stems.stemSetId, id), eq(stems.role, role)));
 }
 

@@ -5,96 +5,37 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('@op-engineering/op-sqlite', () => ({}));
 
 import { unwrap } from './backup.test-helper';
-import type { ImportOptions } from './backup-plan';
+import {
+  editedBackup,
+  editedTarget,
+  expectEdited,
+  expectUntouched,
+  FOLDER_KEY,
+  freshTarget,
+  planFor,
+  restore,
+  STEMDECK_KEY,
+  THEIRS,
+} from './backup-stem-songs-restore.test-helper';
 import {
   addFolderSong,
   addStemDeckSong,
   bundle,
-  edit,
   EDITED,
-  EDITED_MIX,
   expectedEdits,
   FOLDER_UUID,
   JOB,
   LOCAL_SPEED,
-  mixOf,
-  setSpeed,
   stemSetCount,
   stemSongDatabase,
   THREE_LINES,
-  type StemSongDatabase,
 } from './backup-stem-songs.test-helper';
-import { CLICK_RATE } from './click-rate';
 
-const STEMDECK_KEY = `stemdeck:${JOB}`;
-const FOLDER_KEY = `folder:${FOLDER_UUID}`;
 const OTHER_JOB = 'job-other';
 const E2E_BACKUP = new URL(
   '../../../e2e/fixtures/e2estemsongs.json',
   import.meta.url,
 );
-
-interface ExportedFile {
-  categories: string[];
-  stemSongs?: Record<string, unknown>[];
-}
-
-async function editedBackup() {
-  const source = stemSongDatabase();
-  await edit(source, await addStemDeckSong(source));
-  await edit(source, await addFolderSong(source));
-  return JSON.parse(await source.backup.export()) as ExportedFile;
-}
-
-async function freshTarget() {
-  const target = stemSongDatabase();
-  const stemdeck = await addStemDeckSong(target);
-  const folder = await addFolderSong(target);
-  return { target, stemdeck, folder };
-}
-
-async function editedTarget() {
-  const fresh = await freshTarget();
-  await setSpeed(fresh.target, fresh.stemdeck, LOCAL_SPEED);
-  await setSpeed(fresh.target, fresh.folder, LOCAL_SPEED);
-  return fresh;
-}
-
-async function restore(
-  target: StemSongDatabase,
-  file: ExportedFile,
-  options: ImportOptions = {},
-) {
-  const plan = unwrap(await target.backup.plan(JSON.stringify(file), options));
-  return target.backup.apply(plan, { confirmReplace: true });
-}
-
-const THEIRS = {
-  stemSongs: { [STEMDECK_KEY]: 'theirs', [FOLDER_KEY]: 'theirs' },
-} as const;
-
-async function expectEdited(target: StemSongDatabase, id: number) {
-  const set = await target.library.readStemSet(id);
-  expect(set).toMatchObject(expectedEdits);
-  expect(mixOf(set)).toEqual(EDITED_MIX);
-}
-
-async function expectUntouched(
-  target: StemSongDatabase,
-  id: number,
-  speed = 1,
-) {
-  const set = await target.library.readStemSet(id);
-  expect(set).toMatchObject({
-    title: 'Echo',
-    speed,
-    meterBeatsPerBar: null,
-    lyricsRetimed: null,
-    clickRate: CLICK_RATE.single,
-    chosenTempoMode: null,
-  });
-  expect(mixOf(set)?.map(({ volume }) => volume)).toEqual([1, 1]);
-}
 
 describe('stem song settings in a backup', () => {
   it('export carries settings for every stem song, keyed by job or folder UUID', async () => {
@@ -114,15 +55,21 @@ describe('stem song settings in a backup', () => {
         uuid: FOLDER_UUID,
       }),
     ]);
-    expect(JSON.stringify(file.stemSongs)).not.toMatch(/\.flac|beatGrid/);
+    const exported = JSON.stringify(file.stemSongs);
+    expect(exported).not.toMatch(/\.flac|beatGrid|"lyrics"|"tempo"/);
   });
 
-  it('merge onto stem songs still at their import defaults restores without review', async () => {
+  it('a fresh phone takes the folder song at once and asks about the StemDeck mix', async () => {
     const file = await editedBackup();
     const { target, stemdeck, folder } = await freshTarget();
-    const plan = unwrap(await target.backup.plan(JSON.stringify(file)));
-    expect(plan.counts.stemSongs).toMatchObject({ updates: 2, conflicts: [] });
-    expect((await target.backup.apply(plan)).ok).toBe(true);
+    const plan = await planFor(target, file);
+    expect(plan.counts.stemSongs).toMatchObject({ updates: 1 });
+    expect(plan.unresolved).toEqual([
+      { category: 'stemSongs', key: STEMDECK_KEY, label: EDITED.title },
+    ]);
+    expect((await restore(target, file, { resolutions: THEIRS })).ok).toBe(
+      true,
+    );
     await expectEdited(target, stemdeck);
     await expectEdited(target, folder);
   });
@@ -130,8 +77,8 @@ describe('stem song settings in a backup', () => {
   it('importing twice adds no stem song and finds nothing left to change', async () => {
     const file = await editedBackup();
     const { target } = await freshTarget();
-    await restore(target, file);
-    const again = unwrap(await target.backup.plan(JSON.stringify(file)));
+    await restore(target, file, { resolutions: THEIRS });
+    const again = await planFor(target, file);
     expect(again.counts.stemSongs).toMatchObject({
       unchanged: 2,
       new: 0,
@@ -144,15 +91,15 @@ describe('stem song settings in a backup', () => {
 
   it('merge lists a stem song changed on both sides for review and writes nothing unresolved', async () => {
     const file = await editedBackup();
-    const { target, stemdeck } = await editedTarget();
-    const plan = unwrap(await target.backup.plan(JSON.stringify(file)));
+    const { target, folder } = await editedTarget();
+    const plan = await planFor(target, file);
     expect(plan.unresolved).toContainEqual({
       category: 'stemSongs',
-      key: STEMDECK_KEY,
+      key: FOLDER_KEY,
       label: EDITED.title,
     });
     expect((await target.backup.apply(plan)).ok).toBe(false);
-    await expectUntouched(target, stemdeck, LOCAL_SPEED);
+    await expectUntouched(target, folder, LOCAL_SPEED);
   });
 
   it('merge resolved as mine keeps the device settings', async () => {
@@ -176,32 +123,14 @@ describe('stem song settings in a backup', () => {
     await expectEdited(target, folder);
   });
 
-  it('keeps the device line times when the backup retimed different lyrics', async () => {
-    const file = await editedBackup();
-    const target = stemSongDatabase();
-    const id = await target.library.insertStemBundle({
-      ...bundle(JOB),
-      lyrics: THREE_LINES,
-    });
-    const plan = unwrap(await target.backup.plan(JSON.stringify(file)));
-    expect(plan.counts.stemSongs).toMatchObject({ updates: 1, conflicts: [] });
-    expect((await target.backup.apply(plan)).ok).toBe(true);
-    expect(await target.library.readStemSet(id)).toMatchObject({
-      ...expectedEdits,
-      lyricsRetimed: null,
-    });
-  });
-
   it('replace overwrites the matched stem songs and deletes none', async () => {
     const file = await editedBackup();
     const { target, stemdeck, folder } = await freshTarget();
     const spare = await addStemDeckSong(target, OTHER_JOB);
-    const plan = unwrap(
-      await target.backup.plan(JSON.stringify(file), {
-        mode: 'replace',
-        categories: ['stemSongs'],
-      }),
-    );
+    const plan = await planFor(target, file, {
+      mode: 'replace',
+      categories: ['stemSongs'],
+    });
     expect(plan.counts.stemSongs).toMatchObject({ updates: 2, deletes: 0 });
     expect((await target.backup.apply(plan, { confirmReplace: true })).ok).toBe(
       true,
@@ -215,7 +144,7 @@ describe('stem song settings in a backup', () => {
     const file = await editedBackup();
     const target = stemSongDatabase();
     const other = await addStemDeckSong(target, OTHER_JOB);
-    const plan = unwrap(await target.backup.plan(JSON.stringify(file)));
+    const plan = await planFor(target, file);
     expect(plan.counts.stemSongs).toMatchObject({
       incoming: 2,
       new: 0,
@@ -228,11 +157,11 @@ describe('stem song settings in a backup', () => {
     await expectUntouched(target, other);
   });
 
-  it('matches a re-imported StemDeck song by its job, whatever its UUID', async () => {
+  it('matches a re-imported StemDeck song by its job', async () => {
     const file = await editedBackup();
     const target = stemSongDatabase();
     const id = await target.library.insertStemBundle(bundle(JOB));
-    const plan = unwrap(await target.backup.plan(JSON.stringify(file)));
+    const plan = await planFor(target, file, { resolutions: THEIRS });
     expect(plan.counts.stemSongs).toMatchObject({ updates: 1, notOnDevice: 1 });
     expect((await target.backup.apply(plan)).ok).toBe(true);
     await expectEdited(target, id);
@@ -242,10 +171,26 @@ describe('stem song settings in a backup', () => {
     const file = await editedBackup();
     const target = stemSongDatabase();
     const id = await addFolderSong(target);
-    const plan = unwrap(await target.backup.plan(JSON.stringify(file)));
+    const plan = await planFor(target, file);
     expect(plan.counts.stemSongs).toMatchObject({ updates: 1, notOnDevice: 1 });
     expect((await target.backup.apply(plan)).ok).toBe(true);
     await expectEdited(target, id);
+  });
+
+  it('keeps the device line times when the backup retimed different lyrics', async () => {
+    const file = await editedBackup();
+    const target = stemSongDatabase();
+    const id = await target.library.insertStemBundle({
+      ...bundle(JOB),
+      lyrics: THREE_LINES,
+    });
+    const plan = await planFor(target, file, { resolutions: THEIRS });
+    expect(plan.counts.stemSongs).toMatchObject({ updates: 1 });
+    expect((await target.backup.apply(plan)).ok).toBe(true);
+    expect(await target.library.readStemSet(id)).toMatchObject({
+      ...expectedEdits,
+      lyricsRetimed: null,
+    });
   });
 
   it.each(['merge', 'replace'] as const)(
@@ -255,9 +200,7 @@ describe('stem song settings in a backup', () => {
       file.categories = file.categories.filter((c) => c !== 'stemSongs');
       delete file.stemSongs;
       const { target, stemdeck } = await freshTarget();
-      const plan = unwrap(
-        await target.backup.plan(JSON.stringify(file), { mode }),
-      );
+      const plan = await planFor(target, file, { mode });
       expect(plan.categories).not.toContain('stemSongs');
       expect(
         (await target.backup.apply(plan, { confirmReplace: true })).ok,

@@ -30,7 +30,7 @@ export type {
   StoredSection,
   StoredStem,
 } from './stem-bundle-repository';
-export { UNITY_GAIN } from './stem-bundle-repository';
+export { MS_PER_SECOND, SECONDS_PER_MINUTE, UNITY_GAIN } from './units';
 export { parseLrc, plainLyricTexts, type LyricLine } from './lrc';
 export {
   retimeFits,
@@ -96,8 +96,6 @@ export type {
 export {
   CATEGORIES,
   DEFAULT_IMPORT_CATEGORIES,
-  MS_PER_SECOND,
-  SECONDS_PER_MINUTE,
   type Category,
   type Conflict,
   type ImportFailure,

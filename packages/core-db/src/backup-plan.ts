@@ -18,11 +18,7 @@ import {
   stemSongKey,
 } from './backup-format';
 import type { Snapshot } from './backup-snapshot';
-import {
-  atImportDefaults,
-  fittedToDevice,
-  sameStemSong,
-} from './backup-stem-song-plan';
+import { fittedToDevice, stemSongChange } from './backup-stem-song-plan';
 import { meterOverrideOf, NO_METER_OVERRIDE } from './meter-override';
 
 export interface ImportOptions {
@@ -206,8 +202,9 @@ function planStemSongs(
       continue;
     }
     const record = fittedToDevice(backup, mine);
-    if (sameStemSong(mine, record)) state.summary.unchanged += 1;
-    else if (mode === 'replace' || atImportDefaults(mine)) {
+    const change = stemSongChange(mine, record);
+    if (change === 'same') state.summary.unchanged += 1;
+    else if (mode === 'replace' || change === 'update') {
       state.summary.updates += 1;
       state.writes.push({ record, localId });
     } else mergeConflict(category, record, localId, resolutions, state);
