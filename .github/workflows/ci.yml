@@ -56,6 +56,8 @@ jobs:
         run: ./native/audio_core/build/click_soak_verify
       - name: Stretch — duration scales by 1/rate, pitch holds, shifts land, no allocation
         run: ./native/audio_core/build/stretch_verify
+      - name: Mixdown — the offline stem mix renders exactly, stretches, cleans up and stays bounded
+        run: ./native/audio_core/build/mixdown_verify
 
   # The TypeScript workspace (Phase 2, SPEC §13/§13.6). Runs the same gate the
   # project loop runs locally: typecheck, the architecture-rule lint, the
