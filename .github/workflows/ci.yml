@@ -277,7 +277,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-v1-${{ env.AVD_API_LEVEL }}-${{ env.AVD_TARGET }}-${{ env.AVD_ARCH }}-${{ env.AVD_PROFILE }}-${{ env.AVD_RAM }}
+          key: avd-v2-${{ env.AVD_API_LEVEL }}-${{ env.AVD_TARGET }}-${{ env.AVD_ARCH }}-${{ env.AVD_PROFILE }}-${{ env.AVD_RAM }}
       - name: AVD — create it and save a boot snapshot for the cache
         if: steps.flows.outputs.run == 1 && steps.avd-cache.outputs.cache-hit != 'true'
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
