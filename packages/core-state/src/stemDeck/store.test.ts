@@ -214,6 +214,25 @@ describe('connecting', () => {
     });
   });
 
+  it('clears the filters and reloads the song list when reopened', async () => {
+    const { store, native } = setup();
+    await store.getState().connect(ORIGIN);
+    const loads = native.getJson.mock.calls.length;
+    store.setState({ selected: [A], setlistId: 's1', query: 'way' });
+    const reopened = store.getState().reopenCatalog();
+    expect(store.getState()).toMatchObject({
+      selected: [],
+      setlistId: null,
+      query: '',
+      loadingCatalog: true,
+    });
+    expect(store.getState().catalog).not.toBeNull();
+    await reopened;
+    expect(native.getJson.mock.calls.length).toBeGreaterThan(loads);
+    expect(store.getState().connection.status).toBe('connected');
+    expect(store.getState().loadingCatalog).toBe(false);
+  });
+
   it('lets only the latest connect attempt land', async () => {
     const { store, native } = setup();
     let first: (value: ReturnType<typeof probe>) => void = () => undefined;

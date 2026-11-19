@@ -12,12 +12,14 @@ import {
   connected,
   live,
   mount,
+  ORIGIN,
   resetStemDeck,
   SONG_A,
   SONG_B,
 } from './stemDeckHarness.test-helper.tsx';
 
 const INSETS = { top: 0, bottom: 0 };
+const FINGERPRINT = '4f2a91c07be355d8'.padEnd(64, '0');
 const UNITY_NOTE =
   'Songs arrive with every stem at its default level. A mix you made in StemDeck stays on the computer.';
 const WAY_MAKER = 'Way Maker, Sinach · 8:01 · 6 stems';
@@ -95,6 +97,36 @@ describe('importing a song already in the library', () => {
 });
 
 describe('the StemDeck song list', () => {
+  it('goes back to Connect when the connection is gone', async () => {
+    stemDeckStore.getState().disconnect();
+    const onBack = vi.fn();
+    await mount(
+      <SongListScreen insets={INSETS} onBack={onBack} onImporting={vi.fn()} />,
+    );
+    expect(onBack).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    { status: 'connecting', origin: ORIGIN },
+    {
+      status: 'trust',
+      prompt: {
+        kind: 'new',
+        origin: ORIGIN,
+        fingerprint: FINGERPRINT,
+        version: null,
+      },
+    },
+    { status: 'connected', origin: ORIGIN, version: null },
+  ] as const)('stays while the connection is $status', async (connection) => {
+    stemDeckStore.setState({ connection, catalog: null });
+    const onBack = vi.fn();
+    await mount(
+      <SongListScreen insets={INSETS} onBack={onBack} onImporting={vi.fn()} />,
+    );
+    expect(onBack).not.toHaveBeenCalled();
+  });
+
   it('counts every song StemDeck has in the subtitle', async () => {
     const screen = await mount(songList());
     expect(screen.has('192.168.1.50:8443 · 5 songs')).toBe(true);

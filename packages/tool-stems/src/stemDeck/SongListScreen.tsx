@@ -162,11 +162,15 @@ function ReplaceSheet({
   );
 }
 
-function useLeaveOnFailure(onBack: () => void) {
-  const failed = useStemDeck((s) => s.connection.status === 'failed');
+function useLeaveWhenDisconnected(onBack: () => void) {
+  const gone = useStemDeck(
+    (s) =>
+      s.connection.status === 'failed' ||
+      (s.connection.status === 'idle' && s.catalog === null),
+  );
   useEffect(() => {
-    if (failed) onBack();
-  }, [failed, onBack]);
+    if (gone) onBack();
+  }, [gone, onBack]);
 }
 
 function useImport(onImporting: () => void) {
@@ -202,7 +206,7 @@ export function SongListScreen({
   const refreshCatalog = useStemDeck((s) => s.refreshCatalog);
   const selectedCount = useStemDeck((s) => s.selected.length);
   const noteSeen = useStemDeck((s) => s.unityNoticeSeen);
-  useLeaveOnFailure(onBack);
+  useLeaveWhenDisconnected(onBack);
   const { startImport, onStarted } = useImport(onImporting);
   const clear = useCallback(() => {
     setQuery('');
