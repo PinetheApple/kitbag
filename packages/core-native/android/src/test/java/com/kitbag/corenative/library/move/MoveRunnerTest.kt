@@ -199,7 +199,7 @@ class MoveRunnerTest {
 
     fx.released = true
     File(fx.internalRoot, SONG).delete()
-    val runner = MoveRunner(fx.folder, MoveJournal(fx.journalFile) { _, _ -> }, { Long.MAX_VALUE }, { gateSaw.add(it); true })
+    val runner = MoveRunner(fx.folder, fx.journal(), fx.leftovers(), { Long.MAX_VALUE }, { gateSaw.add(it); true })
     assertEquals(MoveOutcome.Done, runner.resume())
     assertEquals(listOf(fx.internalRoot), gateSaw)
     assertMovedToCard()

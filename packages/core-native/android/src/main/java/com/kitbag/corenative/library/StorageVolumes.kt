@@ -5,7 +5,13 @@ import android.os.Environment
 import android.os.storage.StorageManager
 import java.io.File
 
-data class PortableVolume(val uuid: String, val filesDir: File, val mounted: Boolean)
+data class PortableVolume(
+  val uuid: String,
+  val filesDir: File,
+  val mounted: Boolean,
+  val readOnly: Boolean = false,
+  val description: String? = null,
+)
 
 interface VolumeProvider {
   fun portable(): List<PortableVolume>
@@ -20,7 +26,13 @@ class AndroidVolumes(private val context: Context) : VolumeProvider {
       val volume = storage.getStorageVolume(dir) ?: return@mapNotNull null
       val uuid = volume.uuid
       if (volume.isPrimary || !volume.isRemovable || uuid == null) return@mapNotNull null
-      PortableVolume(uuid, dir, volume.state == Environment.MEDIA_MOUNTED)
+      PortableVolume(
+        uuid,
+        dir,
+        mounted = volume.state == Environment.MEDIA_MOUNTED,
+        readOnly = volume.state == Environment.MEDIA_MOUNTED_READ_ONLY,
+        description = volume.getDescription(context),
+      )
     }
   }
 }

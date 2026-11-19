@@ -18,8 +18,15 @@ export type {
   LibraryAudioUsage,
   ImportedStem,
   ImportedStemBundle,
+  DataFolderVolume,
+  DataFolderVolumes,
   LibraryAvailability,
   LibraryConstants,
+  MoveErrors,
+  MoveFinished,
+  MoveOutcomes,
+  MoveStatus,
+  VolumeStates,
   PickedBackup,
   PickedDocument,
   PickedFolder,
@@ -49,6 +56,20 @@ export {
   storageReport,
   watchDataFolder,
 } from './libraryStorage';
+export {
+  cancelMove,
+  dataFolderCodes,
+  listVolumes,
+  moveStatus,
+  releaseOldCopies,
+  resumeMove,
+  startMove,
+  undoMove,
+  switchToInternalStorage,
+  watchMove,
+  type DataFolderCodes,
+  type MoveListeners,
+} from './dataFolder';
 export { backupFilesAvailable, pickBackup, shareBackup } from './backupFiles';
 export {
   mixdownCancel,

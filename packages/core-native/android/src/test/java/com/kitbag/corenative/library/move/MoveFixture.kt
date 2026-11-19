@@ -1,5 +1,6 @@
 package com.kitbag.corenative.library.move
 
+import com.kitbag.corenative.library.AwayManifest
 import com.kitbag.corenative.library.DataFolder
 import com.kitbag.corenative.library.DataFolderLocation
 import com.kitbag.corenative.library.DurableFiles
@@ -18,6 +19,7 @@ class MoveFixture(temp: File) {
 
   val filesDir = File(temp, "files").apply { mkdirs() }
   val cardFilesDir = File(temp, "card").apply { mkdirs() }
+  val otherCardFilesDir = File(temp, "other-card").apply { mkdirs() }
   val volumes = FakeVolumes(listOf(card(mounted = true)))
   val warnings = mutableListOf<String>()
   val journalFile = File(filesDir, MoveJournal.FILE_NAME)
@@ -27,13 +29,31 @@ class MoveFixture(temp: File) {
 
   val internalRoot get() = File(filesDir, DataFolder.DIR_NAME)
   val cardRoot get() = File(cardFilesDir, DataFolder.DIR_NAME)
+  val otherCardRoot get() = File(otherCardFilesDir, DataFolder.DIR_NAME)
 
   fun card(mounted: Boolean) = PortableVolume(CARD_UUID, cardFilesDir, mounted)
 
+  fun mount(card: Boolean, otherCard: Boolean) {
+    volumes.volumes = listOf(card(card), PortableVolume(OTHER_CARD_UUID, otherCardFilesDir, otherCard))
+  }
+
+  fun moves(mixdownRunning: () -> Boolean = { false }, pause: (Long) -> Unit = {}) =
+    DataFolderMoves(folder, journal(), leftovers(), { freeBytes }, mixdownRunning, { 0L }, pause)
+
   fun newFolder() = DataFolder(filesDir, volumes) { message, _ -> warnings.add(message) }
 
+  fun leftovers() =
+    AwayManifest(
+      File(filesDir, DataFolderMoves.LEFTOVERS_FILE_NAME),
+      { message, _ -> warnings.add(message) },
+      unreadableMessage = "set aside",
+      setAsideUnreadable = true,
+    )
+
   fun runner(listener: (MoveProgress) -> Unit = {}) =
-    MoveRunner(folder, MoveJournal(journalFile) { message, _ -> warnings.add(message) }, { freeBytes }, { released }, listener)
+    MoveRunner(folder, journal(), leftovers(), { freeBytes }, { released }, listener)
+
+  fun journal() = MoveJournal(journalFile) { message, _ -> warnings.add(message) }
 
   fun newProcess(): MoveRunner {
     folder = newFolder()
@@ -80,6 +100,7 @@ class MoveFixture(temp: File) {
 
   companion object {
     const val CARD_UUID = "1234-ABCD"
+    const val OTHER_CARD_UUID = "5678-EF01"
     const val SONG = "songs/a/a.mp3"
     const val WAVEFORM = "songs/a/a.kwav"
     const val DRUMS = "stems/job1/drums.wav"

@@ -20,6 +20,10 @@
         android:name="com.kitbag.corenative.stemdeck.StemDeckImportService"
         android:exported="false"
         android:foregroundServiceType="dataSync" />
+    <service
+        android:name="com.kitbag.corenative.library.move.DataFolderMoveService"
+        android:exported="false"
+        android:foregroundServiceType="dataSync" />
     <activity
         android:name="com.kitbag.corenative.stemdeck.qr.QrScanActivity"
         android:exported="false"
