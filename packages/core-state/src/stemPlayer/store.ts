@@ -1,4 +1,5 @@
 import {
+  meterOverrideOf,
   NO_METER_OVERRIDE,
   type MeterOverride,
   type StemSetRecord,
@@ -8,7 +9,7 @@ import { KB_MAX_TRACKS, KB_RESULT } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { mixActions, transportActions } from './actions.ts';
-import { barMarkDownbeats } from './bars.ts';
+import { barMarkDownbeats, sameNumbers } from './bars.ts';
 import { clickActions, followNewGrid, releaseClick } from './clickActions.ts';
 import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
 import type { LoopSeconds } from './loop.ts';
@@ -130,7 +131,10 @@ export interface StemPlayerActions {
   readonly resetRetime: () => Promise<void>;
   readonly toggleClick: () => Promise<void>;
   readonly renameStem: (index: number, name: string) => Promise<void>;
-  readonly meterOverrideChanged: (override: MeterOverride) => void;
+  readonly meterOverrideChanged: (
+    setId: number,
+    override: MeterOverride,
+  ) => void;
 }
 
 export type StemPlayerStore = StemPlayerState & StemPlayerActions;
@@ -181,13 +185,6 @@ const closedState: StemPlayerState = {
 
 function longestSeconds(record: StemSetRecord): number {
   return Math.max(0, ...record.stems.map((stem) => stem.durationSec));
-}
-
-function storedMeterOverride({
-  meterBeatsPerBar,
-  barOneSeconds,
-}: MeterOverride): MeterOverride {
-  return { meterBeatsPerBar, barOneSeconds };
 }
 
 function rowsOf(record: StemSetRecord): StemRow[] {
@@ -241,7 +238,7 @@ export function createStemPlayerStore(
     mixerClick: songClick = createMixerClick(),
   } = options;
   let requestedTracks = 0;
-  let barMarkBeats: readonly number[] = [];
+  let markedDownbeatIndices: readonly number[] = [];
   const saver = mixSaver(
     (mixes) => runtimeOf().records.saveStemMix(mixes),
     mixSaveDelayMs,
@@ -309,7 +306,10 @@ export function createStemPlayerStore(
     );
     const clicks = clickActions(context, mixer.pendingClick, start);
     const songDownbeats = (beats: readonly number[], override: MeterOverride) =>
-      overrideDownbeats({ beats, downbeatIndices: barMarkBeats }, override);
+      overrideDownbeats(
+        { beats, downbeatIndices: markedDownbeatIndices },
+        override,
+      );
     const anchorRetime = retimeAnchor(context);
     const afterSeek = (frame: number) => {
       anchorRetime(frame);
@@ -356,7 +356,10 @@ export function createStemPlayerStore(
       const stems = await loadTracks(runtime, record, rows, () => live(opened));
       const masterGain = await commands.mixerMasterGain();
       if (!live(opened)) return;
-      barMarkBeats = barMarkDownbeats(record.bars, record.beats.length);
+      markedDownbeatIndices = barMarkDownbeats(
+        record.bars,
+        record.beats.length,
+      );
       set({
         status: 'ready',
         title: record.songTitle ?? record.title,
@@ -369,7 +372,7 @@ export function createStemPlayerStore(
         durationFrames: secondsToFrames(longestSeconds(record), engineRate),
         beats: record.beats,
         downbeatIndices: songDownbeats(record.beats, record),
-        meterOverride: storedMeterOverride(record),
+        meterOverride: meterOverrideOf(record),
         sections: sortedSections(record.sections),
         lyrics: songLyrics(record.lyrics, record.lyricsRetimed),
       });
@@ -410,14 +413,16 @@ export function createStemPlayerStore(
       ...clicks,
       ...renameActions(context),
       ...retimeActions(context, claim.defer, start),
-      meterOverrideChanged: (override) => {
-        const { status, beats } = get();
-        if (status !== 'ready') return;
-        const meterOverride = storedMeterOverride(override);
-        set({
-          meterOverride,
-          downbeatIndices: songDownbeats(beats, meterOverride),
-        });
+      meterOverrideChanged: (setId, override) => {
+        const { status, setId: openSet, beats, downbeatIndices } = get();
+        if (status !== 'ready' || openSet !== setId) return;
+        const meterOverride = meterOverrideOf(override);
+        const downbeats = songDownbeats(beats, meterOverride);
+        if (sameNumbers(downbeats, downbeatIndices)) {
+          set({ meterOverride });
+          return;
+        }
+        set({ meterOverride, downbeatIndices: downbeats });
         void followNewGrid(context, start.gridReplaced);
       },
     };

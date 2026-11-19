@@ -1,36 +1,28 @@
-import type { MeterOverride, SongRecord } from '@kitbag/core-db';
+import type { BarMark, MeterOverride } from '@kitbag/core-db';
 
-import { impliedMeter } from './barMeter.ts';
+import { impliedMeter, type BarMeterSong } from './barMeter.ts';
+import { barLength, barMarkDownbeats, usableDownbeats } from './bars.ts';
+import { nearestBeat } from './loop.ts';
 
-export type DetectedGrid = Pick<SongRecord, 'beats' | 'downbeatIndices'>;
+export type DetectedGrid = BarMeterSong;
 
-export function nearestBeat(
-  beats: readonly number[],
-  seconds: number,
-): number | null {
-  if (beats.length === 0) return null;
-  let low = 0;
-  let high = beats.length - 1;
-  while (low < high) {
-    const mid = Math.floor((low + high) / 2);
-    if ((beats[mid] ?? seconds) < seconds) low = mid + 1;
-    else high = mid;
-  }
-  const before = low - 1;
-  if (before < 0) return low;
-  const after = Math.abs((beats[low] ?? seconds) - seconds);
-  return Math.abs(seconds - (beats[before] ?? seconds)) <= after ? before : low;
+function barOneAt(downbeats: readonly number[], meter: number): number {
+  const [first, second] = downbeats;
+  const pickup =
+    first !== undefined && second !== undefined && second - first < meter;
+  return pickup ? 1 : 0;
 }
 
-function everyBar(
-  anchor: number,
-  beatsPerBar: number,
-  beatCount: number,
-): readonly number[] {
-  const downbeats: number[] = [];
-  for (let beat = anchor % beatsPerBar; beat < beatCount; beat += beatsPerBar)
-    downbeats.push(beat);
-  return downbeats;
+function shiftedBars(
+  downbeats: readonly number[],
+  barOne: number,
+  meter: number,
+): BarMark[] {
+  const shift = barOne - (downbeats[0] ?? barOne);
+  return downbeats.map((beat, bar) => ({
+    beat: beat + shift,
+    beatsPerBar: barLength(downbeats, bar) ?? meter,
+  }));
 }
 
 export function overrideDownbeats(
@@ -39,14 +31,18 @@ export function overrideDownbeats(
 ): readonly number[] {
   if (meterBeatsPerBar === null && barOneSeconds === null)
     return downbeatIndices;
-  if (beats.length === 0) return [];
-  const anchor =
+  const detected = usableDownbeats(downbeatIndices, beats.length);
+  const meter = impliedMeter(detected);
+  const fromBarOne = detected.slice(barOneAt(detected, meter));
+  const barOne =
     barOneSeconds === null
-      ? (downbeatIndices[0] ?? 0)
+      ? (fromBarOne[0] ?? 0)
       : (nearestBeat(beats, barOneSeconds) ?? 0);
-  return everyBar(
-    anchor,
-    meterBeatsPerBar ?? impliedMeter(downbeatIndices),
+  const beatsPerBar = meterBeatsPerBar ?? meter;
+  const pattern =
+    meterBeatsPerBar === null ? shiftedBars(fromBarOne, barOne, meter) : [];
+  return barMarkDownbeats(
+    [{ beat: barOne % beatsPerBar, beatsPerBar }, ...pattern],
     beats.length,
   );
 }

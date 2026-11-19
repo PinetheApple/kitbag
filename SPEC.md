@@ -911,6 +911,17 @@ working. Changes:
   at most once per session; the song open in the player waits until it closes. A
   failure keeps the old grid and is not retried automatically; Re-analyse retries it. The meter
   override (meter, bar one) is the user's and survives re-analysis.
+- **Meter override → downbeats.** Songs and stem sets alike: the detected
+  downbeats (analysis, or a stem set's bar marks) pass through the override.
+  The detected meter is the most common bar length, larger on a tie. Detected
+  bar one is the first downbeat, unless the first bar is shorter than that
+  meter (a pickup), in which case it is the second. A meter alone makes the
+  whole song that meter, counted from detected bar one. A bar one alone moves to
+  the beat nearest its stored time (the earlier on a tie, clamped to the grid)
+  and shifts the detected pattern after it by that many beats, each bar keeping
+  its own length, so a meter map stays a map. Both together count the chosen
+  meter from the chosen bar one. Bars repeat backwards to the first beat in the
+  meter (detected or chosen). No override leaves the detected downbeats as they are.
 - Analysis stays ambient — background, badge-driven, no "analyze" button. The
   row appears instantly with `ANALYZING` and lands on `GRID ✓` in ~10–30s. The
   user never waits on a spinner screen.

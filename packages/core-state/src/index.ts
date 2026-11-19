@@ -352,10 +352,9 @@ export {
   type RetimeTap,
   type SongLyrics,
 } from './stemPlayer/lyrics.ts';
-export type { LoopSeconds } from './stemPlayer/loop.ts';
 export { NO_SECTION, sectionAt } from './stemPlayer/sections.ts';
+export { nearestBeat, type LoopSeconds } from './stemPlayer/loop.ts';
 export {
-  nearestBeat,
   overrideDownbeats,
   type DetectedGrid,
 } from './stemPlayer/meterOverride.ts';

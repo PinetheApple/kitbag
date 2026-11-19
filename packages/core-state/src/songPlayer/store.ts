@@ -17,6 +17,7 @@ import {
   followNewGrid,
   type ClickSlice,
 } from '../stemPlayer/clickActions.ts';
+import { sameNumbers } from '../stemPlayer/bars.ts';
 import { loopActions, type LoopSlice } from '../stemPlayer/loopActions.ts';
 import { overrideDownbeats } from '../stemPlayer/meterOverride.ts';
 import { UNITY_GAIN, UNSHIFTED_KEY } from '../stemPlayer/mix.ts';
@@ -125,8 +126,8 @@ function factsOf(record: SongFacts): Partial<SongPlayerState> {
   };
 }
 
-function sameNumbers(a: readonly number[], b: readonly number[]): boolean {
-  return a.length === b.length && a.every((value, i) => value === b[i]);
+function songDownbeats(record: SongRecord): readonly number[] {
+  return overrideDownbeats(record, record);
 }
 
 export function createSongPlayerStore(
@@ -261,7 +262,7 @@ export function createSongPlayerStore(
         engineRate,
         durationFrames,
         beats: record.beats,
-        downbeatIndices: overrideDownbeats(record, record),
+        downbeatIndices: songDownbeats(record),
       });
       if (decoded > 0)
         correctStoredLength(record, framesToSeconds(decoded, engineRate));
@@ -276,7 +277,7 @@ export function createSongPlayerStore(
     const followAnalysis = (opened: number, record: SongRecord) => {
       const { status, beats, downbeatIndices } = get();
       const ready = status === 'ready';
-      const downbeats = overrideDownbeats(record, record);
+      const downbeats = songDownbeats(record);
       const regrid =
         ready &&
         !(

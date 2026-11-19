@@ -11,12 +11,17 @@ import {
   COUNT_END,
   countingSong,
   HEAD,
+  meterSaved,
   opened,
   SONG_DETAILS,
   stem,
 } from './store.test-helper.ts';
 
 const TWO_BARS = 2;
+const TRIPLE_OVERRIDE = {
+  ...NO_METER_OVERRIDE,
+  meterBeatsPerBar: GRID_METER.triple,
+};
 const BAR_AT_HEAD = at(1);
 const SONG_END = at(10);
 
@@ -127,15 +132,27 @@ describe('during the count', () => {
 
   it("re-counts in the user's meter when one is saved", async () => {
     const song = await counting();
-    song.store.getState().meterOverrideChanged({
-      ...NO_METER_OVERRIDE,
-      meterBeatsPerBar: GRID_METER.triple,
-    });
+    meterSaved(song.store, TRIPLE_OVERRIDE);
     await vi.runAllTimersAsync();
     expect(song.commands.songPause).toHaveBeenCalledTimes(1);
     expect(counts(song).map((call) => call[2])).toEqual([
       BAR_BEATS,
       GRID_METER.triple,
+    ]);
+  });
+
+  it('re-counts from where play was pressed after a save and its undo', async () => {
+    const song = await countingSong();
+    song.commands.mixerSeek.mockImplementation((frame: number) => {
+      song.engine.position = frame;
+    });
+    song.store.getState().togglePlay();
+    meterSaved(song.store, TRIPLE_OVERRIDE);
+    meterSaved(song.store, NO_METER_OVERRIDE);
+    expect(song.commands.mixerSeek.mock.calls).toEqual([
+      [BAR_AT_HEAD],
+      [0],
+      [BAR_AT_HEAD],
     ]);
   });
 

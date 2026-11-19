@@ -1,7 +1,7 @@
 import { KB_COUNT_IN_OFF, KB_MAX_BEATS } from '@kitbag/core-native';
 
 import { isCountInBars } from '../metronome/config.ts';
-import { usableDownbeats } from './bars.ts';
+import { barLength, usableDownbeats } from './bars.ts';
 import { secondsToFrames } from './time.ts';
 
 export const COUNT_IN_DRAIN_MARGIN_SECONDS = 0.1;
@@ -33,15 +33,6 @@ function barAtOrBefore(
     0,
     downbeats.findLastIndex((beat) => frameOf(beat) <= headFrame),
   );
-}
-
-function barLength(downbeats: readonly number[], bar: number): number | null {
-  const start = downbeats[bar];
-  const next = downbeats[bar + 1];
-  const previous = downbeats[bar - 1];
-  if (start === undefined) return null;
-  if (next !== undefined) return next - start;
-  return previous === undefined ? null : start - previous;
 }
 
 interface CountedBar {
