@@ -6,6 +6,7 @@ import {
 } from '@kitbag/core-state';
 import { AppState } from 'react-native';
 
+import { cameraPermission } from './cameraPermission.ts';
 import { getDatabase } from './database.ts';
 import { PREFERENCE_FLAG, storedPreference } from './storedPreference.ts';
 
@@ -34,6 +35,7 @@ const native: StemDeckNative = {
   setWatching: (watching) => {
     getKitbagStemDeck().setWatching(watching);
   },
+  scanQr: (look) => getKitbagStemDeck().scanQr(look),
   onImport: (listener) => {
     const subscription = getKitbagStemDeck().onImport(listener);
     return () => {
@@ -50,6 +52,7 @@ const unityNotice = storedPreference(
 
 configureStemDeck({
   native,
+  camera: cameraPermission,
   unityNotice: {
     load: () => unityNotice.read() === PREFERENCE_FLAG.on,
     save: () => {

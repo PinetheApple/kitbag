@@ -29,9 +29,9 @@ export interface ImportState {
 
 export interface ImportActions {
   start: () => Promise<() => void>;
-  importSelected: () => Promise<void>;
-  replaceInLibrary: () => Promise<void>;
-  keepInLibrary: () => Promise<void>;
+  importSelected: () => Promise<boolean>;
+  replaceInLibrary: () => Promise<boolean>;
+  keepInLibrary: () => Promise<boolean>;
   dismissReplace: () => void;
   cancelImport: () => void;
   retryImport: () => Promise<void>;
@@ -97,7 +97,7 @@ export function importActions(
     replace: readonly CatalogSong[],
   ) => {
     const known = codes();
-    if (known === null) return;
+    if (known === null) return false;
     skipped = kept.map(({ jobId, title }) => ({ jobId, title }));
     refusals.clear();
     handOff.replacing(replace.map((s) => s.jobId));
@@ -105,7 +105,7 @@ export function importActions(
     if (songs.length === 0) {
       const empty = { origin, running: false, stopReason: null, items: [] };
       set({ importView: importView(empty, known, skipped, refusals) });
-      return;
+      return false;
     }
     const items = songs.map((s) => ({
       jobId: s.jobId,
@@ -114,8 +114,10 @@ export function importActions(
     }));
     try {
       await deps.native().startImport(origin, items);
+      return true;
     } catch (error) {
       set({ importFailure: nativeFailure(errorCode(error), known) });
+      return false;
     }
   };
 
@@ -151,29 +153,27 @@ export function importActions(
     },
     importSelected: async () => {
       const { catalog, selected, connection } = get();
-      if (catalog === null || connection.status !== 'connected') return;
+      if (catalog === null || connection.status !== 'connected') return false;
       const songs = catalog.songs.filter((s) => selected.includes(s.jobId));
-      if (songs.length === 0) return;
+      if (songs.length === 0) return false;
       const owned = songs.filter((s) => s.inLibrary);
-      if (owned.length === 0) {
-        await begin(connection.origin, songs, [], []);
-        return;
-      }
+      if (owned.length === 0) return begin(connection.origin, songs, [], []);
       pending = { origin: connection.origin, songs };
       set({ replacePrompt: { titles: owned.map((s) => s.title) } });
+      return false;
     },
     replaceInLibrary: async () => {
       const job = takePending();
-      if (job === null) return;
+      if (job === null) return false;
       const owned = job.songs.filter((s) => s.inLibrary);
-      await begin(job.origin, job.songs, [], owned);
+      return begin(job.origin, job.songs, [], owned);
     },
     keepInLibrary: async () => {
       const job = takePending();
-      if (job === null) return;
+      if (job === null) return false;
       const fresh = job.songs.filter((s) => !s.inLibrary);
       const owned = job.songs.filter((s) => s.inLibrary);
-      await begin(job.origin, fresh, owned, []);
+      return begin(job.origin, fresh, owned, []);
     },
     dismissReplace: () => {
       takePending();

@@ -2,13 +2,17 @@
 /* eslint-disable @typescript-eslint/no-deprecated */
 import { act, createElement, type ReactNode } from 'react';
 import { create, type ReactTestRenderer } from 'react-test-renderer';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 type Style = Record<string, unknown>;
 
 const NAV_BAR = 24;
 const list = vi.hoisted(() => ({ fab: 56, fabBottom: 16 }));
+const pickers = vi.hoisted(() => ({
+  importSong: vi.fn(() => Promise.resolve()),
+  importStemFolder: vi.fn(() => Promise.resolve()),
+}));
 const FAB_ROOM = list.fab + list.fabBottom;
 
 vi.mock('react-native', () => ({
@@ -43,6 +47,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
       replacePrompt: null,
       refresh: () => Promise.resolve(),
       setQuery: () => undefined,
+      ...pickers,
     }),
   inView: () => true,
   filterRows: () => [],
@@ -62,7 +67,10 @@ const { LibraryScreen } = await import('./LibraryScreen.tsx');
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
-function mount(dock?: ReactNode): ReactTestRenderer {
+function mount(
+  dock?: ReactNode,
+  extra: Record<string, unknown> = {},
+): ReactTestRenderer {
   let tree: ReactTestRenderer | undefined;
   act(() => {
     tree = create(
@@ -73,6 +81,7 @@ function mount(dock?: ReactNode): ReactTestRenderer {
         onOpenStemSet: () => undefined,
         onOpenSong: () => undefined,
         ...(dock === undefined ? {} : { dock: dock as never }),
+        ...extra,
       }),
     );
   });
@@ -119,5 +128,34 @@ describe('the Songs screen with the mini-player docked', () => {
 
   it('keeps the sheets above the navigation bar', () => {
     expect(propOf(mount(dock), 'Sheets', 'bottomInset')).toBe(NAV_BAR);
+  });
+});
+
+describe('the Stem songs screen with its own way to add', () => {
+  beforeEach(() => {
+    pickers.importStemFolder.mockClear();
+  });
+
+  it('opens what the route gives instead of the folder picker', () => {
+    const onAdd = vi.fn();
+    const tree = mount(undefined, { view: 'stems', onAdd });
+    act(() => {
+      (propOf(tree, 'Fab', 'onPress') as () => void)();
+    });
+    expect(onAdd).toHaveBeenCalledOnce();
+    expect(pickers.importStemFolder).not.toHaveBeenCalled();
+  });
+
+  it('opens the folder picker when the route gives nothing', () => {
+    const tree = mount(undefined, { view: 'stems' });
+    act(() => {
+      (propOf(tree, 'Fab', 'onPress') as () => void)();
+    });
+    expect(pickers.importStemFolder).toHaveBeenCalledOnce();
+  });
+
+  it('shows the status the route gives above the list', () => {
+    const tree = mount(undefined, { status: createElement('Status') });
+    expect(tree.root.findAllByType('Status' as never)).toHaveLength(1);
   });
 });

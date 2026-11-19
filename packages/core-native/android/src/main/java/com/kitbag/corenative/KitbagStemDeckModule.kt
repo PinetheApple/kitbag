@@ -1,10 +1,12 @@
 package com.kitbag.corenative
 
+import android.content.pm.PackageManager
 import android.util.Log
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
+import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.WritableMap
 import com.kitbag.corenative.stemdeck.HttpText
 import com.kitbag.corenative.stemdeck.ImportItem
@@ -23,6 +25,8 @@ import com.kitbag.corenative.stemdeck.StemDeckApi
 import com.kitbag.corenative.stemdeck.StemDeckException
 import com.kitbag.corenative.stemdeck.StemDeckFailure
 import com.kitbag.corenative.stemdeck.StemDeckImportService
+import com.kitbag.corenative.stemdeck.qr.QrScan
+import com.kitbag.corenative.stemdeck.qr.QrScanLauncher
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -30,8 +34,11 @@ class KitbagStemDeckModule(reactContext: ReactApplicationContext) : NativeKitbag
   private val session = ImportSession.get(reactContext)
   private val io: ExecutorService = Executors.newSingleThreadExecutor { Thread(it, IO_THREAD_NAME) }
   private val stopObserving = session.observe(SnapshotSink { snapshot, _ -> emitOnImport(snapshot.toMap()) })
+  private val scanner = QrScanLauncher(reactContext).also { reactContext.addActivityEventListener(it) }
 
   override fun invalidate() {
+    reactApplicationContext.removeActivityEventListener(scanner)
+    scanner.cancel()
     stopObserving()
     io.shutdownNow()
     super.invalidate()
@@ -94,6 +101,8 @@ class KitbagStemDeckModule(reactContext: ReactApplicationContext) : NativeKitbag
   override fun setWatching(watching: Boolean) {
     session.watching = watching
   }
+
+  override fun scanQr(look: ReadableMap, promise: Promise) = scanner.scan(look, promise)
 
   private fun parse(origin: String) =
     ServerOrigin.parse(origin) ?: throw StemDeckException(StemDeckFailure.BAD_ADDRESS)
@@ -173,7 +182,11 @@ class KitbagStemDeckModule(reactContext: ReactApplicationContext) : NativeKitbag
     }
 
   override fun getTypedExportedConstants(): Map<String, Any> =
-    mapOf<String, Any>("unknownBytes" to ItemState.UNKNOWN_BYTES.toDouble()) +
+    mapOf<String, Any>(
+      "unknownBytes" to ItemState.UNKNOWN_BYTES.toDouble(),
+      "hasCamera" to reactApplicationContext.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY),
+    ) +
+      QrScan.CONSTANTS +
       ServerProbe.CONSTANTS +
       StemDeckApi.CONSTANTS +
       ItemState.CONSTANTS +
