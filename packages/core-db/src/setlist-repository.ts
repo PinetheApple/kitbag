@@ -1,5 +1,6 @@
 import { asc, eq } from 'drizzle-orm';
 
+import { placeAt } from './ordering';
 import {
   escapedLike,
   found,
@@ -9,10 +10,6 @@ import {
   type SetlistItem,
 } from './repository';
 import { setlistItems, setlists } from './schema';
-
-function clamp(position: number | undefined, length: number): number {
-  return Math.max(0, Math.min(position ?? length, length));
-}
 
 async function orderedItems(
   db: Database,
@@ -45,24 +42,24 @@ async function placeItem(
   setlistId: number,
   position: number | undefined,
 ): Promise<SetlistItem> {
-  const items = await orderedItems(db, setlistId);
-  const others = items.filter((entry) => entry.id !== item.id);
-  const target = clamp(position, others.length);
-  others.splice(target, 0, item);
-  await renumber(db, setlistId, others);
-  return { ...item, setlistId, position: target };
+  const placed = placeAt(await orderedItems(db, setlistId), item, position);
+  await renumber(db, setlistId, placed.ordered);
+  return { ...item, setlistId, position: placed.position };
 }
+
+type SetlistEntryRef =
+  { readonly songPresetId: number } | { readonly stemSetId: number };
 
 async function addItem(
   db: Database,
   setlistId: number,
-  presetId: number,
+  entry: SetlistEntryRef,
   position: number | undefined,
 ): Promise<SetlistItem> {
   const item = found(
     await db
       .insert(setlistItems)
-      .values({ setlistId, songPresetId: presetId, position: 0 })
+      .values({ setlistId, ...entry, position: 0 })
       .returning(),
     'Setlist item insert',
   );
@@ -127,9 +124,10 @@ async function duplicateSetlist(
   const items = await orderedItems(db, setlistId);
   if (items.length > 0)
     await db.insert(setlistItems).values(
-      items.map(({ songPresetId }, position) => ({
+      items.map(({ songPresetId, stemSetId }, position) => ({
         setlistId: copy.id,
         songPresetId,
+        stemSetId,
         position,
       })),
     );
@@ -187,7 +185,11 @@ function itemCommands({ db, transactor }: DatabaseHandle) {
   return {
     items: (setlistId: number) => serial(() => orderedItems(db, setlistId)),
     add: (setlistId: number, presetId: number, position?: number) =>
-      transaction(() => addItem(db, setlistId, presetId, position)),
+      transaction(() =>
+        addItem(db, setlistId, { songPresetId: presetId }, position),
+      ),
+    addStemSet: (setlistId: number, stemSetId: number, position?: number) =>
+      transaction(() => addItem(db, setlistId, { stemSetId }, position)),
     moveTo: (itemId: number, setlistId: number, position?: number) =>
       transaction(() => moveItem(db, itemId, setlistId, position)),
     move: (itemId: number, position: number) =>

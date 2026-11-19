@@ -155,15 +155,10 @@ function moveItem(
 function addItem(
   store: MemoryStore,
   setlistId: number,
-  presetId: number,
+  entry: Pick<SetlistItem, 'songPresetId' | 'stemSetId'>,
   position: number | undefined,
 ): SetlistItem {
-  const item = {
-    id: store.nextId(),
-    setlistId,
-    songPresetId: presetId,
-    position: 0,
-  };
+  const item = { id: store.nextId(), setlistId, ...entry, position: 0 };
   store.tables.items.push(item);
   place(store, item, setlistId, position);
   return { ...item };
@@ -187,6 +182,7 @@ function duplicateSetlist(store: MemoryStore, setlistId: number, name: string) {
       id: store.nextId(),
       setlistId: copy.id,
       songPresetId: item.songPresetId,
+      stemSetId: item.stemSetId,
       position,
     });
   });
@@ -233,7 +229,17 @@ function itemWrites(store: MemoryStore) {
     add: mutating(
       store,
       (setlistId: number, presetId: number, position?: number) =>
-        addItem(store, setlistId, presetId, position),
+        addItem(
+          store,
+          setlistId,
+          { songPresetId: presetId, stemSetId: null },
+          position,
+        ),
+    ),
+    addStemSet: mutating(
+      store,
+      (setlistId: number, stemSetId: number, position?: number) =>
+        addItem(store, setlistId, { songPresetId: null, stemSetId }, position),
     ),
     moveTo: mutating(
       store,

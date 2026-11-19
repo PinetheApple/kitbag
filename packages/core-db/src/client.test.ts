@@ -41,7 +41,7 @@ describe('openDatabase', () => {
 
   it('leaves the connection open when the migration succeeds', () => {
     connection.executeSync.mockImplementation(() => ({
-      rows: [{ user_version: 0 }],
+      rows: [{ user_version: 0, foreign_keys: 1 }],
     }));
     openDatabase(memoryClickSoundFiles().files, 'ok');
     expect(connection.close).not.toHaveBeenCalled();

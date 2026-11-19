@@ -107,7 +107,9 @@ async function loadSetlists(
     active,
     presetUuids: items
       .filter((item) => item.setlistId === id)
-      .map((item) => presetUuid(item.songPresetId) ?? ''),
+      .flatMap(({ songPresetId }) =>
+        songPresetId === null ? [] : [presetUuid(songPresetId) ?? ''],
+      ),
   }));
 }
 
