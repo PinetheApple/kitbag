@@ -18,7 +18,7 @@ object SongAnalyzer {
       val staged = File(nativeWaveformPath(staging.path, song.path))
       val waveform = File(nativeWaveformPath(waveformDir.path, song.path))
       if (staged.isFile) {
-        if (!staged.renameTo(waveform)) throw IOException("Could not move the waveform into place")
+        DurableFiles.move(staged, waveform)
       } else {
         waveform.delete()
       }
