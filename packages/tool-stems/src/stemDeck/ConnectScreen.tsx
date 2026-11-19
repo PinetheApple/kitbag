@@ -1,5 +1,9 @@
 import { AppBar, Button, SectionHeader } from '@kitbag/core-design';
-import { useStemDeck } from '@kitbag/core-state';
+import {
+  stemDeckStore,
+  useStemDeck,
+  type StemDeckStore,
+} from '@kitbag/core-state';
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { ScrollView, Text, View, type TextInput } from 'react-native';
 
@@ -40,18 +44,20 @@ function useAddressFocus(input: RefObject<TextInput | null>) {
   }, [addressFocus, input]);
 }
 
+function isReady(state: StemDeckStore): boolean {
+  return state.connection.status === 'connected' && state.catalog !== null;
+}
+
 function useEntry(onConnected: () => void) {
   const loadRecents = useStemDeck((s) => s.loadRecents);
   const disconnect = useStemDeck((s) => s.disconnect);
-  const ready = useStemDeck(
-    (s) => s.connection.status === 'connected' && s.catalog !== null,
-  );
+  const ready = useStemDeck(isReady);
   useEffect(() => {
-    disconnect();
+    if (!isReady(stemDeckStore.getState())) disconnect();
     void loadRecents();
   }, [disconnect, loadRecents]);
   useEffect(() => {
-    if (ready) onConnected();
+    if (ready && isReady(stemDeckStore.getState())) onConnected();
   }, [ready, onConnected]);
 }
 

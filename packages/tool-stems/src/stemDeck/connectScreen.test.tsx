@@ -6,7 +6,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AddStemSongSheet } from './AddStemSongSheet.tsx';
 import { CameraExplainerScreen } from './CameraExplainerScreen.tsx';
 import { ConnectScreen } from './ConnectScreen.tsx';
+import { SongListScreen } from './SongListScreen.tsx';
 import {
+  CATALOG,
+  connected,
   mount,
   ORIGIN,
   resetStemDeck,
@@ -51,6 +54,46 @@ describe('the Add a stem song sheet', () => {
     expect(onFromStemDeck).toHaveBeenCalledOnce();
     await screen.press('From this phone');
     expect(onFromPhone).toHaveBeenCalledOnce();
+  });
+});
+
+describe('opening Connect', () => {
+  const LOADING = 'Getting the song list from StemDeck…';
+  const WAY_MAKER = 'Way Maker, Sinach · 8:01 · 6 stems';
+
+  it('goes straight to the song list when already connected', async () => {
+    resetStemDeck();
+    connected();
+    const onConnected = vi.fn();
+    await mount(connectScreen(vi.fn(), onConnected));
+    expect(onConnected).toHaveBeenCalledOnce();
+    expect(stemDeckStore.getState().connection.status).toBe('connected');
+    expect(stemDeckStore.getState().catalog).toBe(CATALOG);
+  });
+
+  it('shows the songs rather than loading once it has moved on', async () => {
+    resetStemDeck();
+    connected();
+    const screen = await mount(
+      <>
+        {connectScreen()}
+        <SongListScreen
+          insets={INSETS}
+          onBack={vi.fn()}
+          onImporting={vi.fn()}
+        />
+      </>,
+    );
+    expect(screen.has(LOADING)).toBe(false);
+    expect(screen.labelled(WAY_MAKER)).toHaveLength(1);
+  });
+
+  it('stays on Connect when not connected', async () => {
+    resetStemDeck();
+    const onConnected = vi.fn();
+    const screen = await mount(connectScreen(vi.fn(), onConnected));
+    expect(onConnected).not.toHaveBeenCalled();
+    expect(screen.has('Connect to StemDeck')).toBe(true);
   });
 });
 

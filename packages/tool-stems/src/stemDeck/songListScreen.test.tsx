@@ -95,6 +95,15 @@ describe('importing a song already in the library', () => {
 });
 
 describe('the StemDeck song list', () => {
+  it('goes back to Connect when the connection is gone', async () => {
+    stemDeckStore.getState().disconnect();
+    const onBack = vi.fn();
+    await mount(
+      <SongListScreen insets={INSETS} onBack={onBack} onImporting={vi.fn()} />,
+    );
+    expect(onBack).toHaveBeenCalledOnce();
+  });
+
   it('counts every song StemDeck has in the subtitle', async () => {
     const screen = await mount(songList());
     expect(screen.has('192.168.1.50:8443 · 5 songs')).toBe(true);
