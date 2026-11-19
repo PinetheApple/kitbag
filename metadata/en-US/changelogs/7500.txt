@@ -1,0 +1,3 @@
+• Backups now keep stem songs in setlists. Restoring on a phone that lacks one of those stem songs says how many were left out.
+• A database written by a newer version of Kitbag is no longer opened, so an older version can't change data it doesn't understand. Until the next release adds a screen for it, the library shows its existing "could not be opened" message in that case.
+• You can move your library to an SD card and back from Settings → Data folder.
