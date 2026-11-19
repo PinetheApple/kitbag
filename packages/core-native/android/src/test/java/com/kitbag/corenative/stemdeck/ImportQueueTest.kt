@@ -1,5 +1,7 @@
 package com.kitbag.corenative.stemdeck
 
+import java.io.File
+import java.nio.file.Files
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -136,6 +138,64 @@ class ImportQueueTest {
     assertEquals(listOf(ItemState.ADDED, ItemState.FAILED, ItemState.NOT_STARTED), restored.states())
     assertEquals(StemDeckFailure.INTERRUPTED, snapshot.items[1].failure)
     assertTrue(restored.retry())
+  }
+
+  @Test
+  fun `clearing a stopped import leaves nothing to restore after a relaunch`() {
+    val queue = queue(a, b)
+    queue.addNext()
+    queue.next()
+    queue.fail(b.jobId, StemDeckFailure.DROPPED)
+    assertTrue(queue.clear())
+    assertEquals(ImportSnapshot.EMPTY, queue.snapshot())
+    assertFalse(queue.retry())
+    val file = Files.createTempDirectory("stemdeck-clear").toFile()
+    try {
+      val journal = ImportJournal(File(file, ImportJournal.FILE_NAME))
+      journal.save(queue.snapshot())
+      val relaunched = ImportQueue()
+      relaunched.restoreInterrupted(journal.load()!!)
+      assertEquals(ImportSnapshot.EMPTY, relaunched.snapshot())
+    } finally {
+      file.deleteRecursively()
+    }
+  }
+
+  @Test
+  fun `clearing a queue that is already empty clears nothing`() {
+    assertFalse(ImportQueue().clear())
+    val queue = queue(a)
+    queue.stop(StemDeckFailure.INTERRUPTED)
+    assertTrue(queue.clear())
+    assertFalse(queue.clear())
+  }
+
+  @Test
+  fun `clearing does nothing while songs are still coming in`() {
+    val queue = queue(a, b)
+    queue.next()
+    assertFalse(queue.clear())
+    assertEquals(listOf(ItemState.PREPARING, ItemState.WAITING), queue.states())
+    queue.downloading(a.jobId, 10)
+    queue.adding(a.jobId, "file:/x/a.zip")
+    queue.stop(StemDeckFailure.CANCELLED)
+    assertFalse(queue.clear())
+    assertTrue(queue.settle(a.jobId, SettleOutcome.ADDED))
+    assertTrue(queue.clear())
+  }
+
+  @Test
+  fun `a retried song keeps the replace it was started with`() {
+    val replaceSet = ImportItem("dddddddddddd", "Goodness", emptyList(), ReplaceChoice(ReplaceMode.REPLACE_SET, 7))
+    val replaceJob = ImportItem("eeeeeeeeeeee", "Firm", emptyList(), ReplaceChoice(ReplaceMode.REPLACE_JOB))
+    val queue = queue(replaceSet, replaceJob, a)
+    queue.next()
+    queue.downloading(replaceSet.jobId, 100)
+    val restored = ImportQueue()
+    restored.restoreInterrupted(queue.snapshot())
+    assertTrue(restored.retry())
+    val retried = generateSequence { restored.next()?.also { restored.fail(it.item.jobId, StemDeckFailure.NOT_FOUND) } }
+    assertEquals(listOf(replaceSet, replaceJob, a).map { it.replace }, retried.map { it.item.replace }.toList())
   }
 
   @Test(expected = IllegalArgumentException::class)

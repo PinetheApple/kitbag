@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import {
   addedText,
   finishedText,
+  importCardShows,
+  importClearable,
   megabytes,
   retryLabel,
   rowBadge,
@@ -110,5 +112,58 @@ describe('why an import stopped', () => {
     expect(
       stopNotice(view([row('failed', { failure: 'noSpace' })]), 'noSpace').body,
     ).toBe('Free some space, then retry.');
+  });
+
+  it('asks for the library storage back when it is not mounted', () => {
+    expect(stopNotice(view([row('failed')]), 'libraryUnavailable').body).toBe(
+      'The library’s storage isn’t available. Reconnect it, then tap Retry.',
+    );
+  });
+});
+
+describe('when Stem songs shows the import card', () => {
+  it('shows while an import runs', () => {
+    expect(importCardShows({ ...view([row('waiting')]), running: true })).toBe(
+      true,
+    );
+  });
+
+  it('shows a stopped import with songs left', () => {
+    const stopped = view([row('added'), row('notStarted')]);
+    expect(
+      importCardShows({ ...stopped, stopped: 'interrupted', retryCount: 1 }),
+    ).toBe(true);
+  });
+
+  it('shows songs that failed in an import that ran to the end', () => {
+    const failed = view([row('added'), row('failed', { failure: 'notFound' })]);
+    expect(importCardShows({ ...failed, retryCount: 1 })).toBe(true);
+  });
+
+  it('hides after the user stopped the import', () => {
+    const stopped = view([row('added'), row('notStarted')]);
+    expect(
+      importCardShows({ ...stopped, stopped: 'cancelled', retryCount: 1 }),
+    ).toBe(false);
+  });
+
+  it('hides when nothing is left or there is no import', () => {
+    const done = view([row('added')]);
+    expect(importCardShows({ ...done, stopped: 'interrupted' })).toBe(false);
+    expect(importCardShows({ ...done, finished: true })).toBe(false);
+    expect(importCardShows(null)).toBe(false);
+  });
+});
+
+describe('when the import screen offers Clear', () => {
+  it('offers it while songs are left', () => {
+    const left = view([row('added'), row('notStarted')]);
+    expect(importClearable({ ...left, retryCount: 1 })).toBe(true);
+  });
+
+  it('holds it back while a song is being added or nothing is left', () => {
+    const adding = view([row('adding'), row('notStarted')]);
+    expect(importClearable({ ...adding, retryCount: 1 })).toBe(false);
+    expect(importClearable(view([row('added')]))).toBe(false);
   });
 });

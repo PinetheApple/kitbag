@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "rt/frame_clock.h"
+#include "test_clock.h"
 
 namespace kitbag_test {
 

@@ -180,6 +180,7 @@ class AnalysisStoreTest {
       UnsupportedAudioException() to AnalysisFailure.UNSUPPORTED,
       AnalysisCoreException(5) to AnalysisFailure.INTERNAL,
       IllegalStateException("/data/user/0/secret") to AnalysisFailure.INTERNAL,
+      DataFolderUnavailableException("1234-ABCD") to AnalysisFailure.UNAVAILABLE,
     )
     for ((error, expected) in cases) {
       var logged: Throwable? = null

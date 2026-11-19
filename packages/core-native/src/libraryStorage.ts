@@ -1,11 +1,22 @@
-import { getKitbagLibrary, type StorageReport } from './NativeKitbagLibrary';
+import {
+  getKitbagLibrary,
+  type LibraryAvailability,
+  type StorageReport,
+} from './NativeKitbagLibrary';
 
 export function storageReport(databaseName: string): Promise<StorageReport> {
   return getKitbagLibrary().storageReport(databaseName);
 }
 
-export function missingFiles(
+export function fileAvailability(
   relativePaths: readonly string[],
-): Promise<readonly string[]> {
-  return getKitbagLibrary().missingFiles(relativePaths);
+): Promise<LibraryAvailability> {
+  return getKitbagLibrary().fileAvailability(relativePaths);
+}
+
+export function watchDataFolder(listener: () => void): () => void {
+  const subscription = getKitbagLibrary().onDataFolderChanged(listener);
+  return () => {
+    subscription.remove();
+  };
 }

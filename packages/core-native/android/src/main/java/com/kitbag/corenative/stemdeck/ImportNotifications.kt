@@ -53,6 +53,8 @@ class ImportNotifications(private val context: Context) {
 
   fun update(notification: Notification) = post(notification)
 
+  fun clear() = manager.cancel(NOTIFICATION_ID)
+
   fun result(notice: ImportNotice) {
     when (notice) {
       is ImportNotice.Finished -> post(finished(notice))

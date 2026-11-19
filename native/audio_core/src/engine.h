@@ -85,7 +85,7 @@ class Engine {
     return device_running_.load(std::memory_order_acquire);
   }
   uint64_t frames_rendered() const {
-    return frames_rendered_.load(std::memory_order_relaxed);
+    return frame_clock().Now();
   }
   FrameClock frame_clock() const {
     return FrameClock::Reading(frames_rendered_);
@@ -209,6 +209,11 @@ class Engine {
   // Last, so it is destroyed first: the render is cancelled and joined.
   MixdownJob mixdown_{kSampleRate};
 };
+
+static_assert(
+    kCustomSoundRate == Engine::kSampleRate,
+    "custom sounds are prepared and faded at the engine rate"
+);
 
 }  // namespace kitbag
 

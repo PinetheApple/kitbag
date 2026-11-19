@@ -173,7 +173,8 @@ describe('MeterSheet', () => {
   it('shows the detected bar 1 and the live playhead until one is set', () => {
     const markup = renderSheet(DETECTED);
     expect(markup).toContain('Bar 1 at 0:02.3');
-    expect(markup).toContain('Playhead 1:04.0: its nearest beat becomes bar 1');
+    expect(markup).toContain('Playhead 1:04.0');
+    expect(markup).toContain(meterCopy.playheadExplanation);
     expect(markup).not.toContain(meterCopy.overriddenBadge);
     expect(pressables.map((p) => p.accessibilityLabel)).not.toContain(
       meterCopy.useDetected,
@@ -184,9 +185,19 @@ describe('MeterSheet', () => {
     renderSheet(DETECTED);
     expect(live.texts).toHaveLength(1);
     expect(live.texts[0]).toBe(live.derived[0]);
-    expect(live.texts[0]).toEqual({
-      value: 'Playhead 1:04.0: its nearest beat becomes bar 1',
-    });
+    expect(live.texts[0]).toEqual({ value: 'Playhead 1:04.0' });
+  });
+
+  it('keeps the explanation out of the live value, in its own static node', () => {
+    const markup = renderSheet(DETECTED);
+    expect(markup).toContain(`>${meterCopy.playheadExplanation}</`);
+  });
+
+  it('speaks the explanation with the playhead as its referent', () => {
+    const markup = renderSheet(DETECTED);
+    expect(markup).toContain(
+      `aria-label="${meterCopy.playheadExplanationSpoken}"`,
+    );
   });
 
   it('drops the playhead line once bar 1 is set', () => {

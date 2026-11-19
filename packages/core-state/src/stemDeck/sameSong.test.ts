@@ -7,6 +7,7 @@ import {
   job,
   JOBS,
   ORIGIN,
+  sent,
   SETLISTS,
   setup,
   snapshot,
@@ -34,7 +35,12 @@ async function settledAdd(
   jobId: string,
 ) {
   context.emit(
-    snapshot([item(jobId, CODES.stateAdding, { fileUri: `file:/x/${jobId}` })]),
+    snapshot([
+      item(jobId, CODES.stateAdding, {
+        fileUri: `file:/x/${jobId}`,
+        ...sent(context.native, jobId),
+      }),
+    ]),
   );
   await vi.waitFor(() => {
     expect(context.native.settleDownload).toHaveBeenCalled();
@@ -72,7 +78,14 @@ describe('a StemDeck song separated again', () => {
     });
     expect(native.startImport).not.toHaveBeenCalled();
     expect(await store.getState().replaceInLibrary()).toBe(true);
-    expect(native.startImport.mock.calls[0]?.[1]).toHaveLength(2);
+    expect(native.startImport.mock.calls[0]?.[1]).toEqual([
+      expect.objectContaining({ jobId: A, replace: CODES.replaceAdd }),
+      expect.objectContaining({
+        jobId: B,
+        replace: CODES.replaceSet,
+        replaceTarget: LIBRARY_ID,
+      }),
+    ]);
     await settledAdd(context, B);
     expect(context.addFetchedBundle).toHaveBeenLastCalledWith(
       expect.anything(),

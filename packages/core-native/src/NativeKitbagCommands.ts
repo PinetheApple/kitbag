@@ -96,6 +96,8 @@ export interface Spec extends TurboModule {
     anchorFrame: Double,
   ): Promise<number>;
   clearGrid(): void;
+  setGridGrouping(sizes: readonly Int32[]): Promise<number>;
+  setGridRate(rate: Int32): Promise<number>;
   metronomeFollowMixer(enabled: boolean): void;
 
   setBeats(beatsPerBar: Int32, denominator: Int32): void;

@@ -22,10 +22,19 @@ constexpr uint64_t kMaxAnalysisFrames = std::numeric_limits<int>::max();
 
 bool WithinFrameCap(uint64_t frames);
 
+constexpr uint64_t kMp3MaxFrameSamples = 1152;
+// An intact MP3 can decode short of its Xing/Info count by the Info frame, when
+// the count includes it, and by a first frame whose bit reservoir is missing.
+constexpr uint64_t kDeclaredShortfallSlackFrames = 2 * kMp3MaxFrameSamples;
+
+bool EndsShortOfDeclared(uint64_t decoded_frames, uint64_t declared_frames);
+
 /// Streams `reader` twice, rewinding it with SeekToFrame(0) in between: tempo
 /// and beats first, then downbeats and peaks, which need the beats and length.
+/// `declared_frames` is the file header's length, 0 when it has none.
 kb_result AnalyzeSong(
     SourceReader& reader,
+    uint64_t declared_frames,
     const char* path,
     const char* waveform_dir,
     BeatResult* out

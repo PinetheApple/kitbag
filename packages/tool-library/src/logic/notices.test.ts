@@ -139,6 +139,13 @@ describe('failureText', () => {
     );
   });
 
+  it('says a song on a missing SD card waits for the card', () => {
+    expect(failureText({ kind: 'unavailable', keptGrid: true })).toEqual({
+      status: 'SD card not found',
+      text: 'This song is on the SD card, so it can’t play until the card is back.',
+    });
+  });
+
   it('names an unsupported format and the formats Kitbag plays', () => {
     expect(failureText(M4A)).toEqual({
       status: 'M4A not supported',
@@ -149,7 +156,7 @@ describe('failureText', () => {
   it('says a supported file that would not decode may be damaged', () => {
     expect(failureText({ kind: 'damaged', keptGrid: false })).toEqual({
       status: 'File may be damaged',
-      text: 'This file could not be decoded and may be damaged, so there is no beat grid to lock to.',
+      text: 'This file could not be read in full and may be damaged or incomplete, so there is no beat grid to lock to.',
     });
   });
 
@@ -177,6 +184,11 @@ describe('canReanalyze', () => {
     ['an interrupted analysis', { kind: 'interrupted', keptGrid: false }, true],
     ['any other failure', { kind: 'other', keptGrid: true }, true],
     ['a missing file', { kind: 'missingFile', keptGrid: false }, false],
+    [
+      'a file on a missing card',
+      { kind: 'unavailable', keptGrid: false },
+      false,
+    ],
     [
       'an unsupported format',
       { kind: 'unsupported', keptGrid: false, format: 'ogg', supported: [] },

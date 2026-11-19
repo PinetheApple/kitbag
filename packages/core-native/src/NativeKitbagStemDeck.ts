@@ -31,11 +31,15 @@ export type StemDeckImportRequest = Readonly<{
   jobId: string;
   title: string;
   stems: readonly string[];
+  replace: string;
+  replaceTarget: Double | null;
 }>;
 
 export type StemDeckImportItem = Readonly<{
   jobId: string;
   title: string;
+  replace: string;
+  replaceTarget: Double | null;
   state: string;
   failure: string | null;
   bytesDone: Double;
@@ -107,6 +111,9 @@ export type StemDeckConstants = Readonly<{
   settleSkipped: string;
   settleRefused: string;
   settleFailed: string;
+  replaceAdd: string;
+  replaceJob: string;
+  replaceSet: string;
   failureBadAddress: string;
   failureUnreachable: string;
   failureTimedOut: string;
@@ -119,6 +126,7 @@ export type StemDeckConstants = Readonly<{
   failureHttpError: string;
   failureTooLarge: string;
   failureNoSpace: string;
+  failureLibraryUnavailable: string;
   failureDropped: string;
   failureCancelled: string;
   failureInterrupted: string;
@@ -141,6 +149,7 @@ export interface Spec extends TurboModule {
   ): Promise<boolean>;
   cancelImport(): void;
   retryImport(): Promise<boolean>;
+  clearImport(): Promise<boolean>;
   importSnapshot(): Promise<StemDeckImportSnapshot>;
   settleDownload(jobId: string, outcome: string): void;
   setWatching(watching: boolean): void;

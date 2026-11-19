@@ -65,7 +65,7 @@ void TestGridCoversWholeLongSong() {
   LongClickReader reader;
   kitbag::BeatResult result;
   const kb_result status =
-      kitbag::AnalyzeSong(reader, "long", nullptr, &result);
+      kitbag::AnalyzeSong(reader, 0, "long", nullptr, &result);
   const size_t beats = result.beat_times.size();
   const double beat_sec = static_cast<double>(kBeatFrames) / kLongRate;
   const double last_click_sec = static_cast<double>(kClicks - 1) * beat_sec;

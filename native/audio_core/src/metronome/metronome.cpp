@@ -40,6 +40,23 @@ void Metronome::SetSubdivisionAccents(int subdivision, int32_t slot_mask) {
   commands_.Push(command);
 }
 
+void Metronome::SetGridGrouping(std::span<const int32_t> sizes) {
+  Command command{CommandType::kSetGridClick};
+  command.word = GridClick::Pack(sizes);
+  command.int_a = static_cast<int32_t>(sizes.size());
+  command.int_b = static_cast<int32_t>(GridClickSetting::kGrouping);
+  command.epoch = click_epoch_;
+  commands_.Push(command);
+}
+
+void Metronome::SetGridRate(int32_t rate) {
+  Command command{CommandType::kSetGridClick};
+  command.int_a = rate;
+  command.int_b = static_cast<int32_t>(GridClickSetting::kRate);
+  command.epoch = click_epoch_;
+  commands_.Push(command);
+}
+
 void Metronome::SetAccent(int beat_index, int32_t accent) {
   Command command{CommandType::kSetAccent};
   command.int_a = beat_index;
@@ -138,21 +155,27 @@ void Metronome::SetFollowMixer(bool enabled) {
 
 void Metronome::SetGrid(
     std::unique_ptr<BeatGrid> grid,
-    uint64_t now_frame,
+    FrameClock clock,
     bool engine_running
 ) {
   if (grid != nullptr && grid->bars.size() != grid->beat_times_sec.size()) {
     grid->bars = GridBars({}, grid->beat_times_sec.size());
   }
-  grid_.Publish(std::move(grid), now_frame, engine_running);
+  if (grid != nullptr) grid->click_epoch = ++click_epoch_;
+  grid_.Publish(std::move(grid), clock, engine_running);
 }
 
-void Metronome::ClearGrid(uint64_t now_frame, bool engine_running) {
-  grid_.Publish(nullptr, now_frame, engine_running);
+void Metronome::ClearGrid(FrameClock clock, bool engine_running) {
+  grid_.Publish(nullptr, clock, engine_running);
 }
 
-void Metronome::ReleaseRetiredGrids() {
+size_t Metronome::retired_grids() const {
+  return grid_.retired_size();
+}
+
+void Metronome::ReleaseRetired() {
   grid_.ReclaimAll();
+  custom_sounds_.ReclaimAll();
 }
 
 void Metronome::ApplyPendingCommands() {
@@ -184,7 +207,10 @@ bool Metronome::RouteCommand(const Command& command) {
     case CommandType::kSetRamp:
     case CommandType::kSetBarMute:
     case CommandType::kSetCountIn:
-      return ApplyTrainerCommand(command);
+    case CommandType::kSetSounds:
+    case CommandType::kPreviewSound:
+    case CommandType::kSetVolume:
+      return ApplyTrainerCommand(command) || ApplyOutputCommand(command);
     case CommandType::kSetBeats:
     case CommandType::kSetSubdivision:
     case CommandType::kSetSubdivisionAccents:
@@ -192,11 +218,8 @@ bool Metronome::RouteCommand(const Command& command) {
     case CommandType::kSetPoly:
     case CommandType::kSetPolyAccent:
     case CommandType::kSetPolyAgainst:
-      return ApplyPatternCommand(command);
-    case CommandType::kSetSounds:
-    case CommandType::kPreviewSound:
-    case CommandType::kSetVolume:
-      return ApplyOutputCommand(command);
+    case CommandType::kSetGridClick:
+      return ApplyPatternCommand(command) || ApplyGridClickCommand(command);
   }
   return false;
 }

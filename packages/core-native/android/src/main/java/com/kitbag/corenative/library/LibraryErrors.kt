@@ -9,6 +9,7 @@ object LibraryErrors {
   const val BAD_FILE_NAME = "E_BAD_FILE_NAME"
   const val NO_SHARE_TARGET = "E_NO_SHARE_TARGET"
   const val SHARE_FAILED = "E_SHARE_FAILED"
+  const val DATA_FOLDER_UNAVAILABLE = "E_DATA_FOLDER_UNAVAILABLE"
 
   val EXPORT_CONSTANTS: Map<String, Any> = mapOf(
     "exportBadFileName" to BAD_FILE_NAME,
@@ -16,4 +17,11 @@ object LibraryErrors {
     "exportNoShareTarget" to NO_SHARE_TARGET,
     "exportShareFailed" to SHARE_FAILED,
   )
+
+  fun codeFor(error: Throwable, fallback: String): String =
+    if (generateSequence(error) { it.cause }.any { it is DataFolderUnavailableException }) {
+      DATA_FOLDER_UNAVAILABLE
+    } else {
+      fallback
+    }
 }

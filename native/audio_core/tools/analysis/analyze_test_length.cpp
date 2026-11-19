@@ -18,12 +18,8 @@ namespace {
 
 constexpr int kMp3Frames = 41;
 constexpr uint64_t kWavFrames = 4999;
-constexpr uint32_t kXingClaimedFrames = 97;
+constexpr uint32_t kXingClaimedFrames = kMp3Frames + 1;
 constexpr size_t kJunkBytes = 3001;
-
-double ExactSeconds(uint64_t frames, uint32_t rate) {
-  return static_cast<double>(frames) / rate;
-}
 
 void TestVbrMp3Length(const std::filesystem::path& dir) {
   const std::string mp3 = (dir / "analyze_length_vbr.mp3").string();
@@ -36,13 +32,13 @@ void TestVbrMp3Length(const std::filesystem::path& dir) {
   const kb_result status = AnalyzeThroughAbi(mp3, nullptr, kAbiCap, &analysis);
   kitbag_test::Check(status == KB_OK, "length: VBR mp3 analyses to KB_OK");
 
-  const double exact = ExactSeconds(kMp3Frames * kMp3FrameSamples, kMp3Rate);
+  const double exact = FramesToSeconds(kMp3Frames * kMp3FrameSamples, kMp3Rate);
   kitbag_test::Check(
       analysis.duration_sec == exact,
       "length: VBR mp3 reports exactly its decoded frames / rate"
   );
   const double estimate = FirstFrameBitrateEstimateSec(bytes.size());
-  const double one_frame = ExactSeconds(kMp3FrameSamples, kMp3Rate);
+  const double one_frame = FramesToSeconds(kMp3FrameSamples, kMp3Rate);
   kitbag_test::Check(
       std::fabs(estimate - analysis.duration_sec) > one_frame,
       "length: VBR mp3 length is not the first-frame bitrate estimate"
@@ -84,7 +80,7 @@ void TestWavLength(const std::filesystem::path& dir) {
   kitbag_test::Check(status == KB_OK, "length: wav analyses to KB_OK");
   kitbag_test::Check(
       analysis.duration_sec ==
-          ExactSeconds(kWavFrames, media_test::kFixtureRate),
+          FramesToSeconds(kWavFrames, media_test::kFixtureRate),
       "length: wav reports exactly its frames / rate"
   );
   CheckNullDurationRefused(wav);
@@ -112,7 +108,7 @@ void TestXingOvercountLength(const std::filesystem::path& dir) {
   kitbag_test::Check(
       status == KB_OK &&
           analysis.duration_sec ==
-              ExactSeconds(kMp3Frames * kMp3FrameSamples, kMp3Rate),
+              FramesToSeconds(kMp3Frames * kMp3FrameSamples, kMp3Rate),
       "length: Xing mp3 reports the frames decoded, not its Xing count"
   );
   std::filesystem::remove(mp3);

@@ -471,6 +471,17 @@ the subdivision mute that follows it, `current_beat` and `bar_phase` count the
 song's bars. Beats before the first downbeat are a pickup: normal, outside any
 bar, and never bar-muted; the mirrors count them back from the first bar.
 
+**Grouping and click rate (#383).** `kb_metronome_set_grid_grouping` splits a
+bar into groups (3+2+2): the first beat of each later group plays the accented
+subdivision click, and a bar whose length differs from the grouping's sum keeps
+only its downbeat accent. `kb_metronome_set_grid_rate` adds a normal click
+halfway through each measured interval (x2), or sounds every other beat (x1/2),
+counted from each group's first beat under a grouping and from each downbeat
+otherwise; at x1/2 subdivisions divide the span from one click to the next.
+`set_grid` and `clear_grid` reset both, so the caller sends them again after
+each `set_grid`. A count-in stays plain under any grouping or rate. Owner may
+overturn these (`docs/decisions.md`, 2026-11-19).
+
 **Downbeats absent → no bar accent.** Every grid beat sounds normal,
 `current_beat` reads 0, `bar_phase` sweeps each beat, and bar mute does not
 apply. An accent the core cannot place on a real bar actively misleads (#300);
@@ -1183,7 +1194,16 @@ phone. That page defines the format; this spec does not copy it.
   target; IN LIBRARY stays job-id based. Two songs in one download that match
   the same library song both offer it: the first replaces it, the second
   finds it gone and is added as a new song, so nothing is lost. The choice
-  lives in JS memory only (#413).
+  and its target are stored with each item in the import journal, so Retry
+  after a restart replaces as chosen; a journal written before this loads
+  its items as plain adds (#413).
+- **Unfinished imports** show on Stem songs as a card that opens the import
+  screen. While an import runs, the card shows its progress. Once it stops or
+  ends with failed songs, the card names how many songs are left, unless the
+  user stopped it. A relaunch reads an import that was running as
+  interrupted. On the import screen Retry runs the songs left again and Clear
+  dismisses the import; Clear is not offered, and native refuses it, while a
+  song is still being added (#451).
 - **A replace keeps** the user's song and stem names, speed and meter. Bar
   one and the lyric retiming are times in the old audio, so only a re-import
   of the same job keeps them (the retiming only while the lyrics are

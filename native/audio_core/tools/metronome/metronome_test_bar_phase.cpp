@@ -8,8 +8,12 @@
 #include "metronome/metronome_internal.h"
 #include "metronome_test_support.h"
 #include "song_bars.h"
+#include "zero_clock.h"
 
 namespace metronome_test {
+
+using kitbag_test::kZeroClock;
+
 namespace {
 
 using kitbag::metronome_detail::BarFraction;
@@ -59,7 +63,9 @@ class BarPhaseRig {
     metronome_.SetTempo(c.bpm);
     metronome_.SetTimeSignature(kBeatsPerBar, kBeatsPerBar);
     metronome_.SetLatencyOffset(c.latency_ms);
-    if (c.mode == StartMode::kGrid) metronome_.SetGrid(MakeGrid(), 0, true);
+    if (c.mode == StartMode::kGrid) {
+      metronome_.SetGrid(MakeGrid(), kZeroClock, true);
+    }
     if (c.mode == StartMode::kCountIn) {
       metronome_.SetCountIn(kCountInBars, false, 0);
     }
@@ -267,7 +273,7 @@ kitbag::SongClock LoopClock(int64_t first, uint32_t frames) {
 void TestGridPhaseAtLoopEdge() {
   kitbag::Metronome metronome;
   metronome.SetTimeSignature(kBeatsPerBar, kBeatsPerBar);
-  metronome.SetGrid(MakeLoopGrid(), 0, true);
+  metronome.SetGrid(MakeLoopGrid(), kZeroClock, true);
   metronome.SetFollowMixer(true);
   metronome.Start();
   std::vector<float> buffer(static_cast<size_t>(kBlockFrames) * kChannels);

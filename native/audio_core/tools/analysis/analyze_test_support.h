@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <filesystem>
 #include <numbers>
 #include <string>
 #include <vector>
@@ -155,6 +156,50 @@ inline kb_result AnalyzeThroughAbi(
       &out->downbeat_count,
       &out->duration_sec,
       waveform_dir
+  );
+}
+
+inline double FramesToSeconds(uint64_t frames, uint32_t rate) {
+  return static_cast<double>(frames) / rate;
+}
+
+inline kb_result AnalyzeBytes(
+    const std::filesystem::path& file,
+    const std::vector<uint8_t>& bytes,
+    const char* waveform_dir,
+    AbiAnalysis* analysis
+) {
+  if (!media_test::WriteBytes(file.string(), bytes)) return KB_ERROR_INTERNAL;
+  const kb_result status =
+      AnalyzeThroughAbi(file.string(), waveform_dir, kAbiCap, analysis);
+  std::filesystem::remove(file);
+  return status;
+}
+
+inline void CheckDamaged(
+    const std::filesystem::path& file,
+    const std::vector<uint8_t>& bytes,
+    const char* message
+) {
+  AbiAnalysis analysis;
+  const kb_result status = AnalyzeBytes(file, bytes, nullptr, &analysis);
+  kitbag_test::Check(
+      status == KB_ERROR_INVALID_ARGUMENT && analysis.duration_sec == 0.0,
+      message
+  );
+}
+
+inline void CheckIntact(
+    const std::filesystem::path& file,
+    const std::vector<uint8_t>& bytes,
+    double expected_sec,
+    const char* message
+) {
+  AbiAnalysis analysis;
+  const kb_result status = AnalyzeBytes(file, bytes, nullptr, &analysis);
+  kitbag_test::Check(
+      status == KB_OK && analysis.duration_sec == expected_sec,
+      message
   );
 }
 

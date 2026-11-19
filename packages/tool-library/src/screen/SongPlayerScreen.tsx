@@ -6,7 +6,6 @@ import {
   Card,
   Chip,
   createThemedStyles,
-  EmptyState,
   screenBar,
   ScrubRow,
   songPlayer,
@@ -27,7 +26,6 @@ import {
   useLoopScrub,
   useSongLibrary,
   useSongPlayer,
-  type StemPlayerStatus,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
@@ -38,7 +36,6 @@ import {
   lockBadgeOf,
   lockText,
 } from '../logic/lockText.ts';
-import { unsupportedFormatText } from '../logic/notices.ts';
 import type { BadgeSpec } from '../logic/rowText.ts';
 import { songTitle } from '../logic/songTitle.ts';
 import { REANALYZE_LABEL } from '../logic/viewText.ts';
@@ -48,7 +45,8 @@ import { SongMeter } from './SongMeter.tsx';
 import { SongPlayerMenu } from './SongPlayerMenu.tsx';
 import { SongTransport } from './SongTransport.tsx';
 import { useLoopHandles } from './useLoopHandles.ts';
-import { useSongFailure } from './useSongFailure.ts';
+import { NotReady } from './NotReady.tsx';
+import { useSongFailure } from './rowFailureHooks.ts';
 
 const NO_NEIGHBOURS = {};
 
@@ -80,7 +78,6 @@ const useStyles = createThemedStyles((theme) => ({
   bpm: { marginRight: screenBar.chipEnd },
   lockTitle: { ...textStyle(textRoles.listTitle), color: theme.color.text },
   lockDetail: { ...textStyle(textRoles.listFacts), color: theme.color.text2 },
-  note: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
 }));
 
 interface SongAppBarProps {
@@ -214,52 +211,6 @@ function LockCard({ songId }: { readonly songId: number }) {
     </View>
   );
   return click ? <Card emphasis="activeGroup">{row}</Card> : <Card>{row}</Card>;
-}
-
-const NOT_PLAYED_REASON =
-  'The file could not be read, its format may not be supported, or the audio engine did not start.';
-
-function NotReady({
-  songId,
-  status,
-  onBack,
-}: {
-  readonly songId: number;
-  readonly status: StemPlayerStatus;
-  readonly onBack: () => void;
-}) {
-  const styles = useStyles();
-  const failure = useSongFailure(songId);
-  if (status === 'failed')
-    return (
-      <EmptyState
-        icon="song"
-        title="This song would not play"
-        reason={
-          failure?.kind === 'unsupported'
-            ? unsupportedFormatText(failure.format, failure.supported)
-            : NOT_PLAYED_REASON
-        }
-        actionLabel="Back to songs"
-        onAction={onBack}
-      />
-    );
-  if (status === 'missing')
-    return (
-      <EmptyState
-        icon="song"
-        title="This song is gone"
-        reason="It was deleted from the library. Pick another song there."
-        actionLabel="Back to songs"
-        onAction={onBack}
-      />
-    );
-  if (status === 'idle') return null;
-  return (
-    <Text accessibilityLiveRegion="polite" style={styles.note}>
-      Opening the song…
-    </Text>
-  );
 }
 
 interface BodyProps {

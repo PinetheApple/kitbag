@@ -17,6 +17,7 @@ export type StemDeckNative = Pick<
   | 'startImport'
   | 'cancelImport'
   | 'retryImport'
+  | 'clearImport'
   | 'importSnapshot'
   | 'settleDownload'
   | 'setWatching'

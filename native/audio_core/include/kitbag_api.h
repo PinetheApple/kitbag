@@ -23,7 +23,9 @@ typedef enum kb_result {
   KB_ERROR_INTERNAL = 5, /* the core failed, not the caller: out of memory, or
                             a file that changed while being read */
   KB_ERROR_NO_SPACE = 6, /* the destination volume is too full to write to */
-  KB_ERROR_TOO_LONG = 7, /* past what the output format can hold */
+  KB_ERROR_TOO_LONG = 7, /* past what the output format can hold, or a sound
+                            past the custom click sound limit */
+  KB_ERROR_SILENT = 8,   /* the audio never reaches an audible level */
 } kb_result;
 
 typedef struct kb_engine kb_engine;
@@ -122,24 +124,29 @@ kb_metronome_set_subdivision(kb_engine* engine, int32_t subdivision);
  * current bar is ignored. kb_metronome_set_poly_accent shares both rules. */
 KB_EXPORT void
 kb_metronome_set_accent(kb_engine* engine, int32_t beat_index, int32_t accent);
-/* Ids index KB_SOUND_NAMES; accent_sound voices accented main and poly beats,
- * normal_sound the rest. An out-of-table id keeps the role's last sound. */
+/* Ids index KB_SOUND_NAMES, then the custom slots (kitbag_click_sound_api.h);
+ * an empty slot sounds tick, and so does a custom id while the metronome
+ * follows the mixer. accent_sound voices accented main and poly beats,
+ * normal_sound the rest. An id past both keeps the role's last sound. */
 KB_EXPORT void kb_metronome_set_sounds(
     kb_engine* engine,
     int32_t normal_sound,
     int32_t accent_sound
 );
 /* Ignored unless bars is in Metronome::kCountInBarChoices; distinct != 0 uses
- * `sound`. Replays after stop, not pause; skipped under a grid or anchor, which
- * count in with kb_metronome_count_in_at (kitbag_song_start_api.h). */
+ * `sound`, a KB_SOUND_NAMES id; other ids keep the last sound. The count-in
+ * never plays a custom sound: it plays tick where the beat's sound is custom.
+ * Replays after stop, not pause; skipped under a grid or anchor, which count
+ * in with kb_metronome_count_in_at (kitbag_song_start_api.h). */
 KB_EXPORT void kb_metronome_set_count_in(
     kb_engine* engine,
     int32_t bars,
     int32_t distinct,
     int32_t sound
 );
-/* One click of `sound` at the current volume on the next block (last wins).
- * Dropped if the device is stopped when issued; bad ids are ignored. */
+/* One click of `sound` (a kb_metronome_set_sounds id) at the current volume on
+ * the next block (last wins). Dropped if the device is stopped when issued;
+ * bad ids are ignored. */
 KB_EXPORT void
 kb_metronome_preview_sound(kb_engine* engine, int32_t sound, int32_t accented);
 /* Volume multiplier [0, 2], default 1. */
@@ -175,6 +182,7 @@ KB_EXPORT double kb_metronome_current_bpm(const kb_engine* engine);
 /* 1 during count-in; current_beat and bar_phase follow the count bars. */
 KB_EXPORT int32_t kb_metronome_counting_in(const kb_engine* engine);
 
+#include "kitbag_click_sound_api.h"
 #include "kitbag_metronome_poly_api.h"
 #include "kitbag_metronome_subdivision_api.h"
 #include "kitbag_metronome_trainer_api.h"
@@ -329,7 +337,10 @@ KB_EXPORT int32_t kb_player_is_playing(const kb_engine* engine);
  * Returns KB_OK on success (even if no beats found; check *beat_count_out).
  * Returns KB_ERROR_INVALID_ARGUMENT for a null path/output pointer, a file that
  * will not open, or decoded PCM that is unusable: zero channels, a zero sample
- * rate, a frame count above INT_MAX, or any non-finite (NaN/inf) sample.
+ * rate, a frame count above INT_MAX, or any non-finite (NaN/inf) sample. Also
+ * for a damaged file: one that decodes to well short of the length its header
+ * declares (a WAV data chunk, an MP3 Xing/Info frame count, FLAC STREAMINFO).
+ * Files that declare no length, such as a headerless MP3, are never flagged.
  * Returns KB_ERROR_INTERNAL if analysis runs out of memory, or the file cannot
  * be rewound or decodes to a different length on the second pass.
  * On any error the outputs read 0 and no sidecar is written.

@@ -9,6 +9,9 @@
 #include <string>
 #include <vector>
 
+#include "media/part_file.h"
+#include "media/riff_bytes.h"
+
 namespace kitbag {
 
 class WavWriter {
@@ -17,8 +20,8 @@ class WavWriter {
   static constexpr uint32_t kBitsPerSample = KB_MIXDOWN_BITS_PER_SAMPLE;
   static_assert(kBitsPerSample == sizeof(int16_t) * CHAR_BIT);
   static constexpr uint32_t kBytesPerFrame = kChannels * sizeof(int16_t);
-  static constexpr uint32_t kHeaderBytes = 44;
-  static constexpr const char* kPartSuffix = ".part";
+  static constexpr uint32_t kHeaderBytes = riff::kHeaderBytes;
+  static constexpr const char* kPartSuffix = kitbag::kPartSuffix;
 
   static uint64_t FileBytes(uint64_t frames) {
     return kHeaderBytes + frames * kBytesPerFrame;

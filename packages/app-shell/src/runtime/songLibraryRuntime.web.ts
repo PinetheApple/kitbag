@@ -18,6 +18,8 @@ configureSongLibrary({
     insertStemBundle: unavailable,
     replaceStemBundle: unavailable,
     listStemSetFolders: () => Promise.resolve([]),
+    listSongFiles: () => Promise.resolve([]),
+    listStemFiles: () => Promise.resolve([]),
     renameSong: unavailable,
     renameStemSet: unavailable,
     updateDuration: unavailable,
@@ -41,6 +43,9 @@ configureSongLibrary({
     importStemBundle: unavailable,
     listStemFolders: () => Promise.resolve([]),
     deleteStemFolder: unavailable,
+    fileAvailability: () =>
+      Promise.resolve({ missing: [], unavailable: [], rootAvailable: true }),
+    onDataFolderChanged: () => () => undefined,
   },
   openSong: { id: () => null, onChange: () => () => undefined },
 });

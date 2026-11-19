@@ -1,6 +1,11 @@
 package com.kitbag.corenative.stemdeck
 
-class ImportItem(val jobId: String, val title: String, val stems: List<String>) {
+class ImportItem(
+  val jobId: String,
+  val title: String,
+  val stems: List<String>,
+  val replace: ReplaceChoice = ReplaceChoice.ADD,
+) {
   init {
     require(JOB_ID.matches(jobId)) { "Not a StemDeck job id" }
     require(stems.all(STEM_NAME::matches)) { "Not a StemDeck stem name" }
@@ -100,6 +105,15 @@ class ImportQueue {
       stopReason = null,
       items = snapshot.items.map { if (it.retryable) ItemState(it.item, ItemState.WAITING) else it },
     )
+    return true
+  }
+
+  // A song still being added after a stop settles later, so the queue keeps it until then.
+  @Synchronized
+  fun clear(): Boolean {
+    if (snapshot == ImportSnapshot.EMPTY || snapshot.running) return false
+    if (snapshot.items.any { it.state == ItemState.ADDING }) return false
+    snapshot = ImportSnapshot.EMPTY
     return true
   }
 

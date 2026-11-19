@@ -18,6 +18,7 @@ namespace media_test {
 constexpr uint32_t kFixtureRate = 44100;
 constexpr uint32_t kFixtureChannels = 2;
 constexpr uint16_t kBitsPerSample = 16;
+constexpr uint32_t kBitsPerByte = 8;
 // Full-scale in s16. miniaudio converts s16 to float as s / 32768, so every
 // expected float below is an exact binary fraction and comparisons need no
 // epsilon.
@@ -57,7 +58,7 @@ inline std::vector<uint8_t> BuildWav(uint64_t frames) {
   const uint32_t data_bytes =
       static_cast<uint32_t>(frames * kFixtureChannels * sizeof(int16_t));
   const uint32_t byte_rate =
-      kFixtureRate * kFixtureChannels * (kBitsPerSample / 8);
+      kFixtureRate * kFixtureChannels * (kBitsPerSample / kBitsPerByte);
   std::vector<uint8_t> out;
   PutTag(&out, "RIFF");
   PutU32(&out, 36 + data_bytes);

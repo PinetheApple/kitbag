@@ -1,7 +1,11 @@
 #include "metronome_test_status_rig.h"
 #include "metronome_test_support.h"
+#include "zero_clock.h"
 
 namespace metronome_test {
+
+using kitbag_test::kZeroClock;
+
 namespace {
 
 using kitbag::RampState;
@@ -198,7 +202,7 @@ void TestGridTurnsRampOff() {
   rig.RenderBlock();
   const bool stepping =
       rig.metronome.trainer_mirrors().ramp_state() == RampState::kStepping;
-  rig.metronome.SetGrid(MakeShiftedGrid(40, 0.0, 0.5), 0, true);
+  rig.metronome.SetGrid(MakeShiftedGrid(40, 0.0, 0.5), kZeroClock, true);
   rig.RenderBlock();
   Check(
       stepping &&

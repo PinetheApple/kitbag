@@ -25,7 +25,8 @@ extern "C" {
  * strictly ascending; NULL with downbeat_count 0 means the song has none. Each
  * bar runs to the next downbeat and the last bar's length repeats; a lone
  * downbeat's bar runs to the grid's end. Under a grid, the downbeat of each bar
- * is accented and every other beat is normal, whatever kb_metronome_set_beats
+ * is accented and every other beat is normal, or grouped by
+ * kb_metronome_set_grid_grouping, whatever kb_metronome_set_beats
  * and kb_metronome_set_accent hold; beats before the first downbeat, and every
  * beat of a grid without downbeats, are normal and outside any bar, so bar mute
  * never silences them. current_beat and bar_phase count the song's bars; with
@@ -49,6 +50,43 @@ KB_EXPORT kb_result kb_metronome_set_grid(
  * the constant tempo falls one whole beat after the last grid beat that
  * sounded, not on the next sample. */
 KB_EXPORT void kb_metronome_clear_grid(kb_engine* engine);
+
+#define KB_MAX_GRID_GROUPS 8
+
+/* Click rate relative to the grid's beats. */
+typedef enum kb_grid_rate {
+  KB_GRID_RATE_SINGLE = 0,
+  KB_GRID_RATE_DOUBLE = 1,
+  KB_GRID_RATE_HALF = 2,
+} kb_grid_rate;
+
+/* Accent a grid's bars in groups, such as 3+2+2 for a 7-beat bar. While a bar's
+ * length equals the sum of sizes, the first beat of each later group plays the
+ * accent sound's accented subdivision click, quieter than the bar's downbeat;
+ * any other bar keeps only its downbeat accent. count 0 clears the grouping
+ * (sizes may then be NULL). Takes effect from the next beat.
+ * kb_metronome_set_grid and kb_metronome_clear_grid reset the grouping to none
+ * and the rate to KB_GRID_RATE_SINGLE: send both again after each set_grid.
+ * A count-in sounds plain whatever the grouping and rate.
+ * Returns KB_ERROR_INVALID_ARGUMENT for a negative count or one above
+ * KB_MAX_GRID_GROUPS, NULL sizes with a positive count, a size below 1, or
+ * sizes summing above Metronome::kMaxBeats; KB_ERROR_BUSY when the command
+ * ring is full. Either way nothing changes. */
+KB_EXPORT kb_result kb_metronome_set_grid_grouping(
+    kb_engine* engine,
+    const int32_t* sizes,
+    int32_t count
+);
+/* Click rate under a grid. KB_GRID_RATE_DOUBLE adds a normal click halfway
+ * between each pair of grid beats, following the grid's own spacing, and
+ * subdivisions divide each half. KB_GRID_RATE_HALF sounds every other beat,
+ * counted from each group's first beat under a grouping and from each downbeat
+ * otherwise, so every downbeat and group start sounds; a grid without
+ * downbeats counts from its first beat. Subdivisions divide the span from one
+ * click to the next. Reset by set_grid and clear_grid as above.
+ * Returns KB_ERROR_INVALID_ARGUMENT for a rate outside kb_grid_rate and
+ * KB_ERROR_BUSY when the command ring is full. */
+KB_EXPORT kb_result kb_metronome_set_grid_rate(kb_engine* engine, int32_t rate);
 /* Anchor the click to an external transport this engine does not clock — a
  * Spotify or YouTube stream. Declares that at engine frame at_frame the song was
  * song_pos_sec into playback, running at a constant bpm, and lays the click grid

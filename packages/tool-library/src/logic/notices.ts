@@ -132,16 +132,22 @@ export interface FailureText {
   readonly text: string;
 }
 
+export const UNAVAILABLE_TEXT: FailureText = {
+  status: 'SD card not found',
+  text: 'This song is on the SD card, so it can’t play until the card is back.',
+};
+
 const FAILURES: Readonly<
   Record<Exclude<FailureKind, 'unsupported'>, FailureText>
 > = {
+  unavailable: UNAVAILABLE_TEXT,
   missingFile: {
     status: 'Missing file',
     text: 'The audio file is no longer on this phone, so it cannot be analyzed. Delete the song from its menu, or import the file again.',
   },
   damaged: {
     status: 'File may be damaged',
-    text: 'This file could not be decoded and may be damaged, so there is no beat grid to lock to.',
+    text: 'This file could not be read in full and may be damaged or incomplete, so there is no beat grid to lock to.',
   },
   interrupted: {
     status: 'Analysis interrupted',
@@ -158,6 +164,7 @@ const KEPT_GRID = 'Re-analysis failed; the previous beat grid is kept.';
 const NOT_REANALYZABLE: ReadonlySet<FailureKind> = new Set([
   'unsupported',
   'missingFile',
+  'unavailable',
 ]);
 
 export function canReanalyze(failure: AnalysisFailure | null): boolean {

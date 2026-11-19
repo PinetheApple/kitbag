@@ -1,7 +1,11 @@
 #include "click_take.h"
 #include "metronome_test_audio.h"
+#include "zero_clock.h"
 
 namespace metronome_test {
+
+using kitbag_test::kZeroClock;
+
 namespace {
 
 using click_take::DetectClicks;
@@ -231,7 +235,7 @@ void SetLateGrid(kitbag::Metronome* metronome) {
   for (const int64_t beat : kLateGridBeats) {
     grid->beat_times_sec.push_back(static_cast<double>(beat) / kSampleRate);
   }
-  metronome->SetGrid(std::move(grid), 0, false);
+  metronome->SetGrid(std::move(grid), kZeroClock, false);
 }
 
 void TestReissuePastTheEnd() {

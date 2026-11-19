@@ -31,6 +31,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
   useSongLibrary: (select: (state: unknown) => unknown) =>
     select({ codes: {}, replacePrompt: null }),
   analysisFailure: () => shown.failure,
+  rowFilesOf: () => null,
   cleanName: (name: string) => name,
 }));
 
@@ -83,7 +84,7 @@ describe('the actions sheet of a song whose analysis failed', () => {
   it('says a supported file may be damaged and offers Re-analyse', () => {
     const actions = sheet(openActions({ kind: 'damaged', keptGrid: false }));
     expect(actions.hint).toBe(
-      'This file could not be decoded and may be damaged, so there is no beat grid to lock to.',
+      'This file could not be read in full and may be damaged or incomplete, so there is no beat grid to lock to.',
     );
     expect(actions.buttons).toContain(REANALYZE_LABEL);
   });

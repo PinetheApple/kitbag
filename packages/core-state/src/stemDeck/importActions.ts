@@ -13,8 +13,9 @@ import type { ReplaceMatch } from '../songLibrary/store.ts';
 import { warn } from '../songLibrary/storeSupport.ts';
 import type { CatalogSong } from './catalog.ts';
 import { nativeFailure, type StemDeckFailure } from './failures.ts';
-import { createHandOff, type ReplaceTargets } from './handOff.ts';
+import { createHandOff } from './handOff.ts';
 import { importView, type ImportView, type SkippedSong } from './importView.ts';
+import { ADD, replaceRequest } from './replaceCodes.ts';
 import { stemDeckCodes } from './runtime.ts';
 import type { Get, SetState, StemDeckDeps } from './store.ts';
 
@@ -39,9 +40,12 @@ export interface ImportActions {
   dismissReplace: () => void;
   cancelImport: () => void;
   retryImport: () => Promise<void>;
+  clearImport: () => Promise<boolean>;
   setWatching: (watching: boolean) => void;
   markUnityNoticeSeen: () => void;
 }
+
+type ReplaceTargets = ReadonlyMap<string, ReplaceChoice>;
 
 interface PendingImport {
   readonly origin: string;
@@ -127,7 +131,6 @@ export function importActions(
     if (known === null) return false;
     skipped = kept.map(({ jobId, title }) => ({ jobId, title }));
     refusals.clear();
-    handOff.replacing(targets);
     set({ selected: [], importFailure: null, replacePrompt: null });
     if (songs.length === 0) {
       const empty = { origin, running: false, stopReason: null, items: [] };
@@ -138,6 +141,7 @@ export function importActions(
       jobId: s.jobId,
       title: s.title,
       stems: [...s.lanes],
+      ...replaceRequest(targets.get(s.jobId) ?? ADD, known),
     }));
     try {
       await deps.native().startImport(origin, items);
@@ -146,6 +150,17 @@ export function importActions(
       set({ importFailure: nativeFailure(errorCode(error), known) });
       return false;
     }
+  };
+
+  const failed = (error: unknown, known: StemDeckConstants | null) => {
+    if (known !== null)
+      set({ importFailure: nativeFailure(errorCode(error), known) });
+  };
+
+  const forgetImport = () => {
+    skipped = [];
+    refusals.clear();
+    set({ importView: null, importFailure: null });
   };
 
   const takePending = () => {
@@ -237,8 +252,18 @@ export function importActions(
       try {
         await deps.native().retryImport();
       } catch (error) {
-        if (known !== null)
-          set({ importFailure: nativeFailure(errorCode(error), known) });
+        failed(error, known);
+      }
+    },
+    clearImport: async () => {
+      const known = codes();
+      try {
+        const cleared = await deps.native().clearImport();
+        if (cleared) forgetImport();
+        return cleared;
+      } catch (error) {
+        failed(error, known);
+        return false;
       }
     },
     setWatching: (watching: boolean) => {

@@ -286,6 +286,12 @@ describe('collectConstants (real engine source)', () => {
   it('extracts the current constants and re-renders deterministically', () => {
     const c = collectConstants(realSources);
     expect(c.maxGridBeats).toBe(65536);
+    expect(c.maxGridGroups).toBe(8);
+    expect(c.gridRate).toEqual([
+      { name: 'KB_GRID_RATE_SINGLE', value: 0 },
+      { name: 'KB_GRID_RATE_DOUBLE', value: 1 },
+      { name: 'KB_GRID_RATE_HALF', value: 2 },
+    ]);
     expect(c.beatAnalysisVersion).toBe(4);
     expect(renderConstants(c)).toContain('KB_BEAT_ANALYSIS_VERSION = 4;');
     expect(c.maxTracks).toBe(16);

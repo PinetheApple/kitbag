@@ -17,7 +17,7 @@ import { lockBadgeOf } from '../logic/lockText.ts';
 import { canReanalyze } from '../logic/notices.ts';
 import { METER_FAILED, meterGridState } from '../logic/songMeterText.ts';
 import { PLAYER_MENU_TEXT, REANALYZE_LABEL } from '../logic/viewText.ts';
-import { useSongFailure } from './useSongFailure.ts';
+import { useSongFailure } from './rowFailureHooks.ts';
 
 interface SongPlayerMenuProps {
   readonly songId: number;

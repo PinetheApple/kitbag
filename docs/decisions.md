@@ -1118,3 +1118,21 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   must not take the click away; a Click sounds backup category keyed by slot; restore resets a
   reference to Tick unless the same sound (by UUID) is in that slot. Song import's list includes
   AIFF, so the copy reads “WAV, MP3, FLAC or AIFF”. **[REC TAKEN, owner may overturn]**
+  Prepare also trims trailing silence before the 2 s check, so a 1 s hit with a long quiet tail
+  is kept as about 1 s; “silence” is an absolute -60 dBFS, so a source whose noise floor sits above
+  that keeps its noise and may be refused as too long; the kept sound ends with a 5 ms linear
+  fade so the cut never clicks. **[REC TAKEN, owner may overturn]**
+  While the metronome follows the mixer (song and stem players), a custom id plays Tick, the
+  same coercion as the count-in; the standalone metronome, setlists and song presets keep
+  custom sounds. **[REC TAKEN, owner may overturn]**
+
+- **2026-11-19 · Grid grouping and click rate (#383, §4.3)** — (1) A bar whose
+  length differs from the grouping's sum keeps only its downbeat accent. (2) At
+  x1/2 with a grouping, the every-other-beat count restarts at each group's
+  first beat (3+2+2 clicks positions 0, 2, 3, 5; 2+2+3 clicks 0, 2, 4, 6);
+  without one it restarts at each downbeat. (3) At x1/2, subdivisions divide the
+  span from one click to the next. (4) `set_grid` and `clear_grid` reset the
+  grouping to none and the rate to x1; the caller sends both again after each
+  `set_grid`. (5) A count-in stays plain under any grouping or rate. Rationale:
+  every group start keeps its click, no silent hole at x1/2, and a new grid
+  never inherits another song's grouping. **[REC TAKEN, owner may overturn]**

@@ -12,7 +12,8 @@ import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.uimanager.UIManagerHelper
 import com.kitbag.corenative.library.LibraryErrors
 import com.kitbag.corenative.library.LibraryPaths
-import com.kitbag.corenative.library.LibraryStorage
+import com.kitbag.corenative.library.DataFolder
+import com.kitbag.corenative.library.DataFolderUnavailableException
 import com.kitbag.corenative.library.MixdownExport
 import com.kitbag.corenative.library.UnsafeLibraryPathException
 import com.kitbag.corenative.route.OutputRoute
@@ -27,7 +28,6 @@ import com.kitbag.corenative.transport.TransportState
 class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   NativeKitbagCommandsSpec(reactContext) {
 
-  private val libraryBase = LibraryStorage.base(reactContext)
   private val mixdown = MixdownExport(reactContext.cacheDir)
   private val transportListener: (TransportState, PracticeClock) -> Unit = ::emitTransport
   private val songStoppedListener: () -> Unit = ::emitOnSongStopped
@@ -219,6 +219,15 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     nativeClearGrid()
   }
 
+  override fun setGridGrouping(sizes: ReadableArray, promise: Promise) {
+    val groups = IntArray(sizes.size()) { i -> sizes.getInt(i) }
+    promise.resolve(nativeSetGridGrouping(groups))
+  }
+
+  override fun setGridRate(rate: Double, promise: Promise) {
+    promise.resolve(nativeSetGridRate(rate.toInt()))
+  }
+
   override fun metronomeFollowMixer(enabled: Boolean) {
     nativeFollowMixer(enabled)
   }
@@ -289,9 +298,12 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   override fun loadTrack(track: Double, relativePath: String, promise: Promise) {
     val file = try {
-      LibraryPaths.resolve(libraryBase, relativePath)
+      LibraryPaths.resolve(DataFolder.root(reactApplicationContext), relativePath)
     } catch (e: UnsafeLibraryPathException) {
       promise.reject(E_UNSAFE_PATH, "Track path escapes the library", e)
+      return
+    } catch (e: DataFolderUnavailableException) {
+      promise.reject(LibraryErrors.DATA_FOLDER_UNAVAILABLE, "The data folder is not mounted", e)
       return
     }
     promise.resolve(nativeLoadTrack(track.toInt(), file.path))
@@ -452,6 +464,8 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     anchorFrame: Double,
   ): Int
   private external fun nativeSetBeats(beatsPerBar: Int, denominator: Int)
+  private external fun nativeSetGridGrouping(sizes: IntArray): Int
+  private external fun nativeSetGridRate(rate: Int): Int
   private external fun nativeSetSubdivision(subdivision: Int)
   private external fun nativeSetSubdivisionAccents(subdivision: Int, slotMask: Int)
   private external fun nativeSetAccent(beatIndex: Int, accent: Int)

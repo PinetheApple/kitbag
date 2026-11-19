@@ -10,10 +10,11 @@ import com.facebook.react.bridge.WritableMap
 import com.kitbag.corenative.stemdeck.DownloadFiles
 import java.io.File
 
-class StemBundleBridge(private val resolver: ContentResolver, private val base: File) {
-  private val importer by lazy {
+class StemBundleBridge(private val resolver: ContentResolver, private val root: () -> File) {
+  // One importer per root, so its synchronized import still serializes every import into that root.
+  private val importers = PerRoot { libraryRoot ->
     StemBundleImporter(
-      base = base,
+      base = libraryRoot,
       maxStems = NativeStemBundle.maxStems,
       availableBytes = { StatFs(it.path).availableBytes },
       sidecars = NativeStemBundle,
@@ -21,17 +22,25 @@ class StemBundleBridge(private val resolver: ContentResolver, private val base: 
     )
   }
 
+  private fun importer() = importers.get(root())
+
   fun check(uri: String, isFolder: Boolean): WritableMap =
-    StemBundleMaps.check(importer.check(source(uri, isFolder)), NativeStemBundle.maxStems)
+    StemBundleMaps.check(importer().check(source(uri, isFolder)), NativeStemBundle.maxStems)
 
   fun import(uri: String, isFolder: Boolean): WritableMap =
-    StemBundleMaps.imported(importer.import(source(uri, isFolder)))
+    StemBundleMaps.imported(importer().import(source(uri, isFolder)))
 
-  fun clearStaging() = importer.clearStaging()
+  fun clearStaging() {
+    try {
+      importer().clearStaging()
+    } catch (e: DataFolderUnavailableException) {
+      Log.i(TAG, "Bundle staging not cleared; the data folder is not mounted", e)
+    }
+  }
 
   fun stemFolderNames(): WritableArray =
     Arguments.createArray().apply {
-      File(base, LibraryPaths.STEMS_DIR_NAME)
+      File(root(), LibraryPaths.STEMS_DIR_NAME)
         .listFiles { file -> file.isDirectory && !LibraryPaths.isHiddenName(file.name) }
         .orEmpty()
         .forEach { pushString(it.name) }

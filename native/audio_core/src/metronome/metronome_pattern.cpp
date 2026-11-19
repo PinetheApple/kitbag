@@ -7,6 +7,7 @@ namespace kitbag {
 
 using metronome_detail::Clamp;
 using metronome_detail::IsOneOf;
+using metronome_detail::IsValidSound;
 
 namespace {
 
@@ -67,6 +68,10 @@ void Metronome::SetSubdivisionAccentRow(
   AccentRowFor(subdivision) = static_cast<uint16_t>(slot_mask);
 }
 
+bool Metronome::SubdivisionSlotAccented(int subdivision, int slot) const {
+  return ((AccentRowFor(subdivision) >> slot) & 1U) != 0;
+}
+
 uint16_t& Metronome::AccentRowFor(int subdivision) {
   return subdivision_accents_[subdivision - kMinSubdivision];
 }
@@ -82,6 +87,7 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
       return true;
     case CommandType::kSetSubdivision:
       subdivision_ = Clamp(command.int_a, kMinSubdivision, kMaxSubdivision);
+      grid_state_.resync_sub = true;
       return true;
     case CommandType::kSetSubdivisionAccents:
       SetSubdivisionAccentRow(command.int_a, command.int_b);

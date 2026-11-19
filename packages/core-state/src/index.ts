@@ -233,6 +233,7 @@ export {
   type SongBadge,
 } from './songLibrary/logic.ts';
 export { playerSongBadge } from './songLibrary/badge.ts';
+export { rowFilesOf } from './songLibrary/availability.ts';
 export type {
   BundleAddOutcome,
   BundleRefusal,
@@ -500,10 +501,12 @@ export {
   type CalibrationSessionStore,
 } from './rig/useCalibration.ts';
 export {
+  DataFolderUnavailableError,
   findMissingRows,
   removeMissingRows,
   type MissingFilesSource,
   type MissingRowsRemoval,
+  type RowFiles,
   type StoredRowFiles,
 } from './storage/missingRows.ts';
 export {

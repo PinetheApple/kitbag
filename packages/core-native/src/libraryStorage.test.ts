@@ -11,14 +11,16 @@ const report: StorageReport = {
 
 const library = vi.hoisted(() => ({
   storageReport: vi.fn(),
-  missingFiles: vi.fn(),
+  fileAvailability: vi.fn(),
+  onDataFolderChanged: vi.fn(),
 }));
 
 vi.mock('./NativeKitbagLibrary', () => ({
   getKitbagLibrary: () => library,
 }));
 
-const { missingFiles, storageReport } = await import('./libraryStorage.ts');
+const { fileAvailability, storageReport, watchDataFolder } =
+  await import('./libraryStorage.ts');
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -31,10 +33,26 @@ it('asks native for the named database and returns its report unchanged', async 
   expect(library.storageReport).toHaveBeenCalledExactlyOnceWith('kitbag');
 });
 
-it('returns the subset native reports missing', async () => {
+it('returns what native reports missing and unavailable', async () => {
   const paths = ['songs/a/x.mp3', 'songs/b/y.mp3'];
-  library.missingFiles.mockResolvedValue(['songs/b/y.mp3']);
+  const availability = {
+    missing: ['songs/b/y.mp3'],
+    unavailable: ['songs/a/x.mp3'],
+    rootAvailable: true,
+  };
+  library.fileAvailability.mockResolvedValue(availability);
 
-  await expect(missingFiles(paths)).resolves.toEqual(['songs/b/y.mp3']);
-  expect(library.missingFiles).toHaveBeenCalledExactlyOnceWith(paths);
+  await expect(fileAvailability(paths)).resolves.toBe(availability);
+  expect(library.fileAvailability).toHaveBeenCalledExactlyOnceWith(paths);
+});
+
+it('stops hearing data folder changes once unwatched', () => {
+  const remove = vi.fn();
+  library.onDataFolderChanged.mockReturnValue({ remove });
+  const listener = vi.fn();
+
+  const stop = watchDataFolder(listener);
+  expect(library.onDataFolderChanged).toHaveBeenCalledExactlyOnceWith(listener);
+  stop();
+  expect(remove).toHaveBeenCalledOnce();
 });

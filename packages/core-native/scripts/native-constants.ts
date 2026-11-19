@@ -20,6 +20,8 @@ export { renderConstants } from './native-render.ts';
 export function collectConstants(sources: NativeSources): NativeConstants {
   return {
     maxGridBeats: parseDefineInt(sources.gridHeader, 'KB_MAX_GRID_BEATS'),
+    maxGridGroups: parseDefineInt(sources.gridHeader, 'KB_MAX_GRID_GROUPS'),
+    gridRate: parseEnum(sources.gridHeader, 'kb_grid_rate'),
     beatAnalysisVersion: parseDefineInt(
       sources.apiHeader,
       'KB_BEAT_ANALYSIS_VERSION',

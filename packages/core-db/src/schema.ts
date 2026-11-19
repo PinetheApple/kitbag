@@ -44,7 +44,7 @@ export const songs = sqliteTable('songs', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   title: text('title').notNull(),
   artist: text('artist').notNull(),
-  // Paths are relative to the user base directory, which the user can move.
+  // Relative to the data folder, so the folder can change without rewriting rows.
   filePath: text('file_path').notNull(),
   duration: real('duration').notNull(),
   format: text('format').notNull(),

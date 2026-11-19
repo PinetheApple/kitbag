@@ -8,6 +8,7 @@
 
 #include "analysis/beat_tracker.h"
 #include "analysis/song_analysis.h"
+#include "analysis/wav_declared_length.h"
 #include "analysis/waveform_peaks.h"
 #include "media/file_audio_reader.h"
 
@@ -46,7 +47,9 @@ kb_result AnalyzeFile(
   if (!reader.Open(path)) {
     return KB_ERROR_INVALID_ARGUMENT;
   }
-  return kitbag::AnalyzeSong(reader, path, waveform_dir, out);
+  const uint64_t declared =
+      std::max(reader.total_frames(), kitbag::WavDeclaredFrames(path));
+  return kitbag::AnalyzeSong(reader, declared, path, waveform_dir, out);
 }
 
 struct AnalysisOutputs {

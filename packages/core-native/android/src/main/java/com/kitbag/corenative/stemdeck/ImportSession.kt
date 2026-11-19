@@ -6,7 +6,7 @@ import android.os.SystemClock
 import android.system.ErrnoException
 import android.system.Os
 import android.util.Log
-import com.kitbag.corenative.library.LibraryStorage
+import com.kitbag.corenative.library.DataFolder
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.CopyOnWriteArraySet
@@ -16,7 +16,7 @@ import java.util.concurrent.ThreadFactory
 internal const val STEMDECK_LOG_TAG = "KitbagStemDeck"
 
 // One per process: the module and the service share the queue, so a JS reload never sees a second one.
-class ImportSession private constructor(context: Context) {
+class ImportSession private constructor(private val context: Context) {
   val files = DownloadFiles(File(context.filesDir, DownloadFiles.DIR_NAME))
   val servers = ServerStore(
     File(File(context.filesDir, ServerStore.DIR_NAME), ServerStore.FILE_NAME),
@@ -32,13 +32,12 @@ class ImportSession private constructor(context: Context) {
   private val journal = ImportJournal(File(files.dir, ImportJournal.FILE_NAME))
   private val observers = CopyOnWriteArraySet<SnapshotSink>()
   private val scheduler = Executors.newSingleThreadScheduledExecutor(named("kitbag-stemdeck-watchdog"))
-  private val libraryBase = LibraryStorage.base(context)
   val runner by lazy {
     ImportRunner(
       queue,
       http,
       files,
-      DownloadSpace(VolumeSpace(files.dir, libraryBase)),
+      DownloadSpace(VolumeSpace(files.dir) { DataFolder.root(context) }),
       servers::policy,
       SnapshotSink { snapshot, structural -> publish(snapshot, structural) },
       scheduler,
@@ -55,6 +54,14 @@ class ImportSession private constructor(context: Context) {
   val probe by lazy { ServerProbe({ http }, servers) }
 
   fun publishNow() = publish(queue.snapshot(), structural = true)
+
+  fun clearImport(): Boolean {
+    if (!runner.clear()) return false
+    val saved = save(queue.snapshot())
+    observers.forEach { it.publish(queue.snapshot(), structural = true) }
+    ImportNotifications(context).clear()
+    return saved
+  }
 
   fun observe(sink: SnapshotSink): () -> Unit {
     observers.add(sink)
@@ -74,22 +81,23 @@ class ImportSession private constructor(context: Context) {
     save(queue.snapshot())
   }
 
-  private fun save(snapshot: ImportSnapshot) {
+  private fun save(snapshot: ImportSnapshot): Boolean =
     try {
       journal.save(snapshot)
+      true
     } catch (e: IOException) {
       Log.w(STEMDECK_LOG_TAG, "Import queue not saved", e)
+      false
     }
-  }
 
-  private class VolumeSpace(private val download: File, private val library: File) : FreeSpace {
+  private class VolumeSpace(private val download: File, private val library: () -> File) : FreeSpace {
     override fun downloadBytes() = StatFs(existing(download).path).availableBytes
 
-    override fun libraryBytes() = StatFs(existing(library).path).availableBytes
+    override fun libraryBytes() = StatFs(existing(library()).path).availableBytes
 
     override fun sameVolume(): Boolean =
       try {
-        Os.stat(existing(download).path).st_dev == Os.stat(existing(library).path).st_dev
+        Os.stat(existing(download).path).st_dev == Os.stat(existing(library()).path).st_dev
       } catch (e: ErrnoException) {
         true
       }

@@ -35,6 +35,8 @@ export type StemPlayerCommands = Pick<
   | 'mixerTrackFrames'
   | 'setGrid'
   | 'clearGrid'
+  | 'setGridGrouping'
+  | 'setGridRate'
   | 'metronomeFollowMixer'
   | 'metronomeStart'
   | 'metronomeStop'

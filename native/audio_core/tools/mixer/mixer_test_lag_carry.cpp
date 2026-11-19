@@ -123,7 +123,7 @@ void FollowTwoBeats(kitbag::Metronome* metronome, int64_t beat_frame) {
   grid->bars =
       kitbag::GridBars(kFirstBeatAccented, grid->beat_times_sec.size());
   metronome->SetTimeSignature(4, 4);
-  metronome->SetGrid(std::move(grid), 0, true);
+  metronome->SetGrid(std::move(grid), kZeroClock, true);
   metronome->SetFollowMixer(true);
   metronome->Start();
 }
