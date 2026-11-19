@@ -1,4 +1,8 @@
-import type { LibrarySongRow, LibraryStemSetRow } from '@kitbag/core-db';
+import {
+  TEMPO_CORRECTION,
+  type LibrarySongRow,
+  type LibraryStemSetRow,
+} from '@kitbag/core-db';
 
 const created = new Date(0);
 
@@ -10,6 +14,7 @@ export function songRow(fields: Partial<LibrarySongRow> = {}): LibrarySongRow {
     artist: 'Foo Fighters',
     durationSec: 250,
     bpm: null,
+    tempoCorrection: TEMPO_CORRECTION.none,
     hasGrid: false,
     analysisStatus: 'done',
     analysisError: null,

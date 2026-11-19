@@ -41,6 +41,8 @@ const records: SongLibraryRecords = {
     library().updateDuration(id, durationSec),
   saveSongMeterOverride: (id, patch) =>
     library().saveSongMeterOverride(id, patch),
+  saveSongTempoCorrection: (id, correction) =>
+    library().saveSongTempoCorrection(id, correction),
 };
 
 // Resolved per call: getKitbagLibrary throws in a build without the module.

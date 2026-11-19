@@ -24,7 +24,8 @@ export const V19_SCHEMA_VERSION = 19;
 export const V20_SCHEMA_VERSION = 20;
 export const V21_SCHEMA_VERSION = V20_SCHEMA_VERSION + 1;
 export const V22_SCHEMA_VERSION = V21_SCHEMA_VERSION + 1;
-export const SCHEMA_VERSION = V22_SCHEMA_VERSION + 1;
+export const V23_SCHEMA_VERSION = V22_SCHEMA_VERSION + 1;
+export const SCHEMA_VERSION = V23_SCHEMA_VERSION + 1;
 
 const OLDEST_UPGRADABLE_VERSION = V7_SCHEMA_VERSION;
 
@@ -338,6 +339,11 @@ export const MIGRATE_V22_TO_V23: readonly string[] = [
 )`,
 ];
 
+// No CHECK on the factor: tempo-correction.ts owns the valid set.
+export const MIGRATE_V23_TO_V24: readonly string[] = [
+  'ALTER TABLE songs ADD COLUMN tempo_correction TEXT',
+];
+
 export const BASELINE: readonly string[] = [
   ...V11_BASELINE,
   ...MIGRATE_V11_TO_V12,
@@ -352,6 +358,7 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V20_TO_V21,
   ...MIGRATE_V21_TO_V22,
   ...MIGRATE_V22_TO_V23,
+  ...MIGRATE_V23_TO_V24,
 ];
 
 export const MIGRATE_V7_TO_V8: readonly string[] = [
@@ -395,7 +402,8 @@ const UPGRADES: readonly {
   { to: V20_SCHEMA_VERSION, steps: MIGRATE_V19_TO_V20 },
   { to: V21_SCHEMA_VERSION, steps: MIGRATE_V20_TO_V21 },
   { to: V22_SCHEMA_VERSION, steps: MIGRATE_V21_TO_V22 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V22_TO_V23 },
+  { to: V23_SCHEMA_VERSION, steps: MIGRATE_V22_TO_V23 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V23_TO_V24 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {

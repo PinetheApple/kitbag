@@ -229,10 +229,14 @@ function fillMissingOverrideFromDevice(
   const device = new Map(
     snapshot.records.librarySongs.map((song) => [song.uuid, song]),
   );
-  return songs.map((song) => ({
-    ...meterOverrideOf({ ...NO_METER_OVERRIDE, ...device.get(song.uuid) }),
-    ...song,
-  }));
+  return songs.map((song) => {
+    const local = device.get(song.uuid);
+    return {
+      ...meterOverrideOf({ ...NO_METER_OVERRIDE, ...local }),
+      tempoCorrection: local?.tempoCorrection ?? null,
+      ...song,
+    };
+  });
 }
 
 function incomingRecords(

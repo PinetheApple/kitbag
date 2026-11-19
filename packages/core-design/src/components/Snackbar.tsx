@@ -14,6 +14,7 @@ import { createThemedStyles } from '../ThemeProvider.tsx';
 
 interface SnackbarBase {
   readonly message: string;
+  readonly spokenMessage?: string;
   readonly onTimeout: () => void;
   readonly durationMs?: number;
 }
@@ -91,6 +92,7 @@ const useStyles = createThemedStyles((theme) => ({
 
 export function Snackbar({
   message,
+  spokenMessage = message,
   actionLabel,
   onAction,
   onTimeout,
@@ -113,7 +115,9 @@ export function Snackbar({
         inline === true ? styles.inline : { bottom },
       ]}
     >
-      <Text style={styles.message}>{message}</Text>
+      <Text style={styles.message} accessibilityLabel={spokenMessage}>
+        {message}
+      </Text>
       {actionLabel === undefined ? null : (
         <Pressable
           accessibilityRole="button"

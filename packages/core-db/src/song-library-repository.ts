@@ -38,6 +38,8 @@ import { saveLyricsRetimed, type LyricLineTimes } from './stem-lyrics';
 import { findStemSetMatches, type StemSetIdentity } from './stem-set-match';
 import { renameStem, renameStemSet } from './stem-rename';
 import { saveChosenTempoMode } from './stem-tempo';
+import { saveTempoCorrection } from './song-tempo-correction';
+import { tempoCorrectionOf, type TempoCorrection } from './tempo-correction';
 import type { TempoMode } from './tempo-mode';
 
 export interface LibrarySongRow {
@@ -47,6 +49,7 @@ export interface LibrarySongRow {
   readonly artist: string;
   readonly durationSec: number;
   readonly bpm: number | null;
+  readonly tempoCorrection: TempoCorrection;
   readonly hasGrid: boolean;
   readonly analysisStatus: AnalysisStatus;
   readonly analysisError: string | null;
@@ -91,6 +94,7 @@ export interface SongRecord extends MeterOverride {
   readonly beats: readonly number[];
   readonly downbeatIndices: readonly number[];
   readonly analysisStatus: AnalysisStatus;
+  readonly tempoCorrection: TempoCorrection;
 }
 
 export interface SongFiles {
@@ -143,6 +147,7 @@ async function songRows(db: Database): Promise<LibrarySongRow[]> {
       artist: songs.artist,
       durationSec: songs.duration,
       bpm: songs.bpm,
+      tempoCorrection: songs.tempoCorrection,
       hasGrid: sql<number>`${songs.beatGrid} IS NOT NULL`,
       analysisStatus: songs.analysisStatus,
       analysisError: songs.analysisError,
@@ -153,6 +158,7 @@ async function songRows(db: Database): Promise<LibrarySongRow[]> {
   return rows.map((row) => ({
     ...row,
     kind: 'song',
+    tempoCorrection: tempoCorrectionOf(row.tempoCorrection),
     hasGrid: row.hasGrid !== 0,
     inSetlist: listed.has(row.id),
   }));
@@ -356,6 +362,7 @@ async function readSong(
     downbeatIndices:
       row.downbeatIndices === null ? [] : unpackInt32(row.downbeatIndices),
     analysisStatus: row.analysisStatus,
+    tempoCorrection: tempoCorrectionOf(row.tempoCorrection),
     ...meterOverrideOf(row),
   };
 }
@@ -405,6 +412,8 @@ export function createSongLibraryRepository({
       serial(() => renameSong(db, id, title)),
     saveSongMeterOverride: (id: number, patch: MeterOverridePatch) =>
       serial(() => saveMeterOverride(db, songs, id, patch)),
+    saveSongTempoCorrection: (id: number, correction: TempoCorrection) =>
+      serial(() => saveTempoCorrection(db, id, correction)),
     saveStemSetMeterOverride: (id: number, patch: MeterOverridePatch) =>
       serial(() => saveMeterOverride(db, stemSets, id, patch)),
     saveStemSetClick: (id: number, patch: StemSetClickPatch) =>
