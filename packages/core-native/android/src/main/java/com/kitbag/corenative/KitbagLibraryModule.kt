@@ -447,6 +447,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       "supportedAudioMimeTypes" to SupportedAudio.MIME_TYPES,
       "unsupportedAudioExtensions" to SupportedAudio.UNSUPPORTED_EXTENSIONS,
       "exportMaxBaseNameBytes" to ExportFiles.MAX_BASE_NAME_BYTES,
+      "databaseCopyUnsettled" to LibraryErrors.DATABASE_UNSETTLED,
     ) + StemBundleBridge.CONSTANTS + LibraryErrors.EXPORT_CONSTANTS + DataFolderBridge.CONSTANTS
 
   companion object {

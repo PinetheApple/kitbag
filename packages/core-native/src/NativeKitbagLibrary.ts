@@ -249,6 +249,8 @@ export type LibraryConstants = Readonly<{
   exportNoShareTarget: string;
   exportShareFailed: string;
   exportMaxBaseNameBytes: Int32;
+  /** Reject code of saveDatabaseCopy while the database has an unfinished journal. */
+  databaseCopyUnsettled: string;
   supportedAudioFamilies: readonly string[];
   supportedAudioExtensions: readonly string[];
   supportedAudioMimeTypes: readonly string[];

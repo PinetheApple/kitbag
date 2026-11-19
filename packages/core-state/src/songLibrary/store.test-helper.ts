@@ -50,6 +50,7 @@ export const CODES: LibraryConstants = {
   exportNoShareTarget: 'no-share-target',
   exportShareFailed: 'share-failed',
   exportMaxBaseNameBytes: 246,
+  databaseCopyUnsettled: 'database-copy-unsettled',
   supportedAudioFamilies: ['WAV', 'MP3', 'FLAC', 'AIFF'],
   supportedAudioExtensions: [
     'wav',

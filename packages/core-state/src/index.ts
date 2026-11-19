@@ -244,10 +244,11 @@ export {
 } from './songLibrary/logic.ts';
 export { playerSongBadge } from './songLibrary/badge.ts';
 export { rowFilesOf } from './songLibrary/availability.ts';
-export type {
-  BundleAddOutcome,
-  BundleRefusal,
-  BundleRefusalReason,
+export {
+  errorCode,
+  type BundleAddOutcome,
+  type BundleRefusal,
+  type BundleRefusalReason,
 } from './songLibrary/stemBundleLogic.ts';
 export {
   createDataFolderStore,
