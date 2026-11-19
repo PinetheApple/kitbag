@@ -253,7 +253,7 @@ export function connectionActions(
   return {
     loadRecents,
     connect: async (address: string) => {
-      set({ address });
+      set({ address, cameraUnavailable: false });
       const parsed = parseAddress(address);
       if (!parsed.ok) {
         attempt += 1;

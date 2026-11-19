@@ -46,26 +46,23 @@ class ViewfinderView(context: Context, private val look: ScanLook) : View(contex
     drawPrompt(canvas, box)
   }
 
-  // The stroke is centred on its path, so the path runs half a stroke inside the box.
+  // One corner drawn four times, turned about the centre; the stroke sits half its width inside the box.
   private fun drawCorners(canvas: Canvas, box: RectF, radius: Float) {
     val half = corner.strokeWidth / 2
-    val inner = RectF(box.left + half, box.top + half, box.right - half, box.bottom - half)
+    val left = box.left + half
+    val top = box.top + half
     val arm = look.cornerDp * density - half
     val arc = radius - half
     corners.reset()
-    corners.moveTo(inner.left, inner.top + arm)
-    corners.arcTo(RectF(inner.left, inner.top, inner.left + 2 * arc, inner.top + 2 * arc), HALF_TURN, QUARTER_TURN)
-    corners.lineTo(inner.left + arm, inner.top)
-    corners.moveTo(inner.right - arm, inner.top)
-    corners.arcTo(RectF(inner.right - 2 * arc, inner.top, inner.right, inner.top + 2 * arc), -QUARTER_TURN, QUARTER_TURN)
-    corners.lineTo(inner.right, inner.top + arm)
-    corners.moveTo(inner.right, inner.bottom - arm)
-    corners.arcTo(RectF(inner.right - 2 * arc, inner.bottom - 2 * arc, inner.right, inner.bottom), 0f, QUARTER_TURN)
-    corners.lineTo(inner.right - arm, inner.bottom)
-    corners.moveTo(inner.left + arm, inner.bottom)
-    corners.arcTo(RectF(inner.left, inner.bottom - 2 * arc, inner.left + 2 * arc, inner.bottom), QUARTER_TURN, QUARTER_TURN)
-    corners.lineTo(inner.left, inner.bottom - arm)
-    canvas.drawPath(corners, corner)
+    corners.moveTo(left, top + arm)
+    corners.arcTo(RectF(left, top, left + 2 * arc, top + 2 * arc), HALF_TURN, QUARTER_TURN)
+    corners.lineTo(left + arm, top)
+    canvas.save()
+    repeat(CORNERS) {
+      canvas.drawPath(corners, corner)
+      canvas.rotate(QUARTER_TURN, box.centerX(), box.centerY())
+    }
+    canvas.restore()
   }
 
   private fun drawPrompt(canvas: Canvas, box: RectF) {
@@ -85,5 +82,6 @@ class ViewfinderView(context: Context, private val look: ScanLook) : View(contex
     const val OPAQUE = 255
     const val HALF_TURN = 180f
     const val QUARTER_TURN = 90f
+    const val CORNERS = 4
   }
 }

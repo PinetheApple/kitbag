@@ -86,6 +86,7 @@ export type StemDeckConstants = Readonly<{
   hasCamera: boolean;
   scanRead: string;
   scanTypeAddress: string;
+  scanUnavailable: string;
   trustPinned: string;
   trustSystem: string;
   trustNew: string;

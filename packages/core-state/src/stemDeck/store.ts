@@ -85,6 +85,7 @@ const INITIAL: StemDeckState = {
   address: '',
   addressFocus: 0,
   camera: null,
+  cameraUnavailable: false,
 };
 
 function listActions(set: SetState, get: Get) {

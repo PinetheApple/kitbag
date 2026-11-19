@@ -117,12 +117,27 @@ class QrScanActivity : ComponentActivity() {
           .build()
           .also { it.setAnalyzer(analysis, ::analyze) }
         provider.unbindAll()
-        provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, frames)
+        val camera = provider.bindToLifecycle(this, lens(provider), preview, frames)
+        camera.cameraInfo.cameraState.observe(this) { state ->
+          state.error?.let { unavailable(IllegalStateException("Camera error ${it.code}")) }
+        }
       } catch (e: Exception) {
-        Log.w(LOG_TAG, "Camera did not open", e)
-        finishWith(RESULT_CANCELED, null)
+        unavailable(e)
       }
     }, ContextCompat.getMainExecutor(this))
+  }
+
+  // hasCamera counts any camera, so a phone with only a front one still scans.
+  private fun lens(provider: ProcessCameraProvider): CameraSelector =
+    if (provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) {
+      CameraSelector.DEFAULT_BACK_CAMERA
+    } else {
+      CameraSelector.DEFAULT_FRONT_CAMERA
+    }
+
+  private fun unavailable(cause: Exception) {
+    Log.w(LOG_TAG, "Camera unavailable", cause)
+    finishWith(RESULT_OK, Intent().putExtra(QrScan.EXTRA_UNAVAILABLE, true))
   }
 
   // The Y plane of YUV_420_888 always has a pixel stride of 1; its rows may be padded.

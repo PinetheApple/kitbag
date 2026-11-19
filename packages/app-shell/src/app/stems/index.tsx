@@ -1,4 +1,4 @@
-import { useLastTool, useSongLibrary } from '@kitbag/core-state';
+import { useLastTool, useSongLibrary, useStemDeck } from '@kitbag/core-state';
 import { LibraryScreen } from '@kitbag/tool-library';
 import { AddStemSongSheet, ImportStatusCard } from '@kitbag/tool-stems';
 import { useCallback, useEffect, useState } from 'react';
@@ -16,6 +16,7 @@ function StemSongsRoute() {
   const markUsed = useLastTool((s) => s.markUsed);
   const importStemFolder = useSongLibrary((s) => s.importStemFolder);
   const [adding, setAdding] = useState(false);
+  const importing = useStemDeck((s) => s.importView?.running === true);
 
   useEffect(() => {
     markUsed(TOOL_ID.stems);
@@ -45,7 +46,9 @@ function StemSongsRoute() {
         onOpenStemSet={routes.openStemSet}
         onOpenSong={routes.openSong}
         onAdd={openAdd}
-        status={<ImportStatusCard onView={stemDeck.openImport} />}
+        {...(importing
+          ? { status: <ImportStatusCard onView={stemDeck.openImport} /> }
+          : {})}
       />
       <AddStemSongSheet
         visible={adding}

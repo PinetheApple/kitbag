@@ -13,10 +13,13 @@ import com.facebook.react.bridge.WritableMap
 object QrScan {
   const val EXTRA_TEXT = "com.kitbag.corenative.stemdeck.qr.TEXT"
   const val EXTRA_TYPE_ADDRESS = "com.kitbag.corenative.stemdeck.qr.TYPE_ADDRESS"
+  const val EXTRA_UNAVAILABLE = "com.kitbag.corenative.stemdeck.qr.UNAVAILABLE"
   const val READ = "read"
   const val TYPE_ADDRESS = "typeAddress"
+  const val UNAVAILABLE = "unavailable"
 
-  val CONSTANTS: Map<String, Any> = mapOf("scanRead" to READ, "scanTypeAddress" to TYPE_ADDRESS)
+  val CONSTANTS: Map<String, Any> =
+    mapOf("scanRead" to READ, "scanTypeAddress" to TYPE_ADDRESS, "scanUnavailable" to UNAVAILABLE)
 }
 
 class QrScanLauncher(private val context: ReactApplicationContext) : ActivityEventListener {
@@ -67,6 +70,7 @@ class QrScanLauncher(private val context: ReactApplicationContext) : ActivityEve
     val outcome = when {
       text != null -> QrScan.READ
       data.getBooleanExtra(QrScan.EXTRA_TYPE_ADDRESS, false) -> QrScan.TYPE_ADDRESS
+      data.getBooleanExtra(QrScan.EXTRA_UNAVAILABLE, false) -> QrScan.UNAVAILABLE
       else -> return null
     }
     return Arguments.createMap().apply {

@@ -79,6 +79,19 @@ describe('scanning an address', () => {
     expect(native.probe).not.toHaveBeenCalled();
   });
 
+  it('says so when the camera would not open, until the next try', async () => {
+    const { store, native } = setup();
+    native.scanQr.mockResolvedValueOnce({
+      outcome: CODES.scanUnavailable,
+      text: null,
+    });
+    await store.getState().scanAddress(LOOK, false);
+    expect(store.getState().cameraUnavailable).toBe(true);
+    expect(native.probe).not.toHaveBeenCalled();
+    await store.getState().scanAddress(LOOK, false);
+    expect(store.getState().cameraUnavailable).toBe(false);
+  });
+
   it('treats a scanner that would not open as closed', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { store, native } = setup();

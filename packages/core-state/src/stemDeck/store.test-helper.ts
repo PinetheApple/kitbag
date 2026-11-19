@@ -18,6 +18,7 @@ export const CODES: StemDeckConstants = {
   hasCamera: true,
   scanRead: 'read',
   scanTypeAddress: 'typeAddress',
+  scanUnavailable: 'unavailable',
   trustPinned: 'pinned',
   trustSystem: 'system',
   trustNew: 'new',

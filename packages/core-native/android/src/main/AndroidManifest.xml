@@ -21,7 +21,8 @@
         android:name="com.kitbag.corenative.stemdeck.qr.QrScanActivity"
         android:exported="false"
         android:theme="@android:style/Theme.Material.NoActionBar"
-        android:configChanges="orientation|screenSize|screenLayout|uiMode|fontScale" />
+        android:screenOrientation="portrait"
+        android:configChanges="screenSize|screenLayout|uiMode|fontScale" />
     <provider
         android:name="com.kitbag.corenative.library.BackupFileProvider"
         android:authorities="${applicationId}.kitbag.backups"

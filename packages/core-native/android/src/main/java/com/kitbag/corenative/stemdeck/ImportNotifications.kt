@@ -165,7 +165,7 @@ class ImportNotifications(private val context: Context) {
     const val CHANNEL_ID = "kitbag_imports"
     const val NOTIFICATION_ID = 2
 
-    // app-shell's expo-router file routes: app/stemdeck/import.tsx and app/stems/index.tsx.
+    // expo-router file routes in app-shell; stemDeckLinks.test.ts checks both exist.
     const val IMPORT_LINK = "kitbag://stemdeck/import"
     const val STEM_SONGS_LINK = "kitbag://stems"
   }

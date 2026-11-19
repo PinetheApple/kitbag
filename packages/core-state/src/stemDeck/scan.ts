@@ -9,6 +9,7 @@ export interface ScanState {
   readonly address: string;
   readonly addressFocus: number;
   readonly camera: PermissionAnswer | null;
+  readonly cameraUnavailable: boolean;
 }
 
 export interface ScanActions {
@@ -54,7 +55,7 @@ export function scanActions(
 
   return {
     setAddress: (address: string) => {
-      set({ address });
+      set({ address, cameraUnavailable: false });
     },
     typeAddress,
     // Resolves once the scanner closes, not once the connection settles. A
@@ -63,12 +64,14 @@ export function scanActions(
       const checked = await permission(ask);
       const keepsBlock = !ask && checked === DENIED && get().camera === BLOCKED;
       const answer = keepsBlock ? BLOCKED : checked;
-      set({ camera: answer });
+      set({ camera: answer, cameraUnavailable: false });
       if (answer !== 'granted') return answer;
       const result = await scan(look);
       const codes = stemDeckCodes(deps.native, get().codes);
       if (result === null || codes === null) return answer;
-      if (result.outcome === codes.scanTypeAddress) typeAddress();
+      if (result.outcome === codes.scanUnavailable)
+        set({ cameraUnavailable: true });
+      else if (result.outcome === codes.scanTypeAddress) typeAddress();
       else if (result.outcome === codes.scanRead && result.text !== null)
         get()
           .connect(result.text)
