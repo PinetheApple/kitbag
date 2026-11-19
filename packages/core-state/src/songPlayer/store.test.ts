@@ -323,6 +323,17 @@ describe('the transport', () => {
     expect(commands.mixerPause).toHaveBeenCalledOnce();
   });
 
+  it('does nothing on play while the song loads', () => {
+    const fake = fakeSongRuntime();
+    fake.records.readSong.mockReturnValueOnce(new Promise(() => undefined));
+    const store = songStore(fake);
+    store.getState().open(SONG_ID, BARS);
+    expect(store.getState().status).toBe('loading');
+    store.getState().togglePlay();
+    expect(fake.commands.mixerPlay).not.toHaveBeenCalled();
+    expect(fake.commands.songTransportShow).not.toHaveBeenCalled();
+  });
+
   it('starts over when pressed at the end of the song', async () => {
     const { store, commands, engine } = await openedSong();
     engine.position = RATE * 10;
