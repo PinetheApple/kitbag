@@ -189,6 +189,17 @@ describe('paused move', () => {
     progress(status());
     expect(pausedMove(store.getState())).toBeNull();
   });
+
+  it('leaves a failed move to its failure, not the closed-app banner', async () => {
+    const mismatch = status({
+      running: false,
+      paused: true,
+      error: CODES.moveErrors.hashMismatch,
+    });
+    const { store } = setup({ move: mismatch });
+    await store.getState().start();
+    expect(pausedMove(store.getState())).toBeNull();
+  });
 });
 
 describe('releasing the old copies', () => {
@@ -254,6 +265,18 @@ describe('releasing the old copies', () => {
     const { store, native } = setup({ move: waiting });
     await store.getState().start();
     expect(native.releaseOldCopies).toHaveBeenCalledOnce();
+  });
+
+  it('releases again for a second move after the first one finished', async () => {
+    const { store, native, progress, finish } = setup();
+    await store.getState().start();
+    progress(SWITCHED);
+    native.moveStatus.mockResolvedValue(null);
+    await finish({ outcome: CODES.moveOutcomes.done, error: null, path: null });
+    expect(store.getState().move).toBeNull();
+
+    progress(SWITCHED);
+    expect(native.releaseOldCopies).toHaveBeenCalledTimes(2);
   });
 });
 

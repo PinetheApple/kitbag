@@ -198,13 +198,16 @@ export type MoveErrors = Readonly<{
   noSpace: string;
   targetNotWritable: string;
   hashMismatch: string;
+  targetLeftovers: string;
   io: string;
   sameLocation: string;
   inProgress: string;
   noMove: string;
   running: string;
   switched: string;
-  useInternalRefused: string;
+  notOnCard: string;
+  cardMounted: string;
+  importLockHeld: string;
   foregroundRefused: string;
 }>;
 

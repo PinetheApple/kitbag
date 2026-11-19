@@ -88,7 +88,8 @@ const INITIAL: DataFolderState = {
 };
 
 export function pausedMove(state: DataFolderState): MoveStatus | null {
-  return state.move?.paused === true ? state.move : null;
+  const { move } = state;
+  return move?.paused === true && move.error === null ? move : null;
 }
 
 export function folderUnavailable(state: DataFolderState): boolean {
