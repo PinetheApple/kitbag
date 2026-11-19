@@ -17,6 +17,7 @@ import com.kitbag.corenative.library.AnalysisEvents
 import com.kitbag.corenative.library.AnalysisFailure
 import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisStore
+import com.kitbag.corenative.library.DataFolder
 import com.kitbag.corenative.library.BackupShare
 import com.kitbag.corenative.library.DocumentPicker
 import com.kitbag.corenative.library.ExportFiles
@@ -39,11 +40,10 @@ import java.util.concurrent.ThreadFactory
 class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   NativeKitbagLibrarySpec(reactContext) {
 
-  private val base = LibraryStorage.base(reactContext)
   private val results = LibraryStorage.analysisStore(reactContext)
   private val io: ExecutorService = Executors.newFixedThreadPool(IO_THREADS, named("kitbag-library-io"))
   private val nameLock = Any()
-  private val bundles = StemBundleBridge(reactContext.contentResolver, base)
+  private val bundles = StemBundleBridge(reactContext.contentResolver, ::libraryRoot)
   private val picker = DocumentPicker(reactContext, io, ::rejectLogged)
   private val files = FileShare(reactContext, io, ::rejectLogged)
   private val backups = BackupShare(reactContext, files)
@@ -82,20 +82,24 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     files.share(ExportFiles.shareSpec(), promise) { file }
   }
 
+  private fun libraryRoot() = DataFolder.root(reactApplicationContext)
+
   override fun importAudio(uri: String, relativeDir: String, promise: Promise) {
     io.execute {
+      var root: File? = null
       var dir: File? = null
       var reserved: File? = null
       try {
         val source = Uri.parse(uri)
         val displayName = picker.displayName(source)
-        dir = LibraryPaths.resolve(base, relativeDir, allowBase = true)
+        root = libraryRoot()
+        dir = LibraryPaths.resolve(root, relativeDir, allowBase = true)
         reserved = reserveTarget(dir, source, displayName ?: source.lastPathSegment)
         copyInto(source, reserved)
-        promise.resolve(importedAudio(reserved, displayName))
+        promise.resolve(importedAudio(root, reserved, displayName))
       } catch (e: Exception) {
         reserved?.delete()
-        if (dir != null && dir != base.canonicalFile) dir.delete()
+        if (dir != null && dir != root?.canonicalFile) dir.delete()
         rejectLogged(promise, E_IMPORT_FAILED, "Import failed", e)
       }
     }
@@ -124,10 +128,10 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     }
   }
 
-  private fun importedAudio(file: File, displayName: String?): WritableMap {
+  private fun importedAudio(root: File, file: File, displayName: String?): WritableMap {
     val metadata = readMetadata(file)
     return Arguments.createMap().apply {
-      putString("relativePath", LibraryPaths.relativize(base, file))
+      putString("relativePath", LibraryPaths.relativize(root, file))
       putString("title", metadata.title ?: LibraryPaths.displayTitle(displayName) ?: file.nameWithoutExtension)
       putString("artist", metadata.artist.orEmpty())
       putDouble("durationSec", metadata.durationSec)
@@ -155,8 +159,9 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
 
   override fun enqueueAnalysis(relativePath: String, waveformRelativeDir: String, replace: Boolean) {
     val canonical = try {
-      LibraryPaths.requireInsideLibrary(base, waveformRelativeDir, allowBase = true)
-      LibraryPaths.relativize(base, LibraryPaths.resolve(base, relativePath))
+      val root = libraryRoot()
+      LibraryPaths.requireInsideLibrary(root, waveformRelativeDir, allowBase = true)
+      LibraryPaths.relativize(root, LibraryPaths.resolve(root, relativePath))
     } catch (e: IllegalArgumentException) {
       Log.w(TAG, "Analysis of $relativePath refused", e)
       io.execute { recordFailure(relativePath, AnalysisFailure.MISSING_FILE) }
@@ -223,7 +228,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun deleteLibraryFile(relativePath: String, promise: Promise) {
     io.execute {
       try {
-        val target = LibraryPaths.resolve(base, relativePath)
+        val target = LibraryPaths.resolve(libraryRoot(), relativePath)
         if (target.isDirectory) throw IOException("$target is a directory")
         if (target.exists() && !target.delete()) throw IOException("Could not delete $target")
         promise.resolve(null)
@@ -234,7 +239,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   }
 
   override fun deleteSongFolder(folderName: String, promise: Promise) {
-    deleteFolder(promise) { LibraryPaths.songFolder(base, folderName) }
+    deleteFolder(promise) { LibraryPaths.songFolder(libraryRoot(), folderName) }
   }
 
   private fun deleteFolder(promise: Promise, resolveFolder: () -> File) {
@@ -282,13 +287,13 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   }
 
   override fun deleteStemFolder(folderName: String, promise: Promise) {
-    deleteFolder(promise) { LibraryPaths.stemFolder(base, folderName) }
+    deleteFolder(promise) { LibraryPaths.stemFolder(libraryRoot(), folderName) }
   }
 
   override fun readWaveform(relativePath: String, buckets: Double, promise: Promise) {
     io.execute {
       try {
-        val envelope = NativeWaveform.envelope(LibraryPaths.resolve(base, relativePath), buckets.toInt())
+        val envelope = NativeWaveform.envelope(LibraryPaths.resolve(libraryRoot(), relativePath), buckets.toInt())
           ?: throw IOException("Unreadable waveform sidecar")
         promise.resolve(Arguments.createArray().apply { envelope.forEach { pushDouble(it.toDouble()) } })
       } catch (e: Exception) {
@@ -301,8 +306,9 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     io.execute {
       try {
         require(databaseName.isNotEmpty() && File(databaseName).name == databaseName) { "Not a database name" }
-        val usage = LibraryUsage.measure(base, reactApplicationContext.getDatabasePath(databaseName))
-        promise.resolve(usage.toMap(base.absolutePath))
+        val root = libraryRoot()
+        val usage = LibraryUsage.measure(root, reactApplicationContext.getDatabasePath(databaseName))
+        promise.resolve(usage.toMap(root.absolutePath))
       } catch (e: Exception) {
         rejectLogged(promise, E_STORAGE_FAILED, "Could not measure storage", e)
       }
@@ -333,7 +339,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     io.execute {
       try {
         val paths = (0 until relativePaths.size()).asSequence().mapNotNull { relativePaths.getString(it) }
-        promise.resolve(Arguments.createArray().apply { LibraryUsage.missing(base, paths).forEach(::pushString) })
+        promise.resolve(Arguments.createArray().apply { LibraryUsage.missing(libraryRoot(), paths).forEach(::pushString) })
       } catch (e: Exception) {
         rejectLogged(promise, E_STORAGE_FAILED, "Could not check library files", e)
       }

@@ -8,6 +8,7 @@ import androidx.work.WorkerParameters
 import com.kitbag.corenative.library.AnalysisEvents
 import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisRun
+import com.kitbag.corenative.library.DataFolder
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
 import com.kitbag.corenative.library.MissingSongException
@@ -43,7 +44,7 @@ class AnalysisWorker(context: Context, params: WorkerParameters) : Worker(contex
   }
 
   private fun analyze(relativePath: String, waveformRelativeDir: String): AnalysisResult {
-    val base = LibraryStorage.base(applicationContext)
+    val base = DataFolder.root(applicationContext)
     val song = LibraryPaths.resolve(base, relativePath)
     if (!song.isFile) throw MissingSongException()
     val waveformDir = LibraryPaths.resolve(base, waveformRelativeDir, allowBase = true)
