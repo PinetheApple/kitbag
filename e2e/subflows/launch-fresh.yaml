@@ -4,6 +4,12 @@ appId: com.kitbag.app
     clearState: true
     permissions:
       notifications: allow
+# A cold CI emulator's launcher can ANR over Home; an ANR of Kitbag itself must still fail.
+- runFlow:
+    when:
+      visible: "(?!Kitbag ).* isn't responding"
+    commands:
+      - tapOn: 'Wait'
 - extendedWaitUntil:
     visible: 'Metronome, .*(ready|playing)'
     timeout: 20000
