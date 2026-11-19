@@ -9,12 +9,14 @@ import type {
 import { formatBytes } from './bytes.ts';
 import { capitalised } from './capitalised.ts';
 import {
+  CARD_PLACE,
   fileCount,
   movePercent,
   movingTitle,
   placeName,
   thePlace,
 } from './dataFolderText.ts';
+import { CARD_SONGS_PLAY } from './returnedCardText.ts';
 
 export function progressBytes(move: MoveStatus): readonly [string, string] {
   return [formatBytes(move.doneBytes), `of ${formatBytes(move.totalBytes)}`];
@@ -57,6 +59,8 @@ export function phaseText(phase: string, phases: MovePhases): string {
 }
 
 export function movingHint(move: MoveStatus): string {
+  if (move.cardReturn)
+    return 'The card’s songs keep playing from it until the move finishes. Keep the card in.';
   return `Every song keeps playing from ${thePlace(move.sourceVolumeUuid)} until the move finishes.`;
 }
 
@@ -76,20 +80,35 @@ export function switchedFailedText(move: MoveStatus): ErrorText {
 }
 
 export function stopHint(move: MoveStatus, phases: MovePhases): string {
-  return `The ${fileCount(copiedFiles(move, phases))} already copied are removed from ${thePlace(move.targetVolumeUuid)}. Everything stays on ${thePlace(move.sourceVolumeUuid)}, where it is now.`;
+  const stays = move.cardReturn
+    ? 'The card’s songs stay on it and play from it, as now.'
+    : `Everything stays on ${thePlace(move.sourceVolumeUuid)}, where it is now.`;
+  return `The ${fileCount(copiedFiles(move, phases))} already copied are removed from ${thePlace(move.targetVolumeUuid)}. ${stays}`;
 }
 
-export function pausedHint(move: MoveStatus, phases: MovePhases): string {
+export function pausedHint(
+  move: MoveStatus,
+  phases: MovePhases,
+  cardOut = false,
+): string {
+  const target = thePlace(move.targetVolumeUuid);
+  const copied = `${String(copiedFiles(move, phases))} of ${fileCount(move.totalFiles)} are on ${target}.`;
+  if (move.cardReturn && cardOut)
+    return `${capitalised(CARD_PLACE)} taken out. ${copied} Put the card back to resume, or undo to remove those copies. Its songs play again once it’s in.`;
   const why =
     move.error === null
       ? 'Kitbag closed during the move.'
       : 'The move stopped.';
-  return `${why} ${String(copiedFiles(move, phases))} of ${fileCount(move.totalFiles)} are on ${thePlace(move.targetVolumeUuid)}. Your songs still play from ${thePlace(move.sourceVolumeUuid)}.`;
+  const after = move.cardReturn
+    ? `${CARD_SONGS_PLAY} Undo removes the copies made so far from ${target}.`
+    : `Your songs still play from ${thePlace(move.sourceVolumeUuid)}.`;
+  return `${why} ${copied} ${after}`;
 }
 
 export interface Places {
   readonly source: string | null;
   readonly target: string | null;
+  readonly cardReturn?: boolean;
 }
 
 export interface ErrorText {
@@ -97,16 +116,21 @@ export interface ErrorText {
   readonly body: string;
 }
 
-type ErrorCopy = (from: string, to: string, toName: string) => ErrorText;
+type ErrorCopy = (
+  from: string,
+  to: string,
+  toName: string,
+  stillPlays: string,
+) => ErrorText;
 
 const MOVE_ERROR_TEXT: Readonly<Record<keyof MoveErrors, ErrorCopy>> = {
   sourceUnavailable: (from) => ({
     title: `Can’t reach ${from}`,
     body: `Your files are on ${from} and Kitbag can’t read it right now. Nothing was moved. Put it back and try again.`,
   }),
-  targetUnavailable: (from, to) => ({
+  targetUnavailable: (_from, to, _toName, stillPlays) => ({
     title: `${capitalised(to)} went away`,
-    body: `Kitbag lost ${to} and stopped before switching. Every song still plays from ${from}.`,
+    body: `Kitbag lost ${to} and stopped before switching. ${stillPlays}`,
   }),
   targetOccupied: (from, to) => ({
     title: `Kitbag files already on ${to}`,
@@ -120,9 +144,9 @@ const MOVE_ERROR_TEXT: Readonly<Record<keyof MoveErrors, ErrorCopy>> = {
     title: `Can’t write to ${toName}`,
     body: `Kitbag wrote a test file before copying anything, and ${to} refused it. It may be read-only, locked or failing. Nothing was moved. Your files are still on ${from}.`,
   }),
-  hashMismatch: (from, to) => ({
+  hashMismatch: (_from, to, _toName, stillPlays) => ({
     title: 'Move didn’t finish',
-    body: `Some files on ${to} didn’t match the originals, so Kitbag stopped before switching. Nothing is lost. Every song still plays from ${from}. Trying again copies them afresh; if it fails again the card may be failing.`,
+    body: `Some files on ${to} didn’t match the originals, so Kitbag stopped before switching. Nothing is lost. ${stillPlays} Trying again copies them afresh; if it fails again the card may be failing.`,
   }),
   targetLeftovers: (from, to) => ({
     title: `Old copies still on ${to}`,
@@ -132,9 +156,9 @@ const MOVE_ERROR_TEXT: Readonly<Record<keyof MoveErrors, ErrorCopy>> = {
     title: 'Can’t read the last move',
     body: 'Kitbag couldn’t read how far the last move got, so it changed nothing. Your files are where they were.',
   }),
-  io: (from) => ({
+  io: (_from, _to, _toName, stillPlays) => ({
     title: 'Move stopped',
-    body: `Kitbag couldn’t read or write a file, so it stopped before switching. Every song still plays from ${from}.`,
+    body: `Kitbag couldn’t read or write a file, so it stopped before switching. ${stillPlays}`,
   }),
   sameLocation: (from) => ({
     title: 'Already there',
@@ -181,10 +205,16 @@ export function moveErrorText(
 ): ErrorText {
   const keys = Object.keys(MOVE_ERROR_TEXT) as (keyof MoveErrors)[];
   const key = keys.find((name) => codes.moveErrors[name] === code) ?? 'io';
+  const from = thePlace(places.source);
+  const stillPlays =
+    places.cardReturn === true
+      ? CARD_SONGS_PLAY
+      : `Every song still plays from ${from}.`;
   return MOVE_ERROR_TEXT[key](
-    thePlace(places.source),
+    from,
     thePlace(places.target),
     placeName(places.target),
+    stillPlays,
   );
 }
 
@@ -201,7 +231,9 @@ export function outcomeText(
   const target = thePlace(places.target);
   switch (finished.outcome) {
     case outcomes.done:
-      return `Move finished. Your files are on ${target}.`;
+      return places.cardReturn === true
+        ? `Move finished. The card’s songs now play from ${target} and are off the card.`
+        : `Move finished. Your files are on ${target}.`;
     case outcomes.cancelled:
       return `Move stopped. Your files are still on ${thePlace(places.source)}.`;
     case outcomes.awaitingRelease:
