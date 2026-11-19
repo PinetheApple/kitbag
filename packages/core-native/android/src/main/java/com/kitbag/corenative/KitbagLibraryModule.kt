@@ -13,6 +13,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.kitbag.corenative.library.AnalysisEvents
+import com.kitbag.corenative.library.AudioHeader
 import com.kitbag.corenative.library.AudioMetadata
 import com.kitbag.corenative.library.AnalysisFailure
 import com.kitbag.corenative.library.AnalysisResult
@@ -218,6 +219,15 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     val input = reactApplicationContext.contentResolver.openInputStream(source)
       ?: throw IOException("Could not open $source")
     input.use { from -> file.outputStream().use { to -> from.copyTo(to) } }
+  }
+
+  override fun sniffUnsupportedFormat(uri: String, promise: Promise) {
+    io.execute {
+      val format = AudioHeader.sniff {
+        reactApplicationContext.contentResolver.openInputStream(Uri.parse(uri))
+      }
+      promise.resolve(format.orEmpty())
+    }
   }
 
   override fun importAudio(uri: String, relativeDir: String, promise: Promise) {

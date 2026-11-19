@@ -37,13 +37,17 @@ object SupportedAudio {
   val EXTENSIONS = FAMILIES.flatMap { it.extensions } + IMPORT_ONLY_EXTENSIONS
   val MIME_TYPES = FAMILIES.flatMap { it.mimeTypes }
 
+  const val M4A = "m4a"
+  const val AAC = "aac"
+  const val OGG = "ogg"
+
   val UNSUPPORTED_EXTENSIONS = listOf(
-    "m4a",
+    M4A,
     "m4b",
     "m4r",
     "mp4",
-    "aac",
-    "ogg",
+    AAC,
+    OGG,
     "oga",
     "opus",
     "wma",
