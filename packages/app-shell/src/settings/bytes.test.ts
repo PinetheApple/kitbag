@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatBytes } from './bytes.ts';
+import { formatBytes, formatWithGbDecimal } from './bytes.ts';
 
 describe('formatBytes', () => {
   it.each([
@@ -16,5 +16,16 @@ describe('formatBytes', () => {
     [12_000_000_000_000, '12000 GB'],
   ])('%d bytes reads %s', (bytes, text) => {
     expect(formatBytes(bytes)).toBe(text);
+  });
+});
+
+describe('formatWithGbDecimal', () => {
+  it.each([
+    [640_000_000, '640 MB'],
+    [1_200_000_000, '1.2 GB'],
+    [41_230_000_000, '41.2 GB'],
+    [128_000_000_000, '128.0 GB'],
+  ])('%d bytes reads %s', (bytes, text) => {
+    expect(formatWithGbDecimal(bytes)).toBe(text);
   });
 });

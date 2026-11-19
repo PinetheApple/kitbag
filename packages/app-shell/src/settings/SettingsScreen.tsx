@@ -8,12 +8,15 @@ import {
   rowLabel,
   SectionHeader,
   SegmentedControl,
+  Snackbar,
+  snackbar,
   type SegmentOption,
 } from '@kitbag/core-design';
 import { backupFilesAvailable, getAppVersion } from '@kitbag/core-native';
 import { useAppearance, useTools, type ThemeChoice } from '@kitbag/core-state';
-import { useCallback, useMemo, useReducer } from 'react';
+import { useCallback, useMemo, useReducer, useState } from 'react';
 import { Linking, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   LICENCE_NAME,
@@ -23,6 +26,9 @@ import {
 } from './about.ts';
 import { formatAppVersion } from './appVersion.ts';
 import { BackUpRow, RestoreRow } from './BackupRows.tsx';
+import { DataFolderRow } from './DataFolderRow.tsx';
+import { DataFolderSheets } from './DataFolderSheets.tsx';
+import { mediaSize } from './dataFolderText.ts';
 import {
   NOTIFICATIONS_LABEL,
   type NotificationRow,
@@ -39,6 +45,7 @@ import { STORAGE_LABEL, storageSummary } from './storageText.ts';
 import { usePracticeStats } from './usePracticeStats.ts';
 import { TOOLS_TITLE, toolsOnSummary } from './toolsText.ts';
 import { useNotificationRow } from './useNotificationRow.ts';
+import { useDataFolderSheets } from './useDataFolderSheets.ts';
 import { useStorage } from './useStorage.ts';
 
 const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
@@ -90,11 +97,14 @@ function ToolsSection({ onOpenTools }: { readonly onOpenTools: () => void }) {
 
 function DataSection({
   onOpenRestore,
+  onNotice,
 }: {
   readonly onOpenRestore: () => void;
+  readonly onNotice: (text: string) => void;
 }) {
   const { report, missing, removalFailed, refresh, removeMissing } =
     useStorage();
+  const dataFolder = useDataFolderSheets(onNotice);
   const summary = report === null ? null : storageSummary(report);
   const [sheet, send] = useReducer(nextStorageSheet, 'none');
   const handlers = useMemo(() => {
@@ -122,6 +132,7 @@ function DataSection({
         <EditRow label="Practice">
           <PracticeValue />
         </EditRow>
+        <DataFolderRow onOpen={dataFolder.open} />
         <EditRow
           label={STORAGE_LABEL}
           accessibilityLabel={
@@ -142,6 +153,10 @@ function DataSection({
         onRemove={remove}
         onCancelRemove={handlers.cancelRemove}
         onDismiss={handlers.dismiss}
+      />
+      <DataFolderSheets
+        model={dataFolder}
+        media={report === null ? null : mediaSize(report)}
       />
     </>
   );
@@ -273,11 +288,24 @@ export function SettingsScreen({
   onOpenTools,
   onOpenRestore,
 }: SettingsScreenProps) {
+  const insets = useSafeAreaInsets();
+  const [notice, setNotice] = useState<string | null>(null);
+  const clearNotice = useCallback(() => {
+    setNotice(null);
+  }, []);
+  const overlay =
+    notice === null ? null : (
+      <Snackbar
+        message={notice}
+        bottom={insets.bottom + snackbar.aboveSheet}
+        onTimeout={clearNotice}
+      />
+    );
   return (
-    <SettingsFrame title="Settings" onBack={onBack}>
+    <SettingsFrame title="Settings" onBack={onBack} overlay={overlay}>
       <RigSection onOpenCalibration={onOpenCalibration} />
       <ToolsSection onOpenTools={onOpenTools} />
-      <DataSection onOpenRestore={onOpenRestore} />
+      <DataSection onOpenRestore={onOpenRestore} onNotice={setNotice} />
       <AppearanceSection />
       <AboutSection onOpenAttributions={onOpenAttributions} />
     </SettingsFrame>

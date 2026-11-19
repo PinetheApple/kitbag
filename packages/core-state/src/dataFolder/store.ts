@@ -14,6 +14,7 @@ import { stemPlayerStore } from '../stemPlayer/store.ts';
 import type { StoredRowFiles } from '../storage/missingRows.ts';
 import { storedRowFiles } from '../storage/storedRowFiles.ts';
 import { awayPaths } from './awayPaths.ts';
+import { moveSettled } from './outcomes.ts';
 import {
   oldRootReleased,
   playerTracks,
@@ -30,6 +31,7 @@ export interface DataFolderState {
   readonly error: string | null;
   readonly holders: PlayerTracks | null;
   readonly released: boolean;
+  readonly pending: boolean;
 }
 
 export interface DataFolderActions {
@@ -37,11 +39,11 @@ export interface DataFolderActions {
   readonly stop: () => void;
   readonly refreshVolumes: () => Promise<void>;
   readonly refreshMove: () => Promise<void>;
-  readonly startMove: (volumeUuid: string | null) => Promise<void>;
-  readonly cancelMove: () => Promise<void>;
-  readonly resumeMove: () => Promise<void>;
-  readonly undoMove: () => Promise<void>;
-  readonly switchToInternalStorage: () => Promise<void>;
+  readonly startMove: (volumeUuid: string | null) => Promise<boolean>;
+  readonly cancelMove: () => Promise<boolean>;
+  readonly resumeMove: () => Promise<boolean>;
+  readonly undoMove: () => Promise<boolean>;
+  readonly switchToInternalStorage: () => Promise<boolean>;
   readonly dismissError: () => void;
 }
 
@@ -85,6 +87,7 @@ const INITIAL: DataFolderState = {
   error: null,
   holders: null,
   released: false,
+  pending: false,
 };
 
 export function pausedMove(state: DataFolderState): MoveStatus | null {
@@ -141,14 +144,33 @@ export function createDataFolderStore(
       set({ error: code ?? get().codes?.moveErrors.io ?? null });
     };
 
+    // Launch-time clean-up can finish a move before a queued resume reaches it.
+    const dropMootRefusal = () => {
+      const { codes, error, move } = get();
+      if (
+        move === null &&
+        error !== null &&
+        error === codes?.moveErrors.noMove
+      ) {
+        set({ error: null });
+      }
+    };
+
     const request = async (call: () => Promise<void>) => {
+      if (get().pending) return false;
+      set({ pending: true });
+      let acted = true;
       try {
         await call();
         set({ error: null });
       } catch (error) {
+        acted = false;
         refuse(error);
       }
       await Promise.all([get().refreshMove(), get().refreshVolumes()]);
+      dropMootRefusal();
+      set({ pending: false });
+      return acted;
     };
 
     const showMove = (move: MoveStatus | null) => {
@@ -157,12 +179,14 @@ export function createDataFolderStore(
     };
 
     const onFinished = (finished: MoveFinished) => {
-      set(
-        finished.error === null
-          ? { finished }
-          : { finished, error: finished.error },
-      );
-      void get().refreshMove();
+      const { codes } = get();
+      const settled =
+        codes === null || moveSettled(finished, codes.moveOutcomes);
+      set({
+        finished,
+        error: settled ? null : (finished.error ?? get().error),
+      });
+      void get().refreshMove().then(dropMootRefusal);
       void get().refreshVolumes();
     };
 

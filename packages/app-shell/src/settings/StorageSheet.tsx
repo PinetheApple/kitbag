@@ -2,6 +2,7 @@ import {
   Button,
   Chip,
   createThemedStyles,
+  dataFolder,
   EditDivider,
   EditPath,
   EditRow,
@@ -11,10 +12,12 @@ import {
   space,
 } from '@kitbag/core-design';
 import type { StorageReport } from '@kitbag/core-native';
+import { useDataFolder } from '@kitbag/core-state';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { LOCATION_LABEL, locationValue } from './dataFolderText.ts';
 import {
   showsRemoveMissing,
   type StorageSheetKind,
@@ -31,22 +34,42 @@ import {
 
 const useStyles = createThemedStyles(() => ({
   actions: { flexDirection: 'row', gap: space.controlGap },
+  path: { marginTop: dataFolder.pathTop },
 }));
 
-function SheetRow({
+export function SheetRow({
   label,
-  singleLine = false,
   children,
 }: {
   readonly label: string;
-  readonly singleLine?: boolean;
   readonly children: ReactNode;
 }) {
   return (
     <View>
-      <EditRow label={label} singleLine={singleLine}>
-        {children}
+      <EditRow label={label}>{children}</EditRow>
+      <EditDivider />
+    </View>
+  );
+}
+
+function LocationRow({ path }: { readonly path: string }) {
+  const styles = useStyles();
+  const volumes = useDataFolder((s) => s.volumes);
+  const move = useDataFolder((s) => s.move);
+  const value = volumes === null ? null : locationValue(volumes, move);
+  return (
+    <View>
+      <EditRow label={LOCATION_LABEL}>
+        {value === null ? null : <EditValue>{value.volume}</EditValue>}
+        {value?.moving == null ? null : (
+          <EditValue muted>{value.moving}</EditValue>
+        )}
       </EditRow>
+      {path === '' ? null : (
+        <View style={styles.path}>
+          <EditPath>{path}</EditPath>
+        </View>
+      )}
       <EditDivider />
     </View>
   );
@@ -64,11 +87,7 @@ function StorageRows({ report }: { readonly report: StorageReport }) {
       <SheetRow label="Database">
         <EditValue>{databaseText(report)}</EditValue>
       </SheetRow>
-      {report.location === '' ? null : (
-        <SheetRow label="Location" singleLine>
-          <EditPath>{report.location}</EditPath>
-        </SheetRow>
-      )}
+      <LocationRow path={report.location} />
     </>
   );
 }

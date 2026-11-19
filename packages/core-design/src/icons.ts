@@ -84,6 +84,10 @@ export const iconGlyphs = {
   clickGrouping: 'view-week-outline',
   clickRate: 'music-note-eighth',
   tempoMode: 'chart-line-variant',
+  internalStorage: 'cellphone',
+  sdCard: 'micro-sd',
+  moveFolder: 'folder-move-outline',
+  dataFolder: 'folder-outline',
   tempoCorrection: 'arrow-expand-horizontal',
 } as const satisfies Record<string, VectorGlyph>;
 
