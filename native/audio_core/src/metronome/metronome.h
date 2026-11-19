@@ -50,6 +50,8 @@ class Metronome {
   static constexpr double kDefaultBpm = 120.0;
   static constexpr double kMinVolume = 0.0;
   static constexpr double kMaxVolume = 2.0;
+  static constexpr uint32_t kNoIntent = 0;
+  static constexpr size_t kCommandRingSize = 128;
 
   Metronome() {
     InitAccentRow(accents_);
@@ -70,7 +72,13 @@ class Metronome {
   // App-thread API. Non-blocking; drops commands if the ring is full.
   void Start();
   void StartAt(uint64_t start_frame);
-  bool CountInAt(uint64_t end_frame, double beat_frames, int beats_per_bar);
+  bool CountInAt(
+      uint64_t end_frame,
+      double beat_frames,
+      int beats_per_bar,
+      bool start_click,
+      uint32_t intent
+  );
   void Stop();
   void Pause();
   void AnchorExternal(double song_pos_sec, uint64_t at_frame, double bpm);
@@ -122,6 +130,16 @@ class Metronome {
   void ReleaseRetiredGrids();
   void DropQueuedPreviews();
 
+  // App thread, the ring's only producer: a push after this cannot fail.
+  bool HasCommandRoom() const {
+    return commands_.Free() > 0;
+  }
+  // RT: the intent of a click-off count that ended this block, once.
+  uint32_t TakeEndedIntent() {
+    const uint32_t ended = ended_intent_;
+    ended_intent_ = kNoIntent;
+    return ended;
+  }
   bool is_running() const {
     return running_flag_.load(std::memory_order_relaxed);
   }
@@ -166,8 +184,6 @@ class Metronome {
     const BeatGrid* grid = nullptr;
     uint64_t generation = 0;
   };
-
-  static constexpr size_t kCommandRingSize = 128;
 
   // ApplyCommand holds the only exhaustive switch over CommandType; the
   // handlers below are partial and say so with a `default:`.
@@ -331,6 +347,9 @@ class Metronome {
   double beat_position_ = 0.0;  // fractional beats since start
   bool has_pending_start_ = false;
   uint64_t pending_start_frame_ = 0;
+  bool pending_start_clicks_ = true;
+  uint32_t pending_intent_ = kNoIntent;
+  uint32_t ended_intent_ = kNoIntent;
   CountInSchedule count_in_at_;
   // Held until the render loop knows block_start_frame. The last drained wins.
   bool has_pending_anchor_ = false;

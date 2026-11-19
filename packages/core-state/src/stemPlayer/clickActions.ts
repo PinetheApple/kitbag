@@ -15,20 +15,44 @@ export type ClickSlice = Pick<
   'status' | 'beats' | 'downbeatIndices' | 'click'
 >;
 
-export function stopClick({ commands }: Pick<MixerRuntime, 'commands'>): void {
-  commands.metronomeFollowMixer(false);
-  commands.clearGrid();
-  commands.metronomeStop();
+export interface ClickHandoff {
+  readonly recountWithClickOff: () => boolean;
+  readonly recountWithClickOn: () => boolean;
 }
 
-export function turnClickOff({
-  set,
-  get,
-  runtimeOf,
-}: Pick<MixerSessionContext<ClickSlice>, 'set' | 'get' | 'runtimeOf'>): void {
-  if (!get().click) return;
+type ClickContext = Pick<
+  MixerSessionContext<ClickSlice>,
+  'set' | 'get' | 'runtimeOf'
+>;
+
+const noCount = () => false;
+const noGridFollower = () => undefined;
+
+function releaseGrid({ commands }: Pick<MixerRuntime, 'commands'>): void {
+  commands.metronomeFollowMixer(false);
+  commands.clearGrid();
+}
+
+export function stopClick(runtime: Pick<MixerRuntime, 'commands'>): void {
+  releaseGrid(runtime);
+  runtime.commands.metronomeStop();
+}
+
+export function releaseClick({ set, get, runtimeOf }: ClickContext): boolean {
+  if (!get().click) return false;
   set({ click: false });
-  stopClick(runtimeOf());
+  releaseGrid(runtimeOf());
+  return true;
+}
+
+export function turnClickOff(
+  context: ClickContext,
+  recountWithClickOff: () => boolean = noCount,
+): void {
+  if (!context.get().click) return;
+  const recounted = recountWithClickOff();
+  releaseClick(context);
+  if (!recounted) context.runtimeOf().commands.metronomeStop();
 }
 
 function gridOf({ beats, downbeatIndices }: ClickSlice) {
@@ -36,12 +60,11 @@ function gridOf({ beats, downbeatIndices }: ClickSlice) {
   return { grid, downbeats: usableDownbeats(downbeatIndices, grid.length) };
 }
 
-export async function followNewGrid({
-  set,
-  get,
-  runtimeOf,
-  session,
-}: MixerSessionContext<ClickSlice>): Promise<void> {
+export async function followNewGrid(
+  { set, get, runtimeOf, session }: MixerSessionContext<ClickSlice>,
+  gridReplaced: () => void = noGridFollower,
+): Promise<void> {
+  gridReplaced();
   if (!get().click) return;
   const sent = get().beats;
   const { grid, downbeats } = gridOf(get());
@@ -60,6 +83,10 @@ export async function followNewGrid({
 export function clickActions(
   context: MixerSessionContext<ClickSlice>,
   pendingClick: PendingClick,
+  {
+    recountWithClickOff = noCount,
+    recountWithClickOn = noCount,
+  }: Partial<ClickHandoff> = {},
 ): Pick<StemPlayerActions, 'toggleClick'> {
   const { set, get, runtimeOf, session } = context;
   const { busy, call } = sessionGate(session);
@@ -81,7 +108,8 @@ export function clickActions(
       return;
     }
     commands.metronomeFollowMixer(true);
-    commands.metronomeStart(engine.nowFrame());
+    const recounted = recountWithClickOn();
+    if (!recounted) commands.metronomeStart(engine.nowFrame());
     set({ click: true });
     if (get().beats !== sent) await followNewGrid(context);
   };
@@ -90,7 +118,7 @@ export function clickActions(
     toggleClick: async () => {
       if (busy()) return;
       if (get().click) {
-        turnClickOff({ set, get, runtimeOf });
+        turnClickOff({ set, get, runtimeOf }, recountWithClickOff);
         return;
       }
       await start();

@@ -1,6 +1,7 @@
 #ifndef KITBAG_TOOLS_CLICK_TAKE_H
 #define KITBAG_TOOLS_CLICK_TAKE_H
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -27,6 +28,14 @@ inline std::vector<int64_t> DetectClicks(const std::vector<float>& channel) {
     quiet = 0;
   }
   return clicks;
+}
+
+inline float Peak(const std::vector<float>& channel, size_t from, size_t to) {
+  float peak = 0.0f;
+  for (size_t k = from; k < to && k < channel.size(); ++k) {
+    peak = std::max(peak, std::fabs(channel[k]));
+  }
+  return peak;
 }
 
 inline bool

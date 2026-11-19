@@ -16,6 +16,8 @@ import com.kitbag.corenative.route.OutputRouteWatcher
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
 import com.kitbag.corenative.transport.Song
+import com.kitbag.corenative.transport.SongCommand
+import com.kitbag.corenative.transport.appAction
 import com.kitbag.corenative.transport.TransportState
 
 class KitbagCommandsModule(reactContext: ReactApplicationContext) :
@@ -25,6 +27,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private val mixdown = MixdownExport(reactContext.cacheDir)
   private val transportListener: (TransportState, PracticeClock) -> Unit = ::emitTransport
   private val songStoppedListener: () -> Unit = ::emitOnSongStopped
+  private val songRequestListener: (SongCommand) -> Unit = ::emitSongRequest
   private val outputRoutes =
     OutputRouteWatcher(reactContext, ::outputDeviceId, ::emitOutputRoute)
 
@@ -35,6 +38,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     }
     PlaybackService.listener = transportListener
     PlaybackService.songStoppedListener = songStoppedListener
+    PlaybackService.songRequestListener = songRequestListener
     outputRoutes.start()
   }
 
@@ -43,6 +47,9 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     if (PlaybackService.listener === transportListener) PlaybackService.listener = null
     if (PlaybackService.songStoppedListener === songStoppedListener) {
       PlaybackService.songStoppedListener = null
+    }
+    if (PlaybackService.songRequestListener === songRequestListener) {
+      PlaybackService.songRequestListener = null
     }
     outputRoutes.stop()
     super.invalidate()
@@ -81,6 +88,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
         skipSeconds = state.getDouble("skipSeconds"),
       ),
       state.getBoolean("playing"),
+      state.getBoolean("countingIn"),
     )
   }
 
@@ -115,6 +123,15 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
         putBoolean("rampRunning", state.rampRunning)
         putDouble("practicePlayedMs", practice.playedMillis.toDouble())
         putDouble("practiceStretchStartedAt", (practice.stretchStartedAt ?: 0L).toDouble())
+      },
+    )
+  }
+
+  private fun emitSongRequest(request: SongCommand) {
+    emitOnSongTransport(
+      Arguments.createMap().apply {
+        putString("action", request.appAction)
+        if (request is SongCommand.Seek) putDouble("frame", request.frame.toDouble()) else putNull("frame")
       },
     )
   }
@@ -304,8 +321,14 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     nativeMixerPlay()
   }
 
-  override fun songCountIn(endFrame: Double, beatFrames: Double, beatsPerBar: Double, promise: Promise) {
-    promise.resolve(nativeSongCountIn(endFrame, beatFrames, beatsPerBar.toInt()))
+  override fun songCountIn(
+    endFrame: Double,
+    beatFrames: Double,
+    beatsPerBar: Double,
+    startClick: Boolean,
+    promise: Promise,
+  ) {
+    promise.resolve(nativeSongCountIn(endFrame, beatFrames, beatsPerBar.toInt(), startClick))
   }
 
   override fun songPause() {
@@ -454,7 +477,12 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeMixerSetMasterGain(gain: Double)
   private external fun nativeMixerMasterGain(): Double
   private external fun nativeMixerPlay()
-  private external fun nativeSongCountIn(endFrame: Double, beatFrames: Double, beatsPerBar: Int): Int
+  private external fun nativeSongCountIn(
+    endFrame: Double,
+    beatFrames: Double,
+    beatsPerBar: Int,
+    startClick: Boolean,
+  ): Int
   private external fun nativeSongPause()
   private external fun nativeSongStop()
   private external fun nativeMixerPause()

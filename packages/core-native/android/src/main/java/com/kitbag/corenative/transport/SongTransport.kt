@@ -15,7 +15,13 @@ data class Song(
 // SystemUI formats the artist into "%1$s by %2$s", so a null would read as "null".
 fun mediaArtist(artist: String?): String = if (artist.isNullOrBlank()) "" else artist
 
-data class SongProgress(val playing: Boolean, val positionFrames: Long)
+data class SongProgress(val playing: Boolean, val positionFrames: Long, val countingIn: Boolean = false) {
+  val shownPlaying: Boolean
+    get() = playing || countingIn
+
+  fun shown(playing: Boolean, countingIn: Boolean): SongProgress =
+    if (countingIn) copy(countingIn = true) else copy(playing = playing, countingIn = false)
+}
 
 enum class SongAction {
   REWIND,
@@ -36,8 +42,24 @@ sealed interface SongCommand {
 
   data object Stop : SongCommand
 
+  data object StopCountIn : SongCommand
+
   data class Seek(val frame: Long) : SongCommand
 }
+
+val SongCommand.appAction: String
+  get() =
+    when (this) {
+      SongCommand.Play -> "play"
+      SongCommand.Pause -> "pause"
+      SongCommand.Stop, SongCommand.StopCountIn -> "stop"
+      is SongCommand.Seek -> "seek"
+    }
+
+data class SongRoute(val app: SongCommand?, val engine: List<SongCommand>)
+
+val SongCommand.endsSong: Boolean
+  get() = this == SongCommand.Stop || this == SongCommand.StopCountIn
 
 data class SongPlayback(
   val state: Int,
@@ -58,14 +80,14 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
   fun actions(progress: SongProgress): List<SongAction> =
     listOf(
       SongAction.REWIND,
-      if (progress.playing) SongAction.PAUSE else SongAction.PLAY,
+      if (progress.shownPlaying) SongAction.PAUSE else SongAction.PLAY,
       SongAction.FORWARD,
       SongAction.STOP,
     )
 
   fun playback(progress: SongProgress, now: Long): SongPlayback =
     SongPlayback(
-      state = if (progress.playing) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
+      state = if (progress.shownPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
       positionMillis = millis(progress.positionFrames.coerceIn(0L, song.durationFrames)),
       speed = if (progress.playing) PLAYING_SPEED else 0f,
       updatedAt = now,
@@ -75,7 +97,7 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
   // The system extrapolates a published position, so a loop wrap or an in-app seek shows only as drift.
   fun stale(published: SongPlayback?, progress: SongProgress, now: Long): Boolean {
     if (published == null) return true
-    if ((published.state == PlaybackStateCompat.STATE_PLAYING) != progress.playing) return true
+    if ((published.state == PlaybackStateCompat.STATE_PLAYING) != progress.shownPlaying) return true
     return abs(published.positionAt(now) - millis(progress.positionFrames)) > DRIFT_TOLERANCE_MILLIS
   }
 
@@ -88,17 +110,40 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
       SongAction.FORWARD -> listOf(seek(progress.positionFrames + skipFrames))
     }
 
+  // A count-in is the app's to cancel; Stop also ends the count and the card natively, as after the start.
+  fun route(progress: SongProgress, action: SongAction, appListening: Boolean): SongRoute {
+    if (progress.countingIn && action == SongAction.STOP) {
+      return SongRoute(if (appListening) SongCommand.Stop else null, listOf(SongCommand.StopCountIn))
+    }
+    if (!progress.countingIn || !appListening) return SongRoute(null, commandsFor(progress, action))
+    return SongRoute(appCommand(progress, action), emptyList())
+  }
+
+  fun seekRoute(progress: SongProgress, positionMillis: Long, appListening: Boolean): SongRoute {
+    val command = seekTo(positionMillis)
+    return if (progress.countingIn && appListening) SongRoute(command, emptyList()) else SongRoute(null, listOf(command))
+  }
+
   // The engine applies a command on its next audio block, so a read straight after it is stale.
   fun applied(progress: SongProgress, command: SongCommand): SongProgress =
     when (command) {
       SongCommand.Play -> progress.copy(playing = true)
       SongCommand.Pause -> progress.copy(playing = false)
-      SongCommand.Stop -> SongProgress(playing = false, positionFrames = 0L)
+      SongCommand.Stop, SongCommand.StopCountIn -> SongProgress(playing = false, positionFrames = 0L)
       is SongCommand.Seek -> progress.copy(positionFrames = command.frame)
     }
 
   fun seekTo(positionMillis: Long): SongCommand =
     seek((positionMillis * sampleRate / MILLIS_PER_SECOND).roundToLong())
+
+  private fun appCommand(progress: SongProgress, action: SongAction): SongCommand =
+    when (action) {
+      SongAction.PLAY -> SongCommand.Play
+      SongAction.PAUSE -> SongCommand.Pause
+      SongAction.STOP -> SongCommand.Stop
+      SongAction.REWIND -> seek(progress.positionFrames - skipFrames)
+      SongAction.FORWARD -> seek(progress.positionFrames + skipFrames)
+    }
 
   private fun play(progress: SongProgress): List<SongCommand> =
     when {

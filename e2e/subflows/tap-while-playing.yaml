@@ -1,0 +1,6 @@
+appId: com.kitbag.app
+---
+# The playing song's progress keeps the screen from settling, so every tap would wait out the default settle timeout.
+- tapOn:
+    text: ${TARGET}
+    waitToSettleTimeoutMs: 1000

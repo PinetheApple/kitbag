@@ -58,7 +58,8 @@ void commandMixerPlay();
 void commandMixerPause();
 void commandMixerStop();
 void commandMixerSeek(double frame);
-int32_t commandSongCountIn(double endFrame, double beatFrames, int32_t beatsPerBar);
+int32_t commandSongCountIn(double endFrame, double beatFrames, int32_t beatsPerBar,
+                           bool startClick);
 void commandSongPause();
 void commandSongStop();
 int32_t commandMixerSetLoop(double startFrame, double endFrame);

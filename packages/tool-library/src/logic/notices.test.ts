@@ -2,6 +2,7 @@ import type { BundleRefusalReason } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import {
+  canReanalyze,
   copyingText,
   failureText,
   noticeLook,
@@ -110,33 +111,70 @@ describe('replaceText', () => {
 });
 
 describe('failureText', () => {
-  it('names each cause in plain words and offers a retry only where it can help', () => {
-    expect(failureText({ kind: 'missingFile', keptGrid: false })).toMatchObject(
-      {
-        status: 'Missing file',
-        canRetry: false,
-      },
-    );
-    expect(failureText({ kind: 'unsupported', keptGrid: false })).toMatchObject(
-      {
-        status: 'Unsupported format',
-        canRetry: false,
-      },
-    );
-    expect(failureText({ kind: 'interrupted', keptGrid: false }).canRetry).toBe(
-      true,
-    );
+  const M4A = {
+    kind: 'unsupported',
+    keptGrid: false,
+    format: 'm4a',
+    supported: ['WAV', 'MP3', 'FLAC', 'AIFF'],
+  } as const;
+  const MISSING_TEXT =
+    'The audio file is no longer on this phone, so it cannot be analyzed. Delete the song from its menu, or import the file again.';
+
+  it('names each cause in plain words', () => {
+    expect(failureText({ kind: 'missingFile', keptGrid: false })).toEqual({
+      status: 'Missing file',
+      text: MISSING_TEXT,
+    });
     expect(failureText({ kind: 'other', keptGrid: false }).text).toBe(
       'This file could not be analyzed, so there is no beat grid to lock to.',
     );
   });
 
-  it('says the previous grid is kept when a re-analysis fails', () => {
-    expect(failureText({ kind: 'unsupported', keptGrid: true })).toEqual({
-      status: 'Unsupported format',
-      text: 'Re-analysis failed; the previous beat grid is kept.',
-      canRetry: true,
+  it('names an unsupported format and the formats Kitbag plays', () => {
+    expect(failureText(M4A)).toEqual({
+      status: 'M4A not supported',
+      text: 'M4A isn’t supported. Kitbag plays WAV, MP3, FLAC or AIFF.',
     });
+  });
+
+  it('says a supported file that would not decode may be damaged', () => {
+    expect(failureText({ kind: 'damaged', keptGrid: false })).toEqual({
+      status: 'File may be damaged',
+      text: 'This file could not be decoded and may be damaged, so there is no beat grid to lock to.',
+    });
+  });
+
+  it('says the previous grid is kept when a re-analysis fails', () => {
+    expect(failureText({ kind: 'damaged', keptGrid: true })).toEqual({
+      status: 'File may be damaged',
+      text: 'Re-analysis failed; the previous beat grid is kept.',
+    });
+  });
+
+  it('keeps the guidance over a kept grid where re-analysing cannot help', () => {
+    expect(failureText({ kind: 'missingFile', keptGrid: true }).text).toBe(
+      MISSING_TEXT,
+    );
+    expect(failureText({ ...M4A, keptGrid: true }).text).toBe(
+      failureText(M4A).text,
+    );
+  });
+});
+
+describe('canReanalyze', () => {
+  it.each([
+    ['no failure', null, true],
+    ['a damaged file', { kind: 'damaged', keptGrid: false }, true],
+    ['an interrupted analysis', { kind: 'interrupted', keptGrid: false }, true],
+    ['any other failure', { kind: 'other', keptGrid: true }, true],
+    ['a missing file', { kind: 'missingFile', keptGrid: false }, false],
+    [
+      'an unsupported format',
+      { kind: 'unsupported', keptGrid: false, format: 'ogg', supported: [] },
+      false,
+    ],
+  ] as const)('offers Re-analyse for %s: %s', (_case, failure, offered) => {
+    expect(canReanalyze(failure)).toBe(offered);
   });
 });
 

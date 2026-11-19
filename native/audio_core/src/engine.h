@@ -44,7 +44,18 @@ class Engine {
   int32_t holders() const;
   bool idle() const;
   void SetMetronomeIntent(bool playing) {
-    metronome_intent_.store(playing);
+    if (playing) {
+      ClaimMetronomeIntent();
+    } else {
+      metronome_intent_.store(Metronome::kNoIntent);
+    }
+  }
+  // A fresh token per claim, so a count's end clears only the intent it set.
+  uint32_t ClaimMetronomeIntent() {
+    uint32_t token = intent_tokens_.fetch_add(1) + 1;
+    if (token == Metronome::kNoIntent) token = intent_tokens_.fetch_add(1) + 1;
+    metronome_intent_.store(token);
+    return token;
   }
   void SetMixerIntent(bool playing) {
     mixer_intent_.store(playing);
@@ -56,7 +67,7 @@ class Engine {
     return rig_click_intent_.load();
   }
   bool metronome_intent() const {
-    return metronome_intent_.load();
+    return metronome_intent_.load() != Metronome::kNoIntent;
   }
   bool mixer_intent() const {
     return mixer_intent_.load();
@@ -184,7 +195,8 @@ class Engine {
   // takes it. The watchdog only try-locks, so Stop can join it while holding.
   mutable std::mutex lifecycle_mutex_;
   int32_t holders_ = 0;
-  std::atomic<bool> metronome_intent_{false};
+  std::atomic<uint32_t> metronome_intent_{Metronome::kNoIntent};
+  std::atomic<uint32_t> intent_tokens_{Metronome::kNoIntent};
   std::atomic<bool> mixer_intent_{false};
   std::atomic<bool> rig_click_intent_{false};
   std::atomic<uint32_t> idle_grace_ms_{kDefaultIdleGraceMs};

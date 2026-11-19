@@ -124,7 +124,7 @@ rebuilding the tools on top. What is here now:
 | Path | What it is |
 |------|-----------|
 | `native/audio_core/` | The C++ realtime core. Flat C ABI (`include/kitbag_api.h`), miniaudio backend — SPEC.md §4. Built in Phase 1 (PR #26); still the cheapest verification signal in the project. |
-| `packages/` | The React Native app: pnpm workspaces + Turborepo. `app-shell` (Expo router shell), `core-native` (JSI HostObject + TurboModule — the ONLY native-binding package), `core-state`, `core-db` (Drizzle schema v19, migrating the Flutter v6 database in place), `core-plugin-api` (the abstract contract), `core-design`, `eslint-plugin-kitbag`, and the tools: `tool-metronome`, `tool-library` (Songs and Stem songs lists, single-song player), `tool-stems` (stem player) and `tool-tuner` are built; `tool-sync` (play along) is a skeleton. |
+| `packages/` | The React Native app: pnpm workspaces + Turborepo. `app-shell` (Expo router shell), `core-native` (JSI HostObject + TurboModule — the ONLY native-binding package), `core-state`, `core-db` (Drizzle schema v20; upgrade floor in SPEC.md §11.1), `core-plugin-api` (the abstract contract), `core-design`, `eslint-plugin-kitbag`, and the tools: `tool-metronome`, `tool-library` (Songs and Stem songs lists, single-song player), `tool-stems` (stem player) and `tool-tuner` are built; `tool-sync` (play along) is a skeleton. |
 | `SPEC.md` | Product + technical spec. Source of truth. §17 records the locked decisions; §17.1 is what is still open. |
 | `design/` | The binding HTML design specs. Precedence, and which variant of a multi-variant file binds, is in SPEC.md §12. |
 | `legacy/` | `android/MediaSessionPlugin.kt` + `AndroidManifest.xml`, the Flutter-era media-session detection that play-along (§8.2, §13.9) still has to port. **Reference only — do not build against them.** Delete them once `MediaNotificationListenerService.kt` stops being a skeleton. |
@@ -173,6 +173,14 @@ bash scripts/e2e.test.sh                   # the script itself, stubbed adb + ma
 
 `e2e.sh` turns off Maestro's analytics and update check. Notification permission
 belongs to the flows' `launchApp`, since clearing state resets it.
+
+CI runs the flows on API 35 x86_64 emulators when app code, a subflow or a flow
+changes: all of them, or only the changed flows. The work is split over four
+shards, and `e2e/shards` lists each shard's flows, balanced by CI time. A new
+flow goes on the shard with the shortest total, or the job fails. Each shard
+uploads `e2e-results-shard-N` with the JUnit report and Maestro's output, plus
+the failure screenshot and logcat when a flow fails. Keep using the local
+emulator for new screens and anything a flow cannot assert.
 
 ### `tuner_verify` is a gate
 

@@ -2,6 +2,7 @@ import {
   acquireEngineHold,
   KB_MIXER_UNITY_RATE,
   KB_RESULT,
+  type SongTransportRequest,
 } from '@kitbag/core-native';
 
 import type { MixerClick, MixerClickSource } from './mixerClick.ts';
@@ -36,6 +37,7 @@ export interface MixerSessionOptions extends Omit<
   readonly isOpen: () => boolean;
   readonly beforeTeardown?: () => void;
   readonly teardownTracks: () => void;
+  readonly counting?: () => boolean;
   readonly resetState: () => void;
 }
 
@@ -49,6 +51,7 @@ export function mixerSession({
   isOpen,
   beforeTeardown,
   teardownTracks,
+  counting = () => false,
   resetState,
 }: MixerSessionOptions) {
   let session = 0;
@@ -56,17 +59,29 @@ export function mixerSession({
   let songStopSubscription: ReturnType<
     StemPlayerCommands['onSongStopped']
   > | null = null;
+  let songTransportSubscription: ReturnType<
+    StemPlayerCommands['onSongTransport']
+  > | null = null;
+  let songTransportListener: ((request: SongTransportRequest) => void) | null =
+    null;
+  let afterScrubSeek: ((frame: number) => void) | null = null;
+  let afterClickRelease: (() => void) | null = null;
+  let songStopped = () => {
+    turnClickOff({ set, get, runtimeOf });
+  };
   const scrubSeek = debounce((frame: number) => {
     runtimeOf().commands.mixerSeek(frame);
+    afterScrubSeek?.(frame);
   }, scrubSeekDelayMs);
   const live = (opened: number) => opened === session;
   const pendingClick = createPendingClick();
   const clickSource: MixerClickSource = {
-    running: () => get().click || pendingClick.pending(),
+    running: () => get().click || pendingClick.pending() || counting(),
     title: () => get().title,
     turnOff: () => {
       pendingClick.cancel();
       turnClickOff({ set, get, runtimeOf });
+      afterClickRelease?.();
     },
   };
 
@@ -76,9 +91,11 @@ export function mixerSession({
     const { commands } = runtime;
     const { click, loop } = get();
     scrubSeek.cancel();
+    const countPending = counting();
     if (click) stopClick(runtime);
     commands.songTransportHide();
-    commands.mixerStop();
+    if (countPending) commands.songStop();
+    else commands.mixerStop();
     if (loop.kind === 'on') void commands.mixerClearLoop().catch(() => null);
     teardownTracks();
   };
@@ -97,6 +114,8 @@ export function mixerSession({
     releaseEngine = null;
     songStopSubscription?.remove();
     songStopSubscription = null;
+    songTransportSubscription?.remove();
+    songTransportSubscription = null;
   };
 
   const awaitReset = async (opened: number, reset: Promise<number>) => {
@@ -123,6 +142,18 @@ export function mixerSession({
 
   return {
     scrubSeek,
+    onScrubSeek: (listener: (frame: number) => void) => {
+      afterScrubSeek = listener;
+    },
+    onClickReleased: (listener: () => void) => {
+      afterClickRelease = listener;
+    },
+    onSongTransport: (listener: (request: SongTransportRequest) => void) => {
+      songTransportListener = listener;
+    },
+    onSongStopped: (listener: () => void) => {
+      songStopped = listener;
+    },
     live,
     close,
     current: () => session,
@@ -140,8 +171,13 @@ export function mixerSession({
       pendingClick.cancel();
       mixerClick.attach(clickSource);
       songStopSubscription ??= runtimeOf().commands.onSongStopped(() => {
-        turnClickOff({ set, get, runtimeOf });
+        songStopped();
       });
+      if (songTransportListener !== null) {
+        songTransportSubscription ??= runtimeOf().commands.onSongTransport(
+          songTransportListener,
+        );
+      }
       return ++session;
     },
     startEngine: async (opened: number): Promise<number | null> => {

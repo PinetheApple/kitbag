@@ -351,7 +351,14 @@ the other. The caller snaps the head back to the whole frame at or before the
 bar's downbeat, spaces the count at the grid interval before that downbeat
 divided by the rate, and passes one end frame to both. A seek or a speed change
 during the count is the caller's cancel plus a new counted start: a pending
-`play_at` survives a seek.
+`play_at` survives a seek. With the song's click off the count still sounds
+(`start_click` 0): the metronome stops on the end frame, drops the play intent
+the count took, and a later start locks to the song's grid. Toggling the click
+during the count re-issues it with the same end frame and the new `start_click`,
+dropping beats already past; the metronome tool's Play during the count ends it
+and starts the song at once, and so does a refused re-issue. A grid with no bar
+marks (common in StemDeck bundles) counts from the beat at or before the head,
+in bars of the song's meter: four beats until a meter is detected or chosen.
 
 **Past the last grid beat, the click goes silent and stays silent.** Every song
 reaches this. `is_running()` keeps reporting true, and `bar_phase` and
@@ -468,8 +475,8 @@ bar, and never bar-muted; the mirrors count them back from the first bar.
 `current_beat` reads 0, `bar_phase` sweeps each beat, and bar mute does not
 apply. An accent the core cannot place on a real bar actively misleads (#300);
 a uniform click does not.
-The analyser's downbeats are always four beats apart, so an analysed song in
-3/4 still gets 4/4 bars (#332).
+Analysis scores 3 beats per bar against 4 and picks 3 only on a clear lead;
+short or tied songs stay 4. The per-song meter override (§6.2) takes precedence.
 
 #### 4.3.1 Why the tracker caps at `KB_MAX_GRID_BEATS`
 
@@ -895,9 +902,15 @@ working. Changes:
 
 - **Store relative paths.** Flutter stores absolute, contradicting its own doc.
   Breaks on iOS, where the container UUID changes per launch. Paths are relative
-  to their base directory, always.
+  to the data folder, always.
 - **Downbeats** into the grid (§4.3).
 - **Re-analyse** action for a song.
+- Each song records the analyser version (`KB_BEAT_ANALYSIS_VERSION`) that made
+  its grid. At launch, songs whose analysis succeeded on an older version
+  re-analyse in the background, one at a time, through the Re-analyse path, each
+  at most once per session; the song open in the player waits until it closes. A
+  failure keeps the old grid and is not retried automatically; Re-analyse retries it. The meter
+  override (meter, bar one) is the user's and survives re-analysis.
 - Analysis stays ambient — background, badge-driven, no "analyze" button. The
   row appears instantly with `ANALYZING` and lands on `GRID ✓` in ~10–30s. The
   user never waits on a spinner screen.
@@ -915,8 +928,8 @@ working. Changes:
   so each tick stays individually readable.
 - **No grid yet, or analysis failed:** the metronome card stays and says why,
   the click chips are muted, and the waveform is flat with no ticks. A failed
-  analysis offers Re-analyse (§6.2). The song still plays; seek and loop work
-  unsnapped.
+  analysis offers Re-analyse (§6.2) unless the file's format is unsupported or
+  the file is missing. The song still plays; seek and loop work unsnapped.
 - **Fix tap-to-seek.** Flutter measures the Scaffold's width, not the
   waveform's, so seek is off by the horizontal padding. Measure the waveform.
 - **`.kwav` load off the UI thread.** Flutter does synchronous file I/O in
@@ -931,9 +944,9 @@ working. Changes:
 - Tapping the Songs row of the song the mini-player is showing opens the player
   on that song as it is, still playing if it was. Any other row tap on Songs
   opens the player paused.
-- **Stop** lives in the player's overflow menu, with Re-analyse. Stop ends the
-  song session and removes the mini-player. Stop in the song's media
-  notification does the same.
+- **Stop** lives in the player's overflow menu, with Re-analyse under the same
+  rule. Stop ends the song session and removes the mini-player. Stop in the
+  song's media notification does the same.
 - **Mini-player** — leaving the player keeps the session, so the click keeps
   running while you open the tuner or edit a setlist. A docked bar shows on Home
   and Songs only: music-note icon, title, artist and click state, play/pause,
@@ -945,9 +958,9 @@ working. Changes:
 - Lock via `kb_metronome_set_grid` (§4.2) — follows per-beat spacing, so
   non-constant tempo works.
 - Latency-compensated: click and track land together at the speaker.
-- Count-in before the lock engages. Until it works under a grid (#298), the
-  Count-in chip and its sheet group show disabled with the note "arrives with
-  count-in".
+- Count-in before the lock engages, under a grid (#298): the song starts on the
+  frame the count ends. The count plays whether the song's click is on or off;
+  with it off the click stays silent once the song starts.
 - **Click settings belong to the song.** The Count-in, Click and Accent chips
   open one shared sheet at the tapped group; changes apply live and stay with
   this song, unsaved until "Save for this song". The standalone metronome's
@@ -1508,9 +1521,8 @@ as a base to build on.
 
 The schema is the durable part and survives the stack change. The Flutter
 build's tables were `Setlists`, `Songs`, `PracticeSessions`, `Tunings`,
-`LibrarySongs`, `StemSets`, `Stems` (schema v6). A reconstruction of that v6 DDL is the
-migration fixture in `packages/core-db/src/migrate-fixtures.test-helper.ts`; the React
-Native schema migrates it in place and is at v19 (`packages/core-db/src/migrate.ts`).
+`LibrarySongs`, `StemSets`, `Stems` (schema v6). The React Native schema is at v20
+(`packages/core-db/src/migrate.ts`); §11.1 sets which versions it upgrades.
 
 ### 11.1 Persistence layer
 
@@ -1521,19 +1533,19 @@ Native schema migrates it in place and is at v19 (`packages/core-db/src/migrate.
 `op-sqlite` is JSI-backed, so queries do not cross the legacy bridge. Drizzle
 gives compile-time-checked SQL and generated migrations, which is the property
 Drift was providing. **Migrations are additive and non-destructive; existing user
-data survives** — a user upgrading from the Flutter build must not lose their
-setlists, so the migration runner must pick up an existing v6 database in place
-rather than starting from zero.
+data survives** for every database at v7 or later. The Flutter build had a different
+applicationId, so its v6 database can never reach this app; the runner refuses
+versions 1–6 with `UnsupportedSchemaVersion` and leaves the file untouched.
 
 ### 11.2 Changes required
 
 | Change | Reason |
 |---|---|
-| `Songs` → `SongPresets`; `LibrarySongs` → `Songs` | §5.4 — the names invert their meaning today |
+| `SongPresets` holds presets, `Songs` holds library tracks (Flutter's `Songs` and `LibrarySongs`); both from v7 | §5.4 — the Flutter names inverted their meaning |
 | `SongPresets`: + ramp config, bar-mute config, count-in, notes, per-accent sounds | §5.3, §5.4 |
 | `SongPresets`: + time signature **denominator** | **D1** — new column; 2/4/8/16 |
-| `SongPresets`: **drop `volume` and `latencyOffset`** | **D3** — both are global rig setup; the columns are unreadable-vs-default today |
-| `SongPresets`: decouple from `Setlists` | §5.4 — songs must exist standalone; setlists reference |
+| `SongPresets`: **no `volume` or `latencyOffset`** | **D3** — both are global rig setup; absent from v7 |
+| `SongPresets`: standalone; `setlist_items` links them to `Setlists` | §5.4 — songs must exist standalone; setlists reference; from v7 |
 | `SongPresets`: + phase nudge, + track identity tuple | §8.8, **D4** — `(title, artist, source, length)`, nullable library-song FK when known |
 | `Setlists`: + `active` flag; a partial unique index (`WHERE active = 1`) allows at most one active row | §5.4 — one active setlist; schema v8 |
 | `SongPresets`: + `polyAccents` BLOB, one `kb_accent` byte per poly slot | §5.2, §5.4 — the poly row has its own accent states and they round-trip; schema v8 |
@@ -1552,12 +1564,13 @@ rather than starting from zero.
 | `StemSets`: + `renamed` (default 0); `Stems`: + `name` (display name, NULL shows the role) | §7.1, §7.8 — a rename is display-only and survives a re-import of the same StemDeck song; schema v17 |
 | `SongPresets`: + `poly_against` INTEGER (0 = the bar, 1..16), default 0 | §5.2 — poly N against M; a v4 backup without `polyAgainst` reads as the bar; schema v18 |
 | `route_latency`: + `name` TEXT, + `kind` TEXT (the route's display name and `OutputRoute` kind when calibrated) | §12.5 — the Output & latency sheet lists calibrated routes that are not connected; schema v19 |
-| **All paths relative** to the base directory | §2.3 (iOS) and **D11** (the directory is now user-movable) |
+| `Songs`: + `analysis_version` INTEGER (NULL = no version reported, counted as outdated), + `meter_beats_per_bar` INTEGER (3 or 4; NULL = the detected meter), + `bar_one_seconds` REAL (NULL = the detected bar one); `StemSets`: + `meter_beats_per_bar`, + `bar_one_seconds`, same meanings | §6.2 — older grids re-analyse in the background; the meter override survives re-analysis and a stem re-import; schema v20 |
+| **All paths relative** to the data folder | §2.3 (iOS) and **D11** (the folder can move between internal storage and an SD card) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
 | BPM cache table | §8.5 |
 | Per-output-route latency calibration | §12.5 |
 | Global subdivision-accent patterns, keyed by subdivision count | **D2** |
-| UUIDs on exportable rows | §12.4 — merge needs stable identity. Backfilled on migration; **D12** accepts the first-merge duplicate. |
+| UUIDs on exportable rows | §12.4 — merge needs stable identity. NOT NULL from v7; `practice_sessions` backfilled at v9; **D12** accepts the first-merge duplicate. |
 
 Beat grids stay Float32 BLOBs of per-beat timestamps (handles tempo drift).
 Waveform peaks stay `.kwav` binary sidecars. Neither crosses into JS as a buffer
@@ -1571,10 +1584,8 @@ All three decisions this schema was waiting on landed 2026-07-17: **D1**
 **D3** (drop `volume`/`latencyOffset`), **D4** (track identity tuple). §11.2 is
 buildable as written.
 
-Two migration notes that are not obvious from the table:
+One migration note that is not obvious from the table:
 
-- **The v6 Drift database must be picked up in place** (§11.1). An upgrading user
-  keeps their setlists; the Drizzle migration runner starts from v6, not from zero.
 - **`SongPresets` gains a nullable FK to the library song** alongside the D4
   identity tuple. When a track later joins the library, the preset migrates from
   tuple-matching to id-matching. That transition is a migration, not a lookup.
@@ -1591,6 +1602,7 @@ Two migration notes that are not obvious from the table:
 | `kitbag-metronome.html` | Supersedes the metronome section of `kitbag-ui.html`. Adds setlists, setlist detail, preset editor, four sheets, the numpad, practice summary, notification/lock screen. |
 | `kitbag-playalong.html` | Supersedes the Play-along section. Adds the locked state, seven more states, five sheets, and a code audit. |
 | `kitbag-settings.html` | Designs Settings, latency calibration, restore. **Supersedes exactly one §06 card** — "Settings stay contextual" — and nothing else. |
+| `kitbag-data-folder.html` | **The Data folder** (D11; #170). Supersedes, in `kitbag-settings.html`, the Data folder row's value in Settings → Data and the Storage sheet's Location line; the rest of that file stands. Adds the Data folder chooser, and draws the move (confirmation, progress, cancel, the paused banner on Home), its failures, the Songs list during a move, and songs on a missing SD card. Recorded in `docs/decisions.md`, 2026-11-19. |
 | `kitbag-metronome-b.html` ("Chosen") and `kitbag-metronome-status.html` (variant A, Q6 pulse marks, poly row) | Owner-approved layout B (#175). **Supersede the metronome screen in `kitbag-metronome.html` §02, and §03's sheets and numpad, where they differ**, except sizes and vertical layout, which the #243 frame in `kitbag-metronome.html` §02 sets. §02's setlists, setlist detail and preset editor, and §04 onward, stay binding. Recorded in `docs/decisions.md`, 2026-10-30; `docs/research/metronome-b-parity.md` is the value table. |
 | `kitbag-metronome-setlist.html` | **D2 only** ("Chosen (owner, 2026-10-30)"; #205). Supersedes the app bar in `kitbag-metronome-b.html` while a setlist is active, and adds the setlist song-list sheet. Options A–D are rejected alternatives. Recorded in `docs/decisions.md`, 2026-10-30. |
 | `kitbag-metronome-poly.html` | **A and the main-screen poly row only** ("Chosen (owner, 2026-10-31)"; #203). Supersedes the Polyrhythm section of the Practice sheet in `kitbag-metronome-b.html` and the poly row in `kitbag-metronome-status.html`, and adds the song editor's Poly and Against rows. Options B and C are rejected alternatives. Recorded in `docs/decisions.md`, 2026-10-31. |
@@ -1799,18 +1811,15 @@ the supersession: ≤7 primary choices.)
   no chevron — the viewer is later work, so the row promises nothing behind it.
   The numbers are already computed; average tempo is the one addition, and it is
   the stat a musician reads.
-- **Base directory stays, and becomes authoritative** (**D11**). This reverses
-  `kitbag-settings.html` §03, which draws it cut. It is write-only today — a
-  picker storing a path no code has ever read, while library and stems hardcode
-  the documents dir and export hardcodes Downloads — and the fix is to make it
-  real, not to delete it. **Library, stems, export and the database all resolve
-  against it**, and every stored path is relative to it (§11.2).
-  **Scoped in, not discovered later**: a file migration when the directory
-  changes, plus SAF / persisted-URI handling on Android — which is the same gap
-  that makes the hardcoded `/storage/emulated/0/Download` fail today.
+- **Data folder** (**D11**). The row names the volume in use and its free space
+  ("Internal storage · 41.2 GB free"). Song audio, stems and waveforms resolve
+  against it, and every stored path is relative to it (§11.2). The database and
+  analysis scratch stay private to the app. The choices are Kitbag's own folder
+  on internal storage or on a portable SD card, listed as volumes; there is no
+  system folder picker. Changing it moves the files.
 - **Storage is its companion, not its replacement.** It reports what is on disk
-  and where, and offers "Remove missing files". The picker relocates; Storage
-  reports.
+  and where, and offers "Remove missing files". Storage reports; Data folder
+  relocates.
 - **Theme and haptics are new**, and they are the cheapest rows here.
 - **Data moves through the system.** Backup goes out through the share sheet,
   restore comes in through the picker. **Kitbag writes to no path of its own
@@ -1910,7 +1919,7 @@ decisions they carry are the reason the files read as they now do:
 
 | File | Edit | Decision |
 |---|---|---|
-| `kitbag-settings.html` §03 | **Base directory is not cut.** It returns as an authoritative picker; Storage becomes its companion, not its replacement. | D11 |
+| `kitbag-settings.html` §03 | **Data folder is not cut.** It returns as an authoritative setting; Storage becomes its companion, not its replacement. | D11 |
 | `kitbag-metronome.html` §02 | `7/4` **went back to `7/8`** — the denominator is being built, so the mock's original claim is buildable. | D1 |
 | `kitbag-metronome.html` §02 | LEDs are a **row with grouping, up to 8 per line, wrapping at a group boundary**. Resolves the file's own "knowingly untrue" flag — and the build's circle is what changes, not the mock. | D9 |
 | `kitbag-playalong.html` §04 | **Delete the ad state.** | D10 |
@@ -1931,9 +1940,6 @@ decisions they carry are the reason the files read as they now do:
 
 - **Standalone song library** — the metronome spec draws the entry point (the
   "All songs" row) but not the screen behind it.
-- **Base directory picker + file migration** (D11) — newly in scope, and it has no
-  design. Needs the picker, the "moving your files" progress state, and the
-  failure path when the target is unwritable.
 - **GetSongBPM key row** (D7) — a Settings row that takes a personal key. Small,
   but undesigned, and it needs the attribution copy.
 - **Practice log viewer** — deferred by decision 2026-07-17. The summary sheet is
@@ -2246,7 +2252,7 @@ prove it kept anything.
 |---|---|---|
 | **Native, headless** | `native/audio_core/tools/` — already exists (`metronome_verify.cpp`, `tuner_verify.cpp` render offline and assert onsets against the beat grid) | §4 in full, with **no UI at all**. This is why Phase 1 is testable before any React exists. |
 | **Native, new** | Mixer test (`mixer_verify`); **metronome soak/jitter harness** (§5.8) — `click_soak` + `click_soak_verify`, run via `scripts/soak-analyze.sh` (#88) | The 4h soak and the click-vs-grid offset, measured from a recording. The harness exists and is gated on synthetic and engine-rendered fixtures; the 4h device recording and the speaker-path offset have not been run. |
-| **DB** | Drizzle migrations against a fixture v6 database | An upgrading user keeps their setlists (§11.1). |
+| **DB** | Drizzle migrations against fixture v7–v19 databases | An upgrading user keeps their setlists; the §11.1 version floor holds. |
 | **Logic** | Jest | Tap-tempo interval averaging (§8.5), BPM match scoring, the phase-modular arithmetic (§8.6), preset round-trip (§5.8). |
 | **Component** | React Native Testing Library | Steppers, LED tap-cycle, sheet behaviour. |
 | **Lint rules** | The ported eval harness (§13.6) | Architecture rules actually fire. |
@@ -2510,24 +2516,36 @@ after. **Free-tier users are most users and this is the honest failure**: a
 temporarily-wrong click you can see is wrong beats a tool that silently mutes your
 practice on a guess. Removes a row from §8.10.
 
-### D11 — Base directory: **wire it**. It is a feature.
+### D11 — Data folder: **wire it**. It is a feature.
 
-The opposite of what `kitbag-settings.html` §03 draws. The picker returns and
-becomes **authoritative**: library, stems, export and the database all resolve
-against it.
+The Settings row is **Data folder**, and it is **authoritative**: song audio,
+stems and waveforms resolve against it. `design/kitbag-data-folder.html` draws
+every state.
 
-**This is real work and it is now scoped in**, not discovered later:
-- A **file migration** — moving existing content when the directory changes.
-- **Scoped-storage handling** on Android (SAF / persisted URI permissions), which
-  is the reason the hardcoded `/storage/emulated/0/Download` fails today.
-- Every path stored **relative to it** (§6.2, §11.2), which was already required
-  for iOS and is now required twice over.
+- **Media follows the folder.** The database and analysis scratch stay private to
+  the app, whatever the folder.
+- **Two locations:** Kitbag's own folder on internal storage, or Kitbag's own
+  folder on a portable SD card. The chooser lists volumes; there is no system
+  folder picker and no persisted-URI permission.
+- **A move is copy → verify → switch → delete.** Every file is copied and
+  verified before the folder switches; then all the old copies are deleted at
+  once, after no player or export is still reading them. Until the switch,
+  songs play from the old copy.
+- **Cancel** is offered only before the switch, and removes the new copies.
+- **A move interrupted by the app being killed** before the switch waits on
+  Home for Resume or Undo and does not restart on its own; after the switch,
+  clean-up finishes by itself.
+- **Import stays allowed** during a move. A new song goes to the current folder
+  and the move picks it up.
+- **A missing SD card** leaves its songs listed as unavailable, never deleted;
+  "Remove missing files" skips them. The user can switch to internal storage for
+  new songs. When the card returns, its songs play from it, and a move to
+  internal storage is offered.
+- **Uninstalling** removes the card copy too: it lives in Kitbag's own folder.
+- Every path stored **relative to it** (§6.2, §11.2).
 
 `Storage` (§12.5) stays as the reporting sheet — what is on disk, where, and
-"remove missing files". It reports; the picker relocates.
-
-**`kitbag-settings.html` needs an edit**: it draws Base directory as cut and
-Storage as its replacement. Storage is now its companion, not its substitute.
+"remove missing files". It reports; Data folder relocates.
 
 ### D12 — Merge migration: **accept the duplicate**.
 

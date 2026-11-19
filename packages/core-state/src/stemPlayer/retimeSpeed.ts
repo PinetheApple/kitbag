@@ -26,6 +26,7 @@ const restorable = (rate: number) =>
 export function retimeSpeed(
   commandsOf: () => RateCommands,
   session: () => number,
+  onRate: (rate: number) => void,
 ): RetimeSpeed {
   let steps: Promise<void> = Promise.resolve();
   let generation = 0;
@@ -53,6 +54,7 @@ export function retimeSpeed(
       throw new Error(`kb_result ${String(result)}`);
     }
     current.known = rate;
+    onRate(rate);
   };
   const speedBefore = async (current: SessionRates) => {
     if (current.owed !== null) return current.owed;
@@ -60,6 +62,7 @@ export function retimeSpeed(
     const read = await commandsOf().mixerRate();
     if (!restorable(read)) throw new Error(`speed ${String(read)}`);
     current.known = read;
+    onRate(read);
     return read;
   };
   const slowDown = (mine: number, opened: number, onPlaying: OnPlaying) => {

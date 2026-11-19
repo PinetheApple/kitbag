@@ -1,3 +1,4 @@
+#include "click_take.h"
 #include "metronome_test_support.h"
 #include "song_bars.h"
 
@@ -19,6 +20,10 @@ constexpr double kFractionalLatencyMs = 20.3;
 // One voice at most an accent; a stacked pair sums to well over this.
 constexpr double kPeakTolerance = 1.05;
 constexpr int32_t kSongBeatsPerBar = 4;
+constexpr uint32_t kSongOffset = 77;
+constexpr int64_t kGridHead = 152965;
+constexpr int64_t kGridBeatFrames = kSampleRate / 2;
+constexpr int kRingOutBlocks = 40;
 
 struct WrapTake {
   double single = 0.0;
@@ -106,11 +111,90 @@ void TestLatencyOffsetIsIgnored() {
   );
 }
 
+void FollowGrid(kitbag::Metronome* metronome) {
+  auto grid = std::make_unique<kitbag::BeatGrid>();
+  grid->beat_times_sec = {
+      static_cast<double>(kGridHead) / kSampleRate,
+      static_cast<double>(kGridHead + kGridBeatFrames) / kSampleRate
+  };
+  metronome->SetGrid(std::move(grid), 0, false);
+  metronome->SetFollowMixer(true);
+  metronome->Start();
+}
+
+std::vector<float> RenderSongBlock(
+    kitbag::Metronome* metronome,
+    const kitbag::SongClock& song,
+    uint64_t block_start
+) {
+  std::vector<float> out(static_cast<size_t>(kBlockFrames) * kChannels);
+  metronome->Render(
+      out.data(),
+      kBlockFrames,
+      kSampleRate,
+      kChannels,
+      block_start,
+      &song
+  );
+  std::vector<float> left;
+  for (uint32_t f = 0; f < kBlockFrames; ++f) {
+    left.push_back(out[f * kChannels]);
+  }
+  return left;
+}
+
+const kitbag::SongClock kStartsMidBlock{
+    .playing = true,
+    .opens_on_jump = true,
+    .first = kGridHead,
+    .frames = kBlockFrames - kSongOffset,
+    .start_index = kSongOffset
+};
+
+void TestFollowStartsMidBlock() {
+  kitbag::Metronome metronome;
+  FollowGrid(&metronome);
+  const std::vector<int64_t> clicks =
+      click_take::DetectClicks(RenderSongBlock(&metronome, kStartsMidBlock, 0));
+  Check(
+      clicks.size() == 1 && clicks.front() == kSongOffset,
+      "follow: a song starting mid-block clicks on its first frame"
+  );
+}
+
+// The pause leaves the beat's frame as the last one followed, so only the
+// jump flag tells the replayed frame from a repeated one.
+void TestFollowReplaysAJumpBackMidBlock() {
+  kitbag::Metronome metronome;
+  FollowGrid(&metronome);
+  const kitbag::SongClock up_to_beat{
+      .playing = true,
+      .first = kGridHead + 1 - kBlockFrames,
+      .frames = kBlockFrames
+  };
+  RenderSongBlock(&metronome, up_to_beat, 0);
+  const kitbag::SongClock paused;
+  for (int b = 1; b <= kRingOutBlocks; ++b) {
+    RenderSongBlock(&metronome, paused, uint64_t{kBlockFrames} * b);
+  }
+  const std::vector<int64_t> clicks = click_take::DetectClicks(RenderSongBlock(
+      &metronome,
+      kStartsMidBlock,
+      uint64_t{kBlockFrames} * (kRingOutBlocks + 1)
+  ));
+  Check(
+      clicks.size() == 1 && clicks.front() == kSongOffset,
+      "follow: a seek back onto the last beat replays it mid-block"
+  );
+}
+
 }  // namespace
 
 void RunFollowTests() {
   TestBeatWithinEpsilonOfTheEndWaits();
   TestLatencyOffsetIsIgnored();
+  TestFollowStartsMidBlock();
+  TestFollowReplaysAJumpBackMidBlock();
 }
 
 }  // namespace metronome_test

@@ -133,6 +133,36 @@ describe('notification permission on playback start', () => {
   });
 });
 
+describe('notification permission on the first import', () => {
+  it('asks for the import, saying so', async () => {
+    const { store } = fakes();
+    await store.getState().importStarted();
+    expect(store.getState()).toMatchObject({
+      prompting: true,
+      reason: 'import',
+    });
+  });
+
+  it('keeps asking for playback on a playback start', async () => {
+    const { store } = fakes();
+    await store.getState().playbackStarted();
+    expect(store.getState().reason).toBe('playback');
+  });
+
+  it('shares the once-only ask with playback', async () => {
+    const { store, check } = fakes();
+    await store.getState().importStarted();
+    store.getState().notNow();
+    await store.getState().playbackStarted();
+    await store.getState().importStarted();
+    expect(check).toHaveBeenCalledTimes(1);
+    expect(store.getState()).toMatchObject({
+      prompting: false,
+      reason: 'import',
+    });
+  });
+});
+
 describe('enabling notifications from Settings', () => {
   it('asks the system after Not now, then opens settings on the next tap', async () => {
     const { store, request, openSettings } = fakes();

@@ -1,15 +1,8 @@
 import { DatabaseSync } from 'node:sqlite';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import { migrate, SCHEMA_VERSION, V7_SCHEMA_VERSION } from './migrate';
 import {
-  MIGRATE_V6_TO_V7,
-  migrate,
-  SCHEMA_VERSION,
-  V6_SCHEMA_VERSION,
-} from './migrate';
-import {
-  applyInTransaction,
-  buildV6Fixture,
   buildV7Fixture,
   buildV8Fixture,
   buildV9Fixture,
@@ -38,12 +31,6 @@ interface ColumnRow {
   name: string;
   type: string;
 }
-
-const readV6Membership = (db: DatabaseSync) =>
-  rows<Membership>(
-    db,
-    'SELECT setlist_id, id AS song_preset_id, position FROM songs ORDER BY setlist_id, position',
-  );
 
 const readMembership = (db: DatabaseSync) =>
   rows<Membership>(
@@ -80,6 +67,44 @@ function shape(db: DatabaseSync) {
   };
 }
 
+const PRE_V7_VERSIONS = Array.from(
+  { length: V7_SCHEMA_VERSION - 1 },
+  (_, index) => index + 1,
+);
+
+const NOT_NULL_UUID_TABLES = [
+  'setlists',
+  'songs',
+  'song_presets',
+  'stem_sets',
+  'tunings',
+];
+
+function buildPreV7Database(version: number): DatabaseSync {
+  const db = new DatabaseSync(':memory:');
+  db.exec('CREATE TABLE setlists (id INTEGER PRIMARY KEY, name TEXT NOT NULL)');
+  db.exec(
+    'CREATE TABLE library_songs (id INTEGER PRIMARY KEY, title TEXT NOT NULL)',
+  );
+  db.exec("INSERT INTO setlists (name) VALUES ('Friday Set')");
+  db.exec("INSERT INTO library_songs (title) VALUES ('Reference')");
+  db.exec(`PRAGMA user_version = ${String(version)}`);
+  return db;
+}
+
+function dump(db: DatabaseSync) {
+  return {
+    userVersion: pragma(db, 'user_version'),
+    schema: rows(db, 'SELECT type, name, sql FROM sqlite_master ORDER BY name'),
+    data: Object.fromEntries(
+      tableNames(db).map((table) => [
+        table,
+        rows(db, `SELECT * FROM ${table} ORDER BY rowid`),
+      ]),
+    ),
+  };
+}
+
 function assertSetlistsPreserved(
   db: DatabaseSync,
   beforeNames: NameRow[],
@@ -90,59 +115,36 @@ function assertSetlistsPreserved(
 }
 
 describe('migrate', () => {
-  it('preserves v6 setlists and their song membership', () => {
-    const db = buildV6Fixture();
-    const beforeNames = readSetlistNames(db);
-    const beforeMembership = readV6Membership(db);
-    migrate(nodeSqliteDriver(db));
-    assertSetlistsPreserved(db, beforeNames, beforeMembership);
-    expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
-    expect(pragma(db, 'foreign_keys')).toBe(1);
-  });
+  it.each(PRE_V7_VERSIONS)(
+    'refuses a v%i database and leaves it untouched',
+    (version) => {
+      const db = buildPreV7Database(version);
+      const before = dump(db);
+      const driver = nodeSqliteDriver(db);
+      const exec = vi.spyOn(driver, 'exec');
+      expect(() => {
+        migrate(driver);
+      }).toThrow(
+        expect.objectContaining({ name: 'UnsupportedSchemaVersion', version }),
+      );
+      expect(exec).not.toHaveBeenCalled();
+      expect(dump(db)).toEqual(before);
+    },
+  );
 
-  it('applies the v6 shape changes', () => {
-    const db = buildV6Fixture();
+  it('declares uuid NOT NULL on a fresh database, practice_sessions aside', () => {
+    const db = new DatabaseSync(':memory:');
     migrate(nodeSqliteDriver(db));
-    const tables = tableNames(db);
-    expect(tables).toEqual(
-      expect.arrayContaining([
-        'songs',
-        'song_presets',
-        'setlist_items',
-        'subdivision_accents',
-        'bpm_cache',
-        'route_latency',
-      ]),
-    );
-    expect(tables).not.toContain('library_songs');
-    expect(tables).not.toContain('song_presets_v6');
-    const presetColumns = columnNames(db, 'song_presets');
-    expect(presetColumns).toEqual(
-      expect.arrayContaining(['denominator', 'library_song_id']),
-    );
-    for (const dropped of ['volume', 'latency_offset', 'setlist_id'])
-      expect(presetColumns).not.toContain(dropped);
-    expect(columnNames(db, 'songs')).toContain('downbeat_indices');
-  });
-
-  it('backfills a uuid on every exportable v6 row', () => {
-    const db = buildV6Fixture();
-    migrate(nodeSqliteDriver(db));
-    for (const table of [
-      'setlists',
-      'songs',
-      'song_presets',
-      'tunings',
-      'stem_sets',
-      'practice_sessions',
-    ])
+    for (const table of NOT_NULL_UUID_TABLES)
       expect(
-        rows(db, `SELECT id FROM ${table} WHERE uuid IS NULL`),
-      ).toHaveLength(0);
+        rows<{ name: string; notnull: number }>(
+          db,
+          `PRAGMA table_info(${table})`,
+        ).find((column) => column.name === 'uuid')?.notnull,
+      ).toBe(1);
   });
 
   it.each([
-    ['v6', buildV6Fixture],
     ['v7', buildV7Fixture],
     ['v8', buildV8Fixture],
     ['v9', buildV9Fixture],
@@ -295,8 +297,8 @@ describe('migrate', () => {
     }).toThrow();
   });
 
-  it('repairs v6 presets the engine would refuse, keeping their meaning', () => {
-    const db = buildV6Fixture();
+  it('repairs v7 presets the engine would refuse, keeping their meaning', () => {
+    const db = buildV7Fixture();
     migrate(nodeSqliteDriver(db));
     const presets = rows(
       db,
@@ -326,43 +328,25 @@ describe('migrate', () => {
     }).toThrow('practice_sessions.uuid is required');
   });
 
-  it('rolls the whole v6 upgrade back when a later step fails', () => {
-    const db = buildV6Fixture();
-    db.exec('CREATE TABLE setlists_one_active_blocker (id INTEGER)');
-    db.exec(
-      'CREATE INDEX setlists_one_active ON setlists_one_active_blocker (id)',
-    );
+  it('rolls the whole upgrade back when a later step fails', () => {
+    const db = buildV7Fixture();
+    db.exec('CREATE TABLE practice_sessions_uuid (id INTEGER)');
     expect(() => {
       migrate(nodeSqliteDriver(db));
-    }).toThrow();
-    expect(tableNames(db)).toContain('library_songs');
-    expect(tableNames(db)).not.toContain('setlist_items');
-    expect(pragma(db, 'user_version')).toBe(V6_SCHEMA_VERSION);
+    }).toThrow('practice_sessions_uuid');
+    expect(columnNames(db, 'setlists')).not.toContain('active');
+    expect(columnNames(db, 'song_presets')).not.toContain('poly_accents');
+    expect(pragma(db, 'user_version')).toBe(V7_SCHEMA_VERSION);
   });
 
   it('is a no-op on a current database but still enables foreign keys', () => {
-    const db = buildV6Fixture();
+    const db = buildV7Fixture();
     migrate(nodeSqliteDriver(db));
     const membership = readMembership(db);
     db.exec('PRAGMA foreign_keys = OFF');
     migrate(nodeSqliteDriver(db));
     expect(readMembership(db)).toEqual(membership);
     expect(pragma(db, 'foreign_keys')).toBe(1);
-  });
-
-  it('sabotage: dropping the membership step makes the guarantee fail', () => {
-    const db = buildV6Fixture();
-    const beforeNames = readSetlistNames(db);
-    const beforeMembership = readV6Membership(db);
-    const sabotaged = MIGRATE_V6_TO_V7.filter(
-      (statement) => !statement.startsWith('INSERT INTO setlist_items'),
-    );
-    expect(sabotaged).toHaveLength(MIGRATE_V6_TO_V7.length - 1);
-    applyInTransaction(db, sabotaged);
-    expect(readSetlistNames(db)).toEqual(beforeNames);
-    expect(() => {
-      assertSetlistsPreserved(db, beforeNames, beforeMembership);
-    }).toThrow();
   });
 
   it('allows at most one active setlist on a fresh database', () => {

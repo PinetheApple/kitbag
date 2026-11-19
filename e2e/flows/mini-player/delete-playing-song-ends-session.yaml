@@ -4,9 +4,18 @@ tags:
   - pr-370
 ---
 - runFlow: ../../subflows/song-playing-behind-bar.yaml
-- tapOn: 'Actions for ${FIXTURE_SONG}'
-- tapOn: 'Delete song'
-- tapOn: 'Delete'
+- runFlow:
+    file: ../../subflows/tap-while-playing.yaml
+    env:
+      TARGET: 'Actions for ${FIXTURE_SONG}'
+- runFlow:
+    file: ../../subflows/tap-while-playing.yaml
+    env:
+      TARGET: 'Delete song'
+- runFlow:
+    file: ../../subflows/tap-while-playing.yaml
+    env:
+      TARGET: 'Delete'
 - extendedWaitUntil:
     notVisible: 'Open ${FIXTURE_SONG}'
     timeout: 5000

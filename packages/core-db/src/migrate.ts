@@ -7,8 +7,7 @@ import {
   MIGRATE_V16_TO_V17,
 } from './migrate-stems';
 
-export const SCHEMA_VERSION = 19;
-export const V6_SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 20;
 export const V7_SCHEMA_VERSION = 7;
 export const V8_SCHEMA_VERSION = 8;
 export const V9_SCHEMA_VERSION = 9;
@@ -21,6 +20,19 @@ export const V15_SCHEMA_VERSION = 15;
 export const V16_SCHEMA_VERSION = 16;
 export const V17_SCHEMA_VERSION = 17;
 export const V18_SCHEMA_VERSION = 18;
+export const V19_SCHEMA_VERSION = 19;
+
+const OLDEST_UPGRADABLE_VERSION = V7_SCHEMA_VERSION;
+
+export class UnsupportedSchemaVersion extends Error {
+  override readonly name = 'UnsupportedSchemaVersion';
+
+  constructor(readonly version: number) {
+    super(
+      `Schema v${String(version)} is older than v${String(OLDEST_UPGRADABLE_VERSION)}, the oldest this app upgrades`,
+    );
+  }
+}
 
 export interface MigrationDriver {
   exec(sql: string): void;
@@ -288,6 +300,15 @@ export const MIGRATE_V18_TO_V19: readonly string[] = [
   'ALTER TABLE route_latency ADD COLUMN kind TEXT',
 ];
 
+// No CHECK on the meter: the supported set lives in meter-override.ts and may grow.
+export const MIGRATE_V19_TO_V20: readonly string[] = [
+  ...['songs', 'stem_sets'].flatMap((table) => [
+    `ALTER TABLE ${table} ADD COLUMN meter_beats_per_bar INTEGER`,
+    `ALTER TABLE ${table} ADD COLUMN bar_one_seconds REAL`,
+  ]),
+  'ALTER TABLE songs ADD COLUMN analysis_version INTEGER',
+];
+
 export const BASELINE: readonly string[] = [
   ...V11_BASELINE,
   ...MIGRATE_V11_TO_V12,
@@ -298,38 +319,7 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V16_TO_V17,
   ...MIGRATE_V17_TO_V18,
   ...MIGRATE_V18_TO_V19,
-];
-
-// SQLite cannot ADD a NOT NULL column without a constant default, so migrated
-// uuid columns stay nullable; every app write supplies one.
-export const MIGRATE_V6_TO_V7: readonly string[] = [
-  'ALTER TABLE songs RENAME TO song_presets_v6',
-  'ALTER TABLE library_songs RENAME TO songs',
-  'ALTER TABLE songs ADD COLUMN downbeat_indices BLOB',
-  'ALTER TABLE songs ADD COLUMN uuid TEXT',
-  `UPDATE songs SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
-  CREATE_SONG_PRESETS_V7,
-  `INSERT INTO song_presets (
-     id, name, bpm, beats_per_bar, subdivision, accents,
-     poly_enabled, poly_beats, sound, uuid
-   )
-   SELECT id, name, bpm, beats_per_bar, subdivision, accents,
-     poly_enabled, poly_beats, sound, ${UUID4_SQL}
-   FROM song_presets_v6`,
-  CREATE_SETLIST_ITEMS,
-  `INSERT INTO setlist_items (setlist_id, song_preset_id, position)
-   SELECT setlist_id, id, position FROM song_presets_v6`,
-  'DROP TABLE song_presets_v6',
-  'ALTER TABLE setlists ADD COLUMN uuid TEXT',
-  `UPDATE setlists SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
-  'ALTER TABLE tunings ADD COLUMN uuid TEXT',
-  `UPDATE tunings SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
-  'ALTER TABLE stem_sets ADD COLUMN uuid TEXT',
-  `UPDATE stem_sets SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
-  CREATE_SUBDIVISION_ACCENTS,
-  CREATE_BPM_CACHE,
-  CREATE_BPM_CACHE_INDEX,
-  CREATE_ROUTE_LATENCY,
+  ...MIGRATE_V19_TO_V20,
 ];
 
 export const MIGRATE_V7_TO_V8: readonly string[] = [
@@ -358,7 +348,6 @@ const UPGRADES: readonly {
   readonly to: number;
   readonly steps: readonly string[];
 }[] = [
-  { to: V7_SCHEMA_VERSION, steps: MIGRATE_V6_TO_V7 },
   { to: V8_SCHEMA_VERSION, steps: MIGRATE_V7_TO_V8 },
   { to: V9_SCHEMA_VERSION, steps: MIGRATE_V8_TO_V9 },
   { to: V10_SCHEMA_VERSION, steps: MIGRATE_V9_TO_V10 },
@@ -370,18 +359,19 @@ const UPGRADES: readonly {
   { to: V16_SCHEMA_VERSION, steps: MIGRATE_V15_TO_V16 },
   { to: V17_SCHEMA_VERSION, steps: MIGRATE_V16_TO_V17 },
   { to: V18_SCHEMA_VERSION, steps: MIGRATE_V17_TO_V18 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V18_TO_V19 },
+  { to: V19_SCHEMA_VERSION, steps: MIGRATE_V18_TO_V19 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V19_TO_V20 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {
   if (from === 0) return BASELINE;
-  // The Flutter build always migrated users to v6 before this code could run,
-  // so any nonzero version below 7 is v6-shaped.
   return UPGRADES.filter(({ to }) => to > from).flatMap(({ steps }) => steps);
 }
 
 export function migrate(driver: MigrationDriver): void {
   const from = driver.getUserVersion();
+  if (from !== 0 && from < OLDEST_UPGRADABLE_VERSION)
+    throw new UnsupportedSchemaVersion(from);
   try {
     if (from < SCHEMA_VERSION) {
       // Renames and drops must not fire FK actions, and the pragma is a no-op

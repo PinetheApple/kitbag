@@ -4,7 +4,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { mixActions, transportActions } from './actions.ts';
 import { barMarkDownbeats } from './bars.ts';
-import { clickActions } from './clickActions.ts';
+import { clickActions, releaseClick } from './clickActions.ts';
 import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
 import type { LoopSeconds } from './loop.ts';
 import { sectionLoopActions } from './loopActions.ts';
@@ -19,10 +19,15 @@ import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
 import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
 import { mixerSession, type MixerHold } from './mixerSession.ts';
 import { mixSaver } from './mixSaver.ts';
+import {
+  showCountOnSongCard,
+  songTransportRequests,
+} from './notificationTransport.ts';
 import { renameActions } from './renameActions.ts';
 import { retimeActions, retimeAnchor } from './retimeActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
 import { sortedSections } from './sections.ts';
+import { countPending, songStart } from './songStart.ts';
 import { secondsToFrames } from './time.ts';
 
 const MIX_SAVE_DELAY_MS = 600;
@@ -82,6 +87,7 @@ export interface StemPlayerState {
   readonly loopFailure: LoopFailure | null;
   readonly undoableLoop: LoopSeconds | null;
   readonly click: boolean;
+  readonly countEndFrame: number | null;
   readonly sections: readonly StoredSection[];
   readonly lyrics: SongLyrics;
   readonly retime: RetimeState;
@@ -157,6 +163,7 @@ const closedState: StemPlayerState = {
   loopFailure: null,
   undoableLoop: null,
   click: false,
+  countEndFrame: null,
   sections: [],
   lyrics: NO_LYRICS,
   retime: { kind: 'off' },
@@ -234,7 +241,7 @@ export function createStemPlayerStore(
     requestedTracks = 0;
   };
 
-  return createStore<StemPlayerStore>((set, get) => {
+  return createStore<StemPlayerStore>((set, get, store) => {
     const mixer = mixerSession({
       set,
       get,
@@ -248,6 +255,8 @@ export function createStemPlayerStore(
         get().leaveRetime();
       },
       teardownTracks,
+      counting: () =>
+        countPending(get().countEndFrame, runtimeOf().engine.nowFrame()),
       resetState: () => {
         set(closedState);
       },
@@ -258,6 +267,34 @@ export function createStemPlayerStore(
       get,
       runtimeOf,
       session: mixer.current,
+    };
+    const start = songStart({
+      ...context,
+      releaseClick: () => releaseClick(context),
+    });
+    mixer.onScrubSeek(start.afterSeek);
+    mixer.onClickReleased(start.endCountNow);
+    const card = showCountOnSongCard(store, runtimeOf, start.counting);
+    mixer.onSongStopped(() => {
+      card.stopped();
+      start.songStopped();
+    });
+    mixer.onSongTransport(
+      songTransportRequests({
+        get,
+        runtimeOf,
+        counting: start.counting,
+        stopCount: () => {
+          card.stopped();
+          start.stop();
+        },
+      }),
+    );
+    const clicks = clickActions(context, mixer.pendingClick, start);
+    const anchorRetime = retimeAnchor(context);
+    const afterSeek = (frame: number) => {
+      anchorRetime(frame);
+      start.afterSeek(frame);
     };
     const loadWaveforms = (
       opened: number,
@@ -347,11 +384,11 @@ export function createStemPlayerStore(
       },
       close: mixer.close,
       ...mixActions(set, get, runtimeOf, saver),
-      ...transportActions(get, runtimeOf, scrubSeek, retimeAnchor(context)),
+      ...transportActions(get, runtimeOf, scrubSeek, afterSeek, start),
       ...sectionLoopActions(context),
-      ...clickActions(context, mixer.pendingClick),
+      ...clicks,
       ...renameActions(context),
-      ...retimeActions(context, claim.defer),
+      ...retimeActions(context, claim.defer, start),
     };
   });
 }

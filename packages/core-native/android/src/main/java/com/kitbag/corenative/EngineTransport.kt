@@ -21,6 +21,8 @@ internal object EngineTransport {
 
   fun mixerStop() = nativeMixerStop()
 
+  fun songStop() = nativeSongStop()
+
   fun mixerSeek(frame: Long) = nativeMixerSeek(frame.toDouble())
 
   fun mixerPosition(): Long = nativeMixerPosition().toLong()
@@ -37,6 +39,7 @@ internal object EngineTransport {
   private external fun nativeMixerPlay()
   private external fun nativeMixerPause()
   private external fun nativeMixerStop()
+  private external fun nativeSongStop()
   private external fun nativeMixerSeek(frame: Double)
   private external fun nativeMixerPosition(): Double
   private external fun nativeMixerPlaying(): Boolean

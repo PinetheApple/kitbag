@@ -1,11 +1,6 @@
 appId: com.kitbag.app
 ---
 - tapOn: 'Metronome, .*(ready|playing)'
-- runFlow:
-    when:
-      visible: 'Got it'
-    commands:
-      - tapOn: 'Got it'
 - extendedWaitUntil:
     visible: 'Tempo, .*'
     timeout: 10000
