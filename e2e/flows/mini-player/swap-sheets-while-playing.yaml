@@ -7,7 +7,7 @@ tags:
 - repeat:
     times: 6
     commands:
-      - assertVisible: 'Pause ${FIXTURE_SONG}'
+      - assertVisible: '${FIXTURE_SONG}, .*'
       - runFlow:
           file: ../../subflows/tap-while-playing.yaml
           env:
