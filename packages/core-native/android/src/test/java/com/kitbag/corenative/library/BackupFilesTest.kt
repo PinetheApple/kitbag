@@ -34,4 +34,19 @@ class BackupFilesTest {
     assertFalse(BackupFiles.isSafeFileName(".json"))
     assertFalse(BackupFiles.isSafeFileName("kitbag.txt"))
   }
+
+  @Test
+  fun acceptsTheDatabaseNameAndADatedCopyName() {
+    assertTrue(BackupFiles.isSafeDatabaseName("kitbag"))
+    assertTrue(BackupFiles.isSafeCopyName("Kitbag data 2026-11-19.db"))
+  }
+
+  @Test
+  fun refusesDatabasePathsAndCopiesWithoutTheDbExtension() {
+    assertFalse(BackupFiles.isSafeDatabaseName("../kitbag"))
+    assertFalse(BackupFiles.isSafeDatabaseName("databases/kitbag"))
+    assertFalse(BackupFiles.isSafeCopyName("../Kitbag data.db"))
+    assertFalse(BackupFiles.isSafeCopyName("Kitbag data.json"))
+    assertFalse(BackupFiles.isSafeCopyName(" leading space.db"))
+  }
 }

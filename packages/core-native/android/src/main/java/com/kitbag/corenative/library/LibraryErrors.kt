@@ -13,6 +13,7 @@ object LibraryErrors {
   const val NO_SHARE_TARGET = "E_NO_SHARE_TARGET"
   const val SHARE_FAILED = "E_SHARE_FAILED"
   const val SAVE_FAILED = "E_SAVE_FAILED"
+  const val DATABASE_UNSETTLED = "E_DATABASE_UNSETTLED"
   const val DATA_FOLDER_UNAVAILABLE = "E_DATA_FOLDER_UNAVAILABLE"
 
   val EXPORT_CONSTANTS: Map<String, Any> = mapOf(
