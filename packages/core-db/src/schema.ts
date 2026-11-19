@@ -64,6 +64,10 @@ export const songs = sqliteTable('songs', {
     .notNull()
     .default(ANALYSIS_STATUS.pending),
   analysisError: text('analysis_error'),
+  // Null: no version was reported, which counts as outdated.
+  analysisVersion: integer('analysis_version'),
+  meterBeatsPerBar: integer('meter_beats_per_bar'),
+  barOneSeconds: real('bar_one_seconds'),
 });
 
 export const songPresets = sqliteTable('song_presets', {
@@ -174,6 +178,8 @@ export const stemSets = sqliteTable(
     sampleRate: integer('sample_rate'),
     folder: text('folder'),
     renamed: integer('renamed', { mode: 'boolean' }).notNull().default(false),
+    meterBeatsPerBar: integer('meter_beats_per_bar'),
+    barOneSeconds: real('bar_one_seconds'),
   },
   (table) => [
     uniqueIndex('stem_sets_stemdeck_job_id')

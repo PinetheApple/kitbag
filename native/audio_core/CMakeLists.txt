@@ -33,6 +33,7 @@ add_library(kitbag_core SHARED
   src/api/api_media.cpp
   src/api/api_metronome.cpp
   src/api/api_rig_click.cpp
+  src/api/api_song_start.cpp
   src/api/api_tuning.cpp
   src/analysis/beat_tracker.cpp
   src/analysis/downbeat.cpp
@@ -228,7 +229,9 @@ if(KITBAG_BUILD_TOOLS)
                                   tools/stem_sync_test_lock.cpp
                                   tools/stem_sync_test_reanchor.cpp
                                   tools/stem_sync_test_bars.cpp
-                                  tools/stem_sync_test_count_in.cpp)
+                                  tools/stem_sync_test_count_in.cpp
+                                  tools/stem_sync_test_count_in_silent.cpp
+                                  tools/stem_sync_count_in_support.cpp)
   target_include_directories(stem_sync_verify PRIVATE src tools tools/media)
   target_link_libraries(stem_sync_verify PRIVATE kitbag_core)
 

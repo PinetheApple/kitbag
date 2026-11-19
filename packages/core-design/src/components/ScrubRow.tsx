@@ -14,12 +14,13 @@ import {
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { withAlpha } from '../theme.ts';
-import { useScreenReader } from '../useScreenReader.ts';
+import { useAccessibilityReadout } from '../useAccessibilityReadout.ts';
 import { Icon } from './Icon.tsx';
 import { LiveText } from './LiveText.tsx';
 import { Slider } from './Slider.tsx';
 
 const SCRUB_STEP = 0.02;
+const NOT_READ = -1;
 
 const useStyles = createThemedStyles((theme) => ({
   lane: {
@@ -207,17 +208,17 @@ export interface PlayerFrame extends ScrubFrame {
   readonly playing: SharedValue<number>;
 }
 
-// The spoken position is React state, so it is kept only while a screen reader
-// runs; the visible clock stays on the UI thread (SPEC §13.3).
+// Unread, the reaction parks on NOT_READ, so a service turning on is itself a
+// change and commits the shown second rather than waiting for the next one.
 function useSpokenSecond(frame: ScrubFrame): number {
-  const reader = useScreenReader();
+  const reading = useAccessibilityReadout();
   const [second, setSecond] = useState(0);
   useAnimatedReaction(
-    () => frame.second.value,
+    () => (reading ? Math.max(0, frame.second.value) : NOT_READ),
     (now, before) => {
-      if (reader && now !== before) scheduleOnRN(setSecond, Math.max(0, now));
+      if (now !== NOT_READ && now !== before) scheduleOnRN(setSecond, now);
     },
-    [reader],
+    [reading],
   );
   return second;
 }

@@ -3,6 +3,7 @@ import { clamp } from '../metronome/config.ts';
 import { soloAfter, UNITY_GAIN } from './mix.ts';
 import type { MixSaver } from './mixSaver.ts';
 import type { MixerRuntime, StemPlayerRuntime } from './runtime.ts';
+import type { SongStart } from './songStart.ts';
 import { restartFromFrame, songTransportShown } from './songTransport.ts';
 import type {
   Get,
@@ -102,6 +103,12 @@ export function transportActions(
   runtimeOf: () => MixerRuntime,
   scrubSeek: Debounced<[number]>,
   afterSeek?: (frame: number) => void,
+  start: Pick<SongStart, 'play' | 'cancel'> = {
+    play: () => {
+      runtimeOf().commands.mixerPlay();
+    },
+    cancel: () => false,
+  },
 ): Pick<
   StemPlayerActions,
   'togglePlay' | 'scrub' | 'cancelScrub' | 'seek' | 'skip'
@@ -119,11 +126,14 @@ export function transportActions(
         commands.mixerPause();
         return;
       }
+      if (start.cancel()) return;
       const { durationFrames, engineRate } = get();
-      if (engine.position() >= restartFromFrame(durationFrames, engineRate)) {
-        seek(0);
+      let head = engine.position();
+      if (head >= restartFromFrame(durationFrames, engineRate)) {
+        head = 0;
+        seek(head);
       }
-      commands.mixerPlay();
+      start.play(head);
       commands.songTransportShow(songTransportShown(get()));
     },
     scrub: (frame) => {

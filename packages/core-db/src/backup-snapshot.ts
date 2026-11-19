@@ -49,15 +49,24 @@ function withoutId<T extends { id: number }>(row: T): Omit<T, 'id'> {
   return copy as Omit<T, 'id'>;
 }
 
+// Analysis state describes this device's copy of the file; a restored song without a
+// grid is analysed again. Version and meter override stay out until the format has them.
+const UNPORTABLE_SONG_FIELDS = [
+  'id',
+  'analysisStatus',
+  'analysisError',
+  'analysisVersion',
+  'meterBeatsPerBar',
+  'barOneSeconds',
+] as const;
+const unportable = new Set<string>(UNPORTABLE_SONG_FIELDS);
+
 function portableSong(row: SongRow) {
-  const copy: Partial<SongRow> = withoutId(row);
-  delete copy.analysisStatus;
-  delete copy.analysisError;
-  return copy as Omit<SongRow, 'id' | 'analysisStatus' | 'analysisError'>;
+  return Object.fromEntries(
+    Object.entries(row).filter(([field]) => !unportable.has(field)),
+  ) as Omit<SongRow, (typeof UNPORTABLE_SONG_FIELDS)[number]>;
 }
 
-// The analysis state describes this device's copy of the file, so it stays out of
-// the backup; a restored song without a grid is analyzed again.
 function librarySongRecord(row: SongRow): LibrarySongRecord {
   return {
     ...portableSong(row),

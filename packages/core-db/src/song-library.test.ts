@@ -47,6 +47,7 @@ const okResult = (title: string, waveform = `${title}.kwav`) => ({
   downbeats: [0, 300],
   waveformPath: `songs/uuid-${title}/${waveform}`,
   durationSec: null,
+  analysisVersion: 1,
 });
 
 const failure = (title: string) => ({
@@ -209,6 +210,7 @@ describe('song library repository', () => {
       downbeats: [],
       waveformPath: null,
       durationSec: null,
+      analysisVersion: 1,
     });
     const [row] = await handle.db.select().from(songs).where(eq(songs.id, id));
     expect(row).toMatchObject({
@@ -404,6 +406,8 @@ describe('readSong', () => {
       beats: [0.5, 1.25],
       downbeatIndices: [0, 300],
       analysisStatus: 'done',
+      meterBeatsPerBar: null,
+      barOneSeconds: null,
     });
   });
 

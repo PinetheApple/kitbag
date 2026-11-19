@@ -74,7 +74,6 @@ export * from './components/PlayerTransport.tsx';
 export * from './components/MiniPlayerBar.tsx';
 export * from './components/ScrubRow.tsx';
 export * from './components/Slider.tsx';
-export * from './useScreenReader.ts';
 export * from './useTextIconScale.ts';
 export * from './useTextScaled.ts';
 export * from './useReduceMotion.ts';

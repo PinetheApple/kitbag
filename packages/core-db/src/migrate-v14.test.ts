@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { ANALYSIS_STATUSES } from './analysis-status';
 import { migrate, MIGRATE_V13_TO_V14, SCHEMA_VERSION } from './migrate';
-import { buildV13Fixture, pragma, rows } from './migrate-fixtures.test-helper';
+import {
+  buildV13Fixture,
+  pragma,
+  rows,
+  V20_SONG_COLUMNS,
+} from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
 describe('migrate v13 to v14', () => {
@@ -18,6 +23,7 @@ describe('migrate v13 to v14', () => {
         ...(row as object),
         analysis_status: expect.any(String) as unknown,
         analysis_error: null,
+        ...V20_SONG_COLUMNS,
       })),
     );
     expect(

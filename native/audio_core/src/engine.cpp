@@ -144,7 +144,7 @@ void Engine::ReleaseRetired() {
 
 // The mirrors cover a stop still queued in the ring, the intents a start.
 bool Engine::IsIdle() const {
-  return holders_ == 0 && !metronome_intent_.load() && !mixer_intent_.load() &&
+  return holders_ == 0 && !metronome_intent() && !mixer_intent_.load() &&
          !rig_click_intent_.load() && !metronome_.is_running() &&
          !mixer_.is_playing() && !metronome_.rig_click().is_active();
 }
@@ -327,6 +327,10 @@ void Engine::RenderSlice(float* output, uint32_t frame_count) {
       block_start_frame,
       &mixer_.song_clock()
   );
+  uint32_t ended = metronome_.TakeEndedIntent();
+  if (ended != Metronome::kNoIntent) {
+    metronome_intent_.compare_exchange_strong(ended, Metronome::kNoIntent);
+  }
 
   frames_rendered_.fetch_add(frame_count, std::memory_order_relaxed);
 }

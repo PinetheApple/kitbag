@@ -22,6 +22,7 @@ export {
   COUNT_IN_SCOPES,
   DEFAULT_COUNT_IN_SCOPE,
   isCountInScope,
+  songCountIn,
   type CountInScope,
 } from './metronome/countInScope.ts';
 export {
@@ -215,6 +216,7 @@ export {
 export {
   configureSongLibrary,
   type LibraryFiles,
+  type OpenSong,
   type SongLibraryRecords,
 } from './songLibrary/runtime.ts';
 export {
@@ -331,6 +333,11 @@ export {
 } from './stemPlayer/time.ts';
 export { SKIP_SECONDS } from './stemPlayer/songTransport.ts';
 export { RETIME_PLAYBACK_RATE } from './stemPlayer/retimeSpeed.ts';
+export {
+  countedStart,
+  type CountedStart,
+  type CountedStartRequest,
+} from './stemPlayer/countedStart.ts';
 export type { LyricLine } from './stemPlayer/lrc.ts';
 export {
   sungLineFrom,
