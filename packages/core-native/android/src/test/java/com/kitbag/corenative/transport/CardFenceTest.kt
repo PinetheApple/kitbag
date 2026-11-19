@@ -10,8 +10,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class SongCardFenceTest {
-  private val fence = SongCardFence()
+class CardFenceTest {
+  private val fence = CardFence()
 
   @Test
   fun `only the card last shown runs`() {
@@ -32,10 +32,30 @@ class SongCardFenceTest {
   }
 
   @Test
-  fun `a card never shown runs nothing, before or after a withdraw`() {
-    assertNull(fence.run(SongCardFence.NONE) { RAN })
+  fun `keep holds the live card and issues a new one only after a withdraw`() {
+    val first = fence.keep()
+    assertEquals(first, fence.keep())
+    assertEquals(RAN, fence.run(first) { RAN })
     fence.withdraw()
-    assertNull(fence.run(SongCardFence.NONE) { RAN })
+    val next = fence.keep()
+    assertNull(fence.run(first) { RAN })
+    assertEquals(RAN, fence.run(next) { RAN })
+  }
+
+  @Test
+  fun `handing the metronome over leaves song presses running`() {
+    val fences = CardFences()
+    val song = fences.song.issue()
+    fences.metronome.keep()
+    fences.handOverMetronome {}
+    assertEquals(RAN, fences.song.run(song) { RAN })
+  }
+
+  @Test
+  fun `a card never shown runs nothing, before or after a withdraw`() {
+    assertNull(fence.run(CardFence.NONE) { RAN })
+    fence.withdraw()
+    assertNull(fence.run(CardFence.NONE) { RAN })
   }
 
   @Test

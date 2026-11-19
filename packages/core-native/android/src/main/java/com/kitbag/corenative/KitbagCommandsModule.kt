@@ -83,6 +83,10 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     PlaybackService.hide(reactApplicationContext)
   }
 
+  override fun transportHandOver() {
+    PlaybackService.handOver(reactApplicationContext)
+  }
+
   override fun songTransportShow(state: ReadableMap) {
     PlaybackService.showSong(
       reactApplicationContext,

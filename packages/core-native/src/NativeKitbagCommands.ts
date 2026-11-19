@@ -184,6 +184,7 @@ export interface Spec extends TurboModule {
 
   transportShow(state: TransportShowState): void;
   transportHide(): void;
+  transportHandOver(): void;
   songTransportShow(state: SongTransportShowState): void;
   songTransportHide(): void;
   setKeepScreenOn(on: boolean): void;

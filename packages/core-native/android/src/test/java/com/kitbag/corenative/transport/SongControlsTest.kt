@@ -37,7 +37,7 @@ class SongControlsTest {
     skipSeconds = 10.0,
   )
   private val engine = FakeEngine()
-  private val fence = SongCardFence()
+  private val fence = CardFence()
   private val controls = SongControls(engine, fence)
   private val requests = mutableListOf<SongCommand>()
   private val app: (SongCommand) -> Unit = { requests += it }

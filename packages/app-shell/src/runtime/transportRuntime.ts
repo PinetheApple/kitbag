@@ -41,11 +41,20 @@ function sendCard(next: TransportShown) {
   });
 }
 
-function hideCard() {
+function withdrawCard() {
   cardNumber += 1;
   shown = undefined;
   cardIssued = true;
+}
+
+function hideCard() {
+  withdrawCard();
   getKitbagCommands().transportHide();
+}
+
+function handOverCard() {
+  withdrawCard();
+  getKitbagCommands().transportHandOver();
 }
 
 // Reads the latest state: a nested setState can hand later listeners an older snapshot.
@@ -136,8 +145,10 @@ getKitbagCommands().onTransport((event) => {
 export const metronomeTransport = {
   active: () => transportActive(metronomeStore.getState().running, shown),
   release: () => {
-    metronomeStore.getState().stop();
-    if (shown !== undefined) hideCard();
+    handOverCard();
+    withoutSync(() => {
+      metronomeStore.getState().stop();
+    });
     handedOver = true;
   },
 };

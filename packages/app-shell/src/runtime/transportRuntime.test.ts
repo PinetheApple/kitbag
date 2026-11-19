@@ -20,6 +20,7 @@ const native = vi.hoisted(() => {
       cardCalls.push('metronome show');
     }),
     transportHide: logged('metronome hide'),
+    transportHandOver: logged('metronome hand over'),
     songTransportShow: logged('song show'),
     songTransportHide: logged('song hide'),
     metronomeStart: vi.fn(),
@@ -81,6 +82,9 @@ const notification = {
 const TEMPO_STEP = 1;
 const calls = (command: { mock: { calls: unknown[] } }) =>
   command.mock.calls.length;
+function lastCall(fn: { mock: { invocationCallOrder: number[] } }): number {
+  return fn.mock.invocationCallOrder.at(-1) ?? Number.NaN;
+}
 
 function pausedByTheService(bpm: number): number {
   metronomeStore.getState().stop();
@@ -467,6 +471,26 @@ describe('transportRuntime', () => {
     expect(lastCard()).toMatchObject({ playing: true, bpm: 130 });
     expect(lastCard()?.cardNumber).toBeGreaterThan(sent);
   });
+
+  it.each([
+    ['playing', playingOnACurrentCard],
+    ['paused by the service', pausedByTheService],
+  ])(
+    'release from %s hands the card over before it stops the click and sends no other card',
+    async (_, before) => {
+      const { metronomeTransport } = await import('./transportRuntime');
+      before(120);
+      const cardsBefore = [...native.cardCalls];
+      const stops = calls(native.metronomeStop);
+
+      metronomeTransport.release();
+      expect(native.cardCalls).toEqual([...cardsBefore, 'metronome hand over']);
+      expect(native.metronomeStop).toHaveBeenCalledTimes(stops + 1);
+      expect(lastCall(native.transportHandOver)).toBeLessThan(
+        lastCall(native.metronomeStop),
+      );
+    },
+  );
 
   it('a stale Play after a song took the card stops the click and leaves the song card shown', async () => {
     const { metronomeTransport } = await import('./transportRuntime');
