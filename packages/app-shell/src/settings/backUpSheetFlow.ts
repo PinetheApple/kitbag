@@ -30,7 +30,7 @@ export function nextBackUpSheet(
 ): BackUpSheetState {
   switch (event) {
     case 'open':
-      return { open: true, busy: false, failed: null };
+      return { open: true, busy: state.busy, failed: null };
     case 'dismiss':
       return { ...state, open: false };
     case 'start':

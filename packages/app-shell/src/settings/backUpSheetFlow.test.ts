@@ -48,6 +48,7 @@ describe('back up sheet flow', () => {
   it('holds the buttons while a backup is going out', () => {
     expect(after(OPEN, 'start').busy).toBe(true);
     expect(after(OPEN, 'start', 'cancelled').busy).toBe(false);
+    expect(after(OPEN, 'start', 'dismiss', 'open').busy).toBe(true);
   });
 });
 
