@@ -43,15 +43,14 @@ constexpr double kMaxTempoErrorBpm = 0.25;
 constexpr double kMaxStemSpreadBpm = 1.0;
 constexpr double kMaxGridLengthSpread = 0.01;
 // Louder noise leaves no beat peak and quieter noise no slope; a weaker accent
-// leaves the double-lag peak under the gain gate. The pad sits in a narrow band.
+// leaves the double-lag peak under the gain gate.
 constexpr double kSwellLagHops = 31.2;
 constexpr float kSwellAttackSec = 0.2f;
 constexpr float kSwellNoiseAmp = 0.06f;
 constexpr int kSwellBeats = 24;
 constexpr uint32_t kSwellNoiseSeed = 7u;
-constexpr float kAccentAmp = 0.18f;
-// A pulse slower than the tracked range whose doubled-lag peak halves below the
-// fastest tracked lag.
+constexpr float kSwellAccentAmp = 0.18f;
+// Read at a lag near min_lag, whose double-lag peak halves below it.
 constexpr double kEdgeLagHops = 91.0;
 constexpr float kEdgeAttackSec = 0.1f;
 constexpr float kEdgeNoiseAmp = 0.01f;
@@ -62,16 +61,14 @@ constexpr float kAccentDecayPerSec = 8.0f;
 constexpr int kRippleBeats = 200;
 constexpr float kRippleChordAttackSec = 0.1f;
 constexpr float kRippleRiseSec = 0.35f;
+constexpr float kRippleNoteSec = 2.0f * kRippleRiseSec;
 constexpr float kRippleDecayPerSec = 4.0f;
 constexpr float kRipplePerSec = 8.0f;
 constexpr float kRippleAmp = 0.6f;
 constexpr float kRippleBaseHz = 440.0f;
 constexpr uint32_t kRipplePitchSteps = 24;
 constexpr float kSemitonesPerOctave = 12.0f;
-constexpr uint32_t kRippleSeed = 2u;
-constexpr uint32_t kUniformShift = 8;
-constexpr uint32_t kUniformMask = 0xFFFFFFu;
-constexpr double kUniformScale = 1.0 / 16777216.0;
+constexpr uint32_t kRippleSeed = 126u;
 
 size_t BeatFrame(int beat, double bpm) {
   const double period = kSecondsPerMinute * kSampleRate / bpm;
@@ -145,8 +142,6 @@ float Accent(const PadShape& shape, int beat, float t) {
          std::exp(-t * kAccentDecayPerSec);
 }
 
-// Slow noise slopes the onset autocorrelation, so the chords' broad beat peak
-// crests short of the period; accents at each chord change keep its double clear.
 std::vector<float> MakeSwellingPadStem(const PadShape& shape) {
   std::vector<float> pcm(BeatFrame(shape.beats, shape.bpm) * 2, 0.0f);
   const float rate = static_cast<float>(kSampleRate);
@@ -189,15 +184,9 @@ void CheckEdgeStaysInRange() {
   );
 }
 
-double LcgUniform(uint32_t& state) {
-  state = state * kLcgMul + kLcgInc;
-  return static_cast<double>((state >> kUniformShift) & kUniformMask) *
-         kUniformScale;
-}
-
 void AddRippleNote(std::vector<float>& pcm, size_t start, float hz) {
   const float rate = static_cast<float>(kSampleRate);
-  const auto length = static_cast<size_t>(2.0f * kRippleRiseSec * rate);
+  const auto length = static_cast<size_t>(kRippleNoteSec * rate);
   const size_t frames = pcm.size() / 2;
   for (size_t f = start; f < start + length && f < frames; ++f) {
     const float t = static_cast<float>(f - start) / rate;
@@ -227,14 +216,15 @@ std::vector<float> MakeRippleStem(double bpm) {
   }
   uint32_t state = kRippleSeed;
   const double song_sec = static_cast<double>(pcm.size() / 2) / kSampleRate;
-  for (double t = 0.0;;) {
-    t -= std::log(1.0 - LcgUniform(state)) / kRipplePerSec;
-    if (t >= song_sec) break;
-    LcgUniform(state);
-    const auto step =
-        static_cast<float>((state >> kUniformShift) % kRipplePitchSteps);
-    const float hz = kRippleBaseHz * std::exp2(step / kSemitonesPerOctave);
+  double t = -std::log(1.0 - LcgUniform(state)) / kRipplePerSec;
+  while (t < song_sec) {
+    const auto step = static_cast<uint32_t>(
+        LcgUniform(state) * static_cast<double>(kRipplePitchSteps)
+    );
+    const float hz = kRippleBaseHz *
+                     std::exp2(static_cast<float>(step) / kSemitonesPerOctave);
     AddRippleNote(pcm, static_cast<size_t>(t * kSampleRate), hz);
+    t -= std::log(1.0 - LcgUniform(state)) / kRipplePerSec;
   }
   return pcm;
 }
@@ -258,7 +248,7 @@ void CheckSwellingPadAgrees() {
   const double bpm = LagBpm(kSwellLagHops);
   const BeatResult clicks = AnalyzePcm(MakeClickStem(bpm));
   const PadShape
-      shape{bpm, kStemBeats, kSwellAttackSec, kSwellNoiseAmp, kAccentAmp};
+      shape{bpm, kStemBeats, kSwellAttackSec, kSwellNoiseAmp, kSwellAccentAmp};
   const BeatResult pad = AnalyzePcm(MakeSwellingPadStem(shape));
   const auto click_beats = static_cast<double>(clicks.beat_times.size());
   const auto pad_beats = static_cast<double>(pad.beat_times.size());

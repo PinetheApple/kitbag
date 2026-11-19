@@ -43,10 +43,22 @@ constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
 constexpr uint32_t kLcgMul = 1664525u;
 constexpr uint32_t kLcgInc = 1013904223u;
 constexpr float kLcgScale = 1.0f / 2147483648.0f;
+constexpr uint32_t kUniformShift = 8;
+constexpr uint32_t kUniformMask = 0xFFFFFFu;
+constexpr double kUniformScale = 1.0 / (kUniformMask + 1.0);
+
+inline uint32_t LcgStep(uint32_t& state) {
+  state = state * kLcgMul + kLcgInc;
+  return state;
+}
 
 inline float LcgNoise(uint32_t& state) {
-  state = state * kLcgMul + kLcgInc;
-  return static_cast<float>(static_cast<int32_t>(state)) * kLcgScale;
+  return static_cast<float>(static_cast<int32_t>(LcgStep(state))) * kLcgScale;
+}
+
+inline double LcgUniform(uint32_t& state) {
+  return static_cast<double>((LcgStep(state) >> kUniformShift) & kUniformMask) *
+         kUniformScale;
 }
 
 // DownBeat's Hanning window zeroes the click, so the beat-long tone carries the
