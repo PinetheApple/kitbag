@@ -8,7 +8,7 @@ object SqliteRecovery : DatabaseRecovery {
   private val FLAGS = SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.NO_LOCALIZED_COLLATORS
   private const val FIRST_READ = "SELECT count(*) FROM sqlite_master"
 
-  // SQLite rolls a hot journal back, or replays a WAL, on the first read of a writable connection.
+  // SQLite rolls a hot journal back, or replays a WAL, no later than the first read of a writable connection.
   override fun recover(database: File) {
     try {
       SQLiteDatabase.openDatabase(database.path, null, FLAGS).use { db ->

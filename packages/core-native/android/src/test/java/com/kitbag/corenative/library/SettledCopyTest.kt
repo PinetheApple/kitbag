@@ -18,17 +18,24 @@ class SettledCopyTest {
   private val workDir = File(root, SettledCopy.WORK_DIR)
   private val recovered = mutableListOf<File>()
   private val seenBeside = mutableMapOf<String, ByteArray>()
+  private var staleSeen = false
 
   private val rollBack = DatabaseRecovery { copy ->
     recovered += copy
-    COMPANIONS.map { File(copy.path + it) }.filter { it.exists() }.forEach { seenBeside[it.name.removePrefix(NAME)] = it.readBytes() }
-    seenBeside[STALE_NAME] = File(copy.parentFile, STALE_NAME).takeIf { it.exists() }?.readBytes() ?: ByteArray(0)
+    COMPANIONS
+      .map { File(copy.path + it) }
+      .filter { it.exists() }
+      .forEach { seenBeside[it.name.removePrefix(NAME)] = it.readBytes() }
+    staleSeen = File(copy.parentFile, STALE_NAME).exists()
     copy.writeBytes(COMMITTED)
     COMPANIONS.forEach { File(copy.path + it).delete() }
   }
 
   private fun settled(recovery: DatabaseRecovery = rollBack, free: Long = Long.MAX_VALUE) =
-    SettledCopy(workDir, recovery) { free }
+    SettledCopy(workDir, recovery, usableSpace = { free })
+
+  private fun failingCopy(error: IOException, free: () -> Long = { Long.MAX_VALUE }) =
+    SettledCopy(workDir, rollBack, usableSpace = { free() }, copyFile = { _, _ -> throw error })
 
   private fun beside(suffix: String, bytes: ByteArray = JOURNAL) = File(database.path + suffix).apply { writeBytes(bytes) }
 
@@ -86,7 +93,7 @@ class SettledCopyTest {
 
     assertArrayEquals(COMMITTED, readAll())
 
-    assertArrayEquals(ByteArray(0), seenBeside[STALE_NAME])
+    assertFalse(staleSeen)
     assertArrayEquals(JOURNAL, seenBeside[JOURNAL_SUFFIX])
   }
 
@@ -140,13 +147,49 @@ class SettledCopyTest {
   @Test
   fun `too little free space for the copy refuses before copying anything`() {
     beside(WAL_SUFFIX)
-    val needed = (TORN.size + JOURNAL.size).toLong() * SPACE_FACTOR
+    val needed = (TORN.size + JOURNAL.size).toLong() * SettledCopy.RECOVERY_SPACE_FACTOR
 
     assertThrows(DatabaseCopyNoSpaceException::class.java) { readAll(settled(free = needed - 1)) }
 
     assertTrue(recovered.isEmpty())
     assertFalse(workDir.exists())
     assertArrayEquals(COMMITTED, readAll(settled(free = needed)))
+  }
+
+  @Test
+  fun `running out of space while copying into the cache reports no space and leaves nothing behind`() {
+    beside(JOURNAL_SUFFIX)
+    val errors = listOf(
+      IOException("write failed: ENOSPC (No space left on device)"),
+      IOException("copy failed", IOException("No space left on device")),
+    )
+
+    for (error in errors) {
+      assertThrows("$error", DatabaseCopyNoSpaceException::class.java) { readAll(failingCopy(error)) }
+      assertFalse(workDir.exists())
+    }
+    assertTrue(recovered.isEmpty())
+  }
+
+  @Test
+  fun `a copy failure with free space gone by then reports no space`() {
+    beside(JOURNAL_SUFFIX)
+    val checks = mutableListOf(Long.MAX_VALUE, 0L)
+
+    assertThrows(DatabaseCopyNoSpaceException::class.java) {
+      readAll(failingCopy(IOException("I/O error")) { checks.removeAt(0) })
+    }
+  }
+
+  @Test
+  fun `any other copy failure keeps its own error`() {
+    beside(JOURNAL_SUFFIX)
+    val error = IOException("I/O error")
+
+    val thrown = assertThrows(IOException::class.java) { readAll(failingCopy(error)) }
+
+    assertEquals(error, thrown)
+    assertFalse(workDir.exists())
   }
 
   @Test
@@ -188,7 +231,6 @@ class SettledCopyTest {
     const val SHM_SUFFIX = "-shm"
     const val STALE_NAME = "kitbag-stale"
     const val LIVE_MTIME = 1_700_000_000_000L
-    const val SPACE_FACTOR = 2
     val COMPANIONS = listOf(JOURNAL_SUFFIX, WAL_SUFFIX, SHM_SUFFIX)
     val TORN = "SQLite format 3\u0000torn".toByteArray(Charsets.US_ASCII)
     val COMMITTED = "SQLite format 3\u0000committed".toByteArray(Charsets.US_ASCII)

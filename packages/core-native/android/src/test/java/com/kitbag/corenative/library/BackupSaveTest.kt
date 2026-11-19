@@ -109,7 +109,7 @@ class BackupSaveTest {
       File(it.path + "-journal").delete()
     },
   ): Boolean {
-    val settled = SettledCopy(File(source.parentFile, SettledCopy.WORK_DIR + source.name), recovery)
+    val settled = SettledCopy(File(source.parentFile, SettledCopy.WORK_DIR), recovery)
     return BackupSave.copyFile(saved, PICKED, source, settled, opener, discard)
   }
 
