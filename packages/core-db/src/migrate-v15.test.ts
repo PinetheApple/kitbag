@@ -6,6 +6,7 @@ import {
   pragma,
   rows,
   V22_STEM_SET_COLUMNS,
+  V26_STEM_SET_COLUMNS,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 import { STEM_SET_SOURCES } from './stem-set-source';
@@ -34,6 +35,7 @@ const NEW_SET_COLUMNS = {
   artist: null,
   renamed: 0,
   ...V22_STEM_SET_COLUMNS,
+  ...V26_STEM_SET_COLUMNS,
 };
 
 function withFolderSet() {

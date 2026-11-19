@@ -6,6 +6,7 @@ import {
   pragma,
   rows,
   V22_STEM_SET_COLUMNS,
+  V26_STEM_SET_COLUMNS,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -24,6 +25,7 @@ describe('migrate v15 to v16', () => {
         artist: null,
         renamed: 0,
         ...V22_STEM_SET_COLUMNS,
+        ...V26_STEM_SET_COLUMNS,
       })),
     );
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);

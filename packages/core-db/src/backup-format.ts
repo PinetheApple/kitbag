@@ -148,6 +148,7 @@ export interface StemSongRecord extends MeterOverride {
   label: string;
   title: string | null;
   speed: number;
+  pitch: number;
   lyricsRetimed: LyricLineTimes | null;
   clickGrouping: readonly number[];
   clickRate: ClickRate;

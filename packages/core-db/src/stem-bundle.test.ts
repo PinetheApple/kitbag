@@ -137,6 +137,7 @@ describe('StemDeck bundles in the song library', () => {
       sampleRate: RATE,
       createdAt: expect.any(Date) as Date,
       speed: 1,
+      pitch: 0,
       bpm: 92.5,
       key: 'A',
       scale: 'minor',
