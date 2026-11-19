@@ -1,8 +1,16 @@
 import { fontFamily, type TypeRole } from './tokens.ts';
 
+export const optionRow = {
+  padH: 11,
+  gap: 9,
+} as const;
+
+export const optionRowText = {
+  title: { family: fontFamily.display, weight: 500, size: 13 },
+  meta: { family: fontFamily.body, weight: 400, size: 11 },
+} as const satisfies Record<string, TypeRole>;
+
 export const calibration = {
-  routeRowH: 11,
-  routeRowGap: 9,
   tapZoneV: 20,
   tapPromptV: 26,
   tapPromptH: 14,
@@ -21,8 +29,6 @@ export const rig = {
 } as const;
 
 export const calibrationText = {
-  routeName: { family: fontFamily.display, weight: 500, size: 13 },
-  routeMeta: { family: fontFamily.body, weight: 400, size: 11 },
   tapCount: {
     family: fontFamily.display,
     weight: 700,
