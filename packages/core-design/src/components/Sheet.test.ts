@@ -89,6 +89,13 @@ const { Sheet } = await import('./Sheet.tsx');
 
 type Props = Readonly<{
   accessibilityRole?: string;
+  accessibilityLabel?: string;
+  accessibilityActions?: readonly { name: string; label?: string }[];
+  importantForAccessibility?: string;
+  accessibilityElementsHidden?: boolean;
+  onAccessibilityAction?: (event: {
+    nativeEvent: { actionName: string };
+  }) => void;
   ref?: unknown;
   entering?: unknown;
   exiting?: unknown;
@@ -101,12 +108,12 @@ function flat(style: unknown): Record<string, unknown> {
   return Object.assign({}, ...parts) as Record<string, unknown>;
 }
 
-function openSheet(onDismiss = vi.fn()) {
+function openSheet(onDismiss = vi.fn(), title = 'T') {
   portal.show.mockClear();
   Sheet({
     visible: true,
-    title: 'T',
-    dismissLabel: 'Close',
+    title,
+    dismissLabel: `Close ${title}`,
     onDismiss,
     children: null,
   });
@@ -187,6 +194,50 @@ it('moves screen reader focus to its title once it has slid in', () => {
   settleEntering(true);
   expect(focusReaderOn).toHaveBeenCalledOnce();
   expect(focusReaderOn).toHaveBeenCalledWith(node);
+});
+
+function readerOrder(node: unknown): ReactElement<Props>[] {
+  if (Array.isArray(node)) return node.flatMap(readerOrder);
+  if (node === null || typeof node !== 'object' || !('props' in node))
+    return [];
+  const element = node as ReactElement<Props>;
+  const { props } = element;
+  if (props.importantForAccessibility === 'no-hide-descendants') return [];
+  const reachable =
+    element.type === 'Pressable' ||
+    element.type === 'Text' ||
+    props.accessibilityLabel !== undefined;
+  return [...(reachable ? [element] : []), ...readerOrder(props.children)];
+}
+
+it('focuses the top title, not its backdrop, when stacked over another sheet', () => {
+  openSheet(vi.fn(), 'Lower');
+  focusReaderOn.mockClear();
+  const top = openSheet(vi.fn(), 'Top');
+  const [first] = readerOrder(top);
+  expect(first?.props.accessibilityRole).toBe('header');
+  expect(first?.props.children).toBe('Top');
+  const node = {};
+  (first?.props.ref as { current: unknown }).current = node;
+  settleEntering(true);
+  expect(focusReaderOn).toHaveBeenCalledOnce();
+  expect(focusReaderOn).toHaveBeenCalledWith(node);
+});
+
+it('offers closing as a screen reader action on the title', () => {
+  const onDismiss = vi.fn();
+  const [title] = headers(openSheet(onDismiss, 'Top'));
+  expect(title?.props.accessibilityActions).toEqual([
+    { name: 'escape', label: 'Close Top' },
+  ]);
+  title?.props.onAccessibilityAction?.({
+    nativeEvent: { actionName: 'activate' },
+  });
+  expect(onDismiss).not.toHaveBeenCalled();
+  title?.props.onAccessibilityAction?.({
+    nativeEvent: { actionName: 'escape' },
+  });
+  expect(onDismiss).toHaveBeenCalledOnce();
 });
 
 it('closes on hardware Back', () => {

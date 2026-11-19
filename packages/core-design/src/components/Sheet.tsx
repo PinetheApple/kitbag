@@ -12,6 +12,7 @@ import {
   StyleSheet,
   Text,
   View,
+  type AccessibilityActionEvent,
   type LayoutChangeEvent,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -39,6 +40,7 @@ import {
 import { palette, radii } from '../tokens.ts';
 import { useReduceMotionMode } from '../useReduceMotion.ts';
 import { focusReaderOn } from '../readerFocus';
+import { readerHiding } from '../readerHiding.ts';
 import { onHardwareBack } from './hardwareBack';
 import { InlineIcon } from './IconGlyph.tsx';
 import { useSheetPortal } from './SheetHost.tsx';
@@ -48,6 +50,8 @@ import { useSheetPortal } from './SheetHost.tsx';
 export const SHEET_TOUCH_ROOM = space.sectionGap;
 const INDICATOR_INSETS = { top: SHEET_TOUCH_ROOM, bottom: SHEET_TOUCH_ROOM };
 const SCRIM = withAlpha(palette.bg.dark, opacity.sheetScrim);
+const READER_CLOSE_ACTION = 'escape';
+const BACKDROP_READER_HIDING = readerHiding(true);
 
 const useStyles = createThemedStyles((theme) => ({
   frame: {
@@ -207,6 +211,16 @@ export function Sheet({
   const focusTitle = useCallback(() => {
     focusReaderOn(titleRef.current);
   }, []);
+  const readerActions = useMemo(
+    () => [{ name: READER_CLOSE_ACTION, label: dismissLabel }],
+    [dismissLabel],
+  );
+  const handleReaderAction = useCallback(
+    (event: AccessibilityActionEvent) => {
+      if (event.nativeEvent.actionName === READER_CLOSE_ACTION) onDismiss();
+    },
+    [onDismiss],
+  );
   // Focus sent at mount, mid-slide, did not land on the title under TalkBack.
   const transitions = useMemo(
     () => ({
@@ -279,10 +293,11 @@ export function Sheet({
         exiting={transitions.scrimOut}
         style={[StyleSheet.absoluteFill, dim && styles.scrim]}
       >
+        {/* A reader that lands on the full-screen backdrop first never reaches the title. */}
         <Pressable
           style={StyleSheet.absoluteFill}
-          accessibilityRole="button"
           accessibilityLabel={dismissLabel}
+          {...BACKDROP_READER_HIDING}
           onPress={onDismiss}
         />
       </Animated.View>
@@ -306,6 +321,8 @@ export function Sheet({
                 <Text
                   ref={titleRef}
                   accessibilityRole="header"
+                  accessibilityActions={readerActions}
+                  onAccessibilityAction={handleReaderAction}
                   style={titleStyle}
                 >
                   {title}
