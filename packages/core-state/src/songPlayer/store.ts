@@ -110,7 +110,7 @@ export function createSongPlayerStore(
 
   return createStore<SongPlayerStore>((set, get, api) => {
     const settings = songClickSettings({ set, get, metronome });
-    api.subscribe(settings.clickChanged);
+    api.subscribe(settings.followSong);
     const mixer = mixerSession({
       set,
       get,
@@ -326,7 +326,7 @@ export function createSongPlayerStore(
         latestWaveform = null;
         set({
           ...closedState,
-          ...settings.seeded(),
+          ...settings.seeded(closedState),
           status: 'loading',
           songId,
         });

@@ -70,7 +70,7 @@ export function fakeSongRuntime(song: SongRecord = songRecord()) {
     setBeats: vi.fn(),
     setSubdivision: vi.fn(),
     setSounds: vi.fn(),
-    setAccent: vi.fn(),
+    setAccent: vi.fn<(beat: number, accent: number) => void>(),
   };
   const mixerTrackFrames = vi.fn(() =>
     Promise.resolve(secondsToFrames(song.durationSec, RATE)),
@@ -91,7 +91,8 @@ export function fakeSongRuntime(song: SongRecord = songRecord()) {
     engine: fake.runtime.engine,
     sharedMetronome: fake.sharedMetronome,
   };
-  const metronome: SongClickMetronome = fakeMetronome();
+  const standalone = fakeMetronome();
+  const metronome: SongClickMetronome = standalone;
   return {
     ...fake,
     runtime,
@@ -100,6 +101,7 @@ export function fakeSongRuntime(song: SongRecord = songRecord()) {
     library,
     readWaveform,
     metronomeSetters,
+    standalone,
     metronome,
   };
 }

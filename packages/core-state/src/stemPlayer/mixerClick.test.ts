@@ -34,6 +34,7 @@ const STANDALONE_BPM = 97;
 const STANDALONE_BEATS = 3;
 const STANDALONE_DENOMINATOR = 8;
 const NOW_FRAME = 0;
+const FIRST_BEAT = 0;
 const SONG_TITLE = songRecord().title;
 
 type MixerCommands = ReturnType<typeof fakeStemRuntime>['commands'];
@@ -182,16 +183,26 @@ describe("standalone Play while a song's click runs", () => {
     expect(configOf(standalone.getState())).toEqual(before);
   });
 
-  it("puts the standalone's sounds back on the engine before it starts", async () => {
+  it("puts the standalone's sounds and accents back before it starts", async () => {
     const { commands, song, standalone } = await songWithClick();
-    const { sounds } = standalone.getState();
+    const { sounds, accents } = standalone.getState();
     song.getState().setClickSounds(sounds.accent, sounds.normal);
+    song.getState().cycleClickAccent(FIRST_BEAT);
+    expect(song.getState().clickSettings.accents[FIRST_BEAT]).not.toBe(
+      accents[FIRST_BEAT],
+    );
     vi.clearAllMocks();
     standalone.getState().start();
     expect(commands.setSounds).toHaveBeenLastCalledWith(
       sounds.normal,
       sounds.accent,
     );
+    accents.forEach((accent, beat) => {
+      expect(commands.setAccent).toHaveBeenCalledWith(beat, accent);
+    });
+    const [lastAccent] = commands.setAccent.mock.invocationCallOrder.slice(-1);
+    const [startedAt] = commands.metronomeStart.mock.invocationCallOrder;
+    expect(lastAccent).toBeLessThan(startedAt ?? 0);
     const [restored] = commands.setSounds.mock.invocationCallOrder;
     const [started] = commands.metronomeStart.mock.invocationCallOrder;
     expect(restored).toBeLessThan(started ?? 0);

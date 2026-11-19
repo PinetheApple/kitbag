@@ -1,3 +1,4 @@
+import type { MeterOverride } from '@kitbag/core-db';
 import {
   KB_COUNT_IN_OFF,
   KB_DEFAULT_SOUNDS,
@@ -13,17 +14,15 @@ import {
   cycleAccentValue,
   isCountInBars,
   isSoundId,
+  resizeAccents,
   type PerAccentSounds,
 } from '../metronome/config.ts';
-import {
-  applyMetronomeSettings,
-  standaloneMetronomeOf,
-} from '../metronome/standalone.ts';
 import {
   metronomeStore,
   type CountInBars,
   type MetronomeStore,
 } from '../metronome/store.ts';
+import type { DetectedMeter } from '../stemPlayer/meterOverride.ts';
 
 export interface SongClickSettings {
   readonly countInBars: CountInBars;
@@ -33,7 +32,10 @@ export interface SongClickSettings {
 }
 
 export interface SongClickSlice {
+  readonly songId: number | null;
   readonly click: boolean;
+  readonly meterOverride: MeterOverride;
+  readonly detected: DetectedMeter;
   readonly clickSettings: SongClickSettings;
 }
 
@@ -66,26 +68,43 @@ interface SongClickContext {
   readonly metronome: SongClickMetronome;
 }
 
+function songMeter({ meterOverride, detected }: SongClickSlice): number {
+  return meterOverride.meterBeatsPerBar ?? detected.meter;
+}
+
+const sameSounds = (a: PerAccentSounds, b: PerAccentSounds) =>
+  a.normal === b.normal && a.accent === b.accent;
+
 export function songClickSettings({ set, get, metronome }: SongClickContext) {
   const { commands } = metronome;
 
-  const edit = (change: Partial<SongClickSettings>) => {
-    set({ clickSettings: { ...get().clickSettings, ...change, dirty: true } });
+  const change = (next: Partial<SongClickSettings>) => {
+    set({ clickSettings: { ...get().clickSettings, ...next } });
   };
 
-  const pushSounds = ({ normal, accent }: PerAccentSounds) => {
-    commands.setSounds(normal, accent);
+  const edit = (next: Partial<SongClickSettings>) => {
+    change({ ...next, dirty: true });
   };
 
-  const pushAccents = (accents: readonly KB_ACCENT[]) => {
+  const push = (sounds: PerAccentSounds, accents: readonly KB_ACCENT[]) => {
+    commands.setSounds(sounds.normal, sounds.accent);
     accents.forEach((accent, beat) => {
       commands.setAccent(beat, accent);
     });
   };
 
   const restoreStandalone = () => {
-    const standalone = metronome.store.getState();
-    applyMetronomeSettings(standalone, standaloneMetronomeOf(standalone));
+    const { sounds, accents } = metronome.store.getState();
+    push(sounds, accents);
+  };
+
+  const fitToMeter = (state: SongClickSlice) => {
+    const accents = resizeAccents(
+      state.clickSettings.accents,
+      songMeter(state),
+    );
+    change({ accents });
+    if (state.click) push(state.clickSettings.sounds, accents);
   };
 
   const actions: SongClickActions = {
@@ -96,8 +115,9 @@ export function songClickSettings({ set, get, metronome }: SongClickContext) {
         normal: isSoundId(normal) ? normal : prev.normal,
         accent: isSoundId(accent) ? accent : prev.accent,
       };
+      if (sameSounds(sounds, prev)) return;
       edit({ sounds });
-      if (get().click) pushSounds(sounds);
+      if (get().click) commands.setSounds(sounds.normal, sounds.accent);
     },
     cycleClickAccent: (beat) => {
       const { accents } = get().clickSettings;
@@ -108,30 +128,33 @@ export function songClickSettings({ set, get, metronome }: SongClickContext) {
       if (get().click) commands.setAccent(beat, next);
     },
     setClickCountIn: (bars) => {
-      if (isCountInBars(bars)) edit({ countInBars: bars });
+      if (!isCountInBars(bars) || bars === get().clickSettings.countInBars)
+        return;
+      edit({ countInBars: bars });
     },
   };
 
   return {
     actions,
-    seeded: (): Pick<SongClickSlice, 'clickSettings'> => {
+    seeded: (song: SongClickSlice): Pick<SongClickSlice, 'clickSettings'> => {
       const { countIn, sounds, accents } = metronome.store.getState();
       return {
         clickSettings: {
           countInBars: countIn.bars,
           sounds,
-          accents,
+          accents: resizeAccents(accents, songMeter(song)),
           dirty: false,
         },
       };
     },
     clickStarting: () => {
       const { sounds, accents } = get().clickSettings;
-      pushSounds(sounds);
-      pushAccents(accents);
+      push(sounds, accents);
     },
-    clickChanged: (state: SongClickSlice, previous: SongClickSlice) => {
+    followSong: (state: SongClickSlice, previous: SongClickSlice) => {
       if (previous.click && !state.click) restoreStandalone();
+      const meterChanged = songMeter(state) !== songMeter(previous);
+      if (state.songId !== null && meterChanged) fitToMeter(state);
     },
   };
 }

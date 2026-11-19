@@ -407,12 +407,21 @@ describe('the standalone metronome', () => {
     expect(configOf(after)).toEqual(configOf(before));
     expect(after.bpm).toBe(TEMPO);
     expect(after.beatsPerBar).toBe(3);
-    const { setSounds, setTempo, setBeats } = song.metronomeSetters;
+    const { setSounds, setTempo, setBeats, setSubdivision, setAccent } =
+      song.metronomeSetters;
     const { normal, accent } = before.sounds;
     for (const call of setSounds.mock.calls)
       expect(call).toEqual([normal, accent]);
     for (const call of setTempo.mock.calls) expect(call).toEqual([TEMPO]);
     for (const call of setBeats.mock.calls) expect(call).toEqual([3, 4]);
+    for (const call of setSubdivision.mock.calls)
+      expect(call).toEqual([before.subdivision]);
+    const lastAccents = new Map<number, number>();
+    for (const [beat, value] of setAccent.mock.calls)
+      lastAccents.set(beat, value);
+    before.accents.forEach((value, beat) => {
+      expect(lastAccents.get(beat)).toBe(value);
+    });
   }
 
   it('keeps its tempo and config through a song, but is left stopped', async () => {
