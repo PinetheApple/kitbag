@@ -12,25 +12,31 @@
 #include "stem_pulse.h"
 #include "stem_sync_rate.h"
 #include "stretch/time_stretch.h"
+#include "time_units.h"
 
 namespace stem_sync {
 namespace {
 
+using kitbag::kSecondsPerMinute;
 using kitbag_test::Check;
 
-constexpr double kSecondsPerMinute = 60.0;
-// 24552.43 frames a beat: a whole multiple of neither the block nor the
-// 512-frame record spacing, so no beat repeats a block phase.
+// A beat is a whole multiple of neither the block nor the record spacing, so
+// no beat repeats a block phase.
 constexpr double kBpm = 117.3;
 constexpr double kBeatFrames = kSecondsPerMinute / kBpm * kSampleRate;
 constexpr double kFirstBeat = 7001.7;
 constexpr int kSongBeats = 300;
 constexpr double kSongTailFrames = kSampleRate;
+constexpr double kStopIntoTailFrames = kSongTailFrames / 2;
 // Onset and engine both take the first whole frame at or after a beat.
 constexpr double kMaxUnityErrorFrames = 0.0;
 constexpr double kMaxExtraFrames = 1.0;
 constexpr double kFullSongRates[] = {0.75, 0.5};
 constexpr size_t kNameChars = 32;
+constexpr const char* kOnBeat =
+    "each click on the first frame at or after its beat";
+constexpr const char* kNearUnity =
+    "each click within a frame of 1.0x's placement";
 constexpr double kLoopFromRate = 0.75;
 constexpr double kLoopToRate = 0.5;
 constexpr double kLoopStartBeat = 20.37;
@@ -82,20 +88,26 @@ double LoopLength(const Loop& loop) {
   return loop.end - loop.start;
 }
 
-double StreamAt(const std::vector<Segment>& segments, double out) {
+const Segment& SegmentAt(
+    const std::vector<Segment>& segments,
+    double Segment::* first,
+    double at
+) {
   const Segment* in = &segments.front();
   for (const Segment& s : segments) {
-    if (s.out_first <= out) in = &s;
+    if (s.*first <= at) in = &s;
   }
-  return in->stream_first + in->rate * (out - in->out_first);
+  return *in;
+}
+
+double StreamAt(const std::vector<Segment>& segments, double out) {
+  const Segment& in = SegmentAt(segments, &Segment::out_first, out);
+  return in.stream_first + in.rate * (out - in.out_first);
 }
 
 double OutAt(const std::vector<Segment>& segments, double stream) {
-  const Segment* in = &segments.front();
-  for (const Segment& s : segments) {
-    if (s.stream_first <= stream) in = &s;
-  }
-  return in->out_first + (stream - in->stream_first) / in->rate;
+  const Segment& in = SegmentAt(segments, &Segment::stream_first, stream);
+  return in.out_first + (stream - in.stream_first) / in.rate;
 }
 
 // Stream frames run on past the loop end; each pass replays [start, end).
@@ -131,28 +143,6 @@ std::vector<double> ExpectedOutFrames(const Script& script) {
   return want;
 }
 
-class Onsets {
- public:
-  void Feed(const std::vector<float>& out, int64_t first) {
-    for (uint32_t f = 0; f < kBlock; ++f) {
-      if (std::fabs(out[kStereo * f + 1]) <= click_take::kSilence) {
-        ++quiet_;
-        continue;
-      }
-      // The silent trigger frame before the first sample, as DetectClicks has it.
-      if (quiet_ >= click_take::kGapFrames) clicks_.push_back(first + f - 1);
-      quiet_ = 0;
-    }
-  }
-  const std::vector<int64_t>& clicks() const {
-    return clicks_;
-  }
-
- private:
-  int64_t quiet_ = click_take::kGapFrames;
-  std::vector<int64_t> clicks_;
-};
-
 void ApplyScriptAt(kb_engine* engine, const Script& script, int64_t block) {
   if (block == script.loop_block) {
     Check(
@@ -175,16 +165,16 @@ void ApplyScriptAt(kb_engine* engine, const Script& script, int64_t block) {
 
 // Unpaced: a starved stem plays silence, and the clicks follow the song clock.
 std::vector<int64_t> PlayScript(kb_engine* engine, const Script& script) {
-  Onsets onsets;
+  click_take::ClickStream clicks;
   std::vector<float> out(static_cast<size_t>(kBlock) * kStereo);
   kb_mixer_set_rate(engine, static_cast<float>(script.segments[0].rate));
   kb_mixer_play(engine);
   for (int64_t b = 0; b < script.blocks; ++b) {
     ApplyScriptAt(engine, script, b);
     kb_engine_render(engine, out.data(), kBlock);
-    onsets.Feed(out, b * kBlock);
+    for (uint32_t f = 0; f < kBlock; ++f) clicks.Feed(out[kStereo * f + 1]);
   }
-  return onsets.clicks();
+  return clicks.clicks();
 }
 
 Measure Compare(const std::vector<int64_t>& got, const Script& script) {
@@ -214,7 +204,7 @@ int64_t BlocksFor(double out_frames) {
 Script FullSong(double rate) {
   return {
       .segments = {{.rate = rate}},
-      .blocks = BlocksFor((SongEnd() - kSongTailFrames / 2) / rate)
+      .blocks = BlocksFor((SongEnd() - kStopIntoTailFrames) / rate)
   };
 }
 
@@ -263,21 +253,18 @@ void Report(const std::string& name, const Measure& measure, double limit) {
   );
 }
 
-void CheckAgainst(
+void CheckWithin(
     const std::string& name,
     const Measure& measure,
-    const Measure& unity
+    double limit,
+    const char* label
 ) {
-  const double limit = unity.worst + kMaxExtraFrames;
   Report(name, measure, limit);
   Check(
       measure.beats > 0 && measure.clicks == measure.beats,
       (name + ": every beat clicks once").c_str()
   );
-  Check(
-      measure.worst <= limit,
-      (name + ": each click within a frame of 1.0x's placement").c_str()
-  );
+  Check(measure.worst <= limit, (name + ": " + label).c_str());
 }
 
 std::string FullSongName(double rate) {
@@ -286,35 +273,29 @@ std::string FullSongName(double rate) {
   return name;
 }
 
-void CheckUnity(const std::string& name, const Measure& measure) {
-  Report(name, measure, kMaxUnityErrorFrames);
-  Check(
-      measure.beats > 0 && measure.clicks == measure.beats,
-      (name + ": every beat clicks once").c_str()
-  );
-  Check(
-      measure.worst <= kMaxUnityErrorFrames,
-      (name + ": each click on the first frame at or after its beat").c_str()
-  );
-}
-
 void TestFullSong(const std::string& stem) {
   const Measure unity = RunScript(stem, FullSong(kitbag::kUnityRate));
-  CheckUnity("full song 1.0x", unity);
+  CheckWithin("full song 1.0x", unity, kMaxUnityErrorFrames, kOnBeat);
   Check(unity.beats == kSongBeats, "full song 1.0x: the run spans every beat");
   for (double rate : kFullSongRates) {
-    CheckAgainst(FullSongName(rate), RunScript(stem, FullSong(rate)), unity);
+    CheckWithin(
+        FullSongName(rate),
+        RunScript(stem, FullSong(rate)),
+        unity.worst + kMaxExtraFrames,
+        kNearUnity
+    );
   }
 }
 
 void TestLoopAndRateChange(const std::string& stem) {
   const Measure unity =
       RunScript(stem, LoopWithChange(kitbag::kUnityRate, kitbag::kUnityRate));
-  CheckUnity("loop 1.0x", unity);
-  CheckAgainst(
+  CheckWithin("loop 1.0x", unity, kMaxUnityErrorFrames, kOnBeat);
+  CheckWithin(
       "loop 0.75x to 0.5x",
       RunScript(stem, LoopWithChange(kLoopFromRate, kLoopToRate)),
-      unity
+      unity.worst + kMaxExtraFrames,
+      kNearUnity
   );
 }
 
