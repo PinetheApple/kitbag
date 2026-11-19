@@ -334,6 +334,56 @@ describe('a stem song closed in retime', () => {
   });
 });
 
+describe('a single song after a stem song at a changed speed and key', () => {
+  const STEM_SPEED = 0.8;
+  const STEM_KEY = 2;
+
+  function sharedEngine({
+    songFake,
+    stemFake,
+  }: ReturnType<typeof storesSharingOneMixer>) {
+    const engine = {
+      rate: KB_MIXER_UNITY_RATE,
+      keys: new Map<number, number>(),
+    };
+    for (const { commands } of [songFake, stemFake]) {
+      commands.mixerRate.mockImplementation(() => Promise.resolve(engine.rate));
+      commands.mixerSetRate.mockImplementation((next: number) => {
+        engine.rate = next;
+        return Promise.resolve<number>(KB_RESULT.KB_OK);
+      });
+      commands.mixerTrackPitch.mockImplementation((track: number) =>
+        Promise.resolve(engine.keys.get(track) ?? 0),
+      );
+      commands.mixerSetTrackPitch.mockImplementation((track, key) => {
+        engine.keys.set(track, key);
+        return Promise.resolve<number>(KB_RESULT.KB_OK);
+      });
+      commands.mixerUnloadTrack.mockImplementation((track: number) => {
+        engine.keys.delete(track);
+      });
+    }
+    return engine;
+  }
+
+  it('plays the single song at unity speed and its own key', async () => {
+    const stores = storesSharingOneMixer({
+      speed: STEM_SPEED,
+      pitch: STEM_KEY,
+      stems: [stem(1, { pitch: STEM_KEY })],
+    });
+    const engine = sharedEngine(stores);
+    await stores.stemSongs.getState().open(STEM_SET_ID, BARS);
+    expect([engine.rate, engine.keys.get(0)]).toEqual([STEM_SPEED, STEM_KEY]);
+    await stores.songs.getState().open(SONG_ID, BARS).loaded;
+    expect([engine.rate, engine.keys.get(0) ?? 0]).toEqual([
+      KB_MIXER_UNITY_RATE,
+      0,
+    ]);
+    expect(stores.songs.getState().status).toBe('ready');
+  });
+});
+
 describe('a screen cleaning up late', () => {
   it('does not close the newer song that replaced its own', async () => {
     const fake = fakeSongRuntime();

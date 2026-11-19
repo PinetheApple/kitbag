@@ -10,6 +10,7 @@ type OnPlaying = (rate: number) => void;
 export interface RetimeSpeed {
   readonly enter: (onPlaying: OnPlaying) => void;
   readonly restore: () => Promise<void>;
+  readonly set: (rate: number) => Promise<boolean>;
 }
 
 interface SessionRates {
@@ -94,6 +95,17 @@ export function retimeSpeed(
       generation++;
       queue(putBack);
       return steps;
+    },
+    set: (rate) => {
+      const opened = session();
+      let applied = false;
+      queue(async () => {
+        const current = ratesFor(opened);
+        if (current.owed !== null) current.owed = rate;
+        else await setRate(current, rate);
+        applied = true;
+      });
+      return steps.then(() => applied);
     },
   };
 }

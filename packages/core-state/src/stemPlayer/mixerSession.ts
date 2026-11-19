@@ -128,16 +128,19 @@ export function mixerSession({
     return true;
   };
 
-  const clearSessionLeftovers = async (opened: number) => {
+  const clearSessionLeftovers = async (
+    opened: number,
+    rate: number = KB_MIXER_UNITY_RATE,
+  ) => {
     await claim.settled();
     const { commands } = runtimeOf();
     // A loop a failed clear left behind would otherwise play in this song.
     await commands.mixerClearLoop().catch(() => null);
     // The rate is engine-wide and outlives stop and unload.
-    const rate = await commands.mixerRate();
+    const current = await commands.mixerRate();
     if (!live(opened)) return false;
-    if (rate === KB_MIXER_UNITY_RATE) return true;
-    return awaitReset(opened, commands.mixerSetRate(KB_MIXER_UNITY_RATE));
+    if (current === rate) return true;
+    return awaitReset(opened, commands.mixerSetRate(rate));
   };
 
   return {
