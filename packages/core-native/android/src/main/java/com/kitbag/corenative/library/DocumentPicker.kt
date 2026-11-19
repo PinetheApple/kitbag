@@ -101,7 +101,7 @@ class DocumentPicker(
     val promise = taken.promise
     val uri = data?.data
     if (requestCode == REQUEST_SAVE_BACKUP) {
-      save(resultCode == Activity.RESULT_OK, uri, taken.contents.orEmpty(), promise)
+      save(resultCode == Activity.RESULT_OK, uri, taken.contents, promise)
       return
     }
     if (resultCode != Activity.RESULT_OK || uri == null) {
@@ -125,10 +125,10 @@ class DocumentPicker(
 
   override fun onNewIntent(intent: Intent) = Unit
 
-  private fun save(saved: Boolean, uri: Uri?, contents: String, promise: Promise) {
+  private fun save(saved: Boolean, uri: Uri?, contents: String?, promise: Promise) {
     io.execute {
       try {
-        promise.resolve(BackupSave.complete(saved, uri?.toString(), contents, ::openForWrite, ::discard))
+        promise.resolve(BackupSave.complete(saved, uri?.toString(), checkNotNull(contents), ::openForWrite, ::discard))
       } catch (e: Exception) {
         rejectLogged(promise, LibraryErrors.SAVE_FAILED, "Could not save the backup", e)
       }
