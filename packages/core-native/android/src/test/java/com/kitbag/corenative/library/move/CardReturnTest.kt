@@ -119,13 +119,43 @@ class CardReturnTest {
     assertThrows(MoveFixture.Killed::class.java) { killedMidPlacement().returnCard(card) }
     fx.mount(card = false, otherCard = true)
     fx.folder = fx.newFolder()
-    fx.moves().start(DataFolderLocation.Card(OTHER_CARD_UUID))
+    val refused = fx.moves().start(DataFolderLocation.Card(OTHER_CARD_UUID))
+    assertEquals(MoveOutcome.Refused(MoveRefusal.IN_PROGRESS), refused)
     fx.mount(card = true, otherCard = true)
     fx.folder = fx.newFolder()
-    val runner = fx.runner()
-    runner.finishLeftovers()
-    runner.resume()
-    away.keys.forEach { assertTrue(it, fx.folder.resolve(it) is LibraryFile.Present) }
+    assertEquals(MoveOutcome.Done, fx.runner().resume())
+    assertReturned()
+  }
+
+  @Test
+  fun `a return killed mid-placement reads as switched and is finished by clean-up`() {
+    assertThrows(MoveFixture.Killed::class.java) { killedMidPlacement().returnCard(card) }
+    fx.folder = fx.newFolder()
+    val moves = fx.moves()
+    val status = moves.status()!!
+    assertTrue(status.switched)
+    assertFalse(status.paused)
+    assertFalse(MoveNotice.of(status).cancellable)
+    assertEquals(MoveOutcome.AwaitingRelease, moves.finishCleanup())
+    assertTrue(moves.releaseOldCopies())
+    assertEquals(MoveOutcome.Done, moves.finishCleanup())
+    assertReturned()
+  }
+
+  @Test
+  fun `a return into a card ejected mid-placement keeps its placed copies`() {
+    val target = DataFolderLocation.Card(OTHER_CARD_UUID)
+    fx.mount(card = true, otherCard = true)
+    fx.folder.select(target)
+    assertThrows(MoveFixture.Killed::class.java) { killedMidPlacement().returnCard(card) }
+    fx.mount(card = true, otherCard = false)
+    assertFalse(fx.newProcess().cancel())
+
+    fx.mount(card = true, otherCard = true)
+    assertEquals(MoveOutcome.Done, fx.newProcess().resume())
+    assertEquals(fx.hashes(away), fx.visibleFiles(fx.otherCardRoot))
+    assertEquals(setOf(NOT_AWAY), fx.visibleFiles(fx.cardRoot).keys)
+    assertEquals(emptyMap<String, Set<String>>(), awayList())
   }
 
   @Test

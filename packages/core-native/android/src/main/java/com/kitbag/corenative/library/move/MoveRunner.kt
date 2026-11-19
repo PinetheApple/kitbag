@@ -248,7 +248,7 @@ class MoveRunner(
     synchronized(cancelOrSwitchLock) {
       if (cancelRequested.get()) throw InterruptedIOException()
       if (state.kind == MoveKind.CARD_RETURN) {
-        placeReturned(state)
+        placeReturned(save(state.copy(placing = true)))
       } else {
         folder.select(state.target)
         listOf(state.source, state.target).filterIsInstance<DataFolderLocation.Card>()
@@ -270,14 +270,8 @@ class MoveRunner(
   private fun switched(state: MoveState) = folder.storedLocation() == state.target
 
   private fun maybeSwitched(state: MoveState): Boolean {
-    if (state.kind == MoveKind.CARD_RETURN) return state.phase >= MovePhase.SWITCHED || anyPlaced(state)
+    if (state.kind == MoveKind.CARD_RETURN) return state.switched
     return folder.storedLocation().let { stored -> stored == null || stored == state.target }
-  }
-
-  // Preflight proved every planned path absent on the target, so one there now was placed by this return.
-  private fun anyPlaced(state: MoveState): Boolean {
-    val targetRoot = mountedRoot(state.target) ?: return false
-    return state.phase >= MovePhase.CATCH_UP && state.files.any { File(targetRoot, it.path).exists() }
   }
 
   private fun copyRoot(state: MoveState, targetRoot: File): File =
