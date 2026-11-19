@@ -50,8 +50,10 @@ export function useSongTempoCorrection(songId: number): SongTempoCorrection {
   const correction = useSongPlayer((s) => s.tempoCorrection);
   const detectedBpm = useSongPlayer((s) => s.detectedBpm);
   const apply = useSongPlayer((s) => s.tempoCorrectionChanged);
+  const settle = useSongPlayer((s) => s.tempoCorrectionSettled);
   const save = useSongLibrary((s) => s.saveSongTempoCorrection);
   const [pending, setPending] = useState<TempoNoticeState | null>(null);
+  const [picked, setPicked] = useState<TempoCorrection | null>(null);
   const shown = useRef(correction);
   const queued = useRef<Choice | null>(null);
   const saving = useRef(false);
@@ -80,6 +82,8 @@ export function useSongTempoCorrection(songId: number): SongTempoCorrection {
   const change = useCallback(
     async (choice: Choice) => {
       queued.current = choice;
+      setPicked(choice.next);
+      setPending(null);
       if (saving.current) return;
       saving.current = true;
       for (let next = takeQueued(queued); next !== null;) {
@@ -87,8 +91,10 @@ export function useSongTempoCorrection(songId: number): SongTempoCorrection {
         next = takeQueued(queued);
       }
       saving.current = false;
+      settle(songId);
+      setPicked(null);
     },
-    [saveOne],
+    [saveOne, settle, songId],
   );
 
   const onPick = useCallback(
@@ -125,5 +131,5 @@ export function useSongTempoCorrection(songId: number): SongTempoCorrection {
     };
   }, [pending, onAction, dismiss]);
 
-  return { correction, notice, onPick };
+  return { correction: picked ?? correction, notice, onPick };
 }

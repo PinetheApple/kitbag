@@ -207,6 +207,7 @@ vi.mock('@kitbag/core-state', async (original) => {
         tempoCorrection: tempo.correction,
         detectedBpm: 104,
         tempoCorrectionChanged: vi.fn(),
+        tempoCorrectionSettled: vi.fn(),
         playheadBeatSeconds: () => null,
         open,
         close: commands.close,

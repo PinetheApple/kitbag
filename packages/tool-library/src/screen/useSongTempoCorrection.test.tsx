@@ -1,7 +1,7 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
 import { act, createElement } from 'react';
-import { create } from 'react-test-renderer';
+import { create, type ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SongTempoCorrection } from './useSongTempoCorrection.ts';
@@ -16,6 +16,7 @@ const apply = vi.hoisted(() =>
   }),
 );
 const save = vi.hoisted(() => vi.fn(() => Promise.resolve(player.saves)));
+const settle = vi.hoisted(() => vi.fn());
 
 vi.mock('@kitbag/core-state', async (original) => ({
   ...(await original<Record<string, unknown>>()),
@@ -24,6 +25,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
       tempoCorrection: player.correction,
       detectedBpm: DETECTED_BPM,
       tempoCorrectionChanged: apply,
+      tempoCorrectionSettled: settle,
     }),
   useSongLibrary: (select: (state: unknown) => unknown) =>
     select({ saveSongTempoCorrection: save }),
@@ -37,6 +39,7 @@ const { useSongTempoCorrection } = await import('./useSongTempoCorrection.ts');
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
 let hook: SongTempoCorrection | null = null;
+let tree: ReactTestRenderer | null = null;
 
 function Probe() {
   hook = useSongTempoCorrection(SONG);
@@ -50,7 +53,7 @@ function current(): SongTempoCorrection {
 
 async function mounted() {
   await act(async () => {
-    create(createElement(Probe));
+    tree = create(createElement(Probe));
     await Promise.resolve();
   });
 }
@@ -78,6 +81,7 @@ function holdNextSave() {
 beforeEach(() => {
   vi.clearAllMocks();
   hook = null;
+  tree = null;
   player.correction = TEMPO_CORRECTION.none;
   player.saves = true;
 });
@@ -176,24 +180,41 @@ describe('the song tempo correction', () => {
     expect(player.correction).toBe(TEMPO_CORRECTION.threeHalves);
   });
 
-  it('keeps an Undo tapped during a running save', async () => {
+  it('hides the Undo note as soon as a new pick starts', async () => {
     await mounted();
     await tap((h) => {
       h.onPick(TEMPO_CORRECTION.double);
     });
-    const finish = holdNextSave();
+    expect(current().notice?.actionLabel).toBe('Undo');
+    holdNextSave();
     await tap((h) => {
       h.onPick(TEMPO_CORRECTION.threeHalves);
     });
+    expect(current().notice).toBeNull();
+  });
+
+  it('never shows the earlier pick once a later one is made during its save', async () => {
+    const finish = holdNextSave();
+    await mounted();
     await tap((h) => {
-      h.notice?.onAction();
+      h.onPick(TEMPO_CORRECTION.double);
     });
+    await tap((h) => {
+      h.onPick(TEMPO_CORRECTION.threeHalves);
+    });
+    expect(current().correction).toBe(TEMPO_CORRECTION.threeHalves);
+    player.correction = TEMPO_CORRECTION.double;
+    await act(async () => {
+      tree?.update(createElement(Probe));
+      await Promise.resolve();
+    });
+    expect(current().correction).toBe(TEMPO_CORRECTION.threeHalves);
     await act(async () => {
       finish(true);
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(save).toHaveBeenLastCalledWith(SONG, TEMPO_CORRECTION.none);
-    expect(player.correction).toBe(TEMPO_CORRECTION.none);
+    expect(current().correction).toBe(TEMPO_CORRECTION.threeHalves);
+    expect(settle).toHaveBeenCalledExactlyOnceWith(SONG);
   });
 });
