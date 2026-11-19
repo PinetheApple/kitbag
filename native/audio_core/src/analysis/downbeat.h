@@ -69,6 +69,7 @@ class DownbeatTracker {
   std::vector<double> real_out_;
   std::vector<double> imag_out_;
   std::vector<double> old_spec_;
+  // beat_sd_[i] is the spectral difference into beat i + 1.
   std::vector<double> beat_sd_;
 };
 

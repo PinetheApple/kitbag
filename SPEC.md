@@ -475,8 +475,8 @@ bar, and never bar-muted; the mirrors count them back from the first bar.
 `current_beat` reads 0, `bar_phase` sweeps each beat, and bar mute does not
 apply. An accent the core cannot place on a real bar actively misleads (#300);
 a uniform click does not.
-The analyser's downbeats are always four beats apart, so an analysed song in
-3/4 still gets 4/4 bars (#332).
+Analysis scores 3 beats per bar against 4 and picks 3 only on a clear lead;
+short or tied songs stay 4. The per-song meter override (§6.2) takes precedence.
 
 #### 4.3.1 Why the tracker caps at `KB_MAX_GRID_BEATS`
 

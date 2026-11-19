@@ -7,8 +7,10 @@ namespace kitbag {
 
 namespace {
 
-constexpr double kWaltzMargin = 0.5;
-constexpr size_t kMinWaltzBars = 4;
+// A difference of mean-normalised contrasts, whose ceilings differ by meter.
+// Real 4/4 stems led toward 3 by at most +0.167; synthetic 3/4 leads by ~2.9.
+constexpr double kTripleMargin = 0.5;
+constexpr size_t kMinDetectBars = 4;
 
 double Mean(const std::vector<double>& values) {
   double sum = 0.0;
@@ -16,27 +18,28 @@ double Mean(const std::vector<double>& values) {
   return sum / static_cast<double>(values.size());
 }
 
-double PhaseContrast(const std::vector<double>& sd, int bar, int phase) {
+double PhaseContrast(
+    const std::vector<double>& beat_sd,
+    int beats_per_bar,
+    int phase
+) {
   double on = 0.0;
   double off = 0.0;
   size_t on_count = 0;
-  for (size_t i = 0; i < sd.size(); ++i) {
-    if (static_cast<int>((i + 1) % bar) == phase) {
-      on += sd[i];
+  for (size_t i = 0; i < beat_sd.size(); ++i) {
+    if (static_cast<int>((i + 1) % beats_per_bar) == phase) {
+      on += beat_sd[i];
       ++on_count;
     } else {
-      off += sd[i];
+      off += beat_sd[i];
     }
   }
-  const size_t off_count = sd.size() - on_count;
+  const size_t off_count = beat_sd.size() - on_count;
   if (on_count == 0 || off_count == 0) return 0.0;
   return on / on_count - off / off_count;
 }
 
-}  // namespace
-
 double BarContrast(const std::vector<double>& beat_sd, int beats_per_bar) {
-  if (beat_sd.empty() || beats_per_bar < 2) return 0.0;
   const double mean = Mean(beat_sd);
   if (mean <= 0.0) return 0.0;
   double best = 0.0;
@@ -46,15 +49,17 @@ double BarContrast(const std::vector<double>& beat_sd, int beats_per_bar) {
   return best / mean;
 }
 
-// Ties and short songs stay 4/4: a wrong 3/4 misplaces every bar after the
-// first, so 3/4 must win by a clear margin.
+}  // namespace
+
+// A wrong 3 misplaces every bar, so ties and short songs stay 4.
 int DetectBeatsPerBar(const std::vector<double>& beat_sd) {
-  if (beat_sd.size() < kMinWaltzBars * kWaltzBeatsPerBar) {
+  if (beat_sd.size() < kMinDetectBars * kTripleBeatsPerBar) {
     return kCommonBeatsPerBar;
   }
-  const double waltz = BarContrast(beat_sd, kWaltzBeatsPerBar);
+  const double triple = BarContrast(beat_sd, kTripleBeatsPerBar);
   const double common = BarContrast(beat_sd, kCommonBeatsPerBar);
-  return waltz > common + kWaltzMargin ? kWaltzBeatsPerBar : kCommonBeatsPerBar;
+  return triple > common + kTripleMargin ? kTripleBeatsPerBar
+                                         : kCommonBeatsPerBar;
 }
 
 }  // namespace kitbag

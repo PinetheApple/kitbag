@@ -4,8 +4,10 @@
 // Fixtures and the ABI driver shared by the analyze suite's translation units.
 #include "kitbag_api.h"
 
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <numbers>
 #include <string>
 #include <vector>
 
@@ -27,6 +29,26 @@ constexpr float kClickAmp = 0.8f;
 // Comfortably above any beat count these fixtures produce, so a full-cap run
 // truncates nothing.
 constexpr int kAbiCap = 64;
+constexpr float kToneAmp = 0.3f;
+constexpr int kToneGuardFrames = 200;
+// Above the ~0.02 s beat-tracker drift, far below the 0.45 s one-beat spacing a
+// wrong phase or a scaled df-unit conversion would produce.
+constexpr float kBarOneToleranceSec = 0.1f;
+constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
+
+// DownBeat's Hanning window zeroes the click, so the beat-long tone carries the
+// spectral cue and the click only gives the tracker an onset.
+inline void
+AddToneBeat(std::vector<float>& pcm, int beat, float hz, float amp) {
+  const size_t start = static_cast<size_t>(beat) * kBeatPeriodFrames;
+  for (int s = 0; s < kBeatPeriodFrames - kToneGuardFrames; ++s) {
+    const float t = static_cast<float>(s) / static_cast<float>(kSampleRate);
+    float v = amp * std::sin(kTwoPi * hz * t);
+    if (s < kClickWidth) v += kClickAmp;
+    pcm[(start + s) * 2] += v;
+    pcm[(start + s) * 2 + 1] += v;
+  }
+}
 
 // One narrow impulse burst per beat, stereo interleaved. Spectral flux fires on
 // each onset, so autocorrelation has a real period to lock to.

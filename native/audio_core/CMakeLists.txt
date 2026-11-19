@@ -37,7 +37,7 @@ add_library(kitbag_core SHARED
   src/api/api_tuning.cpp
   src/analysis/beat_tracker.cpp
   src/analysis/downbeat.cpp
-src/analysis/meter.cpp
+  src/analysis/meter.cpp
   src/analysis/onset_envelope.cpp
   src/analysis/song_analysis.cpp
   src/media/audio_source.cpp

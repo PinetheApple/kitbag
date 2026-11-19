@@ -5,7 +5,6 @@
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
-#include <numbers>
 #include <string>
 #include <vector>
 
@@ -23,8 +22,8 @@ namespace {
 
 using kitbag::BeatResult;
 
-// Mirrors downbeat.cpp's 4/4 fallback independently, so a change to that default
-// without updating this expectation trips the spacing check.
+// The meter DetectBeatsPerBar (meter.h) picks for these 4/4 fixtures, typed
+// independently so a change to that choice trips the spacing check.
 constexpr int kBeatsPerBar = 4;
 
 // Measured for this beat period and these tones: the control lands on the click
@@ -46,11 +45,6 @@ constexpr int kTailBeats = 1;
 constexpr float kBarToneBaseHz = 200.0f;
 constexpr float kBarToneStepHz = 90.0f;
 constexpr int kBarToneCycle = 5;
-constexpr float kBarToneAmp = 0.3f;
-constexpr int kBarToneGuardFrames = 200;
-// Above the ~0.02 s beat-tracker drift, far below the 0.45 s one-beat spacing a
-// wrong phase or a scaled df-unit conversion would produce.
-constexpr float kBarOneToleranceSec = 0.1f;
 
 // Bar-ones must be an in-range, ascending, strict subset of the beats, spaced
 // one bar apart. Split from TestDownbeats to stay within the function-size cap.
@@ -100,40 +94,6 @@ float BarToneHz(int b, float step, int phase) {
   return kBarToneBaseHz + step * static_cast<float>(bar % kBarToneCycle);
 }
 
-// A start-edge click is zeroed by the Hanning window DownBeat applies, so the
-// spectral cue must be the beat-spanning tone; equal within-bar pitches leave
-// only the bar boundary as a large transition.
-void AddBarTone(
-    std::vector<float>& pcm,
-    int b,
-    int total,
-    float step,
-    int phase
-) {
-  const int start = b * kBeatPeriodFrames;
-  const float hz = BarToneHz(b, step, phase);
-  const int width = kBeatPeriodFrames - kBarToneGuardFrames;
-  for (int s = 0; s < width && start + s < total; ++s) {
-    const float v = kBarToneAmp *
-                    std::sin(
-                        2.0f * std::numbers::pi_v<float> * hz *
-                        static_cast<float>(s) / static_cast<float>(kSampleRate)
-                    );
-    pcm[static_cast<size_t>(start + s) * 2] += v;
-    pcm[static_cast<size_t>(start + s) * 2 + 1] += v;
-  }
-}
-
-// Narrow onset click, so the tracker locks a stable beat grid regardless of the
-// sustained tone.
-void AddClick(std::vector<float>& pcm, int b, int total) {
-  const int start = b * kBeatPeriodFrames;
-  for (int s = 0; s < kClickWidth && start + s < total; ++s) {
-    pcm[static_cast<size_t>(start + s) * 2] += kClickAmp;
-    pcm[static_cast<size_t>(start + s) * 2 + 1] += kClickAmp;
-  }
-}
-
 // Click grid carrying the per-bar tone step. step==kBarToneStepHz places the
 // accent at `phase`; step==0 is the featureless control (identical clicks,
 // no per-bar structure), the only difference between the two fixtures.
@@ -141,8 +101,7 @@ std::vector<float> MakeTonedClickTrack(float step, int phase) {
   const int total = (kBeatCount + kTailBeats) * kBeatPeriodFrames;
   std::vector<float> pcm(static_cast<size_t>(total) * 2, 0.0f);
   for (int b = 0; b < kBeatCount; ++b) {
-    AddBarTone(pcm, b, total, step, phase);
-    AddClick(pcm, b, total);
+    AddToneBeat(pcm, b, BarToneHz(b, step, phase), kToneAmp);
   }
   return pcm;
 }

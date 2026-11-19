@@ -82,7 +82,7 @@ DownbeatTracker::DownbeatTracker(
     int beats_per_bar
 )
     : beats_(BeatsToDfUnits(beat_times, sample_rate)),
-      beats_per_bar_(std::max(beats_per_bar, kDetectBeatsPerBar)),
+      beats_per_bar_(beats_per_bar > 0 ? beats_per_bar : kDetectBeatsPerBar),
       audio_length_(
           (total_frames + kDfIncrement - 1) / kDfIncrement * kDecimatedPerBlock
       ),
