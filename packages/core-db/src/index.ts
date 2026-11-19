@@ -3,6 +3,11 @@ export {
   type DatabaseOpenErrorKind,
 } from './database-open-error';
 export {
+  SQLITE_CANTOPEN,
+  SQLITE_FULL,
+  SQLITE_READONLY,
+} from './sqlite-result-codes';
+export {
   DATABASE_NAME,
   openDatabase,
   type KitbagDatabase,
