@@ -426,6 +426,18 @@ describe('library store', () => {
     expect(around()).toEqual(['A', undefined]);
   });
 
+  it('counts every metronome song load, a reload of the same one too', async () => {
+    const { library, gig } = await onStage();
+    const [one] = library.getState().entries[gig] ?? [];
+    if (one === undefined || !isPresetEntry(one)) throw new Error('no song');
+    const before = library.getState().songLoads;
+    await library.getState().loadSong(one.preset.id, one.item.id, gig);
+    await library.getState().loadSong(one.preset.id, one.item.id, gig);
+    await library.getState().refresh();
+    await library.getState().removeFromSet(one.item.id);
+    expect(library.getState().songLoads).toBe(before + 2);
+  });
+
   it('loads nothing on Next when the last song on stage is removed', async () => {
     const { library, gig } = await onStage();
     const [, , three] = library.getState().entries[gig] ?? [];

@@ -67,6 +67,7 @@ export interface LibraryState extends LibrarySnapshot {
   readonly played: readonly number[];
   readonly results: SearchResults | null;
   readonly carriedSkip: boolean;
+  readonly songLoads: number;
 }
 
 export type PresetEdit = Partial<Omit<NewSongPreset, 'id'>>;
@@ -133,6 +134,7 @@ const EMPTY: LibraryState = {
   played: [],
   results: null,
   carriedSkip: false,
+  songLoads: 0,
 };
 
 export function loadedPresetOf(
@@ -338,14 +340,20 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
   ) => {
     applyPreset(preset, deps.metronome);
     if (setlistId === null || itemId === null) {
-      set({ loaded: { presetId: preset.id, itemId: null, setlistId: null } });
+      set({
+        loaded: { presetId: preset.id, itemId: null, setlistId: null },
+        songLoads: get().songLoads + 1,
+      });
       // The stage bar keys off loaded.setlistId, so it hides even if this fails.
       await leaveOrWarn();
       return;
     }
     const index = indexIn(get().entries[setlistId], itemId);
     const at = index < 0 ? {} : { index };
-    set({ loaded: { presetId: preset.id, itemId, setlistId, ...at } });
+    set({
+      loaded: { presetId: preset.id, itemId, setlistId, ...at },
+      songLoads: get().songLoads + 1,
+    });
     await pinQuietly(setlistId, itemId);
   };
   const noteDiscard = () => {

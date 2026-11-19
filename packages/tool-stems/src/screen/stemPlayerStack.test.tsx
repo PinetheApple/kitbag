@@ -1,4 +1,8 @@
-import { RETIME_PLAYBACK_RATE, stemPlayerStore } from '@kitbag/core-state';
+import {
+  libraryStore,
+  RETIME_PLAYBACK_RATE,
+  stemPlayerStore,
+} from '@kitbag/core-state';
 import { record } from '@kitbag/core-state/src/stemPlayer/store.test-helper.ts';
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -224,6 +228,41 @@ describe('another route covering the player', () => {
     expect(player.store.getState().status).toBe('idle');
     expect(player.commands.mixerStop).toHaveBeenCalledOnce();
     expect(player.commands.engineRelease).toHaveBeenCalledOnce();
+  });
+});
+
+function loadMetronomeSong(): void {
+  act(() => {
+    libraryStore.setState((s) => ({ songLoads: s.songLoads + 1 }));
+  });
+}
+
+describe('a metronome song loaded over the player', () => {
+  it('lets go of the song while covered', async () => {
+    const player = await openFirst();
+    player.setFocused(false);
+    loadMetronomeSong();
+    expect(player.commands.engineRelease).toHaveBeenCalledOnce();
+    expect(player.store.getState().status).toBe('idle');
+  });
+
+  it('opens the song again on Back', async () => {
+    const player = await openFirst();
+    player.setFocused(false);
+    loadMetronomeSong();
+    player.setFocused(true);
+    await act(flush);
+    expect(player.store.getState().status).toBe('ready');
+    expect(player.records.readStemSet).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the song when the load happens while it is in front', async () => {
+    const player = await openFirst();
+    loadMetronomeSong();
+    player.setFocused(false);
+    await act(flush);
+    expect(player.commands.engineRelease).not.toHaveBeenCalled();
+    expect(player.store.getState().status).toBe('ready');
   });
 });
 
