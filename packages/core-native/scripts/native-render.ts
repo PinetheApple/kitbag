@@ -145,6 +145,12 @@ export const KB_MIXDOWN_CHANNELS = ${String(c.mixdownChannels)};
 /** Mixdown WAV sample width (KB_MIXDOWN_BITS_PER_SAMPLE). */
 export const KB_MIXDOWN_BITS_PER_SAMPLE = ${String(c.mixdownBitsPerSample)};
 
+/** Custom click sound slots (KB_CUSTOM_SOUND_SLOTS); slot n is sound id KB_SOUND_NAMES.length + n. */
+export const KB_CUSTOM_SOUND_SLOTS = ${String(c.customSoundSlots)};
+
+/** Longest custom click sound, in seconds (KB_MAX_CUSTOM_SOUND_SECONDS). */
+export const KB_MAX_CUSTOM_SOUND_SECONDS = ${String(c.maxCustomSoundSeconds)};
+
 /** Metronome output-latency offset range, in ms (kb_metronome_set_latency_offset). */
 export const KB_LATENCY_OFFSET_MS_BOUNDS = {
   min: ${String(c.latencyOffsetMsBounds.min)},
