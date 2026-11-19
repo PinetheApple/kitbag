@@ -1,5 +1,5 @@
-// Paths crossing this boundary are relative to the app-owned base directory;
-// the native side resolves them.
+// Paths crossing this boundary are relative to the data folder; the native
+// side resolves them.
 
 import type { TurboModule } from 'react-native';
 import { TurboModuleRegistry } from 'react-native';
