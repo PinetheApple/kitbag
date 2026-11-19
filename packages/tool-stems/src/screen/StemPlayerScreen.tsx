@@ -210,7 +210,8 @@ function Body({ bottom, onBack }: BodyProps) {
   const rate = useStemPlayer((s) => s.engineRate);
   const frames = useStemPlayer((s) => s.durationFrames);
   const loopEnd = useStemPlayer(loopEndFrames);
-  const frame = useMixerFrame(rate, frames, loopEnd);
+  const countEnd = useStemPlayer((s) => s.countEndFrame);
+  const frame = useMixerFrame(rate, frames, loopEnd, countEnd);
   const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
   const [picked, setPicked] = useState<Tab>(MIX);
   if (status !== 'ready')

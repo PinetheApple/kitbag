@@ -11,6 +11,7 @@ describe('the song notification', () => {
     store.getState().togglePlay();
     expect(commands.songTransportShow).toHaveBeenCalledWith({
       playing: true,
+      countingIn: false,
       title: 'Song',
       artist: null,
       durationFrames: DURATION_FRAMES,

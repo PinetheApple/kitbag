@@ -121,6 +121,42 @@ class StemBundleMembersTest {
   }
 
   @Test
+  fun `the grid's tempo is the song's tempo in either mode`() {
+    val detected = members.metadata("""{"bpm":118.4}""")
+    val grids = listOf(
+      121.5 to """{"beats":[0.5,1.0],"bpm":121.5,"tempo":{"mode":"constant","bpm":121.5,"source":"user"}}""",
+      118.9 to """{"beats":[0.5,1.0],"bpm":118.9,"tempo":{"mode":"follow","bpm":120,"source":"detected"}}""",
+    )
+    for ((bpm, text) in grids) {
+      assertEquals(text, bpm, members.bpm(detected, members.grid(text))!!, 0.0)
+    }
+  }
+
+  @Test
+  fun `the detected tempo stands when beats json has no usable bpm`() {
+    val detected = members.metadata("""{"bpm":118.4}""")
+    val grids = listOf(
+      null,
+      """{"beats":[0.5,1.0]}""",
+      """{"beats":[0.5,1.0],"bpm":0}""",
+      """{"beats":[0.5,1.0],"bpm":-120}""",
+      """{"beats":[0.5,1.0],"bpm":NaN}""",
+      """{"beats":[0.5,1.0],"bpm":1e999}""",
+      """{"beats":[0.5,1.0],"bpm":"120"}""",
+      """{"beats":[0.5,1.0],"bpm":null}""",
+      """{"beats":[0.5,1.0],"tempo":{"mode":"constant","bpm":120}}""",
+    )
+    for (text in grids) {
+      assertEquals(text, 118.4, members.bpm(detected, members.grid(text))!!, 0.0)
+    }
+  }
+
+  @Test
+  fun `a song with no tempo anywhere has no bpm`() {
+    assertNull(members.bpm(members.metadata(null), members.grid(null)))
+  }
+
+  @Test
   fun `lyrics read back, with offset and instrumental defaulted`() {
     val lyrics = members.lyrics("""{"synced":"[00:19.92] You moved","plain":null,"source":"lrclib"}""")!!
     assertEquals("[00:19.92] You moved", lyrics.synced)
@@ -173,6 +209,7 @@ class StemBundleMembersTest {
       emptyList(),
       metadata,
       BundleGrid(),
+      null,
       null,
     )
 }

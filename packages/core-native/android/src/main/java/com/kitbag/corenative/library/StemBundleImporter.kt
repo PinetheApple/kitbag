@@ -22,6 +22,7 @@ class ImportedBundle(
   val stems: List<ImportedBundleStem>,
   val metadata: BundleMetadata,
   val grid: BundleGrid,
+  val bpm: Double?,
   val lyrics: BundleLyrics?,
 ) {
   val artist: String? get() = manifest.artist ?: metadata.heading?.artist
@@ -82,6 +83,7 @@ class StemBundleImporter(
         },
         metadata = metadata,
         grid = grid,
+        bpm = members.bpm(metadata, grid),
         lyrics = lyrics,
       )
     } finally {

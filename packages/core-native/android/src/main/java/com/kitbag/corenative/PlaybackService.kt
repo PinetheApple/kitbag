@@ -24,6 +24,7 @@ import com.kitbag.corenative.transport.PracticeClock
 import com.kitbag.corenative.transport.SessionButton
 import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.SongAction
+import com.kitbag.corenative.transport.SongCommand
 import com.kitbag.corenative.transport.TransportAction
 import com.kitbag.corenative.transport.TransportCommand
 import com.kitbag.corenative.transport.TransportModel
@@ -122,8 +123,13 @@ class PlaybackService : Service() {
       launchIntent(),
       ::songIntent,
       ::postForeground,
+      { songRequestListener },
     ) { songStopped() }.also { song = it }
-    songCard.show(next, intent.getBooleanExtra(EXTRA_PLAYING, true))
+    songCard.show(
+      next,
+      intent.getBooleanExtra(EXTRA_PLAYING, true),
+      intent.getBooleanExtra(EXTRA_COUNTING_IN, false),
+    )
   }
 
   private fun songStopped() {
@@ -353,6 +359,7 @@ class PlaybackService : Service() {
     private const val EXTRA_MIN_BPM = "minBpm"
     private const val EXTRA_MAX_BPM = "maxBpm"
     private const val EXTRA_PLAYING = "playing"
+    private const val EXTRA_COUNTING_IN = "countingIn"
     private const val EXTRA_PRACTICE_PLAYED_MS = "practicePlayedMs"
     private const val EXTRA_PRACTICE_STRETCH_STARTED_AT = "practiceStretchStartedAt"
     private const val EXTRA_SUBTITLE = "setlistSubtitle"
@@ -364,6 +371,8 @@ class PlaybackService : Service() {
     @Volatile var listener: ((TransportState, PracticeClock) -> Unit)? = null
 
     @Volatile var songStoppedListener: (() -> Unit)? = null
+
+    @Volatile var songRequestListener: ((SongCommand) -> Unit)? = null
 
     fun show(
       context: Context,
@@ -396,10 +405,11 @@ class PlaybackService : Service() {
       context.startService(Intent(context, PlaybackService::class.java).setAction(ACTION_HIDE))
     }
 
-    fun showSong(context: Context, song: Song, playing: Boolean) {
+    fun showSong(context: Context, song: Song, playing: Boolean, countingIn: Boolean) {
       val intent = Intent(context, PlaybackService::class.java)
         .setAction(ACTION_SONG_SHOW)
         .putExtra(EXTRA_PLAYING, playing)
+        .putExtra(EXTRA_COUNTING_IN, countingIn)
         .putExtra(EXTRA_TITLE, song.title)
         .putExtra(EXTRA_ARTIST, song.artist)
         .putExtra(EXTRA_DURATION_FRAMES, song.durationFrames)

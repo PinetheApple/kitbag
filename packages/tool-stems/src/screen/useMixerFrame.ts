@@ -16,6 +16,7 @@ type HostGlobal = Record<
 const NO_SECOND = -1;
 const NOT_HELD = -1;
 const NO_LOOP = -1;
+const NO_COUNT = -1;
 const MS_PER_SECOND = 1000;
 // The mixer publishes its head once per device block; the playhead runs on
 // between publishes, never further than this.
@@ -37,6 +38,7 @@ export function useMixerFrame(
   engineRate: number,
   durationFrames: number,
   loopEndFrames: number | null,
+  countEndFrame: number | null = null,
 ): MixerFrameValues {
   const progress = useSharedValue(0);
   const playing = useSharedValue(0);
@@ -46,6 +48,7 @@ export function useMixerFrame(
   const rate = useSharedValue(engineRate);
   const duration = useSharedValue(durationFrames);
   const loopEnd = useSharedValue(loopEndFrames ?? NO_LOOP);
+  const countEnd = useSharedValue(countEndFrame ?? NO_COUNT);
   const published = useSharedValue(NO_SECOND);
   const publishedAt = useSharedValue(0);
   const lastShown = useSharedValue(0);
@@ -67,6 +70,10 @@ export function useMixerFrame(
     second,
   ]);
 
+  useEffect(() => {
+    countEnd.value = countEndFrame ?? NO_COUNT;
+  }, [countEndFrame, countEnd]);
+
   const hold = useCallback(
     (fraction: number) => {
       held.value = fraction * duration.value;
@@ -81,7 +88,10 @@ export function useMixerFrame(
     if (host === undefined) return;
     const position = host.mixer_position;
     const isPlaying = host.mixer_playing;
-    if (playing.value !== isPlaying) playing.value = isPlaying;
+    const counting =
+      countEnd.value !== NO_COUNT && host.frames_rendered < countEnd.value;
+    const started = isPlaying !== 0 || counting ? 1 : 0;
+    if (playing.value !== started) playing.value = started;
     if (position !== published.value) {
       if (position < published.value) lastShown.value = position;
       published.value = position;

@@ -25,6 +25,9 @@ export const mixerRuntime: MixerRuntime = {
     mixerPause: ignore,
     mixerStop: ignore,
     mixerSeek: ignore,
+    songCountIn: noEngine,
+    songPause: ignore,
+    songStop: ignore,
     mixerSetLoop: noEngine,
     mixerClearLoop: noEngine,
     mixerSetRate: noEngine,
@@ -40,6 +43,7 @@ export const mixerRuntime: MixerRuntime = {
     songTransportShow: ignore,
     songTransportHide: ignore,
     onSongStopped: () => ({ remove: ignore }),
+    onSongTransport: () => ({ remove: ignore }),
   },
   sharedMetronome: { active: () => false, release: ignore },
   engine: {

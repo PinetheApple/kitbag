@@ -9,6 +9,7 @@ configureSongLibrary({
     insertSong: unavailable,
     beginAnalysis: () => Promise.resolve(undefined),
     claimUnfinishedAnalyses: () => Promise.resolve([]),
+    listOutdatedAnalyses: () => Promise.resolve([]),
     applyAnalysis: unavailable,
     deleteSong: () => Promise.resolve(undefined),
     deleteStemSet: () => Promise.resolve({ folder: null, files: [] }),
@@ -39,6 +40,7 @@ configureSongLibrary({
     listStemFolders: () => Promise.resolve([]),
     deleteStemFolder: unavailable,
   },
+  openSong: { id: () => null, onChange: () => () => undefined },
 });
 
 export const useSongLibraryAnalysis = (): void => undefined;

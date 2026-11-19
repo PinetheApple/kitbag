@@ -33,6 +33,13 @@ export type {
 export type { LyricLineTimes } from './stem-lyrics';
 export { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
 export { ANALYSIS_STATUS, type AnalysisStatus } from './analysis-status';
+export {
+  GRID_METER,
+  GRID_METERS,
+  type GridMeter,
+  type MeterOverride,
+  type MeterOverridePatch,
+} from './meter-override';
 export type {
   AnalysisResultRecord,
   LibraryRow,

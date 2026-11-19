@@ -31,7 +31,7 @@ object StemBundleMaps {
       putInt("sampleRate", manifest.sampleRate)
       putInt("channels", manifest.channels)
       putArray("stems", Arguments.createArray().apply { bundle.stems.forEach { pushMap(stem(it)) } })
-      putNullableDouble("bpm", metadata.bpm)
+      putNullableDouble("bpm", bundle.bpm)
       putString("key", metadata.key)
       putString("scale", metadata.scale)
       putNullableDouble("keyConfidence", metadata.keyConfidence)

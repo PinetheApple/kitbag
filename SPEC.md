@@ -351,7 +351,14 @@ the other. The caller snaps the head back to the whole frame at or before the
 bar's downbeat, spaces the count at the grid interval before that downbeat
 divided by the rate, and passes one end frame to both. A seek or a speed change
 during the count is the caller's cancel plus a new counted start: a pending
-`play_at` survives a seek.
+`play_at` survives a seek. With the song's click off the count still sounds
+(`start_click` 0): the metronome stops on the end frame, drops the play intent
+the count took, and a later start locks to the song's grid. Toggling the click
+during the count re-issues it with the same end frame and the new `start_click`,
+dropping beats already past; the metronome tool's Play during the count ends it
+and starts the song at once, and so does a refused re-issue. A grid with no bar
+marks (common in StemDeck bundles) counts from the beat at or before the head,
+in bars of the song's meter: four beats until a meter is detected or chosen.
 
 **Past the last grid beat, the click goes silent and stays silent.** Every song
 reaches this. `is_running()` keeps reporting true, and `bar_phase` and
@@ -898,6 +905,12 @@ working. Changes:
   to their base directory, always.
 - **Downbeats** into the grid (§4.3).
 - **Re-analyse** action for a song.
+- Each song records the analyser version (`KB_BEAT_ANALYSIS_VERSION`) that made
+  its grid. At launch, songs whose analysis succeeded on an older version
+  re-analyse in the background, one at a time, through the Re-analyse path, each
+  at most once per session; the song open in the player waits until it closes. A
+  failure keeps the old grid and is not retried automatically; Re-analyse retries it. The meter
+  override (meter, bar one) is the user's and survives re-analysis.
 - Analysis stays ambient — background, badge-driven, no "analyze" button. The
   row appears instantly with `ANALYZING` and lands on `GRID ✓` in ~10–30s. The
   user never waits on a spinner screen.
@@ -945,9 +958,9 @@ working. Changes:
 - Lock via `kb_metronome_set_grid` (§4.2) — follows per-beat spacing, so
   non-constant tempo works.
 - Latency-compensated: click and track land together at the speaker.
-- Count-in before the lock engages. Until it works under a grid (#298), the
-  Count-in chip and its sheet group show disabled with the note "arrives with
-  count-in".
+- Count-in before the lock engages, under a grid (#298): the song starts on the
+  frame the count ends. The count plays whether the song's click is on or off;
+  with it off the click stays silent once the song starts.
 - **Click settings belong to the song.** The Count-in, Click and Accent chips
   open one shared sheet at the tapped group; changes apply live and stay with
   this song, unsaved until "Save for this song". The standalone metronome's
@@ -1550,6 +1563,7 @@ rather than starting from zero.
 | `StemSets`: + `renamed` (default 0); `Stems`: + `name` (display name, NULL shows the role) | §7.1, §7.8 — a rename is display-only and survives a re-import of the same StemDeck song; schema v17 |
 | `SongPresets`: + `poly_against` INTEGER (0 = the bar, 1..16), default 0 | §5.2 — poly N against M; a v4 backup without `polyAgainst` reads as the bar; schema v18 |
 | `route_latency`: + `name` TEXT, + `kind` TEXT (the route's display name and `OutputRoute` kind when calibrated) | §12.5 — the Output & latency sheet lists calibrated routes that are not connected; schema v19 |
+| `Songs`: + `analysis_version` INTEGER (NULL = no version reported, counted as outdated), + `meter_beats_per_bar` INTEGER (3 or 4; NULL = the detected meter), + `bar_one_seconds` REAL (NULL = the detected bar one); `StemSets`: + `meter_beats_per_bar`, + `bar_one_seconds`, same meanings | §6.2 — older grids re-analyse in the background; the meter override survives re-analysis and a stem re-import; schema v20 |
 | **All paths relative** to the base directory | §2.3 (iOS) and **D11** (the directory is now user-movable) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
 | BPM cache table | §8.5 |
