@@ -1,4 +1,5 @@
 import {
+  correctedBpm,
   meterOverrideOf,
   type LibraryRow,
   type LibrarySongRow,
@@ -13,7 +14,6 @@ import { transportActions } from '../stemPlayer/actions.ts';
 import { clickActions, followNewGrid } from '../stemPlayer/clickActions.ts';
 import { snapToBeat } from '../stemPlayer/loop.ts';
 import { loopActions } from '../stemPlayer/loopActions.ts';
-import { correctedBpm } from '../stemPlayer/tempoCorrection.ts';
 import { UNITY_GAIN, UNSHIFTED_KEY } from '../stemPlayer/mix.ts';
 import {
   createMixerClaim,

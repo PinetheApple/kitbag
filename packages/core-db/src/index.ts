@@ -55,6 +55,7 @@ export {
   NO_METER_OVERRIDE,
 } from './meter-override';
 export {
+  correctedBpm,
   isTempoCorrection,
   TEMPO_CORRECTION,
   TEMPO_CORRECTIONS,

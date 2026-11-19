@@ -38,3 +38,11 @@ export function storedTempoCorrection(
 ): TempoCorrection | null {
   return correction === TEMPO_CORRECTION.none ? null : correction;
 }
+
+export function correctedBpm(
+  bpm: number | null,
+  correction: TempoCorrection,
+): number | null {
+  const { beatsOut, beatsIn } = TEMPO_RATIO[correction];
+  return bpm === null ? null : (bpm * beatsOut) / beatsIn;
+}

@@ -1,7 +1,7 @@
-import { TEMPO_CORRECTION } from '@kitbag/core-db';
+import { correctedBpm, TEMPO_CORRECTION } from '@kitbag/core-db';
 import { describe, expect, it } from 'vitest';
 
-import { correctedBpm, correctedGrid, scaleBeats } from './tempoCorrection.ts';
+import { correctedGrid, scaleBeats } from './tempoCorrection.ts';
 
 const STEP = 0.5;
 const STEADY = Array.from({ length: 8 }, (_, i) => i * STEP);

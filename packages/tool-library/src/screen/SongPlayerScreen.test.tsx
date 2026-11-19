@@ -49,6 +49,7 @@ const commands = vi.hoisted(() => ({
   save: vi.fn(() => Promise.resolve(true)),
   dismissMeterNotice: vi.fn(),
 }));
+const tempo = vi.hoisted(() => ({ correction: 'none' }));
 const meter = vi.hoisted((): { override: unknown; notice: unknown } => ({
   override: { meterBeatsPerBar: null, barOneSeconds: null },
   notice: null,
@@ -92,7 +93,12 @@ vi.mock('@kitbag/core-design', async (original) => {
       ),
     Button: (props: Props) => h('Button', props),
     Sheet: (props: Props) =>
-      props.visible === true ? h('Sheet', null, props.children) : null,
+      props.visible === true
+        ? h('Sheet', { title: props.title }, props.children)
+        : null,
+    SectionHeader: (props: Props) => h('SectionHeader', props),
+    SegmentedControl: (props: Props) => h('SegmentedControl', props),
+    SheetHint: (props: Props) => h('SheetHint', null, props.children),
     Badge: (props: Props) => h('Badge', { label: props.label }),
     MenuRow: (props: Props) => h('MenuRow', props),
     MeterRow: (props: Props) => h('MeterRow', props),
@@ -122,11 +128,17 @@ vi.mock('@kitbag/core-state', async (original) => {
     playerSongBadge,
     beatBeside,
     formatClockSeconds,
+    correctedBpm,
+    TEMPO_CORRECTION,
+    TEMPO_CORRECTIONS,
   } = await original<{
     useFocusedMixerHold: unknown;
     playerSongBadge: unknown;
     beatBeside: unknown;
     formatClockSeconds: unknown;
+    correctedBpm: unknown;
+    TEMPO_CORRECTION: unknown;
+    TEMPO_CORRECTIONS: unknown;
   }>();
   const open = () => {
     const mine = ++mixer.session;
@@ -151,8 +163,17 @@ vi.mock('@kitbag/core-state', async (original) => {
     rowFilesOf: () => library.files,
     beatBeside,
     formatClockSeconds,
+    correctedBpm,
+    TEMPO_CORRECTION,
+    TEMPO_CORRECTIONS,
     bpmFact: (bpm: number | null) =>
-      bpm === null ? null : { text: `${String(bpm)} BPM`, spoken: '' },
+      bpm === null
+        ? null
+        : {
+            value: String(Math.round(bpm)),
+            text: `${String(Math.round(bpm))} BPM`,
+            spoken: '',
+          },
     clickKeyLabel: () => '',
     framesToSeconds: (frames: number, rate: number) => frames / rate,
     loopEndFrames: () => null,
@@ -167,6 +188,7 @@ vi.mock('@kitbag/core-state', async (original) => {
         codes: {},
         reanalyze: commands.reanalyze,
         saveSongMeterOverride: commands.save,
+        saveSongTempoCorrection: commands.save,
       }),
     useSongPlayer: (select: (state: unknown) => unknown) =>
       select({
@@ -182,6 +204,9 @@ vi.mock('@kitbag/core-state', async (original) => {
         meterNotice: meter.notice,
         dismissMeterNotice: commands.dismissMeterNotice,
         meterOverrideChanged: vi.fn(),
+        tempoCorrection: tempo.correction,
+        detectedBpm: 104,
+        tempoCorrectionChanged: vi.fn(),
         playheadBeatSeconds: () => null,
         open,
         close: commands.close,
@@ -255,6 +280,7 @@ beforeEach(() => {
   library.files = null;
   meter.override = { meterBeatsPerBar: null, barOneSeconds: null };
   meter.notice = null;
+  tempo.correction = 'none';
   Object.assign(mixer, { session: 0, opens: 0, displaced: 0, releases: 0 });
 });
 
@@ -426,13 +452,19 @@ describe('the player menu', () => {
     ['whose file is missing', MISSING],
   ])('offers no Re-analyse for a song %s', (_case, failure) => {
     failWith(failure);
-    expect(menuLabels(openMenu())).toEqual(['Meter', 'Count-in', 'Stop']);
+    expect(menuLabels(openMenu())).toEqual([
+      'Meter',
+      'Tempo correction',
+      'Count-in',
+      'Stop',
+    ]);
   });
 
-  it('lists Re-analyse, Meter, Count-in and Stop', () => {
+  it('lists Re-analyse, Meter, Tempo correction, Count-in and Stop', () => {
     expect(menuLabels(openMenu())).toEqual([
       REANALYZE_LABEL,
       'Meter',
+      'Tempo correction',
       'Count-in',
       'Stop',
     ]);
@@ -523,6 +555,70 @@ describe('the player menu', () => {
     expect(commands.reanalyze).toHaveBeenCalledExactlyOnceWith(1);
     expect(tree.root.findAllByType('Sheet' as never)).toHaveLength(0);
     expect(commands.close).not.toHaveBeenCalled();
+  });
+  function tempoRow(tree: ReactTestRenderer) {
+    return menuButton(tree, 'Tempo correction');
+  }
+
+  it('shows the factor and the tempo it gives, and speaks them in words', () => {
+    expect(tempoRow(openMenu()).props).toMatchObject({
+      value: '×1 · 104 BPM',
+      spokenValue: 'as detected, 104 BPM',
+      icon: 'tempoCorrection',
+      disabled: false,
+    });
+    tempo.correction = 'threeHalves';
+    expect(tempoRow(openMenu()).props).toMatchObject({
+      value: '×3/2 · 156 BPM',
+      spokenValue: 'one and a half times, 156 BPM',
+    });
+  });
+
+  it.each([
+    ['analysing', 'analyzing', 'Available once the beat is found'],
+    ['failed', 'failed', METER_FAILED],
+  ] as const)(
+    "disables Tempo correction while %s with Meter's reason",
+    (_case, status, why) => {
+      display.analysis = { analysisStatus: status, beats: [] };
+      expect(tempoRow(openMenu()).props).toMatchObject({
+        disabled: true,
+        detail: why,
+        value: undefined,
+      });
+    },
+  );
+
+  it('opens the five-option sheet from the row and closes the menu', () => {
+    const tree = openMenu();
+    act(() => {
+      (tempoRow(tree).props.onPress as () => void)();
+    });
+    const sheet = tree.root.findByType('Sheet' as never);
+    expect(sheet.props.title).toBe('Tempo correction');
+    const picker = sheet.findByType('SegmentedControl' as never).props;
+    expect(picker).toMatchObject({ selected: 'none', size: 'picker' });
+    expect(
+      (picker.options as readonly Record<string, string>[]).map((o) => [
+        o.label,
+        o.detail,
+        o.accessibilityLabel,
+      ]),
+    ).toEqual([
+      ['÷2', '52', 'Half, 52 BPM'],
+      ['×2/3', '69', 'Two thirds, 69 BPM'],
+      ['×1', '104', 'As detected, 104 BPM'],
+      ['×3/2', '156', 'One and a half times, 156 BPM'],
+      ['×2', '208', 'Double, 208 BPM'],
+    ]);
+    expect(
+      sheet
+        .findAllByType('SheetHint' as never)
+        .map((n) => n.props.children as unknown),
+    ).toEqual([
+      'Detected: 104 BPM',
+      'For a beat found too slow or too fast. The meter and bar 1 are kept.',
+    ]);
   });
 });
 

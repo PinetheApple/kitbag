@@ -1,5 +1,6 @@
 import {
   ANALYSIS_STATUS,
+  correctedBpm,
   NO_METER_OVERRIDE,
   TEMPO_CORRECTION,
   type AnalysisStatus,
@@ -13,7 +14,6 @@ import { FALLBACK_BEATS_PER_BAR } from '../stemPlayer/barMeter.ts';
 import type { ClickSlice } from '../stemPlayer/clickActions.ts';
 import type { LoopSlice } from '../stemPlayer/loopActions.ts';
 import type { DetectedMeter } from '../stemPlayer/meterOverride.ts';
-import { correctedBpm } from '../stemPlayer/tempoCorrection.ts';
 import type { SongGrid } from './songGrid.ts';
 
 export interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
