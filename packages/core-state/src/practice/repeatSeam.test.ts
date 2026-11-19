@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { applyPreset, isLoadedSongUnsaved } from '../library/presetMapping.ts';
 import { SONG_STEP } from '../library/setlistPosition.ts';
+import { COUNT_IN_SCOPE } from '../metronome/countInScope.ts';
 import { loadedBaselineOf, loadedPresetOf } from '../library/store.ts';
 import { SESSION_LOAD, repeatPlanOf } from './repeat.ts';
 import { COUNT_IN, gig } from './repeat.test-helper.ts';
@@ -93,6 +94,17 @@ describe('Repeat through the library store', () => {
       distinct: user.distinct,
       sound: user.sound,
     });
+  });
+
+  it('gives the user count-in back right away on Revert in always scope', async () => {
+    const r = await repeating();
+    r.metronome.getState().setCountInScope(COUNT_IN_SCOPE.always);
+    const user = r.metronome.getState().countIn;
+    expect(user.bars).not.toBe(COUNT_IN.bars);
+    await r.start();
+    expect(r.metronome.getState().countIn.bars).toBe(COUNT_IN.bars);
+    r.library.getState().revertLoadedSong();
+    expect(r.metronome.getState().countIn).toEqual(user);
   });
 
   it('brings discarded edits back on Undo, bypassing the overlay', async () => {
