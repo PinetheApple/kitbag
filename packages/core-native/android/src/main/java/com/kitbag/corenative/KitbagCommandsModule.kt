@@ -12,7 +12,6 @@ import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.uimanager.UIManagerHelper
 import com.kitbag.corenative.library.ClickSoundFiles
 import com.kitbag.corenative.library.LibraryErrors
-import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.DataFolder
 import com.kitbag.corenative.library.DataFolderUnavailableException
 import com.kitbag.corenative.library.MixdownExport
