@@ -352,13 +352,16 @@ export function createMetronomeStore(
   songClick: SongClick = mixerClick,
 ): StoreApi<MetronomeStore> {
   let holds = 0;
-  const guard = guardSongClick(commands, songClick.active);
+  // A song count keeps the click active after release, and the count's voice is
+  // copied when it arms, so a running standalone takes its pattern at once.
+  const guard = guardSongClick(
+    commands,
+    () => songClick.active() && !store.getState().running,
+    () => store.getState(),
+  );
   const engine = guard.commands;
   const store = createStore<MetronomeStore>((set, get) => {
     const tempo = engineTempoOf(set, get, engineBpm);
-    const restoreStandalone = () => {
-      guard.restore(get());
-    };
     return {
       ...initialConfig(),
       ...patternActions(set, get, engine),
@@ -370,7 +373,7 @@ export function createMetronomeStore(
         nowFrame,
         tempo,
         songClick,
-        restoreStandalone,
+        guard.restore,
       ),
       holdEngine: () => {
         const release = acquireEngineHold(commands);
@@ -394,7 +397,7 @@ export function createMetronomeStore(
   // Every way playback starts or stops, including the notification, goes through running.
   store.subscribe((state, previous) => {
     if (state.running === previous.running) return;
-    if (state.running) guard.restore(state);
+    if (state.running) guard.restore();
     store.setState({
       practice: practiceAfterRunning(state.practice, state.running, now()),
     });

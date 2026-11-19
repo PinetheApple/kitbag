@@ -1,12 +1,19 @@
-import { KB_ACCENT, KB_RESULT } from '@kitbag/core-native';
+import {
+  KB_ACCENT,
+  KB_MAX_BEATS,
+  KB_POLY_BEATS_BOUNDS,
+  KB_RESULT,
+} from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 
 import { applyPreset } from '../library/presetMapping.ts';
 import { setup as librarySetup } from '../library/store.test-helper.ts';
 import type { MetronomeCommands } from './commands.ts';
+import { resizeAccents } from './config.ts';
 import {
   createMetronomeStore,
   DEFAULT_BPM,
+  initialConfig,
   type MetronomeConfig,
   type MetronomeStore,
 } from './store.ts';
@@ -17,6 +24,9 @@ const ACCENT_SOUND = 3;
 const EDITED_BEATS = 3;
 const EDITED_DENOMINATOR = 8;
 const EDITED_SUBDIVISION = 2;
+const EDITED_POLY_BEATS = 5;
+const EDITED_AGAINST = 3;
+const FIRST_BEAT = 0;
 const LAST_BEAT = 3;
 const MUTE = { enabled: true, playBars: 2, muteBars: 1 };
 const EDITED_ACCENTS = [
@@ -25,61 +35,127 @@ const EDITED_ACCENTS = [
   KB_ACCENT.KB_ACCENT_NORMAL,
   KB_ACCENT.KB_ACCENT_ACCENTED,
 ];
+const EDITED_POLY_ACCENTS = [
+  KB_ACCENT.KB_ACCENT_NORMAL,
+  KB_ACCENT.KB_ACCENT_MUTED,
+  KB_ACCENT.KB_ACCENT_ACCENTED,
+];
 
-function makeCommands() {
+type PatternSource = Pick<
+  MetronomeConfig,
+  | 'beatsPerBar'
+  | 'denominator'
+  | 'accents'
+  | 'subdivision'
+  | 'polyEnabled'
+  | 'polyBeats'
+  | 'polyAgainst'
+  | 'polyAccents'
+  | 'sounds'
+  | 'barMute'
+>;
+
+function patternOf(config: PatternSource) {
   return {
+    beatsPerBar: config.beatsPerBar,
+    denominator: config.denominator,
+    accents: config.accents.slice(0, config.beatsPerBar),
+    subdivision: config.subdivision,
+    polyEnabled: config.polyEnabled,
+    polyBeats: config.polyBeats,
+    polyAgainst: config.polyAgainst,
+    polyAccents: config.polyAccents.slice(0, config.polyBeats),
+    sounds: { ...config.sounds },
+    barMute: { ...config.barMute },
+  };
+}
+
+type Pattern = ReturnType<typeof patternOf>;
+
+function fakeEngine() {
+  const initial = initialConfig();
+  const applied: Pattern = {
+    ...patternOf(initial),
+    accents: resizeAccents(initial.accents, KB_MAX_BEATS),
+    polyAccents: resizeAccents(initial.polyAccents, KB_POLY_BEATS_BOUNDS.max),
+  };
+  let atStart: Pattern | null = null;
+  const commands = {
     start: vi.fn(() => Promise.resolve(0)),
-    metronomeStart: vi.fn(),
+    metronomeStart: vi.fn(() => {
+      atStart = patternOf(applied);
+    }),
     metronomeStop: vi.fn(),
     metronomePause: vi.fn(),
     setTempo: vi.fn(),
-    setBeats: vi.fn(),
-    setSubdivision: vi.fn(),
+    setBeats: vi.fn((beats: number, denominator: number) => {
+      applied.beatsPerBar = beats;
+      applied.denominator = denominator as Pattern['denominator'];
+    }),
+    setSubdivision: vi.fn((subdivision: number) => {
+      applied.subdivision = subdivision;
+    }),
     setSubdivisionAccents: vi.fn(),
-    setAccent: vi.fn(),
-    setPoly: vi.fn(),
-    setPolyAccent: vi.fn(),
-    setPolyAgainst: vi.fn(),
-    setSounds: vi.fn(),
+    setAccent: vi.fn((beat: number, accent: number) => {
+      applied.accents[beat] = accent as KB_ACCENT;
+    }),
+    setPoly: vi.fn((enabled: boolean, beats: number) => {
+      applied.polyEnabled = enabled;
+      applied.polyBeats = beats;
+    }),
+    setPolyAccent: vi.fn((beat: number, accent: number) => {
+      applied.polyAccents[beat] = accent as KB_ACCENT;
+    }),
+    setPolyAgainst: vi.fn((against: number) => {
+      applied.polyAgainst = against;
+    }),
+    setSounds: vi.fn((normal: number, accent: number) => {
+      applied.sounds = { normal, accent };
+    }),
     previewSound: vi.fn(),
     setCountIn: vi.fn(),
     setVolume: vi.fn(),
     setLatencyOffset: vi.fn(),
     setRamp: vi.fn(),
-    setBarMute: vi.fn(),
+    setBarMute: vi.fn((enabled: boolean, playBars: number, muteBars: number) => {
+      applied.barMute = { enabled, playBars, muteBars };
+    }),
     engineHold: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
     engineRelease: vi.fn(),
   } satisfies MetronomeCommands;
+  return {
+    commands,
+    pattern: () => patternOf(applied),
+    atStart: () => atStart,
+  };
 }
 
-type Commands = ReturnType<typeof makeCommands>;
-
-function songClickOver() {
+function songClickOver({ releaseEndsIt }: { releaseEndsIt: boolean }) {
   let running = true;
   const turnOff = () => {
     running = false;
   };
-  return { active: () => running, release: vi.fn(turnOff), turnOff };
+  const release = vi.fn(releaseEndsIt ? turnOff : () => undefined);
+  return { active: () => running, release, turnOff };
 }
 
-function standalone() {
-  const commands = makeCommands();
-  const songClick = songClickOver();
+function standalone({ releaseEndsIt = true } = {}) {
+  const engine = fakeEngine();
+  const songClick = songClickOver({ releaseEndsIt });
   const store = createMetronomeStore(
-    commands,
+    engine.commands,
     () => NOW_FRAME,
     () => DEFAULT_BPM,
     Date.now,
     songClick,
   );
-  return { commands, songClick, store };
+  const stored = () => patternOf(store.getState());
+  return { engine, songClick, store, stored };
 }
 
 interface Edit {
   readonly name: string;
   readonly apply: (metronome: MetronomeStore) => void;
-  readonly field: keyof MetronomeConfig;
-  readonly sent: (commands: Commands) => ReturnType<typeof vi.fn>;
 }
 
 const EDITS: readonly Edit[] = [
@@ -88,96 +164,132 @@ const EDITS: readonly Edit[] = [
     apply: (m) => {
       m.setSounds(NORMAL_SOUND, ACCENT_SOUND);
     },
-    field: 'sounds',
-    sent: (c) => c.setSounds,
   },
   {
     name: 'setAccents',
     apply: (m) => {
       m.setAccents(EDITED_ACCENTS);
     },
-    field: 'accents',
-    sent: (c) => c.setAccent,
   },
   {
     name: 'cycleAccent',
     apply: (m) => {
       m.cycleAccent(LAST_BEAT);
     },
-    field: 'accents',
-    sent: (c) => c.setAccent,
   },
   {
     name: 'setBeats',
     apply: (m) => {
       m.setBeats(EDITED_BEATS, EDITED_DENOMINATOR);
     },
-    field: 'beatsPerBar',
-    sent: (c) => c.setBeats,
+  },
+  {
+    name: 'setSubdivision',
+    apply: (m) => {
+      m.setSubdivision(EDITED_SUBDIVISION);
+    },
+  },
+  {
+    name: 'setBarMute',
+    apply: (m) => {
+      m.setBarMute(MUTE);
+    },
+  },
+  {
+    name: 'setPoly',
+    apply: (m) => {
+      m.setPoly(true, EDITED_POLY_BEATS);
+    },
+  },
+  {
+    name: 'setPolyAgainst',
+    apply: (m) => {
+      m.setPolyAgainst(EDITED_AGAINST);
+    },
+  },
+  {
+    name: 'cyclePolyAccent',
+    apply: (m) => {
+      m.cyclePolyAccent(FIRST_BEAT);
+    },
+  },
+  {
+    name: 'setPolyAccents',
+    apply: (m) => {
+      m.setPolyAccents(EDITED_POLY_ACCENTS);
+    },
   },
 ];
 
-function lastOrder(mock: { mock: { invocationCallOrder: number[] } }) {
-  return mock.mock.invocationCallOrder.at(-1) ?? 0;
-}
-
-function expectEngineRuns(commands: Commands, config: MetronomeConfig) {
-  expect(commands.setBeats).toHaveBeenLastCalledWith(
-    config.beatsPerBar,
-    config.denominator,
-  );
-  config.accents.forEach((accent, beat) => {
-    expect(commands.setAccent).toHaveBeenCalledWith(beat, accent);
-  });
-  expect(commands.setSubdivision).toHaveBeenLastCalledWith(config.subdivision);
-  expect(commands.setSounds).toHaveBeenLastCalledWith(
-    config.sounds.normal,
-    config.sounds.accent,
-  );
-  expect(commands.setBarMute).toHaveBeenLastCalledWith(
-    config.barMute.enabled,
-    config.barMute.playBars,
-    config.barMute.muteBars,
-  );
-  const start = lastOrder(commands.metronomeStart);
-  expect(start).toBeGreaterThan(0);
-  expect(lastOrder(commands.setSounds)).toBeLessThan(start);
-  expect(lastOrder(commands.setAccent)).toBeLessThan(start);
-}
-
 describe("standalone edits while a song's click runs", () => {
   it.each(EDITS)('$name updates the store but not the engine', (edit) => {
-    const { commands, store } = standalone();
-    const before = store.getState()[edit.field];
+    const { engine, store, stored } = standalone();
+    const before = engine.pattern();
     edit.apply(store.getState());
-    expect(store.getState()[edit.field]).not.toEqual(before);
-    expect(edit.sent(commands)).not.toHaveBeenCalled();
+    expect(stored()).not.toEqual(before);
+    expect(engine.pattern()).toEqual(before);
   });
 
   it.each(EDITS)('$name reaches the engine with no song click', (edit) => {
-    const { commands, songClick, store } = standalone();
+    const { engine, songClick, store, stored } = standalone();
     songClick.turnOff();
     edit.apply(store.getState());
-    expect(edit.sent(commands)).toHaveBeenCalled();
+    expect(engine.pattern()).toEqual(stored());
   });
 
   it.each(EDITS)(
-    '$name plays once the click is off and the standalone starts',
+    '$name is what the standalone starts on once the click is off',
     (edit) => {
-      const { commands, songClick, store } = standalone();
+      const { engine, songClick, store, stored } = standalone();
       edit.apply(store.getState());
       songClick.turnOff();
       store.getState().start();
-      expectEngineRuns(commands, store.getState());
+      expect(engine.atStart()).toEqual(stored());
     },
   );
 
-  it('sends the edits when Play releases the click', () => {
-    const { commands, songClick, store } = standalone();
+  it('starts on the edits when Play releases the click', () => {
+    const { engine, songClick, store, stored } = standalone();
     store.getState().setSounds(NORMAL_SOUND, ACCENT_SOUND);
     store.getState().start();
     expect(songClick.release).toHaveBeenCalledOnce();
-    expectEngineRuns(commands, store.getState());
+    expect(engine.atStart()).toEqual(stored());
+  });
+
+  it('starts on the edits when a song count keeps the click active', () => {
+    const { engine, songClick, store, stored } = standalone({
+      releaseEndsIt: false,
+    });
+    store.getState().setSounds(NORMAL_SOUND, ACCENT_SOUND);
+    store.getState().start();
+    expect(songClick.active()).toBe(true);
+    expect(engine.atStart()).toEqual(stored());
+  });
+
+  it('sends an edit to the running standalone while a song count stays active', () => {
+    const { engine, songClick, store, stored } = standalone({
+      releaseEndsIt: false,
+    });
+    store.getState().start();
+    store.getState().setSubdivision(EDITED_SUBDIVISION);
+    expect(songClick.active()).toBe(true);
+    expect(engine.pattern()).toEqual(stored());
+  });
+
+  it('sends the whole held pattern with the first edit after the click goes off', () => {
+    const { engine, songClick, store, stored } = standalone();
+    store.getState().setSounds(NORMAL_SOUND, ACCENT_SOUND);
+    songClick.turnOff();
+    store.getState().setSubdivision(EDITED_SUBDIVISION);
+    expect(engine.pattern()).toEqual(stored());
+  });
+
+  it('sends the held pattern when playback starts outside start()', () => {
+    const { engine, songClick, store, stored } = standalone();
+    store.getState().setSounds(NORMAL_SOUND, ACCENT_SOUND);
+    songClick.turnOff();
+    store.setState({ running: true });
+    expect(engine.pattern()).toEqual(stored());
   });
 });
 
@@ -194,18 +306,11 @@ async function savedPreset() {
   return preset;
 }
 
-const PATTERN_COMMANDS = [
-  'setSounds',
-  'setAccent',
-  'setBeats',
-  'setSubdivision',
-  'setBarMute',
-] as const satisfies readonly (keyof Commands)[];
-
 describe("a preset load while a song's click runs", () => {
-  it('updates the store but sends no pattern to the engine', async () => {
+  it('updates the store but not the engine', async () => {
     const preset = await savedPreset();
-    const { commands, store } = standalone();
+    const { engine, store, stored } = standalone();
+    const before = engine.pattern();
     applyPreset(preset, store.getState);
     expect(store.getState()).toMatchObject({
       sounds: { normal: NORMAL_SOUND, accent: ACCENT_SOUND },
@@ -213,27 +318,24 @@ describe("a preset load while a song's click runs", () => {
       subdivision: EDITED_SUBDIVISION,
       barMute: MUTE,
     });
-    for (const name of PATTERN_COMMANDS) {
-      expect(commands[name]).not.toHaveBeenCalled();
-    }
+    expect(stored()).not.toEqual(before);
+    expect(engine.pattern()).toEqual(before);
   });
 
   it('reaches the engine with no song click', async () => {
     const preset = await savedPreset();
-    const { commands, songClick, store } = standalone();
+    const { engine, songClick, store, stored } = standalone();
     songClick.turnOff();
     applyPreset(preset, store.getState);
-    for (const name of PATTERN_COMMANDS) {
-      expect(commands[name]).toHaveBeenCalled();
-    }
+    expect(engine.pattern()).toEqual(stored());
   });
 
-  it('plays the loaded song once the click is off and the standalone starts', async () => {
+  it('is what the standalone starts on once the click is off', async () => {
     const preset = await savedPreset();
-    const { commands, songClick, store } = standalone();
+    const { engine, songClick, store, stored } = standalone();
     applyPreset(preset, store.getState);
     songClick.turnOff();
     store.getState().start();
-    expectEngineRuns(commands, store.getState());
+    expect(engine.atStart()).toEqual(stored());
   });
 });
