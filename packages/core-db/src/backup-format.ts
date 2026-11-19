@@ -3,13 +3,14 @@ import type { ClickSound } from './click-sound-repository';
 import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
 import type { MeterOverride } from './meter-override';
 import { STANDALONE_METRONOME_KEY } from './standalone-metronome-preference';
-import type { LyricLineTimes } from './stem-lyrics';
+import type { LyricLineTimes, LyricsSource } from './stem-lyrics';
 import { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
 import type { TempoMode } from './tempo-mode';
 
 export const BACKUP_FORMAT = 'kitbag-backup';
 export const BACKUP_VERSION = 4;
 export const MS_PER_SECOND = 1000;
+export const SECONDS_PER_MINUTE = 60;
 
 export const CATEGORIES = [
   'librarySongs',
@@ -162,8 +163,14 @@ export interface CategoryRecords {
 
 export type BackupRecord = CategoryRecords[Category][number];
 
-export type LocalRecords = Omit<CategoryRecords, 'clickSounds'> & {
+export type LocalStemSong = StemSongRecord & { lyrics: LyricsSource | null };
+
+export type LocalRecords = Omit<
+  CategoryRecords,
+  'clickSounds' | 'stemSongs'
+> & {
   clickSounds: ClickSound[];
+  stemSongs: LocalStemSong[];
 };
 
 export type LocalRecord = LocalRecords[Category][number];

@@ -14,9 +14,15 @@ import {
   type LibrarySongRecord,
   type LocalRecord,
   type Resolutions,
+  type StemSongRecord,
+  stemSongKey,
 } from './backup-format';
 import type { Snapshot } from './backup-snapshot';
-import { sameStemSong } from './backup-stem-songs';
+import {
+  atImportDefaults,
+  fittedToDevice,
+  sameStemSong,
+} from './backup-stem-song-plan';
 import { meterOverrideOf, NO_METER_OVERRIDE } from './meter-override';
 
 export interface ImportOptions {
@@ -65,7 +71,6 @@ function canonical(record: BackupRecord): string {
 // A sound is its UUID: a renamed copy of the same sound is not a difference.
 function sameRecord(mine: LocalRecord, theirs: BackupRecord): boolean {
   if ('slot' in mine) return 'slot' in theirs && mine.uuid === theirs.uuid;
-  if ('stems' in mine) return 'stems' in theirs && sameStemSong(mine, theirs);
   return canonical(mine) === canonical(theirs);
 }
 
@@ -182,22 +187,27 @@ function localRecords(category: Category, snapshot: Snapshot) {
 // or deleted, and a record with no stem song here is only counted.
 function planStemSongs(
   mode: ImportMode,
-  incoming: readonly BackupRecord[],
+  incoming: readonly StemSongRecord[],
   snapshot: Snapshot,
   resolutions: Resolutions,
 ): MergeState {
   const category = 'stemSongs';
-  const local = localRecords(category, snapshot);
+  const local = new Map(
+    snapshot.records.stemSongs.map((song) => [stemSongKey(song), song]),
+  );
   const state = emptyMergeState(incoming.length);
   state.summary.notOnDevice = 0;
-  for (const record of incoming) {
-    const key = recordKey(category, record);
+  for (const backup of incoming) {
+    const key = stemSongKey(backup);
     const mine = local.get(key);
     const localId = snapshot.ids[category].get(key);
-    if (mine === undefined || localId === undefined)
+    if (mine === undefined || localId === undefined) {
       state.summary.notOnDevice += 1;
-    else if (sameRecord(mine, record)) state.summary.unchanged += 1;
-    else if (mode === 'replace') {
+      continue;
+    }
+    const record = fittedToDevice(backup, mine);
+    if (sameStemSong(mine, record)) state.summary.unchanged += 1;
+    else if (mode === 'replace' || atImportDefaults(mine)) {
       state.summary.updates += 1;
       state.writes.push({ record, localId });
     } else mergeConflict(category, record, localId, resolutions, state);
@@ -262,7 +272,12 @@ function planCategory(
   resolutions: Resolutions,
 ): MergeState {
   if (category === 'stemSongs')
-    return planStemSongs(mode, incoming, snapshot, resolutions);
+    return planStemSongs(
+      mode,
+      incoming as readonly StemSongRecord[],
+      snapshot,
+      resolutions,
+    );
   if (mode === 'replace')
     return planReplace(incoming, snapshot.records[category].length);
   return planMerge(category, incoming, snapshot, resolutions);

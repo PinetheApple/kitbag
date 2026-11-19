@@ -2,6 +2,7 @@ import { and, asc, eq } from 'drizzle-orm';
 
 import {
   stemSongKey,
+  type LocalStemSong,
   type StemMixRecord,
   type StemSongRecord,
 } from './backup-format';
@@ -35,11 +36,22 @@ function identityOf(row: StemSetRow) {
   return { stemdeckJobId: null, uuid: row.uuid };
 }
 
+function lyricsOf(row: StemSetRow) {
+  const { lyricsSynced, lyricsPlain, lyricsInstrumental } = row;
+  return lyricsInstrumental === null
+    ? null
+    : {
+        synced: lyricsSynced,
+        plain: lyricsPlain,
+        instrumental: lyricsInstrumental,
+      };
+}
+
 function stemSongRecord(
   row: StemSetRow,
   identity: Pick<StemSongRecord, 'stemdeckJobId' | 'uuid'>,
   mixes: readonly StemRow[],
-): StemSongRecord {
+): LocalStemSong {
   return {
     source: row.source,
     ...identity,
@@ -51,7 +63,14 @@ function stemSongRecord(
     ...stemSetClickOf(row),
     chosenTempoMode: stemSetTempoOf(row).chosenTempoMode,
     stems: mixes.map(mixRecord),
+    lyrics: lyricsOf(row),
   };
+}
+
+export function portableStemSong(song: LocalStemSong): StemSongRecord {
+  const copy: Partial<LocalStemSong> = { ...song };
+  delete copy.lyrics;
+  return copy as StemSongRecord;
 }
 
 export async function loadStemSongs(db: Database) {
@@ -60,7 +79,7 @@ export async function loadStemSongs(db: Database) {
     .select()
     .from(stems)
     .orderBy(asc(stems.sortOrder), asc(stems.id));
-  const records: StemSongRecord[] = [];
+  const records: LocalStemSong[] = [];
   const ids = new Map<string, number>();
   for (const row of setRows) {
     const identity = identityOf(row);
@@ -71,37 +90,6 @@ export async function loadStemSongs(db: Database) {
     ids.set(stemSongKey(record), row.id);
   }
   return { records, ids };
-}
-
-function settingsOf(record: StemSongRecord, roles: ReadonlySet<string>) {
-  const shared = record.stems
-    .filter(({ role }) => roles.has(role))
-    .sort((a, b) => a.role.localeCompare(b.role));
-  return { ...record, label: null, stems: shared };
-}
-
-function canonical(value: unknown): string {
-  return JSON.stringify(value, (_key, field: unknown) =>
-    field !== null && typeof field === 'object' && !Array.isArray(field)
-      ? Object.fromEntries(
-          Object.entries(field).sort(([a], [b]) => a.localeCompare(b)),
-        )
-      : field,
-  );
-}
-
-// Only roles on both sides are compared: a restore never adds or removes a stem.
-export function sameStemSong(
-  mine: StemSongRecord,
-  theirs: StemSongRecord,
-): boolean {
-  const theirRoles = new Set(theirs.stems.map(({ role }) => role));
-  const roles = new Set(
-    mine.stems.map(({ role }) => role).filter((role) => theirRoles.has(role)),
-  );
-  return (
-    canonical(settingsOf(mine, roles)) === canonical(settingsOf(theirs, roles))
-  );
 }
 
 async function restoreTempoMode(

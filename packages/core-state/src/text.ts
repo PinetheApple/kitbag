@@ -1,6 +1,8 @@
-export const MINUS = '−';
+import { SECONDS_PER_MINUTE } from '@kitbag/core-db';
 
-export const SECONDS_PER_MINUTE = 60;
+export const MINUS = '−';
+export { SECONDS_PER_MINUTE };
+
 const SPEED_DECIMALS = 2;
 const MINUTES_PER_HOUR = 60;
 const TWO_DIGITS = 2;

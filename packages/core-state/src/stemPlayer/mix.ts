@@ -1,4 +1,4 @@
-export const UNITY_GAIN = 1;
+export { UNITY_GAIN } from '@kitbag/core-db';
 export const UNSHIFTED_KEY = 0;
 
 export function soloAfter(

@@ -15,6 +15,17 @@ const FOLLOW_BPM = 120;
 const FOLLOW_ANCHOR_SEC = 0.5;
 const BEATS_PER_BAR = 4;
 export const JOB = 'job-echo';
+export const LOCAL_SPEED = 0.5;
+export const TWO_LINES = {
+  synced: '[00:12.25]First line\n[00:15.80]Second line',
+  plain: null,
+  offsetSec: 0,
+  instrumental: false,
+};
+export const THREE_LINES = {
+  ...TWO_LINES,
+  synced: `${TWO_LINES.synced}\n[00:19.00]Third line`,
+};
 export const FOLDER_UUID = '7d4c1f8e-2b6a-4f3d-9c1e-5a8b7e6d4c3b';
 
 export const EDITED = {
@@ -61,7 +72,7 @@ export function bundle(jobId: string): NewStemBundle {
     sections: [],
     beats: [],
     bars: [],
-    lyrics: null,
+    lyrics: TWO_LINES,
     tempo: {
       mode: TEMPO_MODE.follow,
       bpm: FOLLOW_BPM,
@@ -172,4 +183,12 @@ export const EDITED_MIX = [
 
 export async function stemSetCount({ handle }: BackupDatabase) {
   return (await handle.db.select({ id: stemSets.id }).from(stemSets)).length;
+}
+
+export async function setSpeed(
+  { handle }: StemSongDatabase,
+  id: number,
+  speed: number,
+) {
+  await handle.db.update(stemSets).set({ speed }).where(eq(stemSets.id, id));
 }
