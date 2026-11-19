@@ -37,12 +37,42 @@ describe('migrate v25 to v26', () => {
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
   });
 
-  it('keeps every earlier session, with no log and no setlist name', () => {
+  it('keeps every earlier session, with no log', () => {
     const { db, before } = upgraded();
     expect(before.length).toBeGreaterThan(0);
-    expect(rows(db, 'SELECT * FROM practice_sessions ORDER BY id')).toEqual(
-      before.map((row) => ({ ...row, log: null, setlist_name: null })),
+    const names = new Map(
+      rows<{ id: number; name: string }>(
+        db,
+        'SELECT id, name FROM setlists',
+      ).map(({ id, name }) => [id, name]),
     );
+    expect(rows(db, 'SELECT * FROM practice_sessions ORDER BY id')).toEqual(
+      before.map((row) => ({
+        ...row,
+        log: null,
+        setlist_name: names.get(Number(row.setlist_id)) ?? null,
+      })),
+    );
+  });
+
+  it('names each earlier session after the setlist it still links to', () => {
+    const db = buildV25Fixture();
+    db.exec(
+      "INSERT INTO setlists (id, name, uuid) VALUES (900, 'Wedding', 'w')",
+    );
+    db.exec(`INSERT INTO practice_sessions
+      (start_time, duration_seconds, avg_bpm, setlist_id, uuid)
+      VALUES (1, 60, 96, 900, 'linked'), (2, 60, 96, NULL, 'unlinked')`);
+    migrate(nodeSqliteDriver(db));
+    expect(
+      rows(
+        db,
+        "SELECT uuid, setlist_name FROM practice_sessions WHERE uuid IN ('linked', 'unlinked') ORDER BY uuid",
+      ),
+    ).toEqual([
+      { uuid: 'linked', setlist_name: 'Wedding' },
+      { uuid: 'unlinked', setlist_name: null },
+    ]);
   });
 
   it('reads sessions newest first through the start time index', () => {

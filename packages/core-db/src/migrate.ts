@@ -365,6 +365,9 @@ export const MIGRATE_V24_TO_V25: readonly string[] = [
 export const MIGRATE_V25_TO_V26: readonly string[] = [
   'ALTER TABLE practice_sessions ADD COLUMN log TEXT',
   'ALTER TABLE practice_sessions ADD COLUMN setlist_name TEXT',
+  `UPDATE practice_sessions SET setlist_name =
+   (SELECT name FROM setlists WHERE setlists.id = practice_sessions.setlist_id)
+   WHERE setlist_id IS NOT NULL`,
   'CREATE INDEX practice_sessions_start_time ON practice_sessions (start_time)',
 ];
 
