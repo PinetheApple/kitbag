@@ -27,6 +27,7 @@ async function entriesOf(
 ): Promise<SetlistEntry[]> {
   const items = await repos.setlists.items(setlist.id);
   return items.flatMap((item) => {
+    if (item.songPresetId === null) return [];
     const preset = byId.get(item.songPresetId);
     return preset === undefined ? [] : [{ item, preset }];
   });

@@ -1617,7 +1617,7 @@ as a base to build on.
 
 The schema is the durable part and survives the stack change. The Flutter
 build's tables were `Setlists`, `Songs`, `PracticeSessions`, `Tunings`,
-`LibrarySongs`, `StemSets`, `Stems` (schema v6). The React Native schema is at v23
+`LibrarySongs`, `StemSets`, `Stems` (schema v6). The React Native schema is at v25
 (`packages/core-db/src/migrate.ts`); §11.1 sets which versions it upgrades.
 
 ### 11.1 Persistence layer
@@ -1664,6 +1664,7 @@ versions 1–6 with `UnsupportedSchemaVersion` and leaves the file untouched.
 | `StemSets`: + `click_grouping` TEXT (JSON int array; NULL = no grouping), + `click_rate` TEXT (`single` \| `double` \| `half`, default `single`); kept on a re-import of the same StemDeck song | #383 — click grouping and rate per stem song; schema v21 |
 | `StemSets`: + `tempo_mode` TEXT (`constant` \| `follow`), + `tempo_bpm` REAL, + `tempo_anchor` REAL (seconds), + `tempo_beats_per_bar` INTEGER, + `tempo_source` TEXT (`detected` \| `user`) — the StemDeck bundle's `tempo`, all NULL when the bundle has none, bpm and anchor NULL for a follow tempo StemDeck detected none for; + `chosen_tempo_mode` TEXT (NULL = the bundle's mode), kept on a re-import when the new bundle can build it | #384 — constant tempo or follow the band per stem song; schema v22 |
 | `click_sounds`: slot INTEGER primary key, `uuid`, `name`, `file_name` (the prepared WAV in app-private storage, fresh on every write) | §5.3 — custom click sounds; the UUID is the sound's identity for backup Merge and the restore's Tick rule; schema v23 |
+| `setlist_items`: + `stem_set_id` (FK to `stem_sets`, cascade), `song_preset_id` nullable, a CHECK that exactly one is set (a table rebuild); `play_queue`: `stem_set_id` (unique, FK cascade), `position` | #382 — a setlist holds stem songs beside metronome songs, and stem songs queue to play next, each once; a re-import moves both to the new stem set; schema v25 |
 | **All paths relative** to the data folder | §2.3 (iOS) and **D11** (the folder can move between internal storage and an SD card) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
 | BPM cache table | §8.5 |
