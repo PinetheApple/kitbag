@@ -151,6 +151,7 @@ check "  ... and each one back at its old value afterwards" \
   bash -c 'for s in window_animation_scale transition_animation_scale animator_duration_scale; do [[ $(grep "settings put global $s" "$ADB_LOG" | tail -1) == *"$s 1.0" ]] || exit 1; done'
 check "  ... and error dialogs hidden during the run" \
   bash -c 'grep -q "settings put global hide_error_dialogs 1" "$ADB_LOG"'
+check "  ... and a dialog already open closed" adb_called "am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS"
 check "  ... and their setting back afterwards" \
   bash -c '[[ $(grep "settings put global hide_error_dialogs" "$ADB_LOG" | tail -1) == *"dialogs 1.0" ]]'
 FAKE_ANIMATION=null expect "an animation setting that was unset" "$EXIT_OK" "" "$APK" metronome

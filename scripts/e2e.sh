@@ -37,8 +37,9 @@ flow in it). With no FLOW, every flow runs.
 
 Maestro is ~/.maestro/bin/maestro unless MAESTRO is set. MAESTRO_OPTS
 defaults to -Xmx1g.
-Animation scales are 0 and error dialogs hidden during the run, so another
-app's ANR dialog cannot cover the app; a hung app still fails its flow.
+Animation scales are 0 and error dialogs hidden during the run, and a dialog
+already open is closed, so another app's ANR cannot cover the app; a hung app
+still fails its flow.
 All four settings are restored on exit.
 
 exit 0  every flow passed
@@ -181,6 +182,7 @@ for setting in "${!RUN_SETTINGS[@]}"; do
   previous_setting[$setting]=$(adb_s shell settings get global "$setting" | tr -d '\r')
   adb_s shell settings put global "$setting" "${RUN_SETTINGS[$setting]}"
 done
+adb_s shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null
 
 step "Pushing the fixture song"
 fixture="$OUT/$FIXTURE_SONG.wav"
