@@ -1,0 +1,1 @@
+• Load songs straight from StemDeck over Wi-Fi: scan StemDeck's QR code or type its address, trust the server once, pick songs and they import in the background with a progress notification. Adds the camera permission, used only to scan StemDeck's code.
