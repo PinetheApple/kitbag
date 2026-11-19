@@ -1,0 +1,1 @@
+• Stem songs can now have their meter corrected: Player sheet → Meter sets 3/4 or 4/4 or moves bar 1 to the beat at the playhead, and the bar marks and click follow. Every change saves at once with Undo.
