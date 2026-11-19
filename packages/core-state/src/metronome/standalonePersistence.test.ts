@@ -1,6 +1,7 @@
 import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
+import { isPresetEntry } from '../library/snapshot.ts';
 import { setup } from '../library/store.test-helper.ts';
 import { BPM_BOUNDS } from './config.ts';
 import {
@@ -62,7 +63,9 @@ async function saveSongInSetlist(app: ReturnType<typeof setup>) {
     bpm: SONG_BPM,
     subdivision: SONG_SUBDIVISION,
   });
-  const [entry] = app.library.getState().entries[setlistId] ?? [];
+  const [entry] = (app.library.getState().entries[setlistId] ?? []).filter(
+    isPresetEntry,
+  );
   if (entry === undefined) throw new Error('missing setlist entry');
   return { presetId, itemId: entry.item.id, setlistId };
 }

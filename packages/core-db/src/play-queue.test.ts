@@ -73,6 +73,24 @@ describe('play queue repository', () => {
     ]);
   });
 
+  it('takes a stem song and everything queued before it, in one step', async () => {
+    const { queue, a, b, c, order } = await setup();
+    for (const id of [a, b, c]) await queue.add(id);
+    await queue.takeThrough(b);
+    expect(await order()).toEqual([[c, 0]]);
+  });
+
+  it('takes nothing for a stem song that is not queued', async () => {
+    const { queue, a, b, c, order } = await setup();
+    await queue.add(a);
+    await queue.add(b);
+    await queue.takeThrough(c);
+    expect(await order()).toEqual([
+      [a, 0],
+      [b, 1],
+    ]);
+  });
+
   it('clears', async () => {
     const { queue, a, b } = await setup();
     await queue.add(a);

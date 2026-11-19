@@ -48,5 +48,5 @@ export function setup(engineBpm = () => 120) {
     metronome: () => metronome.getState(),
     now: Date.now,
   });
-  return { library, metronome, commands, repos };
+  return { library, metronome, commands, repos, handle };
 }

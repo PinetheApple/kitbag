@@ -1,5 +1,9 @@
 import { countLabel } from '@kitbag/core-design';
-import type { ActiveSet, SetlistEntry } from '@kitbag/core-state';
+import {
+  isPresetEntry,
+  type ActiveSet,
+  type SetlistEntry,
+} from '@kitbag/core-state';
 
 export interface SongListRow {
   readonly itemId: number;
@@ -22,12 +26,18 @@ export function songListRows(
   entries: readonly SetlistEntry[],
   loadedItemId: number | null,
 ): SongListRow[] {
-  return entries.map(({ item, preset }, index) => ({
-    itemId: item.id,
-    presetId: preset.id,
-    number: String(index + 1),
-    name: preset.name,
-    bpm: String(Math.round(preset.bpm)),
-    now: item.id === loadedItemId,
-  }));
+  return entries.flatMap((entry, index) => {
+    if (!isPresetEntry(entry)) return [];
+    const { item, preset } = entry;
+    return [
+      {
+        itemId: item.id,
+        presetId: preset.id,
+        number: String(index + 1),
+        name: preset.name,
+        bpm: String(Math.round(preset.bpm)),
+        now: item.id === loadedItemId,
+      },
+    ];
+  });
 }

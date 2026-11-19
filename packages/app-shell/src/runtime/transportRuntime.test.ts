@@ -1,6 +1,11 @@
 import type { TransportEvent, TransportShowState } from '@kitbag/core-native';
 import type { SetlistEntry, SetlistSummary } from '@kitbag/core-state';
-import { libraryStore, metronomeStore, mixerClick } from '@kitbag/core-state';
+import {
+  ENTRY_KIND,
+  libraryStore,
+  metronomeStore,
+  mixerClick,
+} from '@kitbag/core-state';
 import { describe, expect, it, vi } from 'vitest';
 
 type TransportHandler = (event: TransportEvent) => void;
@@ -56,6 +61,7 @@ const SETLIST_ID = 3;
 const entries = ['Intro', 'Blackbird'].map(
   (name, index) =>
     ({
+      kind: ENTRY_KIND.preset,
       item: { id: 10 + index },
       preset: { id: 20 + index, name },
     }) as unknown as SetlistEntry,

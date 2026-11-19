@@ -4,10 +4,11 @@ import {
   KB_POLY_AGAINST_BAR,
   KB_RAMP_UNIT,
 } from '@kitbag/core-native';
-import type {
-  SetlistEntry,
-  SetlistSummary,
-  SongPreset,
+import {
+  ENTRY_KIND,
+  type PresetSetlistEntry,
+  type SetlistSummary,
+  type SongPreset,
 } from '@kitbag/core-state';
 
 import type { PracticeSettings } from './statusRows.ts';
@@ -55,9 +56,10 @@ export const entry = (
   presetId = itemId,
 ) =>
   ({
+    kind: ENTRY_KIND.preset,
     item: { id: itemId },
     preset: { id: presetId, name, bpm },
-  }) as unknown as SetlistEntry;
+  }) as unknown as PresetSetlistEntry;
 
 export const songPreset = (overrides: Partial<SongPreset> = {}) =>
   ({

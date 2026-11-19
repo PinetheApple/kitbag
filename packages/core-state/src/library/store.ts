@@ -12,7 +12,7 @@ import {
 import { getLibrary, type LibraryRepositories } from './runtime.ts';
 import {
   activeSetlistOf,
-  adjacentEntry,
+  adjacentPresetEntry,
   type SongStep,
 } from './setlistPosition.ts';
 import { takeSnapshot, type LibrarySnapshot } from './snapshot.ts';
@@ -300,7 +300,7 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       const active = activeSetlistOf(get().setlists);
       if (active === undefined) return;
       const setlistId = active.setlist.id;
-      const entry = adjacentEntry(
+      const entry = adjacentPresetEntry(
         get().entries[setlistId] ?? [],
         get().loaded?.itemId ?? null,
         step,
