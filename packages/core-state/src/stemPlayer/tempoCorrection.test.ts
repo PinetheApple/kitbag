@@ -66,15 +66,19 @@ describe('the anchor beat', () => {
 describe('the corrected grid', () => {
   const grid = { beats: STEADY, downbeatIndices: [1, 5] };
 
-  it('maps the detected downbeats onto the scaled beats by time', () => {
-    const corrected = correctedGrid(grid, TEMPO_CORRECTION.double, STEP);
-    expect(corrected.downbeatIndices).toEqual([2, 10]);
+  it.each([
+    [TEMPO_CORRECTION.double, [2, 6, 10, 14]],
+    [TEMPO_CORRECTION.threeHalves, [1, 5, 9]],
+  ])('%s keeps the detected meter from bar 1', (correction, downbeats) => {
+    const corrected = correctedGrid(grid, correction, STEP);
+    expect(corrected.downbeatIndices).toEqual(downbeats);
+    expect(corrected.beats[downbeats[0] ?? 0]).toBeCloseTo(STEP, 9);
   });
 
-  it('anchors ÷2 on the beat nearest bar 1 so the downbeats survive', () => {
+  it('anchors ÷2 on the beat nearest bar 1 so bar 1 survives', () => {
     const corrected = correctedGrid(grid, TEMPO_CORRECTION.half, STEP);
     expect(corrected.beats).toEqual([0.5, 1.5, 2.5, 3.5]);
-    expect(corrected.downbeatIndices).toEqual([0, 2]);
+    expect(corrected.downbeatIndices).toEqual([0]);
   });
 
   it('×1 hands back the analysed grid', () => {

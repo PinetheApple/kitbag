@@ -50,11 +50,12 @@ describe("the song player's tempo correction", () => {
       bpm: DETECTED_BPM * 1.5,
       detectedBpm: DETECTED_BPM,
       beats: THREE_HALVES_BEATS,
-      downbeatIndices: [0, 6],
+      downbeatIndices: [0, 4, 8],
+      detected: { meter: 4, barOneSeconds: 0 },
     });
     expect(commands.setGrid).toHaveBeenLastCalledWith(
       THREE_HALVES_BEATS,
-      [0, 6],
+      [0, 4, 8],
       0,
     );
   });

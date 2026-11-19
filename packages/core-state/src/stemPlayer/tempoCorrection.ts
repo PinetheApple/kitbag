@@ -1,8 +1,8 @@
 import { TEMPO_RATIO, type TempoCorrection } from '@kitbag/core-db';
 
-import { usableDownbeats } from './bars.ts';
+import { barMarkDownbeats } from './bars.ts';
 import { nearestBeat } from './loop.ts';
-import type { DetectedGrid } from './meterOverride.ts';
+import { detectedMeter, type DetectedGrid } from './meterOverride.ts';
 
 function beatAt(
   beats: readonly number[],
@@ -37,18 +37,8 @@ export function scaleBeats(
   return scaled;
 }
 
-function mappedDownbeats(
-  { beats, downbeatIndices }: DetectedGrid,
-  scaled: readonly number[],
-): readonly number[] {
-  const mapped: number[] = [];
-  for (const index of usableDownbeats(downbeatIndices, beats.length)) {
-    const nearest = nearestBeat(scaled, beats[index] ?? 0);
-    if (nearest !== null && nearest !== mapped.at(-1)) mapped.push(nearest);
-  }
-  return mapped;
-}
-
+// The detected meter is kept: bars of that many scaled beats, from the scaled
+// beat nearest bar 1.
 export function correctedGrid(
   grid: DetectedGrid,
   correction: TempoCorrection,
@@ -57,7 +47,15 @@ export function correctedGrid(
   const anchor = nearestBeat(grid.beats, barOneSeconds) ?? 0;
   const beats = scaleBeats(grid.beats, correction, anchor);
   if (beats === grid.beats) return grid;
-  return { beats, downbeatIndices: mappedDownbeats(grid, beats) };
+  const { meter } = detectedMeter(grid);
+  const barOne = nearestBeat(beats, barOneSeconds) ?? 0;
+  return {
+    beats,
+    downbeatIndices: barMarkDownbeats(
+      [{ beat: barOne % meter, beatsPerBar: meter }],
+      beats.length,
+    ),
+  };
 }
 
 export function correctedBpm(
