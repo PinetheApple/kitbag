@@ -74,6 +74,10 @@ double commandMixerTrackFrames(double track);
 int32_t commandMixdownStart(const char* path);
 void commandMixdownCancel();
 
+int32_t commandLoadCustomSound(double slot, const char* path);
+void commandClearCustomSound(double slot);
+bool commandCustomSoundLoaded(double slot);
+
 // Tuner.
 int32_t commandTunerStart();
 void commandTunerStop();

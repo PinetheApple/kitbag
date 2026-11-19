@@ -34,7 +34,8 @@ add_library(kitbag_jsi SHARED
   "${KITBAG_GLUE_DIR}/KitbagJniPattern.cpp"
   "${KITBAG_GLUE_DIR}/KitbagJniTuner.cpp"
   "${KITBAG_GLUE_DIR}/KitbagJniLibrary.cpp"
-  "${KITBAG_GLUE_DIR}/KitbagJniMixdown.cpp")
+  "${KITBAG_GLUE_DIR}/KitbagJniMixdown.cpp"
+  "${KITBAG_GLUE_DIR}/KitbagJniClickSound.cpp")
 
 target_include_directories(kitbag_jsi PRIVATE
   "${KITBAG_GLUE_DIR}"
