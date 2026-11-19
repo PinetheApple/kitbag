@@ -16,6 +16,8 @@ export type TransportEvent = Readonly<{
   rampRunning: boolean;
   practicePlayedMs: Double;
   practiceStretchStartedAt: Double;
+  cardNumber: Int32;
+  tempoSet: boolean;
 }>;
 
 export type TransportSetlist = Readonly<{
@@ -33,6 +35,7 @@ export type TransportShowState = Readonly<{
   practicePlayedMs: Double;
   practiceStretchStartedAt: Double;
   setlist: TransportSetlist | null;
+  cardNumber: Int32;
 }>;
 
 export type SongTransportShowState = Readonly<{

@@ -26,6 +26,7 @@ import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.SongAction
 import com.kitbag.corenative.transport.SongCommand
 import com.kitbag.corenative.transport.TransportAction
+import com.kitbag.corenative.transport.TransportChange
 import com.kitbag.corenative.transport.TransportCommand
 import com.kitbag.corenative.transport.TransportModel
 import com.kitbag.corenative.transport.TransportState
@@ -37,6 +38,7 @@ class PlaybackService : Service() {
   private var lastStartId = 0
   private var session: MediaSessionCompat? = null
   private var practice = PracticeClock.IDLE
+  private var shownCardNumber = 0
   private lateinit var card: MetronomeCard
   private var song: SongCard? = null
   private val routing = CardRouting()
@@ -181,6 +183,7 @@ class PlaybackService : Service() {
       intent.getDoubleExtra(EXTRA_MAX_BPM, 0.0),
     )
     val playing = intent.getBooleanExtra(EXTRA_PLAYING, true)
+    shownCardNumber = intent.getIntExtra(EXTRA_CARD_NUMBER, 0)
     practice = PracticeClock(
       intent.getLongExtra(EXTRA_PRACTICE_PLAYED_MS, 0L),
       if (playing) intent.getLongExtra(EXTRA_PRACTICE_STRETCH_STARTED_AT, System.currentTimeMillis()) else null,
@@ -206,7 +209,8 @@ class PlaybackService : Service() {
     }
     practice = practice.afterPlaying(next.playback == Playback.PLAYING, System.currentTimeMillis())
     state = next
-    listener?.invoke(next, practice)
+    val tempoSet = commands.any { it is TransportCommand.SetTempo }
+    listener?.invoke(TransportChange(next, practice, shownCardNumber, tempoSet))
     if (next.playback == Playback.STOPPED) route(CardEvent.MetronomeStopped) else render()
   }
 
@@ -363,12 +367,13 @@ class PlaybackService : Service() {
     private const val EXTRA_PRACTICE_PLAYED_MS = "practicePlayedMs"
     private const val EXTRA_PRACTICE_STRETCH_STARTED_AT = "practiceStretchStartedAt"
     private const val EXTRA_SUBTITLE = "setlistSubtitle"
+    private const val EXTRA_CARD_NUMBER = "cardNumber"
 
     @Volatile private var running = false
 
     @Volatile private var startRequested = false
 
-    @Volatile var listener: ((TransportState, PracticeClock) -> Unit)? = null
+    @Volatile var listener: ((TransportChange) -> Unit)? = null
 
     @Volatile var songStoppedListener: (() -> Unit)? = null
 
@@ -381,6 +386,7 @@ class PlaybackService : Service() {
       maxBpm: Double,
       practicePlayedMs: Long,
       practiceStretchStartedAt: Long,
+      cardNumber: Int,
     ) {
       val playing = state.playback == Playback.PLAYING
       if (!running && !playing) return
@@ -395,6 +401,7 @@ class PlaybackService : Service() {
         .putExtra(EXTRA_MAX_BPM, maxBpm)
         .putExtra(EXTRA_PRACTICE_PLAYED_MS, practicePlayedMs)
         .putExtra(EXTRA_PRACTICE_STRETCH_STARTED_AT, practiceStretchStartedAt)
+        .putExtra(EXTRA_CARD_NUMBER, cardNumber)
       state.subtitle?.let { intent.putExtra(EXTRA_SUBTITLE, it) }
       start(context, intent)
     }
