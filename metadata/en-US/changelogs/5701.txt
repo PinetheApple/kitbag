@@ -1,0 +1,1 @@
+• StemDeck: if Kitbag is closed while a song is downloading to replace one in your library, tapping Retry after reopening now replaces it as you chose instead of skipping it.
