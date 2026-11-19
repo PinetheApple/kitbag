@@ -26,6 +26,8 @@ constexpr double kBeatFrames = kSecondsPerMinute / kBpm * kSampleRate;
 constexpr double kFirstBeat = 7001.7;
 constexpr int kSongBeats = 300;
 constexpr double kSongTailFrames = kSampleRate;
+// Onset and engine both take the first whole frame at or after a beat.
+constexpr double kMaxUnityErrorFrames = 0.0;
 constexpr double kMaxExtraFrames = 1.0;
 constexpr double kFullSongRates[] = {0.75, 0.5};
 constexpr size_t kNameChars = 32;
@@ -137,6 +139,7 @@ class Onsets {
         ++quiet_;
         continue;
       }
+      // The silent trigger frame before the first sample, as DetectClicks has it.
       if (quiet_ >= click_take::kGapFrames) clicks_.push_back(first + f - 1);
       quiet_ = 0;
     }
@@ -188,7 +191,7 @@ Measure Compare(const std::vector<int64_t>& got, const Script& script) {
   const std::vector<double> want = ExpectedOutFrames(script);
   Measure measure{.clicks = got.size(), .beats = want.size()};
   for (size_t k = 0; k < got.size() && k < want.size(); ++k) {
-    const double error = static_cast<double>(got[k]) - want[k];
+    const double error = static_cast<double>(got[k]) - std::ceil(want[k]);
     measure.worst = std::max(measure.worst, std::fabs(error));
   }
   return measure;
@@ -239,8 +242,8 @@ Script LoopWithChange(double from, double to) {
   script.change_block =
       BlocksFor((script.loop.end + kChangeAfterPasses * pass) / from);
   script.change_to = to;
-  const auto heard = static_cast<double>(script.change_block * kBlock) +
-                     (from == kitbag::kUnityRate ? 0.0 : OutputLatencyFrames());
+  const double heard =
+      static_cast<double>(script.change_block * kBlock) + OutputLatencyFrames();
   script.segments.push_back(
       {.out_first = heard, .stream_first = from * heard, .rate = to}
   );
@@ -283,13 +286,22 @@ std::string FullSongName(double rate) {
   return name;
 }
 
+void CheckUnity(const std::string& name, const Measure& measure) {
+  Report(name, measure, kMaxUnityErrorFrames);
+  Check(
+      measure.beats > 0 && measure.clicks == measure.beats,
+      (name + ": every beat clicks once").c_str()
+  );
+  Check(
+      measure.worst <= kMaxUnityErrorFrames,
+      (name + ": each click on the first frame at or after its beat").c_str()
+  );
+}
+
 void TestFullSong(const std::string& stem) {
   const Measure unity = RunScript(stem, FullSong(kitbag::kUnityRate));
-  Report("full song 1.0x", unity, unity.worst);
-  Check(
-      unity.beats == kSongBeats && unity.clicks == unity.beats,
-      "full song 1.0x: every beat clicks once"
-  );
+  CheckUnity("full song 1.0x", unity);
+  Check(unity.beats == kSongBeats, "full song 1.0x: the run spans every beat");
   for (double rate : kFullSongRates) {
     CheckAgainst(FullSongName(rate), RunScript(stem, FullSong(rate)), unity);
   }
@@ -298,7 +310,7 @@ void TestFullSong(const std::string& stem) {
 void TestLoopAndRateChange(const std::string& stem) {
   const Measure unity =
       RunScript(stem, LoopWithChange(kitbag::kUnityRate, kitbag::kUnityRate));
-  Report("loop 1.0x", unity, unity.worst);
+  CheckUnity("loop 1.0x", unity);
   CheckAgainst(
       "loop 0.75x to 0.5x",
       RunScript(stem, LoopWithChange(kLoopFromRate, kLoopToRate)),
