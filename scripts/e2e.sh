@@ -14,7 +14,12 @@ readonly FIXTURE_SONG=e2eclick
 readonly FIXTURE_SECONDS=240
 readonly DEVICE_DOWNLOADS=/sdcard/Download
 readonly DEFAULT_MAESTRO_HEAP=-Xmx1g
-readonly ANIMATION_SETTINGS=(window_animation_scale transition_animation_scale animator_duration_scale)
+declare -rA RUN_SETTINGS=(
+  [window_animation_scale]=0
+  [transition_animation_scale]=0
+  [animator_duration_scale]=0
+  [hide_error_dialogs]=1
+)
 
 usage() {
   cat <<'USAGE'
@@ -32,7 +37,9 @@ flow in it). With no FLOW, every flow runs.
 
 Maestro is ~/.maestro/bin/maestro unless MAESTRO is set. MAESTRO_OPTS
 defaults to -Xmx1g.
-Animation scales are 0 during the run and restored on exit.
+Animation scales are 0 and error dialogs hidden during the run, so another
+app's ANR dialog cannot cover the app; a hung app still fails its flow.
+All four settings are restored on exit.
 
 exit 0  every flow passed
 exit 1  a flow failed; the flow and its failing step are printed
@@ -158,21 +165,21 @@ if ((!SKIP_INSTALL)); then
   }
 fi
 
-step "Turning animations off"
-declare -A previous_animation
-restore_animations() {
-  for setting in "${!previous_animation[@]}"; do
-    if [[ ${previous_animation[$setting]} == null ]]; then
+step "Turning animations and error dialogs off"
+declare -A previous_setting
+restore_settings() {
+  for setting in "${!previous_setting[@]}"; do
+    if [[ ${previous_setting[$setting]} == null ]]; then
       adb_s shell settings delete global "$setting" >/dev/null
     else
-      adb_s shell settings put global "$setting" "${previous_animation[$setting]}"
+      adb_s shell settings put global "$setting" "${previous_setting[$setting]}"
     fi
   done
 }
-trap restore_animations EXIT
-for setting in "${ANIMATION_SETTINGS[@]}"; do
-  previous_animation[$setting]=$(adb_s shell settings get global "$setting" | tr -d '\r')
-  adb_s shell settings put global "$setting" 0
+trap restore_settings EXIT
+for setting in "${!RUN_SETTINGS[@]}"; do
+  previous_setting[$setting]=$(adb_s shell settings get global "$setting" | tr -d '\r')
+  adb_s shell settings put global "$setting" "${RUN_SETTINGS[$setting]}"
 done
 
 step "Pushing the fixture song"
