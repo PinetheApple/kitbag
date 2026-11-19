@@ -171,10 +171,11 @@ export interface SetlistSongsSheetProps {
 function useStemPick(
   setlistId: number,
   onOpenStemSet: SetlistSongsSheetProps['onOpenStemSet'],
+  visible: boolean,
 ) {
   const openStemEntry = useLibrary((s) => s.openStemEntry);
   const openStemPlayer = useOpenStemPlayer(onOpenStemSet);
-  const { after, closed } = useAfterSheetClosed();
+  const { after, closed } = useAfterSheetClosed(visible);
   const pick = useCallback(
     (row: SongListRow) => {
       const { stemSetId } = row;
@@ -204,7 +205,7 @@ export function SetlistSongsSheet({
   const loadSong = useLibrary((s) => s.loadSong);
   const leaveSetlist = useLibrary((s) => s.leaveSetlist);
   const stems = useStemSongs();
-  const stemPick = useStemPick(set.id, onOpenStemSet);
+  const stemPick = useStemPick(set.id, onOpenStemSet, visible);
   const [saveError, setSaveError] = useState<string | null>(null);
   const rows = useMemo(
     () => songListRows(entries, loadedItemId, stems),

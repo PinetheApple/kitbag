@@ -137,7 +137,7 @@ export function SetlistPickerSheet(props: SetlistPickerSheetProps) {
   const setlists = useLibrary((s) => s.setlists);
   const refresh = useLibrary((s) => s.refresh);
   const [naming, setNaming] = useState(false);
-  const exit = useAfterSheetClosed();
+  const exit = useAfterSheetClosed(props.visible);
   const picker = usePicker(props, exit.after);
   const { visible, onDismiss } = props;
   useEffect(() => {

@@ -26,8 +26,8 @@ export function leaveOf(entry: SetlistEntry): Leave {
     : { kind: 'stem', stemSetId: entry.stemSetId };
 }
 
-export function useLeaveAfterClose(routes: PlayOrderRoutes) {
-  const { after, closed } = useAfterSheetClosed();
+export function useLeaveAfterClose(routes: PlayOrderRoutes, visible: boolean) {
+  const { after, closed } = useAfterSheetClosed(visible);
   const leaveFor = useCallback(
     (leave: Leave) => {
       after(() => {

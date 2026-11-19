@@ -167,10 +167,11 @@ export interface AddSongSheetProps {
 }
 
 function useLeaveForStemSongs(
+  visible: boolean,
   onDismiss: () => void,
   onAddStemSongs: () => void,
 ) {
-  const { after, closed } = useAfterSheetClosed();
+  const { after, closed } = useAfterSheetClosed(visible);
   const leave = useCallback(() => {
     after(onAddStemSongs);
     onDismiss();
@@ -182,7 +183,11 @@ export function AddSongSheet(props: AddSongSheetProps) {
   const styles = useStyles();
   const [kind, setKind] = useState<Kind>(METRONOME);
   const inSet = useMemo(() => new Set(props.stemSetIds), [props.stemSetIds]);
-  const exit = useLeaveForStemSongs(props.onDismiss, props.onAddStemSongs);
+  const exit = useLeaveForStemSongs(
+    props.visible,
+    props.onDismiss,
+    props.onAddStemSongs,
+  );
   return (
     <Sheet
       visible={props.visible}

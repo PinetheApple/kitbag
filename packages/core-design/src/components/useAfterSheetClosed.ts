@@ -1,11 +1,19 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-export function useAfterSheetClosed() {
+export function useAfterSheetClosed(visible: boolean) {
   const pending = useRef<(() => void) | null>(null);
+  const shut = useRef(!visible);
+  useEffect(() => {
+    if (!visible) return;
+    pending.current = null;
+    shut.current = false;
+  }, [visible]);
   const after = useCallback((then: () => void) => {
-    pending.current = then;
+    if (shut.current) then();
+    else pending.current = then;
   }, []);
   const closed = useCallback(() => {
+    shut.current = true;
     const then = pending.current;
     pending.current = null;
     then?.();

@@ -267,7 +267,7 @@ export interface UpNextSheetProps extends PlayOrderRoutes {
 function useUpNextSheet(props: UpNextSheetProps) {
   const nav = usePlayOrderNav(props);
   const playQueued = usePlayOrder((s) => s.playQueued);
-  const exit = useLeaveAfterClose(props);
+  const exit = useLeaveAfterClose(props, props.visible);
   const { onDismiss } = props;
   const play = useCallback(
     (stemSetId: number) => {

@@ -9,6 +9,7 @@ import {
   type LibraryStemSetRow,
   type PlayOrderRepositories,
 } from '@kitbag/core-state';
+import { Snackbar } from '@kitbag/core-design';
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -17,6 +18,7 @@ import {
   mountTracked,
   SET_ID,
   unmountTracked,
+  type Player,
 } from './playerHarness.test-helper.tsx';
 
 const NIGHT_BUS = 21;
@@ -152,40 +154,75 @@ function holdAnimationFrames() {
   return { drain };
 }
 
+function oneSetlist(addStemToSetlist: () => Promise<void>): void {
+  libraryStore.setState({
+    setlists: [
+      {
+        setlist: { id: GIG, name: 'Gig', active: false },
+        songCount: 0,
+        rampCount: 0,
+      },
+    ] as never,
+    entries: { [GIG]: [] },
+    refresh: () => Promise.resolve(),
+    addStemToSetlist,
+  });
+}
+
+async function pickGig(p: Player): Promise<void> {
+  const gig = p.renderer.root.find(
+    (node) =>
+      typeof node.type === 'string' &&
+      String(node.props.accessibilityLabel).startsWith('Gig'),
+  );
+  await act(async () => {
+    (gig.props.onPress as () => void)();
+    await Promise.resolve();
+  });
+}
+
 describe('Add to setlist from the player', () => {
   it('says where the song went only once the sheet has closed', async () => {
     const addStemToSetlist = vi.fn(() => Promise.resolve());
-    libraryStore.setState({
-      setlists: [
-        {
-          setlist: { id: GIG, name: 'Gig', active: false },
-          songCount: 0,
-          rampCount: 0,
-        },
-      ] as never,
-      entries: { [GIG]: [] },
-      refresh: () => Promise.resolve(),
-      addStemToSetlist,
-    });
+    oneSetlist(addStemToSetlist);
     const p = await mountTracked();
     await p.press(MENU);
     await p.press('Add to setlist');
     const frames = holdAnimationFrames();
-    const gig = p.renderer.root.find(
-      (node) =>
-        typeof node.type === 'string' &&
-        String(node.props.accessibilityLabel).startsWith('Gig'),
-    );
-    await act(async () => {
-      (gig.props.onPress as () => void)();
-      await Promise.resolve();
-    });
+    await pickGig(p);
     await flush();
     expect(addStemToSetlist).toHaveBeenCalledWith(GIG, SET_ID);
     expect(p.has('Added to Gig')).toBe(false);
     act(frames.drain);
     await flush();
     expect(p.has('Added to Gig')).toBe(true);
+  });
+
+  it('says it once when the sheet closes before the add lands, and not on the next close', async () => {
+    const add = Promise.withResolvers<undefined>();
+    oneSetlist(() => add.promise);
+    const p = await mountTracked();
+    await p.press(MENU);
+    await p.press('Add to setlist');
+    await pickGig(p);
+    await p.press('Cancel');
+    await flush();
+    await act(async () => {
+      add.resolve(undefined);
+      await Promise.resolve();
+    });
+    await flush();
+    expect(p.has('Added to Gig')).toBe(true);
+    await p.press('Open');
+    expect(p.routes.onOpenSetlist).toHaveBeenCalledOnce();
+    const snack = p.renderer.root.find((node) => node.type === Snackbar);
+    act(snack.props.onTimeout as () => void);
+    expect(p.has('Added to Gig')).toBe(false);
+    await p.press(MENU);
+    await p.press('Add to setlist');
+    await p.press('Cancel');
+    await flush();
+    expect(p.has('Added to Gig')).toBe(false);
   });
 });
 
