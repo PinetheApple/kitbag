@@ -567,6 +567,7 @@ endif()
 target_sources(kitbag_core PRIVATE
   src/api/api_click_sound.cpp
   src/media/mono_file_stream.cpp
+  src/media/part_file.cpp
   src/metronome/click_sound_prepare.cpp
   src/metronome/sample_voices.cpp)
 
@@ -576,13 +577,17 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/click_sound_test_prepare.cpp
     tools/metronome/click_sound_test_refuse.cpp
     tools/metronome/click_sound_test_voices.cpp
+    tools/metronome/click_sound_test_write.cpp
     src/media/file_audio_reader.cpp
     src/media/miniaudio_decoder.cpp
     src/media/miniaudio_impl.c
     src/media/mono_file_stream.cpp
+    src/media/part_file.cpp
     src/media/resampling_source_reader.cpp
     src/metronome/click_sound_prepare.cpp
+    src/metronome/click_voices.cpp
     src/metronome/sample_voices.cpp)
   target_include_directories(click_sound_verify PRIVATE src include tools tools/media tools/metronome third_party)
   target_link_libraries(click_sound_verify PRIVATE kitbag_core Threads::Threads m ${CMAKE_DL_LIBS})
+  target_sources(mixdown_verify PRIVATE src/media/part_file.cpp)
 endif()

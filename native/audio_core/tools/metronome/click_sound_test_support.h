@@ -5,10 +5,16 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
 #include "check.h"
+#include "media/file_audio_reader.h"
+#include "metronome/click_sound_prepare.h"
+#include "metronome/custom_sound_limits.h"
 #include "wav_fixture.h"
 
 namespace click_sound_test {
@@ -17,6 +23,9 @@ namespace click_sound_test {
 constexpr float kSubThreshold = 0.00099F;
 constexpr float kSampleTolerance = 1e-6F;
 constexpr float kJustAudible = 0.0011F;
+constexpr auto kFadeFrames = static_cast<size_t>(
+    kitbag::kClickSoundTailFadeSeconds * kitbag::kCustomSoundRate
+);
 
 void ResetHeapPeak();
 size_t HeapPeakGrowth();
@@ -24,6 +33,7 @@ size_t LiveHeapBytes();
 
 void RunPrepareTests();
 void RunRefusalTests();
+void RunWriteTests();
 void RunLoadTests();
 void RunVoiceTests();
 void RunRaceTests();
@@ -73,6 +83,41 @@ inline std::string Fixture(
 
 inline std::string OutPath(const std::string& name) {
   return media_test::UniqueTempPath(name);
+}
+
+inline std::vector<float>
+ReadMono(const std::string& path, uint32_t* rate, uint32_t* channels) {
+  kitbag::FileAudioReader reader;
+  if (!reader.Open(path.c_str())) return {};
+  *rate = reader.sample_rate();
+  *channels = reader.channels();
+  std::vector<float> pcm(reader.total_frames() * reader.channels());
+  reader.ReadFrames(pcm.data(), reader.total_frames());
+  return pcm;
+}
+
+// Regular files only: a device such as /dev/full never reaches end of file.
+inline std::vector<uint8_t> FileBytes(const std::string& path) {
+  if (!std::filesystem::is_regular_file(path)) return {};
+  std::ifstream in(path, std::ios::binary);
+  return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+}
+
+inline float Peak(const std::vector<float>& pcm) {
+  float peak = 0.0F;
+  for (float s : pcm) peak = std::max(peak, std::fabs(s));
+  return peak;
+}
+
+inline int SignChanges(const std::vector<float>& pcm) {
+  int changes = 0;
+  float last = 0.0F;
+  for (float s : pcm) {
+    if (s == 0.0F) continue;
+    if (last != 0.0F && (s > 0.0F) != (last > 0.0F)) ++changes;
+    last = s;
+  }
+  return changes;
 }
 
 }  // namespace click_sound_test

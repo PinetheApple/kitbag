@@ -9,6 +9,7 @@
 
 #include "click_sound_test_support.h"
 #include "media/file_audio_reader.h"
+#include "media/part_file.h"
 #include "metronome/click_sound_prepare.h"
 #include "metronome/custom_sound_limits.h"
 
@@ -29,7 +30,7 @@ constexpr size_t kPrepareHeapBudget = 640 * 1024;
 
 bool Absent(const std::string& path) {
   return !std::filesystem::exists(path) &&
-         !std::filesystem::exists(path + ".part");
+         !std::filesystem::exists(path + kitbag::kPartSuffix);
 }
 
 uint64_t FramesIn(const std::string& path, uint32_t* rate, uint32_t* channels) {
@@ -131,6 +132,34 @@ void TestLongInputStaysBounded() {
   std::remove(in.c_str());
 }
 
+void TestQuietTailStaysBounded() {
+  const std::vector<float> hit = Body(kRate / 4, 0.6F);
+  const std::string in = Fixture(
+      "cs_30s_tail",
+      Concat(hit, SubThresholdLead(kLongInputSeconds * kRate)),
+      1,
+      kRate
+  );
+  const std::string out = OutPath("cs_30s_tail_out");
+  ResetHeapPeak();
+  const kb_result result = kitbag::PrepareClickSound(in.c_str(), out.c_str());
+  const size_t growth = HeapPeakGrowth();
+  std::printf(
+      "  bounded: heap peak +%zu bytes over a 30 s quiet tail\n",
+      growth
+  );
+  Check(
+      result == KB_OK,
+      "bounded: a short hit with a 30 s quiet tail is accepted"
+  );
+  Check(
+      growth < kPrepareHeapBudget,
+      "bounded: reading a 30 s tail to its end holds no more than about 2 s"
+  );
+  std::remove(in.c_str());
+  std::remove(out.c_str());
+}
+
 void TestSilentIsRefused() {
   std::string out;
   Check(
@@ -190,24 +219,6 @@ void TestNonFiniteIsRefused() {
   );
 }
 
-void TestRefusalKeepsExistingOutput() {
-  const std::string out = OutPath("cs_keep_out");
-  const std::vector<uint8_t> previous = {'k', 'e', 'e', 'p'};
-  media_test::WriteBytes(out, previous);
-  const std::string in =
-      Fixture("cs_keep", std::vector<float>(kRate, 0.0F), 1, kRate);
-  Check(
-      kitbag::PrepareClickSound(in.c_str(), out.c_str()) == KB_ERROR_SILENT,
-      "replace: a silent replacement is refused"
-  );
-  Check(
-      std::filesystem::file_size(out) == previous.size(),
-      "replace: a refused replacement leaves the slot's file as it was"
-  );
-  std::remove(in.c_str());
-  std::remove(out.c_str());
-}
-
 void TestLoadMatchesPrepared() {
   constexpr uint32_t kCdRate = 44100;
   const std::string in = Fixture("cs_load", Body(kRate, 0.45F), 1, kRate);
@@ -254,10 +265,10 @@ void RunRefusalTests() {
   TestTrailingSilenceIsTrimmed();
   TestSoundPastLimitIsRefused();
   TestLongInputStaysBounded();
+  TestQuietTailStaysBounded();
   TestSilentIsRefused();
   TestUndecodableIsRefused();
   TestNonFiniteIsRefused();
-  TestRefusalKeepsExistingOutput();
 }
 
 void RunLoadTests() {

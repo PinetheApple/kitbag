@@ -11,7 +11,7 @@
 namespace kitbag {
 
 // Publish, Clear and Collect are app-thread only; BeginBlock, Trigger and
-// Render run in the audio callback and allocate, free and wait on nothing.
+// Render are for the audio callback and allocate, free and wait on nothing.
 class SampleVoices {
  public:
   static constexpr int kMaxVoices = 8;
@@ -24,7 +24,6 @@ class SampleVoices {
     return slot >= 0 && slot < kCustomSoundSlots;
   }
 
-  // False, changing nothing, for a bad slot or no frames.
   bool Publish(
       int slot,
       std::vector<float> frames,

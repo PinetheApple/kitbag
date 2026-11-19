@@ -15,6 +15,7 @@
 #include "analysis/sidecar_path.h"
 #include "analysis/waveform_peaks.h"
 #include "media/audio_source.h"
+#include "media/downmix.h"
 
 namespace kitbag {
 
@@ -43,13 +44,7 @@ class ChunkStream {
         reader_.ReadFrames(interleaved_.data(), kAnalysisChunkFrames);
     ended_ = read.status != ReadStatus::kOk;
     const auto frames = static_cast<size_t>(read.frames);
-    for (size_t f = 0; f < frames; ++f) {
-      float sum = 0.0f;
-      for (uint32_t ch = 0; ch < channels_; ++ch) {
-        sum += interleaved_[f * channels_ + ch];
-      }
-      mono_[f] = sum / static_cast<float>(channels_);
-    }
+    DownmixToMono(interleaved_.data(), frames, channels_, mono_.data());
     return frames;
   }
 

@@ -1,5 +1,6 @@
 #include "kitbag_api.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <cstdio>
@@ -10,8 +11,9 @@
 #include "counting_allocator.h"
 #include "metronome/custom_sound_limits.h"
 #include "metronome/sample_voices.h"
+#include "rt/rt_publisher.h"
 
-constexpr int kExpectedChecks = 66;
+constexpr int kExpectedChecks = 83;
 
 namespace click_sound_test {
 
@@ -27,11 +29,15 @@ constexpr float kRaceLevel = 0.5F;
 constexpr size_t kRaceMinFrames = 300;
 constexpr size_t kRaceFrameSpread = 4000;
 
+constexpr uint64_t kGrace =
+    kitbag::RtPublisher<SampleVoices::Sample>::kReclaimGraceFrames;
+
 struct RaceState {
   SampleVoices voices;
   std::atomic<uint64_t> clock{0};
   std::atomic<bool> done{false};
   bool bounded = true;
+  std::vector<uint64_t> publish_frames;
 };
 
 void RenderLoop(RaceState* state) {
@@ -45,7 +51,7 @@ void RenderLoop(RaceState* state) {
           state->bounded && std::isfinite(sample) &&
           std::fabs(sample) <= kRaceLevel * SampleVoices::kMaxVoices;
     }
-    state->clock.fetch_add(kRaceBlock, std::memory_order_release);
+    state->clock.fetch_add(kRaceBlock, std::memory_order_relaxed);
   }
   state->done.store(true, std::memory_order_release);
 }
@@ -53,7 +59,8 @@ void RenderLoop(RaceState* state) {
 int PublishLoop(RaceState* state) {
   int publishes = 0;
   while (!state->done.load(std::memory_order_acquire)) {
-    const uint64_t now = state->clock.load(std::memory_order_acquire);
+    const uint64_t now = state->clock.load(std::memory_order_relaxed);
+    state->publish_frames.push_back(now);
     const int slot = publishes % kitbag::kCustomSoundSlots;
     if (publishes % kTriggerStride == 0) {
       state->voices.Clear(slot, now, true);
@@ -70,16 +77,27 @@ int PublishLoop(RaceState* state) {
   return publishes;
 }
 
+size_t StillInGrace(const std::vector<uint64_t>& frames, uint64_t now) {
+  return static_cast<size_t>(
+      std::count_if(frames.begin(), frames.end(), [now](uint64_t frame) {
+        return now <= frame + kGrace;
+      })
+  );
+}
+
 void TestLoadWhileRendering() {
   RaceState state;
   std::thread render(RenderLoop, &state);
   const int publishes = PublishLoop(&state);
   render.join();
+  const size_t in_grace =
+      StillInGrace(state.publish_frames, state.publish_frames.back());
   std::printf(
-      "  race: %d publishes against %d blocks, %zu still retired\n",
+      "  race: %d publishes against %d blocks, %zu retired, %zu in grace\n",
       publishes,
       kRaceBlocks,
-      state.voices.retired_size()
+      state.voices.retired_size(),
+      in_grace
   );
   Check(
       state.bounded,
@@ -90,8 +108,9 @@ void TestLoadWhileRendering() {
       "race: the app thread published throughout the render"
   );
   Check(
-      state.voices.retired_size() < static_cast<size_t>(publishes),
-      "race: retired sounds were freed during the run"
+      state.voices.retired_size() <= in_grace &&
+          in_grace < static_cast<size_t>(publishes),
+      "race: only sounds retired within the last grace window are still held"
   );
 }
 
@@ -178,6 +197,7 @@ void RunRaceTests() {
 int main() {
   click_sound_test::RunPrepareTests();
   click_sound_test::RunRefusalTests();
+  click_sound_test::RunWriteTests();
   click_sound_test::RunLoadTests();
   click_sound_test::RunVoiceTests();
   click_sound_test::RunRaceTests();

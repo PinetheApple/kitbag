@@ -4,13 +4,11 @@
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
-#include <fstream>
-#include <iterator>
 #include <string>
 #include <vector>
 
 #include "click_sound_test_support.h"
-#include "media/file_audio_reader.h"
+#include "media/part_file.h"
 #include "metronome/click_sound_prepare.h"
 #include "metronome/custom_sound_limits.h"
 
@@ -28,41 +26,20 @@ constexpr size_t kFormatTagOffset = 20;
 constexpr size_t kBitsOffset = 34;
 constexpr uint8_t kFloatTag = 3;
 constexpr uint8_t kFloatBits = 32;
-constexpr int kResampleToleranceFrames = 4;
-
-std::vector<float>
-ReadMono(const std::string& path, uint32_t* rate, uint32_t* channels) {
-  kitbag::FileAudioReader reader;
-  if (!reader.Open(path.c_str())) return {};
-  *rate = reader.sample_rate();
-  *channels = reader.channels();
-  std::vector<float> pcm(reader.total_frames() * reader.channels());
-  reader.ReadFrames(pcm.data(), reader.total_frames());
-  return pcm;
-}
-
-std::vector<uint8_t> FileBytes(const std::string& path) {
-  std::ifstream in(path, std::ios::binary);
-  return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
-}
+constexpr int kResampleToleranceFrames = 2;
+constexpr int kCrossingTolerance = 1;
 
 float MaxError(
     const std::vector<float>& got,
     const std::vector<float>& want,
     float scale
 ) {
-  if (got.size() != want.size()) return INFINITY;
+  if (got.size() != want.size() || got.size() < kFadeFrames) return INFINITY;
   float worst = 0.0F;
-  for (size_t i = 0; i < got.size(); ++i) {
+  for (size_t i = 0; i + kFadeFrames < got.size(); ++i) {
     worst = std::max(worst, std::fabs(got[i] - want[i] * scale));
   }
   return worst;
-}
-
-float Peak(const std::vector<float>& pcm) {
-  float peak = 0.0F;
-  for (float s : pcm) peak = std::max(peak, std::fabs(s));
-  return peak;
 }
 
 struct Prepared {
@@ -86,7 +63,7 @@ Prepared PrepareAndRead(
   prepared.result = kitbag::PrepareClickSound(in.c_str(), out.c_str());
   prepared.mono = ReadMono(out, &prepared.rate, &prepared.channels);
   prepared.bytes = FileBytes(out);
-  prepared.part_left = std::filesystem::exists(out + ".part");
+  prepared.part_left = std::filesystem::exists(out + kitbag::kPartSuffix);
   std::remove(in.c_str());
   std::remove(out.c_str());
   return prepared;
@@ -180,8 +157,9 @@ void TestResamplesTo48k() {
   constexpr uint32_t kCdRate = 44100;
   constexpr size_t kCdLead = 4410;
   constexpr size_t kCdBody = 22050;
+  const std::vector<float> body = Body(kCdBody, 0.5F);
   const std::vector<float> pcm =
-      Concat(std::vector<float>(kCdLead, 0.0F), Body(kCdBody, 0.5F));
+      Concat(std::vector<float>(kCdLead, 0.0F), body);
   const Prepared got = PrepareAndRead("cs_cd", DualMono(pcm), 2, kCdRate);
   const auto expected = static_cast<long>(kCdBody * kRate / kCdRate);
   std::printf(
@@ -198,6 +176,10 @@ void TestResamplesTo48k() {
       std::labs(static_cast<long>(got.mono.size()) - expected) <=
           kResampleToleranceFrames,
       "resample: the trimmed length scales by 48000/44100"
+  );
+  Check(
+      std::abs(SignChanges(got.mono) - SignChanges(body)) <= kCrossingTolerance,
+      "resample: the waveform keeps its zero crossings"
   );
 }
 

@@ -1,8 +1,12 @@
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <utility>
 #include <vector>
 
 #include "click_sound_test_support.h"
+#include "metronome/click_sound_prepare.h"
+#include "metronome/click_voices.h"
 #include "metronome/sample_voices.h"
 #include "rt/rt_publisher.h"
 
@@ -123,18 +127,38 @@ void TestEmptySlotFallsBack() {
   );
 }
 
+// Gain 2^k per hit: dropping the new hit, stealing the newest and stealing
+// the oldest each leave a different sum.
 void TestOldestVoiceIsStolen() {
   SampleVoices voices;
   voices.Publish(1, std::vector<float>(kBlock * 2, 1.0F), 0, false);
   voices.BeginBlock();
   float last = 0.0F;
+  float gain = 1.0F;
+  float all = 0.0F;
   for (int hit = 0; hit <= SampleVoices::kMaxVoices; ++hit) {
-    voices.Trigger(1, 1.0F);
+    voices.Trigger(1, gain);
+    all += gain;
+    gain *= 2.0F;
     last = voices.Render();
   }
+  Check(last == all - 1.0F, "voice: a hit past the pool replaces the oldest");
+}
+
+void TestBuiltInPeakIsClickSoundPeak() {
+  constexpr double kBeepHz = 1760.0;
+  constexpr double kBeepDecay = 30.0;
+  constexpr int kPeakFrames = 64;
+  constexpr float kPeakTolerance = 0.01F;
+  kitbag::ClickVoices clicks;
+  clicks.Trigger(kBeepHz, 1.0, kBeepDecay, kitbag::kCustomSoundRate);
+  float peak = 0.0F;
+  for (int i = 0; i < kPeakFrames; ++i) {
+    peak = std::max(peak, std::fabs(clicks.Render()));
+  }
   Check(
-      last == static_cast<float>(SampleVoices::kMaxVoices),
-      "voice: a hit past the pool replaces the oldest"
+      std::fabs(peak - kitbag::kClickSoundPeak) < kPeakTolerance,
+      "peak: a built-in hit at gain 1 peaks at kClickSoundPeak"
   );
 }
 
@@ -198,6 +222,7 @@ void RunVoiceTests() {
   TestHitSpansBlocks();
   TestEmptySlotFallsBack();
   TestOldestVoiceIsStolen();
+  TestBuiltInPeakIsClickSoundPeak();
   TestRenderAllocatesNothing();
   TestReplacedSoundRetiresOffTheAudioThread();
   TestClearWhileStoppedFreesAtOnce();

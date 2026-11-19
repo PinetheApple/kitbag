@@ -3,21 +3,17 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <filesystem>
 #include <limits>
-#include <system_error>
 #include <utility>
 
+#include "media/part_file.h"
 #include "media/riff_bytes.h"
 
 namespace kitbag {
 namespace {
 
-using riff::kFmtChunkBytes;
 using riff::kRiffPreambleBytes;
-using riff::PutTag;
 using riff::PutU16;
-using riff::PutU32;
 
 constexpr uint16_t kPcmFormat = 1;
 constexpr float kS16Max = std::numeric_limits<int16_t>::max();
@@ -58,21 +54,13 @@ bool WavWriter::Open(
 
 bool WavWriter::WriteHeader(uint64_t frames) {
   const auto data = static_cast<uint32_t>(frames * kBytesPerFrame);
-  std::vector<uint8_t> header;
-  header.reserve(kHeaderBytes);
-  PutTag(&header, "RIFF");
-  PutU32(&header, kHeaderBytes - kRiffPreambleBytes + data);
-  PutTag(&header, "WAVE");
-  PutTag(&header, "fmt ");
-  PutU32(&header, kFmtChunkBytes);
-  PutU16(&header, kPcmFormat);
-  PutU16(&header, kChannels);
-  PutU32(&header, sample_rate_);
-  PutU32(&header, sample_rate_ * kBytesPerFrame);
-  PutU16(&header, kBytesPerFrame);
-  PutU16(&header, static_cast<uint16_t>(kBitsPerSample));
-  PutTag(&header, "data");
-  PutU32(&header, data);
+  const std::vector<uint8_t> header = riff::WavHeader(
+      {kPcmFormat,
+       static_cast<uint16_t>(kChannels),
+       sample_rate_,
+       static_cast<uint16_t>(kBitsPerSample)},
+      data
+  );
   return std::fseek(file_, 0, SEEK_SET) == 0 &&
          std::fwrite(header.data(), 1, header.size(), file_) == header.size();
 }
@@ -94,9 +82,7 @@ bool WavWriter::Finish() {
   if (file_ == nullptr) return false;
   const bool written = WriteHeader(frames_);
   const bool closed = std::fclose(std::exchange(file_, nullptr)) == 0;
-  std::error_code error;
-  if (written && closed) std::filesystem::rename(part_, path_, error);
-  if (!written || !closed || error) {
+  if (!written || !closed || CommitPartFile(path_) != FileWrite::kOk) {
     Abort();
     return false;
   }
