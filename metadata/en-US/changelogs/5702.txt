@@ -1,0 +1,1 @@
+• A WAV, MP3 or FLAC file that was cut short (an incomplete download or copy) now shows as possibly damaged, instead of importing as a short song with no beat grid.
