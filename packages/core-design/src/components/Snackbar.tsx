@@ -15,8 +15,17 @@ import { createThemedStyles } from '../ThemeProvider.tsx';
 interface SnackbarBase {
   readonly message: string;
   readonly onTimeout: () => void;
-  readonly bottom: number;
   readonly durationMs?: number;
+}
+
+interface Floating {
+  readonly bottom: number;
+  readonly inline?: never;
+}
+
+interface Inline {
+  readonly inline: true;
+  readonly bottom?: never;
 }
 
 interface SnackbarAction {
@@ -29,7 +38,9 @@ interface NoAction {
   readonly onAction?: never;
 }
 
-export type SnackbarProps = SnackbarBase & (SnackbarAction | NoAction);
+export type SnackbarProps = SnackbarBase &
+  (Floating | Inline) &
+  (SnackbarAction | NoAction);
 
 const useStyles = createThemedStyles((theme) => ({
   bar: {
@@ -45,6 +56,13 @@ const useStyles = createThemedStyles((theme) => ({
     paddingLeft: snackbar.textLeft,
     paddingRight: snackbar.actionRight,
     boxShadow: theme.shadow,
+  },
+  inline: {
+    position: 'relative',
+    left: 0,
+    right: 0,
+    marginHorizontal: snackbar.sideInset,
+    marginBottom: snackbar.aboveDock,
   },
   noAction: {
     paddingRight: snackbar.textLeft,
@@ -77,6 +95,7 @@ export function Snackbar({
   onAction,
   onTimeout,
   bottom,
+  inline,
   durationMs = SNACKBAR_DURATION_MS,
 }: SnackbarProps) {
   const styles = useStyles();
@@ -91,7 +110,7 @@ export function Snackbar({
       style={[
         styles.bar,
         actionLabel === undefined && styles.noAction,
-        { bottom },
+        inline === true ? styles.inline : { bottom },
       ]}
     >
       <Text style={styles.message}>{message}</Text>

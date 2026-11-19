@@ -181,6 +181,7 @@ export interface SheetProps {
   readonly onShow?: () => void;
   readonly dim?: boolean;
   readonly scrollEnabled?: boolean;
+  readonly notice?: ReactNode;
   readonly children: ReactNode;
 }
 
@@ -197,6 +198,7 @@ export function Sheet({
   onShow,
   dim = false,
   scrollEnabled = true,
+  notice,
   children,
 }: SheetProps) {
   const styles = useStyles();
@@ -307,6 +309,7 @@ export function Sheet({
         exiting={transitions.sheetOut}
         style={slotStyle}
       >
+        {notice}
         <Animated.View
           style={[styles.sheet, sheetStyle]}
           onLayout={handleLayout}

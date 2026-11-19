@@ -129,7 +129,7 @@ function child(element: ReactElement<Props>, index: number) {
 it('keeps the slide animation off the view that carries the drag transform', () => {
   const frame = openSheet();
   const outer = child(frame, 1);
-  const inner = child(outer, 0);
+  const inner = child(outer, 1);
   expect(outer.props).toMatchObject({
     entering: 'sheetIn',
     exiting: 'sheetOut',
@@ -153,7 +153,7 @@ it('caps the sheet below the status bar so tall content scrolls inside it', () =
 it('covers the scroll touch room under the title so scrolled content clips below a gap', async () => {
   const { SHEET_TOUCH_ROOM } = await import('./Sheet.tsx');
   const { themes } = await import('../theme.ts');
-  const sheet = child(child(openSheet(), 1), 0);
+  const sheet = child(child(openSheet(), 1), 1);
   const scrollFrame = child(sheet, 1);
   const [scroll, cover] = [child(scrollFrame, 0), child(scrollFrame, 1)];
   expect(flat(scrollFrame.props.style).marginVertical).toBe(-SHEET_TOUCH_ROOM);
