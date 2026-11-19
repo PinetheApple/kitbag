@@ -40,6 +40,15 @@ constexpr int kAttackSteps = 5;
 constexpr int kAttackStride = 3;
 constexpr double kMaxTempoErrorBpm = 0.25;
 constexpr double kMaxStemSpreadBpm = 1.0;
+constexpr double kMaxGridLengthSpread = 0.01;
+// Louder noise leaves no beat peak at all and quieter noise no slope, so the
+// pad sits inside a narrow band.
+constexpr double kSwellLagHops = 31.2;
+constexpr float kSwellAttackSec = 0.22f;
+constexpr float kSwellChordAmp = 0.1f;
+constexpr float kSwellNoiseAmp = 0.022f;
+constexpr int kSwellBeatsPerBar = 4;
+constexpr uint32_t kSwellNoiseSeed = 7u;
 
 size_t BeatFrame(int beat, double bpm) {
   const double period = kSecondsPerMinute * kSampleRate / bpm;
@@ -93,6 +102,66 @@ std::vector<float> MakeChordStem(double bpm) {
   return pcm;
 }
 
+float BarSwell(size_t frame, double bar_frames) {
+  const auto phase =
+      static_cast<float>(static_cast<double>(frame) / bar_frames);
+  return 0.5f - 0.5f * std::cos(kTwoPi * phase);
+}
+
+// Noise swelling once a bar slopes the onset autocorrelation, so the chords'
+// broad beat peak crests short of the period while its double does not.
+std::vector<float> MakeSwellingPadStem(double bpm) {
+  std::vector<float> pcm(BeatFrame(kStemBeats, bpm) * 2, 0.0f);
+  const float rate = static_cast<float>(kSampleRate);
+  const double bar_frames =
+      kSecondsPerMinute * kSampleRate / bpm * kSwellBeatsPerBar;
+  uint32_t noise = kSwellNoiseSeed;
+  for (int b = 0; b < kStemBeats; ++b) {
+    const size_t start = BeatFrame(b, bpm);
+    const size_t end = BeatFrame(b + 1, bpm);
+    for (size_t f = start; f < end; ++f) {
+      const float t = static_cast<float>(f - start) / rate;
+      const float attack = std::fmin(t / kSwellAttackSec, 1.0f);
+      const float chord =
+          kSwellChordAmp * attack * Chord(b, static_cast<float>(f) / rate);
+      const float pad =
+          kSwellNoiseAmp * BarSwell(f, bar_frames) * LcgNoise(noise);
+      SetFrame(pcm, f, chord + pad);
+    }
+  }
+  return pcm;
+}
+
+void CheckSwellingPadAgrees() {
+  const double bpm = LagBpm(kSwellLagHops);
+  const BeatResult clicks = AnalyzePcm(MakeClickStem(bpm));
+  const BeatResult pad = AnalyzePcm(MakeSwellingPadStem(bpm));
+  const auto click_beats = static_cast<double>(clicks.beat_times.size());
+  const auto pad_beats = static_cast<double>(pad.beat_times.size());
+  std::printf(
+      "analyze_verify: swelling pad at %.2f BPM -> clicks %.2f (%zu beats), "
+      "pad %.2f (%zu beats)\n",
+      bpm,
+      clicks.bpm,
+      clicks.beat_times.size(),
+      pad.bpm,
+      pad.beat_times.size()
+  );
+  Check(
+      std::fabs(clicks.bpm - bpm) <= kMaxTempoErrorBpm,
+      "stems: the swelling pad's click stem reads the played tempo"
+  );
+  Check(
+      std::fabs(pad.bpm - clicks.bpm) <= kMaxStemSpreadBpm,
+      "stems: a swelling slow-attack pad reads its click stem's tempo"
+  );
+  Check(
+      std::fabs(pad_beats - click_beats) <= kMaxGridLengthSpread * click_beats,
+      "stems: a swelling slow-attack pad's grid matches its click stem's "
+      "length within 1%"
+  );
+}
+
 void CheckStemsAgree(double bpm) {
   const BeatResult clicks = AnalyzePcm(MakeClickStem(bpm));
   const BeatResult chords = AnalyzePcm(MakeChordStem(bpm));
@@ -143,6 +212,7 @@ void CheckSkippedBeat(double bpm) {
 void RunStemTests() {
   for (const double bpm : kStemTempos) CheckStemsAgree(bpm);
   CheckSkippedBeat(kStemTempos[0]);
+  CheckSwellingPadAgrees();
 }
 
 }  // namespace analyze_test

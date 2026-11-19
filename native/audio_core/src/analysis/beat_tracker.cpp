@@ -45,6 +45,11 @@ constexpr int kPulseFold = 2;
 // shortest.
 constexpr float kLongerLagMargin = 1.01f;
 constexpr int kPeakMargin = 1;
+// The double-lag peak is searched this far either side of twice the beat lag,
+// and only overrides the beat lag when they disagree by more than one lag.
+constexpr int kHarmonic = 2;
+constexpr float kHarmonicWindow = 0.1f;
+constexpr double kMaxHarmonicDisagreementLags = 1.0;
 constexpr size_t kMaxSlopePoints = 256;
 constexpr size_t kMinBeatsForSlope = 2;
 
@@ -124,6 +129,31 @@ int BestPeakLag(const std::vector<float>& acf, int min_lag, int max_lag) {
   }
   if (best_lag == 0) return 0;
   return FoldToFasterPulse(acf, best_lag, min_lag);
+}
+
+int StrongestPeak(const std::vector<float>& acf, int lo, int hi) {
+  int peak = 0;
+  for (int lag = lo; lag <= hi; ++lag) {
+    if (IsPeak(acf, lag) && (peak == 0 || acf[lag] > acf[peak])) peak = lag;
+  }
+  return peak;
+}
+
+// A broad beat peak on a sloping baseline crests off the period; the peak at
+// twice the lag lies past the slope and halves back to the period.
+int RefineByHarmonic(const std::vector<float>& onset, int lag) {
+  const float doubled = static_cast<float>(kHarmonic * lag);
+  const auto lo =
+      static_cast<int>(std::floor(doubled * (1.0f - kHarmonicWindow)));
+  const auto hi =
+      static_cast<int>(std::ceil(doubled * (1.0f + kHarmonicWindow)));
+  const auto acf =
+      Autocorrelation(onset, lo - kPeakMargin, hi + kPeakMargin + 1);
+  const int peak = StrongestPeak(acf, lo, hi);
+  if (peak == 0) return lag;
+  const double halved = static_cast<double>(peak) / kHarmonic;
+  if (std::fabs(halved - lag) <= kMaxHarmonicDisagreementLags) return lag;
+  return static_cast<int>(std::lround(halved));
 }
 
 double Median(std::vector<double> values) {
@@ -311,8 +341,9 @@ float BeatTracker::EstimateTempo(
 
   const auto acf =
       Autocorrelation(onset, min_lag - kPeakMargin, max_lag + kPeakMargin);
-  const int best_lag = BestPeakLag(acf, min_lag, max_lag);
-  if (best_lag <= 0) return 0.0f;
+  const int peak_lag = BestPeakLag(acf, min_lag, max_lag);
+  if (peak_lag <= 0) return 0.0f;
+  const int best_lag = RefineByHarmonic(onset, peak_lag);
 
   return kSecondsPerMinute / (static_cast<float>(best_lag) * hop_time);
 }

@@ -40,6 +40,14 @@ constexpr float kBarOneToleranceSec = 0.1f;
 constexpr std::array<float, 5> kBarPitchesHz =
     {110.0f, 164.81f, 130.81f, 196.0f, 146.83f};
 constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
+constexpr uint32_t kLcgMul = 1664525u;
+constexpr uint32_t kLcgInc = 1013904223u;
+constexpr float kLcgScale = 1.0f / 2147483648.0f;
+
+inline float LcgNoise(uint32_t& state) {
+  state = state * kLcgMul + kLcgInc;
+  return static_cast<float>(static_cast<int32_t>(state)) * kLcgScale;
+}
 
 // DownBeat's Hanning window zeroes the click, so the beat-long tone carries the
 // spectral cue and the click only gives the tracker an onset.

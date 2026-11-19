@@ -52,20 +52,12 @@ constexpr float kKickSweepDecayPerSec = 40.0f;
 constexpr float kOffbeatAmp = 0.25f;
 constexpr float kOffbeatDecayPerSec = 200.0f;
 constexpr uint32_t kNoiseSeed = 12345u;
-constexpr uint32_t kLcgMul = 1664525u;
-constexpr uint32_t kLcgInc = 1013904223u;
-constexpr float kLcgScale = 1.0f / 2147483648.0f;
 constexpr int kMissableBeats = 2;
 
 float Kick(float t) {
   const float hz =
       kKickBaseHz + kKickSweepHz * std::exp(-t * kKickSweepDecayPerSec);
   return kKickAmp * std::exp(-t * kKickDecayPerSec) * std::sin(kTwoPi * hz * t);
-}
-
-float Noise(uint32_t& state) {
-  state = state * kLcgMul + kLcgInc;
-  return static_cast<float>(static_cast<int32_t>(state)) * kLcgScale;
 }
 
 float Pad(int beat, float song_t) {
@@ -91,7 +83,7 @@ std::vector<float> MakeSustainedTrack(int period) {
     const float off_t = static_cast<float>((f + period / 2) % period) / rate;
     const float v =
         Pad(beat, static_cast<float>(f) / rate) + Kick(t) +
-        kOffbeatAmp * std::exp(-off_t * kOffbeatDecayPerSec) * Noise(noise);
+        kOffbeatAmp * std::exp(-off_t * kOffbeatDecayPerSec) * LcgNoise(noise);
     pcm[static_cast<size_t>(f) * 2] = v;
     pcm[static_cast<size_t>(f) * 2 + 1] = v;
   }
