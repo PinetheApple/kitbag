@@ -36,6 +36,8 @@ import { RetimeBody } from './RetimeMode.tsx';
 import { StemAppBar } from './StemAppBar.tsx';
 import { Scrubber } from './Scrubber.tsx';
 import { SongFactChips } from './SongFactChips.tsx';
+import { SpeedKeyDock } from './SpeedKeyDock.tsx';
+import { SpeedKeySheet } from './SpeedKeySheet.tsx';
 import { StemList } from './StemList.tsx';
 import { StemMeterSheet } from './StemMeterSheet.tsx';
 import { WAVEFORM_BARS } from './StemRowView.tsx';
@@ -54,7 +56,9 @@ const MIX = 'mix';
 const DETAILS = 'details';
 type Tab = typeof MIX | typeof DETAILS;
 type RetimeAsk = 'reset' | 'leave';
-type PlayerSheet = 'menu' | 'meter' | 'export';
+type PlayerSheet = 'menu' | 'meter' | 'export' | 'speedKey';
+
+const DOCK_GAPS = { top: stemPlayer.dockGap, bottom: stemPlayer.dockGap };
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
@@ -110,16 +114,18 @@ function Notices() {
   );
 }
 
-function Dock({
-  frame,
-  bottom,
-}: {
+interface DockProps {
   readonly frame: MixerFrameValues;
   readonly bottom: number;
-}) {
+  readonly retiming: boolean;
+  readonly onSpeedKey: () => void;
+}
+
+function Dock({ frame, bottom, retiming, onSpeedKey }: DockProps) {
   return (
     <PlayerDock bottomInset={bottom}>
       <Scrubber frame={frame} />
+      {retiming ? null : <SpeedKeyDock gaps={DOCK_GAPS} onOpen={onSpeedKey} />}
       <StemTransport playing={frame.playing} />
     </PlayerDock>
   );
@@ -226,9 +232,10 @@ interface BodyProps {
   readonly bottom: number;
   readonly frame: MixerFrameValues;
   readonly onBack: () => void;
+  readonly onSpeedKey: () => void;
 }
 
-function Body({ bottom, frame, onBack }: BodyProps) {
+function Body({ bottom, frame, onBack, onSpeedKey }: BodyProps) {
   const styles = useStyles();
   const status = useStemPlayer((s) => s.status);
   const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
@@ -252,7 +259,12 @@ function Body({ bottom, frame, onBack }: BodyProps) {
         <LoopUndoSnackbar />
         <ExportCancelledSnackbar />
       </View>
-      <Dock frame={frame} bottom={bottom} />
+      <Dock
+        frame={frame}
+        bottom={bottom}
+        retiming={retiming}
+        onSpeedKey={onSpeedKey}
+      />
     </>
   );
 }
@@ -300,6 +312,7 @@ function usePlayerSheet(retiming: boolean) {
       openMenu: opener('menu'),
       openMeter: opener('meter'),
       openExport: opener('export'),
+      openSpeedKey: opener('speedKey'),
       openTempo: opener(TEMPO_SHEET),
       openClick: (section: ClickSection) => {
         setSheet({ kind: 'click', section });
@@ -367,6 +380,11 @@ function PlayerSheets(props: PlayerSheetsProps) {
         bottomInset={bottomInset}
         onClose={onClose}
       />
+      <SpeedKeySheet
+        visible={sheet === 'speedKey'}
+        bottomInset={bottomInset}
+        onClose={onClose}
+      />
     </>
   );
 }
@@ -402,7 +420,12 @@ export function StemPlayerScreen({
         ) : (
           <StemAppBar onBack={onBack} onMenu={ready ? sheets.openMenu : null} />
         )}
-        <Body bottom={insets.bottom} frame={frame} onBack={onBack} />
+        <Body
+          bottom={insets.bottom}
+          frame={frame}
+          onBack={onBack}
+          onSpeedKey={sheets.openSpeedKey}
+        />
       </View>
       <PlayerSheets
         sheet={sheets.sheet}

@@ -9,9 +9,10 @@ import {
 } from '@kitbag/core-design';
 import { useStemPlayer } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, useWindowDimensions, View } from 'react-native';
+import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
+import { isSetApart, keyText } from '../logic/speedKeyView.ts';
 import { stemNameWidth } from '../logic/stemName.ts';
 import { GainFader } from './GainFader.tsx';
 import { LevelChip } from './LevelChip.tsx';
@@ -56,6 +57,7 @@ export function StemRowView({
     [fontScale],
   );
   const row = useStemPlayer((s) => s.stems[index]);
+  const songKey = useStemPlayer((s) => s.songKey);
   const setGain = useStemPlayer((s) => s.setGain);
   const toggleMute = useStemPlayer((s) => s.toggleMute);
   const solo = useStemPlayer((s) => s.solo);
@@ -130,6 +132,11 @@ export function StemRowView({
                 role={textRoles.stemName}
                 style={[stemStyles.name, row.muted && stemStyles.nameQuiet]}
               />
+              {isSetApart(row, songKey) ? (
+                <Text numberOfLines={1} style={stemStyles.keyTag}>
+                  {keyText(row.key)}
+                </Text>
+              ) : null}
             </Pressable>
             <View style={[styles.wave, row.muted && styles.waveQuiet]}>
               <Waveform
