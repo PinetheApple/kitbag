@@ -790,15 +790,14 @@ referenced but never drew: **setlists**, **setlist detail**, **preset editor**.
   (cleared, or freshly activated) Next loads song 1 and the chip shows the
   setlist name. Deleting the on-stage metronome song itself counts as cleared;
   deleting an on-stage stem song keeps the position. The chip opens the
-  setlist's song list, the loaded
-  song marked NOW; tapping a row loads it, and "Leave setlist" deactivates the
-  setlist. A song
-  loaded from outside the setlist (All songs, search) clears it. With no setlist
-  active the bar keeps its title, and a song loaded on its own shows in the chip
-  as "Not in a setlist"; the chip then opens a sheet with "Clear song" and
-  "Open setlists". Clear song and Leave setlist unlink the loaded song but keep
-  the metronome's current settings, so the bar returns to the plain "Setlists"
-  chip without the sound changing.
+  setlist's song list, the loaded song marked NOW; tapping a row loads it, and
+  "Leave setlist" deactivates the setlist. A song loaded from outside the
+  setlist (All songs, search) clears it. With no setlist active the bar keeps
+  its title, and a song loaded on its own shows in the chip as "Not in a
+  setlist"; the chip then opens a sheet with "Clear song" and "Open setlists".
+  Clear song and Leave setlist unlink the loaded song but keep the metronome's
+  current settings, so the bar returns to the plain "Setlists" chip without the
+  sound changing.
 - **Live edits are unsaved until Save** (owner, 2026-10-31; #212). Changing a
   loaded song's settings on the metronome (tempo, meter, subdivision, accents,
   poly, sound, ramp, mute, count-in) never writes the song; a visible mark shows
