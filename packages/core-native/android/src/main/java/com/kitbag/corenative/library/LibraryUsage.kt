@@ -46,7 +46,7 @@ object LibraryUsage {
     )
   }
 
-  fun missing(root: RootState, relativePaths: Sequence<String>): LibraryAvailability {
+  fun availability(root: RootState, relativePaths: Sequence<String>): LibraryAvailability {
     val missing = mutableListOf<String>()
     val unavailable = mutableListOf<String>()
     for (path in relativePaths) {

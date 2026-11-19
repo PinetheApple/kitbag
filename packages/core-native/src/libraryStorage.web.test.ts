@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { missingFiles, storageReport } from './libraryStorage.web.ts';
+import { fileAvailability, storageReport } from './libraryStorage.web.ts';
 
 it('reports an empty library with no location', async () => {
   await expect(storageReport('kitbag')).resolves.toEqual({
@@ -12,7 +12,7 @@ it('reports an empty library with no location', async () => {
 });
 
 it('reports nothing missing', async () => {
-  await expect(missingFiles(['songs/a/x.mp3'])).resolves.toEqual({
+  await expect(fileAvailability(['songs/a/x.mp3'])).resolves.toEqual({
     missing: [],
     unavailable: [],
     rootAvailable: true,

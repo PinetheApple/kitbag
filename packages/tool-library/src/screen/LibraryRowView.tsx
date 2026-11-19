@@ -25,7 +25,7 @@ import { Pressable, useWindowDimensions, View } from 'react-native';
 import { failureText } from '../logic/notices.ts';
 import { rowLayout } from '../logic/rowLayout.ts';
 import { rowBadges, rowSubtitle, spokenRow } from '../logic/rowText.ts';
-import { useRowFailure } from './useSongFailure.ts';
+import { useRowFailure } from './rowFailureHooks.ts';
 
 const MORE_HIT_BOX = hitBoxStyle(
   hitExtension(libraryList.moreWidth, minTouchTargetDp, {

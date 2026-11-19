@@ -18,25 +18,49 @@ export function rowFilesOf(
   return byKey.get(rowKey(row)) ?? null;
 }
 
+function coalesced(work: () => Promise<void>): () => Promise<void> {
+  let current: Promise<void> | null = null;
+  let again = false;
+  const drain = async () => {
+    await work();
+    while (again) {
+      again = false;
+      await work();
+    }
+    current = null;
+  };
+  return () => {
+    if (current !== null) {
+      again = true;
+      return current;
+    }
+    current = drain();
+    return current;
+  };
+}
+
 export function availabilityRefresher(
   deps: SongLibraryDeps,
   set: SetState,
+  onRootReturned: () => Promise<void>,
 ): () => Promise<void> {
-  let latest = 0;
-  return async () => {
-    latest += 1;
-    const request = latest;
+  let rootAvailable: boolean | null = null;
+  return coalesced(async () => {
     try {
-      const { rows } = await checkRowFiles({
+      const check = await checkRowFiles({
         storedFiles: () => storedRowFiles(deps.records()),
-        missingFiles: deps.files().missingFiles,
+        fileAvailability: deps.files().fileAvailability,
       });
-      if (request !== latest) return;
       set({
-        rowFiles: new Map(rows.map(({ row, files }) => [rowKey(row), files])),
+        rowFiles: new Map(
+          check.rows.map(({ row, files }) => [rowKey(row), files]),
+        ),
       });
+      const returned = rootAvailable === false && check.rootAvailable;
+      rootAvailable = check.rootAvailable;
+      if (returned) await onRootReturned();
     } catch (error) {
       warn('library file availability unread', error);
     }
-  };
+  });
 }

@@ -41,7 +41,7 @@ export interface LibraryFiles {
   ) => Promise<ImportedStemBundle>;
   readonly listStemFolders: () => Promise<readonly string[]>;
   readonly deleteStemFolder: (folderName: string) => Promise<void>;
-  readonly missingFiles: (
+  readonly fileAvailability: (
     relativePaths: readonly string[],
   ) => Promise<LibraryAvailability>;
   readonly onDataFolderChanged: (listener: () => void) => () => void;

@@ -1,6 +1,6 @@
 import {
   getKitbagLibrary,
-  missingFiles,
+  fileAvailability,
   watchDataFolder,
 } from '@kitbag/core-native';
 import {
@@ -79,7 +79,7 @@ const files: LibraryFiles = {
   listStemFolders: () => getKitbagLibrary().listStemFolders(),
   deleteStemFolder: (folderName) =>
     getKitbagLibrary().deleteStemFolder(folderName),
-  missingFiles,
+  fileAvailability,
   onDataFolderChanged: watchDataFolder,
 };
 

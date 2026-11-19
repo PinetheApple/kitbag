@@ -42,7 +42,7 @@ configureSongLibrary({
     importStemBundle: unavailable,
     listStemFolders: () => Promise.resolve([]),
     deleteStemFolder: unavailable,
-    missingFiles: () =>
+    fileAvailability: () =>
       Promise.resolve({ missing: [], unavailable: [], rootAvailable: true }),
     onDataFolderChanged: () => () => undefined,
   },

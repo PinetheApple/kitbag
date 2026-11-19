@@ -43,7 +43,11 @@ export type {
   StemDeckServer,
   StemDeckText,
 } from './NativeKitbagStemDeck';
-export { missingFiles, storageReport, watchDataFolder } from './libraryStorage';
+export {
+  fileAvailability,
+  storageReport,
+  watchDataFolder,
+} from './libraryStorage';
 export { backupFilesAvailable, pickBackup, shareBackup } from './backupFiles';
 export {
   mixdownCancel,

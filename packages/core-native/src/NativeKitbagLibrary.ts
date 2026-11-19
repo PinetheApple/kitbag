@@ -198,7 +198,9 @@ export interface Spec extends TurboModule {
     buckets: Int32,
   ): Promise<readonly Double[]>;
   storageReport(databaseName: string): Promise<StorageReport>;
-  missingFiles(relativePaths: readonly string[]): Promise<LibraryAvailability>;
+  fileAvailability(
+    relativePaths: readonly string[],
+  ): Promise<LibraryAvailability>;
   readonly onDataFolderChanged: EventEmitter<void>;
 }
 

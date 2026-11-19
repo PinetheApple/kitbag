@@ -22,7 +22,7 @@ import {
   replaceButtonLabel,
   replaceSheetTitle,
 } from '../logic/viewText.ts';
-import { useRowFailure } from './useSongFailure.ts';
+import { useRowFailure } from './rowFailureHooks.ts';
 
 const useStyles = createThemedStyles(() => ({
   stack: { gap: space.controlGap },

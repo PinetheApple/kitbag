@@ -317,6 +317,7 @@ describe('analysisFailure', () => {
     ['missing-file', 'unavailable', 'unavailable'],
     ['unavailable', null, 'unavailable'],
     ['unavailable', 'present', 'other'],
+    ['unavailable', 'missing', 'missingFile'],
     ['internal', 'unavailable', 'unavailable'],
     ['internal', 'present', 'other'],
   ] as const)(

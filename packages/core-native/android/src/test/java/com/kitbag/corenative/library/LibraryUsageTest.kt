@@ -157,7 +157,7 @@ class LibraryUsageTest {
     file("songs/a/zero.mp3", 0)
     File(base, "songs/dir.mp3").mkdirs()
 
-    val availability = LibraryUsage.missing(
+    val availability = LibraryUsage.availability(
       mounted(),
       sequenceOf("songs/absent.mp3", "songs/a/present.mp3", "songs/dir.mp3", "songs/a/zero.mp3"),
     )
@@ -171,14 +171,14 @@ class LibraryUsageTest {
     link("songs/out", outside)
     val escapes = listOf("../outside/real.mp3", "songs/../../outside/real.mp3", "/etc/hosts", "songs/out/real.mp3", "")
 
-    assertEquals(escapes, LibraryUsage.missing(mounted(), escapes.asSequence()).missing)
+    assertEquals(escapes, LibraryUsage.availability(mounted(), escapes.asSequence()).missing)
   }
 
   @Test
   fun `an unmounted card makes its paths unavailable, never missing`() {
     val paths = listOf("songs/a/a.mp3", "stems/j/bass.flac")
 
-    val availability = LibraryUsage.missing(RootState.Unmounted(CARD_UUID), paths.asSequence())
+    val availability = LibraryUsage.availability(RootState.Unmounted(CARD_UUID), paths.asSequence())
 
     assertEquals(LibraryAvailability(emptyList(), paths, rootAvailable = false), availability)
   }
@@ -187,7 +187,7 @@ class LibraryUsageTest {
   fun `an unknown location makes absent paths unavailable and the root unavailable`() {
     file("songs/a/present.mp3", 1)
 
-    val availability = LibraryUsage.missing(
+    val availability = LibraryUsage.availability(
       RootState.Mounted(base, known = false),
       sequenceOf("songs/a/present.mp3", "songs/card/only.mp3"),
     )
@@ -200,7 +200,7 @@ class LibraryUsageTest {
     for (i in 0 until LARGE_INPUT step 2) file("songs/s/$i.mp3", 0)
     val paths = (0 until LARGE_INPUT).asSequence().map { "songs/s/$it.mp3" }
 
-    val missing = LibraryUsage.missing(mounted(), paths).missing
+    val missing = LibraryUsage.availability(mounted(), paths).missing
     assertEquals(LARGE_INPUT / 2, missing.size)
     assertEquals("songs/s/1.mp3", missing.first())
     assertEquals("songs/s/${LARGE_INPUT - 1}.mp3", missing.last())

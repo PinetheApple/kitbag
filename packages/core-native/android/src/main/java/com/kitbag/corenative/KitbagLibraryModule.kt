@@ -17,13 +17,12 @@ import com.kitbag.corenative.library.AnalysisEvents
 import com.kitbag.corenative.library.AnalysisFailure
 import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisStore
+import com.kitbag.corenative.library.AnalysisTarget
 import com.kitbag.corenative.library.BackupShare
 import com.kitbag.corenative.library.DataFolder
-import com.kitbag.corenative.library.DataFolderUnavailableException
 import com.kitbag.corenative.library.DocumentPicker
 import com.kitbag.corenative.library.ExportFiles
 import com.kitbag.corenative.library.FileShare
-import com.kitbag.corenative.library.LibraryAvailability
 import com.kitbag.corenative.library.LibraryErrors
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
@@ -31,6 +30,7 @@ import com.kitbag.corenative.library.LibraryUsage
 import com.kitbag.corenative.library.NativeWaveform
 import com.kitbag.corenative.library.StemBundleBridge
 import com.kitbag.corenative.library.StemBundleRefusedException
+import com.kitbag.corenative.library.toMap
 import com.kitbag.corenative.library.StorageUsage
 import com.kitbag.corenative.library.SupportedAudio
 import com.kitbag.corenative.library.VolumeWatcher
@@ -57,16 +57,8 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   init {
     reactContext.addActivityEventListener(picker)
     AnalysisEvents.listener.set(listener)
-    io.execute(::clearBundleStaging)
+    io.execute { bundles.clearStaging() }
     volumes.start()
-  }
-
-  private fun clearBundleStaging() {
-    try {
-      bundles.clearStaging()
-    } catch (e: DataFolderUnavailableException) {
-      Log.i(TAG, "Bundle staging not cleared; the data folder is not mounted", e)
-    }
   }
 
   override fun invalidate() {
@@ -172,18 +164,14 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   }
 
   override fun enqueueAnalysis(relativePath: String, waveformRelativeDir: String, replace: Boolean) {
-    val canonical = try {
-      val root = libraryRoot()
-      LibraryPaths.requireInsideLibrary(root, waveformRelativeDir, allowBase = true)
-      LibraryPaths.relativize(root, LibraryPaths.resolve(root, relativePath))
-    } catch (e: IllegalArgumentException) {
-      Log.w(TAG, "Analysis of $relativePath refused", e)
-      io.execute { recordFailure(relativePath, AnalysisFailure.MISSING_FILE) }
-      return
-    } catch (e: DataFolderUnavailableException) {
-      Log.i(TAG, "Analysis of $relativePath refused", e)
-      io.execute { recordFailure(relativePath, AnalysisFailure.of(e)) }
-      return
+    val canonical = when (val target = AnalysisTarget.of(::libraryRoot, relativePath, waveformRelativeDir)) {
+      is AnalysisTarget.Ready -> target.relativePath
+      AnalysisTarget.Refused -> {
+        Log.w(TAG, "Analysis of $relativePath refused: the path escapes the library")
+        io.execute { recordFailure(relativePath, AnalysisFailure.MISSING_FILE) }
+        return
+      }
+      AnalysisTarget.Deferred -> return
     }
     val request = OneTimeWorkRequestBuilder<AnalysisWorker>()
       .setInputData(
@@ -353,24 +341,17 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       putString("location", location)
     }
 
-  override fun missingFiles(relativePaths: ReadableArray, promise: Promise) {
+  override fun fileAvailability(relativePaths: ReadableArray, promise: Promise) {
     io.execute {
       try {
         val paths = (0 until relativePaths.size()).asSequence().mapNotNull { relativePaths.getString(it) }
         val root = DataFolder.get(reactApplicationContext).rootState()
-        promise.resolve(LibraryUsage.missing(root, paths).toMap())
+        promise.resolve(LibraryUsage.availability(root, paths).toMap())
       } catch (e: Exception) {
         rejectLogged(promise, E_STORAGE_FAILED, "Could not check library files", e)
       }
     }
   }
-
-  private fun LibraryAvailability.toMap(): WritableMap =
-    Arguments.createMap().apply {
-      putArray("missing", Arguments.createArray().apply { missing.forEach(::pushString) })
-      putArray("unavailable", Arguments.createArray().apply { unavailable.forEach(::pushString) })
-      putBoolean("rootAvailable", rootAvailable)
-    }
 
   // Raw causes carry paths; JS gets the code and shows its own text.
   private fun rejectLogged(promise: Promise, code: String, message: String, cause: Exception) {

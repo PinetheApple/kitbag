@@ -32,7 +32,7 @@ function deps(
 ) {
   return {
     storedFiles: vi.fn(() => Promise.resolve(stored)),
-    missingFiles: vi.fn((paths: readonly string[]) =>
+    fileAvailability: vi.fn((paths: readonly string[]) =>
       Promise.resolve({
         missing: paths.filter((path) => missing.includes(path)),
         unavailable: paths.filter((path) => unavailable.includes(path)),
@@ -49,8 +49,8 @@ describe('findMissingRows', () => {
   it('asks about every stored audio path in one call', async () => {
     const source = deps([]);
     await findMissingRows(source);
-    expect(source.missingFiles).toHaveBeenCalledTimes(1);
-    expect(source.missingFiles).toHaveBeenCalledWith([
+    expect(source.fileAvailability).toHaveBeenCalledTimes(1);
+    expect(source.fileAvailability).toHaveBeenCalledWith([
       'songs/a/Everlong.mp3',
       'songs/b/TakeFive.mp3',
       'stems/r/bass.flac',
@@ -116,7 +116,7 @@ describe('removeMissingRows', () => {
   it('checks the disk again rather than trusting an earlier count', async () => {
     const source = deps([]);
     await removeMissingRows(source);
-    expect(source.missingFiles).toHaveBeenCalledTimes(1);
+    expect(source.fileAvailability).toHaveBeenCalledTimes(1);
     expect(source.deleteRow).not.toHaveBeenCalled();
   });
 });

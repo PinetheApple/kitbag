@@ -8,7 +8,7 @@ export interface StoredRowFiles {
 
 export interface MissingFilesSource {
   readonly storedFiles: () => Promise<readonly StoredRowFiles[]>;
-  readonly missingFiles: (
+  readonly fileAvailability: (
     relativePaths: readonly string[],
   ) => Promise<LibraryAvailability>;
 }
@@ -53,7 +53,7 @@ export async function checkRowFiles(
   source: MissingFilesSource,
 ): Promise<RowFilesCheck> {
   const stored = await source.storedFiles();
-  const availability = await source.missingFiles(
+  const availability = await source.fileAvailability(
     stored.flatMap(({ audioPaths }) => audioPaths),
   );
   const missing = new Set(availability.missing);

@@ -1,3 +1,4 @@
+import type { LibraryAvailability } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
 import { rowFilesOf } from './availability.ts';
@@ -13,6 +14,7 @@ import {
 
 const ON_CARD = { missing: [], unavailable: [SONG_PATH], rootAvailable: false };
 const BACK = { missing: [], unavailable: [], rootAvailable: true };
+const FAILURES = 5;
 
 async function startedWithOneSong() {
   const library = setup();
@@ -72,5 +74,62 @@ describe('library file availability', () => {
     library.changeDataFolder(BACK);
     await settle();
     expect(fileFailure(library)?.kind).toBe('other');
+  });
+
+  it('resumes the analysis queue once the card comes back', async () => {
+    const library = setup();
+    await importOne(library.store);
+    library.changeDataFolder(ON_CARD);
+    await library.store.getState().start();
+    const queuedWhileOut = library.files.enqueueAnalysis.mock.calls.length;
+
+    library.changeDataFolder(ON_CARD);
+    await settle();
+    expect(library.files.enqueueAnalysis).toHaveBeenCalledTimes(queuedWhileOut);
+
+    library.changeDataFolder(BACK);
+    await settle();
+    expect(library.files.enqueueAnalysis).toHaveBeenCalledTimes(
+      queuedWhileOut + 1,
+    );
+    expect(library.files.enqueueAnalysis).toHaveBeenLastCalledWith(
+      SONG_PATH,
+      'songs/f1',
+      false,
+    );
+  });
+
+  it('reads the disk once for every failure pending at launch', async () => {
+    const library = setup();
+    await importOne(library.store);
+    for (let n = 0; n < FAILURES; n++)
+      library.stored.push(
+        unversionedResult({ ok: false, error: CODES.failureMissingFile }),
+      );
+    await library.store.getState().start();
+    expect(library.files.fileAvailability).toHaveBeenCalledOnce();
+  });
+
+  it('runs at most one refresh and queues one more for a burst of failures', async () => {
+    const library = await startedWithOneSong();
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    library.files.fileAvailability.mockClear();
+    library.files.fileAvailability.mockImplementation(async () => {
+      await gate;
+      return BACK satisfies LibraryAvailability;
+    });
+    for (let n = 0; n < FAILURES; n++)
+      library.emit(
+        unversionedResult({ ok: false, error: CODES.failureMissingFile }),
+      );
+    await settle();
+    await settle();
+    release();
+    await settle();
+    await settle();
+    expect(library.files.fileAvailability).toHaveBeenCalledTimes(2);
   });
 });

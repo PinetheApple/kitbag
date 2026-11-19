@@ -5,6 +5,7 @@ import android.util.Log
 import com.kitbag.corenative.stemdeck.writeAtomically
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicBoolean
 import org.json.JSONException
 import org.json.JSONObject
 
@@ -57,6 +58,7 @@ class DataFolder(
 ) {
   val internalRoot = File(filesDir, DIR_NAME)
   private val stateFile = File(filesDir, STATE_FILE_NAME)
+  private val warned = AtomicBoolean(false)
 
   fun location(): DataFolderLocation = readLocation() ?: DataFolderLocation.Internal
 
@@ -77,7 +79,7 @@ class DataFolder(
   }
 
   private fun unreadable(cause: Exception): DataFolderLocation? {
-    warn("Unreadable $STATE_FILE_NAME; using internal storage", cause)
+    if (warned.compareAndSet(false, true)) warn("Unreadable $STATE_FILE_NAME; using internal storage", cause)
     return null
   }
 

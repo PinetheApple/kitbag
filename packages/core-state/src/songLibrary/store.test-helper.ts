@@ -230,7 +230,7 @@ export function fakeFiles(
     listStemFolders: vi.fn<Native['listStemFolders']>(() =>
       Promise.resolve([]),
     ),
-    missingFiles: vi.fn<Native['missingFiles']>(() =>
+    fileAvailability: vi.fn<Native['fileAvailability']>(() =>
       Promise.resolve(disk.availability),
     ),
     onDataFolderChanged: vi.fn((listener: () => void) => {

@@ -1,8 +1,4 @@
-import type {
-  AnalysisResultRecord,
-  LibraryRow,
-  SongFiles,
-} from '@kitbag/core-db';
+import type { LibraryRow, SongFiles } from '@kitbag/core-db';
 import type {
   AnalysisResult,
   ImportedAudio,
@@ -21,6 +17,7 @@ import {
   type Removal,
 } from './logic.ts';
 import { cleanName } from '../names.ts';
+import { resultRecord } from './analysisRecord.ts';
 import { availabilityRefresher, type RowFilesByKey } from './availability.ts';
 import {
   outdatedGridQueue,
@@ -143,26 +140,6 @@ const INITIAL: SongLibraryState = {
   codes: null,
   rowFiles: new Map(),
 };
-
-function knownLength(durationSec: number) {
-  return Number.isFinite(durationSec) && durationSec > 0;
-}
-
-function resultRecord(result: AnalysisResult): AnalysisResultRecord {
-  const filePath = result.relativePath;
-  if (!result.ok) return { filePath, ok: false, error: result.error };
-  return {
-    filePath,
-    ok: true,
-    bpm: result.bpm > 0 ? result.bpm : null,
-    beats: result.beats,
-    downbeats: result.downbeats,
-    waveformPath:
-      result.waveformRelativePath === '' ? null : result.waveformRelativePath,
-    durationSec: knownLength(result.durationSec) ? result.durationSec : null,
-    analysisVersion: result.analysisVersion ?? null,
-  };
-}
 
 function readActions(deps: SongLibraryDeps, set: SetState, get: Get) {
   return {
@@ -320,7 +297,7 @@ function analysisActions(
 ) {
   // A result can arrive both as an event and from pendingAnalyses, so applying
   // it must be idempotent; it is acknowledged only once it is stored.
-  const receiveAnalysis = async (result: AnalysisResult) => {
+  const storeResult = async (result: AnalysisResult) => {
     const files = deps.files();
     try {
       const outcome = await deps.records().applyAnalysis(resultRecord(result));
@@ -334,8 +311,11 @@ function analysisActions(
       warn(`analysis result for ${result.relativePath} not stored`, error);
     }
     await get().refresh();
-    if (!result.ok) await refreshAvailability();
     await queue.settled(result.relativePath);
+  };
+  const receiveAnalysis = async (result: AnalysisResult) => {
+    await storeResult(result);
+    if (!result.ok) await refreshAvailability();
   };
   const analyzeUnfinished = async () => {
     const files = deps.files();
@@ -358,7 +338,7 @@ function analysisActions(
         void refreshAvailability();
       });
       for (const result of await files.pendingAnalyses())
-        await receiveAnalysis(result);
+        await storeResult(result);
       await analyzeUnfinished();
       await refreshAvailability();
       await queue.resume();
@@ -426,7 +406,10 @@ export function createSongLibraryStore(
   return createStore<SongLibraryStore>((set, get) => {
     const imports = importTracker();
     const queue = outdatedGridQueue(deps, get);
-    const refreshAvailability = availabilityRefresher(deps, set);
+    const refreshAvailability = availabilityRefresher(deps, set, async () => {
+      await get().analyzeUnfinished();
+      await queue.restart();
+    });
     return {
       ...INITIAL,
       ...readActions(deps, set, get),

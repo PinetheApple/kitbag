@@ -1,5 +1,5 @@
 import { DATABASE_NAME } from '@kitbag/core-db';
-import { missingFiles, storageReport } from '@kitbag/core-native';
+import { fileAvailability, storageReport } from '@kitbag/core-native';
 import {
   findMissingRows,
   removeMissingRows,
@@ -14,7 +14,7 @@ import type { StorageDeps } from './storageModel.ts';
 
 const source: MissingFilesSource = {
   storedFiles: () => storedRowFiles(getDatabase().songLibrary),
-  missingFiles,
+  fileAvailability,
 };
 
 // Settings reports a failed removal itself; the Songs screen must not repeat it.

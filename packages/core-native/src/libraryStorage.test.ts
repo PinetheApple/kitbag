@@ -11,7 +11,7 @@ const report: StorageReport = {
 
 const library = vi.hoisted(() => ({
   storageReport: vi.fn(),
-  missingFiles: vi.fn(),
+  fileAvailability: vi.fn(),
   onDataFolderChanged: vi.fn(),
 }));
 
@@ -19,7 +19,7 @@ vi.mock('./NativeKitbagLibrary', () => ({
   getKitbagLibrary: () => library,
 }));
 
-const { missingFiles, storageReport, watchDataFolder } =
+const { fileAvailability, storageReport, watchDataFolder } =
   await import('./libraryStorage.ts');
 
 beforeEach(() => {
@@ -40,10 +40,10 @@ it('returns what native reports missing and unavailable', async () => {
     unavailable: ['songs/a/x.mp3'],
     rootAvailable: true,
   };
-  library.missingFiles.mockResolvedValue(availability);
+  library.fileAvailability.mockResolvedValue(availability);
 
-  await expect(missingFiles(paths)).resolves.toBe(availability);
-  expect(library.missingFiles).toHaveBeenCalledExactlyOnceWith(paths);
+  await expect(fileAvailability(paths)).resolves.toBe(availability);
+  expect(library.fileAvailability).toHaveBeenCalledExactlyOnceWith(paths);
 });
 
 it('stops hearing data folder changes once unwatched', () => {
