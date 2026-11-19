@@ -6,7 +6,7 @@ import type { ClickSoundFiles } from './click-sound-files';
 import { createClickSoundRepository } from './click-sound-repository';
 import { DatabaseOpenError } from './database-open-error';
 import * as schema from './schema';
-import { migrate, type MigrationDriver } from './migrate';
+import { attempt, migrate, type MigrationDriver } from './migrate';
 import { openConnection } from './openConnection';
 import { createPlayQueueRepository } from './play-queue-repository';
 import { createPracticeRepository } from './practice-repository';
@@ -76,12 +76,12 @@ export function connectDatabase(
     requireForeignKeys(connection);
   } catch (error) {
     // The caller retries, so a failed open must not leave a connection behind.
-    try {
+    const closeErrors = attempt(() => {
       connection.close();
-    } catch {
-      // The migration error is the one worth reporting.
-    }
-    throw error;
+    });
+    throw error instanceof DatabaseOpenError
+      ? error.withCleanupErrors(closeErrors)
+      : error;
   }
   const handle = {
     db: drizzle(drizzleClient(connection), { schema }),

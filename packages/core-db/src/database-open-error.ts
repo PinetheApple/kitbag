@@ -1,3 +1,5 @@
+import { STORAGE_RESULT_CODES } from './sqlite-result-codes';
+
 export type DatabaseOpenErrorKind =
   | 'newer-version'
   | 'legacy-version'
@@ -8,20 +10,9 @@ export type DatabaseOpenErrorKind =
 
 interface DatabaseOpenErrorDetails {
   readonly cause?: unknown;
-  readonly fromVersion?: number;
+  readonly fromVersion?: number | undefined;
   readonly cleanupErrors?: readonly unknown[];
 }
-
-const SQLITE_READONLY = 8;
-const SQLITE_IOERR = 10;
-const SQLITE_FULL = 13;
-const SQLITE_CANTOPEN = 14;
-const STORAGE_RESULT_CODES: ReadonlySet<number> = new Set([
-  SQLITE_READONLY,
-  SQLITE_IOERR,
-  SQLITE_FULL,
-  SQLITE_CANTOPEN,
-]);
 
 // op-sqlite puts the primary SQLite result code on the thrown Error as a number.
 function isStorageFailure(error: unknown): boolean {
@@ -31,7 +22,7 @@ function isStorageFailure(error: unknown): boolean {
   return typeof code === 'number' && STORAGE_RESULT_CODES.has(code);
 }
 
-function describe(
+function formatMessage(
   kind: DatabaseOpenErrorKind,
   fromVersion: number | undefined,
   cause: unknown,
@@ -52,7 +43,7 @@ export class DatabaseOpenError extends Error {
     readonly kind: DatabaseOpenErrorKind,
     { cause, fromVersion, cleanupErrors = [] }: DatabaseOpenErrorDetails = {},
   ) {
-    super(describe(kind, fromVersion, cause));
+    super(formatMessage(kind, fromVersion, cause));
     this.cause = cause;
     this.fromVersion = fromVersion;
     this.cleanupErrors = cleanupErrors;
@@ -68,13 +59,13 @@ export class DatabaseOpenError extends Error {
       cause,
     });
   }
-}
 
-export function attempt(work: () => void): unknown[] {
-  try {
-    work();
-    return [];
-  } catch (error) {
-    return [error];
+  withCleanupErrors(errors: readonly unknown[]): DatabaseOpenError {
+    if (errors.length === 0) return this;
+    return new DatabaseOpenError(this.kind, {
+      cause: this.cause,
+      fromVersion: this.fromVersion,
+      cleanupErrors: [...this.cleanupErrors, ...errors],
+    });
   }
 }

@@ -1,5 +1,5 @@
 import { CLICK_RATE } from './click-rate';
-import { attempt, DatabaseOpenError } from './database-open-error';
+import { DatabaseOpenError } from './database-open-error';
 import { REPAIR_PRESETS } from './preset-repair';
 import { POLY_AGAINST_BAR, RAMP_UNITS } from './preset-rules';
 import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
@@ -384,18 +384,26 @@ export const MIGRATE_V7_TO_V8: readonly string[] = [
   ADD_POLY_ACCENTS,
 ];
 
+export function attempt(work: () => void): unknown[] {
+  try {
+    work();
+    return [];
+  } catch (error) {
+    return [error];
+  }
+}
+
 function runStatements(
   driver: MigrationDriver,
   statements: readonly string[],
 ): unknown[] {
-  try {
+  const setupErrors = attempt(() => {
     // Renames and drops must not fire FK actions, and the pragma is a no-op
     // inside a transaction, so it is toggled around BEGIN.
     driver.exec('PRAGMA foreign_keys = OFF');
     driver.exec('BEGIN');
-  } catch (error) {
-    return [error];
-  }
+  });
+  if (setupErrors.length > 0) return setupErrors;
   try {
     for (const statement of statements) driver.exec(statement);
     driver.setUserVersion(SCHEMA_VERSION);
@@ -466,8 +474,9 @@ export function migrate(driver: MigrationDriver): void {
   const pragmaErrors = attempt(() => {
     driver.exec('PRAGMA foreign_keys = ON');
   });
-  const [cause, ...cleanupErrors] = [...migrationErrors, ...pragmaErrors];
-  if (migrationErrors.length + pragmaErrors.length === 0) return;
+  const errors = [...migrationErrors, ...pragmaErrors];
+  if (errors.length === 0) return;
+  const [cause, ...cleanupErrors] = errors;
   throw DatabaseOpenError.classify(
     migrationErrors.length > 0 ? 'migration' : 'foreign-keys',
     cause,

@@ -10,19 +10,17 @@ vi.mock('@op-engineering/op-sqlite', () => ({ open }));
 
 import { openDatabase } from './client';
 import { memoryClickSoundFiles } from './click-sound-files.test-helper';
+import {
+  opSqliteError,
+  throwsOpenError,
+} from './database-open-error.test-helper';
 import { SCHEMA_VERSION } from './migrate';
+import { SQLITE_CANTOPEN } from './sqlite-result-codes';
 
 const MIGRATION_FAILURE = new Error('disk I/O error');
-const SQLITE_CANTOPEN = 14;
 
-function openError(name: string) {
-  try {
-    openDatabase(memoryClickSoundFiles().files, name);
-  } catch (error) {
-    return error;
-  }
-  throw new Error('expected openDatabase to throw');
-}
+const openNamed = (name: string) => () =>
+  openDatabase(memoryClickSoundFiles().files, name);
 
 beforeEach(() => {
   open.mockReset();
@@ -38,22 +36,19 @@ beforeEach(() => {
 
 describe('openDatabase', () => {
   it('closes the connection when the migration throws, then reports it as the cause', () => {
-    expect(openError('failing')).toMatchObject({
-      name: 'DatabaseOpenError',
-      kind: 'migration',
-      cause: MIGRATION_FAILURE,
-    });
+    const error = throwsOpenError('migration', openNamed('failing'));
+    expect(error.cause).toBe(MIGRATION_FAILURE);
     expect(connection.close).toHaveBeenCalledOnce();
   });
 
-  it('reports the migration error even if closing also fails', () => {
+  it('reports the migration error even if closing also fails, keeping the close error', () => {
+    const closeFailure = new Error('close failed');
     connection.close.mockImplementation(() => {
-      throw new Error('close failed');
+      throw closeFailure;
     });
-    expect(openError('failing')).toMatchObject({
-      kind: 'migration',
-      cause: MIGRATION_FAILURE,
-    });
+    const error = throwsOpenError('migration', openNamed('failing'));
+    expect(error.cause).toBe(MIGRATION_FAILURE);
+    expect(error.cleanupErrors).toEqual([closeFailure]);
   });
 
   it('leaves the connection open when the migration succeeds', () => {
@@ -69,36 +64,32 @@ describe('openDatabase', () => {
     open.mockImplementation(() => {
       throw failure;
     });
-    expect(openError('unreachable')).toMatchObject({
-      name: 'DatabaseOpenError',
-      kind: 'open',
-      cause: failure,
-    });
+    expect(throwsOpenError('open', openNamed('unreachable')).cause).toBe(
+      failure,
+    );
     expect(connection.close).not.toHaveBeenCalled();
   });
 
   it('reports an open refused by storage as a storage failure', () => {
-    const failure = Object.assign(new Error('unable to open database file'), {
-      code: SQLITE_CANTOPEN,
-      extendedCode: SQLITE_CANTOPEN,
-    });
+    const failure = opSqliteError(
+      'unable to open database file',
+      SQLITE_CANTOPEN,
+    );
     open.mockImplementation(() => {
       throw failure;
     });
-    expect(openError('unwritable')).toMatchObject({
-      kind: 'storage',
-      cause: failure,
-    });
+    expect(throwsOpenError('storage', openNamed('unwritable')).cause).toBe(
+      failure,
+    );
   });
 
   it('refuses a newer schema without writing, and closes the connection', () => {
     connection.executeSync.mockImplementation(() => ({
       rows: [{ user_version: SCHEMA_VERSION + 1 }],
     }));
-    expect(openError('newer')).toMatchObject({
-      kind: 'newer-version',
-      fromVersion: SCHEMA_VERSION + 1,
-    });
+    expect(
+      throwsOpenError('newer-version', openNamed('newer')).fromVersion,
+    ).toBe(SCHEMA_VERSION + 1);
     expect(connection.executeSync.mock.calls).toEqual([
       ['PRAGMA user_version'],
     ]);

@@ -4,7 +4,10 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DatabaseOpenError } from './database-open-error';
+import {
+  opSqliteError,
+  throwsOpenError,
+} from './database-open-error.test-helper';
 import {
   migrate,
   MIGRATE_V24_TO_V25,
@@ -13,33 +16,17 @@ import {
   type MigrationDriver,
 } from './migrate';
 import { buildV24Fixture, pragma, rows } from './migrate-fixtures.test-helper';
+import {
+  SQLITE_CONSTRAINT_NOTNULL,
+  SQLITE_FULL,
+  SQLITE_IOERR_FSYNC,
+  SQLITE_NOTADB,
+} from './sqlite-result-codes';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
-const PRIMARY_RESULT_CODE_MASK = 0xff;
-const SQLITE_FULL = 13;
-const SQLITE_IOERR_FSYNC = 1034;
-const SQLITE_CONSTRAINT_NOTNULL = 1299;
-const SQLITE_NOTADB = 26;
 const CORRUPT_FILE_BYTES = 200;
 const GARBAGE_BYTE = 7;
 const FAILING_V25_STATEMENT = MIGRATE_V24_TO_V25[2] ?? '';
-
-function opSqliteError(message: string, extendedCode: number) {
-  return Object.assign(new Error(message), {
-    code: extendedCode & PRIMARY_RESULT_CODE_MASK,
-    extendedCode,
-  });
-}
-
-function openError(work: () => void): DatabaseOpenError {
-  try {
-    work();
-  } catch (error) {
-    if (error instanceof DatabaseOpenError) return error;
-    throw error;
-  }
-  throw new Error('expected a DatabaseOpenError');
-}
 
 function failingAt(
   db: DatabaseSync,
@@ -82,13 +69,10 @@ describe('migrate refuses what it cannot open', () => {
     const driver = nodeSqliteDriver(db);
     const exec = vi.spyOn(driver, 'exec');
     const setUserVersion = vi.spyOn(driver, 'setUserVersion');
-    const error = openError(() => {
+    const error = throwsOpenError('newer-version', () => {
       migrate(driver);
     });
-    expect(error).toMatchObject({
-      kind: 'newer-version',
-      fromVersion: SCHEMA_VERSION + 1,
-    });
+    expect(error.fromVersion).toBe(SCHEMA_VERSION + 1);
     expect(exec).not.toHaveBeenCalled();
     expect(setUserVersion).not.toHaveBeenCalled();
     expect(snapshot(db)).toEqual(before);
@@ -101,11 +85,10 @@ describe('migrate refuses what it cannot open', () => {
     writeFileSync(path, Buffer.alloc(CORRUPT_FILE_BYTES, GARBAGE_BYTE));
     const before = readFileSync(path);
     const db = new DatabaseSync(path);
-    const error = openError(() => {
+    const error = throwsOpenError('open', () => {
       migrate(nodeSqliteDriver(db));
     });
     db.close();
-    expect(error.kind).toBe('open');
     expect(error.cause).toMatchObject({ errcode: SQLITE_NOTADB });
     expect(readFileSync(path)).toEqual(before);
   });
@@ -116,11 +99,10 @@ describe('a failed upgrade', () => {
     const db = buildV24Fixture();
     const before = snapshot(db);
     const failure = opSqliteError('NOT NULL', SQLITE_CONSTRAINT_NOTNULL);
-    const error = openError(() => {
+    const error = throwsOpenError('migration', () => {
       migrate(failingAt(db, FAILING_V25_STATEMENT, failure));
     });
     expect(error).toMatchObject({
-      kind: 'migration',
       fromVersion: V24_SCHEMA_VERSION,
       cause: failure,
       cleanupErrors: [],
@@ -136,12 +118,11 @@ describe('a failed upgrade', () => {
     (_, extendedCode) => {
       const db = buildV24Fixture();
       const failure = opSqliteError('storage', extendedCode);
-      const error = openError(() => {
+      const error = throwsOpenError('storage', () => {
         migrate(
           failingAt(db, FAILING_V25_STATEMENT, failure, { autoRollback: true }),
         );
       });
-      expect(error.kind).toBe('storage');
       expect(error.cause).toBe(failure);
       expect(error.cleanupErrors).toHaveLength(1);
       expect(String(error.cleanupErrors[0])).toMatch(/rollback/);
@@ -161,10 +142,10 @@ describe('a failed upgrade', () => {
         failing.exec(sql);
       },
     };
-    const error = openError(() => {
+    const error = throwsOpenError('storage', () => {
       migrate(driver);
     });
-    expect(error).toMatchObject({ kind: 'storage', cause: failure });
+    expect(error.cause).toBe(failure);
     expect(error.cleanupErrors).toEqual([pragmaFailure]);
   });
 });
