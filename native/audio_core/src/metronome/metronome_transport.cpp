@@ -186,10 +186,8 @@ void Metronome::BeginAnchorExternal(
       pending_anchor_song_pos_ +
       (static_cast<double>(now) - static_cast<double>(pending_anchor_frame_)) /
           sample_rate;
-  // position == song beats, so beat_position_ carries no latency term; the
-  // per-sample bias in AdvanceConstantTempo adds it back (§4.7).
-  // Song second → this signature's beat unit, so an 8th-note bar anchors on the
-  // song's clock like a quarter-note one.
+  // Song beats in this signature's unit, with no latency term: the per-sample
+  // bias in AdvanceConstantTempo adds it back (§4.7).
   beat_position_ = song_seconds * bpm_ * BeatUnitScale() / kSecondsPerMinute;
   if (!running_) grid_state_.last_onset = {};
   running_ = true;

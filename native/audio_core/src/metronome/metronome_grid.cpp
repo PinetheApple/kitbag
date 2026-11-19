@@ -12,6 +12,7 @@
 namespace kitbag {
 
 using metronome_detail::Clamp;
+using metronome_detail::GridSound;
 using metronome_detail::kGridEpsilon;
 using metronome_detail::kMsPerSecond;
 using metronome_detail::kSecondsPerMinute;
@@ -144,27 +145,41 @@ void Metronome::OnGridBeat(const BeatGrid& grid, uint32_t sample_rate) {
   const auto beat = static_cast<size_t>(grid_state_.beat_index);
   current_beat_.store(grid.bars[beat].position, std::memory_order_relaxed);
   if (BarIsMuted(current_bar_)) return;
+  const int accent = GridSound(follow_mixer_, accent_sound_);
   switch (grid_click_.Level(grid, beat)) {
     case GridBeatLevel::kSilent:
       return;
     case GridBeatLevel::kNormal:
-      TriggerSound(normal_sound_, ClickRole::kBeat, sample_rate);
+      TriggerSound(
+          GridSound(follow_mixer_, normal_sound_),
+          ClickRole::kBeat,
+          sample_rate
+      );
       return;
     case GridBeatLevel::kGroup:
-      TriggerSubdivisionVoice(Accent::kAccented, sample_rate);
+      TriggerSound(accent, ClickRole::kAccentedSubdivision, sample_rate);
       return;
     case GridBeatLevel::kBar:
-      TriggerSound(accent_sound_, ClickRole::kAccent, sample_rate);
+      TriggerSound(accent, ClickRole::kAccent, sample_rate);
       return;
   }
 }
 
 void Metronome::OnGridTick(int tick, uint32_t sample_rate) {
+  const int normal = GridSound(follow_mixer_, normal_sound_);
   if (grid_click_.IsHalfBeat(tick, subdivision_)) {
-    TriggerSound(normal_sound_, ClickRole::kBeat, sample_rate);
+    TriggerSound(normal, ClickRole::kBeat, sample_rate);
     return;
   }
-  TriggerSubdivision(subdivision_, tick % subdivision_, sample_rate);
+  if (SubdivisionSlotAccented(subdivision_, tick % subdivision_)) {
+    TriggerSound(
+        GridSound(follow_mixer_, accent_sound_),
+        ClickRole::kAccentedSubdivision,
+        sample_rate
+    );
+    return;
+  }
+  TriggerSound(normal, ClickRole::kSubdivision, sample_rate);
 }
 
 void Metronome::RenderGridBeat(

@@ -12,8 +12,10 @@ namespace {
 using kitbag::Metronome;
 using kitbag::metronome_detail::kBeatAmplitude;
 
+constexpr double kSecondsPerMinute = 60.0;
 constexpr double kSlowBpm = 40.0;
-constexpr int64_t kSlowBeatFrames = kSampleRate * 60 / 40;
+constexpr auto kSlowBeatFrames =
+    static_cast<int64_t>(kSampleRate * kSecondsPerMinute / kSlowBpm);
 constexpr size_t kLongFrames = kSampleRate;
 constexpr size_t kSwapFrames = 3000;
 constexpr float kOldLevel = 0.43F;
@@ -45,7 +47,7 @@ void TestSwapMidRunFadesTheOldVoice() {
       }
   );
   Check(
-      MaxStep(left, 1, kSlowBeatFrames) < kMaxStep,
+      MaxStep(left, 1, kSlowBeatFrames) < kClickFreeStep,
       "swap: replacing a sounding sound fades it out with no click"
   );
   Check(
@@ -53,8 +55,10 @@ void TestSwapMidRunFadesTheOldVoice() {
       "swap: the old voice is gone one fade into the next block"
   );
   Check(
-      left[static_cast<size_t>(kSlowBeatFrames)] ==
-          kNewLevel * static_cast<float>(kBeatAmplitude),
+      std::fabs(
+          left[static_cast<size_t>(kSlowBeatFrames)] -
+          kNewLevel * static_cast<float>(kBeatAmplitude)
+      ) < kShapeTolerance,
       "swap: the next beat plays the new sound"
   );
 }
@@ -69,14 +73,14 @@ void TestStopFadesCustomVoices() {
         if (at == stop_at) metronome.Stop();
       });
   Check(
-      MaxStep(left, 1, stop_at + kAfterStopFrames) < kMaxStep &&
+      MaxStep(left, 1, stop_at + kAfterStopFrames) < kClickFreeStep &&
           Silent(left, stop_at + kCutFadeFrames, stop_at + kAfterStopFrames),
       "stop: a sounding custom voice fades out at the stop, with no click"
   );
 }
 
 constexpr int64_t kSeekBeat = 12000;
-constexpr int64_t kSongStart = 10000;
+constexpr int64_t kSongStart = 13000;
 constexpr int64_t kSeekTo = 30000;
 constexpr int64_t kSeekBlock = 16;
 constexpr int64_t kSeekRenderBlocks = 32;
@@ -90,7 +94,7 @@ void StartFollowing(Metronome& metronome) {
   SetSongBars(grid.get(), 0, 4);
   metronome.SetGrid(std::move(grid), kitbag_test::kZeroClock, true);
   metronome.SetFollowMixer(true);
-  metronome.SetSounds(kCustomSound, kCustomSound);
+  metronome.PreviewSound(kCustomSound, true);
   metronome.Start();
 }
 
@@ -137,9 +141,9 @@ void TestSeekFadesCustomVoices() {
   const auto continued = RenderFollowSeek(true);
   const int64_t onset = FirstSoundFrom(seeked, 0);
   Check(
-      onset >= 0 && MaxStep(seeked, onset + 1, end) < kMaxStep &&
+      onset >= 0 && MaxStep(seeked, onset + 1, end) < kClickFreeStep &&
           Silent(seeked, seek_at + kCutFadeFrames, end),
-      "seek: a mixer seek fades a sounding custom voice out, with no click"
+      "seek: a mixer seek fades a previewed custom voice out, with no click"
   );
   Check(
       !Silent(continued, seek_at + kCutFadeFrames, end),

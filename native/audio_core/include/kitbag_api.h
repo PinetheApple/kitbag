@@ -125,7 +125,8 @@ kb_metronome_set_subdivision(kb_engine* engine, int32_t subdivision);
 KB_EXPORT void
 kb_metronome_set_accent(kb_engine* engine, int32_t beat_index, int32_t accent);
 /* Ids index KB_SOUND_NAMES, then the custom slots (kitbag_click_sound_api.h);
- * an empty slot sounds tick. accent_sound voices accented main and poly beats,
+ * an empty slot sounds tick, and so does a custom id while the metronome
+ * follows the mixer. accent_sound voices accented main and poly beats,
  * normal_sound the rest. An id past both keeps the role's last sound. */
 KB_EXPORT void kb_metronome_set_sounds(
     kb_engine* engine,
@@ -133,10 +134,10 @@ KB_EXPORT void kb_metronome_set_sounds(
     int32_t accent_sound
 );
 /* Ignored unless bars is in Metronome::kCountInBarChoices; distinct != 0 uses
- * `sound`, a KB_SOUND_NAMES id only. The count-in never plays a custom sound:
- * it plays tick where the beat's sound is custom. Replays after stop, not
- * pause; skipped under a grid or anchor, which count in with
- * kb_metronome_count_in_at (kitbag_song_start_api.h). */
+ * `sound`, a KB_SOUND_NAMES id; other ids keep the last sound. The count-in
+ * never plays a custom sound: it plays tick where the beat's sound is custom.
+ * Replays after stop, not pause; skipped under a grid or anchor, which count
+ * in with kb_metronome_count_in_at (kitbag_song_start_api.h). */
 KB_EXPORT void kb_metronome_set_count_in(
     kb_engine* engine,
     int32_t bars,

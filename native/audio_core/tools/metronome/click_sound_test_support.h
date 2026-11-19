@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "check.h"
+#include "heap_probe.h"
 #include "media/file_audio_reader.h"
 #include "metronome/click_sound_prepare.h"
 #include "metronome/custom_sound_limits.h"
@@ -27,9 +28,9 @@ constexpr auto kFadeFrames = static_cast<size_t>(
     kitbag::kClickSoundTailFadeSeconds * kitbag::kCustomSoundRate
 );
 
-void ResetHeapPeak();
-size_t HeapPeakGrowth();
-size_t LiveHeapBytes();
+using kitbag_test::HeapPeakGrowth;
+using kitbag_test::LiveHeapBytes;
+using kitbag_test::ResetHeapPeak;
 
 void RunPrepareTests();
 void RunRefusalTests();

@@ -1,5 +1,6 @@
 #include "metronome/sample_voices.h"
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -66,26 +67,44 @@ void SampleVoices::CutAll() {
   }
 }
 
+float SampleVoices::FadeLevel(const Voice& voice) {
+  return voice.fade_from * static_cast<float>(voice.fade_left) /
+         static_cast<float>(kCutFadeFrames);
+}
+
+float SampleVoices::Tail(const Voice& voice) {
+  const float tail =
+      (voice.frames != nullptr ? voice.last : 0.0F) + FadeLevel(voice);
+  return std::clamp(tail, -kMaxTail, kMaxTail);
+}
+
 void SampleVoices::Cut(Voice& voice) {
-  voice.frames = nullptr;
-  voice.fade_from = voice.last;
+  voice.fade_from = Tail(voice);
   voice.fade_left = kCutFadeFrames;
+  voice.frames = nullptr;
 }
 
 SampleVoices::Voice* SampleVoices::FreeOrOldest() {
   Voice* oldest = &voices_[0];
+  Voice* fading = nullptr;
   for (Voice& voice : voices_) {
     if (voice.frames == nullptr && voice.fade_left == 0) return &voice;
+    if (voice.frames == nullptr) fading = &voice;
     if (voice.cursor > oldest->cursor) oldest = &voice;
   }
-  return oldest;
+  return fading != nullptr ? fading : oldest;
 }
 
 bool SampleVoices::Trigger(int slot, float gain) {
   if (!IsValidSlot(slot) || views_[slot].frames == nullptr) return false;
   const SlotView& view = views_[slot];
-  *FreeOrOldest() =
-      Voice{view.frames, view.length, 0, gain, slot, view.generation};
+  Voice* voice = FreeOrOldest();
+  const float tail = Tail(*voice);
+  *voice = Voice{view.frames, view.length, 0, gain, slot, view.generation};
+  if (tail != 0.0F) {
+    voice->fade_from = tail;
+    voice->fade_left = kCutFadeFrames;
+  }
   return true;
 }
 
@@ -96,9 +115,9 @@ float SampleVoices::Render() {
       voice.last = voice.frames[voice.cursor] * voice.gain;
       sample += voice.last;
       if (++voice.cursor == voice.length) voice.frames = nullptr;
-    } else if (voice.fade_left > 0) {
-      sample += voice.fade_from * static_cast<float>(voice.fade_left) /
-                static_cast<float>(kCutFadeFrames);
+    }
+    if (voice.fade_left > 0) {
+      sample += FadeLevel(voice);
       --voice.fade_left;
     }
   }

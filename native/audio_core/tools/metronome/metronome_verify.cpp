@@ -1,5 +1,5 @@
-// Offline sequencer verification: renders the metronome without a device and
-// asserts click onsets land where the contract says. Suite entry point only.
+// metronome_verify's entry point, and the one translation unit that installs
+// the counting allocator.
 #include <cstdio>
 
 #include "counting_allocator.h"
@@ -8,7 +8,7 @@
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 826;
+constexpr int kExpectedChecks = 829;
 
 void RunGridSuites() {
   metronome_test::RunGridTests();
@@ -35,6 +35,7 @@ void RunMetronomeTests() {
   metronome_test::RunSoundTests();
   metronome_test::RunCustomSoundTests();
   metronome_test::RunCustomSoundCutTests();
+  metronome_test::RunCustomSoundSongTests();
   metronome_test::RunTickTests();
   metronome_test::RunSubdivisionAccentTests();
   metronome_test::RunRigClickScheduleTests();
@@ -50,27 +51,6 @@ void RunMetronomeTests() {
   metronome_test::RunRampStatusTests();
   metronome_test::RunBarPhaseTests();
 }
-
-namespace metronome_test {
-
-namespace {
-size_t g_heap_baseline = 0;
-}  // namespace
-
-void ResetHeapPeak() {
-  g_heap_baseline = kitbag_test::g_live_bytes.load();
-  kitbag_test::g_peak_bytes.store(g_heap_baseline);
-}
-
-size_t HeapPeakGrowth() {
-  return kitbag_test::g_peak_bytes.load() - g_heap_baseline;
-}
-
-size_t LiveHeapBytes() {
-  return kitbag_test::g_live_bytes.load();
-}
-
-}  // namespace metronome_test
 
 void RunAllTests() {
   RunMetronomeTests();

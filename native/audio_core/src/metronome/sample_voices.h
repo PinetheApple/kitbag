@@ -15,9 +15,12 @@ namespace kitbag {
 class SampleVoices {
  public:
   static constexpr int kMaxVoices = 8;
-  static constexpr double kCutFadeSeconds = 0.005;
-  static constexpr auto kCutFadeFrames =
-      static_cast<uint32_t>(kCutFadeSeconds * kCustomSoundRate);
+  static constexpr uint32_t kCutFadeMs = 5;
+  static constexpr uint32_t kMsPerSecond = 1000;
+  static constexpr uint32_t kCutFadeFrames =
+      kCustomSoundRate * kCutFadeMs / kMsPerSecond;
+  // Full scale: a voice stolen again mid-fade stacks tails, and this bounds it.
+  static constexpr float kMaxTail = 1.0F;
 
   struct Sample {
     std::vector<float> frames;
@@ -65,6 +68,8 @@ class SampleVoices {
     uint32_t fade_left = 0;
   };
 
+  static float FadeLevel(const Voice& voice);
+  static float Tail(const Voice& voice);
   static void Cut(Voice& voice);
   Voice* FreeOrOldest();
 

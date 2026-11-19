@@ -70,6 +70,15 @@ inline int BuiltInOrTick(int32_t sound) {
   return IsBuiltInSound(sound) ? sound : Metronome::kTickSound;
 }
 
+// Following the mixer, the click is the song's and keeps the built-ins (§5.3).
+inline int GridSound(bool follow_mixer, int32_t sound) {
+  return follow_mixer ? BuiltInOrTick(sound) : sound;
+}
+
+inline ClickRole BeatRole(bool accented) {
+  return accented ? ClickRole::kAccent : ClickRole::kBeat;
+}
+
 template <std::size_t N>
 bool IsOneOf(const int (&choices)[N], int value) {
   for (const int choice : choices) {

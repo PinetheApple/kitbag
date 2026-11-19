@@ -28,6 +28,8 @@ constexpr int kTriggerStride = 7;
 constexpr float kRaceLevel = 0.5F;
 constexpr size_t kRaceMinFrames = 300;
 constexpr size_t kRaceFrameSpread = 4000;
+constexpr float kRaceReach =
+    (kRaceLevel + SampleVoices::kMaxTail) * SampleVoices::kMaxVoices;
 
 constexpr uint64_t kGrace =
     kitbag::RtPublisher<SampleVoices::Sample>::kReclaimGraceFrames;
@@ -49,9 +51,8 @@ uint64_t RenderLoop(RaceState* state) {
       const int slot = static_cast<int>(i) % kitbag::kCustomSoundSlots;
       if (i % kTriggerStride == 0) state->voices.Trigger(slot, 1.0F);
       const float sample = state->voices.Render();
-      state->bounded =
-          state->bounded && std::isfinite(sample) &&
-          std::fabs(sample) <= kRaceLevel * SampleVoices::kMaxVoices;
+      state->bounded = state->bounded && std::isfinite(sample) &&
+                       std::fabs(sample) <= kRaceReach;
     }
     state->clock.fetch_add(kRaceBlock, std::memory_order_seq_cst);
     ++blocks;
@@ -177,23 +178,6 @@ void TestAbi() {
 }
 
 }  // namespace
-
-namespace {
-size_t g_heap_baseline = 0;
-}  // namespace
-
-void ResetHeapPeak() {
-  g_heap_baseline = kitbag_test::g_live_bytes.load();
-  kitbag_test::g_peak_bytes.store(g_heap_baseline);
-}
-
-size_t HeapPeakGrowth() {
-  return kitbag_test::g_peak_bytes.load() - g_heap_baseline;
-}
-
-size_t LiveHeapBytes() {
-  return kitbag_test::g_live_bytes.load();
-}
 
 void RunRaceTests() {
   TestLoadWhileRendering();

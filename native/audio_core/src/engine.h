@@ -210,6 +210,11 @@ class Engine {
   MixdownJob mixdown_{kSampleRate};
 };
 
+static_assert(
+    kCustomSoundRate == Engine::kSampleRate,
+    "custom sounds are prepared and faded at the engine rate"
+);
+
 }  // namespace kitbag
 
 #endif  // KITBAG_ENGINE_H

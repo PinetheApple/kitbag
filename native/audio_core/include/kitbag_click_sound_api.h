@@ -27,22 +27,22 @@ extern "C" {
  * Returns KB_OK once written; KB_ERROR_INVALID_ARGUMENT for a null path, a
  * file that will not decode or stops decoding before its stated length, or a
  * non-finite sample; KB_ERROR_TOO_LONG when the kept span is longer than
- * KB_MAX_CUSTOM_SOUND_SECONDS;
- * KB_ERROR_SILENT when no sample reaches the threshold; KB_ERROR_NO_SPACE when
- * the volume fills during the write; KB_ERROR_INTERNAL when the write or
- * rename fails otherwise. An error leaves out_path as it was and no ".part"
- * behind. Holds at most KB_MAX_CUSTOM_SOUND_SECONDS of audio in memory,
- * whatever the input's length. */
+ * KB_MAX_CUSTOM_SOUND_SECONDS; KB_ERROR_SILENT when no sample reaches the
+ * threshold; KB_ERROR_NO_SPACE when the volume fills during the write;
+ * KB_ERROR_INTERNAL when the write or rename fails otherwise. An error leaves
+ * out_path as it was and no ".part" behind. Holds at most
+ * KB_MAX_CUSTOM_SOUND_SECONDS of audio in memory, whatever the input's length.
+ */
 KB_EXPORT kb_result
 kb_click_sound_prepare(const char* in_path, const char* out_path);
 
 /* Loads a file kb_click_sound_prepare wrote into custom slot `slot` (0 to
- * KB_CUSTOM_SOUND_SLOTS - 1),
- * resampled to the engine rate, and publishes it for the audio callback; a
- * replaced sound is freed off the audio callback. Returns KB_OK once
- * published; KB_ERROR_INVALID_ARGUMENT for a null engine or path, a slot out
- * of range or a file that will not decode, which keep the slot as it was;
- * KB_ERROR_TOO_LONG for a file longer than KB_MAX_CUSTOM_SOUND_SECONDS.
+ * KB_CUSTOM_SOUND_SLOTS - 1), resampled to the engine rate, and publishes it
+ * for the audio callback; a replaced sound is freed off the audio callback.
+ * Returns KB_OK once published; KB_ERROR_INVALID_ARGUMENT for a null engine or
+ * path, a slot out of range or a file that will not decode, which keep the
+ * slot as it was; KB_ERROR_TOO_LONG for a file longer than
+ * KB_MAX_CUSTOM_SOUND_SECONDS.
  *
  * Load and clear are not serialized: they must not overlap each other, or
  * kb_engine_start, kb_engine_stop or a hold call on another thread, since

@@ -13,13 +13,11 @@ using kitbag::metronome_detail::kBeatAmplitude;
 
 using Setup = std::function<void(Metronome&)>;
 
-constexpr size_t kHitFrames = 2000;
 constexpr int64_t kBarFrames = 4 * kBeatFrames;
 constexpr int64_t kPolyBeatFrames = kBarFrames / 3;
 constexpr int64_t kOnsetSearch = 4;
 constexpr int64_t kBuiltInPeakFrames = 200;
 constexpr double kGainTolerance = 0.02;
-constexpr float kShapeTolerance = 1e-6F;
 constexpr int kCountInBars = 1;
 constexpr int kAccentedSecondSlot = 0b10;
 // Slow enough that the reference beep's beat has fallen silent by the half.
@@ -36,27 +34,12 @@ std::vector<float> RenderWith(const Setup& setup, int normal, int accent) {
   return RenderLeft(metronome, kBarFrames + kBeatFrames);
 }
 
-// The gain a hit was played at, or a negative value when the output at the
-// onset is not the stored sound at one gain.
-double PlayedGain(const std::vector<float>& left, int64_t onset) {
-  const std::vector<float> shape = HitShape(kHitFrames);
-  const double gain = left[static_cast<size_t>(onset)] / shape[0];
-  for (size_t k = 0; k < kHitFrames; ++k) {
-    const float want = shape[k] * static_cast<float>(gain);
-    if (std::fabs(left[static_cast<size_t>(onset) + k] - want) >
-        kShapeTolerance) {
-      return -1.0;
-    }
-  }
-  return gain;
-}
-
 void CheckRole(const char* label, const Setup& setup, int64_t at) {
   const auto custom = RenderWith(setup, kCustomSound, kCustomSound);
   const auto built_in = RenderWith(setup, kBeepSound, kBeepSound);
   const int64_t onset = FirstSoundFrom(custom, at - kOnsetSearch);
   const int64_t built_in_first = FirstSoundFrom(built_in, at - kOnsetSearch);
-  const double gain = PlayedGain(custom, onset);
+  const double gain = PlayedGain(custom, onset).value_or(-1.0);
   const double peak =
       PeakOver(built_in, built_in_first, built_in_first + kBuiltInPeakFrames);
   const bool same_frame = onset == built_in_first - 1;
@@ -84,8 +67,8 @@ void TestCustomHitLandsOnTheBeatFrame() {
       "custom: hits start exactly on frames 0, one beat and one bar"
   );
   Check(
-      PlayedGain(left, 0) == static_cast<float>(kAccentAmplitude) &&
-          PlayedGain(left, kBeatFrames) == static_cast<float>(kBeatAmplitude),
+      GainIs(left, 0, kAccentAmplitude) &&
+          GainIs(left, kBeatFrames, kBeatAmplitude),
       "custom: the accent and a plain beat play the sound unchanged at their "
       "gains"
   );
@@ -144,7 +127,7 @@ void TestCountInKeepsBuiltIns() {
       "count-in: a custom beat sound counts in with tick"
   );
   Check(
-      PlayedGain(custom, kBarFrames) == static_cast<float>(kAccentAmplitude),
+      GainIs(custom, kBarFrames, kAccentAmplitude),
       "count-in: bar one after it plays the custom sound"
   );
 }
@@ -174,8 +157,8 @@ void TestPreviewOfCustomSlot() {
   plain.PreviewSound(kCustomSound, false);
   const auto plain_left = RenderLeft(plain, kBeatFrames);
   Check(
-      PlayedGain(accent_left, 0) == static_cast<float>(kAccentAmplitude) &&
-          PlayedGain(plain_left, 0) == static_cast<float>(kBeatAmplitude),
+      GainIs(accent_left, 0, kAccentAmplitude) &&
+          GainIs(plain_left, 0, kBeatAmplitude),
       "preview: a custom slot plays at the accent or the plain gain"
   );
   Metronome empty;

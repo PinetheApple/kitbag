@@ -5,6 +5,7 @@
 
 namespace kitbag {
 
+using metronome_detail::BeatRole;
 using metronome_detail::BuiltInOrTick;
 using metronome_detail::IsBuiltInSound;
 using metronome_detail::IsOneOf;
@@ -69,11 +70,7 @@ void Metronome::OnCountInBeat(
   const bool downbeat = index == 0;
   const int sound =
       voice.distinct ? voice.sound : (downbeat ? accent_sound_ : normal_sound_);
-  TriggerSound(
-      BuiltInOrTick(sound),
-      downbeat ? ClickRole::kAccent : ClickRole::kBeat,
-      sample_rate
-  );
+  TriggerSound(BuiltInOrTick(sound), BeatRole(downbeat), sample_rate);
 }
 
 }  // namespace kitbag

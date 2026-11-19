@@ -13,6 +13,7 @@ namespace kitbag {
 namespace {
 
 using metronome_detail::BarFraction;
+using metronome_detail::BeatRole;
 using metronome_detail::BuiltInOrTick;
 using metronome_detail::kAccentAmplitude;
 using metronome_detail::kAccentedSubdivisionGain;
@@ -92,10 +93,6 @@ double RoleHz(const SoundPreset& preset, ClickRole role) {
       return preset.poly_hz;
   }
   return preset.beat_hz;
-}
-
-ClickRole BeatRole(bool accented) {
-  return accented ? ClickRole::kAccent : ClickRole::kBeat;
 }
 
 }  // namespace
