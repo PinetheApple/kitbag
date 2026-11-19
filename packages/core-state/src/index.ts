@@ -406,6 +406,13 @@ export {
   type MeterOverride,
 } from '@kitbag/core-db';
 export {
+  canBuildTempoMode,
+  TEMPO_MODE,
+  TEMPO_SOURCE,
+  type BundleTempo,
+  type TempoMode,
+} from '@kitbag/core-db';
+export {
   clickKeyLabel,
   loopEndFrames,
   loopKeyLabel,
@@ -426,6 +433,7 @@ export {
 } from './stemPlayer/mixerClick.ts';
 export { useMixerClickNotice } from './stemPlayer/useMixerClickNotice.ts';
 export {
+  BPM_UNIT,
   bpmFact,
   keyFact,
   shortKeyName,
