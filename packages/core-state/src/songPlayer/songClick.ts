@@ -110,7 +110,6 @@ export function songClickEngine(context: SongClickContext) {
   };
 
   return {
-    fittedTo,
     clickStarting: () => {
       const { sounds, accents } = get().clickSettings;
       push(sounds, accents);

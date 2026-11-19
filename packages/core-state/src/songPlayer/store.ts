@@ -217,7 +217,6 @@ export function createSongPlayerStore(
       }
       detectedGrid = record;
       const grid = recordGrid(record);
-      const meterOverride = meterOverrideOf(record);
       set({
         status: 'ready',
         engineRate,
@@ -225,11 +224,7 @@ export function createSongPlayerStore(
         beats: grid.beats,
         downbeatIndices: grid.downbeatIndices,
         detected: grid.detected,
-        meterOverride,
-        clickSettings: clickEngine.fittedTo({
-          detected: grid.detected,
-          meterOverride,
-        }),
+        meterOverride: meterOverrideOf(record),
       });
       if (decoded > 0)
         correctStoredLength(record, framesToSeconds(decoded, engineRate));

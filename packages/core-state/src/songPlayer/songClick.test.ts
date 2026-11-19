@@ -132,20 +132,6 @@ describe("a song's click settings", () => {
     expect(lastAccentPerBeat(metronome.commands.setAccent)).toEqual(triple);
   });
 
-  it("are at the song's meter in the same update that makes it ready", async () => {
-    const fake = fakeSongRuntime(
-      songRecord({ meterBeatsPerBar: GRID_METER.triple }),
-    );
-    const store = songStore(fake);
-    const atReady: number[] = [];
-    store.subscribe((state, previous) => {
-      if (state.status === 'ready' && previous.status !== 'ready')
-        atReady.push(state.clickSettings.accents.length);
-    });
-    await store.getState().open(SONG_ID, BARS).loaded;
-    expect(atReady).toEqual([GRID_METER.triple]);
-  });
-
   it("refit the accents live when the song's meter changes", async () => {
     const { metronome, store } = await songBesideStandalone();
     await store.getState().toggleClick();
