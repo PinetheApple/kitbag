@@ -12,11 +12,14 @@ import {
   screenBar,
   ScrubRow,
   Sheet,
+  Snackbar,
   songPlayer,
   space,
   stemPlayer,
+  stemSections,
   textRoles,
   textStyle,
+  TransportKey,
   useTextScaled,
   type AppBarAction,
   type PlayerFrame,
@@ -46,7 +49,13 @@ import {
 } from '../logic/lockText.ts';
 import type { BadgeSpec } from '../logic/rowText.ts';
 import { songTitle } from '../logic/songTitle.ts';
-import { REANALYZE_LABEL } from '../logic/viewText.ts';
+import {
+  LOOP_KEY_TEXT,
+  REANALYZE_LABEL,
+  SPEED_KEY_LABEL,
+  SPEED_KEY_TEXT,
+  SPEED_NOTE,
+} from '../logic/viewText.ts';
 import { frameAtTap } from '../logic/waveSeek.ts';
 import type { UsePlayhead } from './playhead.ts';
 
@@ -62,6 +71,7 @@ export interface SongPlayerScreenProps {
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
+  main: { flex: 1 },
   body: { flex: 1 },
   bodyContent: {
     paddingTop: stemPlayer.bodyTop,
@@ -260,11 +270,12 @@ function LockCard({ songId }: { readonly songId: number }) {
   return click ? <Card emphasis="activeGroup">{row}</Card> : <Card>{row}</Card>;
 }
 
-function SongTransport({
-  playing,
-}: {
+interface SongTransportProps {
   readonly playing: PlayerFrame['playing'];
-}) {
+  readonly onSpeed: () => void;
+}
+
+function SongTransport({ playing, onSpeed }: SongTransportProps) {
   const loop = useSongPlayer((s) => s.loop);
   const togglePlay = useSongPlayer((s) => s.togglePlay);
   const skip = useSongPlayer((s) => s.skip);
@@ -277,10 +288,20 @@ function SongTransport({
       playing={playing}
       loopActive={loop.kind !== 'off'}
       loopLabel={loopKeyLabel(loop)}
+      loopText={LOOP_KEY_TEXT}
       skipSeconds={SKIP_SECONDS}
       onLoop={onLoop}
       onSkip={skip}
       onTogglePlay={togglePlay}
+      extraKey={
+        <TransportKey
+          size="dock"
+          text={SPEED_KEY_TEXT}
+          muted
+          accessibilityLabel={SPEED_KEY_LABEL}
+          onPress={onSpeed}
+        />
+      }
     />
   );
 }
@@ -336,6 +357,13 @@ function Body({ songId, bottom, onBack, usePlayhead }: BodyProps) {
   const loopEnd = useSongPlayer(loopEndFrames);
   const playhead = usePlayhead(rate, frames, loopEnd);
   const scrub = useLoopScrub(useSongPlayer);
+  const [speedNote, setSpeedNote] = useState(false);
+  const showSpeedNote = useCallback(() => {
+    setSpeedNote(true);
+  }, []);
+  const hideSpeedNote = useCallback(() => {
+    setSpeedNote(false);
+  }, []);
   if (status !== 'ready')
     return (
       <View style={styles.bodyContent}>
@@ -344,18 +372,27 @@ function Body({ songId, bottom, onBack, usePlayhead }: BodyProps) {
     );
   return (
     <>
-      <ScrollView
-        style={styles.body}
-        contentContainerStyle={styles.bodyContent}
-      >
-        <Card>
-          <SongWave playhead={playhead} />
-          <ScrubRow frame={playhead} {...scrub} />
-        </Card>
-        <LockCard songId={songId} />
-      </ScrollView>
+      <View style={styles.main}>
+        <ScrollView
+          style={styles.body}
+          contentContainerStyle={styles.bodyContent}
+        >
+          <Card>
+            <SongWave playhead={playhead} />
+            <ScrubRow frame={playhead} {...scrub} />
+          </Card>
+          <LockCard songId={songId} />
+        </ScrollView>
+        {speedNote ? (
+          <Snackbar
+            message={SPEED_NOTE}
+            bottom={stemSections.undoAbove}
+            onTimeout={hideSpeedNote}
+          />
+        ) : null}
+      </View>
       <PlayerDock bottomInset={bottom}>
-        <SongTransport playing={playhead.playing} />
+        <SongTransport playing={playhead.playing} onSpeed={showSpeedNote} />
       </PlayerDock>
     </>
   );

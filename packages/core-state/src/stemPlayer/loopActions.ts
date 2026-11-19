@@ -5,6 +5,7 @@ import type { MixerSessionContext } from './mixerSession.ts';
 import { sessionGate } from './sessionGate.ts';
 import type {
   ActionContext,
+  LoopEdge,
   LoopFailure,
   StemPlayerActions,
   StemPlayerState,
@@ -115,23 +116,40 @@ function loopControls(
     await setLoop(bounds);
   };
 
-  return { busy, clear, setLoop, markLoop };
+  const moveLoopEdge = async (edge: LoopEdge, seconds: number) => {
+    const { loop, beats } = get();
+    if (busy() || loop.kind !== 'on') return;
+    const snapped = snapToBeat(seconds, beats);
+    await setLoop(
+      edge === 'start'
+        ? { startSec: snapped, endSec: loop.endSec }
+        : { startSec: loop.startSec, endSec: snapped },
+    );
+  };
+
+  return { busy, clear, setLoop, markLoop, moveLoopEdge };
 }
 
 export function loopActions(
   context: MixerSessionContext<LoopSlice>,
-): Pick<StemPlayerActions, 'markLoop'> {
-  return { markLoop: loopControls(context).markLoop };
+): Pick<StemPlayerActions, 'markLoop' | 'moveLoopEdge'> {
+  const { markLoop, moveLoopEdge } = loopControls(context);
+  return { markLoop, moveLoopEdge };
 }
 
 export function sectionLoopActions(
   context: ActionContext,
 ): Pick<
   StemPlayerActions,
-  'markLoop' | 'undoLoop' | 'dismissLoopUndo' | 'jumpToSection' | 'loopSection'
+  | 'markLoop'
+  | 'moveLoopEdge'
+  | 'undoLoop'
+  | 'dismissLoopUndo'
+  | 'jumpToSection'
+  | 'loopSection'
 > {
   const { set, get } = context;
-  const { busy, clear, setLoop, markLoop } = loopControls(
+  const { busy, clear, setLoop, markLoop, moveLoopEdge } = loopControls(
     context,
     (undoableLoop) => {
       set({ undoableLoop });
@@ -139,6 +157,7 @@ export function sectionLoopActions(
   );
   return {
     markLoop,
+    moveLoopEdge,
     undoLoop: async () => {
       const { undoableLoop } = get();
       if (busy() || undoableLoop === null) return;

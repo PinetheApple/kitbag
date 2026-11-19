@@ -309,6 +309,7 @@ export { UNITY_GAIN, UNSHIFTED_KEY } from './stemPlayer/mix.ts';
 export {
   createStemPlayerStore,
   stemPlayerStore,
+  type LoopEdge,
   type LoopFailure,
   type LoopState,
   type RetimeFailure,

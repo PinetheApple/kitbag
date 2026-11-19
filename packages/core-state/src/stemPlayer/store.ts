@@ -67,6 +67,7 @@ export type StemPlayerStatus =
   'idle' | 'loading' | 'ready' | 'missing' | 'failed';
 
 export type LoopFailure = 'tooShort' | 'pastEnd' | 'engine';
+export type LoopEdge = 'start' | 'end';
 
 export type RetimeFailure = 'notStored';
 
@@ -109,6 +110,7 @@ export interface StemPlayerActions {
   readonly seek: (frame: number) => void;
   readonly skip: (seconds: number) => void;
   readonly markLoop: () => Promise<void>;
+  readonly moveLoopEdge: (edge: LoopEdge, seconds: number) => Promise<void>;
   readonly undoLoop: () => Promise<void>;
   readonly dismissLoopUndo: () => void;
   readonly jumpToSection: (index: number) => Promise<void>;

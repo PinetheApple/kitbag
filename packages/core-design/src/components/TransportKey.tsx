@@ -34,6 +34,7 @@ export type TransportKeyProps = TransportKeyContent & {
   readonly onPress: () => void;
   readonly selected?: boolean;
   readonly disabled?: boolean;
+  readonly muted?: boolean;
   readonly size?: TransportKeySize;
   readonly badge?: string | undefined;
 };
@@ -124,6 +125,7 @@ export function TransportKey({
   onPress,
   selected = false,
   disabled = false,
+  muted = false,
   size: keySize = 'standard',
   badge,
 }: TransportKeyProps) {
@@ -142,7 +144,7 @@ export function TransportKey({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ selected, disabled }}
+      accessibilityState={{ selected, disabled: disabled || muted }}
       disabled={disabled}
       style={[
         styles.key,
@@ -150,7 +152,7 @@ export function TransportKey({
         large && styles.large,
         small && styles.small,
         selected && styles.selected,
-        disabled && styles.disabled,
+        (disabled || muted) && styles.disabled,
       ]}
       hitSlop={HIT_SLOP[keySize]}
       onPress={onPress}
