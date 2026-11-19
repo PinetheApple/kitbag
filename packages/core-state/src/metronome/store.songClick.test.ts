@@ -117,9 +117,11 @@ function fakeEngine() {
     setVolume: vi.fn(),
     setLatencyOffset: vi.fn(),
     setRamp: vi.fn(),
-    setBarMute: vi.fn((enabled: boolean, playBars: number, muteBars: number) => {
-      applied.barMute = { enabled, playBars, muteBars };
-    }),
+    setBarMute: vi.fn(
+      (enabled: boolean, playBars: number, muteBars: number) => {
+        applied.barMute = { enabled, playBars, muteBars };
+      },
+    ),
     engineHold: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
     engineRelease: vi.fn(),
   } satisfies MetronomeCommands;
