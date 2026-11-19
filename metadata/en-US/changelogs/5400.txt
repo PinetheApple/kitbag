@@ -1,0 +1,1 @@
+• In the song player, drag the A and B flags on the scrub bar to move the loop; each edge snaps to a beat.
