@@ -87,7 +87,7 @@ XML
     logs="${shots%/screenshots}/logs"
     mkdir -p "$logs"
     case ${FAKE_CRASH:-none} in
-      header) echo "E/AndroidRuntime( 41): FATAL EXCEPTION: main" > "$logs/crash-report.txt" ;;
+      header) printf '%s\n' "--------- beginning of crash" "E/AndroidRuntime( 41): FATAL EXCEPTION: main" > "$logs/crash-report.txt" ;;
       maestro) : > "$logs/crash-report.txt" ;;
     esac
     [[ ${FAKE_CRASH:-none} == none ]] || cat >> "$logs/crash-report.txt" <<'CRASH'
@@ -240,8 +240,10 @@ FAKE_RESULT=fail FAKE_CRASH=header expect "a flow failing on an app crash prints
 check "  ... and the exception" test "${LAST_OUTPUT/java.lang.NullPointerException/}" != "$LAST_OUTPUT"
 check "  ... and names the crash report" test "${LAST_OUTPUT/crash: *crash-report.txt/}" != "$LAST_OUTPUT"
 check "  ... but not the whole stack" test "${LAST_OUTPUT/Looper.loop/}" == "$LAST_OUTPUT"
+check "  ... nor the lines before the marker" test "${LAST_OUTPUT/beginning of crash/}" == "$LAST_OUTPUT"
 FAKE_RESULT=fail FAKE_CRASH=maestro expect "a crash report without the FATAL EXCEPTION header still prints the exception" \
   "$EXIT_FLOW_FAILED" "java.lang.NullPointerException" "$APK"
+check "  ... from its first line" test "${LAST_OUTPUT/Process: com.kitbag.app/}" != "$LAST_OUTPUT"
 
 FAKE_INDEXED_AFTER=0 expect "fixtures indexed at once" "$EXIT_OK" "all flows passed" "$APK" metronome
 check "  ... are each scanned" adb_called "MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/e2estems.zip"
