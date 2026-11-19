@@ -1,0 +1,1 @@
+• You can now import your own click sounds in the metronome's Sound sheets (WAV, MP3, FLAC or AIFF, up to 2 seconds, two kept at a time), use them on normal or accented beats, and rename, replace or remove them.
