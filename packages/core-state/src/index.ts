@@ -234,6 +234,13 @@ export {
 export { usePlayOrder, useUpNext } from './playOrder/usePlayOrder.ts';
 export { bindStemSetRemovals } from './playOrder/stemSetRemovals.ts';
 export {
+  SKIPPED_STEM_SONG,
+  stemSongFacts,
+  stemSongListFacts,
+  stemSongsById,
+} from './playOrder/stemSongText.ts';
+export { useStemSongs } from './playOrder/useStemSongs.ts';
+export {
   configurePlayOrder,
   type PlayOrderRepositories,
 } from './playOrder/runtime.ts';

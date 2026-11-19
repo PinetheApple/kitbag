@@ -197,6 +197,17 @@ describe('library store', () => {
     expect(loadedName(library)).toBe('One');
   });
 
+  it('adds a stem song at the end of a setlist, as often as asked', async () => {
+    const { library, handle, gig } = await onStage();
+    const stem = await insertStemSet(handle.db, 'Redbone');
+    await library.getState().addStemToSetlist(gig, stem);
+    await library.getState().addStemToSetlist(gig, stem);
+    const entries = library.getState().entries[gig] ?? [];
+    expect(
+      entries.map((e) => (isPresetEntry(e) ? e.preset.name : e.stemSetId)),
+    ).toEqual(['One', 'Two', 'Three', stem, stem]);
+  });
+
   it('skips a stem song deleted since the setlist was read, and says so', async () => {
     const { library, repos, handle, gig } = await onStage();
     const stem = await insertStemSet(handle.db, 'Redbone');

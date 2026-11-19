@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
 import { useBackOrHome } from '@/runtime/backOrHome';
+import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
 // The shell, not the tool, records the visit for Home's Continue card.
 function MetronomeRoute() {
@@ -23,12 +24,14 @@ function MetronomeRoute() {
   }, [router]);
 
   const goBack = useBackOrHome();
+  const routes = useLibraryRoutes();
 
   return (
     <MetronomeScreen
       insets={insets}
       onBack={goBack}
       onOpenSetlists={openSetlists}
+      onOpenStemSet={routes.openStemSet}
     />
   );
 }

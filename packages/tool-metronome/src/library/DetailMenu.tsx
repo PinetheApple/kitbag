@@ -6,12 +6,8 @@ import {
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 
-import {
-  ActionsSheet,
-  ConfirmSheet,
-  guarded,
-  type SheetAction,
-} from './sheets.tsx';
+import { AddSongSheet } from './AddSongSheet.tsx';
+import { ConfirmSheet, guarded, type SheetAction } from './sheets.tsx';
 
 type Kind = 'none' | 'add' | 'save';
 
@@ -46,6 +42,7 @@ interface DetailSheetsProps {
   readonly entries: readonly SetlistEntry[];
   readonly bottomInset: number;
   readonly onEdit: (presetId: number) => void;
+  readonly onAddStemSongs: () => void;
 }
 
 interface AddActionsProps extends Omit<DetailSheetsProps, 'entries'> {
@@ -94,6 +91,9 @@ function useAddActions({
 
 export function DetailSheets(props: DetailSheetsProps) {
   const metronomeEntries = props.entries.filter(isPresetEntry);
+  const stemSetIds = props.entries.flatMap((e) =>
+    isPresetEntry(e) ? [] : [e.stemSetId],
+  );
   const actions = useAddActions({ ...props, entries: metronomeEntries });
   const saveCurrentInto = useLibrary((s) => s.saveCurrentInto);
   const loaded = useLibrary((s) => s.loaded);
@@ -119,11 +119,14 @@ export function DetailSheets(props: DetailSheetsProps) {
   };
   return (
     <>
-      <ActionsSheet
+      <AddSongSheet
         {...common}
         visible={menu.kind === 'add'}
-        title="Add song"
-        actions={actions}
+        setlistId={props.setlistId}
+        stemSetIds={stemSetIds}
+        metronomeActions={actions}
+        onError={menu.setError}
+        onAddStemSongs={props.onAddStemSongs}
       />
       <ConfirmSheet
         {...common}

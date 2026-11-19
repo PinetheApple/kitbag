@@ -14,15 +14,19 @@ import {
 } from '@kitbag/core-design';
 import {
   useLibrary,
+  useMetronome,
+  useStemSongs,
   type ActiveSet,
   type SetlistEntry,
 } from '@kitbag/core-state';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { STEMS_BADGE } from '../logic/setlistEntry.ts';
 import {
   songListHint,
   songListRows,
+  STEM_SONG_HINT,
   type SongListRow,
 } from '../logic/songList.ts';
 import { type ErrorSetter } from '../library/sheets.tsx';
@@ -108,7 +112,10 @@ function SongRow({
   const handlePress = useCallback(() => {
     onPick(row);
   }, [onPick, row]);
-  const spoken = `${row.number}. ${row.name}, ${row.bpm} BPM`;
+  const spoken =
+    row.bpm === null
+      ? `${row.number}. ${row.name}, stem song`
+      : `${row.number}. ${row.name}, ${row.bpm} BPM`;
   return (
     <Pressable
       accessibilityRole="button"
@@ -135,6 +142,10 @@ function SongRow({
           <View>
             <Badge tone="accent" variant="filled" label="NOW" />
           </View>
+        ) : row.bpm === null ? (
+          <View>
+            <Badge label={STEMS_BADGE} />
+          </View>
         ) : (
           <Text style={styles.bpm}>{row.bpm}</Text>
         )}
@@ -153,6 +164,31 @@ export interface SetlistSongsSheetProps {
   readonly set: ActiveSet;
   readonly bottomInset: number;
   readonly onDismiss: () => void;
+  readonly onOpenStemSet?: ((stemSetId: number) => void) | undefined;
+}
+
+function useStemPick(
+  setlistId: number,
+  onOpenStemSet: SetlistSongsSheetProps['onOpenStemSet'],
+) {
+  const openStemEntry = useLibrary((s) => s.openStemEntry);
+  const stop = useMetronome((s) => s.stop);
+  const leavingFor = useRef<number | null>(null);
+  const pick = useCallback(
+    (row: SongListRow) => {
+      if (row.stemSetId === null) return;
+      leavingFor.current = row.stemSetId;
+      stop();
+      void openStemEntry(row.itemId, setlistId);
+    },
+    [openStemEntry, stop, setlistId],
+  );
+  const closed = useCallback(() => {
+    const stemSetId = leavingFor.current;
+    leavingFor.current = null;
+    if (stemSetId !== null) onOpenStemSet?.(stemSetId);
+  }, [onOpenStemSet]);
+  return { pick, closed };
 }
 
 export function SetlistSongsSheet({
@@ -160,23 +196,28 @@ export function SetlistSongsSheet({
   set,
   bottomInset,
   onDismiss,
+  onOpenStemSet,
 }: SetlistSongsSheetProps) {
   const sheetStyles = useSheetStyles();
   const entries = useLibrary((s) => s.entries[set.id] ?? NO_ENTRIES);
   const loadedItemId = useLibrary((s) => s.loaded?.itemId ?? null);
   const loadSong = useLibrary((s) => s.loadSong);
   const leaveSetlist = useLibrary((s) => s.leaveSetlist);
+  const stems = useStemSongs();
+  const stemPick = useStemPick(set.id, onOpenStemSet);
   const [saveError, setSaveError] = useState<string | null>(null);
   const rows = useMemo(
-    () => songListRows(entries, loadedItemId),
-    [entries, loadedItemId],
+    () => songListRows(entries, loadedItemId, stems),
+    [entries, loadedItemId, stems],
   );
+  const hasStems = rows.some((row) => row.stemSetId !== null);
   const handlePick = useCallback(
     (row: SongListRow) => {
       onDismiss();
-      void loadSong(row.presetId, row.itemId, set.id);
+      if (row.presetId === null) stemPick.pick(row);
+      else void loadSong(row.presetId, row.itemId, set.id);
     },
-    [onDismiss, loadSong, set.id],
+    [onDismiss, loadSong, set.id, stemPick],
   );
   const handleLeave = useCallback(() => {
     onDismiss();
@@ -190,6 +231,7 @@ export function SetlistSongsSheet({
       dismissLabel="Close song list"
       bottomInset={bottomInset}
       onDismiss={onDismiss}
+      onClosed={stemPick.closed}
     >
       <Text style={sheetStyles.songHint}>{songListHint(set)}</Text>
       <View>
@@ -212,6 +254,7 @@ export function SetlistSongsSheet({
           ),
         )}
       </View>
+      {hasStems ? <SheetHint>{STEM_SONG_HINT}</SheetHint> : null}
       {saveError === null ? null : <SheetHint>{saveError}</SheetHint>}
       <Button
         variant="ghost"

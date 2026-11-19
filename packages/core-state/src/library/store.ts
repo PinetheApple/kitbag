@@ -74,6 +74,7 @@ export interface LibraryActions {
   deleteSetlist: (setlistId: number) => Promise<void>;
   newSongFromCurrent: (name: string, setlistId?: number) => Promise<number>;
   addToSetlist: (setlistId: number, presetId: number) => Promise<void>;
+  addStemToSetlist: (setlistId: number, stemSetId: number) => Promise<void>;
   reorder: (setlistId: number, from: number, to: number) => Promise<void>;
   moveToSetlist: (itemId: number, setlistId: number) => Promise<void>;
   removeFromSet: (itemId: number) => Promise<void>;
@@ -187,6 +188,10 @@ function itemActions(deps: LibraryDeps, get: Get) {
   return {
     addToSetlist: async (setlistId: number, presetId: number) => {
       await sets().add(setlistId, presetId);
+      await get().refresh();
+    },
+    addStemToSetlist: async (setlistId: number, stemSetId: number) => {
+      await sets().addStemSet(setlistId, stemSetId);
       await get().refresh();
     },
     reorder: async (setlistId: number, from: number, to: number) => {

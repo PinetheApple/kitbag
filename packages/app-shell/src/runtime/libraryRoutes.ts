@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 
+export const ADD_STEM_SONGS = 'add';
+
 export function useLibraryRoutes() {
   const router = useRouter();
   return useMemo(
@@ -20,6 +22,9 @@ export function useLibraryRoutes() {
       // Unlike push, navigate keeps one screen when a double tap repeats the id.
       openStemSet: (id: number) => {
         router.navigate(`/stems/${String(id)}`);
+      },
+      openStemSongsToAdd: () => {
+        router.push({ pathname: '/stems', params: { [ADD_STEM_SONGS]: '1' } });
       },
       openSong: (id: number) => {
         router.navigate(`/library/${String(id)}`);
