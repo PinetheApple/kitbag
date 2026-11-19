@@ -45,3 +45,19 @@ export const toolsManager = {
   noteV: 10,
   noteH: 12,
 } as const;
+
+export const dataFolder = {
+  volumeRowMinHeight: 58,
+  highlightEdge: 2,
+  pathTop: 4,
+  locationGap: 6,
+} as const;
+
+export const dataFolderType = {
+  progress: {
+    family: fontFamily.display,
+    weight: 500,
+    size: 13.5,
+    tabular: true,
+  },
+} as const satisfies Record<string, TypeRole>;
