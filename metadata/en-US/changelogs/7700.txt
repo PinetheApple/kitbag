@@ -1,0 +1,2 @@
+• If Kitbag can't open your data and it was interrupted mid-save, "Save a copy" now still saves a complete copy instead of asking you to restart Kitbag. If there isn't room, or the data can't be read, it tells you which.
+• Kitbag now keeps a detailed log of each practice session, ready for the practice history screens.
