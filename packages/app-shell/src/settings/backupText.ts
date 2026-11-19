@@ -36,6 +36,7 @@ export const RESTORE_ORDER: readonly Category[] = [
   'tunings',
   'practiceSessions',
   'librarySongs',
+  'stemSongs',
   'countInSettings',
   'metronomeSettings',
   'clickSounds',
@@ -50,6 +51,7 @@ export const CATEGORY_LABELS: Readonly<Record<Category, string>> = {
   countInSettings: 'Count-in',
   metronomeSettings: 'Metronome',
   clickSounds: 'Click sounds',
+  stemSongs: 'Stem songs',
 };
 
 const NOUNS: Readonly<Record<Category, readonly [string, string]>> = {
@@ -61,6 +63,7 @@ const NOUNS: Readonly<Record<Category, readonly [string, string]>> = {
   countInSettings: ['count-in setting', 'count-in settings'],
   metronomeSettings: ['metronome setup', 'metronome setups'],
   clickSounds: ['click sound', 'click sounds'],
+  stemSongs: ['stem song', 'stem songs'],
 };
 
 const MONTHS = [
@@ -82,6 +85,7 @@ const MERGE_HINT =
   'Keeps what you have. Items already here are updated, not duplicated.';
 const NOTHING_DELETED = 'Deletes nothing you have';
 const FILES_NOT_INCLUDED = 'files not included';
+const NOT_ON_DEVICE = 'not on this phone';
 const REPLACE_EVERYTHING = 'Replace everything';
 const MERGE_LABEL_CATEGORIES = 2;
 const NOTHING_CHANGED = 'Nothing was changed.';
@@ -118,6 +122,14 @@ export function sourceDetail(
   );
 }
 
+const notOnDevice = (plan: CategoryPlan | undefined) => plan?.notOnDevice ?? 0;
+
+function stemSongsValue(incoming: number, plan: CategoryPlan | undefined) {
+  const missing = notOnDevice(plan);
+  if (missing === 0) return String(incoming);
+  return `${String(incoming)} ${SEPARATOR} ${String(missing)} ${NOT_ON_DEVICE}`;
+}
+
 export function categoryValue(
   category: Category,
   incoming: number,
@@ -125,6 +137,7 @@ export function categoryValue(
 ): string {
   if (category === 'librarySongs')
     return `${String(incoming)} ${SEPARATOR} ${FILES_NOT_INCLUDED}`;
+  if (category === 'stemSongs') return stemSongsValue(incoming, plan);
   const total =
     category === 'practiceSessions'
       ? counted(category, incoming)
@@ -150,9 +163,10 @@ function incomingList(
   counts: ImportPlan['counts'],
 ): string {
   return joined(
-    categories.map((category) =>
-      counted(category, counts[category]?.incoming ?? 0),
-    ),
+    categories.map((category) => {
+      const plan = counts[category];
+      return counted(category, (plan?.incoming ?? 0) - notOnDevice(plan));
+    }),
     '&',
   );
 }
@@ -207,7 +221,10 @@ export function restoredText(
     (category) => counts[category] !== undefined,
   );
   const verb = mode === 'merge' ? 'Merged' : 'Replaced with';
-  return `${verb} ${incomingList(categories, counts)}.`;
+  const restored = `${verb} ${incomingList(categories, counts)}.`;
+  const missing = notOnDevice(counts.stemSongs);
+  if (missing === 0) return restored;
+  return `${restored} ${counted('stemSongs', missing)} ${NOT_ON_DEVICE}.`;
 }
 
 export function restorePrompt(phase: RestoreState['phase']): string | null {

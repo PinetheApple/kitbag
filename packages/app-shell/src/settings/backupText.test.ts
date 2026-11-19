@@ -84,6 +84,31 @@ describe('category rows', () => {
   });
 });
 
+describe('stem songs row', () => {
+  it('shows the count, and how many have no stem song on this phone', () => {
+    expect(categoryValue('stemSongs', 3, undefined)).toBe('3');
+    expect(
+      categoryValue('stemSongs', 3, counts({ incoming: 3, notOnDevice: 0 })),
+    ).toBe('3');
+    expect(
+      categoryValue('stemSongs', 3, counts({ incoming: 3, notOnDevice: 1 })),
+    ).toBe('3 · 1 not on this phone');
+  });
+
+  it('reports the stem songs a restore skipped', () => {
+    expect(
+      restoredText('merge', {
+        stemSongs: counts({ incoming: 3, notOnDevice: 2 }),
+      }),
+    ).toBe('Merged 1 stem song. 2 stem songs not on this phone.');
+    expect(
+      restoredText('replace', {
+        stemSongs: counts({ incoming: 1, notOnDevice: 0 }),
+      }),
+    ).toBe('Replaced with 1 stem song.');
+  });
+});
+
 describe('mode copy', () => {
   it('promises merge keeps what you have', () => {
     expect(modeHint(MERGE_PLAN)).toBe(
