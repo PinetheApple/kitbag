@@ -40,16 +40,16 @@ vi.mock('react-native', () => ({
   Text: 'Text',
   View: 'View',
   StyleSheet: { create: <T>(styles: T) => styles, absoluteFill: {} },
+  useWindowDimensions: () => ({ height: 0 }),
 }));
 vi.mock('react-native-reanimated', () => ({
   default: { View: 'Animated.View' },
   FadeIn: transition('scrimIn'),
-  FadeOut: transition('scrimOut'),
   SlideInDown: settlingTransition('sheetIn'),
-  SlideOutDown: transition('sheetOut'),
   useAnimatedStyle: () => DRAG,
   useSharedValue: (value: number) => ({ value }),
   withSpring: vi.fn(),
+  withTiming: vi.fn(),
 }));
 vi.mock('react-native-gesture-handler', () => ({
   Gesture: { Pan: () => chain },
@@ -99,7 +99,6 @@ type Props = Readonly<{
   }) => void;
   ref?: unknown;
   entering?: unknown;
-  exiting?: unknown;
   style?: unknown;
   children?: ReactNode;
 }>;
@@ -131,10 +130,7 @@ it('keeps the slide animation off the view that carries the drag transform', () 
   const frame = openSheet();
   const outer = child(frame, 1);
   const inner = child(outer, 1);
-  expect(outer.props).toMatchObject({
-    entering: 'sheetIn',
-    exiting: 'sheetOut',
-  });
+  expect(outer.props.entering).toBe('sheetIn');
   expect([outer.props.style].flat()).not.toContain(DRAG);
   expect(inner.props.entering).toBeUndefined();
   expect([inner.props.style].flat()).toContain(DRAG);

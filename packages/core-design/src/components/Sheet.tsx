@@ -12,6 +12,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
   type AccessibilityActionEvent,
   type LayoutChangeEvent,
 } from 'react-native';
@@ -19,12 +20,11 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, {
   FadeIn,
-  FadeOut,
   SlideInDown,
-  SlideOutDown,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -227,17 +227,17 @@ export function Sheet({
   const transitions = useMemo(
     () => ({
       scrimIn: FadeIn.reduceMotion(motion),
-      scrimOut: FadeOut.reduceMotion(motion),
       sheetIn: SlideInDown.reduceMotion(motion).withCallback((finished) => {
         'worklet';
         if (finished) scheduleOnRN(focusTitle);
       }),
-      sheetOut: SlideOutDown.reduceMotion(motion),
     }),
     [motion, focusTitle],
   );
   const dragY = useSharedValue(0);
   const sheetHeight = useSharedValue(0);
+  const scrimOpacity = useSharedValue(1);
+  const { height: windowHeight } = useWindowDimensions();
 
   const handleLayout = useCallback(
     (event: LayoutChangeEvent) => {
@@ -274,6 +274,7 @@ export function Sheet({
   const noticeStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: dragY.value }],
   }));
+  const scrimStyle = useAnimatedStyle(() => ({ opacity: scrimOpacity.value }));
 
   const { show, hide, topInset } = useSheetPortal();
   const slotStyle = useMemo(
@@ -281,37 +282,57 @@ export function Sheet({
     [styles.sheetSlot, topInset],
   );
   const id = useId();
+  const present = useRef(false);
+  const visibleNow = useRef(visible);
+  const finishExit = useCallback(() => {
+    if (visibleNow.current) return;
+    present.current = false;
+    hide(id);
+  }, [hide, id]);
 
+  // A layout `exiting` animation leaves a zombie view that a same-commit insert
+  // overflows (reanimated#7493, RN#57017), so the slot leaves only after this.
   useEffect(() => {
-    if (!visible) return undefined;
-    dragY.value = 0;
-    onShow?.();
-    return onHardwareBack(onDismiss);
+    visibleNow.current = visible;
+    if (visible) {
+      present.current = true;
+      dragY.value = 0;
+      scrimOpacity.value = 1;
+      onShow?.();
+      return onHardwareBack(onDismiss);
+    }
+    if (!present.current) return undefined;
+    const exit = { reduceMotion: motion };
+    scrimOpacity.value = withTiming(0, exit);
+    dragY.value = withTiming(windowHeight, exit, (finished) => {
+      'worklet';
+      if (finished) scheduleOnRN(finishExit);
+    });
+    return undefined;
     // onShow and onDismiss run per opening, not per new callback identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  const content = visible ? (
+  const content = (
     <View style={styles.frame} onAccessibilityEscape={onDismiss}>
       <Animated.View
         entering={transitions.scrimIn}
-        exiting={transitions.scrimOut}
-        style={[StyleSheet.absoluteFill, dim && styles.scrim]}
+        style={StyleSheet.absoluteFill}
       >
-        {/* Over a stacked sheet, TalkBack seated focus on the backdrop, the layer's first node. */}
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          accessibilityLabel={dismissLabel}
-          {...BACKDROP_READER_HIDING}
-          onPress={onDismiss}
-        />
+        <Animated.View
+          style={[StyleSheet.absoluteFill, dim && styles.scrim, scrimStyle]}
+        >
+          {/* Over a stacked sheet, TalkBack seated focus on the backdrop, the layer's first node. */}
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            accessibilityLabel={dismissLabel}
+            {...BACKDROP_READER_HIDING}
+            onPress={onDismiss}
+          />
+        </Animated.View>
       </Animated.View>
       {/* Layout animations overwrite transforms, so the drag transform lives on the inner view. */}
-      <Animated.View
-        entering={transitions.sheetIn}
-        exiting={transitions.sheetOut}
-        style={slotStyle}
-      >
+      <Animated.View entering={transitions.sheetIn} style={slotStyle}>
         {notice === undefined ? null : (
           <Animated.View style={noticeStyle}>{notice}</Animated.View>
         )}
@@ -358,11 +379,10 @@ export function Sheet({
         </Animated.View>
       </Animated.View>
     </View>
-  ) : null;
+  );
 
   useEffect(() => {
-    if (content === null) hide(id);
-    else show(id, content);
+    if (present.current) show(id, content, !visible);
   });
   useEffect(
     () => () => {
