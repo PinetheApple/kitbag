@@ -11,9 +11,11 @@ import {
   type Category,
   type Conflict,
   type ImportMode,
+  type LibrarySongRecord,
   type Resolutions,
 } from './backup-format';
 import type { Snapshot } from './backup-snapshot';
+import { meterOverrideOf, NO_METER_OVERRIDE } from './meter-override';
 
 export interface ImportOptions {
   mode?: ImportMode;
@@ -46,10 +48,15 @@ export interface Write {
 
 export type Writes = Partial<Record<Category, Write[]>>;
 
-function canonical(record: BackupRecord, mode: ImportMode): string {
-  const copy: Record<string, unknown> = { ...record };
-  if (mode === 'merge') delete copy.active;
-  return JSON.stringify(copy, Object.keys(copy).sort());
+// A version travels with its grid: it only differs from the device's when the grid
+// does, and a version-only difference is not one the user can judge.
+const MERGE_IGNORED_FIELDS = new Set(['active', 'analysisVersion']);
+
+function canonical(record: BackupRecord): string {
+  const fields = Object.keys(record).filter(
+    (field) => !MERGE_IGNORED_FIELDS.has(field),
+  );
+  return JSON.stringify(record, fields.sort());
 }
 
 function selectCategories(
@@ -151,7 +158,7 @@ function planMerge(
     if (mine === undefined) {
       state.summary.new += 1;
       state.writes.push({ record, localId: undefined });
-    } else if (canonical(mine, 'merge') === canonical(record, 'merge'))
+    } else if (canonical(mine) === canonical(record))
       state.summary.unchanged += 1;
     else {
       const localId = snapshot.ids[category].get(key);
@@ -169,6 +176,29 @@ function resolvedRef(
 ): string | null {
   if (uuid === null || categories.includes(target)) return uuid;
   return snapshot.ids[target].has(uuid) ? uuid : null;
+}
+
+function fillMissingOverrideFromDevice(
+  songs: readonly LibrarySongRecord[],
+  snapshot: Snapshot,
+): LibrarySongRecord[] {
+  const device = new Map(
+    snapshot.records.librarySongs.map((song) => [song.uuid, song]),
+  );
+  return songs.map((song) => ({
+    ...meterOverrideOf({ ...NO_METER_OVERRIDE, ...device.get(song.uuid) }),
+    ...song,
+  }));
+}
+
+function incomingRecords(
+  category: Category,
+  file: BackupFile,
+  snapshot: Snapshot,
+): readonly BackupRecord[] {
+  return category === 'librarySongs'
+    ? fillMissingOverrideFromDevice(file.records.librarySongs, snapshot)
+    : file.records[category];
 }
 
 function effective(
@@ -201,7 +231,7 @@ export function computePlan(
   };
   const writes: Writes = {};
   for (const category of categories) {
-    const incoming = file.records[category].map((record) =>
+    const incoming = incomingRecords(category, file, snapshot).map((record) =>
       effective(category, record, categories, snapshot),
     );
     const result =

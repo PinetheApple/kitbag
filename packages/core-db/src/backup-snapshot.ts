@@ -12,6 +12,7 @@ import {
   type SongPresetRecord,
 } from './backup-format';
 import { encodeBase64, nullableBase64, presetBase64 } from './base64';
+import { meterOverrideOf } from './meter-override';
 import type { Database } from './repository';
 import {
   practiceSessions,
@@ -49,15 +50,11 @@ function withoutId<T extends { id: number }>(row: T): Omit<T, 'id'> {
   return copy as Omit<T, 'id'>;
 }
 
-// Analysis state describes this device's copy of the file; a restored song without a
-// grid is analysed again. Version and meter override stay out until the format has them.
+// Status and error describe this device's copy of the file.
 const UNPORTABLE_SONG_FIELDS = [
   'id',
   'analysisStatus',
   'analysisError',
-  'analysisVersion',
-  'meterBeatsPerBar',
-  'barOneSeconds',
 ] as const;
 const unportable = new Set<string>(UNPORTABLE_SONG_FIELDS);
 
@@ -70,6 +67,7 @@ function portableSong(row: SongRow) {
 function librarySongRecord(row: SongRow): LibrarySongRecord {
   return {
     ...portableSong(row),
+    ...meterOverrideOf(row),
     createdAt: toSeconds(row.createdAt),
     beatGrid: nullableBase64(row.beatGrid),
     downbeatIndices: nullableBase64(row.downbeatIndices),
