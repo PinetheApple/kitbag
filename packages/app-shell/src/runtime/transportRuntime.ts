@@ -9,6 +9,8 @@ import { transportSubtitle } from '@kitbag/tool-metronome';
 
 import { askForNotificationsOnce } from './notificationPermission';
 import {
+  cardStale,
+  keepsAppTempo,
   notificationStepAfterAppChange,
   shownAfterNativeChange,
   storePatchFor,
@@ -17,7 +19,24 @@ import {
 } from './transportSync';
 
 let shown: TransportShown | undefined;
+let cardNumber = 0;
 let applyingNative = false;
+
+function sendCard(next: TransportShown) {
+  cardNumber += 1;
+  shown = next;
+  getKitbagCommands().transportShow({
+    ...next,
+    cardNumber,
+    minBpm: BPM_BOUNDS.min,
+    maxBpm: BPM_BOUNDS.max,
+  });
+}
+
+function hideCard() {
+  shown = undefined;
+  getKitbagCommands().transportHide();
+}
 
 // Reads the latest state: a nested setState can hand later listeners an older snapshot.
 function syncFromApp() {
@@ -32,37 +51,41 @@ function syncFromApp() {
   );
   if (step.kind === 'show') {
     askForNotificationsOnce();
-    shown = step.shown;
-    getKitbagCommands().transportShow({
-      ...shown,
-      minBpm: BPM_BOUNDS.min,
-      maxBpm: BPM_BOUNDS.max,
-    });
+    sendCard(step.shown);
   } else if (step.kind === 'hide') {
-    shown = undefined;
-    getKitbagCommands().transportHide();
+    hideCard();
   }
 }
 
 metronomeStore.subscribe(syncFromApp);
 libraryStore.subscribe(syncFromApp);
 
+function resendCard() {
+  if (shown === undefined) hideCard();
+  else sendCard(shown);
+}
+
 getKitbagCommands().onTransport((event) => {
-  shown = shownAfterNativeChange(shown, event);
+  const stale = cardStale(shown, event, cardNumber);
+  const keepTempo = keepsAppTempo(event, stale);
+  shown = shownAfterNativeChange(shown, event, { keepTempo });
   applyingNative = true;
   try {
-    metronomeStore.setState(storePatchFor(event, metronomeStore.getState()));
+    metronomeStore.setState(
+      storePatchFor(event, metronomeStore.getState(), { keepTempo }),
+    );
   } finally {
     applyingNative = false;
   }
+  // The app's newer cards, queued at the service behind the event's card, would
+  // overwrite this change when they land, so send the current card after them.
+  if (stale) resendCard();
 });
 
 export const metronomeTransport = {
   active: () => transportActive(metronomeStore.getState().running, shown),
   release: () => {
     metronomeStore.getState().stop();
-    if (shown === undefined) return;
-    shown = undefined;
-    getKitbagCommands().transportHide();
+    if (shown !== undefined) hideCard();
   },
 };

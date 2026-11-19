@@ -52,7 +52,14 @@ const loadedAt = (index: number) => ({
   itemId: 10 + index,
   setlistId: SETLIST_ID,
 });
-const lastShownSetlist = () => native.transportShow.mock.lastCall?.[0].setlist;
+const lastCard = () => native.transportShow.mock.lastCall?.[0];
+const lastShownSetlist = () => lastCard()?.setlist;
+const notification = {
+  rampRunning: false,
+  practicePlayedMs: 0,
+  practiceStretchStartedAt: 0,
+  tempoSet: false,
+};
 
 describe('transportRuntime', () => {
   it('re-sends the notification as the setlist moves and when it is left', async () => {
@@ -92,16 +99,15 @@ describe('transportRuntime', () => {
       entries: { [SETLIST_ID]: entries },
       loaded: loadedAt(0),
     });
-    const notification = {
-      rampRunning: false,
-      practicePlayedMs: 0,
-      practiceStretchStartedAt: 0,
-    };
-
-    native.emitTransport({ ...notification, playback: 'paused', bpm: 120 });
+    native.emitTransport({
+      ...notification,
+      playback: 'paused',
+      bpm: 120,
+      cardNumber: lastCard()?.cardNumber ?? 0,
+    });
     libraryStore.setState({ loaded: loadedAt(1) });
     metronomeStore.setState({ bpm: 90, beatsPerBar: 7, denominator: 8 });
-    const card = native.transportShow.mock.lastCall?.[0];
+    const card = lastCard();
     expect(card).toMatchObject({
       playing: false,
       bpm: 90,
@@ -114,11 +120,116 @@ describe('transportRuntime', () => {
       ...notification,
       playback: 'playing',
       bpm: card?.bpm ?? 0,
+      cardNumber: card?.cardNumber ?? 0,
     });
     expect(metronomeStore.getState()).toMatchObject({
       running: true,
       bpm: 90,
       beatsPerBar: 7,
+    });
+  });
+
+  it('a Play before the new song card reaches the service keeps the new tempo', async () => {
+    await import('./transportRuntime');
+    metronomeStore.setState({ running: true, bpm: 120 });
+    const oldSong = lastCard()?.cardNumber ?? 0;
+    native.emitTransport({
+      ...notification,
+      playback: 'paused',
+      bpm: 120,
+      cardNumber: oldSong,
+    });
+    metronomeStore.setState({ bpm: 90 });
+    const newSong = lastCard()?.cardNumber ?? 0;
+
+    native.emitTransport({
+      ...notification,
+      playback: 'playing',
+      bpm: 120,
+      cardNumber: oldSong,
+    });
+    expect(metronomeStore.getState()).toMatchObject({ running: true, bpm: 90 });
+    expect(lastCard()).toMatchObject({ playing: true, bpm: 90 });
+    expect(lastCard()?.cardNumber).toBeGreaterThan(newSong);
+  });
+
+  it('a Stop from a service on another card hides the card exactly once', async () => {
+    const { metronomeTransport } = await import('./transportRuntime');
+    metronomeStore.setState({ running: true, bpm: 130 });
+    const hides = native.transportHide.mock.calls.length;
+
+    native.emitTransport({
+      ...notification,
+      playback: 'stopped',
+      bpm: 130,
+      cardNumber: (lastCard()?.cardNumber ?? 0) - 1,
+    });
+    expect(native.transportHide).toHaveBeenCalledTimes(hides + 1);
+    expect(metronomeTransport.active()).toBe(false);
+  });
+
+  it('a service restarted on card 0 gets one resend, then its tempo is taken', async () => {
+    await import('./transportRuntime');
+    metronomeStore.setState({ running: true, bpm: 100 });
+    const sends = native.transportShow.mock.calls.length;
+
+    native.emitTransport({
+      ...notification,
+      playback: 'paused',
+      bpm: 60,
+      cardNumber: 0,
+    });
+    expect(native.transportShow).toHaveBeenCalledTimes(sends + 1);
+    expect(metronomeStore.getState().bpm).toBe(100);
+
+    native.emitTransport({
+      ...notification,
+      playback: 'playing',
+      bpm: 104,
+      cardNumber: lastCard()?.cardNumber ?? 0,
+    });
+    expect(native.transportShow).toHaveBeenCalledTimes(sends + 1);
+    expect(metronomeStore.getState()).toMatchObject({
+      running: true,
+      bpm: 104,
+    });
+  });
+
+  it('after an app reload the service tempo is taken until the app sends a card', async () => {
+    await import('./transportRuntime');
+    metronomeStore.setState({ running: true, bpm: 100 });
+    native.emitTransport({
+      ...notification,
+      playback: 'stopped',
+      bpm: 100,
+      cardNumber: lastCard()?.cardNumber ?? 0,
+    });
+    const sends = native.transportShow.mock.calls.length;
+    const hides = native.transportHide.mock.calls.length;
+    const reloadedAway = 999;
+
+    native.emitTransport({
+      ...notification,
+      playback: 'playing',
+      bpm: 87,
+      cardNumber: reloadedAway,
+    });
+    expect(native.transportShow).toHaveBeenCalledTimes(sends);
+    expect(native.transportHide).toHaveBeenCalledTimes(hides);
+    expect(metronomeStore.getState()).toMatchObject({ running: true, bpm: 87 });
+
+    metronomeStore.setState({ bpm: 88 });
+    expect(native.transportShow).toHaveBeenCalledTimes(sends + 1);
+    native.emitTransport({
+      ...notification,
+      playback: 'paused',
+      bpm: 92,
+      cardNumber: lastCard()?.cardNumber ?? 0,
+    });
+    expect(native.transportShow).toHaveBeenCalledTimes(sends + 1);
+    expect(metronomeStore.getState()).toMatchObject({
+      running: false,
+      bpm: 92,
     });
   });
 
