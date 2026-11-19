@@ -9,7 +9,9 @@ import {
   type ToolGridItem,
 } from '@kitbag/core-design';
 import {
+  pausedMove,
   summarize,
+  useDataFolder,
   useHomeLayout,
   useLastTool,
   useMetronome,
@@ -23,6 +25,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { MovePausedBanner } from '../dataFolder/MovePausedBanner.tsx';
 import { DockedMiniPlayer } from '../miniPlayer/DockedMiniPlayer.tsx';
 import { useMiniPlayerDocked } from '../miniPlayer/useMiniPlayerDocked.ts';
 import { useSettingsRoutes } from '../settings/settingsRoutes.ts';
@@ -135,6 +138,7 @@ export function HomeScreen() {
   const isOn = useToolOn();
   const { arrangement, onArrange } = useArrangement(isOn);
   const docked = useMiniPlayerDocked();
+  const movePaused = useDataFolder((s) => pausedMove(s) !== null);
   const [arranging, setArranging] = useState(false);
   const openArrange = useCallback(() => {
     setArranging(true);
@@ -208,7 +212,9 @@ export function HomeScreen() {
           }
         />
 
-        {resume === undefined || resumeText === undefined ? null : (
+        {movePaused ? (
+          <MovePausedBanner />
+        ) : resume === undefined || resumeText === undefined ? null : (
           <ToolRow
             variant="resume"
             icon={resume.icon}
