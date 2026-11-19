@@ -8,7 +8,6 @@ import {
 } from '@kitbag/core-design';
 import { loopKeyLabel, SKIP_SECONDS, useSongPlayer } from '@kitbag/core-state';
 import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
 
 import {
   LOOP_KEY_TEXT,
@@ -16,10 +15,7 @@ import {
   SPEED_KEY_TEXT,
   SPEED_NOTE,
 } from '../logic/viewText.ts';
-
-const styles = StyleSheet.create({
-  noteAnchor: { height: 0 },
-});
+import { NoteAnchor } from './NoteAnchor.tsx';
 
 export interface SongTransportProps {
   readonly playing: PlayerFrame['playing'];
@@ -43,7 +39,7 @@ export function SongTransport({ playing, bottomInset }: SongTransportProps) {
   }, []);
   return (
     <>
-      <View style={styles.noteAnchor}>
+      <NoteAnchor>
         {speedNote ? (
           <Snackbar
             message={SPEED_NOTE}
@@ -51,7 +47,7 @@ export function SongTransport({ playing, bottomInset }: SongTransportProps) {
             onTimeout={hideSpeedNote}
           />
         ) : null}
-      </View>
+      </NoteAnchor>
       <PlayerDock bottomInset={bottomInset}>
         <PlayerTransport
           playing={playing}

@@ -1,36 +1,13 @@
-import {
-  NO_METER_OVERRIDE,
-  type LibraryRow,
-  type SongRecord,
-} from '@kitbag/core-db';
+import { NO_METER_OVERRIDE, type SongRecord } from '@kitbag/core-db';
 import { describe, expect, it, vi } from 'vitest';
-import { createStore } from 'zustand/vanilla';
 
 import { songRow } from '../storage/fixtures.test-helper.ts';
-import {
-  BARS,
-  fakeSongRuntime,
-  SONG_ID,
-  songRecord,
-  songStore,
-} from './store.test-helper.ts';
+import { opened, SONG_ID, songRecord } from './store.test-helper.ts';
 
 const BEATS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5];
 const BAR_ONE_ON_SECOND_BEAT = { ...NO_METER_OVERRIDE, barOneSeconds: 0.5 };
 const FIRST = songRecord({ beats: BEATS, downbeatIndices: [0, 4] });
 const OVERRIDDEN = { ...FIRST, ...BAR_ONE_ON_SECOND_BEAT };
-
-async function opened(first: SongRecord) {
-  const fake = fakeSongRuntime(first);
-  const library = createStore(() => ({
-    rows: [songRow({ id: SONG_ID })] as readonly LibraryRow[],
-    ready: true,
-    failed: false,
-  }));
-  const player = songStore(fake, undefined, library);
-  await player.getState().open(SONG_ID, BARS).loaded;
-  return { ...fake, library, player };
-}
 
 type Opened = Awaited<ReturnType<typeof opened>>;
 

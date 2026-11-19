@@ -6,6 +6,7 @@ import { STANDALONE_METRONOME_KEY } from './standalone-metronome-preference';
 import type { LyricLineTimes, LyricsSource } from './stem-lyrics';
 import type { BundleTempo } from './stem-tempo';
 import { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
+import type { TempoCorrection } from './tempo-correction';
 import type { TempoMode } from './tempo-mode';
 import { MS_PER_SECOND } from './units';
 
@@ -48,6 +49,7 @@ export interface LibrarySongRecord extends Partial<MeterOverride> {
   bpm: number | null;
   waveformPath: string | null;
   analysisVersion?: number | null;
+  tempoCorrection?: TempoCorrection | null;
 }
 
 export interface SongPresetRecord {

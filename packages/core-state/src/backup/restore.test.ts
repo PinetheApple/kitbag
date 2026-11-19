@@ -24,6 +24,7 @@ function harness(target: BackupDatabase, picked: () => Promise<Picked>) {
     service: () => target.backup,
     pick: picked,
     share: () => Promise.resolve(),
+    save: () => Promise.resolve(true),
     afterRestore,
   };
   const store = createRestoreStore(() => deps);

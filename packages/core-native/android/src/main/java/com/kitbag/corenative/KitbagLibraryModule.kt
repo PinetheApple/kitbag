@@ -111,6 +111,9 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun shareBackup(fileName: String, contents: String, promise: Promise) =
     backups.share(fileName, contents, promise)
 
+  override fun saveBackup(fileName: String, contents: String, promise: Promise) =
+    picker.saveBackup(fileName, contents, promise)
+
   override fun shareExport(path: String, promise: Promise) {
     val file = ExportFiles.resolve(reactApplicationContext.cacheDir, path)
     if (file == null) {

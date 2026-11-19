@@ -43,6 +43,7 @@ import { frameAtTap } from '../logic/waveSeek.ts';
 import type { UsePlayhead } from './playhead.ts';
 import { SongMeter } from './SongMeter.tsx';
 import { SongPlayerMenu } from './SongPlayerMenu.tsx';
+import { SongTempoCorrection } from './SongTempoCorrection.tsx';
 import { SongTransport } from './SongTransport.tsx';
 import { useLoopHandles } from './useLoopHandles.ts';
 import { NotReady } from './NotReady.tsx';
@@ -217,8 +218,10 @@ interface BodyProps {
   readonly songId: number;
   readonly bottom: number;
   readonly meterOpen: boolean;
+  readonly tempoOpen: boolean;
   readonly onBack: () => void;
   readonly onCloseMeter: () => void;
+  readonly onCloseTempo: () => void;
   readonly usePlayhead: UsePlayhead;
 }
 
@@ -226,8 +229,10 @@ function Body({
   songId,
   bottom,
   meterOpen,
+  tempoOpen,
   onBack,
   onCloseMeter,
+  onCloseTempo,
   usePlayhead,
 }: BodyProps) {
   const styles = useStyles();
@@ -263,6 +268,12 @@ function Body({
         playheadSeconds={playhead.songSec}
         onClose={onCloseMeter}
       />
+      <SongTempoCorrection
+        songId={songId}
+        visible={tempoOpen}
+        bottomInset={bottom}
+        onClose={onCloseTempo}
+      />
       <SongTransport playing={playhead.playing} bottomInset={bottom} />
     </>
   );
@@ -296,6 +307,13 @@ export function SongPlayerScreen({
   const closeMeter = useCallback(() => {
     setMeterOpen(false);
   }, []);
+  const [tempoOpen, setTempoOpen] = useState(false);
+  const openTempo = useCallback(() => {
+    setTempoOpen(true);
+  }, []);
+  const closeTempo = useCallback(() => {
+    setTempoOpen(false);
+  }, []);
   const padding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
   return (
     <View style={[styles.screen, padding]}>
@@ -304,8 +322,10 @@ export function SongPlayerScreen({
         songId={songId}
         bottom={insets.bottom}
         meterOpen={meterOpen}
+        tempoOpen={tempoOpen}
         onBack={onBack}
         onCloseMeter={closeMeter}
+        onCloseTempo={closeTempo}
         usePlayhead={usePlayhead}
       />
       <SongPlayerMenu
@@ -315,6 +335,7 @@ export function SongPlayerScreen({
         onDismiss={closeMenu}
         onBack={onBack}
         onMeter={openMeter}
+        onTempoCorrection={openTempo}
       />
     </View>
   );

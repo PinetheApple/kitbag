@@ -40,6 +40,7 @@ interface Timing {
 }
 
 vi.mock('react-native', () => ({
+  Platform: { OS: 'android' },
   Pressable: 'Pressable',
   ScrollView: 'ScrollView',
   Text: 'Text',

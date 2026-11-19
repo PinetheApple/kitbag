@@ -2,6 +2,8 @@ import { createElement, type ReactElement, type ReactNode } from 'react';
 import type { HostInstance } from 'react-native';
 import { expect, it, vi } from 'vitest';
 
+import type { ThemeMode } from '../tokens.ts';
+
 const DRAG = { drag: true };
 const entered = vi.hoisted(() => ({
   settle: undefined as ((finished: boolean) => void) | undefined,
@@ -18,6 +20,11 @@ const STATUS_BAR = 24;
 const portal = { show: vi.fn(), hide: vi.fn(), topInset: STATUS_BAR };
 const back = vi.hoisted(() => ({ handlers: [] as (() => void)[] }));
 const focusReaderOn = vi.hoisted(() => vi.fn());
+const platform = vi.hoisted(() => ({ OS: 'android' }));
+const shown = vi.hoisted((): { mode: ThemeMode } => ({ mode: 'dark' }));
+const SURFACE1 = { dark: '#1A1820', light: '#FFFFFF' } as const;
+const SURFACE1_CLEAR = { dark: '#1A182000', light: '#FFFFFF00' } as const;
+const THEME_MODES = ['dark', 'light'] as const;
 const chain = {
   activeOffsetY: () => chain,
   onUpdate: () => chain,
@@ -35,6 +42,7 @@ vi.mock('react', async (importOriginal) => ({
   },
 }));
 vi.mock('react-native', () => ({
+  Platform: platform,
   Pressable: 'Pressable',
   ScrollView: 'ScrollView',
   Text: 'Text',
@@ -80,7 +88,7 @@ vi.mock('../ThemeProvider.tsx', async () => {
     createThemedStyles:
       <T>(factory: (theme: typeof themes.dark) => T) =>
       () =>
-        factory(themes.dark),
+        factory(themes[shown.mode]),
   };
 });
 
@@ -156,24 +164,48 @@ it('caps the sheet below the status bar so tall content scrolls inside it', () =
   expect(slot.marginTop).toBe(STATUS_BAR);
 });
 
-it('covers the scroll touch room under the title so scrolled content clips below a gap', async () => {
+async function titleGapStyle(os: string, mode: ThemeMode) {
   const { SHEET_TOUCH_ROOM } = await import('./Sheet.tsx');
-  const { themes } = await import('../theme.ts');
+  platform.OS = os;
+  shown.mode = mode;
   const sheet = child(child(openSheet(), 1), 1);
+  platform.OS = 'android';
+  shown.mode = 'dark';
   const scrollFrame = child(sheet, 1);
   const [scroll, cover] = [child(scrollFrame, 0), child(scrollFrame, 1)];
   expect(flat(scrollFrame.props.style).marginVertical).toBe(-SHEET_TOUCH_ROOM);
   expect(scroll.type).toBe('ScrollView');
-  expect(flat(cover.props.style)).toMatchObject({
+  const style = flat(cover.props.style);
+  expect(style).toMatchObject({
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     height: SHEET_TOUCH_ROOM,
-    backgroundColor: themes.dark.color.surface1,
     pointerEvents: 'none',
   });
-});
+  return style;
+}
+
+it.each(THEME_MODES)(
+  'fades scrolled content out under the title on native in %s',
+  async (mode) => {
+    const style = await titleGapStyle('android', mode);
+    expect(style.experimental_backgroundImage).toBe(
+      `linear-gradient(to bottom, ${SURFACE1[mode]}, ${SURFACE1_CLEAR[mode]})`,
+    );
+    expect(style.backgroundColor).toBeUndefined();
+  },
+);
+
+it.each(THEME_MODES)(
+  'covers the title gap solid on web, which drops background images, in %s',
+  async (mode) => {
+    const style = await titleGapStyle('web', mode);
+    expect(style.backgroundColor).toBe(SURFACE1[mode]);
+    expect(style.experimental_backgroundImage).toBeUndefined();
+  },
+);
 
 function headers(node: unknown): ReactElement<Props>[] {
   if (Array.isArray(node)) return node.flatMap(headers);

@@ -25,6 +25,13 @@ export async function shareLibraryBackup(
   await deps.share(LIBRARY_BACKUP_FILE_NAME, contents);
 }
 
+export async function saveLibraryBackup(
+  deps: BackupDeps = getBackup(),
+): Promise<boolean> {
+  const contents = await deps.service().export(CATEGORIES);
+  return deps.save(LIBRARY_BACKUP_FILE_NAME, contents);
+}
+
 export async function shareSetlist(
   setlist: { readonly uuid: string; readonly name: string },
   deps: BackupDeps = getBackup(),

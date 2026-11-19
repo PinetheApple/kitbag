@@ -13,5 +13,6 @@ configureBackup({
   }),
   pick: () => Promise.resolve(null),
   share: unavailable,
+  save: unavailable,
   afterRestore: () => Promise.resolve(),
 });

@@ -10,6 +10,13 @@ export function pickBackup(): Promise<PickedBackup | null> {
   return getKitbagLibrary().pickBackup();
 }
 
+export function saveBackup(
+  fileName: string,
+  contents: string,
+): Promise<boolean> {
+  return getKitbagLibrary().saveBackup(fileName, contents);
+}
+
 export function shareBackup(fileName: string, contents: string): Promise<void> {
   return getKitbagLibrary().shareBackup(fileName, contents);
 }

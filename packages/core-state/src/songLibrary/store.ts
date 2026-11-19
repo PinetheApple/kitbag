@@ -2,6 +2,7 @@ import type {
   LibraryRow,
   MeterOverridePatch,
   SongFiles,
+  TempoCorrection,
 } from '@kitbag/core-db';
 import type {
   AnalysisResult,
@@ -34,6 +35,7 @@ import {
   type OpenSong,
   type SongLibraryRecords,
 } from './runtime.ts';
+import { songGridSaves } from './songGridSaves.ts';
 import { stemBundleActions, type BundleSource } from './stemBundleImport.ts';
 import {
   stemSetRemovals,
@@ -110,6 +112,10 @@ export interface SongLibraryActions {
   saveSongMeterOverride: (
     songId: number,
     patch: MeterOverridePatch,
+  ) => Promise<boolean>;
+  saveSongTempoCorrection: (
+    songId: number,
+    correction: TempoCorrection,
   ) => Promise<boolean>;
   dismissNotice: () => void;
   confirmReplace: () => Promise<void>;
@@ -405,19 +411,6 @@ function rowActions(
       }
       await get().refresh();
     },
-    saveSongMeterOverride: async (
-      songId: number,
-      patch: MeterOverridePatch,
-    ) => {
-      try {
-        await deps.records().saveSongMeterOverride(songId, patch);
-      } catch (error) {
-        warn(`meter of song ${String(songId)} not stored`, error);
-        return false;
-      }
-      await get().refresh();
-      return true;
-    },
   };
 }
 
@@ -437,6 +430,7 @@ export function createSongLibraryStore(
       ...importActions(deps, set, get, imports),
       ...analysisActions(deps, get, imports, queue, refreshAvailability),
       ...rowActions(deps, set, get, queue),
+      ...songGridSaves(deps, get),
     };
   });
 }

@@ -1,5 +1,5 @@
 import type { ApplyReport } from '@kitbag/core-db';
-import { pickBackup, shareBackup } from '@kitbag/core-native';
+import { pickBackup, saveBackup, shareBackup } from '@kitbag/core-native';
 import {
   clickSoundStore,
   configureBackup,
@@ -32,5 +32,6 @@ configureBackup({
   service: () => getDatabase().backup,
   pick: pickBackup,
   share: shareBackup,
+  save: saveBackup,
   afterRestore: refreshAfterRestore,
 });

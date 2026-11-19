@@ -1920,8 +1920,8 @@ the supersession: ≤7 primary choices.)
   and where, and offers "Remove missing files". Storage reports; Data folder
   relocates.
 - **Theme and haptics are new**, and they are the cheapest rows here.
-- **Data moves through the system.** Backup goes out through the share sheet,
-  restore comes in through the picker. **Kitbag writes to no path of its own
+- **Data moves through the system.** Backup goes out through the share sheet
+  or the system save dialog, restore comes in through the picker. **Kitbag writes to no path of its own
   choosing.**
 - **Attributions is not optional**: `kitbag-ui.html`'s footer promises "BPM data:
   Deezer / GetSongBPM (attribution in-app)". Licence and source are table stakes
