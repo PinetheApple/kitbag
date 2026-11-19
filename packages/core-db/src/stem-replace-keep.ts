@@ -19,6 +19,13 @@ import {
   type LyricLineTimes,
 } from './stem-lyrics';
 import { applyUserNames, readUserNames, type UserNames } from './stem-rename';
+import {
+  carriedTempoMode,
+  saveChosenTempoMode,
+  STEM_SET_TEMPO_COLUMNS,
+  stemSetTempoOf,
+} from './stem-tempo';
+import type { TempoMode } from './tempo-mode';
 
 interface RoleMix {
   readonly role: string;
@@ -32,6 +39,7 @@ interface KeptOnReplace {
   readonly names: UserNames;
   readonly retimed: LyricLineTimes | null;
   readonly meter: MeterOverride;
+  readonly tempoMode: TempoMode | null;
   readonly speed: number;
   readonly click: StemSetClick;
   readonly mixes: readonly RoleMix[];
@@ -76,6 +84,7 @@ export async function readKept(
     .select({
       meterBeatsPerBar: stemSets.meterBeatsPerBar,
       barOneSeconds: stemSets.barOneSeconds,
+      ...STEM_SET_TEMPO_COLUMNS,
       speed: stemSets.speed,
       clickGrouping: stemSets.clickGrouping,
       clickRate: stemSets.clickRate,
@@ -89,6 +98,10 @@ export async function readKept(
     names: await readUserNames(db, id),
     retimed: sameJob ? await retainedRetime(db, id, bundle.lyrics) : null,
     meter: carriedMeter(meterOverrideOf(row), sameJob),
+    tempoMode: carriedTempoMode(
+      stemSetTempoOf(row).chosenTempoMode,
+      bundle.tempo,
+    ),
     speed: row.speed,
     click: stemSetClickOf(row),
     mixes: bundle.hasMix ? [] : await readRoleMixes(db, id),
@@ -103,6 +116,7 @@ export async function applyKept(
   await applyUserNames(db, id, kept.names);
   await saveLyricsRetimed(db, id, kept.retimed);
   await saveMeterOverride(db, stemSets, id, kept.meter);
+  await saveChosenTempoMode(db, id, kept.tempoMode);
   await saveStemSetClick(db, id, kept.click);
   await db
     .update(stemSets)

@@ -37,6 +37,8 @@ import {
 import { saveLyricsRetimed, type LyricLineTimes } from './stem-lyrics';
 import { findStemSetMatches, type StemSetIdentity } from './stem-set-match';
 import { renameStem, renameStemSet } from './stem-rename';
+import { saveChosenTempoMode } from './stem-tempo';
+import type { TempoMode } from './tempo-mode';
 
 export interface LibrarySongRow {
   readonly kind: 'song';
@@ -407,6 +409,8 @@ export function createSongLibraryRepository({
       serial(() => saveMeterOverride(db, stemSets, id, patch)),
     saveStemSetClick: (id: number, patch: StemSetClickPatch) =>
       serial(() => saveStemSetClick(db, id, patch)),
+    saveStemSetChosenTempoMode: (id: number, mode: TempoMode | null) =>
+      serial(() => saveChosenTempoMode(db, id, mode)),
     renameStemSet: (id: number, title: string) =>
       serial(() => renameStemSet(db, id, title)),
     renameStem: (id: number, name: string) =>
