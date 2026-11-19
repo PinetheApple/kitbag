@@ -1,4 +1,6 @@
+import type { ClickSoundRepository } from '@kitbag/core-db';
 import {
+  configureClickSounds,
   configureStandaloneMetronomePersistence,
   createMetronomeStore,
   getBackup,
@@ -11,6 +13,7 @@ import {
   type MetronomeSettingsInput,
   type StandaloneMetronomePersistence,
 } from '@kitbag/core-state';
+import { customSoundId, KB_DEFAULT_SOUNDS } from '@kitbag/core-native';
 import { expect, it, vi } from 'vitest';
 
 const service = vi.hoisted(() => ({ plan: vi.fn() }));
@@ -36,8 +39,27 @@ vi.mock('@kitbag/core-native', async (actual) => ({
   getKitbagCommands: () => engine,
 }));
 
+const clickSounds = { list: vi.fn(() => Promise.resolve([])) };
+configureClickSounds({
+  repository: () => clickSounds as unknown as ClickSoundRepository,
+  prepare: vi.fn(),
+  load: vi.fn(),
+  clear: vi.fn(),
+  deleteFile: vi.fn(),
+  newUuid: vi.fn(),
+  freshFileName: vi.fn(),
+  afterRemove: vi.fn(),
+});
+
 await import('./backupRuntime.ts');
 
+const NO_SOUND_CHANGES = {
+  counts: {},
+  soundResets: 0,
+  staleSlots: { restored: [], local: [] },
+};
+const STALE_SLOT = 0;
+const SLOT_SOUND = customSoundId(STALE_SLOT);
 const SONG_BPM = 90;
 const EDITED_BPM = 95;
 const RESTORED_BPM = 140;
@@ -80,14 +102,16 @@ it('restores through the app database', () => {
   expect(getBackup().service()).toBe(service);
 });
 
-it('reloads setlists, library songs and tunings after a restore', async () => {
+it('reloads setlists, library songs, tunings and click sounds after a restore', async () => {
   const { refresh, refreshSongs, loadCustomTunings } = stubRefreshes();
+  clickSounds.list.mockClear();
 
-  await getBackup().afterRestore();
+  await getBackup().afterRestore(NO_SOUND_CHANGES);
 
   expect(refresh).toHaveBeenCalledOnce();
   expect(refreshSongs).toHaveBeenCalledOnce();
   expect(loadCustomTunings).toHaveBeenCalledOnce();
+  expect(clickSounds.list).toHaveBeenCalledOnce();
 });
 
 it('plays and keeps the restored standalone settings over the unloaded song', async () => {
@@ -95,11 +119,28 @@ it('plays and keeps the restored standalone settings over the unloaded song', as
   loadSong();
   stored = { bpm: RESTORED_BPM };
 
-  await getBackup().afterRestore();
+  await getBackup().afterRestore(NO_SOUND_CHANGES);
   await Promise.resolve();
 
   expect(metronomeStore.getState().bpm).toBe(RESTORED_BPM);
   expect(stored.bpm).toBe(RESTORED_BPM);
+});
+
+it('puts Tick in the restored standalone sounds whose slot changed', async () => {
+  stubRefreshes();
+  stored = {
+    bpm: RESTORED_BPM,
+    sounds: { normal: SLOT_SOUND, accent: SLOT_SOUND },
+  };
+
+  await getBackup().afterRestore({
+    ...NO_SOUND_CHANGES,
+    staleSlots: { restored: [], local: [STALE_SLOT] },
+  });
+  await Promise.resolve();
+
+  expect(stored.sounds).toEqual(KB_DEFAULT_SOUNDS);
+  expect(metronomeStore.getState().sounds).toEqual(KB_DEFAULT_SOUNDS);
 });
 
 const defaults = () => standaloneMetronomeOf(createMetronomeStore().getState());
@@ -110,7 +151,7 @@ it('resets to the defaults when a replace empties the stored settings', async ()
   await Promise.resolve();
   stored = {};
 
-  await getBackup().afterRestore();
+  await getBackup().afterRestore(NO_SOUND_CHANGES);
   await Promise.resolve();
 
   expect(standaloneMetronomeOf(metronomeStore.getState())).toEqual(defaults());
@@ -122,7 +163,7 @@ it('resets to the defaults, not the unloaded song, when a replace empties them',
   loadSong();
   stored = {};
 
-  await getBackup().afterRestore();
+  await getBackup().afterRestore(NO_SOUND_CHANGES);
   await Promise.resolve();
 
   expect(standaloneMetronomeOf(metronomeStore.getState())).toEqual(defaults());
@@ -133,7 +174,7 @@ it('keeps edits made after a restore across a relaunch', async () => {
   stubRefreshes();
   loadSong();
 
-  await getBackup().afterRestore();
+  await getBackup().afterRestore(NO_SOUND_CHANGES);
   const { loaded, discarded, played } = libraryStore.getState();
   expect({ loaded, discarded, played }).toEqual({
     loaded: null,

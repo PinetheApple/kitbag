@@ -11,6 +11,7 @@ import { stems, stemSets } from './schema';
 import { createSongLibraryRepository } from './song-library-repository';
 import type { NewStemBundle, StoredLyrics } from './stem-bundle-repository';
 import { openTestDatabase } from './sqlite.test-helper';
+import { memoryClickSoundFiles } from './click-sound-files.test-helper';
 
 const open: ReturnType<typeof openTestDatabase>[] = [];
 
@@ -489,7 +490,10 @@ describe('tap-along lyric retiming', () => {
 
 describe('StemDeck bundles over the op-sqlite 17 connection', () => {
   it('inserts, replaces and reads back', async () => {
-    const database = connectDatabase(fakeOpSqlite().connection);
+    const database = connectDatabase(
+      fakeOpSqlite().connection,
+      memoryClickSoundFiles().files,
+    );
     const first = await database.songLibrary.insertStemBundle(FULL);
     const { id, replaced } = await database.songLibrary.replaceStemBundle(
       { ...FULL, uuid: 'set-uuid-5', folder: 'stems/0297074f4836-2' },

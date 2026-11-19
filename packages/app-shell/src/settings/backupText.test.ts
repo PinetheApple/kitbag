@@ -171,6 +171,18 @@ describe('conflict banner', () => {
     );
     expect(conflictDetail(conflict)).toBe('Metronome');
   });
+
+  it('names a click sound in its slot as a click sound', () => {
+    const conflict = {
+      category: 'clickSounds',
+      key: '0',
+      label: 'Rimshot',
+    } as const;
+    expect(conflictBanner([conflict])).toBe(
+      '1 click sound differs from yours.',
+    );
+    expect(conflictDetail(conflict)).toBe('Click sounds');
+  });
 });
 
 describe('failures', () => {
@@ -204,6 +216,16 @@ describe('result', () => {
     };
     expect(restoredText('replace', settings)).toBe(
       'Replaced with 3 count-in settings & 1 metronome setup.',
+    );
+  });
+
+  it('lists click sounds last', () => {
+    const settings = {
+      clickSounds: counts({ incoming: 2 }),
+      metronomeSettings: counts({ incoming: 1 }),
+    };
+    expect(restoredText('merge', settings)).toBe(
+      'Merged 1 metronome setup & 2 click sounds.',
     );
   });
 });

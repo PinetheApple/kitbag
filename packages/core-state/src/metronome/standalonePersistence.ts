@@ -1,7 +1,8 @@
+import { KB_DENOMINATORS } from '@kitbag/core-native';
 import type { StoreApi } from 'zustand/vanilla';
 
 import { libraryStore, type LibraryStore } from '../library/store.ts';
-import { rangeRamp } from './config.ts';
+import { rangeRamp, usesSound, withoutSound } from './config.ts';
 import {
   applyMetronomeSettings,
   standaloneMetronomeChanged,
@@ -91,4 +92,20 @@ export function reloadStandaloneMetronomePersistence(): void {
   const state = metronomeStore.getState();
   const base = stored === undefined ? initialConfig() : state;
   applyMetronomeSettings(state, { ...standaloneMetronomeOf(base), ...stored });
+}
+
+export function releaseStandaloneSound(soundId: number): void {
+  if (configured === undefined) return;
+  const stored = storedSettings(configured);
+  if (stored?.sounds === undefined || !usesSound(stored.sounds, soundId))
+    return;
+  const base = standaloneMetronomeOf(initialConfig());
+  configured.save({
+    ...base,
+    ...stored,
+    denominator:
+      KB_DENOMINATORS.find((value) => value === stored.denominator) ??
+      base.denominator,
+    sounds: withoutSound(stored.sounds, soundId),
+  });
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CATEGORIES, type ImportFailure } from './backup-format';
 import { openBackupDatabase, records, seed } from './backup.test-helper';
+import { SOUND_ID_COUNT } from './preset-rules';
 
 type Mutable = Record<string, unknown> & {
   songPresets: Record<string, unknown>[];
@@ -209,7 +210,7 @@ describe('backup validation', () => {
     ['bpm', 401],
     ['beatsPerBar', 0],
     ['denominator', 6],
-    ['sound', 6],
+    ['sound', SOUND_ID_COUNT],
   ])('refuses a preset %s outside engine bounds', async (field, value) => {
     const failure = await rejected((file) => {
       first(file.songPresets)[field] = value;

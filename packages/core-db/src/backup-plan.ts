@@ -12,6 +12,7 @@ import {
   type Conflict,
   type ImportMode,
   type LibrarySongRecord,
+  type LocalRecord,
   type Resolutions,
 } from './backup-format';
 import type { Snapshot } from './backup-snapshot';
@@ -59,6 +60,12 @@ function canonical(record: BackupRecord): string {
   return JSON.stringify(record, fields.sort());
 }
 
+// A sound is its UUID: a renamed copy of the same sound is not a difference.
+function sameRecord(mine: LocalRecord, theirs: BackupRecord): boolean {
+  if ('slot' in mine) return 'slot' in theirs && mine.uuid === theirs.uuid;
+  return canonical(mine) === canonical(theirs);
+}
+
 function selectCategories(
   file: BackupFile,
   mode: ImportMode,
@@ -101,13 +108,10 @@ function emptyPlan(incoming: number): CategoryPlan {
   };
 }
 
-function planReplace(
-  incoming: readonly BackupRecord[],
-  local: readonly BackupRecord[],
-) {
+function planReplace(incoming: readonly BackupRecord[], localCount: number) {
   const summary = emptyPlan(incoming.length);
   summary.new = incoming.length;
-  summary.deletes = local.length;
+  summary.deletes = localCount;
   const writes = incoming.map((record) => ({ record, localId: undefined }));
   return { summary, writes, unresolved: [] as Conflict[] };
 }
@@ -145,7 +149,7 @@ function planMerge(
   snapshot: Snapshot,
   resolutions: Resolutions,
 ): MergeState {
-  const local = new Map(
+  const local = new Map<string, LocalRecord>(
     snapshot.records[category].map((record) => [
       recordKey(category, record),
       record,
@@ -158,8 +162,7 @@ function planMerge(
     if (mine === undefined) {
       state.summary.new += 1;
       state.writes.push({ record, localId: undefined });
-    } else if (canonical(mine) === canonical(record))
-      state.summary.unchanged += 1;
+    } else if (sameRecord(mine, record)) state.summary.unchanged += 1;
     else {
       const localId = snapshot.ids[category].get(key);
       mergeConflict(category, record, localId, resolutions, state);
@@ -236,7 +239,7 @@ export function computePlan(
     );
     const result =
       mode === 'replace'
-        ? planReplace(incoming, snapshot.records[category])
+        ? planReplace(incoming, snapshot.records[category].length)
         : planMerge(category, incoming, snapshot, resolutions);
     plan.counts[category] = result.summary;
     plan.unresolved.push(...result.unresolved);

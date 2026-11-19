@@ -2,6 +2,8 @@ import { afterEach } from 'vitest';
 
 import { createBackupService } from './backup';
 import type { ImportResult } from './backup-format';
+import { createClickSoundRepository } from './click-sound-repository';
+import { memoryClickSoundFiles } from './click-sound-files.test-helper';
 import { COUNT_IN_PREFERENCE_KEYS } from './count-in-preferences';
 import { createPracticeRepository } from './practice-repository';
 import { createPreferences } from './preferences';
@@ -26,11 +28,14 @@ export const SESSION_START = new Date('2026-07-14T20:00:00Z');
 export function openBackupDatabase() {
   const handle = openTestDatabase();
   open.push(handle);
+  const clickSoundFiles = memoryClickSoundFiles();
   return {
     handle,
+    clickSoundFiles,
+    clickSounds: createClickSoundRepository(handle),
     sets: createSetlistRepository(handle),
     presets: createSongPresetRepository(handle),
-    backup: createBackupService(handle),
+    backup: createBackupService(handle, clickSoundFiles.files),
     preferences: createPreferences(
       (sql, params) => handle.connection.prepare(sql).all(...params),
       handle.transactor,

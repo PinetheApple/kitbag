@@ -58,3 +58,18 @@ export function customSoundLoaded(slot: number): Promise<boolean> {
   if (!isCustomSoundSlot(slot)) return Promise.resolve(false);
   return getKitbagCommands().customSoundLoaded(slot);
 }
+
+export function readClickSound(fileName: string): Promise<string> {
+  return getKitbagLibrary().readClickSound(fileName);
+}
+
+export function writeClickSound(
+  fileName: string,
+  wavBase64: string,
+): Promise<void> {
+  return getKitbagLibrary().writeClickSound(fileName, wavBase64);
+}
+
+export function deleteClickSound(fileName: string): Promise<void> {
+  return getKitbagLibrary().deleteClickSound(fileName);
+}

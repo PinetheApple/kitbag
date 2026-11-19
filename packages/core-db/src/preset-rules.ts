@@ -1,5 +1,5 @@
-// core-db may not import core-native (§13.1), so these mirror metronome.h and
-// kitbag_api.h; engine-limits.test.ts fails if either side drifts.
+// core-db may not import core-native (§13.1), so these mirror the engine headers;
+// engine-limits.test.ts fails if either side drifts.
 export const MIN_BPM = 20;
 export const MAX_BPM = 400;
 export const MAX_BEATS = 16;
@@ -30,6 +30,16 @@ export const DENOMINATORS: readonly number[] = [
 ];
 export const DEFAULT_DENOMINATOR = Denominator.Quarter;
 export const SOUND_COUNT = 6;
+export const CUSTOM_SOUND_SLOTS = 2;
+export const SOUND_ID_COUNT = SOUND_COUNT + CUSTOM_SOUND_SLOTS;
+export const TICK_SOUND = 4;
+export const MAX_CUSTOM_SOUND_SECONDS = 2;
+export const CUSTOM_SOUND_RATE = 48000;
+export const CUSTOM_SOUND_SAMPLE_BYTES = 4;
+export const WAV_HEADER_BYTES = 44;
+export const MAX_CUSTOM_SOUND_WAV_BYTES =
+  WAV_HEADER_BYTES +
+  MAX_CUSTOM_SOUND_SECONDS * CUSTOM_SOUND_RATE * CUSTOM_SOUND_SAMPLE_BYTES;
 export const ACCENT_LEVELS = 3;
 export const NORMAL_ACCENT = 1;
 
@@ -67,6 +77,8 @@ export interface PresetBound {
   integer: boolean;
 }
 
+// The v9 repair builds its SQL from these, so they keep v9's columns and sound ids;
+// later columns and the custom sound ids are checked outside them.
 export const PRESET_BOUNDS: readonly PresetBound[] = [
   { field: 'bpm', column: 'bpm', low: MIN_BPM, high: MAX_BPM, integer: false },
   {
@@ -158,10 +170,19 @@ function rampLengthBound(unit: number): PresetBound | undefined {
   };
 }
 
+const SOUND_ID_BOUND: PresetBound = {
+  field: 'sound',
+  column: 'sound',
+  low: 0,
+  high: SOUND_ID_COUNT - 1,
+  integer: true,
+};
+
 function boundViolation(preset: PresetShape): RuleViolation | undefined {
-  const timed = rampLengthBound(preset.rampUnit);
-  const bounds = PRESET_BOUNDS.map((bound) =>
-    bound.field === timed?.field ? timed : bound,
+  const overrides = [rampLengthBound(preset.rampUnit), SOUND_ID_BOUND];
+  const bounds = PRESET_BOUNDS.map(
+    (bound) =>
+      overrides.find((override) => override?.field === bound.field) ?? bound,
   );
   const failed = bounds.find(
     (bound) => !nullOrWithin(preset[bound.field], bound),
@@ -193,7 +214,7 @@ function blobViolation(preset: PresetShape): RuleViolation | undefined {
       'perAccentSounds',
       preset.perAccentSounds,
       [0, PER_ACCENT_SOUND_BYTES],
-      SOUND_COUNT,
+      SOUND_ID_COUNT,
     ],
     ['polyAccents', preset.polyAccents, [preset.polyBeats], ACCENT_LEVELS],
   ];
@@ -226,8 +247,6 @@ export function presetViolation(
   const units: readonly number[] = Object.values(RAMP_UNITS);
   if (!units.includes(preset.rampUnit))
     return { field: 'rampUnit', reason: `expected ${units.join('/')}` };
-  // Not in PRESET_BOUNDS: the v9 repair builds SQL from those, before v13 and
-  // v18 added these columns.
   const step = preset.rampStep ?? MIN_RAMP_STEP;
   if (!(step >= MIN_RAMP_STEP && step <= MAX_STEP))
     return {

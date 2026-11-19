@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { POLY_AGAINST_BAR } from './preset-rules';
+import { POLY_AGAINST_BAR, SOUND_ID_COUNT } from './preset-rules';
 import type { NewSongPreset } from './repository';
 import { createSetlistRepository } from './setlist-repository';
 import { createSongPresetRepository } from './song-preset-repository';
@@ -156,7 +156,7 @@ describe('song preset repository', () => {
     ['bpm', { bpm: 19 }],
     ['beatsPerBar', { beatsPerBar: 17, accents: new Uint8Array(17).fill(1) }],
     ['denominator', { denominator: 3 }],
-    ['sound', { sound: 6 }],
+    ['sound', { sound: SOUND_ID_COUNT }],
     ['subdivision', { subdivision: 17 }],
     ['rampEndBpm', { rampEndBpm: 401 }],
     ['rampLength', { rampLength: 65, rampUnit: 0 }],
@@ -169,7 +169,10 @@ describe('song preset repository', () => {
     ['accents', { accents: new Uint8Array([1, 1, 1]) }],
     ['accents', { accents: new Uint8Array([2, 1, 3, 1, 1, 1, 1]) }],
     ['perAccentSounds', { perAccentSounds: new Uint8Array([1, 2, 3]) }],
-    ['perAccentSounds', { perAccentSounds: new Uint8Array([1, 6]) }],
+    [
+      'perAccentSounds',
+      { perAccentSounds: new Uint8Array([1, SOUND_ID_COUNT]) },
+    ],
     ['polyAccents', { polyAccents: new Uint8Array([1, 1]) }],
     ['polyAgainst', { polyAgainst: 17 }],
     ['polyAgainst', { polyAgainst: -1 }],

@@ -523,6 +523,23 @@ export {
   type StoredFilesRecords,
 } from './storage/storedRowFiles.ts';
 export {
+  configureClickSounds,
+  type ClickSoundDeps,
+} from './clickSounds/runtime.ts';
+export {
+  clickSoundStore,
+  createClickSoundStore,
+  type ClickSoundActions,
+  type ClickSoundOutcome,
+  type ClickSoundState,
+  type ClickSoundStore,
+} from './clickSounds/store.ts';
+export {
+  releaseRemovedSound,
+  releaseSound,
+  releaseStaleSounds,
+} from './clickSounds/released.ts';
+export {
   configureBackup,
   getBackup,
   type BackupDeps,

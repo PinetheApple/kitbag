@@ -188,6 +188,10 @@ export interface Spec extends TurboModule {
   /** Rejects E_BAD_FILE_NAME for a name unsafe as a click sound file. The name must be
    *  new to each call: two prepares to one name share its .part file. */
   prepareClickSound(sourceUri: string, freshFileName: string): Promise<number>;
+  readClickSound(fileName: string): Promise<string>;
+  /** Same name rule as prepareClickSound. */
+  writeClickSound(fileName: string, wavBase64: string): Promise<void>;
+  deleteClickSound(fileName: string): Promise<void>;
   importAudio(uri: string, relativeDir: string): Promise<ImportedAudio>;
   enqueueAnalysis(
     relativePath: string,

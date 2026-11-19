@@ -117,6 +117,7 @@ describe('picking a file', () => {
       'tunings',
       'countInSettings',
       'metronomeSettings',
+      'clickSounds',
     ]);
     expect(state.plan.counts.setlists).toMatchObject({ incoming: 2, new: 2 });
   });
@@ -147,6 +148,7 @@ describe('reviewing', () => {
       'tunings',
       'countInSettings',
       'metronomeSettings',
+      'clickSounds',
     ]);
     await h.store.getState().toggleCategory('setlists');
     expect(review(h.state()).plan.categories).toEqual([
@@ -155,6 +157,7 @@ describe('reviewing', () => {
       'tunings',
       'countInSettings',
       'metronomeSettings',
+      'clickSounds',
     ]);
   });
 
@@ -191,7 +194,11 @@ describe('applying', () => {
 
     await h.store.getState().apply();
 
-    expect(h.state()).toMatchObject({ phase: 'done', mode: 'merge' });
+    expect(h.state()).toMatchObject({
+      phase: 'done',
+      mode: 'merge',
+      soundResets: 0,
+    });
     expect(h.afterRestore).toHaveBeenCalledOnce();
     const again = unwrap(await target.backup.plan(text));
     expect(again.counts.setlists).toMatchObject({ new: 0, unchanged: 2 });

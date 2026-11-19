@@ -20,7 +20,13 @@ import {
   MIN_BPM,
   NORMAL_ACCENT,
   POLY_AGAINST_BAR,
+  CUSTOM_SOUND_RATE,
+  CUSTOM_SOUND_SAMPLE_BYTES,
+  CUSTOM_SOUND_SLOTS,
+  MAX_CUSTOM_SOUND_SECONDS,
+  WAV_HEADER_BYTES,
   SOUND_COUNT,
+  TICK_SOUND,
 } from './preset-rules';
 import { MAX_CLICK_GROUPS } from './click-settings';
 import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
@@ -37,6 +43,11 @@ const headers = {
   'tempo_ramp.h': source('src/metronome/tempo_ramp.h'),
 };
 const api = source('include/kitbag_api.h');
+const clickSoundApi = source('include/kitbag_click_sound_api.h');
+const customSoundLimits = source('src/metronome/custom_sound_limits.h');
+const clickSoundPrepare = source('src/metronome/click_sound_prepare.cpp');
+const riffBytes = source('src/media/riff_bytes.h');
+const BITS_PER_BYTE = 8;
 const polyApi = source('include/kitbag_metronome_poly_api.h');
 const tunerApi = source('include/kitbag_tuner_api.h');
 const gridApi = source('include/kitbag_metronome_grid_api.h');
@@ -63,6 +74,8 @@ describe('engine limits mirrored in core-db', () => {
     expect(constant('kMaxPolyAgainst')).toBe('kMaxBeats');
     expect(MAX_POLY_AGAINST).toBe(MAX_BEATS);
     expect(Number(constant('kSoundCount'))).toBe(SOUND_COUNT);
+    expect(Number(constant('kTickSound'))).toBe(TICK_SOUND);
+    expect(constant('kDefaultNormalSound')).toBe('kTickSound');
     expect(Number(constant('kMaxSubdivision'))).toBe(MAX_SUBDIVISION);
     expect(Number(constant('kMaxBars', 'tempo_ramp.h'))).toBe(MAX_RAMP_BARS);
     expect(Number(constant('kMinSeconds', 'tempo_ramp.h'))).toBe(
@@ -82,6 +95,31 @@ describe('engine limits mirrored in core-db', () => {
   it('match the poly against sentinel in kitbag_metronome_poly_api.h', () => {
     expect(Number(/#define KB_POLY_AGAINST_BAR (\d+)/.exec(polyApi)?.[1])).toBe(
       POLY_AGAINST_BAR,
+    );
+  });
+
+  it('match the custom sound slots in kitbag_click_sound_api.h', () => {
+    expect(
+      Number(/#define KB_CUSTOM_SOUND_SLOTS (\d+)/.exec(clickSoundApi)?.[1]),
+    ).toBe(CUSTOM_SOUND_SLOTS);
+    expect(constant('kFirstCustomSound')).toBe('kSoundCount');
+  });
+
+  it('match the prepared click sound WAV that bounds a backup', () => {
+    expect(
+      Number(
+        /#define KB_MAX_CUSTOM_SOUND_SECONDS (\d+)/.exec(clickSoundApi)?.[1],
+      ),
+    ).toBe(MAX_CUSTOM_SOUND_SECONDS);
+    expect(
+      Number(/kCustomSoundRate = (\d+);/.exec(customSoundLimits)?.[1]),
+    ).toBe(CUSTOM_SOUND_RATE);
+    expect(
+      Number(/kFloatBits = (\d+);/.exec(clickSoundPrepare)?.[1]) /
+        BITS_PER_BYTE,
+    ).toBe(CUSTOM_SOUND_SAMPLE_BYTES);
+    expect(Number(/kHeaderBytes = (\d+);/.exec(riffBytes)?.[1])).toBe(
+      WAV_HEADER_BYTES,
     );
   });
 

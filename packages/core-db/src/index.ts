@@ -100,7 +100,17 @@ export {
   type ImportResult,
   type TuningRecord,
 } from './backup-format';
-export type { ApplyOptions, BackupService } from './backup';
+export type { StaleSlots } from './backup-apply';
+export type { ApplyOptions, ApplyReport, BackupService } from './backup';
+export {
+  freshClickSoundFileName,
+  type ClickSoundFiles,
+} from './click-sound-files';
+export type {
+  ClickSound,
+  ClickSoundRepository,
+  RemovedClickSound,
+} from './click-sound-repository';
 export type { CategoryPlan, ImportOptions, ImportPlan } from './backup-plan';
 export { normalizePolyAgainst } from './preset-rules';
 export {

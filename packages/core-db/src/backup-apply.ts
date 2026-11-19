@@ -9,6 +9,7 @@ import {
   REFERENCES,
   type BackupRecord,
   type Category,
+  type ClickSoundRecord,
   type LibrarySongRecord,
   type PracticeSessionRecord,
   type PreferenceRecord,
@@ -19,8 +20,16 @@ import {
 import type { ImportPlan, Writes } from './backup-plan';
 import { decodeBase64, nullableBytes, presetBytes } from './base64';
 import { fromSeconds, type IdMaps, type Snapshot } from './backup-snapshot';
+import {
+  freshClickSoundFileName,
+  type ClickSoundFiles,
+} from './click-sound-files';
+import { resetStaleSounds } from './click-sound-references';
+import { clickSoundIn, putClickSound } from './click-sound-repository';
+import { CUSTOM_SOUND_SLOTS } from './preset-rules';
 import { found, type Database } from './repository';
 import {
+  clickSounds,
   practiceSessions,
   preferences,
   setlistItems,
@@ -104,7 +113,17 @@ async function upsertSetlist(
   return id;
 }
 
-interface WriteContext {
+export interface ClickSoundFileLog {
+  written: string[];
+  replaced: string[];
+}
+
+export interface FileContext {
+  files: ClickSoundFiles;
+  log: ClickSoundFileLog;
+}
+
+interface WriteContext extends FileContext {
   mode: ImportPlan['mode'];
   ids: IdMaps;
 }
@@ -153,6 +172,22 @@ async function upsertPreference(
   return found(rows, 'Preference upsert').id;
 }
 
+async function upsertClickSound(
+  db: Database,
+  record: ClickSoundRecord,
+  _localId: number | undefined,
+  { files, log }: WriteContext,
+): Promise<number> {
+  const { wav, ...sound } = record;
+  const fileName = freshClickSoundFileName();
+  log.written.push(fileName);
+  await files.write(fileName, wav);
+  const previous = await clickSoundIn(db, sound.slot);
+  if (previous !== null) log.replaced.push(previous.fileName);
+  await putClickSound(db, { ...sound, fileName });
+  return sound.slot;
+}
+
 const UPSERTS: Record<Category, Upsert> = {
   librarySongs: simpleUpsert(songs, librarySongValues),
   songPresets: simpleUpsert(songPresets, songPresetValues),
@@ -164,6 +199,7 @@ const UPSERTS: Record<Category, Upsert> = {
   practiceSessions: simpleUpsert(practiceSessions, practiceValues),
   countInSettings: upsertPreference as Upsert,
   metronomeSettings: upsertPreference as Upsert,
+  clickSounds: upsertClickSound as Upsert,
 };
 
 async function deleteCategory(db: Database, category: Category) {
@@ -186,6 +222,8 @@ async function deleteCategory(db: Database, category: Category) {
     await db.delete(songs);
   } else if (category === 'tunings') {
     await db.delete(tunings);
+  } else if (category === 'clickSounds') {
+    await db.delete(clickSounds);
   } else {
     await db.delete(practiceSessions);
   }
@@ -232,16 +270,66 @@ async function upsertAll(
   db: Database,
   plan: ImportPlan,
   writes: Writes,
-  ids: IdMaps,
+  context: Omit<WriteContext, 'mode'>,
 ) {
+  const { ids } = context;
   for (const category of plan.categories)
     for (const { record, localId } of writes[category] ?? []) {
       const id = await UPSERTS[category](db, record, localId, {
+        ...context,
         mode: plan.mode,
-        ids,
       });
       ids[category].set(recordKey(category, record), id);
     }
+}
+
+const slotSounds = (sounds: readonly { slot: number; uuid: string }[]) =>
+  new Map(sounds.map(({ slot, uuid }) => [slot, uuid]));
+
+const CUSTOM_SLOTS = Array.from(
+  { length: CUSTOM_SOUND_SLOTS },
+  (_, slot) => slot,
+);
+
+export interface StaleSlots {
+  restored: number[];
+  local: number[];
+}
+
+export interface SoundOutcome {
+  soundResets: number;
+  staleSlots: StaleSlots;
+}
+
+async function resetSongSounds(
+  db: Database,
+  plan: ImportPlan,
+  writes: Writes,
+  snapshot: Snapshot,
+): Promise<SoundOutcome> {
+  const restored = new Set(
+    (writes.songPresets ?? []).map(({ record }) =>
+      recordKey('songPresets', record),
+    ),
+  );
+  const fromFile = slotSounds(plan.file.records.clickSounds);
+  const before = slotSounds(snapshot.records.clickSounds);
+  const after = slotSounds(await db.select().from(clickSounds));
+  const slotChanged = (slot: number) => before.get(slot) !== after.get(slot);
+  const slotMissesBackupSound = (slot: number) => {
+    const intended = fromFile.get(slot);
+    return intended === undefined || intended !== after.get(slot);
+  };
+  const soundResets = await resetStaleSounds(db, (presetUuid, slot) =>
+    restored.has(presetUuid) ? slotMissesBackupSound(slot) : slotChanged(slot),
+  );
+  return {
+    soundResets,
+    staleSlots: {
+      restored: CUSTOM_SLOTS.filter(slotMissesBackupSound),
+      local: CUSTOM_SLOTS.filter(slotChanged),
+    },
+  };
 }
 
 export async function applyWrites(
@@ -249,15 +337,22 @@ export async function applyWrites(
   plan: ImportPlan,
   writes: Writes,
   snapshot: Snapshot,
-) {
+  fileContext: FileContext,
+): Promise<SoundOutcome> {
   const { ids } = snapshot;
-  if (plan.mode === 'replace')
+  if (plan.mode === 'replace') {
     for (const category of [...plan.categories].reverse()) {
       await deleteCategory(db, category);
       ids[category].clear();
     }
-  await upsertAll(db, plan, writes, ids);
+    if (plan.categories.includes('clickSounds'))
+      fileContext.log.replaced.push(
+        ...snapshot.records.clickSounds.map(({ fileName }) => fileName),
+      );
+  }
+  await upsertAll(db, plan, writes, { ...fileContext, ids });
   if (plan.mode === 'replace') await relinkUntouched(db, plan, snapshot);
   if (plan.categories.includes('setlists'))
     await adoptActiveSetlist(db, plan, ids);
+  return resetSongSounds(db, plan, writes, snapshot);
 }

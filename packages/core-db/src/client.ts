@@ -2,6 +2,8 @@ import type { DB } from '@op-engineering/op-sqlite';
 import { drizzle } from 'drizzle-orm/op-sqlite';
 
 import { createBackupService } from './backup';
+import type { ClickSoundFiles } from './click-sound-files';
+import { createClickSoundRepository } from './click-sound-repository';
 import * as schema from './schema';
 import { migrate, type MigrationDriver } from './migrate';
 import { openConnection } from './openConnection';
@@ -37,11 +39,17 @@ export function drizzleClient(connection: Connection) {
   };
 }
 
-export function openDatabase(name: string = DATABASE_NAME) {
-  return connectDatabase(openConnection(name));
+export function openDatabase(
+  clickSoundFiles: ClickSoundFiles,
+  name: string = DATABASE_NAME,
+) {
+  return connectDatabase(openConnection(name), clickSoundFiles);
 }
 
-export function connectDatabase(connection: Connection) {
+export function connectDatabase(
+  connection: Connection,
+  clickSoundFiles: ClickSoundFiles,
+) {
   try {
     migrate(opSqliteMigrationDriver(connection));
   } catch (error) {
@@ -62,7 +70,8 @@ export function connectDatabase(connection: Connection) {
     presets: createSongPresetRepository(handle),
     tunings: createTuningRepository(handle),
     songLibrary: createSongLibraryRepository(handle),
-    backup: createBackupService(handle),
+    backup: createBackupService(handle, clickSoundFiles),
+    clickSounds: createClickSoundRepository(handle),
     practice: createPracticeRepository(handle),
     routeLatency: createRouteLatencyRepository(handle),
     preferences: createPreferences(
