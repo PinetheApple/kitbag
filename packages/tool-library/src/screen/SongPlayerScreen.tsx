@@ -9,7 +9,6 @@ import {
   EmptyState,
   screenBar,
   ScrubRow,
-  Sheet,
   songPlayer,
   space,
   stemPlayer,
@@ -39,12 +38,14 @@ import {
   lockBadgeOf,
   lockText,
 } from '../logic/lockText.ts';
-import { canReanalyze, unsupportedFormatText } from '../logic/notices.ts';
+import { unsupportedFormatText } from '../logic/notices.ts';
 import type { BadgeSpec } from '../logic/rowText.ts';
 import { songTitle } from '../logic/songTitle.ts';
 import { REANALYZE_LABEL } from '../logic/viewText.ts';
 import { frameAtTap } from '../logic/waveSeek.ts';
 import type { UsePlayhead } from './playhead.ts';
+import { SongMeter } from './SongMeter.tsx';
+import { SongPlayerMenu } from './SongPlayerMenu.tsx';
 import { SongTransport } from './SongTransport.tsx';
 import { useSongFailure } from './useSongFailure.ts';
 
@@ -79,59 +80,7 @@ const useStyles = createThemedStyles((theme) => ({
   lockTitle: { ...textStyle(textRoles.listTitle), color: theme.color.text },
   lockDetail: { ...textStyle(textRoles.listFacts), color: theme.color.text2 },
   note: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
-  menu: { gap: space.controlGap },
 }));
-
-interface PlayerMenuProps {
-  readonly songId: number;
-  readonly visible: boolean;
-  readonly bottomInset: number;
-  readonly onDismiss: () => void;
-  readonly onBack: () => void;
-}
-
-function PlayerMenu({
-  songId,
-  visible,
-  bottomInset,
-  onDismiss,
-  onBack,
-}: PlayerMenuProps) {
-  const styles = useStyles();
-  const title = useSongPlayer((s) => s.title);
-  const close = useSongPlayer((s) => s.close);
-  const reanalyze = useSongLibrary((s) => s.reanalyze);
-  const reanalyzable = canReanalyze(useSongFailure(songId));
-  const stop = useCallback(() => {
-    onDismiss();
-    onBack();
-    close();
-  }, [onDismiss, onBack, close]);
-  const onReanalyze = useCallback(() => {
-    onDismiss();
-    void reanalyze(songId);
-  }, [onDismiss, reanalyze, songId]);
-  return (
-    <Sheet
-      visible={visible}
-      title={songTitle(title)}
-      dismissLabel="Close the menu"
-      bottomInset={bottomInset}
-      onDismiss={onDismiss}
-    >
-      <View style={styles.menu}>
-        <Button label="Stop" variant="tonal" onPress={stop} />
-        {reanalyzable ? (
-          <Button
-            label={REANALYZE_LABEL}
-            variant="tonal"
-            onPress={onReanalyze}
-          />
-        ) : null}
-      </View>
-    </Sheet>
-  );
-}
 
 interface SongAppBarProps {
   readonly onBack: () => void;
@@ -315,11 +264,20 @@ function NotReady({
 interface BodyProps {
   readonly songId: number;
   readonly bottom: number;
+  readonly meterOpen: boolean;
   readonly onBack: () => void;
+  readonly onCloseMeter: () => void;
   readonly usePlayhead: UsePlayhead;
 }
 
-function Body({ songId, bottom, onBack, usePlayhead }: BodyProps) {
+function Body({
+  songId,
+  bottom,
+  meterOpen,
+  onBack,
+  onCloseMeter,
+  usePlayhead,
+}: BodyProps) {
   const styles = useStyles();
   const status = useSongPlayer((s) => s.status);
   const rate = useSongPlayer((s) => s.engineRate);
@@ -345,6 +303,13 @@ function Body({ songId, bottom, onBack, usePlayhead }: BodyProps) {
         </Card>
         <LockCard songId={songId} />
       </ScrollView>
+      <SongMeter
+        songId={songId}
+        visible={meterOpen}
+        bottomInset={bottom}
+        playheadSeconds={playhead.songSec}
+        onClose={onCloseMeter}
+      />
       <SongTransport playing={playhead.playing} bottomInset={bottom} />
     </>
   );
@@ -371,6 +336,13 @@ export function SongPlayerScreen({
   const closeMenu = useCallback(() => {
     setMenuOpen(false);
   }, []);
+  const [meterOpen, setMeterOpen] = useState(false);
+  const openMeter = useCallback(() => {
+    setMeterOpen(true);
+  }, []);
+  const closeMeter = useCallback(() => {
+    setMeterOpen(false);
+  }, []);
   const padding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
   return (
     <View style={[styles.screen, padding]}>
@@ -378,15 +350,18 @@ export function SongPlayerScreen({
       <Body
         songId={songId}
         bottom={insets.bottom}
+        meterOpen={meterOpen}
         onBack={onBack}
+        onCloseMeter={closeMeter}
         usePlayhead={usePlayhead}
       />
-      <PlayerMenu
+      <SongPlayerMenu
         songId={songId}
         visible={menuOpen}
         bottomInset={insets.bottom}
         onDismiss={closeMenu}
         onBack={onBack}
+        onMeter={openMeter}
       />
     </View>
   );

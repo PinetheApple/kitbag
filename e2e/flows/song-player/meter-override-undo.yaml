@@ -1,0 +1,28 @@
+appId: com.kitbag.app
+name: "#332: the song player's Meter row saves a meter and Undo restores it"
+tags:
+  - pr-332
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- runFlow: ../../subflows/import-fixture-song.yaml
+- tapOn: '${FIXTURE_SONG}, .*'
+- extendedWaitUntil:
+    visible: 'Play'
+    timeout: 10000
+- tapOn: 'More'
+- extendedWaitUntil:
+    visible: 'Meter, 4/4'
+    timeout: 60000
+- tapOn: 'Meter, 4/4'
+- tapOn: '3/4'
+- assertVisible: 'Meter set to 3/4. Saved for this song.'
+- tapOn: 'Done'
+- tapOn: 'More'
+- assertVisible: 'Meter, 3/4 · yours'
+- tapOn: 'Meter, 3/4 · yours'
+- tapOn: 'Use detected'
+- assertVisible: 'Back to the detected meter. Saved for this song.'
+- tapOn: 'Undo'
+- tapOn: 'Done'
+- tapOn: 'More'
+- assertVisible: 'Meter, 3/4 · yours'

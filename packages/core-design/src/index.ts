@@ -42,6 +42,7 @@ export * from './components/EmptyState.tsx';
 export * from './components/FloatingActionButton.tsx';
 export * from './components/Icon.tsx';
 export * from './components/ListRow.tsx';
+export * from './components/MenuRow.tsx';
 export * from './components/MeterRow.tsx';
 export * from './components/MeterSheet.tsx';
 export * from './components/LinearProgress.tsx';

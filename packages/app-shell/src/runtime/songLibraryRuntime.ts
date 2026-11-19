@@ -33,6 +33,8 @@ const records: SongLibraryRecords = {
   renameStemSet: (id, title) => library().renameStemSet(id, title),
   updateDuration: (id, durationSec) =>
     library().updateDuration(id, durationSec),
+  saveSongMeterOverride: (id, patch) =>
+    library().saveSongMeterOverride(id, patch),
 };
 
 // Resolved per call: getKitbagLibrary throws in a build without the module.

@@ -363,7 +363,14 @@ export {
 export {
   overrideDownbeats,
   type DetectedGrid,
+  type DetectedMeter,
 } from './stemPlayer/meterOverride.ts';
+export {
+  GRID_METERS,
+  NO_METER_OVERRIDE,
+  type GridMeter,
+  type MeterOverride,
+} from '@kitbag/core-db';
 export {
   clickKeyLabel,
   loopEndFrames,
