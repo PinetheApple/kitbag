@@ -1107,3 +1107,14 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   the detected bar one, which skips a leading pickup bar shorter than a full bar. The detected
   meter is the most common bar length, not the first, so a pickup cannot set it.
   **[recorded — lane call, owner may overturn]**
+
+- **2026-11-19 · Custom click sounds (§5.3, #174)** — Owner ruling 2026-11-07: custom sound
+  import only; the six built-in sounds stay. **[user]** Recommendations taken while the owner is
+  away, recorded in SPEC §5.3 and drawn in
+  `docs/research/mockups/kitbag-metronome-custom-sound.html`: two slots as engine ids 6 and 7;
+  song-import formats, up to 2 s from the first audible sample; mono, 48 kHz, peak-matched,
+  prepared by the core; file-name naming, renamable; Replace keeps the slot, Remove resets users
+  to Tick; prepared WAV in app-private storage, not the Data folder, because a removable card
+  must not take the click away; a Click sounds backup category keyed by slot; restore resets a
+  reference to Tick unless the same sound (by UUID) is in that slot. Song import's list includes
+  AIFF, so the copy reads “WAV, MP3, FLAC or AIFF”. **[REC TAKEN, owner may overturn]**

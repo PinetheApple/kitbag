@@ -1,6 +1,6 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
-import { screenBar, space } from '@kitbag/core-design';
+import { screenBar, space, type LoopHandles } from '@kitbag/core-design';
 import { act, createElement, type ReactNode } from 'react';
 import {
   create,
@@ -20,6 +20,9 @@ type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const OPEN_SONG = { songId: 1, title: 'A song', artist: 'An artist', bpm: 120 };
 const CLOSED_SONG = { songId: null, title: '', artist: null, bpm: null };
+const ENGINE_RATE = 48_000;
+const SONG_SECONDS = 200;
+const DROPPED_FRACTION = 0.25;
 
 const display = vi.hoisted(() => ({
   scaled: false,
@@ -86,16 +89,24 @@ vi.mock('@kitbag/core-design', async (original) => {
       h('PlayerTransport', props, props.extraKey as ReactNode),
     Snackbar: (props: Props) => h('Snackbar', props),
     TransportKey: (props: Props) => h('TransportKey', props),
-    ScrubRow: nothing,
+    ScrubRow: (props: Props) =>
+      h('ScrubRow', { loopHandles: props.loopHandles }),
     textStyle: () => ({}),
     useTextScaled: () => display.scaled,
   };
 });
 
 vi.mock('@kitbag/core-state', async (original) => {
-  const { useFocusedMixerHold, playerSongBadge } = await original<{
+  const {
+    useFocusedMixerHold,
+    playerSongBadge,
+    beatBeside,
+    formatClockSeconds,
+  } = await original<{
     useFocusedMixerHold: unknown;
     playerSongBadge: unknown;
+    beatBeside: unknown;
+    formatClockSeconds: unknown;
   }>();
   const open = () => {
     const mine = ++mixer.session;
@@ -114,10 +125,12 @@ vi.mock('@kitbag/core-state', async (original) => {
   };
   return {
     analysisFailure: () => library.failure,
+    beatBeside,
+    formatClockSeconds,
     bpmFact: (bpm: number | null) =>
       bpm === null ? null : { text: `${String(bpm)} BPM`, spoken: '' },
     clickKeyLabel: () => '',
-    framesToSeconds: () => 0,
+    framesToSeconds: (frames: number, rate: number) => frames / rate,
     loopEndFrames: () => null,
     loopKeyLabel: () => '',
     SKIP_SECONDS: 10,
@@ -131,6 +144,8 @@ vi.mock('@kitbag/core-state', async (original) => {
         status: display.status,
         ...display.song,
         click: false,
+        durationFrames: SONG_SECONDS * ENGINE_RATE,
+        engineRate: ENGINE_RATE,
         ...display.analysis,
         loop: { kind: 'off' },
         open,
@@ -512,5 +527,19 @@ describe('the transport', () => {
       )();
     });
     expect(tree.root.findAllByType('Snackbar' as never)).toHaveLength(0);
+  });
+});
+
+describe('the loop handles', () => {
+  it('moves the dropped edge to its fraction of the song in seconds', () => {
+    const row = mount().root.findByType('ScrubRow' as never);
+    const handles = row.props.loopHandles as LoopHandles;
+    act(() => {
+      void handles.onMoveLoopEdge('end', DROPPED_FRACTION);
+    });
+    expect(transport.moveLoopEdge).toHaveBeenCalledExactlyOnceWith(
+      'end',
+      DROPPED_FRACTION * SONG_SECONDS,
+    );
   });
 });

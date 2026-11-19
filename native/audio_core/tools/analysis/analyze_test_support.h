@@ -4,6 +4,7 @@
 // Fixtures and the ABI driver shared by the analyze suite's translation units.
 #include "kitbag_api.h"
 
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -34,6 +35,9 @@ constexpr int kToneGuardFrames = 200;
 // Above the ~0.02 s beat-tracker drift, far below the 0.45 s one-beat spacing a
 // wrong phase or a scaled df-unit conversion would produce.
 constexpr float kBarOneToleranceSec = 0.1f;
+// Below the ~344 Hz top of the band the downbeat spectral difference reads.
+constexpr std::array<float, 5> kBarPitchesHz =
+    {110.0f, 164.81f, 130.81f, 196.0f, 146.83f};
 constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
 
 // DownBeat's Hanning window zeroes the click, so the beat-long tone carries the
