@@ -27,12 +27,18 @@ export async function reopenDatabase(): Promise<DatabaseOpenError | undefined> {
   return undefined;
 }
 
-function copyFailureNotice(error: unknown): string {
+function isUnsettled(error: unknown): boolean {
   const code = errorCode(error);
-  const unsettled =
-    code !== null &&
-    code === getKitbagLibrary().getConstants().databaseCopyUnsettled;
-  return unsettled
+  if (code === null) return false;
+  try {
+    return code === getKitbagLibrary().getConstants().databaseCopyUnsettled;
+  } catch {
+    return false;
+  }
+}
+
+function copyFailureNotice(error: unknown): string {
+  return isUnsettled(error)
     ? DATABASE_ERROR_TEXT.copyUnsettled
     : DATABASE_ERROR_TEXT.copyFailed;
 }

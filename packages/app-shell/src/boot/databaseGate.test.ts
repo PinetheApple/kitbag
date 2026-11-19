@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   reloadAppAsync: vi.fn(() => Promise.resolve()),
   saveDatabaseCopy: vi.fn(),
   close: vi.fn(() => Promise.resolve()),
+  getKitbagLibrary: vi.fn(),
 }));
 
 vi.mock('@/runtime/database', () => ({
@@ -19,9 +20,7 @@ vi.mock('@/runtime/database', () => ({
 }));
 vi.mock('@kitbag/core-native', async (original) => ({
   ...(await original<Record<string, unknown>>()),
-  getKitbagLibrary: () => ({
-    getConstants: () => ({ databaseCopyUnsettled: UNSETTLED_CODE }),
-  }),
+  getKitbagLibrary: mocks.getKitbagLibrary,
   saveDatabaseCopy: mocks.saveDatabaseCopy,
 }));
 vi.mock('expo', () => ({ reloadAppAsync: mocks.reloadAppAsync }));
@@ -41,6 +40,9 @@ function quietly() {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.restoreAllMocks();
+  mocks.getKitbagLibrary.mockReturnValue({
+    getConstants: () => ({ databaseCopyUnsettled: UNSETTLED_CODE }),
+  });
 });
 
 describe('launchDatabaseError', () => {
@@ -125,6 +127,22 @@ describe('saveDatabaseCopyNotice', () => {
 
     await expect(saveDatabaseCopyNotice(TODAY)).resolves.toBe(
       DATABASE_ERROR_TEXT.copyUnsettled,
+    );
+  });
+
+  it('falls back to the generic notice when the native module cannot be read', async () => {
+    quietly();
+    mocks.saveDatabaseCopy.mockRejectedValue(
+      Object.assign(new Error('unfinished transaction'), {
+        code: UNSETTLED_CODE,
+      }),
+    );
+    mocks.getKitbagLibrary.mockImplementation(() => {
+      throw new Error('KitbagLibrary is not registered');
+    });
+
+    await expect(saveDatabaseCopyNotice(TODAY)).resolves.toBe(
+      DATABASE_ERROR_TEXT.copyFailed,
     );
   });
 });

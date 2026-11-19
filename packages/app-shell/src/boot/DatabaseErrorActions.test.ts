@@ -10,6 +10,7 @@ import {
 } from './databaseErrorCopy.ts';
 
 const labels = vi.hoisted(() => [] as string[]);
+const disabled = vi.hoisted(() => new Map<string, boolean>());
 
 vi.mock('react-native', () => ({
   StyleSheet: { create: <T>(styles: T) => styles },
@@ -17,13 +18,34 @@ vi.mock('react-native', () => ({
 }));
 vi.mock('@kitbag/core-design', async (original) => ({
   ...(await original<Record<string, unknown>>()),
-  Button: ({ label }: { readonly label: string }) => {
+  Button: ({
+    label,
+    disabled: off,
+  }: {
+    readonly label: string;
+    readonly disabled: boolean;
+  }) => {
     labels.push(label);
+    disabled.set(label, off);
     return null;
   },
 }));
 
 const { DatabaseErrorActions } = await import('./DatabaseErrorActions.tsx');
+
+function renderActions(state: { retrying: boolean; saving: boolean }) {
+  disabled.clear();
+  renderToStaticMarkup(
+    createElement(DatabaseErrorActions, {
+      stacked: false,
+      canRetry: true,
+      ...state,
+      onRetry: () => undefined,
+      onSaveCopy: () => undefined,
+    }),
+  );
+  return Object.fromEntries(disabled);
+}
 
 function actionsFor(kind: DatabaseOpenErrorKind): readonly string[] {
   labels.length = 0;
@@ -33,6 +55,7 @@ function actionsFor(kind: DatabaseOpenErrorKind): readonly string[] {
       stacked: false,
       canRetry: offersRetry(frame),
       retrying: false,
+      saving: false,
       onRetry: () => undefined,
       onSaveCopy: () => undefined,
     }),
@@ -54,4 +77,25 @@ describe('DatabaseErrorActions', () => {
       ]);
     },
   );
+
+  it('disables Try again while a copy is being saved, so nothing migrates the file mid-copy', () => {
+    expect(renderActions({ retrying: false, saving: true })).toEqual({
+      [DATABASE_ERROR_TEXT.retry]: true,
+      [DATABASE_ERROR_TEXT.saveCopy]: true,
+    });
+  });
+
+  it('disables Save a copy while the retry is in flight', () => {
+    expect(renderActions({ retrying: true, saving: false })).toEqual({
+      [DATABASE_ERROR_TEXT.retry]: true,
+      [DATABASE_ERROR_TEXT.saveCopy]: true,
+    });
+  });
+
+  it('enables both when nothing is in flight', () => {
+    expect(renderActions({ retrying: false, saving: false })).toEqual({
+      [DATABASE_ERROR_TEXT.retry]: false,
+      [DATABASE_ERROR_TEXT.saveCopy]: false,
+    });
+  });
 });

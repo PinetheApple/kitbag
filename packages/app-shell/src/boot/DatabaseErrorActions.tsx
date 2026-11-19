@@ -7,6 +7,7 @@ export interface DatabaseErrorActionsProps {
   readonly stacked: boolean;
   readonly canRetry: boolean;
   readonly retrying: boolean;
+  readonly saving: boolean;
   readonly onRetry: () => void;
   readonly onSaveCopy: () => void;
 }
@@ -15,9 +16,11 @@ export function DatabaseErrorActions({
   stacked,
   canRetry,
   retrying,
+  saving,
   onRetry,
   onSaveCopy,
 }: DatabaseErrorActionsProps) {
+  const busy = retrying || saving;
   return (
     <View style={[styles.actions, stacked && styles.stacked]}>
       {canRetry ? (
@@ -27,7 +30,7 @@ export function DatabaseErrorActions({
           icon="analyzing"
           iconSize="emptyButton"
           label={DATABASE_ERROR_TEXT.retry}
-          disabled={retrying}
+          disabled={busy}
           fill={!stacked}
           onPress={onRetry}
         />
@@ -38,7 +41,7 @@ export function DatabaseErrorActions({
         icon="backupFile"
         iconSize="emptyButton"
         label={DATABASE_ERROR_TEXT.saveCopy}
-        disabled={retrying}
+        disabled={busy}
         fill={!stacked}
         onPress={onSaveCopy}
       />

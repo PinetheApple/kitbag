@@ -122,7 +122,7 @@ export function DatabaseErrorScreen({ error }: DatabaseErrorScreenProps) {
   const stacked = useTextScaled();
   const { notice, setNotice, clearNotice } = useNotice();
   const retry = useDatabaseRetry(error, setNotice);
-  const handleSaveCopy = useSaveCopy(setNotice);
+  const copy = useSaveCopy(setNotice);
   const frame = databaseErrorFrame(retry.error);
   return (
     <View
@@ -139,8 +139,9 @@ export function DatabaseErrorScreen({ error }: DatabaseErrorScreenProps) {
             stacked={stacked}
             canRetry={offersRetry(frame)}
             retrying={retry.retrying}
+            saving={copy.saving}
             onRetry={retry.retry}
-            onSaveCopy={handleSaveCopy}
+            onSaveCopy={copy.saveCopy}
           />
           <Text style={styles.hint}>{DATABASE_ERROR_TEXT.saveHint}</Text>
         </View>
