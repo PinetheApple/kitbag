@@ -58,7 +58,6 @@ class MoveRunner(
   fun pending(): MoveState? = journal.load()
 
   fun start(target: DataFolderLocation): MoveOutcome {
-    check(journal.load() == null) { "A move is already in progress" }
     val source = folder.location()
     require(source != target) { "The data folder is already there" }
     val sourceState = folder.rootState()
@@ -66,15 +65,22 @@ class MoveRunner(
       return MoveOutcome.Failed(MoveFailure.SOURCE_UNAVAILABLE)
     }
     val files = MovePlan.scan(sourceState.root).map { MoveEntry(it.path, it.size, it.modified) }
-    return drive(save(MoveState(source, target, MovePhase.PREFLIGHT, files)))
+    val state = synchronized(cancelOrSwitchLock) {
+      check(journal.load() == null) { "A move is already in progress" }
+      begin(save(MoveState(source, target, MovePhase.PREFLIGHT, files)))
+    }
+    return drive(state)
   }
 
-  fun resume(): MoveOutcome = journal.load()?.let { drive(it.copy(failure = null)) } ?: MoveOutcome.NoMove
+  fun resume(): MoveOutcome {
+    val state = synchronized(cancelOrSwitchLock) { journal.load()?.copy(failure = null)?.let(::begin) }
+    return state?.let(::drive) ?: MoveOutcome.NoMove
+  }
 
   fun cancel(): Boolean =
     synchronized(cancelOrSwitchLock) {
       val state = current ?: journal.load() ?: return false
-      if (state.phase >= MovePhase.SWITCHED || switched(state)) return false
+      if (state.phase >= MovePhase.SWITCHED || maybeSwitched(state)) return false
       if (running.get()) {
         cancelRequested.set(true)
         return true
@@ -93,11 +99,15 @@ class MoveRunner(
     return true
   }
 
-  private fun drive(initial: MoveState): MoveOutcome {
+  private fun begin(state: MoveState): MoveState {
     check(running.compareAndSet(false, true)) { "A move is already running" }
     cancelRequested.set(false)
-    var state = initial
     current = state
+    return state
+  }
+
+  private fun drive(initial: MoveState): MoveOutcome {
+    var state = initial
     try {
       while (true) {
         emit(state, null)
@@ -246,6 +256,9 @@ class MoveRunner(
 
   private fun switched(state: MoveState) = folder.storedLocation() == state.target
 
+  private fun maybeSwitched(state: MoveState): Boolean =
+    folder.storedLocation().let { stored -> stored == null || stored == state.target }
+
   private fun cleaning(state: MoveState): MoveState {
     val sourceRoot = mountedRoot(state.source) ?: throw Stop(MoveOutcome.Failed(MoveFailure.SOURCE_UNAVAILABLE))
     if (!gate.released(sourceRoot)) throw Stop(MoveOutcome.AwaitingRelease)
@@ -255,7 +268,7 @@ class MoveRunner(
 
   // Preflight proved every planned path absent on the target, so past it each one present there is ours.
   private fun discard(state: MoveState): Boolean {
-    if (switched(state)) return false
+    if (maybeSwitched(state)) return false
     if (state.phase > MovePhase.PREFLIGHT) {
       val targetRoot = mountedRoot(state.target) ?: return false
       state.files.forEach { deleteCopy(targetRoot, it.path) }

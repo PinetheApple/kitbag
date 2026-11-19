@@ -1,5 +1,6 @@
 package com.kitbag.corenative.library.move
 
+import com.kitbag.corenative.library.DataFolder
 import com.kitbag.corenative.library.DataFolderLocation
 import com.kitbag.corenative.library.Waveforms
 import com.kitbag.corenative.library.move.MoveFixture.Companion.DRUMS
@@ -8,6 +9,7 @@ import com.kitbag.corenative.library.move.MoveFixture.Companion.SONG
 import com.kitbag.corenative.library.move.MoveFixture.Companion.WAVEFORM
 import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -120,7 +122,57 @@ class MoveSafetyTest {
     assertFalse(File(fx.internalRoot, WAVEFORM).exists())
   }
 
+  @Test
+  fun `cancel is refused while the state file is unreadable and an internal target may be live`() {
+    fx = MoveFixture(File(temp, "from-card"))
+    fx.folder.select(card)
+    library = fx.seedLibrary(fx.cardRoot)
+    val killer = fx.runner { if (it.phase == MovePhase.VERIFYING && it.path == null) throw MoveFixture.Killed() }
+    assertThrows(MoveFixture.Killed::class.java) { killer.start(DataFolderLocation.Internal) }
+    File(fx.filesDir, DataFolder.STATE_FILE_NAME).writeText("{not json")
+
+    assertFalse(fx.newProcess().cancel())
+    assertEquals(fx.hashes(library), fx.visibleFiles(fx.internalRoot))
+    assertEquals(fx.hashes(library), fx.visibleFiles(fx.cardRoot))
+  }
+
+  @Test
+  fun `a cancel racing a resume never discards copies the resumed move relies on`() {
+    killAt(MovePhase.CATCH_UP)
+    val loaded = CountDownLatch(1)
+    val cancelled = CountDownLatch(1)
+    lateinit var resumer: Thread
+    val journal = object : MoveJournal(fx.journalFile, { _, _ -> }) {
+      override fun load(): MoveState? =
+        super.load().also {
+          if (Thread.currentThread() == resumer && loaded.count > 0) {
+            loaded.countDown()
+            cancelled.await(RACE_WINDOW_MS, TimeUnit.MILLISECONDS)
+          }
+        }
+    }
+    fx.folder = fx.newFolder()
+    val runner = MoveRunner(fx.folder, journal, { Long.MAX_VALUE }, { true })
+    var outcome: MoveOutcome? = null
+    resumer = Thread { outcome = runner.resume() }
+    resumer.start()
+    assertTrue(loaded.await(WAIT_SECONDS, TimeUnit.SECONDS))
+    val accepted = runner.cancel()
+    cancelled.countDown()
+    resumer.join()
+
+    if (fx.location() == card) {
+      assertFalse(accepted)
+      assertEquals(MoveOutcome.Done, outcome)
+      assertEquals(fx.hashes(library), fx.visibleFiles(fx.cardRoot))
+    } else {
+      assertEquals(MoveOutcome.Cancelled, outcome)
+      assertEquals(fx.hashes(library), fx.visibleFiles(fx.internalRoot))
+    }
+  }
+
   private companion object {
+    const val RACE_WINDOW_MS = 500L
     const val WAIT_SECONDS = 10L
   }
 }

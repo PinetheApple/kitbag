@@ -31,13 +31,13 @@ data class MoveState(
   val totalBytes: Long get() = files.sumOf { it.size }
 }
 
-class MoveJournal(file: File, warn: (message: String, cause: Exception) -> Unit) {
+open class MoveJournal(file: File, warn: (message: String, cause: Exception) -> Unit) {
   private val stored = JsonStateFile(file, "no move in progress", warn)
 
   fun save(state: MoveState) = stored.write(json(state))
 
   // A journal that cannot be read means no move: nothing may be deleted on its word.
-  fun load(): MoveState? = stored.read(null, ::state)
+  open fun load(): MoveState? = stored.read(null, ::state)
 
   fun clear() = stored.delete()
 
