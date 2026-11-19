@@ -6,6 +6,9 @@ on:
 
 permissions: {}
 
+env:
+  APT_OPTS: -o Acquire::Retries=5 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
+
 concurrency:
   group: release
   cancel-in-progress: false
@@ -151,7 +154,7 @@ jobs:
           key: ccache-${{ runner.os }}-${{ github.sha }}
           restore-keys: ccache-${{ runner.os }}-
       - name: Install ccache
-        run: sudo apt-get update && sudo apt-get install -y ccache
+        run: sudo apt-get $APT_OPTS update && sudo apt-get $APT_OPTS install -y ccache
       - name: Install (frozen lockfile)
         run: pnpm install --frozen-lockfile
       - name: Keystore — decode to the runner's temp dir

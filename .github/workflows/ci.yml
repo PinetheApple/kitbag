@@ -7,6 +7,9 @@ on:
   merge_group:
     types: [checks_requested]
 
+env:
+  APT_OPTS: -o Acquire::Retries=5 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
+
 # The Flutter app is gone (SPEC.md §13 — the stack is React Native + TypeScript).
 # The native core is the only buildable target today; the RN jobs land with the app.
 jobs:
@@ -19,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install build tools
-        run: sudo apt-get update && sudo apt-get install -y ninja-build
+        run: sudo apt-get $APT_OPTS update && sudo apt-get $APT_OPTS install -y ninja-build
       - name: Configure
         run: cmake -S native/audio_core -B native/audio_core/build -G Ninja -DKITBAG_BUILD_TOOLS=ON
       - name: Build
@@ -174,7 +177,7 @@ jobs:
           key: ccache-${{ runner.os }}-${{ github.sha }}
           restore-keys: ccache-${{ runner.os }}-
       - name: Install ccache
-        run: sudo apt-get update && sudo apt-get install -y ccache
+        run: sudo apt-get $APT_OPTS update && sudo apt-get $APT_OPTS install -y ccache
       - name: ccache — zero the restored stats so the report covers this build only
         run: ccache --zero-stats
       - name: Install (frozen lockfile)
