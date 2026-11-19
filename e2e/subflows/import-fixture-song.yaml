@@ -15,6 +15,11 @@ appId: com.kitbag.app
           element: '${FIXTURE_SONG}.wav'
           timeout: 5000
 - tapOn: '${FIXTURE_SONG}.wav'
+- runFlow:
+    when:
+      visible: '\d+ selected'
+    commands:
+      - tapOn: 'Select'
 - extendedWaitUntil:
     visible: '${FIXTURE_SONG}, .*'
     timeout: 20000
