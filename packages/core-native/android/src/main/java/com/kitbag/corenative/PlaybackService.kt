@@ -24,6 +24,7 @@ import com.kitbag.corenative.transport.PracticeClock
 import com.kitbag.corenative.transport.SessionButton
 import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.SongAction
+import com.kitbag.corenative.transport.SongCardFence
 import com.kitbag.corenative.transport.SongCommand
 import com.kitbag.corenative.transport.TransportAction
 import com.kitbag.corenative.transport.TransportChange
@@ -126,9 +127,11 @@ class PlaybackService : Service() {
       ::songIntent,
       ::postForeground,
       { songRequestListener },
+      songFence,
     ) { songStopped() }.also { song = it }
     songCard.show(
       next,
+      intent.getIntExtra(EXTRA_SONG_CARD, SongCardFence.NONE),
       intent.getBooleanExtra(EXTRA_PLAYING, true),
       intent.getBooleanExtra(EXTRA_COUNTING_IN, false),
     )
@@ -368,6 +371,8 @@ class PlaybackService : Service() {
     private const val EXTRA_PRACTICE_STRETCH_STARTED_AT = "practiceStretchStartedAt"
     private const val EXTRA_SUBTITLE = "setlistSubtitle"
     private const val EXTRA_CARD_NUMBER = "cardNumber"
+    private const val EXTRA_SONG_CARD = "songCard"
+    private val songFence = SongCardFence()
 
     @Volatile private var running = false
 
@@ -422,10 +427,12 @@ class PlaybackService : Service() {
         .putExtra(EXTRA_DURATION_FRAMES, song.durationFrames)
         .putExtra(EXTRA_RESTART_FROM_FRAME, song.restartFromFrame)
         .putExtra(EXTRA_SKIP_SECONDS, song.skipSeconds)
+        .putExtra(EXTRA_SONG_CARD, songFence.issue())
       start(context, intent)
     }
 
     fun hideSong(context: Context) {
+      songFence.withdraw()
       if (!running && !startRequested) return
       context.startService(Intent(context, PlaybackService::class.java).setAction(ACTION_SONG_HIDE))
     }
