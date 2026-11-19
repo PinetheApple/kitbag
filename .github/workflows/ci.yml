@@ -22,6 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install build tools
+        timeout-minutes: 5
         run: sudo apt-get $APT_OPTS update && sudo apt-get $APT_OPTS install -y ninja-build
       - name: Configure
         run: cmake -S native/audio_core -B native/audio_core/build -G Ninja -DKITBAG_BUILD_TOOLS=ON
@@ -177,6 +178,7 @@ jobs:
           key: ccache-${{ runner.os }}-${{ github.sha }}
           restore-keys: ccache-${{ runner.os }}-
       - name: Install ccache
+        timeout-minutes: 5
         run: sudo apt-get $APT_OPTS update && sudo apt-get $APT_OPTS install -y ccache
       - name: ccache — zero the restored stats so the report covers this build only
         run: ccache --zero-stats

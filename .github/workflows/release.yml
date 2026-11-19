@@ -154,6 +154,7 @@ jobs:
           key: ccache-${{ runner.os }}-${{ github.sha }}
           restore-keys: ccache-${{ runner.os }}-
       - name: Install ccache
+        timeout-minutes: 5
         run: sudo apt-get $APT_OPTS update && sudo apt-get $APT_OPTS install -y ccache
       - name: Install (frozen lockfile)
         run: pnpm install --frozen-lockfile
