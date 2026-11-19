@@ -7,6 +7,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import org.json.JSONException
 import org.json.JSONObject
 
+class UnreadableStateException(name: String) : IOException("Refusing to overwrite an unreadable $name")
+
 class JsonStateFile(
   private val file: File,
   private val unreadableMessage: String,
@@ -37,7 +39,13 @@ class JsonStateFile(
 
   fun write(json: JSONObject) = writeAtomically(file, json.toString(), durable = true)
 
+  fun setAside(): Boolean = file.renameTo(File(file.parentFile, file.name + CORRUPT_SUFFIX))
+
   fun delete() {
     if (file.exists() && !file.delete()) throw IOException("Could not delete ${file.name}")
+  }
+
+  private companion object {
+    const val CORRUPT_SUFFIX = ".corrupt"
   }
 }

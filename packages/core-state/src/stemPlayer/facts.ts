@@ -68,7 +68,7 @@ export function roundedBpm(bpm: number | null): string | null {
   return bpm === null || bpm <= 0 ? null : String(Math.round(bpm));
 }
 
-const BPM_UNIT = 'BPM';
+export const BPM_UNIT = 'BPM';
 
 export function bpmFact(bpm: number | null): BpmFact | null {
   const rounded = roundedBpm(bpm);

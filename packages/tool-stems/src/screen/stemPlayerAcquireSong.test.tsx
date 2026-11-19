@@ -49,6 +49,7 @@ vi.mock('./PlayerMenu.tsx', () => ({ PlayerMenu: () => nothing() }));
 vi.mock('./ExportSheet.tsx', () => ({ ExportSheet: () => nothing() }));
 vi.mock('./StemMeterSheet.tsx', () => ({ StemMeterSheet: () => nothing() }));
 vi.mock('./ClickSheet.tsx', () => ({ ClickSheet: () => nothing() }));
+vi.mock('./TempoSheet.tsx', () => ({ TempoSheet: () => nothing() }));
 vi.mock('./StemAppBar.tsx', () => ({ StemAppBar: () => nothing() }));
 vi.mock('./Scrubber.tsx', () => ({ Scrubber: () => nothing() }));
 vi.mock('./SongFactChips.tsx', () => ({ SongFactChips: () => nothing() }));

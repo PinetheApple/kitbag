@@ -247,6 +247,20 @@ export type {
   BundleRefusal,
   BundleRefusalReason,
 } from './songLibrary/stemBundleLogic.ts';
+export {
+  createDataFolderStore,
+  dataFolderStore,
+  folderUnavailable,
+  pausedMove,
+  type DataFolderDeps,
+  type DataFolderStore,
+  type PlayerWatch,
+} from './dataFolder/store.ts';
+export {
+  configureDataFolder,
+  type DataFolderNative,
+} from './dataFolder/runtime.ts';
+export type { PlayerTracks } from './dataFolder/release.ts';
 export { useStemDeck } from './stemDeck/useStemDeck.ts';
 export {
   createStemDeckStore,
@@ -406,6 +420,13 @@ export {
   type MeterOverride,
 } from '@kitbag/core-db';
 export {
+  canBuildTempoMode,
+  TEMPO_MODE,
+  TEMPO_SOURCE,
+  type BundleTempo,
+  type TempoMode,
+} from '@kitbag/core-db';
+export {
   clickKeyLabel,
   loopEndFrames,
   loopKeyLabel,
@@ -426,6 +447,7 @@ export {
 } from './stemPlayer/mixerClick.ts';
 export { useMixerClickNotice } from './stemPlayer/useMixerClickNotice.ts';
 export {
+  BPM_UNIT,
   bpmFact,
   keyFact,
   shortKeyName,

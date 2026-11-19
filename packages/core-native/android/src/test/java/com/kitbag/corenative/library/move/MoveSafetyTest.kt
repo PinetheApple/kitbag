@@ -152,7 +152,7 @@ class MoveSafetyTest {
         }
     }
     fx.folder = fx.newFolder()
-    val runner = MoveRunner(fx.folder, journal, { Long.MAX_VALUE }, { true })
+    val runner = MoveRunner(fx.folder, journal, fx.leftovers(), { Long.MAX_VALUE }, { true })
     var outcome: MoveOutcome? = null
     resumer = Thread { outcome = runner.resume() }
     resumer.start()

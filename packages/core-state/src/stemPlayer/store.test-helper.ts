@@ -145,7 +145,9 @@ export function fakeRuntime(set: StemSetRecord) {
     mixerSetTrackPitch: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
     mixerTrackPitch: vi.fn(() => Promise.resolve(0)),
     mixerTrackFrames: vi.fn(() => Promise.resolve(0)),
-    setGrid: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
+    setGrid: vi.fn<StemPlayerCommands['setGrid']>(() =>
+      Promise.resolve<number>(KB_RESULT.KB_OK),
+    ),
     clearGrid: vi.fn(),
     setGridGrouping: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
     setGridRate: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
@@ -192,6 +194,12 @@ export function fakeRuntime(set: StemSetRecord) {
         return Promise.resolve();
       },
     ),
+    saveStemSetChosenTempoMode: vi.fn<
+      StemPlayerRecords['saveStemSetChosenTempoMode']
+    >((_id, chosenTempoMode) => {
+      stored = { ...stored, chosenTempoMode };
+      return Promise.resolve();
+    }),
   };
   const sharedMetronome = { active: vi.fn(() => false), release: vi.fn() };
   const countInBars = vi.fn<() => number>(() => KB_COUNT_IN_OFF);

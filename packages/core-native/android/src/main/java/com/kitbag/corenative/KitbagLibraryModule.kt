@@ -1,6 +1,5 @@
 package com.kitbag.corenative
 
-import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.Base64
 import android.util.Log
@@ -9,12 +8,12 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
-import com.facebook.react.bridge.WritableMap
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.kitbag.corenative.library.AnalysisEvents
+import com.kitbag.corenative.library.AudioMetadata
 import com.kitbag.corenative.library.AnalysisFailure
 import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisStore
@@ -34,9 +33,9 @@ import com.kitbag.corenative.library.NativeWaveform
 import com.kitbag.corenative.library.StemBundleBridge
 import com.kitbag.corenative.library.StemBundleRefusedException
 import com.kitbag.corenative.library.toMap
-import com.kitbag.corenative.library.StorageUsage
 import com.kitbag.corenative.library.SupportedAudio
 import com.kitbag.corenative.library.VolumeWatcher
+import com.kitbag.corenative.library.move.DataFolderBridge
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ExecutorService
@@ -53,7 +52,13 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private val picker = DocumentPicker(reactContext, io, ::rejectLogged)
   private val files = FileShare(reactContext, io, ::rejectLogged)
   private val backups = BackupShare(reactContext, files)
-  private val volumes = VolumeWatcher(reactContext, ::emitOnDataFolderChanged)
+  private val moves = DataFolderBridge(
+    reactContext,
+    io,
+    DataFolderBridge.Events(::emitOnMoveProgress, ::emitOnMoveFinished, ::emitOnDataFolderChanged),
+    ::rejectLogged,
+  )
+  private val volumes = VolumeWatcher(reactContext, ::onVolumesChanged)
 
   private val listener: (AnalysisResult) -> Unit = ::emitAnalysis
 
@@ -62,16 +67,40 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     AnalysisEvents.listener.set(listener)
     io.execute { bundles.clearStaging() }
     volumes.start()
+    moves.start()
   }
 
   override fun invalidate() {
     AnalysisEvents.listener.compareAndSet(listener, null)
     volumes.stop()
+    moves.stop()
     reactApplicationContext.removeActivityEventListener(picker)
     io.shutdownNow()
     picker.cancel()
     super.invalidate()
   }
+
+  private fun onVolumesChanged() {
+    emitOnDataFolderChanged()
+    moves.volumesChanged()
+  }
+
+  override fun listVolumes(promise: Promise) = moves.listVolumes(promise)
+
+  override fun startMove(volumeUuid: String?, promise: Promise) = moves.startMove(volumeUuid, promise)
+
+  override fun cancelMove(promise: Promise) = moves.cancelMove(promise)
+
+  override fun resumeMove(promise: Promise) = moves.resumeMove(promise)
+
+  override fun undoMove(promise: Promise) = moves.undoMove(promise)
+
+  override fun moveStatus(promise: Promise) = moves.moveStatus(promise)
+
+  override fun useInternalStorage(awayPaths: ReadableArray, promise: Promise) =
+    moves.useInternalStorage(awayPaths, promise)
+
+  override fun releaseOldCopies() = moves.releaseOldCopies()
 
   override fun pickDocument(promise: Promise) = picker.pickDocument(promise)
 
@@ -180,7 +209,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       dir = LibraryPaths.resolve(root, relativeDir, allowBase = true)
       reserved = reserveTarget(dir, source, displayName ?: source.lastPathSegment)
       copyInto(source, reserved)
-      promise.resolve(importedAudio(root, reserved, displayName))
+      promise.resolve(AudioMetadata.importedAudio(root, reserved, displayName))
     } catch (e: Exception) {
       reserved?.delete()
       if (dir != null && dir != root?.canonicalFile) dir.delete()
@@ -206,35 +235,6 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       if (!part.renameTo(reserved)) throw IOException("Could not move the import into place")
     } finally {
       part.delete()
-    }
-  }
-
-  private fun importedAudio(root: File, file: File, displayName: String?): WritableMap {
-    val metadata = readMetadata(file)
-    return Arguments.createMap().apply {
-      putString("relativePath", LibraryPaths.relativize(root, file))
-      putString("title", metadata.title ?: LibraryPaths.displayTitle(displayName) ?: file.nameWithoutExtension)
-      putString("artist", metadata.artist.orEmpty())
-      putDouble("durationSec", metadata.durationSec)
-    }
-  }
-
-  private class AudioMetadata(val title: String?, val artist: String?, val durationSec: Double)
-
-  private fun readMetadata(file: File): AudioMetadata {
-    val retriever = MediaMetadataRetriever()
-    return try {
-      retriever.setDataSource(file.path)
-      AudioMetadata(
-        title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)?.takeIf { it.isNotBlank() },
-        artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)?.takeIf { it.isNotBlank() },
-        durationSec = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-          ?.toLongOrNull()?.let { it / MILLIS_PER_SECOND } ?: 0.0,
-      )
-    } catch (e: RuntimeException) {
-      AudioMetadata(null, null, 0.0)
-    } finally {
-      retriever.release()
     }
   }
 
@@ -289,22 +289,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     io.execute { results.remove(relativePath) }
   }
 
-  private fun emitAnalysis(result: AnalysisResult) {
-    emitOnAnalysis(result.toMap())
-  }
-
-  private fun AnalysisResult.toMap(): WritableMap =
-    Arguments.createMap().apply {
-      putString("relativePath", relativePath)
-      putBoolean("ok", ok)
-      putString("error", error)
-      putDouble("bpm", bpm.toDouble())
-      putArray("beats", Arguments.createArray().apply { beats.forEach { pushDouble(it.toDouble()) } })
-      putArray("downbeats", Arguments.createArray().apply { downbeats.forEach { pushInt(it) } })
-      putString("waveformRelativePath", waveformRelativePath)
-      putDouble("durationSec", durationSec)
-      analysisVersion?.let { putInt("analysisVersion", it) }
-    }
+  private fun emitAnalysis(result: AnalysisResult) = emitOnAnalysis(result.toMap())
 
   override fun deleteLibraryFile(relativePath: String, promise: Promise) {
     io.execute {
@@ -400,26 +385,6 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     }
   }
 
-  private fun StorageUsage.toMap(location: String): WritableMap =
-    Arguments.createMap().apply {
-      putMap(
-        "libraryAudio",
-        Arguments.createMap().apply {
-          putInt("songs", libraryAudio.songs)
-          putDouble("bytes", libraryAudio.bytes.toDouble())
-        },
-      )
-      putMap(
-        "stemSets",
-        Arguments.createMap().apply {
-          putInt("count", stemSets.count)
-          putDouble("bytes", stemSets.bytes.toDouble())
-        },
-      )
-      putMap("database", Arguments.createMap().apply { putDouble("bytes", databaseBytes.toDouble()) })
-      putString("location", location)
-    }
-
   override fun fileAvailability(relativePaths: ReadableArray, promise: Promise) {
     io.execute {
       try {
@@ -453,12 +418,11 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       "supportedAudioMimeTypes" to SupportedAudio.MIME_TYPES,
       "unsupportedAudioExtensions" to SupportedAudio.UNSUPPORTED_EXTENSIONS,
       "exportMaxBaseNameBytes" to ExportFiles.MAX_BASE_NAME_BYTES,
-    ) + StemBundleBridge.CONSTANTS + LibraryErrors.EXPORT_CONSTANTS
+    ) + StemBundleBridge.CONSTANTS + LibraryErrors.EXPORT_CONSTANTS + DataFolderBridge.CONSTANTS
 
   companion object {
     private const val TAG = "KitbagLibrary"
     private const val IO_THREADS = 2
-    private const val MILLIS_PER_SECOND = 1000.0
 
     private const val E_IMPORT_FAILED = "E_IMPORT_FAILED"
     private const val E_RESULTS_FAILED = "E_RESULTS_FAILED"

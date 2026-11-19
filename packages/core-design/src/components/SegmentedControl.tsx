@@ -5,6 +5,7 @@ import { homeArrange, homeArrangeText } from '../homeArrangeRoles.ts';
 import {
   bodyLineHeight,
   inset,
+  opacity,
   radius,
   size,
   space,
@@ -34,6 +35,7 @@ export interface SegmentOption<T extends string> {
   readonly value: T;
   readonly label: string;
   readonly accessibilityLabel?: string;
+  readonly disabled?: boolean;
 }
 
 export interface SegmentedControlProps<T extends string> {
@@ -90,6 +92,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   byLabel: growNeverShrink,
   fillByLabel: growShrinkToLine,
+  disabled: { opacity: opacity.muted },
   option: {
     alignItems: 'center',
     paddingVertical: inset.segmentOptionV,
@@ -161,9 +164,10 @@ function Segment<T extends string>({
   onSelect,
 }: SegmentProps<T>) {
   const styles = useStyles();
+  const isDisabled = option.disabled === true;
   const handlePress = useCallback(() => {
-    onSelect(option.value);
-  }, [onSelect, option.value]);
+    if (!isDisabled) onSelect(option.value);
+  }, [isDisabled, onSelect, option.value]);
   const handleLabelLayout = useCallback(
     (event: LayoutChangeEvent) => {
       onLabelWidth(option.value, event.nativeEvent.layout.width);
@@ -190,14 +194,20 @@ function Segment<T extends string>({
     <Pressable
       accessibilityRole="radio"
       accessibilityLabel={option.accessibilityLabel ?? option.label}
-      accessibilityState={{ checked: selected }}
+      accessibilityState={
+        isDisabled
+          ? { checked: selected, disabled: true }
+          : { checked: selected }
+      }
       aria-checked={selected}
+      {...(isDisabled ? { disabled: true, 'aria-disabled': true } : {})}
       style={[
         !inline &&
           !editRow &&
           !row &&
           (byLabel ? styles.byLabel : styles.optionHit),
         hitBox,
+        isDisabled && styles.disabled,
       ]}
       onLayout={onLineTop === undefined ? undefined : handleLayout}
       onPress={handlePress}

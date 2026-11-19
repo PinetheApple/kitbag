@@ -28,5 +28,7 @@ configureStemPlayer({
       getDatabase().songLibrary.saveStemSetMeterOverride(id, patch),
     saveStemSetClick: (id, patch) =>
       getDatabase().songLibrary.saveStemSetClick(id, patch),
+    saveStemSetChosenTempoMode: (id, mode) =>
+      getDatabase().songLibrary.saveStemSetChosenTempoMode(id, mode),
   },
 });

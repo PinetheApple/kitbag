@@ -83,6 +83,7 @@ export const iconGlyphs = {
   share: 'share-variant',
   clickGrouping: 'view-week-outline',
   clickRate: 'music-note-eighth',
+  tempoMode: 'chart-line-variant',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;

@@ -1,0 +1,11 @@
+<resources>
+  <string name="kitbag_data_folder_channel">Data folder</string>
+  <string name="kitbag_data_folder_internal">internal storage</string>
+  <string name="kitbag_data_folder_card">SD card</string>
+  <string name="kitbag_data_folder_moving">Moving files to %1$s</string>
+  <string name="kitbag_data_folder_copying">%1$s of %2$s · songs still play</string>
+  <string name="kitbag_data_folder_checking">Checking copies · %1$s of %2$s</string>
+  <string name="kitbag_data_folder_cleaning">Removing the old copies</string>
+  <string name="kitbag_data_folder_starting">Preparing the move</string>
+  <string name="kitbag_data_folder_cancel">Cancel move</string>
+</resources>
