@@ -138,7 +138,7 @@ void Mixer::SetGain(int track, float gain) {
   Command command{CommandType::kSetGain};
   command.track = track;
   command.fvalue = std::clamp(gain, kMinGain, kMaxGain);
-  Enqueue(command);
+  if (Enqueue(command)) app_mix_.gain[track] = command.fvalue;
 }
 
 void Mixer::SetMute(int track, bool muted) {
@@ -148,7 +148,7 @@ void Mixer::SetMute(int track, bool muted) {
   Command command{CommandType::kSetMute};
   command.track = track;
   command.fvalue = muted ? 1.0f : 0.0f;
-  Enqueue(command);
+  if (Enqueue(command)) app_mix_.mute[track] = muted;
 }
 
 void Mixer::SetSolo(int track, bool soloed) {
@@ -158,13 +158,13 @@ void Mixer::SetSolo(int track, bool soloed) {
   Command command{CommandType::kSetSolo};
   command.track = track;
   command.fvalue = soloed ? 1.0f : 0.0f;
-  Enqueue(command);
+  if (Enqueue(command)) app_mix_.solo[track] = soloed;
 }
 
 void Mixer::SetMasterGain(float gain) {
   Command command{CommandType::kSetMasterGain};
   command.fvalue = std::clamp(gain, kMinGain, kMaxGain);
-  Enqueue(command);
+  if (Enqueue(command)) app_mix_.master_gain = command.fvalue;
 }
 
 float Mixer::gain(int track) const {

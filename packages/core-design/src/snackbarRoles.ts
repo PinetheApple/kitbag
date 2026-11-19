@@ -12,6 +12,7 @@ export const snackbar = {
   actionHeight: 40,
   actionH: 12,
   dividerMix: 0.3,
+  aboveDock: 10,
 } as const;
 
 export const snackbarText = {

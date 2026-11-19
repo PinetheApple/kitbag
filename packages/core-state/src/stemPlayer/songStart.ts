@@ -42,6 +42,10 @@ export function countPending(
   return countEndFrame !== null && nowFrame < countEndFrame;
 }
 
+interface PendingCount extends CountedStart {
+  readonly headFrame: number;
+}
+
 interface SessionRate {
   readonly session: number;
   readonly rate: number;
@@ -55,7 +59,7 @@ export function songStart({
   releaseClick,
 }: SongStartOptions): SongStart {
   let generation = 0;
-  let pending: CountedStart | null = null;
+  let pending: PendingCount | null = null;
   let known: SessionRate = { session: session(), rate: KB_MIXER_UNITY_RATE };
   const playbackRate = () =>
     known.session === session() ? known.rate : KB_MIXER_UNITY_RATE;
@@ -102,7 +106,7 @@ export function songStart({
     runtimeOf().commands.mixerPlay();
   };
 
-  const countIn = (counted: CountedStart, startClick: boolean) => {
+  const countIn = (counted: PendingCount, startClick: boolean) => {
     const mine = ++generation;
     const opened = session();
     pending = counted;
@@ -130,7 +134,7 @@ export function songStart({
       return;
     }
     commands.mixerSeek(counted.startFrame);
-    countIn(counted, get().click);
+    countIn({ ...counted, headFrame }, get().click);
   };
 
   const cancel = () => {
@@ -179,7 +183,7 @@ export function songStart({
       if (changed) recount(runtimeOf().engine.position());
     },
     gridReplaced: () => {
-      recount(runtimeOf().engine.position());
+      recount(pending?.headFrame ?? runtimeOf().engine.position());
     },
     recountWithClickOff: () => recountWith(false),
     recountWithClickOn: () => recountWith(true),

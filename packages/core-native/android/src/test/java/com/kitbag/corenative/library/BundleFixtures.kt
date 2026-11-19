@@ -9,6 +9,7 @@ import org.json.JSONObject
 
 object BundleFixtures {
   const val FRAMES = 1000L
+  const val DURATION_SEC = 311.0
 
   fun manifestJson(stems: List<String>): JSONObject =
     JSONObject()
@@ -16,7 +17,7 @@ object BundleFixtures {
       .put("version", StemBundleManifest.SUPPORTED_VERSION)
       .put("job_id", "job123")
       .put("title", "Echo")
-      .put("duration_sec", 311.0)
+      .put("duration_sec", DURATION_SEC)
       .put("sample_rate", 44100)
       .put("channels", 2)
       .put(

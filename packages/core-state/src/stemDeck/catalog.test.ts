@@ -43,6 +43,7 @@ describe('parseJobs', () => {
         durationSec: 481,
         lanes: ['vocals', 'drums', 'bass'],
         inLibrary: false,
+        sameSong: null,
       },
       expect.objectContaining({ jobId: B, title: 'Gratitude' }),
     ]);

@@ -34,6 +34,7 @@ import {
   type StemMix,
 } from './stem-bundle-repository';
 import { saveLyricsRetimed, type LyricLineTimes } from './stem-lyrics';
+import { findStemSetMatches, type StemSetIdentity } from './stem-set-match';
 import { renameStem, renameStemSet } from './stem-rename';
 
 export interface LibrarySongRow {
@@ -382,10 +383,12 @@ export function createSongLibraryRepository({
     deleteStemSet: (id: number) => transaction(() => deleteStemSet(db, id)),
     findStemSetByJobId: (jobId: string) =>
       serial(() => findStemSetByJobId(db, jobId)),
+    findStemSetMatches: (identity: StemSetIdentity) =>
+      serial(() => findStemSetMatches(db, identity)),
     insertStemBundle: (bundle: NewStemBundle) =>
       transaction(() => insertStemBundle(db, bundle)),
-    replaceStemBundle: (bundle: NewStemBundle) =>
-      transaction(() => replaceStemBundle(db, bundle)),
+    replaceStemBundle: (bundle: NewStemBundle, targetId: number) =>
+      transaction(() => replaceStemBundle(db, bundle, targetId)),
     readSong: (id: number) => serial(() => readSong(db, id)),
     readStemSet: (id: number) => serial(() => readStemSet(db, id)),
     saveStemMix: (mixes: readonly StemMix[]) =>

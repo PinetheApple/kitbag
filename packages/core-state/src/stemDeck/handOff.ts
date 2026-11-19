@@ -4,7 +4,10 @@ import type {
   StemDeckImportSnapshot,
 } from '@kitbag/core-native';
 
-import type { BundleAddOutcome } from '../songLibrary/stemBundleLogic.ts';
+import type {
+  BundleAddOutcome,
+  ReplaceChoice,
+} from '../songLibrary/stemBundleLogic.ts';
 import type { SongLibraryActions } from '../songLibrary/store.ts';
 import { warn } from '../songLibrary/storeSupport.ts';
 
@@ -14,8 +17,12 @@ export interface HandOffDeps {
   readonly settled: (jobId: string, outcome: BundleAddOutcome | null) => void;
 }
 
+export type ReplaceTargets = ReadonlyMap<string, ReplaceChoice>;
+
+const ADD: ReplaceChoice = { kind: 'add' };
+
 export interface HandOff {
-  readonly replacing: (jobIds: Iterable<string>) => void;
+  readonly replacing: (targets: ReplaceTargets) => void;
   readonly receive: (
     snapshot: StemDeckImportSnapshot,
     codes: StemDeckConstants,
@@ -41,7 +48,7 @@ function settleCode(
 // Native waits on every finished download until JS settles it, so each one is
 // settled exactly once, whether the import succeeds, refuses or throws.
 export function createHandOff(deps: HandOffDeps): HandOff {
-  let replace = new Set<string>();
+  let replace: ReplaceTargets = new Map();
   const handling = new Set<string>();
   const done = new Set<string>();
 
@@ -54,7 +61,7 @@ export function createHandOff(deps: HandOffDeps): HandOff {
     try {
       outcome = await deps.addFetchedBundle(
         { uri, name: item.title, isFolder: false },
-        { replace: replace.has(item.jobId) },
+        replace.get(item.jobId) ?? ADD,
       );
     } catch (error) {
       warn(`adding ${item.title} from StemDeck failed`, error);
@@ -66,8 +73,8 @@ export function createHandOff(deps: HandOffDeps): HandOff {
   };
 
   return {
-    replacing: (jobIds) => {
-      replace = new Set(jobIds);
+    replacing: (targets) => {
+      replace = targets;
     },
     receive: async (snapshot, codes) => {
       const adding = new Map<string, StemDeckImportItem>();

@@ -1,8 +1,10 @@
 import {
   Card,
+  countLabel,
   createThemedStyles,
   EmptyState,
   PlayerDock,
+  readerHiding,
   SegmentedControl,
   space,
   stemPlayer,
@@ -61,9 +63,16 @@ const useStyles = createThemedStyles((theme) => ({
   note: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
 }));
 
+function missingNote(unloaded: number, stemCount: number): string {
+  if (unloaded === stemCount)
+    return 'No stem files could be opened. Nothing will play.';
+  return `${countLabel(unloaded, 'stem file', 'stem files')} could not be opened. The others play.`;
+}
+
 function Notices() {
   const styles = useStyles();
   const overLimit = useStemPlayer((s) => s.overLimit);
+  const stemCount = useStemPlayer((s) => s.stems.length);
   const unloaded = useStemPlayer(
     (s) => s.stems.filter((row) => !row.loaded).length,
   );
@@ -86,9 +95,7 @@ function Notices() {
           statusIcon="failure"
           statusLabel="Stems missing"
         >
-          <Text style={styles.note}>
-            {`${String(unloaded)} stem files could not be opened. The others play.`}
-          </Text>
+          <Text style={styles.note}>{missingNote(unloaded, stemCount)}</Text>
         </Card>
       ) : null}
     </>
@@ -286,8 +293,8 @@ export function StemPlayerScreen({
     <View style={[styles.screen, padding]}>
       <View
         style={styles.main}
-        importantForAccessibility={dialogOpen ? 'no-hide-descendants' : 'auto'}
-        accessibilityElementsHidden={dialogOpen}
+        collapsable={false}
+        {...readerHiding(dialogOpen)}
       >
         {retiming ? (
           <RetimeBar onAskReset={askReset} onAskLeave={askLeave} />

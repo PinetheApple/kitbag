@@ -22,6 +22,7 @@ const DOWNBEATS = [0, BAR_BEATS, 2 * BAR_BEATS];
 const BAR_AT_HEAD = at(2 * BEAT);
 const NEW_BEAT = 0.6;
 const NEW_BEATS = [0, NEW_BEAT, 2 * NEW_BEAT, 3 * NEW_BEAT, 4 * NEW_BEAT];
+const NEW_BAR_AT_HEAD = at(2 * NEW_BEAT);
 
 function started({ click = false } = {}) {
   const fake = fakeRuntime(record([stem(1)]));
@@ -119,12 +120,12 @@ describe('stop', () => {
 });
 
 describe('gridReplaced', () => {
-  it('counts in again from the bar start and beat length of the new grid', () => {
+  it('counts in again from the new bar at or before where play was pressed', () => {
     const song = counting({ click: true });
     song.replaceGrid(NEW_BEATS);
     song.start.gridReplaced();
     expect(song.commands.songPause).toHaveBeenCalledOnce();
-    expect(song.commands.mixerSeek.mock.calls).toEqual([[0]]);
+    expect(song.commands.mixerSeek.mock.calls).toEqual([[NEW_BAR_AT_HEAD]]);
     const [call] = song.commands.songCountIn.mock.calls;
     expect(call?.[1]).toBeCloseTo(at(NEW_BEAT));
     expect(call?.[3]).toBe(true);

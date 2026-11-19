@@ -1,3 +1,4 @@
+import type { ExistingStemSet } from '@kitbag/core-db';
 import type {
   StemDeckConstants,
   StemDeckScan,
@@ -186,7 +187,11 @@ export function fakeCamera(answer: PermissionAnswer = 'granted') {
   } satisfies StemDeckCamera;
 }
 
-export function setup(owned: readonly string[] = [], camera = fakeCamera()) {
+export function setup(
+  owned: readonly string[] = [],
+  camera = fakeCamera(),
+  sameSongs: ReadonlyMap<string, ExistingStemSet> = new Map(),
+) {
   const { native, emit } = fakeNative();
   let seen = false;
   const unityNotice = {
@@ -203,6 +208,7 @@ export function setup(owned: readonly string[] = [], camera = fakeCamera()) {
     unityNotice: () => unityNotice,
     addFetchedBundle,
     inLibrary: (jobId) => Promise.resolve(owned.includes(jobId)),
+    findSameSong: ({ jobId }) => Promise.resolve(sameSongs.get(jobId)),
     camera: () => camera,
   });
   return { store, native, emit, unityNotice, addFetchedBundle, camera };

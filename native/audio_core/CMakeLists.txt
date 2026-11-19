@@ -32,6 +32,7 @@ add_library(kitbag_core SHARED
   src/api/api_analysis.cpp
   src/api/api_media.cpp
   src/api/api_metronome.cpp
+  src/api/api_mixdown.cpp
   src/api/api_rig_click.cpp
   src/api/api_song_start.cpp
   src/api/api_tuning.cpp
@@ -69,6 +70,9 @@ add_library(kitbag_core SHARED
   src/mixer/mixer_prime.cpp
   src/mixer/mixer_handover.cpp
   src/mixer/mixer_play_at.cpp
+  src/mixer/mixer_snapshot.cpp
+  src/mixdown/mixdown_job.cpp
+  src/mixdown/wav_writer.cpp
   src/player/player.cpp
   src/player/player_render.cpp
   src/stretch/time_stretch.cpp
@@ -293,6 +297,40 @@ if(KITBAG_BUILD_TOOLS)
   target_compile_options(mixer_verify PRIVATE -Werror=switch)
   target_link_libraries(mixer_verify PRIVATE signalsmith_stretch Threads::Threads m ${CMAKE_DL_LIBS})
 
+  # Links kitbag_core for the C ABI and the live render it is checked against,
+  # and the sources for MixdownJob's reader and free-space seams.
+  add_executable(mixdown_verify
+    tools/mixdown/mixdown_verify.cpp
+    tools/mixdown/mixdown_test_support.cpp
+    tools/mixdown/mixdown_test_engine.cpp
+    tools/mixdown/mixdown_test_exact.cpp
+    tools/mixdown/mixdown_test_stretch.cpp
+    tools/mixdown/mixdown_test_lifecycle.cpp
+    tools/mixdown/mixdown_test_failure.cpp
+    tools/mixdown/mixdown_test_memory.cpp
+    src/mixdown/mixdown_job.cpp
+    src/mixdown/wav_writer.cpp
+    src/media/streaming_track.cpp
+    src/media/looping_source_reader.cpp
+    src/mixer/key_bus.cpp
+    src/mixer/mixer.cpp
+    src/mixer/mixer_keys.cpp
+    src/mixer/mixer_render.cpp
+    src/mixer/mixer_stretch.cpp
+    src/mixer/mixer_prime.cpp
+    src/mixer/mixer_handover.cpp
+    src/mixer/mixer_play_at.cpp
+    src/mixer/mixer_snapshot.cpp
+    src/stretch/time_stretch.cpp
+    src/media/audio_source.cpp
+    src/media/file_audio_reader.cpp
+    src/media/miniaudio_decoder.cpp
+    src/media/resampling_source_reader.cpp
+    src/media/miniaudio_impl.c
+  )
+  target_include_directories(mixdown_verify PRIVATE src include tools tools/mixdown tools/media third_party)
+  target_link_libraries(mixdown_verify PRIVATE kitbag_core signalsmith_stretch Threads::Threads m ${CMAKE_DL_LIBS})
+
   # Links the sources: Player is internal, not exported through the C ABI. It
   # streams a single source through an AudioSource over a real file path, so the
   # tool writes a temp WAV and links the file adapter and Threads, like the mixer.
@@ -392,6 +430,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/analysis/analyze_test_length.cpp
     tools/analysis/analyze_test_sustained.cpp
     tools/analysis/analyze_test_meter.cpp
+    tools/analysis/analyze_test_stems.cpp
     src/api/api_analysis.cpp
     src/analysis/song_analysis.cpp
     src/analysis/downbeat.cpp

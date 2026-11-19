@@ -1,13 +1,19 @@
 package com.kitbag.corenative
 
+import android.view.Choreographer
 import android.view.WindowManager
+import android.view.accessibility.AccessibilityNodeInfo
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.bridge.UiThreadUtil
+import com.facebook.react.uimanager.UIManagerHelper
+import com.kitbag.corenative.library.LibraryErrors
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
+import com.kitbag.corenative.library.MixdownExport
 import com.kitbag.corenative.library.UnsafeLibraryPathException
 import com.kitbag.corenative.route.OutputRoute
 import com.kitbag.corenative.route.OutputRouteWatcher
@@ -22,6 +28,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   NativeKitbagCommandsSpec(reactContext) {
 
   private val libraryBase = LibraryStorage.base(reactContext)
+  private val mixdown = MixdownExport(reactContext.cacheDir)
   private val transportListener: (TransportState, PracticeClock) -> Unit = ::emitTransport
   private val songStoppedListener: () -> Unit = ::emitOnSongStopped
   private val songRequestListener: (SongCommand) -> Unit = ::emitSongRequest
@@ -376,6 +383,24 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     promise.resolve(nativeMixerTrackFrames(track))
   }
 
+  override fun mixdownStart(fileName: String, promise: Promise) {
+    val started = mixdown.start(fileName)
+    if (started == null) {
+      promise.reject(LibraryErrors.BAD_FILE_NAME, "Not an export file name: $fileName")
+      return
+    }
+    promise.resolve(
+      Arguments.createMap().apply {
+        putInt("result", started.result)
+        putString("path", started.path)
+      },
+    )
+  }
+
+  override fun mixdownCancel() {
+    mixdown.cancel()
+  }
+
   override fun tunerStart(promise: Promise) {
     promise.resolve(nativeTunerStart())
   }
@@ -494,4 +519,26 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
       System.loadLibrary("kitbag_jsi")
     }
   }
+
+  override fun focusReaderView(viewTag: Double) {
+    val tag = viewTag.toInt()
+    UiThreadUtil.runOnUiThread { focusAfterMount(tag, FOCUS_RETRY_FRAMES) }
+  }
+
+  // Fabric mounts in a frame callback posted before ours, and preallocates views
+  // detached, so only an attached view has been mounted.
+  private fun focusAfterMount(tag: Int, framesLeft: Int) {
+    Choreographer.getInstance().postFrameCallback {
+      val uiManager = UIManagerHelper.getUIManagerForReactTag(reactApplicationContext, tag)
+      // resolveView throws when the tag has no view state yet or its view is gone.
+      val view = runCatching { uiManager?.resolveView(tag) }.getOrNull()
+      if (view != null && view.isAttachedToWindow) {
+        view.performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
+      } else if (framesLeft > 0) {
+        focusAfterMount(tag, framesLeft - 1)
+      }
+    }
+  }
 }
+
+private const val FOCUS_RETRY_FRAMES = 5

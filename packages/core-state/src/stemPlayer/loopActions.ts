@@ -1,6 +1,12 @@
 import { KB_RESULT } from '@kitbag/core-native';
 
-import { loopBetween, snapToBeat, type LoopSeconds } from './loop.ts';
+import {
+  loopBetween,
+  movedEdge,
+  snapToBeat,
+  type LoopEdge,
+  type LoopSeconds,
+} from './loop.ts';
 import type { MixerSessionContext } from './mixerSession.ts';
 import { sessionGate } from './sessionGate.ts';
 import type {
@@ -115,23 +121,48 @@ function loopControls(
     await setLoop(bounds);
   };
 
-  return { busy, clear, setLoop, markLoop };
+  const moveLoopEdge = async (edge: LoopEdge, seconds: number) => {
+    const { loop, beats, durationFrames, engineRate } = get();
+    if (busy() || loop.kind !== 'on') return;
+    const bounds = movedEdge(
+      loop,
+      edge,
+      seconds,
+      beats,
+      framesToSeconds(durationFrames, engineRate),
+    );
+    if (bounds === null) {
+      refuse('tooShort');
+      return;
+    }
+    if (bounds.startSec === loop.startSec && bounds.endSec === loop.endSec)
+      return;
+    await setLoop(bounds);
+  };
+
+  return { busy, clear, setLoop, markLoop, moveLoopEdge };
 }
 
 export function loopActions(
   context: MixerSessionContext<LoopSlice>,
-): Pick<StemPlayerActions, 'markLoop'> {
-  return { markLoop: loopControls(context).markLoop };
+): Pick<StemPlayerActions, 'markLoop' | 'moveLoopEdge'> {
+  const { markLoop, moveLoopEdge } = loopControls(context);
+  return { markLoop, moveLoopEdge };
 }
 
 export function sectionLoopActions(
   context: ActionContext,
 ): Pick<
   StemPlayerActions,
-  'markLoop' | 'undoLoop' | 'dismissLoopUndo' | 'jumpToSection' | 'loopSection'
+  | 'markLoop'
+  | 'moveLoopEdge'
+  | 'undoLoop'
+  | 'dismissLoopUndo'
+  | 'jumpToSection'
+  | 'loopSection'
 > {
   const { set, get } = context;
-  const { busy, clear, setLoop, markLoop } = loopControls(
+  const { busy, clear, setLoop, markLoop, moveLoopEdge } = loopControls(
     context,
     (undoableLoop) => {
       set({ undoableLoop });
@@ -139,6 +170,7 @@ export function sectionLoopActions(
   );
   return {
     markLoop,
+    moveLoopEdge,
     undoLoop: async () => {
       const { undoableLoop } = get();
       if (busy() || undoableLoop === null) return;

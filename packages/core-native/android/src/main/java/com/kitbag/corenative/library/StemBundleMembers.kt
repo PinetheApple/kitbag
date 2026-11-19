@@ -118,8 +118,8 @@ class StemBundleMembers(private val warn: BundleWarning) {
     )
   }
 
-  fun mix(text: String?, stemNames: Collection<String>): Map<String, StemMix> {
-    val stems = parse(text, MIX)?.opt("stems") as? JSONObject
+  fun mix(text: String?, stemNames: Collection<String>): Map<String, StemMix>? {
+    val stems = parse(text, MIX)?.opt("stems") as? JSONObject ?: return null
     return stemNames.associateWith { name ->
       val lane = stems?.opt(name) as? JSONObject ?: return@associateWith StemMix()
       StemMix(

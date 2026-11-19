@@ -1,3 +1,4 @@
+import type { ExistingStemSet } from '@kitbag/core-db';
 import type {
   StemDeckConstants,
   StemDeckProbe,
@@ -9,10 +10,12 @@ import { warn } from '../songLibrary/storeSupport.ts';
 import { parseAddress } from './address.ts';
 import {
   markInLibrary,
+  markSameSongs,
   parseHealth,
   parseJobs,
   parseSetlists,
   type Catalog,
+  type CatalogSong,
 } from './catalog.ts';
 import { nativeFailure, type StemDeckFailure } from './failures.ts';
 import { stemDeckCodes } from './runtime.ts';
@@ -70,6 +73,7 @@ export interface ConnectionActions {
   forgetServer: (origin: string) => Promise<void>;
   disconnect: () => void;
   refreshCatalog: () => Promise<void>;
+  reopenCatalog: () => Promise<void>;
 }
 
 function recent(server: StemDeckServer): RecentServer {
@@ -96,6 +100,26 @@ async function inLibraryIds(
     }),
   );
   return new Set(found.flat());
+}
+
+async function sameSongMatches(
+  deps: StemDeckDeps,
+  songs: readonly CatalogSong[],
+): Promise<Map<string, ExistingStemSet>> {
+  const found = await Promise.all(
+    songs
+      .filter((s) => !s.inLibrary)
+      .map(async (song) => {
+        try {
+          const match = await deps.findSameSong(song);
+          return match === undefined ? [] : [[song.jobId, match] as const];
+        } catch (error) {
+          warn(`library match of ${song.jobId} failed`, error);
+          return [];
+        }
+      }),
+  );
+  return new Map(found.flat());
 }
 
 export function connectionActions(
@@ -156,8 +180,9 @@ export function connectionActions(
       deps,
       jobs.songs.map((s) => s.jobId),
     );
+    const listed = markInLibrary(jobs.songs, owned);
     return {
-      songs: markInLibrary(jobs.songs, owned),
+      songs: markSameSongs(listed, await sameSongMatches(deps, listed)),
       setlists,
       unavailable: jobs.unavailable,
     };
@@ -307,6 +332,10 @@ export function connectionActions(
       const codes = stemDeckCodes(deps.native, get().codes);
       if (connection.status !== 'connected' || codes === null) return;
       await openCatalog(attempt, connection.origin, connection.version, codes);
+    },
+    reopenCatalog: async () => {
+      set({ selected: [], setlistId: null, query: '' });
+      await get().refreshCatalog();
     },
   };
 }

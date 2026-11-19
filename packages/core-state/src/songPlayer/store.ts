@@ -17,7 +17,9 @@ import {
   followNewGrid,
   type ClickSlice,
 } from '../stemPlayer/clickActions.ts';
+import { sameNumbers } from '../stemPlayer/bars.ts';
 import { loopActions, type LoopSlice } from '../stemPlayer/loopActions.ts';
+import { overrideDownbeats } from '../stemPlayer/meterOverride.ts';
 import { UNITY_GAIN, UNSHIFTED_KEY } from '../stemPlayer/mix.ts';
 import {
   createMixerClaim,
@@ -67,6 +69,7 @@ type SongPlayerActions = Pick<
   | 'seek'
   | 'skip'
   | 'markLoop'
+  | 'moveLoopEdge'
   | 'toggleClick'
 > & {
   readonly open: (songId: number, waveformBars: number) => SongSession;
@@ -124,8 +127,8 @@ function factsOf(record: SongFacts): Partial<SongPlayerState> {
   };
 }
 
-function sameNumbers(a: readonly number[], b: readonly number[]): boolean {
-  return a.length === b.length && a.every((value, i) => value === b[i]);
+function songDownbeats(record: SongRecord): readonly number[] {
+  return overrideDownbeats(record, record);
 }
 
 export function createSongPlayerStore(
@@ -260,7 +263,7 @@ export function createSongPlayerStore(
         engineRate,
         durationFrames,
         beats: record.beats,
-        downbeatIndices: record.downbeatIndices,
+        downbeatIndices: songDownbeats(record),
       });
       if (decoded > 0)
         correctStoredLength(record, framesToSeconds(decoded, engineRate));
@@ -275,17 +278,16 @@ export function createSongPlayerStore(
     const followAnalysis = (opened: number, record: SongRecord) => {
       const { status, beats, downbeatIndices } = get();
       const ready = status === 'ready';
+      const downbeats = songDownbeats(record);
       const regrid =
         ready &&
         !(
           sameNumbers(beats, record.beats) &&
-          sameNumbers(downbeatIndices, record.downbeatIndices)
+          sameNumbers(downbeatIndices, downbeats)
         );
       set({
         ...factsOf(record),
-        ...(regrid
-          ? { beats: record.beats, downbeatIndices: record.downbeatIndices }
-          : {}),
+        ...(regrid ? { beats: record.beats, downbeatIndices: downbeats } : {}),
       });
       if (ready) showWaveform(opened, record.waveformPath);
       if (regrid) void followNewGrid(context);

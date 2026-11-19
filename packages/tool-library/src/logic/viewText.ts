@@ -2,6 +2,19 @@ import type { EmptyStateOption, IconName } from '@kitbag/core-design';
 import type { LibraryView } from '@kitbag/core-state';
 
 export const REANALYZE_LABEL = 'Re-analyse';
+export const LOOP_KEY_TEXT = 'A|B';
+export const SPEED_KEY_TEXT = '1.0×';
+export const SPEED_KEY_LABEL = `Speed ${SPEED_KEY_TEXT}, not built yet`;
+export const SPEED_NOTE =
+  "Speed isn't built yet. It arrives with the stem player's.";
+
+export const REPLACE_SHEET_TEXT = {
+  dismiss: 'Keep the current song',
+  cancel: 'Cancel',
+} as const;
+
+export const replaceSheetTitle = (title: string) => `Replace “${title}”?`;
+export const replaceButtonLabel = (title: string) => `Replace ${title}`;
 
 export interface ViewText {
   readonly title: string;

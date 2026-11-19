@@ -31,6 +31,7 @@ export type {
   StoredStem,
 } from './stem-bundle-repository';
 export type { LyricLineTimes } from './stem-lyrics';
+export type { StemSetIdentity } from './stem-set-match';
 export { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
 export { ANALYSIS_STATUS, type AnalysisStatus } from './analysis-status';
 export {
@@ -39,6 +40,8 @@ export {
   type GridMeter,
   type MeterOverride,
   type MeterOverridePatch,
+  meterOverrideOf,
+  NO_METER_OVERRIDE,
 } from './meter-override';
 export type {
   AnalysisResultRecord,

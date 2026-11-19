@@ -1,3 +1,5 @@
+import type { ExistingStemSet } from '@kitbag/core-db';
+
 import { openingLanes, type JobVersion } from './lanes.ts';
 
 export interface ServerHealth {
@@ -12,6 +14,7 @@ export interface CatalogSong {
   readonly durationSec: number | null;
   readonly lanes: readonly string[];
   readonly inLibrary: boolean;
+  readonly sameSong: ExistingStemSet | null;
 }
 
 export interface CatalogSetlist {
@@ -96,6 +99,7 @@ function song(job: Json, jobId: string): CatalogSong {
       vocalSplitChoice: text(job.vocal_split_choice),
     }),
     inLibrary: false,
+    sameSong: null,
   };
 }
 
@@ -137,6 +141,13 @@ export function markInLibrary(
   inLibrary: ReadonlySet<string>,
 ): CatalogSong[] {
   return songs.map((s) => ({ ...s, inLibrary: inLibrary.has(s.jobId) }));
+}
+
+export function markSameSongs(
+  songs: readonly CatalogSong[],
+  matches: ReadonlyMap<string, ExistingStemSet>,
+): CatalogSong[] {
+  return songs.map((s) => ({ ...s, sameSong: matches.get(s.jobId) ?? null }));
 }
 
 export function setlistSongs(

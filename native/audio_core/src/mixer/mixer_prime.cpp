@@ -97,7 +97,7 @@ bool Mixer::BuildBank(int64_t frame, bool staged, Bank* bank) {
     any = &bank->slots[s]->bus->stretch;
   }
   if (any == nullptr) return false;
-  bank->lag = std::min(any->SongLagFrames(app_rate_), any->SeekFrames());
+  bank->lag = std::min(any->SongLagFrames(app_mix_.rate), any->SeekFrames());
   if (!ReadBankPreRoll(frame, staged, bank)) return false;
   for (auto& slot : bank->slots) {
     if (slot == nullptr) continue;
@@ -127,7 +127,7 @@ bool Mixer::ReadBankPreRoll(int64_t frame, bool staged, Bank* bank) {
       if (staged) continue;
       return false;
     }
-    KeyBus& bus = *bank->slots[app_pitch_[t] - kMinPitchSemitones]->bus;
+    KeyBus& bus = *bank->slots[app_mix_.pitch[t] - kMinPitchSemitones]->bus;
     StreamingTrack::AddToOutput(
         pcm.data(),
         got.channels,
@@ -153,7 +153,7 @@ void Mixer::PublishBank(
   plan->primed = true;
   plan->bank = idle_bank;
   plan->generation = bank->generation;
-  plan->rate = app_rate_;
+  plan->rate = app_mix_.rate;
   plan->lag = bank->lag;
 }
 

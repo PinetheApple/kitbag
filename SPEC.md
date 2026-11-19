@@ -911,6 +911,17 @@ working. Changes:
   at most once per session; the song open in the player waits until it closes. A
   failure keeps the old grid and is not retried automatically; Re-analyse retries it. The meter
   override (meter, bar one) is the user's and survives re-analysis.
+- **Meter override → downbeats.** Songs and stem sets alike: the detected
+  downbeats (analysis, or a stem set's bar marks) pass through the override.
+  The detected meter is the most common bar length, larger on a tie. Detected
+  bar one is the first downbeat, unless the first bar is shorter than that
+  meter (a pickup), in which case it is the second. A meter alone makes the
+  whole song that meter, counted from detected bar one. A bar one alone moves to
+  the beat nearest its stored time (the earlier on a tie, clamped to the grid)
+  and shifts the detected pattern after it by that many beats, each bar keeping
+  its own length, so a meter map stays a map. Both together count the chosen
+  meter from the chosen bar one. Bars repeat backwards to the first beat in the
+  meter (detected or chosen). No override leaves the detected downbeats as they are.
 - Analysis stays ambient — background, badge-driven, no "analyze" button. The
   row appears instantly with `ANALYZING` and lands on `GRID ✓` in ~10–30s. The
   user never waits on a spinner screen.
@@ -1104,7 +1115,9 @@ Acceptance:
   retiming is saved per song in Kitbag.
 - **Song facts:** key, BPM, tempo stability. Loudness is stored but not shown (owner, 2026-11-01).
 - **Mixdown export:** offline render of the current mix, speed and key, out
-  through the share sheet (§5.5) — never a hardcoded path.
+  through the share sheet (§5.5) — never a hardcoded path. The whole song as a
+  stereo 16-bit PCM WAV at the engine rate, no dither; gain, mute, solo and
+  master apply, the loop and the click do not (owner, #379).
 
 Sections and lyrics line up with playback at every speed.
 
@@ -1127,7 +1140,29 @@ phone. That page defines the format; this spec does not copy it.
   per-stem key) are stored with the stem set; the mix is applied on first
   open.
 - **Re-import** of the same StemDeck job replaces the stem set after a
-  confirm.
+  confirm: Replace or Keep current. StemDeck gives a song separated again a
+  new job id, so when the job id misses, a StemDeck stem set whose title (or
+  song title) and artist match, trimmed and case-insensitive, and whose
+  longest stem is within 2 s, is offered as the same song: Cancel, Keep both
+  or Replace. The artist compared is the one the import stores: the
+  manifest's, else the metadata heading's. Two different songs sharing title,
+  artist and length within 2 s are offered too; Keep both is the way out. A
+  song the user renamed no longer matches by title. The StemDeck song list
+  applies the same rule to `/api/jobs` (title, `display_artist`, duration)
+  and asks before the download: IN LIBRARY songs (same job) first, then
+  matched ones with Skip, Keep both or Replace; Skip leaves out only the
+  matched songs. Replace hands the matched library song to the import as its
+  target; IN LIBRARY stays job-id based. Two songs in one download that match
+  the same library song both offer it: the first replaces it, the second
+  finds it gone and is added as a new song, so nothing is lost. The choice
+  lives in JS memory only (#413).
+- **A replace keeps** the user's song and stem names, speed and meter. Bar
+  one and the lyric retiming are times in the old audio, so only a re-import
+  of the same job keeps them (the retiming only while the lyrics are
+  unchanged). The mix and per-stem key come from the new bundle's
+  `mix.json`; without one, each stem keeps its saved mix and key by name and
+  a new stem starts at unity. The song key, sections and grid come from the
+  bundle. On failure nothing changes: the swap is one transaction.
 - Out of scope: separation, lead/backing vocal split, lyric transcription,
   search and download — StemDeck's job, on hardware built for it.
 
@@ -1562,7 +1597,7 @@ versions 1–6 with `UnsupportedSchemaVersion` and leaves the file untouched.
 | `StemSets`: + `renamed` (default 0); `Stems`: + `name` (display name, NULL shows the role) | §7.1, §7.8 — a rename is display-only and survives a re-import of the same StemDeck song; schema v17 |
 | `SongPresets`: + `poly_against` INTEGER (0 = the bar, 1..16), default 0 | §5.2 — poly N against M; a v4 backup without `polyAgainst` reads as the bar; schema v18 |
 | `route_latency`: + `name` TEXT, + `kind` TEXT (the route's display name and `OutputRoute` kind when calibrated) | §12.5 — the Output & latency sheet lists calibrated routes that are not connected; schema v19 |
-| `Songs`: + `analysis_version` INTEGER (NULL = no version reported, counted as outdated), + `meter_beats_per_bar` INTEGER (3 or 4; NULL = the detected meter), + `bar_one_seconds` REAL (NULL = the detected bar one); `StemSets`: + `meter_beats_per_bar`, + `bar_one_seconds`, same meanings | §6.2 — older grids re-analyse in the background; the meter override survives re-analysis and a stem re-import; schema v20 |
+| `Songs`: + `analysis_version` INTEGER (NULL = no version reported, counted as outdated), + `meter_beats_per_bar` INTEGER (3 or 4; NULL = the detected meter), + `bar_one_seconds` REAL (NULL = the detected bar one); `StemSets`: + `meter_beats_per_bar`, + `bar_one_seconds`, same meanings | §6.2 — older grids re-analyse in the background; the meter override survives re-analysis and a stem re-import, bar one only a re-import of the same StemDeck job; schema v20 |
 | **All paths relative** to the data folder | §2.3 (iOS) and **D11** (the folder can move between internal storage and an SD card) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
 | BPM cache table | §8.5 |
