@@ -31,6 +31,8 @@ internal object EngineTransport {
 
   fun sampleRate(): Double = nativeSampleRate()
 
+  fun mixerRate(): Double = nativeMixerRate()
+
   private external fun nativeStart()
   private external fun nativePause()
   private external fun nativeStop()
@@ -44,4 +46,5 @@ internal object EngineTransport {
   private external fun nativeMixerPosition(): Double
   private external fun nativeMixerPlaying(): Boolean
   private external fun nativeSampleRate(): Double
+  private external fun nativeMixerRate(): Double
 }

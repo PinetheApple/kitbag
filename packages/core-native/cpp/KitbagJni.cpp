@@ -332,6 +332,11 @@ Java_com_kitbag_corenative_EngineTransport_nativeSampleRate(JNIEnv*, jobject) {
   return static_cast<jdouble>(kb_engine_sample_rate(kitbag::kitbagEngine()));
 }
 
+JNIEXPORT jdouble JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeMixerRate(JNIEnv*, jobject) {
+  return kitbag::commandMixerRate();
+}
+
 JNIEXPORT jobject JNICALL
 Java_com_kitbag_corenative_library_SongAnalyzer_nativeAnalyzeSong(JNIEnv* env, jobject,
                                                                  jstring path,
