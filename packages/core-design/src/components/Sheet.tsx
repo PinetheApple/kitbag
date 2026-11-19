@@ -17,14 +17,13 @@ import {
   type LayoutChangeEvent,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, {
   SlideInDown,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import type { IconName } from '../icons.ts';
 import { layout, opacity, size, space, textRoles } from '../roles.ts';
@@ -42,6 +41,7 @@ import { readerHiding } from '../readerHiding.ts';
 import { onHardwareBack } from './hardwareBack';
 import { InlineIcon } from './IconGlyph.tsx';
 import { useSheetPortal } from './SheetHost.tsx';
+import { useSheetCardStyle } from './useSheetCardStyle.ts';
 import { useSheetExit } from './useSheetExit.ts';
 
 // A scroll view drops every touch outside its frame, so the frame reaches this
@@ -138,11 +138,6 @@ const useStyles = createThemedStyles((theme) => ({
     backgroundColor: SCRIM,
   },
 }));
-
-function sheetPaddingBottom(bottomInset: number, keyboardHeight: number) {
-  'worklet';
-  return space.cardPadding + Math.max(bottomInset, -keyboardHeight);
-}
 
 export type SheetHintSize = 'default' | 'large';
 export type SheetTitleSize = 'default' | 'large' | 'screen';
@@ -273,39 +268,7 @@ export function Sheet({
     [dragAllowed, dragY, sheetHeight, onDismiss, motion],
   );
 
-  // Edge to edge, nothing resizes for the keyboard and RN's keyboard events
-  // only fire on a layout pass (#142). Height is negative while it is open.
-  const keyboard = useReanimatedKeyboardAnimation();
-  const leavingPadding = useSharedValue(0);
-  const openSheetStyle = () => {
-    'worklet';
-    return {
-      paddingBottom: sheetPaddingBottom(bottomInset, keyboard.height.value),
-      transform: [{ translateY: dragY.value }],
-    };
-  };
-  const leavingSheetStyle = () => {
-    'worklet';
-    return {
-      paddingBottom: leavingPadding.value,
-      transform: [{ translateY: dragY.value }],
-    };
-  };
-  useEffect(() => {
-    if (visible) return;
-    scheduleOnUI(() => {
-      'worklet';
-      leavingPadding.value = sheetPaddingBottom(
-        bottomInset,
-        keyboard.height.value,
-      );
-    });
-    // The padding freezes once per exit, not per new inset.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
-  const sheetStyle = useAnimatedStyle(
-    visible ? openSheetStyle : leavingSheetStyle,
-  );
+  const sheetStyle = useSheetCardStyle({ visible, bottomInset, dragY });
   const noticeStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: dragY.value }],
   }));

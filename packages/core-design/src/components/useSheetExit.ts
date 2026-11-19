@@ -50,10 +50,10 @@ export function useSheetExit({
   const present = useRef(false);
   const visibleNow = useRef(visible);
   const lastShown = useRef<ReactNode>(null);
-  const exitCount = useRef(0);
+  const latestExit = useRef(0);
   const finishExit = useCallback(
     (exit: number) => {
-      if (visibleNow.current || exit !== exitCount.current) return;
+      if (visibleNow.current || exit !== latestExit.current) return;
       present.current = false;
       hide(id);
     },
@@ -72,8 +72,8 @@ export function useSheetExit({
     }
     if (!present.current) return;
     Keyboard.dismiss();
-    exitCount.current += 1;
-    const exit = exitCount.current;
+    latestExit.current += 1;
+    const exit = latestExit.current;
     scrimOpacity.value = withTiming(0, timing);
     dragY.value = withTiming(windowHeight, timing, (finished) => {
       'worklet';
