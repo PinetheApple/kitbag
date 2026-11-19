@@ -4,6 +4,7 @@ import {
   metronomeResumeSubtitle,
   metronomeTileSubtext,
   songsTileSubtext,
+  practiceTileSubtext,
   stemsTileSubtext,
   type MetronomeSummary,
 } from './subtext.ts';
@@ -53,5 +54,37 @@ describe('library subtext', () => {
     expect(
       stemsTileSubtext({ songCount: 0, analyzedCount: 0, stemSongCount: 0 }),
     ).toBe('0 stem songs');
+  });
+});
+describe('practice history subtext', () => {
+  const now = new Date(2026, 10, 2, 20, 41);
+  const session = (startedAt: Date, durationSeconds: number) => ({
+    uuid: startedAt.toISOString(),
+    startedAt,
+    durationSeconds,
+    avgBpm: 100,
+    setlistId: null,
+    setlistName: null,
+    songUuids: [],
+  });
+
+  it('shows the last day practised and its total', () => {
+    expect(
+      practiceTileSubtext(
+        [
+          session(new Date(2026, 10, 2, 19, 40), 2538),
+          session(new Date(2026, 10, 2, 8, 5), 750),
+          session(new Date(2026, 9, 31, 21, 10), 3940),
+        ],
+        now,
+      ),
+    ).toBe('Today · 54:48');
+    expect(
+      practiceTileSubtext([session(new Date(2026, 9, 29, 18, 30), 1502)], now),
+    ).toBe('4 days ago · 25:02');
+  });
+
+  it('says so when nothing is saved', () => {
+    expect(practiceTileSubtext([], now)).toBe('No sessions yet');
   });
 });

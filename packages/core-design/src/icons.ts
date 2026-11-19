@@ -89,6 +89,7 @@ export const iconGlyphs = {
   moveFolder: 'folder-move-outline',
   dataFolder: 'folder-outline',
   tempoCorrection: 'arrow-expand-horizontal',
+  delete: 'trash-can-outline',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;

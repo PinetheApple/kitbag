@@ -75,6 +75,7 @@ vi.mock('@kitbag/tool-tuner', () => ({
 
 vi.mock('expo-router', () => ({
   useRouter: () => ({ push: () => undefined }),
+  useFocusEffect: () => undefined,
 }));
 
 vi.mock('../miniPlayer/useMiniPlayerDocked.ts', () => ({

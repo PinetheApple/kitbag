@@ -91,6 +91,62 @@ export {
   type PracticeSessionState,
   type PracticeSessionStore,
 } from './practice/store.ts';
+export {
+  DEFAULT_HISTORY_GROUPING,
+  GRAPH_PERIODS,
+  groupSessions,
+  HISTORY_GROUPING,
+  HISTORY_GROUPINGS,
+  historyGraph,
+  isHistoryGrouping,
+  longestBar,
+  periodStart,
+  type GraphBar,
+  type HistoryGroup,
+  type HistoryGrouping,
+} from './practice/history.ts';
+export {
+  sessionTimeline,
+  TIMELINE_ENTRY,
+  type TimelineEntry,
+  type TimelinePause,
+  type TimelineStretch,
+  type TimelineTempoChange,
+} from './practice/timeline.ts';
+export {
+  REPEAT_PLAN,
+  repeatPlanOf,
+  SESSION_LOAD,
+  sessionLoadOf,
+  type RepeatPlan,
+  type SessionLoad,
+} from './practice/repeat.ts';
+export {
+  configureRepeatOverlay,
+  getRepeatOverlay,
+  type RepeatOverlay,
+  type RepeatPort,
+} from './practice/repeatOverlay.ts';
+export {
+  configureHistoryPrefsPersistence,
+  createHistoryPrefsStore,
+  DEFAULT_SWIPE_DIRECTION,
+  getHistoryPrefsStore,
+  isSwipeDirection,
+  SWIPE_DIRECTION,
+  type HistoryPrefs,
+  type HistoryPrefsPersistence,
+  type HistoryPrefsStore,
+  type SwipeDirection,
+} from './practice/historyPrefs.ts';
+export { useHistoryPrefs } from './practice/useHistoryPrefs.ts';
+export {
+  configurePracticeHistory,
+  getPracticeHistoryStore,
+  type PracticeHistoryRepository,
+  type PracticeHistoryStore,
+} from './practice/historyList.ts';
+export { usePracticeHistory } from './practice/usePracticeHistory.ts';
 export { useLastTool } from './lastTool/useLastTool.ts';
 export {
   configureLastToolPersistence,

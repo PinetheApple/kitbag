@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { continueTarget, HOME_TOOLS, TOOL_ID } from './registry.ts';
+import {
+  BUILT_TOOL_IDS,
+  continueTarget,
+  HOME_TOOLS,
+  TOOL_ID,
+} from './registry.ts';
 
 const ALL_ON = () => true;
 
@@ -46,6 +51,14 @@ describe('continueTarget', () => {
 
   it('ignores an id no longer on the roster', () => {
     expect(continueTarget('removed-tool', HOME_TOOLS, ALL_ON)).toBeUndefined();
+  });
+});
+
+describe('the Practice history shortcut', () => {
+  it('opens the history and is no tool to switch off', () => {
+    const shortcut = HOME_TOOLS.find((t) => t.id === TOOL_ID.practiceHistory);
+    expect(shortcut?.homeTile?.route).toBe('/practice');
+    expect(BUILT_TOOL_IDS).not.toContain(TOOL_ID.practiceHistory);
   });
 });
 

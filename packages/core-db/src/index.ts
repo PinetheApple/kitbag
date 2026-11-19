@@ -28,6 +28,7 @@ export {
   isStemSong,
   loggedSettingsOf,
   PRACTICE_LOG_VERSION,
+  presetFieldsOfLogged,
   STRETCH_END,
   type LoggedCountIn,
   type LoggedPresetSong,

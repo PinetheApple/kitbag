@@ -37,6 +37,7 @@ import { formatPracticeSummary } from './practiceText.ts';
 import { RigSection } from './RigSection.tsx';
 import { SettingsFrame } from './SettingsFrame.tsx';
 import { StorageSheets } from './StorageSheet.tsx';
+import { SwipeDirectionRow } from './SwipeDirectionRow.tsx';
 import {
   nextStorageSheet,
   type StorageSheetEvent,
@@ -97,9 +98,11 @@ function ToolsSection({ onOpenTools }: { readonly onOpenTools: () => void }) {
 
 function DataSection({
   onOpenRestore,
+  onOpenPractice,
   onNotice,
 }: {
   readonly onOpenRestore: () => void;
+  readonly onOpenPractice: () => void;
   readonly onNotice: (text: string) => void;
 }) {
   const { report, missing, removalFailed, refresh, removeMissing } =
@@ -129,7 +132,7 @@ function DataSection({
       <EditGroup>
         {backups && <BackUpRow />}
         {backups && <RestoreRow onOpenRestore={onOpenRestore} />}
-        <EditRow label="Practice">
+        <EditRow label="Practice" onPress={onOpenPractice}>
           <PracticeValue />
         </EditRow>
         <DataFolderRow onOpen={dataFolder.open} />
@@ -219,6 +222,7 @@ function AppearanceSection() {
             onEnable={notifications.enable}
           />
         )}
+        <SwipeDirectionRow gaps={THEME_CONTROL_GAPS} />
       </EditGroup>
     </>
   );
@@ -279,6 +283,7 @@ export interface SettingsScreenProps {
   readonly onOpenCalibration: () => void;
   readonly onOpenTools: () => void;
   readonly onOpenRestore: () => void;
+  readonly onOpenPractice: () => void;
 }
 
 export function SettingsScreen({
@@ -287,6 +292,7 @@ export function SettingsScreen({
   onOpenCalibration,
   onOpenTools,
   onOpenRestore,
+  onOpenPractice,
 }: SettingsScreenProps) {
   const insets = useSafeAreaInsets();
   const [notice, setNotice] = useState<string | null>(null);
@@ -305,7 +311,11 @@ export function SettingsScreen({
     <SettingsFrame title="Settings" onBack={onBack} overlay={overlay}>
       <RigSection onOpenCalibration={onOpenCalibration} />
       <ToolsSection onOpenTools={onOpenTools} />
-      <DataSection onOpenRestore={onOpenRestore} onNotice={setNotice} />
+      <DataSection
+        onOpenRestore={onOpenRestore}
+        onOpenPractice={onOpenPractice}
+        onNotice={setNotice}
+      />
       <AppearanceSection />
       <AboutSection onOpenAttributions={onOpenAttributions} />
     </SettingsFrame>

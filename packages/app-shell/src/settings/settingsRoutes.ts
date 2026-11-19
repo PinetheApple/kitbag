@@ -23,6 +23,9 @@ export function useSettingsRoutes() {
       openRestore: () => {
         router.push('/settings/restore');
       },
+      openPractice: () => {
+        router.push('/practice');
+      },
     }),
     [router],
   );

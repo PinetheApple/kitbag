@@ -1,4 +1,4 @@
-import { presetBase64 } from './base64';
+import { presetBase64, presetBytes } from './base64';
 import { isBoolean, isNumber, isRecord, isString, type Check } from './guards';
 import type { SongPreset } from './repository';
 
@@ -90,6 +90,12 @@ export function loggedSettingsOf(
   fields: StretchSettingsFields,
 ): LoggedSettings {
   return { ...fields, ...presetBase64(fields) };
+}
+
+export function presetFieldsOfLogged(
+  settings: LoggedSettings,
+): StretchSettingsFields {
+  return { ...settings, ...presetBytes(settings) };
 }
 
 export function isStemSong(song: LoggedSong): song is LoggedStemSong {

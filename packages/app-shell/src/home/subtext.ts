@@ -1,5 +1,14 @@
+import type { PracticeSessionListing } from '@kitbag/core-db';
 import { countLabel } from '@kitbag/core-design';
-import type { LibrarySummary } from '@kitbag/core-state';
+import {
+  formatClockSeconds,
+  groupSessions,
+  HISTORY_GROUPING,
+  type LibrarySummary,
+} from '@kitbag/core-state';
+
+import { daysAgoText, weekdayDate } from '../practice/dates.ts';
+import { SEPARATOR } from '../settings/separator.ts';
 
 export const UPCOMING_SUBTEXT = 'Coming soon';
 export const MORE_TOOLS_TITLE = 'More tools';
@@ -46,4 +55,16 @@ export function songsTileSubtext(summary: LibrarySummary): string {
 
 export function stemsTileSubtext(summary: LibrarySummary): string {
   return countLabel(summary.stemSongCount, 'stem song', 'stem songs');
+}
+
+export const NO_PRACTICE_SUBTEXT = 'No sessions yet';
+
+export function practiceTileSubtext(
+  sessions: readonly PracticeSessionListing[],
+  now: Date,
+): string {
+  const [latest] = groupSessions(sessions, HISTORY_GROUPING.day);
+  if (latest === undefined) return NO_PRACTICE_SUBTEXT;
+  const day = daysAgoText(latest.start, now) ?? weekdayDate(latest.start);
+  return `${day} ${SEPARATOR} ${formatClockSeconds(latest.totalSeconds)}`;
 }

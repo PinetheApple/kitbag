@@ -7,6 +7,7 @@ export const TOOL_ID = {
   library: 'library',
   stems: 'stems',
   sync: 'sync',
+  practiceHistory: 'practiceHistory',
 } as const;
 
 export type HomeLayout = ToolTileSize | 'row';
@@ -21,6 +22,7 @@ export interface HomeToolEntry extends Pick<ToolPlugin, 'id' | 'name'> {
   readonly homeTile?: ToolPlugin['homeTile'];
   readonly layout: HomeLayout;
   readonly summary?: string;
+  readonly shortcut?: boolean;
 }
 
 const CORE_SUMMARY = 'Core';
@@ -59,6 +61,14 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
     summary: 'Mix and loop imported stems',
   },
   { id: TOOL_ID.sync, name: 'Play along', icon: 'playAlong', layout: 'row' },
+  {
+    id: TOOL_ID.practiceHistory,
+    name: 'Practice history',
+    icon: 'practice',
+    homeTile: { label: 'Practice history', route: '/practice' },
+    layout: '1x1',
+    shortcut: true,
+  },
 ];
 
 export interface BuiltTool extends HomeToolEntry {
@@ -66,7 +76,8 @@ export interface BuiltTool extends HomeToolEntry {
 }
 
 export const BUILT_TOOLS: readonly BuiltTool[] = HOME_TOOLS.filter(
-  (tool): tool is BuiltTool => tool.homeTile !== undefined,
+  (tool): tool is BuiltTool =>
+    tool.homeTile !== undefined && tool.shortcut !== true,
 );
 
 export const BUILT_TOOL_IDS: readonly string[] = BUILT_TOOLS.map((t) => t.id);
