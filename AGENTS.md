@@ -174,6 +174,14 @@ bash scripts/e2e.test.sh                   # the script itself, stubbed adb + ma
 `e2e.sh` turns off Maestro's analytics and update check. Notification permission
 belongs to the flows' `launchApp`, since clearing state resets it.
 
+CI runs the flows on API 35 x86_64 emulators when app code, a subflow or a flow
+changes: all of them, or only the changed flows. The work is split over four
+shards, and `e2e/shards` lists each shard's flows, balanced by CI time. A new
+flow goes on the shard with the shortest total, or the job fails. Each shard
+uploads `e2e-results-shard-N` with the JUnit report and Maestro's output, plus
+the failure screenshot and logcat when a flow fails. Keep using the local
+emulator for new screens and anything a flow cannot assert.
+
 ### `tuner_verify` is a gate
 
 It failed 37/37 until #117: the old cycfi/q wrapper reset its detector every
