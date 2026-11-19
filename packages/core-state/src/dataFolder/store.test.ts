@@ -400,3 +400,38 @@ describe('whether a request acted', () => {
     await first;
   });
 });
+
+describe('a resume that finds the move already finished', () => {
+  it('keeps no refusal once there is no move left', async () => {
+    const { store, native } = setup({
+      move: status({ running: false, paused: true }),
+    });
+    await store.getState().start();
+    native.moveStatus.mockResolvedValue(null);
+    native.resumeMove.mockRejectedValue(rejection(CODES.moveErrors.noMove));
+    await store.getState().resumeMove();
+    expect(store.getState()).toMatchObject({ move: null, error: null });
+  });
+
+  it('drops a refused finish for no move once the reread finds none', async () => {
+    const { store, native, finish } = setup();
+    await store.getState().start();
+    native.moveStatus.mockResolvedValue(null);
+    await finish({
+      outcome: CODES.moveOutcomes.refused,
+      error: CODES.moveErrors.noMove,
+      path: null,
+    });
+    await vi.waitFor(() => {
+      expect(store.getState().error).toBeNull();
+    });
+  });
+
+  it('keeps any other refusal', async () => {
+    const { store, native } = setup();
+    await store.getState().start();
+    native.resumeMove.mockRejectedValue(rejection(CODES.moveErrors.running));
+    await store.getState().resumeMove();
+    expect(store.getState().error).toBe(CODES.moveErrors.running);
+  });
+});

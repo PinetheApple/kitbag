@@ -264,6 +264,7 @@ export {
 } from './dataFolder/runtime.ts';
 export type { PlayerTracks } from './dataFolder/release.ts';
 export { useDataFolder } from './dataFolder/useDataFolder.ts';
+export { moveSettled } from './dataFolder/outcomes.ts';
 export { useStemDeck } from './stemDeck/useStemDeck.ts';
 export {
   createStemDeckStore,

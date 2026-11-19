@@ -14,6 +14,7 @@ import { stemPlayerStore } from '../stemPlayer/store.ts';
 import type { StoredRowFiles } from '../storage/missingRows.ts';
 import { storedRowFiles } from '../storage/storedRowFiles.ts';
 import { awayPaths } from './awayPaths.ts';
+import { moveSettled } from './outcomes.ts';
 import {
   oldRootReleased,
   playerTracks,
@@ -143,6 +144,18 @@ export function createDataFolderStore(
       set({ error: code ?? get().codes?.moveErrors.io ?? null });
     };
 
+    // Launch-time clean-up can finish a move before a queued resume reaches it.
+    const dropMootRefusal = () => {
+      const { codes, error, move } = get();
+      if (
+        move === null &&
+        error !== null &&
+        error === codes?.moveErrors.noMove
+      ) {
+        set({ error: null });
+      }
+    };
+
     const request = async (call: () => Promise<void>) => {
       if (get().pending) return false;
       set({ pending: true });
@@ -155,6 +168,7 @@ export function createDataFolderStore(
         refuse(error);
       }
       await Promise.all([get().refreshMove(), get().refreshVolumes()]);
+      dropMootRefusal();
       set({ pending: false });
       return acted;
     };
@@ -165,15 +179,14 @@ export function createDataFolderStore(
     };
 
     const onFinished = (finished: MoveFinished) => {
-      const outcomes = get().codes?.moveOutcomes;
+      const { codes } = get();
       const settled =
-        finished.outcome !== outcomes?.failed &&
-        finished.outcome !== outcomes?.refused;
+        codes === null || moveSettled(finished, codes.moveOutcomes);
       set({
         finished,
         error: settled ? null : (finished.error ?? get().error),
       });
-      void get().refreshMove();
+      void get().refreshMove().then(dropMootRefusal);
       void get().refreshVolumes();
     };
 
