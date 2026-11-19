@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import {
+  existsSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
@@ -29,6 +30,7 @@ import {
 import { buildV24Fixture, pragma, rows } from './migrate-fixtures.test-helper';
 import {
   copyBeforeMigration,
+  databaseBytes,
   MIGRATION_COPY_MARGIN_BYTES,
   migrationCopyName,
   PART_SUFFIX,
@@ -37,11 +39,12 @@ import {
 import { folderMigrationCopyFiles } from './migration-copy-files.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
-const DATABASE_NAME = 'kitbag';
+const FIXTURE_NAME = 'kitbag';
 const LEGACY_VERSION = OLDEST_UPGRADABLE_VERSION - 1;
 const PROBE_KEY = 'written-just-before-the-copy';
 const PREVIOUS_COPY = 'the previous copy';
-const LATEST_COPY = migrationCopyName(DATABASE_NAME, V24_SCHEMA_VERSION);
+const LEFTOVER_PART_BYTES = 1024 * 1024;
+const LATEST_COPY = migrationCopyName(FIXTURE_NAME, V24_SCHEMA_VERSION);
 
 let folder: string;
 let warn: MockInstance<typeof console.warn>;
@@ -56,7 +59,7 @@ afterEach(() => {
   rmSync(folder, { recursive: true, force: true });
 });
 
-const databasePath = () => join(folder, DATABASE_NAME);
+const databasePath = () => join(folder, FIXTURE_NAME);
 const filesInFolder = () => readdirSync(folder).sort();
 
 function openV24(): DatabaseSync {
@@ -93,26 +96,18 @@ function migrateWithCopy(
   });
 }
 
-function databaseBytes(database: DatabaseSync): number {
-  return Number(
-    nodeCopySql(database).value(
-      'SELECT page_count * page_size FROM pragma_page_count(), pragma_page_size()',
-    ),
-  );
-}
-
 const warnedAbout = (problem: string) =>
   warn.mock.calls.some(([message]) => String(message).includes(problem));
 
 function writePreviousCopy(version: number) {
   writeFileSync(
-    join(folder, migrationCopyName(DATABASE_NAME, version)),
+    join(folder, migrationCopyName(FIXTURE_NAME, version)),
     PREVIOUS_COPY,
   );
 }
 
 const readCopy = (version: number) =>
-  readFileSync(join(folder, migrationCopyName(DATABASE_NAME, version)), 'utf8');
+  readFileSync(join(folder, migrationCopyName(FIXTURE_NAME, version)), 'utf8');
 
 describe('the copy taken before a migration', () => {
   it('holds the database as it was, including a row written just before it', () => {
@@ -124,7 +119,7 @@ describe('the copy taken before a migration', () => {
     migrateWithCopy(database);
 
     expect(pragma(database, 'user_version')).toBe(SCHEMA_VERSION);
-    expect(filesInFolder()).toEqual([DATABASE_NAME, LATEST_COPY]);
+    expect(filesInFolder()).toEqual([FIXTURE_NAME, LATEST_COPY]);
     const copy = new DatabaseSync(join(folder, LATEST_COPY));
     expect(pragma(copy, 'user_version')).toBe(V24_SCHEMA_VERSION);
     expect(
@@ -138,13 +133,13 @@ describe('the copy taken before a migration', () => {
     const database = new DatabaseSync(databasePath());
     migrateWithCopy(database);
     expect(pragma(database, 'user_version')).toBe(SCHEMA_VERSION);
-    expect(filesInFolder()).toEqual([DATABASE_NAME]);
+    expect(filesInFolder()).toEqual([FIXTURE_NAME]);
   });
 
   it('is not taken for a database already on the current schema', () => {
     const database = openAtVersion(SCHEMA_VERSION);
     migrateWithCopy(database);
-    expect(filesInFolder()).toEqual([DATABASE_NAME]);
+    expect(filesInFolder()).toEqual([FIXTURE_NAME]);
   });
 
   it.each([
@@ -163,13 +158,14 @@ describe('the copy taken before a migration', () => {
     });
 
     expect(beforeUpgrade).not.toHaveBeenCalled();
-    expect(filesInFolder()).toEqual([DATABASE_NAME]);
+    expect(filesInFolder()).toEqual([FIXTURE_NAME]);
     expect(readFileSync(databasePath())).toEqual(before);
   });
 
   it('is skipped, and the migration still runs, when space is short', () => {
     const database = openV24();
-    const needed = databaseBytes(database) + MIGRATION_COPY_MARGIN_BYTES;
+    const needed =
+      databaseBytes(nodeCopySql(database)) + MIGRATION_COPY_MARGIN_BYTES;
 
     migrateWithCopy(
       database,
@@ -177,20 +173,21 @@ describe('the copy taken before a migration', () => {
     );
 
     expect(pragma(database, 'user_version')).toBe(SCHEMA_VERSION);
-    expect(filesInFolder()).toEqual([DATABASE_NAME]);
+    expect(filesInFolder()).toEqual([FIXTURE_NAME]);
     expect(warnedAbout('no-space')).toBe(true);
   });
 
   it('is taken when the free space exactly covers it', () => {
     const database = openV24();
-    const needed = databaseBytes(database) + MIGRATION_COPY_MARGIN_BYTES;
+    const needed =
+      databaseBytes(nodeCopySql(database)) + MIGRATION_COPY_MARGIN_BYTES;
 
     migrateWithCopy(
       database,
       folderMigrationCopyFiles(folder, { freeBytes: () => needed }),
     );
 
-    expect(filesInFolder()).toEqual([DATABASE_NAME, LATEST_COPY]);
+    expect(filesInFolder()).toEqual([FIXTURE_NAME, LATEST_COPY]);
   });
 
   it('does not block the migration when it fails, and names the failure', () => {
@@ -207,6 +204,43 @@ describe('the copy taken before a migration', () => {
 
     expect(pragma(database, 'user_version')).toBe(SCHEMA_VERSION);
     expect(warnedAbout('copy-failed')).toBe(true);
+    expect(warnedAbout('no-space')).toBe(false);
+  });
+
+  it('counts a free space that could not be measured as a failed copy', () => {
+    const database = openV24();
+
+    migrateWithCopy(
+      database,
+      folderMigrationCopyFiles(folder, { freeBytes: () => Number.NaN }),
+    );
+
+    expect(pragma(database, 'user_version')).toBe(SCHEMA_VERSION);
+    expect(filesInFolder()).toEqual([FIXTURE_NAME]);
+    expect(warnedAbout('copy-failed')).toBe(true);
+    expect(warnedAbout('no-space')).toBe(false);
+  });
+
+  it('counts the space a leftover part frees before deciding there is no room', () => {
+    const database = openV24();
+    const needed =
+      databaseBytes(nodeCopySql(database)) + MIGRATION_COPY_MARGIN_BYTES;
+    const leftover = join(folder, LATEST_COPY + PART_SUFFIX);
+    writeFileSync(leftover, Buffer.alloc(LEFTOVER_PART_BYTES));
+    const freeWithoutLeftover = needed - LEFTOVER_PART_BYTES;
+
+    migrateWithCopy(
+      database,
+      folderMigrationCopyFiles(folder, {
+        freeBytes: () =>
+          existsSync(leftover)
+            ? freeWithoutLeftover
+            : freeWithoutLeftover + LEFTOVER_PART_BYTES,
+      }),
+    );
+
+    expect(filesInFolder()).toEqual([FIXTURE_NAME, LATEST_COPY]);
+    expect(warnedAbout('no-space')).toBe(false);
   });
 
   it('leaves the previous copies untouched when it cannot be moved into place', () => {
@@ -227,8 +261,8 @@ describe('the copy taken before a migration', () => {
     expect(readCopy(V23_SCHEMA_VERSION)).toBe(PREVIOUS_COPY);
     expect(readCopy(V24_SCHEMA_VERSION)).toBe(PREVIOUS_COPY);
     expect(filesInFolder()).toEqual([
-      DATABASE_NAME,
-      migrationCopyName(DATABASE_NAME, V23_SCHEMA_VERSION),
+      FIXTURE_NAME,
+      migrationCopyName(FIXTURE_NAME, V23_SCHEMA_VERSION),
       LATEST_COPY,
     ]);
     expect(warnedAbout('copy-failed')).toBe(true);
@@ -240,7 +274,7 @@ describe('the copy taken before a migration', () => {
 
     migrateWithCopy(database);
 
-    expect(filesInFolder()).toEqual([DATABASE_NAME, LATEST_COPY]);
+    expect(filesInFolder()).toEqual([FIXTURE_NAME, LATEST_COPY]);
     expect(warn).not.toHaveBeenCalled();
   });
 
@@ -251,6 +285,6 @@ describe('the copy taken before a migration', () => {
 
     migrateWithCopy(database);
 
-    expect(filesInFolder()).toEqual([DATABASE_NAME, LATEST_COPY]);
+    expect(filesInFolder()).toEqual([FIXTURE_NAME, LATEST_COPY]);
   });
 });

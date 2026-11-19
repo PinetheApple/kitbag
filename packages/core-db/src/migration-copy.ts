@@ -32,7 +32,12 @@ function report(problem: MigrationCopyProblem, error?: unknown): void {
   console.warn(`[kitbag] database copy before migration: ${problem}`, error);
 }
 
-function databaseFile(sql: MigrationCopySql) {
+interface DatabaseFile {
+  readonly folder: string;
+  readonly name: string;
+}
+
+function databaseFile(sql: MigrationCopySql): DatabaseFile {
   const path = sql.value(
     "SELECT file FROM pragma_database_list WHERE name = 'main'",
   );
@@ -42,7 +47,7 @@ function databaseFile(sql: MigrationCopySql) {
   return { folder: path.slice(0, split), name: path.slice(split) };
 }
 
-function databaseBytes(sql: MigrationCopySql): number {
+export function databaseBytes(sql: MigrationCopySql): number {
   return Number(
     sql.value(
       'SELECT page_count * page_size FROM pragma_page_count(), pragma_page_size()',
@@ -50,19 +55,29 @@ function databaseBytes(sql: MigrationCopySql): number {
   );
 }
 
+function measuredFreeBytes(files: MigrationCopyFiles): number {
+  const free = files.freeBytes();
+  if (!Number.isFinite(free))
+    throw new Error(`Free space could not be measured: ${String(free)}`);
+  return free;
+}
+
 function takeCopy(
   sql: MigrationCopySql,
   files: MigrationCopyFiles,
+  database: DatabaseFile,
   fromVersion: number,
-): string | undefined {
-  const database = databaseFile(sql);
-  if (files.freeBytes() < databaseBytes(sql) + MIGRATION_COPY_MARGIN_BYTES) {
-    report('no-space');
-    return undefined;
-  }
+): boolean {
   const copyName = migrationCopyName(database.name, fromVersion);
   const partName = copyName + PART_SUFFIX;
   files.remove(partName);
+  if (
+    measuredFreeBytes(files) <
+    databaseBytes(sql) + MIGRATION_COPY_MARGIN_BYTES
+  ) {
+    report('no-space');
+    return false;
+  }
   try {
     sql.exec(`VACUUM INTO ${quoted(database.folder + partName)}`);
     files.replace(partName, copyName);
@@ -72,13 +87,13 @@ function takeCopy(
     });
     throw error;
   }
-  return database.name;
+  return true;
 }
 
 function pruneOlderCopies(
   files: MigrationCopyFiles,
   databaseName: string,
-  kept: number,
+  keptVersion: number,
 ): unknown[] {
   const errors: unknown[] = [];
   for (
@@ -86,7 +101,7 @@ function pruneOlderCopies(
     version < SCHEMA_VERSION;
     version++
   )
-    if (version !== kept)
+    if (version !== keptVersion)
       errors.push(
         ...attempt(() => {
           files.remove(migrationCopyName(databaseName, version));
@@ -100,14 +115,12 @@ export function copyBeforeMigration(
   files: MigrationCopyFiles,
   fromVersion: number,
 ): void {
-  let databaseName: string | undefined;
   try {
-    databaseName = takeCopy(sql, files, fromVersion);
+    const database = databaseFile(sql);
+    if (!takeCopy(sql, files, database, fromVersion)) return;
+    const [pruneError] = pruneOlderCopies(files, database.name, fromVersion);
+    if (pruneError !== undefined) report('prune-failed', pruneError);
   } catch (error) {
     report('copy-failed', error);
-    return;
   }
-  if (databaseName === undefined) return;
-  const [pruneError] = pruneOlderCopies(files, databaseName, fromVersion);
-  if (pruneError !== undefined) report('prune-failed', pruneError);
 }

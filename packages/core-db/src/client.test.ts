@@ -126,7 +126,8 @@ describe('openDatabase', () => {
         return { rows: [{ user_version: V24_SCHEMA_VERSION }] };
       if (sql.includes('pragma_database_list'))
         return { rows: [{ file: '/data/databases/kitbag' }] };
-      return { rows: [{ bytes: 0, foreign_keys: 1 }] };
+      if (sql.includes('pragma_page_size')) return { rows: [{ bytes: 0 }] };
+      return { rows: [{ foreign_keys: 1 }] };
     });
 
     openDatabase(memoryClickSoundFiles().files, files, 'kitbag');
