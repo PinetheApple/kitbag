@@ -1,4 +1,4 @@
-import type { MoveFinished, MoveStatus } from '@kitbag/core-native';
+import type { MoveStatus } from '@kitbag/core-native';
 import type { DataFolderStore } from '@kitbag/core-state';
 
 export type DataFolderStep =
@@ -173,14 +173,4 @@ export function sheetActions(
     primary,
     disabled: pending || starting,
   }));
-}
-
-export function settledOutcome(
-  finished: MoveFinished,
-  outcomes: { readonly failed: string; readonly refused: string },
-): boolean {
-  return (
-    finished.outcome !== outcomes.failed &&
-    finished.outcome !== outcomes.refused
-  );
 }

@@ -135,9 +135,10 @@ describe('outcome and phase text', () => {
   });
 
   it('gives every phase its own line', () => {
-    const lines = CODES.movePhases.map(phaseText);
-    expect(new Set(lines).size).toBe(CODES.movePhases.length);
-    expect(phaseText('VERIFYING')).toBe(
+    const phases = Object.values(CODES.movePhases);
+    const lines = phases.map((phase) => phaseText(phase, CODES.movePhases));
+    expect(new Set(lines).size).toBe(phases.length);
+    expect(phaseText(CODES.movePhases.verifying, CODES.movePhases)).toBe(
       'Checking every copy against its original.',
     );
   });
@@ -298,15 +299,23 @@ describe('verifying counts', () => {
   const checking = move({ phase: 'VERIFYING', doneFiles: 10 });
 
   it('counts checked files as checked', () => {
-    expect(progressFiles(checking)).toEqual(['10', 'of 54 files checked']);
-    expect(progressFiles(move())).toEqual(['24', 'of 54 files']);
+    expect(progressFiles(checking, CODES.movePhases)).toEqual([
+      '10',
+      'of 54 files checked',
+    ]);
+    expect(progressFiles(move(), CODES.movePhases)).toEqual([
+      '24',
+      'of 54 files',
+    ]);
   });
 
   it('counts every file as copied while checking', () => {
-    expect(stopHint(checking)).toContain('The 54 files already copied');
-    expect(pausedHint({ ...checking, running: false })).toContain(
-      '54 of 54 files are on the SD card',
+    expect(stopHint(checking, CODES.movePhases)).toContain(
+      'The 54 files already copied',
     );
+    expect(
+      pausedHint({ ...checking, running: false }, CODES.movePhases),
+    ).toContain('54 of 54 files are on the SD card');
   });
 });
 

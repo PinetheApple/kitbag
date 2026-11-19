@@ -1,8 +1,6 @@
 import {
   createThemedStyles,
   dataFolderType,
-  EditDivider,
-  EditRow,
   EditValue,
   LinearProgress,
   SheetHint,
@@ -12,6 +10,7 @@ import {
 import type {
   DataFolderCodes,
   DataFolderVolumes,
+  MovePhases,
   MoveStatus,
 } from '@kitbag/core-native';
 import { Text, View } from 'react-native';
@@ -38,6 +37,7 @@ import {
   progressFiles,
   progressLabel,
 } from './dataFolderMoveText.ts';
+import { SheetRow } from './StorageSheet.tsx';
 import { VolumeOptionRow } from './VolumeOptionRow.tsx';
 
 const SINGLE_VOLUME = 1;
@@ -102,23 +102,6 @@ export function ChooserBody({
   );
 }
 
-function SheetRow({
-  label,
-  value,
-}: {
-  readonly label: string;
-  readonly value: string;
-}) {
-  return (
-    <View>
-      <EditRow label={label}>
-        <EditValue>{value}</EditValue>
-      </EditRow>
-      <EditDivider />
-    </View>
-  );
-}
-
 export interface ConfirmBodyProps {
   readonly volumes: DataFolderVolumes;
   readonly target: string | null;
@@ -131,18 +114,22 @@ export function ConfirmBody({ volumes, target, media }: ConfirmBodyProps) {
   return (
     <>
       {media === null ? null : (
-        <SheetRow label="Moves" value={mediaText(media)} />
+        <SheetRow label="Moves">
+          <EditValue>{mediaText(media)}</EditValue>
+        </SheetRow>
       )}
-      <SheetRow
-        label="From"
-        value={volumeName(findVolume(volumes, current), current)}
-      />
-      <SheetRow label="To" value={volumeName(destination, target)} />
+      <SheetRow label="From">
+        <EditValue>
+          {volumeName(findVolume(volumes, current), current)}
+        </EditValue>
+      </SheetRow>
+      <SheetRow label="To">
+        <EditValue>{volumeName(destination, target)}</EditValue>
+      </SheetRow>
       {media === null || destination === undefined ? null : (
-        <SheetRow
-          label={freeAfterLabel(target)}
-          value={freeAfterText(destination, media)}
-        />
+        <SheetRow label={freeAfterLabel(target)}>
+          <EditValue>{freeAfterText(destination, media)}</EditValue>
+        </SheetRow>
       )}
       {CONFIRM_HINTS.map((hint) => (
         <SheetHint key={hint}>{hint}</SheetHint>
@@ -164,23 +151,24 @@ function Count({ parts }: { readonly parts: readonly [string, string] }) {
 
 export interface MovingBodyProps {
   readonly move: MoveStatus;
+  readonly phases: MovePhases;
   readonly notice: string | null;
 }
 
-export function MovingBody({ move, notice }: MovingBodyProps) {
+export function MovingBody({ move, phases, notice }: MovingBodyProps) {
   const styles = useStyles();
   return (
     <>
       <View style={styles.numbers}>
         <Count parts={progressBytes(move)} />
-        <Count parts={progressFiles(move)} />
+        <Count parts={progressFiles(move, phases)} />
       </View>
       <LinearProgress
         percent={movePercent(move)}
         accessibilityLabel={progressLabel(move)}
       />
       {notice === null ? null : <SheetHint>{notice}</SheetHint>}
-      <SheetHint>{`${phaseText(move.phase)} ${movingHint(move)}`}</SheetHint>
+      <SheetHint>{`${phaseText(move.phase, phases)} ${movingHint(move)}`}</SheetHint>
       <SheetHint>{MOVING_CLOSE_HINT}</SheetHint>
     </>
   );

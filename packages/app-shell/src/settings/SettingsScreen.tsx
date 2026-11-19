@@ -155,7 +155,7 @@ function DataSection({
         onDismiss={handlers.dismiss}
       />
       <DataFolderSheets
-        controller={dataFolder}
+        model={dataFolder}
         media={report === null ? null : mediaSize(report)}
       />
     </>

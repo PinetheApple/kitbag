@@ -1,10 +1,9 @@
-import type { MoveFinished } from '@kitbag/core-native';
-import type { DataFolderStore } from '@kitbag/core-state';
+import type { MoveFinished, MoveStatus } from '@kitbag/core-native';
+import { moveSettled, type DataFolderStore } from '@kitbag/core-state';
 
 import {
   CLOSED,
   nextDataFolderStep,
-  settledOutcome,
   type DataFolderAction,
   type DataFolderEvent,
   type DataFolderStep,
@@ -50,19 +49,21 @@ export function createDataFolderSheetController(
     if (codes === null) return;
     send({
       kind: 'finished',
-      settled: settledOutcome(finished, codes.moveOutcomes),
+      settled: moveSettled(finished, codes.moveOutcomes),
     });
     const text = outcomeText(finished, codes, places);
     if (text !== null) notify(text);
   };
 
+  const remember = (move: MoveStatus | null) => {
+    if (move === null) return;
+    places = { source: move.sourceVolumeUuid, target: move.targetVolumeUuid };
+  };
+
   const follow = (now: DataFolderStore, before: DataFolderStore) => {
-    if (now.move !== null) {
-      places = {
-        source: now.move.sourceVolumeUuid,
-        target: now.move.targetVolumeUuid,
-      };
-      if (before.move === null) send({ kind: 'progressed' });
+    remember(now.move);
+    if (now.move !== null && before.move === null) {
+      send({ kind: 'progressed' });
     }
     if (now.finished !== null && now.finished !== before.finished) {
       finish(now.finished);
@@ -86,7 +87,11 @@ export function createDataFolderSheetController(
     const { target } = step;
     places = { source: state().volumes?.currentVolumeUuid ?? null, target };
     send({ kind: 'start' });
-    void state().startMove(target);
+    void state()
+      .startMove(target)
+      .then((acted) => {
+        if (!acted) send({ kind: 'requestSettled' });
+      });
   };
 
   const undo = async () => {
@@ -100,7 +105,10 @@ export function createDataFolderSheetController(
     step: () => step,
     subscribe: (listener) => {
       listeners.add(listener);
-      stopFollowing ??= store.subscribe(follow);
+      if (stopFollowing === null) {
+        remember(state().move);
+        stopFollowing = store.subscribe(follow);
+      }
       return () => {
         listeners.delete(listener);
         if (listeners.size > 0) return;

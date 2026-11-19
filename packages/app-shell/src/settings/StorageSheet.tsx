@@ -37,7 +37,7 @@ const useStyles = createThemedStyles(() => ({
   path: { marginTop: dataFolder.pathTop },
 }));
 
-function SheetRow({
+export function SheetRow({
   label,
   children,
 }: {

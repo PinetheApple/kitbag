@@ -7,7 +7,8 @@ import type {
   StorageReport,
 } from '@kitbag/core-native';
 
-import { formatSpace } from './bytes.ts';
+import { formatWithGbDecimal } from './bytes.ts';
+import { capitalised } from './capitalised.ts';
 import { SEPARATOR } from './separator.ts';
 
 export const DATA_FOLDER_LABEL = 'Data folder';
@@ -51,10 +52,6 @@ export function thePlace(volumeUuid: string | null): string {
   return volumeUuid === null ? INTERNAL_PLACE : THE_CARD;
 }
 
-export function capitalised(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
 export function findVolume(
   volumes: DataFolderVolumes,
   volumeUuid: string | null,
@@ -79,8 +76,12 @@ export function movePercent(move: MoveStatus): number {
 const percentDetail = (move: MoveStatus) =>
   `${SEPARATOR} ${String(movePercent(move))}%`;
 
-export function moveUnderWay(move: MoveStatus): boolean {
-  return move.running || move.switched;
+export function movingTitle(move: MoveStatus): string {
+  return `Moving to ${placeName(move.targetVolumeUuid)}`;
+}
+
+export function pausedTitle(move: MoveStatus): string {
+  return `Move to ${placeName(move.targetVolumeUuid)} paused`;
 }
 
 export interface RowValue {
@@ -106,9 +107,9 @@ export function dataFolderRowValue(
         }
       : { ...quiet, lead: moved, detail: `${SEPARATOR} old copies left` };
   }
-  if (move !== null && moveUnderWay(move)) {
+  if (move?.running === true) {
     return {
-      lead: `Moving to ${placeName(move.targetVolumeUuid)}`,
+      lead: movingTitle(move),
       detail: percentDetail(move),
       missing: false,
       highlighted: true,
@@ -117,7 +118,7 @@ export function dataFolderRowValue(
   if (move !== null) {
     return {
       ...quiet,
-      lead: `Move to ${placeName(move.targetVolumeUuid)} paused`,
+      lead: pausedTitle(move),
       detail: null,
     };
   }
@@ -137,7 +138,7 @@ export function dataFolderRowValue(
     detail:
       current === undefined
         ? null
-        : `${SEPARATOR} ${formatSpace(current.freeBytes)} free`,
+        : `${SEPARATOR} ${formatWithGbDecimal(current.freeBytes)} free`,
   };
 }
 
@@ -190,7 +191,7 @@ export interface VolumeOption {
 export const fileCount = (count: number) => countLabel(count, 'file', 'files');
 
 function freeLine(volume: DataFolderVolume): string {
-  return `${formatSpace(volume.freeBytes)} free`;
+  return `${formatWithGbDecimal(volume.freeBytes)} free`;
 }
 
 function blockedLine(
@@ -208,7 +209,7 @@ function blockedLine(
     return `Kitbag can’t read the current folder, so nothing can move.`;
   }
   if (volume.freeBytes < volumes.requiredBytes) {
-    return `${freeLine(volume)} ${SEPARATOR} needs ${formatSpace(volumes.requiredBytes)}`;
+    return `${freeLine(volume)} ${SEPARATOR} needs ${formatWithGbDecimal(volumes.requiredBytes)}`;
   }
   return null;
 }
@@ -226,7 +227,9 @@ export function volumeOption(
   };
   if (volume.inUse) {
     const used =
-      media === null ? '' : ` ${SEPARATOR} ${formatSpace(media.bytes)} used`;
+      media === null
+        ? ''
+        : ` ${SEPARATOR} ${formatWithGbDecimal(media.bytes)} used`;
     const mounted = volume.state !== codes.volumeStates.unmounted;
     return {
       ...base,
@@ -253,7 +256,7 @@ export function volumeOption(
 
 export function noSpaceHint(option: VolumeOption): string | null {
   if (option.shortBy === null) return null;
-  return `Free up ${formatSpace(option.shortBy)} on ${thePlace(option.volumeUuid)} to move here. Nothing has moved.`;
+  return `Free up ${formatWithGbDecimal(option.shortBy)} on ${thePlace(option.volumeUuid)} to move here. Nothing has moved.`;
 }
 
 export function confirmTitle(target: string | null): string {
@@ -261,7 +264,7 @@ export function confirmTitle(target: string | null): string {
 }
 
 export function mediaText(media: MediaSize): string {
-  return formatSpace(media.bytes);
+  return formatWithGbDecimal(media.bytes);
 }
 
 export function freeAfterLabel(target: string | null): string {
@@ -269,5 +272,5 @@ export function freeAfterLabel(target: string | null): string {
 }
 
 export function freeAfterText(volume: DataFolderVolume, media: MediaSize) {
-  return formatSpace(Math.max(0, volume.freeBytes - media.bytes));
+  return formatWithGbDecimal(Math.max(0, volume.freeBytes - media.bytes));
 }

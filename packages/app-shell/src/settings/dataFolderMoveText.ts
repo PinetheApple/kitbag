@@ -2,58 +2,58 @@ import type {
   DataFolderCodes,
   MoveErrors,
   MoveFinished,
+  MovePhases,
   MoveStatus,
 } from '@kitbag/core-native';
 
 import { formatBytes } from './bytes.ts';
+import { capitalised } from './capitalised.ts';
 import {
-  capitalised,
   fileCount,
   movePercent,
+  movingTitle,
   placeName,
   thePlace,
 } from './dataFolderText.ts';
-
-export function movingTitle(move: MoveStatus): string {
-  return `Moving to ${placeName(move.targetVolumeUuid)}`;
-}
 
 export function progressBytes(move: MoveStatus): readonly [string, string] {
   return [formatBytes(move.doneBytes), `of ${formatBytes(move.totalBytes)}`];
 }
 
-const VERIFYING = 'VERIFYING';
+const verifying = (move: MoveStatus, phases: MovePhases) =>
+  move.phase === phases.verifying;
 
-const verifying = (move: MoveStatus) => move.phase === VERIFYING;
-
-export function progressFiles(move: MoveStatus): readonly [string, string] {
-  const checked = verifying(move) ? ' checked' : '';
+export function progressFiles(
+  move: MoveStatus,
+  phases: MovePhases,
+): readonly [string, string] {
+  const checked = verifying(move, phases) ? ' checked' : '';
   return [String(move.doneFiles), `of ${fileCount(move.totalFiles)}${checked}`];
 }
 
 // While verifying, doneFiles counts checked copies; every file is copied by then.
-function copiedFiles(move: MoveStatus): number {
-  return verifying(move) ? move.totalFiles : move.doneFiles;
+function copiedFiles(move: MoveStatus, phases: MovePhases): number {
+  return verifying(move, phases) ? move.totalFiles : move.doneFiles;
 }
 
 export function progressLabel(move: MoveStatus): string {
   return `${movingTitle(move)}, ${String(movePercent(move))}%`;
 }
 
-const COPYING_TEXT = 'Copying files.';
-
-const PHASE_TEXT: Readonly<Record<string, string>> = {
-  PREFLIGHT: 'Checking there is room and that Kitbag can write there.',
-  COPYING: COPYING_TEXT,
-  VERIFYING: 'Checking every copy against its original.',
-  CATCH_UP: 'Copying songs added during the move.',
-  SWITCHED: 'Switched over.',
-  CLEANING: 'Removing the old copies.',
-  DONE: 'Done.',
+const PHASE_TEXT: Readonly<Record<keyof MovePhases, string>> = {
+  preflight: 'Checking there is room and that Kitbag can write there.',
+  copying: 'Copying files.',
+  verifying: 'Checking every copy against its original.',
+  catchUp: 'Copying songs added during the move.',
+  switched: 'Switched over.',
+  cleaning: 'Removing the old copies.',
+  done: 'Done.',
 };
 
-export function phaseText(phase: string): string {
-  return PHASE_TEXT[phase] ?? COPYING_TEXT;
+export function phaseText(phase: string, phases: MovePhases): string {
+  const keys = Object.keys(PHASE_TEXT) as (keyof MovePhases)[];
+  const key = keys.find((name) => phases[name] === phase) ?? 'copying';
+  return PHASE_TEXT[key];
 }
 
 export function movingHint(move: MoveStatus): string {
@@ -75,20 +75,16 @@ export function switchedFailedText(move: MoveStatus): ErrorText {
   };
 }
 
-export function stopHint(move: MoveStatus): string {
-  return `The ${fileCount(copiedFiles(move))} already copied are removed from ${thePlace(move.targetVolumeUuid)}. Everything stays on ${thePlace(move.sourceVolumeUuid)}, where it is now.`;
+export function stopHint(move: MoveStatus, phases: MovePhases): string {
+  return `The ${fileCount(copiedFiles(move, phases))} already copied are removed from ${thePlace(move.targetVolumeUuid)}. Everything stays on ${thePlace(move.sourceVolumeUuid)}, where it is now.`;
 }
 
-export function pausedTitle(move: MoveStatus): string {
-  return `Move to ${placeName(move.targetVolumeUuid)} paused`;
-}
-
-export function pausedHint(move: MoveStatus): string {
+export function pausedHint(move: MoveStatus, phases: MovePhases): string {
   const why =
     move.error === null
       ? 'Kitbag closed during the move.'
       : 'The move stopped.';
-  return `${why} ${String(copiedFiles(move))} of ${fileCount(move.totalFiles)} are on ${thePlace(move.targetVolumeUuid)}. Your songs still play from ${thePlace(move.sourceVolumeUuid)}.`;
+  return `${why} ${String(copiedFiles(move, phases))} of ${fileCount(move.totalFiles)} are on ${thePlace(move.targetVolumeUuid)}. Your songs still play from ${thePlace(move.sourceVolumeUuid)}.`;
 }
 
 export interface Places {

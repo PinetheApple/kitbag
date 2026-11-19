@@ -12,7 +12,6 @@ import type {
   DataFolderVolumes,
   MoveStatus,
 } from '@kitbag/core-native';
-import { useDataFolder } from '@kitbag/core-state';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,9 +24,7 @@ import type {
 } from './dataFolderFlow.ts';
 import {
   moveErrorText,
-  movingTitle,
   pausedHint,
-  pausedTitle,
   phaseText,
   stopHint,
   switchedFailedText,
@@ -45,8 +42,10 @@ import {
   DATA_FOLDER_LABEL,
   KEEP_MOVING,
   MOVE,
+  movingTitle,
   NOT_NOW,
   OK,
+  pausedTitle,
   RESUME,
   STOP_MOVING,
   STOP_TITLE,
@@ -54,7 +53,7 @@ import {
   UNDO,
   type MediaSize,
 } from './dataFolderText.ts';
-import type { useDataFolderSheets } from './useDataFolderSheets.ts';
+import type { DataFolderSheetsModel } from './useDataFolderSheets.ts';
 
 const LABELS: Readonly<Record<DataFolderAction, string>> = {
   move: MOVE,
@@ -132,13 +131,15 @@ function errorFace(text: ErrorText): SheetFace {
   };
 }
 
-function switchedFace(move: MoveStatus): SheetFace {
+function switchedFace(move: MoveStatus, codes: DataFolderCodes): SheetFace {
   return {
     title: switchedTitle(move),
     icon: 'moveFolder',
     body: (
       <>
-        {move.running ? <SheetHint>{phaseText(move.phase)}</SheetHint> : null}
+        {move.running ? (
+          <SheetHint>{phaseText(move.phase, codes.movePhases)}</SheetHint>
+        ) : null}
         <SheetHint>{switchedHint(move)}</SheetHint>
       </>
     ),
@@ -179,6 +180,7 @@ function sheetFace(sheet: DataFolderSheet, context: FaceContext): SheetFace {
         body: (
           <MovingBody
             move={sheet.move}
+            phases={codes.movePhases}
             notice={
               notice === null
                 ? null
@@ -191,17 +193,17 @@ function sheetFace(sheet: DataFolderSheet, context: FaceContext): SheetFace {
     case 'stopAsk':
       return {
         title: STOP_TITLE,
-        body: <SheetHint>{stopHint(sheet.move)}</SheetHint>,
+        body: <SheetHint>{stopHint(sheet.move, codes.movePhases)}</SheetHint>,
       };
     case 'switched':
-      return switchedFace(sheet.move);
+      return switchedFace(sheet.move, codes);
     case 'switchedFailed':
       return errorFace(switchedFailedText(sheet.move));
     case 'paused':
       return {
         title: pausedTitle(sheet.move),
         icon: 'moveFolder',
-        body: <SheetHint>{pausedHint(sheet.move)}</SheetHint>,
+        body: <SheetHint>{pausedHint(sheet.move, codes.movePhases)}</SheetHint>,
       };
     case 'stopped':
     case 'failed':
@@ -214,16 +216,22 @@ function otherPlace(volumes: DataFolderVolumes): string | null {
 }
 
 export interface DataFolderSheetsProps {
-  readonly controller: ReturnType<typeof useDataFolderSheets>;
+  readonly model: DataFolderSheetsModel;
   readonly media: MediaSize | null;
 }
 
-export function DataFolderSheets({ controller, media }: DataFolderSheetsProps) {
+export function DataFolderSheets({ model, media }: DataFolderSheetsProps) {
   const insets = useSafeAreaInsets();
-  const volumes = useDataFolder((s) => s.volumes);
-  const move = useDataFolder((s) => s.move);
-  const storeError = useDataFolder((s) => s.error);
-  const { sheet, actions, pending, codes, confirmTarget } = controller;
+  const {
+    sheet,
+    actions,
+    pending,
+    codes,
+    confirmTarget,
+    volumes,
+    move,
+    error: storeError,
+  } = model;
   if (volumes === null || codes === null) return null;
   const places: Places = {
     source: move?.sourceVolumeUuid ?? volumes.currentVolumeUuid,
@@ -236,7 +244,7 @@ export function DataFolderSheets({ controller, media }: DataFolderSheetsProps) {
     pending,
     places,
     storeError,
-    onChoose: controller.choose,
+    onChoose: model.choose,
   });
   return (
     <Sheet
@@ -245,10 +253,10 @@ export function DataFolderSheets({ controller, media }: DataFolderSheetsProps) {
       {...(face.icon === undefined ? {} : { titleIcon: face.icon })}
       dismissLabel={CLOSE_DATA_FOLDER}
       bottomInset={insets.bottom}
-      onDismiss={controller.close}
+      onDismiss={model.close}
     >
       {face.body}
-      <Actions sheet={sheet} actions={actions} handlers={controller.byAction} />
+      <Actions sheet={sheet} actions={actions} handlers={model.act} />
     </Sheet>
   );
 }

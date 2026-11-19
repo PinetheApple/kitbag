@@ -252,3 +252,69 @@ describe('a move a failure stopped', () => {
     expect(sheet()).toBe('paused');
   });
 });
+
+describe('places known before any event', () => {
+  it('names the target of a move already in the store when it finishes', async () => {
+    const awaiting = move({
+      phase: 'CLEANING',
+      switched: true,
+      running: false,
+      awaitingRelease: true,
+    });
+    const { notices, emit } = await setup(awaiting);
+    emit.finished(finished(CODES.moveOutcomes.done));
+    expect(notices).toEqual(['Move finished. Your files are on the SD card.']);
+  });
+});
+
+describe('a start that is refused', () => {
+  it('leaves starting when the request is rejected', async () => {
+    const { native, controller, sheet, settle } = await setup();
+    native.startMove.mockRejectedValueOnce(
+      Object.assign(new Error('refused'), {
+        code: CODES.moveErrors.targetLeftovers,
+      }),
+    );
+    controller.open();
+    controller.choose(CARD);
+    controller.act.move();
+    await settle();
+    await vi.waitFor(() => {
+      expect(controller.step().kind).toBe('open');
+    });
+    expect(sheet()).toBe('failed');
+    controller.act.chooseAnother();
+    expect(sheet()).toBe('chooser');
+  });
+
+  it('leaves starting when the service reports a refusal', async () => {
+    const { controller, sheet, emit, settle } = await setup();
+    controller.open();
+    controller.choose(CARD);
+    controller.act.move();
+    await settle();
+    expect(controller.step().kind).toBe('starting');
+    emit.finished(
+      finished(CODES.moveOutcomes.refused, CODES.moveErrors.inProgress),
+    );
+    expect(controller.step().kind).toBe('open');
+    expect(sheet()).toBe('failed');
+  });
+});
+
+describe('old copies left after the switch', () => {
+  it('resumes the clean-up on Try again', async () => {
+    const left = move({
+      phase: 'CLEANING',
+      switched: true,
+      running: false,
+      error: CODES.moveErrors.io,
+    });
+    const { native, controller, sheet, settle } = await setup(left);
+    controller.open();
+    expect(sheet()).toBe('switchedFailed');
+    controller.act.resume();
+    await settle();
+    expect(native.resumeMove).toHaveBeenCalledOnce();
+  });
+});
