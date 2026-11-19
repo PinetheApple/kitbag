@@ -14,8 +14,9 @@ namespace kitbag {
 constexpr int kDetectBeatsPerBar = 0;
 
 /// Streaming port of QM-DSP DownBeat::findDownBeats, holding one beat of
-/// decimated audio. Beats must ascend; beats_per_bar <= 0 picks 3 or 4 from
-/// the audio (DetectBeatsPerBar), defaulting to 4.
+/// decimated audio. Unlike QM, a near-tie between the change into and out of
+/// one accented beat resolves to that beat. Beats must ascend; beats_per_bar
+/// <= 0 picks 3 or 4 from the audio (DetectBeatsPerBar), defaulting to 4.
 class DownbeatTracker {
  public:
   DownbeatTracker(
