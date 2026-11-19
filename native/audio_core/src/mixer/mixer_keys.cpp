@@ -70,11 +70,7 @@ Mixer::BusChange Mixer::EngageBuses(
   for (int s = 0; s < kKeyBusCount; ++s) {
     auto& slot = buses_[app_bank_][s];
     if (used[s] && slot.Get() == nullptr) {
-      slot.Publish(
-          MakeBus(s, app_bus_generation_),
-          clock.Now(),
-          engine_running
-      );
+      slot.Publish(MakeBus(s, app_bus_generation_), clock, engine_running);
     }
   }
   return BusChange::kAddedLive;
@@ -112,7 +108,7 @@ void Mixer::UndoPrepare(
   if (app_engaged_) RestoreEngage(prepared.before);
   for (int s = 0; s < kKeyBusCount; ++s) {
     if ((prepared.created & (1U << static_cast<unsigned>(s))) != 0) {
-      buses_[app_bank_][s].Publish(nullptr, clock.Now(), engine_running);
+      buses_[app_bank_][s].Publish(nullptr, clock, engine_running);
     }
   }
 }
@@ -144,7 +140,7 @@ void Mixer::RetireDrainedBuses(
     const auto* node = slot.Get();
     if (used[s] || node == nullptr) continue;
     if (node->value.bus->drained.load(std::memory_order_acquire)) {
-      slot.Publish(nullptr, clock.Now(), engine_running);
+      slot.Publish(nullptr, clock, engine_running);
     }
   }
 }
@@ -156,7 +152,7 @@ void Mixer::FreeUnusedBuses(FrameClock clock, bool engine_running) {
   for (int s = 0; s < kKeyBusCount; ++s) {
     auto& slot = buses_[app_bank_][s];
     if (!used[s] && slot.Get() != nullptr) {
-      slot.Publish(nullptr, clock.Now(), engine_running);
+      slot.Publish(nullptr, clock, engine_running);
     }
   }
   if (key_bus_count() == 0) MatchBusConfig(0, true);

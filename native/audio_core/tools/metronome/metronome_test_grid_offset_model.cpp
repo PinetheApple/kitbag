@@ -8,6 +8,7 @@
 #include "metronome/metronome_internal.h"
 #include "metronome_test_audio.h"
 #include "metronome_test_grid_offset.h"
+#include "zero_clock.h"
 
 namespace metronome_test {
 namespace {
@@ -97,7 +98,7 @@ void StartOnGrid(
 ) {
   metronome.SetSounds(kTickSound, kTickSound);
   metronome.SetSubdivision(change.subdivision);
-  metronome.SetGrid(MakeGrid(change, 0), 0, true);
+  metronome.SetGrid(MakeGrid(change, 0), kitbag_test::kZeroClock, true);
   metronome.SetLatencyOffset(change.from_ms);
   metronome.SetFollowMixer(follow);
   metronome.Start();
@@ -115,7 +116,7 @@ void ApplyStep(
     case StepKind::kRepublish:
       metronome.SetGrid(
           MakeGrid(change, step.anchor_frame),
-          static_cast<uint64_t>(step.frame),
+          kitbag_test::ClockAt(step.frame),
           true
       );
       return;

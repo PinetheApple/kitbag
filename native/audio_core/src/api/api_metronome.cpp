@@ -97,21 +97,15 @@ kb_result kb_metronome_set_grid(
       grid->beat_times_sec.size()
   );
   kitbag::Engine* target = ToEngine(engine);
-  target->metronome().SetGrid(
-      std::move(grid),
-      target->frames_rendered(),
-      target->is_running()
-  );
+  target->metronome()
+      .SetGrid(std::move(grid), target->frame_clock(), target->is_running());
   return KB_OK;
 }
 
 void kb_metronome_clear_grid(kb_engine* engine) {
   if (engine != nullptr) {
     kitbag::Engine* target = ToEngine(engine);
-    target->metronome().ClearGrid(
-        target->frames_rendered(),
-        target->is_running()
-    );
+    target->metronome().ClearGrid(target->frame_clock(), target->is_running());
   }
 }
 

@@ -60,6 +60,15 @@ jobs:
         run: ./native/audio_core/build/mixdown_verify
       - name: Click sounds — prepare trims, fades and peak-matches; slots retire off the audio thread
         run: ./native/audio_core/build/click_sound_verify
+      - name: Retire race — the engine clock dates and frees retired grids after the callback is done
+        run: ./native/audio_core/build/retire_race_verify
+      - name: Retire race under ThreadSanitizer — the callback's reads happen before the free
+        # The runner's 32-bit mmap ASLR leaves no room for TSan's shadow memory.
+        run: |
+          sudo sysctl -w vm.mmap_rnd_bits=28
+          cmake -S native/audio_core -B native/audio_core/build-tsan -G Ninja -DKITBAG_BUILD_TOOLS=ON -DKITBAG_TSAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          cmake --build native/audio_core/build-tsan --target retire_race_verify
+          ./native/audio_core/build-tsan/retire_race_verify
 
   # The TypeScript workspace (Phase 2, SPEC §13/§13.6). Runs the same gate the
   # project loop runs locally: typecheck, the architecture-rule lint, the
