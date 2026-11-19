@@ -787,7 +787,7 @@ referenced but never drew: **setlists**, **setlist detail**, **preset editor**.
   path as tapping it in setlist detail, and are disabled on the first and last
   song. After the on-stage entry is removed, Next loads the entry now at its
   position, Previous the one before it; with no song from the set on stage
-  (cleared, left, or freshly activated) Next loads song 1 and the chip shows the
+  (cleared, or freshly activated) Next loads song 1 and the chip shows the
   setlist name. Deleting the on-stage metronome song itself counts as cleared;
   deleting an on-stage stem song keeps the position. The chip opens the
   setlist's song list, the loaded
