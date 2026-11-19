@@ -28,6 +28,7 @@ import { useCustomSoundViews } from '../screen/CustomSounds.tsx';
 import type { ShellMeasuredInsets } from '../screen/MetronomeScreen.tsx';
 import { DetailSheets, useDetailMenu, type DetailMenu } from './DetailMenu.tsx';
 import { ScreenFrame } from './ScreenFrame.tsx';
+import { CHANGE_NOT_SAVED, REMOVE_FROM_SET } from './setlistCopy.ts';
 import { ActionsSheet, guarded } from './sheets.tsx';
 import { SongMenuSheets, useSongMenu, type SongMenu } from './SongMenu.tsx';
 import { useOpenStemPlayer } from '../screen/useOpenStemPlayer.ts';
@@ -260,7 +261,7 @@ function StemActionsSheet({
   const { target, close, setError } = actions;
   const remove = useCallback(
     () =>
-      guarded(setError, 'Could not save this change. Try again.', async () => {
+      guarded(setError, CHANGE_NOT_SAVED, async () => {
         if (target !== null) await removeFromSet(target.itemId);
         close();
       }),
@@ -273,7 +274,7 @@ function StemActionsSheet({
       bottomInset={bottomInset}
       onDismiss={close}
       error={actions.error}
-      actions={[{ label: 'Remove from set', onPress: remove }]}
+      actions={[{ label: REMOVE_FROM_SET, onPress: remove }]}
     />
   );
 }
