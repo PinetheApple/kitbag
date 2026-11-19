@@ -37,6 +37,8 @@ const INTERNAL: DataFolderVolume = {
   inUse: true,
   freeBytes: 41.2 * GB,
   totalBytes: 128 * GB,
+  awayFiles: 0,
+  awayBytes: 0,
 };
 
 const SD: DataFolderVolume = {
@@ -46,6 +48,8 @@ const SD: DataFolderVolume = {
   inUse: false,
   freeBytes: 58.3 * GB,
   totalBytes: 64 * GB,
+  awayFiles: 0,
+  awayBytes: 0,
 };
 
 const VOLUMES: DataFolderVolumes = {

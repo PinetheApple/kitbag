@@ -158,6 +158,9 @@ export type DataFolderVolume = Readonly<{
   inUse: boolean;
   freeBytes: Double;
   totalBytes: Double;
+  /** Files of songs left on this card when the folder moved off it; 0 while it is unmounted. */
+  awayFiles: Int32;
+  awayBytes: Double;
 }>;
 
 export type DataFolderVolumes = Readonly<{
@@ -319,6 +322,8 @@ export interface Spec extends TurboModule {
   listVolumes(): Promise<DataFolderVolumes>;
   /** Null moves to internal storage. Resolves once the move is handed to its service. */
   startMove(volumeUuid: string | null): Promise<void>;
+  /** Moves a returned card's away songs into the data folder. */
+  startCardReturn(volumeUuid: string): Promise<void>;
   cancelMove(): Promise<void>;
   resumeMove(): Promise<void>;
   /** Discards a paused move's copies; refused while a move runs. */

@@ -9,6 +9,8 @@ import org.json.JSONObject
 
 enum class MovePhase { PREFLIGHT, COPYING, VERIFYING, CATCH_UP, SWITCHED, CLEANING, DONE }
 
+enum class MoveKind { FOLDER, CARD_RETURN }
+
 data class MoveEntry(
   val path: String,
   val size: Long,
@@ -27,6 +29,7 @@ data class MoveState(
   val phase: MovePhase,
   val files: List<MoveEntry>,
   val failure: MoveFailure? = null,
+  val kind: MoveKind = MoveKind.FOLDER,
 ) {
   val totalBytes: Long get() = files.sumOf { it.size }
 }
@@ -48,6 +51,7 @@ open class MoveJournal(file: File, warn: (message: String, cause: Exception) -> 
       .put(SOURCE, DataFolder.toJson(state.source))
       .put(TARGET, DataFolder.toJson(state.target))
       .put(FAILURE, state.failure?.name ?: JSONObject.NULL)
+      .put(KIND, state.kind.name)
       .put(FILES, JSONArray().apply { state.files.forEach { put(json(it)) } })
 
   private fun json(entry: MoveEntry): JSONObject =
@@ -67,6 +71,7 @@ open class MoveJournal(file: File, warn: (message: String, cause: Exception) -> 
       phase = MovePhase.valueOf(json.getString(PHASE)),
       files = (0 until files.length()).map { entry(files.getJSONObject(it)) },
       failure = if (json.isNull(FAILURE)) null else MoveFailure.valueOf(json.getString(FAILURE)),
+      kind = MoveKind.valueOf(json.optString(KIND, MoveKind.FOLDER.name)),
     )
   }
 
@@ -87,6 +92,7 @@ open class MoveJournal(file: File, warn: (message: String, cause: Exception) -> 
     private const val SOURCE = "source"
     private const val TARGET = "target"
     private const val FAILURE = "failure"
+    private const val KIND = "kind"
     private const val FILES = "files"
     private const val PATH = "path"
     private const val SIZE = "size"

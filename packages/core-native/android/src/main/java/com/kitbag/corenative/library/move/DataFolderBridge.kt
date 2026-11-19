@@ -74,6 +74,11 @@ class DataFolderBridge(
     settle(promise) { moves.refusalToStart(target) ?: launched { DataFolderMoveService.start(context, target) } }
   }
 
+  fun startCardReturn(volumeUuid: String, promise: Promise) {
+    val card = DataFolderLocation.Card(volumeUuid)
+    settle(promise) { moves.refusalToStart(card) ?: launched { DataFolderMoveService.returnCard(context, card) } }
+  }
+
   fun resumeMove(promise: Promise) =
     settle(promise) { moves.refusalToResume() ?: launched { DataFolderMoveService.resume(context) } }
 
@@ -148,6 +153,8 @@ class DataFolderBridge(
     return volumeMap(null, null, VOLUME_MOUNTED, inUse).apply {
       putDouble("freeBytes", DataFolderMoves.usableBytes(root).toDouble())
       putDouble("totalBytes", context.filesDir.totalSpace.toDouble())
+      putInt("awayFiles", 0)
+      putDouble("awayBytes", 0.0)
     }
   }
 
@@ -158,9 +165,12 @@ class DataFolderBridge(
       else -> VOLUME_UNMOUNTED
     }
     val inUse = current == DataFolderLocation.Card(volume.uuid)
+    val away = moves.folder.awayOnCard(volume.uuid)
     return volumeMap(volume.uuid, volume.description, state, inUse).apply {
       putDouble("freeBytes", DataFolderMoves.usableBytes(volume.filesDir).toDouble())
       putDouble("totalBytes", volume.filesDir.totalSpace.toDouble())
+      putInt("awayFiles", away.size)
+      putDouble("awayBytes", away.sumOf { it.length() }.toDouble())
     }
   }
 

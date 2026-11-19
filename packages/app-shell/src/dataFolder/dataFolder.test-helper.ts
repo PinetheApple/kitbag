@@ -42,6 +42,8 @@ export const CARD_OUT: DataFolderVolumes = {
       inUse: true,
       freeBytes: 0,
       totalBytes: 0,
+      awayFiles: 0,
+      awayBytes: 0,
     },
   ],
 };
@@ -54,6 +56,7 @@ export function fakeFolder(
     codes: vi.fn(() => CODES),
     listVolumes: vi.fn(() => Promise.resolve(volumes)),
     startMove: vi.fn(() => Promise.resolve()),
+    startCardReturn: vi.fn(() => Promise.resolve()),
     cancelMove: vi.fn(() => Promise.resolve()),
     resumeMove: vi.fn(() => Promise.resolve()),
     undoMove: vi.fn(() => Promise.resolve()),

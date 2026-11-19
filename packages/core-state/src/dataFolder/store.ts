@@ -1,5 +1,6 @@
 import type {
   DataFolderCodes,
+  DataFolderVolume,
   DataFolderVolumes,
   MoveFinished,
   MoveStatus,
@@ -40,6 +41,7 @@ export interface DataFolderActions {
   readonly refreshVolumes: () => Promise<void>;
   readonly refreshMove: () => Promise<void>;
   readonly startMove: (volumeUuid: string | null) => Promise<boolean>;
+  readonly returnCard: (volumeUuid: string) => Promise<boolean>;
   readonly cancelMove: () => Promise<boolean>;
   readonly resumeMove: () => Promise<boolean>;
   readonly undoMove: () => Promise<boolean>;
@@ -93,6 +95,20 @@ const INITIAL: DataFolderState = {
 export function pausedMove(state: DataFolderState): MoveStatus | null {
   const { move } = state;
   return move?.paused === true && move.error === null ? move : null;
+}
+
+export function returnedCards(
+  state: DataFolderState,
+): readonly DataFolderVolume[] {
+  const { codes, volumes, move, pending } = state;
+  if (codes === null || volumes === null || move !== null || pending) return [];
+  return volumes.volumes.filter(
+    (volume) =>
+      volume.volumeUuid !== null &&
+      !volume.inUse &&
+      volume.state === codes.volumeStates.mounted &&
+      volume.awayFiles > 0,
+  );
 }
 
 export function folderUnavailable(state: DataFolderState): boolean {
@@ -231,6 +247,8 @@ export function createDataFolderStore(
       },
       startMove: (volumeUuid) =>
         request(() => deps.native().startMove(volumeUuid)),
+      returnCard: (volumeUuid) =>
+        request(() => deps.native().startCardReturn(volumeUuid)),
       cancelMove: () => request(() => deps.native().cancelMove()),
       resumeMove: () => request(() => deps.native().resumeMove()),
       undoMove: () => request(() => deps.native().undoMove()),

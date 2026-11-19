@@ -255,6 +255,7 @@ export {
   dataFolderStore,
   folderUnavailable,
   pausedMove,
+  returnedCards,
   type DataFolderDeps,
   type DataFolderStore,
   type PlayerWatch,

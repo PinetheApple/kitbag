@@ -46,6 +46,7 @@ async function setup(initial: MoveStatus | null = null) {
     codes: () => CODES,
     listVolumes: vi.fn(() => Promise.resolve(ON_PHONE)),
     startMove: vi.fn(() => Promise.resolve()),
+    startCardReturn: vi.fn(() => Promise.resolve()),
     cancelMove: vi.fn(() => Promise.resolve()),
     resumeMove: vi.fn(() => Promise.resolve()),
     undoMove: vi.fn(() => Promise.resolve()),
