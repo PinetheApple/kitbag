@@ -3,12 +3,15 @@ import { Text, View, type AccessibilityActionEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   type SharedValue,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import {
+  flagHang,
+  LOOP_FLAG_TOP,
   loopHandleFrame,
   type BarBox,
   type LaneSize,
@@ -27,6 +30,7 @@ import { withAlpha } from '../theme.ts';
 import { minTouchTargetDp } from '../tokens.ts';
 
 const NOT_DRAGGING = -1;
+const DRAG_SLOP = sliderGeometry.dragSlop;
 
 export type { ScrubEdge } from '../loopHandleFrame.ts';
 export type EdgeStep = 1 | -1;
@@ -60,6 +64,10 @@ const EDGE_LABELS: Readonly<Record<ScrubEdge, string>> = {
   start: 'Loop start',
   end: 'Loop end',
 };
+const EDGE_STEPS: Readonly<Record<string, EdgeStep>> = {
+  increment: 1,
+  decrement: -1,
+};
 const EDGE_ACTIONS = [
   { name: 'increment', label: 'One beat later' },
   { name: 'decrement', label: 'One beat earlier' },
@@ -89,19 +97,15 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pinned: {
-    position: 'absolute',
-    top: stemPlayer.loopTintInset + stemPlayer.loopFlagTop,
-  },
-  flagStart: { marginLeft: -stemPlayer.loopFlagWidth },
-  flagEnd: { marginLeft: 0 },
+  pinned: { position: 'absolute', top: LOOP_FLAG_TOP },
+  flagStart: { marginLeft: -flagHang('start') },
+  flagEnd: { marginLeft: -flagHang('end') },
   flagText: { ...textStyle(textRoles.loopFlag), color: theme.color.onAccent },
   handle: {
     position: 'absolute',
     left: 0,
     top: 0,
     width: minTouchTargetDp,
-    height: minTouchTargetDp,
   },
   handleFlag: { position: 'absolute', left: 0, top: 0 },
 }));
@@ -119,8 +123,6 @@ export function useLoopGeometry(): LoopGeometry {
   return useMemo(() => ({ start, end, lane, bar }), [start, end, lane, bar]);
 }
 
-// A's flag hangs left of its line and B's right of its own, so a short loop
-// never hides one flag under the other.
 function LoopEdge({
   at,
   edge,
@@ -190,14 +192,14 @@ function LiveTint({ start, end, geometry }: LiveTintProps) {
 interface LoopMarksProps {
   readonly marks: ScrubMarks | null;
   readonly geometry: LoopGeometry;
-  readonly draggable: boolean;
+  readonly handles: LoopHandles | undefined;
 }
 
-export function LoopMarks({ marks, geometry, draggable }: LoopMarksProps) {
+export function LoopMarks({ marks, geometry, handles }: LoopMarksProps) {
   const styles = useStyles();
   if (marks === null) return null;
   const { start, end } = marks;
-  if (draggable && end !== null)
+  if (handles !== undefined && end !== null)
     return (
       <View pointerEvents="none" style={styles.cover}>
         <LiveTint start={start} end={end} geometry={geometry} />
@@ -234,8 +236,11 @@ function useHandlePan({ at, edge, low, high, geometry, handles }: HandleProps) {
   const { onMoveLoopEdge } = handles;
   const settle = useCallback(
     async (fraction: number) => {
-      await onMoveLoopEdge(edge, fraction);
-      drag.value = NOT_DRAGGING;
+      try {
+        await onMoveLoopEdge(edge, fraction);
+      } finally {
+        drag.value = NOT_DRAGGING;
+      }
     },
     [onMoveLoopEdge, edge, drag],
   );
@@ -246,7 +251,8 @@ function useHandlePan({ at, edge, low, high, geometry, handles }: HandleProps) {
     [settle],
   );
   return Gesture.Pan()
-    .activeOffsetX([-sliderGeometry.dragSlop, sliderGeometry.dragSlop])
+    .activeOffsetX([-DRAG_SLOP, DRAG_SLOP])
+    .failOffsetY([-DRAG_SLOP, DRAG_SLOP])
     .onUpdate((event) => {
       const { width } = bar.value;
       if (width <= 0) return;
@@ -276,38 +282,28 @@ function Handle(props: HandleProps) {
   }, [at, drag]);
   const onAction = useCallback(
     (event: AccessibilityActionEvent) => {
-      onStepLoopEdge(
-        edge,
-        event.nativeEvent.actionName === 'increment' ? 1 : -1,
-      );
+      const step = EDGE_STEPS[event.nativeEvent.actionName];
+      if (step !== undefined) onStepLoopEdge(edge, step);
     },
     [onStepLoopEdge, edge],
   );
-  const hitStyle = useAnimatedStyle(() => {
-    const frame = loopHandleFrame(
-      edge,
-      shownAt(drag, at),
-      bar.value,
-      lane.value,
-    );
-    return {
-      transform: [{ translateX: frame.left }, { translateY: frame.top }],
-    };
-  });
-  const flagStyle = useAnimatedStyle(() => {
-    const frame = loopHandleFrame(
-      edge,
-      shownAt(drag, at),
-      bar.value,
-      lane.value,
-    );
-    return {
-      transform: [
-        { translateX: frame.flagLeft },
-        { translateY: frame.flagTop },
-      ],
-    };
-  });
+  const frame = useDerivedValue(() =>
+    loopHandleFrame(edge, shownAt(drag, at), bar.value, lane.value),
+  );
+  const hitStyle = useAnimatedStyle(() => ({
+    height: frame.value.height,
+    transform: [
+      { translateX: frame.value.left },
+      { translateY: frame.value.top },
+    ],
+  }));
+  const flagStyle = useAnimatedStyle(() => ({
+    opacity: frame.value.shown ? 1 : 0,
+    transform: [
+      { translateX: frame.value.flagLeft },
+      { translateY: frame.value.flagTop },
+    ],
+  }));
   return (
     <GestureDetector gesture={pan}>
       <Animated.View

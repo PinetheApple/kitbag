@@ -17,10 +17,36 @@ interface Pan {
   finalize: Done;
 }
 
+interface Held {
+  value: unknown;
+  readonly initial: unknown;
+}
+
 const seen = vi.hoisted(() => ({
   views: [] as Props[],
   pans: [] as { readonly testID: unknown; readonly pan: Pan }[],
 }));
+
+const hooks = vi.hoisted(() => ({
+  shared: [] as Held[],
+  sharedCursor: 0,
+  deps: [] as (readonly unknown[] | undefined)[],
+  effectCursor: 0,
+}));
+
+vi.mock('react', async (original) => {
+  const actual = await original<Record<string, unknown>>();
+  return {
+    ...actual,
+    useLayoutEffect: (run: () => void, deps: readonly unknown[]) => {
+      const slot = hooks.effectCursor++;
+      const before = hooks.deps[slot];
+      if (before?.every((dep, i) => Object.is(dep, deps[i])) === true) return;
+      hooks.deps[slot] = deps;
+      run();
+    },
+  };
+});
 
 vi.mock('react-native', async (original) => {
   const actual = await original<Record<string, unknown>>();
@@ -45,7 +71,16 @@ vi.mock('react-native-reanimated', async () => {
     },
     useAnimatedReaction: () => undefined,
     useAnimatedStyle: () => ({}),
-    useSharedValue: (value: unknown) => ({ value }),
+    useDerivedValue: (derive: () => unknown) => ({
+      get value() {
+        return derive();
+      },
+    }),
+    useSharedValue: (initial: unknown) => {
+      const slot = hooks.sharedCursor++;
+      hooks.shared[slot] ??= { value: initial, initial };
+      return hooks.shared[slot];
+    },
   };
 });
 
@@ -65,6 +100,7 @@ vi.mock('react-native-gesture-handler', async () => {
         const chain = {
           pan,
           activeOffsetX: () => chain,
+          failOffsetY: () => chain,
           onUpdate: (run: Update) => ((pan.update = run), chain),
           onEnd: (run: Done) => ((pan.end = run), chain),
           onFinalize: (run: Done) => ((pan.finalize = run), chain),
@@ -110,6 +146,8 @@ const ID = /\bid="([^"]*)"/;
 const MOVES = [20, 40];
 const DROPPED = 0.4;
 const PAST_END = 400;
+const NOT_DRAGGING = -1;
+const MOVED: ScrubMarks = { start: 0.3, end: 0.6 };
 
 const frame = {
   progress: { value: 0 },
@@ -143,6 +181,8 @@ function ancestorsOf(markup: string, id: string): string[] {
 function render(marks: ScrubMarks, loopHandles?: LoopHandles): string {
   seen.views = [];
   seen.pans = [];
+  hooks.sharedCursor = 0;
+  hooks.effectCursor = 0;
   const markup = renderToStaticMarkup(
     <ThemeProvider mode="dark">
       <ScrubRow
@@ -176,7 +216,14 @@ function adjustable(): Props[] {
   return seen.views.filter((view) => view.accessibilityActions !== undefined);
 }
 
-function act(edge: 'start' | 'end', actionName: string) {
+function dragOf(edge: 'start' | 'end'): Held {
+  const drags = hooks.shared.filter((held) => held.initial === NOT_DRAGGING);
+  const drag = drags[edge === 'start' ? 0 : 1];
+  if (drag === undefined) throw new Error(`no ${edge} drag value`);
+  return drag;
+}
+
+function performAction(edge: 'start' | 'end', actionName: string) {
   const view = adjustable().find((v) => v.testID === `loop-handle-${edge}`);
   (view?.onAccessibilityAction as (event: unknown) => void)({
     nativeEvent: { actionName },
@@ -185,6 +232,8 @@ function act(edge: 'start' | 'end', actionName: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  hooks.shared = [];
+  hooks.deps = [];
 });
 
 describe('ScrubRow loop handles', () => {
@@ -224,12 +273,52 @@ describe('ScrubRow loop handles', () => {
   it('steps each edge one step from a screen reader', () => {
     render(LOOP, handles);
     expect(adjustable()).toHaveLength(2);
-    act('end', 'increment');
-    act('start', 'decrement');
+    performAction('end', 'increment');
+    performAction('start', 'decrement');
+    performAction('start', 'activate');
     expect(handles.onStepLoopEdge.mock.calls).toEqual([
       ['end', 1],
       ['start', -1],
     ]);
+  });
+
+  it('holds the dropped edge until the commit settles, then lets go', async () => {
+    let answer: (() => void) | undefined;
+    handles.onMoveLoopEdge.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    render(LOOP, handles);
+    const pan = panOf('start');
+    for (const translationX of MOVES) pan.update({ translationX });
+    pan.end({}, true);
+    pan.finalize({}, true);
+    expect(dragOf('start').value).toBeCloseTo(DROPPED);
+    answer?.();
+    await vi.waitFor(() => {
+      expect(dragOf('start').value).toBe(NOT_DRAGGING);
+    });
+  });
+
+  it('lets go of the edge when the drag is cancelled', () => {
+    render(LOOP, handles);
+    const pan = panOf('end');
+    pan.update({ translationX: MOVES[0] ?? 0 });
+    expect(dragOf('end').value).not.toBe(NOT_DRAGGING);
+    pan.end({}, false);
+    pan.finalize({}, false);
+    expect(dragOf('end').value).toBe(NOT_DRAGGING);
+  });
+
+  it('lets go of a held edge once the loop moves it', () => {
+    render(LOOP, handles);
+    panOf('start').update({ translationX: MOVES[0] ?? 0 });
+    render(LOOP, handles);
+    expect(dragOf('start').value).not.toBe(NOT_DRAGGING);
+    render(MOVED, handles);
+    expect(dragOf('start').value).toBe(NOT_DRAGGING);
   });
 
   it('mounts the handles over the whole lane, not inside the bar', () => {

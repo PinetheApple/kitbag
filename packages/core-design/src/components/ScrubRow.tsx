@@ -242,11 +242,7 @@ export function ScrubRow({
           behindFill={behindFill}
           overFill={overFill}
         />
-        <LoopMarks
-          marks={marks}
-          geometry={geometry}
-          draggable={loopHandles !== undefined}
-        />
+        <LoopMarks marks={marks} geometry={geometry} handles={loopHandles} />
       </View>
       <Text
         style={styles.total}

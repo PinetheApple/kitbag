@@ -60,7 +60,6 @@ export const songPlayer = {
   beatTickMinGap: 3,
   waveBars: 64,
   lockGap: 10,
-  loopNudgeSec: 1,
 } as const;
 
 export const miniPlayer = {

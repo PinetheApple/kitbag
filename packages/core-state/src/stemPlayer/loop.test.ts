@@ -38,13 +38,20 @@ describe('A-B loop beat snapping', () => {
 });
 
 describe('the beat beside an edge', () => {
-  it('steps one beat either way from the nearest beat', () => {
+  it('steps to the first beat strictly past an edge between beats', () => {
+    const beats = [1.0, 1.5, 2.0];
+    expect(beatBeside(1.3, beats, 1)).toBe(1.5);
+    expect(beatBeside(1.3, beats, -1)).toBe(1.0);
+  });
+
+  it('steps one beat either way from an edge on a beat', () => {
     expect(beatBeside(1.0, BEATS, 1)).toBe(1.5);
     expect(beatBeside(1.0, BEATS, -1)).toBe(0.5);
   });
 
   it('steps from a frame-rounded edge, not onto the same beat', () => {
     expect(beatBeside(1.4999, BEATS, 1)).toBe(2.0);
+    expect(beatBeside(1.5001, BEATS, -1)).toBe(1.0);
   });
 
   it('finds nothing past the grid or without one', () => {

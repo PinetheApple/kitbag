@@ -30,12 +30,12 @@ export function movedEdge(
 ): LoopSeconds | null {
   const target = Math.min(Math.max(seconds, 0), durationSec);
   if (edge === 'start') {
-    if (target >= loop.endSec) return null;
     const side = beats.filter((beat) => beat < loop.endSec);
+    if (target >= loop.endSec && side.length === 0) return null;
     return { startSec: snapToBeat(target, side), endSec: loop.endSec };
   }
-  if (target <= loop.startSec) return null;
   const side = beats.filter((beat) => beat > loop.startSec);
+  if (target <= loop.startSec && side.length === 0) return null;
   return { startSec: loop.startSec, endSec: snapToBeat(target, side) };
 }
 

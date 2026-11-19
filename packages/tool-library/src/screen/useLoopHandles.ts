@@ -23,7 +23,8 @@ export function useLoopHandles(): LoopHandles {
   const onStepLoopEdge = useCallback(
     (edge: ScrubEdge, step: EdgeStep) => {
       if (loop.kind !== 'on') return;
-      void moveLoopEdge(edge, steppedEdge(loop, edge, step, beats));
+      const target = steppedEdge(loop, edge, step, beats);
+      if (target !== null) void moveLoopEdge(edge, target);
     },
     [moveLoopEdge, loop, beats],
   );

@@ -77,7 +77,8 @@ function loopControls(
       commands.mixerSetLoop(startFrame, endFrame),
     );
     if (!live) {
-      if (result === KB_RESULT.KB_OK) void commands.mixerClearLoop();
+      if (result === KB_RESULT.KB_OK)
+        void commands.mixerClearLoop().catch(() => null);
       return false;
     }
     if (result === KB_RESULT.KB_OK) {
