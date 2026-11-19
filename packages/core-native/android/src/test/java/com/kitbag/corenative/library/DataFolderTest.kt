@@ -5,6 +5,8 @@ import java.nio.file.Files
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Test
 
@@ -18,6 +20,7 @@ class DataFolderTest {
   private lateinit var cardFilesDir: File
   private lateinit var volumes: FakeVolumes
   private lateinit var folder: DataFolder
+  private val warnings = mutableListOf<String>()
 
   @Before
   fun setUp() {
@@ -25,7 +28,7 @@ class DataFolderTest {
     filesDir = File(temp, "files").apply { mkdirs() }
     cardFilesDir = File(temp, "card").apply { mkdirs() }
     volumes = FakeVolumes(listOf(card(mounted = true)))
-    folder = DataFolder(filesDir, volumes)
+    folder = DataFolder(filesDir, volumes) { message, _ -> warnings.add(message) }
   }
 
   @After
@@ -33,7 +36,7 @@ class DataFolderTest {
     temp.deleteRecursively()
   }
 
-  private fun card(mounted: Boolean) = PortableVolume(CARD_UUID, cardFilesDir, mounted, freeBytes = 0L)
+  private fun card(mounted: Boolean) = PortableVolume(CARD_UUID, cardFilesDir, mounted)
 
   private fun internalRoot() = File(filesDir, DataFolder.DIR_NAME)
 
@@ -85,7 +88,7 @@ class DataFolderTest {
   }
 
   @Test
-  fun `an absolute path is refused whether or not the card is mounted`() {
+  fun `absolute and parent-escaping paths are refused whatever the location`() {
     assertThrows(UnsafeLibraryPathException::class.java) { folder.resolve("/etc/passwd") }
     folder.select(DataFolderLocation.Card(CARD_UUID))
     volumes.volumes = emptyList()
@@ -94,10 +97,24 @@ class DataFolderTest {
   }
 
   @Test
-  fun `a corrupt state file means internal`() {
-    File(filesDir, DataFolder.STATE_FILE_NAME).writeText("{not json")
+  fun `a malformed state file means internal and is logged`() {
+    val stateFile = File(filesDir, DataFolder.STATE_FILE_NAME)
+    for (contents in listOf("{not json", "", "[]", "\"card\"", "{\"kind\":\"card\"}")) {
+      warnings.clear()
+      stateFile.writeText(contents)
+      assertEquals(contents, DataFolderLocation.Internal, folder.location())
+      assertEquals(contents, internalRoot(), folder.root())
+      assertTrue(contents, warnings.isNotEmpty())
+    }
+  }
+
+  @Test
+  fun `a state file that cannot be read means internal and is logged`() {
+    folder.select(DataFolderLocation.Card(CARD_UUID))
+    val stateFile = File(filesDir, DataFolder.STATE_FILE_NAME).apply { setReadable(false) }
+    assumeFalse("running as root, the file stays readable", stateFile.canRead())
     assertEquals(DataFolderLocation.Internal, folder.location())
-    assertEquals(internalRoot(), folder.root())
+    assertTrue(warnings.isNotEmpty())
   }
 
   @Test
@@ -108,7 +125,7 @@ class DataFolderTest {
   }
 
   @Test
-  fun `analysis staging and results stay pinned under filesDir whatever the root`() {
+  fun `analysis staging and results stay pinned under the internal root`() {
     folder.select(DataFolderLocation.Card(CARD_UUID))
     assertEquals(cardRoot(), folder.root())
     assertEquals(internalRoot(), LibraryStorage.staging(folder).parentFile)
@@ -116,7 +133,7 @@ class DataFolderTest {
   }
 
   @Test
-  fun `a backup-restored relative row resolves under a card root`() {
+  fun `a path present under both roots resolves to the card copy`() {
     folder.select(DataFolderLocation.Card(CARD_UUID))
     val song = createUnder(cardRoot(), RESTORED_SONG)
     createUnder(internalRoot(), RESTORED_SONG)
