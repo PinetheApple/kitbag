@@ -1,4 +1,8 @@
-import type { TransportEvent, TransportSetlist } from '@kitbag/core-native';
+import {
+  transportActionNamed,
+  type TransportEvent,
+  type TransportSetlist,
+} from '@kitbag/core-native';
 import type { MetronomeConfig } from '@kitbag/core-state';
 
 export type TransportSource = Pick<
@@ -73,29 +77,58 @@ export function transportActive(
   return running || shown !== undefined;
 }
 
-// With no card of its own, as after a reload, the app has no tempo to prefer.
+// With no card of its own, as after a reload, the app has nothing to prefer.
 export function cardStale(
-  shown: TransportShown | undefined,
+  cardIssued: boolean,
   event: TransportEvent,
   cardNumber: number,
 ): boolean {
-  return shown !== undefined && event.cardNumber !== cardNumber;
+  return cardIssued && event.cardNumber !== cardNumber;
 }
 
-// A service on another card reports that card's tempo, so the app's tempo
-// stands unless the action itself set one.
-export function keepsAppTempo(event: TransportEvent, stale: boolean): boolean {
-  return event.rampRunning || (stale && !event.tempoSet);
+export type Replay =
+  | { readonly kind: 'start' | 'pause' | 'stop' | 'none' | 'follow' }
+  | { readonly kind: 'step'; readonly delta: number; readonly from: number };
+
+export function replayOnApp(
+  event: TransportEvent,
+  app: Pick<MetronomeConfig, 'running' | 'bpm' | 'ramp'>,
+): Replay {
+  const action = transportActionNamed(event.action);
+  if (action === undefined) return { kind: 'follow' };
+  if (action === 'stop') return { kind: 'stop' };
+  if (action === 'play') return { kind: app.running ? 'none' : 'start' };
+  if (action === 'pause') return { kind: app.running ? 'pause' : 'none' };
+  return { kind: 'step', delta: event.tempoStep, from: stepBase(event, app) };
 }
 
-export interface TempoChoice {
-  readonly keepTempo: boolean;
+// The engine may already hold the service's step, so the base never comes from a
+// fresh engine read: a running ramp's base is the tempo the service read first.
+function stepBase(
+  event: TransportEvent,
+  app: Pick<MetronomeConfig, 'running' | 'bpm' | 'ramp'>,
+): number {
+  const engineTempo = event.engineBpm;
+  const engineReported = Number.isFinite(engineTempo) && engineTempo > 0;
+  return app.running && app.ramp.enabled && engineReported
+    ? engineTempo
+    : app.bpm;
+}
+
+export function shownAfterReplay(
+  shown: TransportShown | undefined,
+  step: Replay,
+): TransportShown | undefined {
+  if (step.kind === 'stop') return undefined;
+  if (step.kind === 'pause' && shown !== undefined) {
+    return { ...shown, playing: false };
+  }
+  return shown;
 }
 
 export function shownAfterNativeChange(
   shown: TransportShown | undefined,
   event: TransportEvent,
-  { keepTempo }: TempoChoice,
 ): TransportShown | undefined {
   if (shown === undefined || event.playback === 'stopped') return undefined;
   const followed = {
@@ -104,7 +137,7 @@ export function shownAfterNativeChange(
     practicePlayedMs: event.practicePlayedMs,
     practiceStretchStartedAt: event.practiceStretchStartedAt,
   };
-  return keepTempo
+  return event.rampRunning
     ? followed
     : { ...followed, bpm: event.bpm, rampRunning: false };
 }
@@ -112,13 +145,14 @@ export function shownAfterNativeChange(
 export function storePatchFor(
   event: TransportEvent,
   current: Pick<MetronomeConfig, 'bpm' | 'ramp'>,
-  { keepTempo }: TempoChoice,
 ): Pick<MetronomeConfig, 'running' | 'bpm' | 'ramp' | 'practice'> {
   const running = event.playback === 'playing';
   return {
     running,
-    bpm: keepTempo ? current.bpm : event.bpm,
-    ramp: keepTempo ? current.ramp : { ...current.ramp, enabled: false },
+    bpm: event.rampRunning ? current.bpm : event.bpm,
+    ramp: event.rampRunning
+      ? current.ramp
+      : { ...current.ramp, enabled: false },
     practice: {
       playedMs: event.practicePlayedMs,
       stretchStartedAt: running ? event.practiceStretchStartedAt : null,

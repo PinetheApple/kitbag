@@ -588,6 +588,19 @@ describe('§5.3 tempo shown and nudged is the engine tempo, not a stale intent',
     s.getState().nudgeTempo(5);
     expect(s.getState().bpm).toBe(102);
   });
+
+  it('steps from a given base, rounded, instead of the engine tempo', () => {
+    const cmds = makeCommands();
+    const s = createMetronomeStore(
+      cmds,
+      () => NOW_FRAME,
+      () => 140,
+    );
+    s.getState().start();
+    s.getState().nudgeTempo(1, 100.4);
+    expect(s.getState().bpm).toBe(101);
+    expect(cmds.setTempo).toHaveBeenLastCalledWith(101);
+  });
 });
 
 describe('practice clock in the store', () => {

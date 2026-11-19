@@ -86,7 +86,7 @@ export interface MetronomeConfig {
 
 export interface MetronomeActions {
   setTempo: (bpm: number) => void;
-  nudgeTempo: (delta: number) => void;
+  nudgeTempo: (delta: number, from?: number) => void;
   resetPractice: () => void;
   syncTempoFromEngine: () => void;
   readTempo: () => number;
@@ -266,8 +266,9 @@ function tempoActions(
       commands.setTempo(next);
     },
 
-    nudgeTempo: (delta) => {
-      get().setTempo(tempo.read() + delta);
+    nudgeTempo: (delta, from) => {
+      const base = from === undefined ? tempo.read() : roundToEngineBpm(from);
+      get().setTempo(base + delta);
     },
 
     syncTempoFromEngine: tempo.sync,

@@ -1,30 +1,38 @@
-import { getKitbagCommands } from '@kitbag/core-native';
+import { getKitbagCommands, type TransportEvent } from '@kitbag/core-native';
 import {
   BPM_BOUNDS,
   libraryStore,
   metronomeStore,
+  mixerClick,
   transportSetlistOf,
+  type MetronomeStore,
 } from '@kitbag/core-state';
 import { transportSubtitle } from '@kitbag/tool-metronome';
 
 import { askForNotificationsOnce } from './notificationPermission';
 import {
   cardStale,
-  keepsAppTempo,
   notificationStepAfterAppChange,
+  replayOnApp,
   shownAfterNativeChange,
+  shownAfterReplay,
   storePatchFor,
   transportActive,
+  type Replay,
   type TransportShown,
 } from './transportSync';
 
 let shown: TransportShown | undefined;
 let cardNumber = 0;
-let applyingNative = false;
+let cardIssued = false;
+let handedOver = false;
+let syncHeld = false;
 
 function sendCard(next: TransportShown) {
   cardNumber += 1;
   shown = next;
+  cardIssued = true;
+  handedOver = false;
   getKitbagCommands().transportShow({
     ...next,
     cardNumber,
@@ -34,13 +42,15 @@ function sendCard(next: TransportShown) {
 }
 
 function hideCard() {
+  cardNumber += 1;
   shown = undefined;
+  cardIssued = true;
   getKitbagCommands().transportHide();
 }
 
 // Reads the latest state: a nested setState can hand later listeners an older snapshot.
 function syncFromApp() {
-  if (applyingNative) return;
+  if (syncHeld) return;
   const step = notificationStepAfterAppChange(
     {
       ...metronomeStore.getState(),
@@ -65,21 +75,62 @@ function resendCard() {
   else sendCard(shown);
 }
 
-getKitbagCommands().onTransport((event) => {
-  const stale = cardStale(shown, event, cardNumber);
-  const keepTempo = keepsAppTempo(event, stale);
-  shown = shownAfterNativeChange(shown, event, { keepTempo });
-  applyingNative = true;
+function withoutSync(change: () => void) {
+  syncHeld = true;
   try {
-    metronomeStore.setState(
-      storePatchFor(event, metronomeStore.getState(), { keepTempo }),
-    );
+    change();
   } finally {
-    applyingNative = false;
+    syncHeld = false;
   }
+}
+
+function followService(event: TransportEvent) {
+  shown = shownAfterNativeChange(shown, event);
+  if (shown === undefined) cardIssued = false;
+  withoutSync(() => {
+    metronomeStore.setState(storePatchFor(event, metronomeStore.getState()));
+  });
+}
+
+function applyReplay(step: Replay, metronome: MetronomeStore) {
+  if (step.kind === 'start') metronome.start();
+  if (step.kind === 'pause') metronome.pause();
+  if (step.kind === 'stop') metronome.stop();
+  if (step.kind === 'step') metronome.nudgeTempo(step.delta, step.from);
+}
+
+// The service acted on a card the app has since replaced, so redo its action on the app's state.
+function replay(event: TransportEvent) {
+  const sent = cardNumber;
+  const metronome = metronomeStore.getState();
+  const step = replayOnApp(event, metronome);
+  if (step.kind === 'follow') {
+    followService(event);
+    resendCard();
+    return;
+  }
+  withoutSync(() => {
+    applyReplay(step, metronome);
+  });
+  shown = shownAfterReplay(shown, step);
+  syncFromApp();
   // The app's newer cards, queued at the service behind the event's card, would
   // overwrite this change when they land, so send the current card after them.
-  if (stale) resendCard();
+  if (cardNumber === sent) resendCard();
+}
+
+function stopClickTheServiceStarted() {
+  const metronome = metronomeStore.getState();
+  if (metronome.running || mixerClick.active()) return;
+  withoutSync(() => {
+    metronome.stop();
+  });
+}
+
+getKitbagCommands().onTransport((event) => {
+  if (handedOver) stopClickTheServiceStarted();
+  else if (cardStale(cardIssued, event, cardNumber)) replay(event);
+  else followService(event);
 });
 
 export const metronomeTransport = {
@@ -87,5 +138,6 @@ export const metronomeTransport = {
   release: () => {
     metronomeStore.getState().stop();
     if (shown !== undefined) hideCard();
+    handedOver = true;
   },
 };
