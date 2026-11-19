@@ -83,6 +83,10 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     PlaybackService.hide(reactApplicationContext)
   }
 
+  override fun transportHandOver() {
+    PlaybackService.handOver(reactApplicationContext)
+  }
+
   override fun songTransportShow(state: ReadableMap) {
     PlaybackService.showSong(
       reactApplicationContext,
@@ -130,7 +134,9 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
         putDouble("practicePlayedMs", change.practice.playedMillis.toDouble())
         putDouble("practiceStretchStartedAt", (change.practice.stretchStartedAt ?: 0L).toDouble())
         putInt("cardNumber", change.cardNumber)
-        putBoolean("tempoSet", change.tempoSet)
+        putString("action", change.action.name.lowercase())
+        putInt("tempoStep", change.tempoStep)
+        putDouble("engineBpm", change.engineBpm)
       },
     )
   }

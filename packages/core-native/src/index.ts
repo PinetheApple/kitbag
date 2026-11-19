@@ -139,3 +139,4 @@ export type {
   TransportShowState,
 } from './NativeKitbagCommands';
 export { focusReaderNode } from './readerFocus';
+export { transportActionNamed } from './transportActions';

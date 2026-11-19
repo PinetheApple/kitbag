@@ -18,7 +18,6 @@ import {
   type LayoutChangeEvent,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, {
   SlideInDown,
   useAnimatedStyle,
@@ -43,6 +42,7 @@ import { readerHiding } from '../readerHiding.ts';
 import { onHardwareBack } from './hardwareBack';
 import { InlineIcon } from './IconGlyph.tsx';
 import { useSheetPortal } from './SheetHost.tsx';
+import { useSheetCardStyle } from './useSheetCardStyle.ts';
 import { useSheetExit } from './useSheetExit.ts';
 
 // A scroll view drops every touch outside its frame, so the frame reaches this
@@ -240,6 +240,7 @@ export function Sheet({
     [motion, focusTitle],
   );
   const dragY = useSharedValue(0);
+  const dragAllowed = useSharedValue(visible);
   const sheetHeight = useSharedValue(0);
   const scrimOpacity = useSharedValue(0);
 
@@ -250,31 +251,30 @@ export function Sheet({
     [sheetHeight],
   );
 
+  useEffect(() => {
+    dragAllowed.value = visible;
+  }, [dragAllowed, visible]);
+  // A leaving slot keeps the gesture it was shown with, so it gates on a shared value.
   const dragToDismiss = useMemo(
     () =>
       Gesture.Pan()
         .activeOffsetY(SHEET_DRAG_ACTIVATION_DP)
         .onUpdate((event) => {
+          if (!dragAllowed.value) return;
           dragY.value = Math.max(0, event.translationY);
         })
         .onEnd((event) => {
+          if (!dragAllowed.value) return;
           if (shouldDismissSheet(event.translationY, sheetHeight.value)) {
             scheduleOnRN(onDismiss);
             return;
           }
           dragY.value = withSpring(0, { reduceMotion: motion });
         }),
-    [dragY, sheetHeight, onDismiss, motion],
+    [dragAllowed, dragY, sheetHeight, onDismiss, motion],
   );
 
-  // Edge to edge, nothing resizes for the keyboard and RN's keyboard events
-  // only fire on a layout pass (#142). Height is negative while it is open.
-  const keyboard = useReanimatedKeyboardAnimation();
-  const sheetStyle = useAnimatedStyle(() => ({
-    paddingBottom:
-      space.cardPadding + Math.max(bottomInset, -keyboard.height.value),
-    transform: [{ translateY: dragY.value }],
-  }));
+  const sheetStyle = useSheetCardStyle({ visible, bottomInset, dragY });
   const noticeStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: dragY.value }],
   }));

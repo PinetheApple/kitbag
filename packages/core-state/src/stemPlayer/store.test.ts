@@ -21,6 +21,10 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+function lastCall(fn: { mock: { invocationCallOrder: number[] } }): number {
+  return fn.mock.invocationCallOrder.at(-1) ?? Number.NaN;
+}
+
 describe('opening a stem song', () => {
   it.each([
     ['the stem set cannot be read', 'readStemSet'],
@@ -62,6 +66,19 @@ describe('opening a stem song', () => {
     const store = createStemPlayerStore(() => fake.runtime);
     await store.getState().open(7, BARS);
     expect(fake.sharedMetronome.release).toHaveBeenCalledTimes(1);
+    expect(lastCall(fake.sharedMetronome.release)).toBeLessThan(
+      lastCall(fake.commands.start),
+    );
+  });
+
+  it('releases the shared metronome before the click takes the engine metronome', async () => {
+    const { commands, sharedMetronome, store } = await opened([stem(1)]);
+    sharedMetronome.active.mockReturnValue(true);
+    await store.getState().toggleClick();
+    const released = lastCall(sharedMetronome.release);
+    expect(released).toBeLessThan(lastCall(commands.setGrid));
+    expect(released).toBeLessThan(lastCall(commands.metronomeFollowMixer));
+    expect(released).toBeLessThan(lastCall(commands.metronomeStart));
   });
 
   it('heads the screen with the song title and artist when the bundle has them', async () => {

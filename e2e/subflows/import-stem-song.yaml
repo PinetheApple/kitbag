@@ -1,0 +1,16 @@
+appId: com.kitbag.app
+---
+- tapOn: 'Songs, .*'
+- tapOn: 'Import( a song)?'
+- runFlow:
+    file: pick-download.yaml
+    env:
+      FILE: '${STEM_SONG}.zip'
+- extendedWaitUntil:
+    visible: '“${STEM_SONG}\.zip” is a StemDeck song bundle, so it was added to Stem songs\.'
+    timeout: 20000
+- back
+- tapOn: 'Stem songs, .*'
+- extendedWaitUntil:
+    visible: '${STEM_SONG}, .*'
+    timeout: 10000

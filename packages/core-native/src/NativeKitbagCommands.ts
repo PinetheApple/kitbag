@@ -17,7 +17,9 @@ export type TransportEvent = Readonly<{
   practicePlayedMs: Double;
   practiceStretchStartedAt: Double;
   cardNumber: Int32;
-  tempoSet: boolean;
+  action: string;
+  tempoStep: Int32;
+  engineBpm: Double;
 }>;
 
 export type TransportSetlist = Readonly<{
@@ -182,6 +184,7 @@ export interface Spec extends TurboModule {
 
   transportShow(state: TransportShowState): void;
   transportHide(): void;
+  transportHandOver(): void;
   songTransportShow(state: SongTransportShowState): void;
   songTransportHide(): void;
   setKeepScreenOn(on: boolean): void;

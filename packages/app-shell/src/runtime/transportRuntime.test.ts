@@ -1,6 +1,6 @@
 import type { TransportEvent, TransportShowState } from '@kitbag/core-native';
 import type { SetlistEntry, SetlistSummary } from '@kitbag/core-state';
-import { libraryStore, metronomeStore } from '@kitbag/core-state';
+import { libraryStore, metronomeStore, mixerClick } from '@kitbag/core-state';
 import { describe, expect, it, vi } from 'vitest';
 
 type TransportHandler = (event: TransportEvent) => void;
@@ -9,9 +9,25 @@ type TransportHandler = (event: TransportEvent) => void;
 // history before each test, so the subscriber must outlive vi.fn's record.
 const native = vi.hoisted(() => {
   const subscribers: TransportHandler[] = [];
+  const cardCalls: string[] = [];
+  const logged = (name: string) =>
+    vi.fn(() => {
+      cardCalls.push(name);
+    });
   return {
-    transportShow: vi.fn<(state: TransportShowState) => void>(),
-    transportHide: vi.fn(),
+    cardCalls,
+    transportShow: vi.fn<(state: TransportShowState) => void>(() => {
+      cardCalls.push('metronome show');
+    }),
+    transportHide: logged('metronome hide'),
+    transportHandOver: logged('metronome hand over'),
+    songTransportShow: logged('song show'),
+    songTransportHide: logged('song hide'),
+    metronomeStart: vi.fn(),
+    metronomePause: vi.fn(),
+    metronomeStop: vi.fn(),
+    setTempo: vi.fn<(bpm: number) => void>(),
+    host: { frames_rendered: 0, current_bpm: Number.NaN },
     onTransport: (handler: TransportHandler) => {
       subscribers.push(handler);
     },
@@ -33,6 +49,7 @@ vi.mock('./notificationPermission', () => ({
 vi.mock('@kitbag/core-native', async (actual) => ({
   ...(await actual<typeof import('@kitbag/core-native')>()),
   getKitbagCommands: () => native,
+  getKitbagHostObject: () => native.host,
 }));
 
 const SETLIST_ID = 3;
@@ -58,8 +75,36 @@ const notification = {
   rampRunning: false,
   practicePlayedMs: 0,
   practiceStretchStartedAt: 0,
-  tempoSet: false,
+  action: 'play',
+  tempoStep: 0,
+  engineBpm: Number.NaN,
 };
+const TEMPO_STEP = 1;
+const calls = (command: { mock: { calls: unknown[] } }) =>
+  command.mock.calls.length;
+function lastCall(fn: { mock: { invocationCallOrder: number[] } }): number {
+  return fn.mock.invocationCallOrder.at(-1) ?? Number.NaN;
+}
+
+function pausedByTheService(bpm: number): number {
+  metronomeStore.getState().stop();
+  metronomeStore.setState({ running: true, bpm });
+  const held = lastCard()?.cardNumber ?? 0;
+  native.emitTransport({
+    ...notification,
+    action: 'pause',
+    playback: 'paused',
+    bpm,
+    cardNumber: held,
+  });
+  return held;
+}
+
+function playingOnACurrentCard(bpm: number): number {
+  metronomeStore.getState().stop();
+  metronomeStore.setState({ running: true, bpm });
+  return lastCard()?.cardNumber ?? 0;
+}
 
 describe('transportRuntime', () => {
   it('re-sends the notification as the setlist moves and when it is left', async () => {
@@ -101,6 +146,7 @@ describe('transportRuntime', () => {
     });
     native.emitTransport({
       ...notification,
+      action: 'pause',
       playback: 'paused',
       bpm: 120,
       cardNumber: lastCard()?.cardNumber ?? 0,
@@ -135,6 +181,7 @@ describe('transportRuntime', () => {
     const oldSong = lastCard()?.cardNumber ?? 0;
     native.emitTransport({
       ...notification,
+      action: 'pause',
       playback: 'paused',
       bpm: 120,
       cardNumber: oldSong,
@@ -160,6 +207,7 @@ describe('transportRuntime', () => {
 
     native.emitTransport({
       ...notification,
+      action: 'stop',
       playback: 'stopped',
       bpm: 130,
       cardNumber: (lastCard()?.cardNumber ?? 0) - 1,
@@ -175,6 +223,7 @@ describe('transportRuntime', () => {
 
     native.emitTransport({
       ...notification,
+      action: 'pause',
       playback: 'paused',
       bpm: 60,
       cardNumber: 0,
@@ -200,6 +249,7 @@ describe('transportRuntime', () => {
     metronomeStore.setState({ running: true, bpm: 100 });
     native.emitTransport({
       ...notification,
+      action: 'stop',
       playback: 'stopped',
       bpm: 100,
       cardNumber: lastCard()?.cardNumber ?? 0,
@@ -222,6 +272,7 @@ describe('transportRuntime', () => {
     expect(native.transportShow).toHaveBeenCalledTimes(sends + 1);
     native.emitTransport({
       ...notification,
+      action: 'pause',
       playback: 'paused',
       bpm: 92,
       cardNumber: lastCard()?.cardNumber ?? 0,
@@ -242,5 +293,248 @@ describe('transportRuntime', () => {
       loaded: null,
     });
     expect(lastShownSetlist()).toEqual({ subtitle: 'Wedding set · 2 songs' });
+  });
+
+  it('a Pause that beats the app Play to the service pauses the click', async () => {
+    await import('./transportRuntime');
+    const held = pausedByTheService(120);
+    metronomeStore.getState().start();
+    const pauses = calls(native.metronomePause);
+
+    native.emitTransport({
+      ...notification,
+      action: 'pause',
+      playback: 'paused',
+      bpm: 120,
+      cardNumber: held,
+    });
+    expect(native.metronomePause).toHaveBeenCalledTimes(pauses + 1);
+    expect(metronomeStore.getState().running).toBe(false);
+    expect(lastCard()).toMatchObject({ playing: false, bpm: 120 });
+  });
+
+  it('a Play that beats the app Pause to the service starts the click', async () => {
+    await import('./transportRuntime');
+    const held = playingOnACurrentCard(120);
+    metronomeStore.getState().pause();
+    const starts = calls(native.metronomeStart);
+
+    native.emitTransport({
+      ...notification,
+      action: 'play',
+      playback: 'playing',
+      bpm: 120,
+      cardNumber: held,
+    });
+    expect(native.metronomeStart).toHaveBeenCalledTimes(starts + 1);
+    expect(metronomeStore.getState().running).toBe(true);
+    expect(lastCard()).toMatchObject({ playing: true, bpm: 120 });
+  });
+
+  it('a tempo step that beats the new song card steps from the new song tempo', async () => {
+    await import('./transportRuntime');
+    const held = pausedByTheService(120);
+    metronomeStore.setState({ bpm: 90 });
+
+    native.emitTransport({
+      ...notification,
+      action: 'tempo_up',
+      tempoStep: TEMPO_STEP,
+      playback: 'paused',
+      bpm: 121,
+      cardNumber: held,
+    });
+    expect(metronomeStore.getState()).toMatchObject({
+      running: false,
+      bpm: 91,
+    });
+    expect(native.setTempo).toHaveBeenLastCalledWith(91);
+    expect(lastCard()).toMatchObject({ playing: false, bpm: 91 });
+  });
+
+  it('an event that beats a practice reset to the service keeps the reset', async () => {
+    await import('./transportRuntime');
+    metronomeStore.getState().stop();
+    metronomeStore.setState({
+      running: true,
+      bpm: 120,
+      practice: { playedMs: 60_000, stretchStartedAt: Date.now() },
+    });
+    const held = lastCard()?.cardNumber ?? 0;
+    metronomeStore.getState().resetPractice();
+
+    native.emitTransport({
+      ...notification,
+      action: 'play',
+      playback: 'playing',
+      bpm: 120,
+      practicePlayedMs: 60_000,
+      cardNumber: held,
+    });
+    expect(metronomeStore.getState().practice.playedMs).toBe(0);
+    expect(lastCard()?.practicePlayedMs).toBe(0);
+  });
+
+  it('a stale step while playing moves the store exactly one step, even once the engine has it', async () => {
+    await import('./transportRuntime');
+    const held = playingOnACurrentCard(120);
+    metronomeStore.setState({ beatsPerBar: 3 });
+    native.host.current_bpm = 121;
+
+    native.emitTransport({
+      ...notification,
+      action: 'tempo_up',
+      tempoStep: TEMPO_STEP,
+      playback: 'playing',
+      bpm: 121,
+      engineBpm: 120,
+      cardNumber: held,
+    });
+    native.host.current_bpm = Number.NaN;
+    expect(metronomeStore.getState().bpm).toBe(121);
+    expect(native.setTempo).toHaveBeenLastCalledWith(121);
+    expect(lastCard()).toMatchObject({ playing: true, bpm: 121 });
+  });
+
+  it('a stale step from a paused card during an app ramp steps from the ramp tempo', async () => {
+    await import('./transportRuntime');
+    const held = pausedByTheService(120);
+    const ramp = metronomeStore.getState().ramp;
+    metronomeStore.setState({ ramp: { ...ramp, enabled: true }, bpm: 95 });
+    metronomeStore.getState().start();
+
+    native.emitTransport({
+      ...notification,
+      action: 'tempo_up',
+      tempoStep: TEMPO_STEP,
+      playback: 'paused',
+      bpm: 121,
+      engineBpm: 100.4,
+      cardNumber: held,
+    });
+    expect(metronomeStore.getState()).toMatchObject({
+      running: true,
+      bpm: 101,
+      ramp: { enabled: false },
+    });
+    expect(native.setTempo).toHaveBeenLastCalledWith(101);
+  });
+
+  it('two stale steps from two queued cards each move one step from the app tempo', async () => {
+    await import('./transportRuntime');
+    const held = pausedByTheService(120);
+    metronomeStore.setState({ bpm: 90 });
+    const queued = lastCard()?.cardNumber ?? 0;
+    metronomeStore.setState({ bpm: 95 });
+
+    native.emitTransport({
+      ...notification,
+      action: 'tempo_up',
+      tempoStep: TEMPO_STEP,
+      playback: 'paused',
+      bpm: 121,
+      cardNumber: held,
+    });
+    native.emitTransport({
+      ...notification,
+      action: 'tempo_up',
+      tempoStep: TEMPO_STEP,
+      playback: 'paused',
+      bpm: 91,
+      cardNumber: queued,
+    });
+    expect(metronomeStore.getState()).toMatchObject({
+      running: false,
+      bpm: 97,
+    });
+    expect(native.setTempo).toHaveBeenLastCalledWith(97);
+    expect(lastCard()).toMatchObject({ playing: false, bpm: 97 });
+  });
+
+  it('a stale event with an action the app does not know takes the service result', async () => {
+    await import('./transportRuntime');
+    const held = pausedByTheService(120);
+    metronomeStore.setState({ bpm: 90 });
+    const sent = lastCard()?.cardNumber ?? 0;
+
+    native.emitTransport({
+      ...notification,
+      action: 'rewind',
+      playback: 'playing',
+      bpm: 130,
+      cardNumber: held,
+    });
+    expect(metronomeStore.getState()).toMatchObject({
+      running: true,
+      bpm: 130,
+    });
+    expect(lastCard()).toMatchObject({ playing: true, bpm: 130 });
+    expect(lastCard()?.cardNumber).toBeGreaterThan(sent);
+  });
+
+  it.each([
+    ['playing', playingOnACurrentCard],
+    ['paused by the service', pausedByTheService],
+  ])(
+    'release from %s hands the card over before it stops the click and sends no other card',
+    async (_, before) => {
+      const { metronomeTransport } = await import('./transportRuntime');
+      before(120);
+      const cardsBefore = [...native.cardCalls];
+      const stops = calls(native.metronomeStop);
+
+      metronomeTransport.release();
+      expect(native.cardCalls).toEqual([...cardsBefore, 'metronome hand over']);
+      expect(native.metronomeStop).toHaveBeenCalledTimes(stops + 1);
+      expect(lastCall(native.transportHandOver)).toBeLessThan(
+        lastCall(native.metronomeStop),
+      );
+    },
+  );
+
+  it('a stale Play after a song took the card stops the click and leaves the song card shown', async () => {
+    const { metronomeTransport } = await import('./transportRuntime');
+    const held = playingOnACurrentCard(120);
+    metronomeTransport.release();
+    native.songTransportShow();
+    const cardsBefore = [...native.cardCalls];
+    const stops = calls(native.metronomeStop);
+
+    native.emitTransport({
+      ...notification,
+      action: 'play',
+      playback: 'playing',
+      bpm: 120,
+      cardNumber: held,
+    });
+    expect(native.cardCalls).toEqual(cardsBefore);
+    expect(native.cardCalls.at(-1)).toBe('song show');
+    expect(native.metronomeStop).toHaveBeenCalledTimes(stops + 1);
+    expect(metronomeStore.getState().running).toBe(false);
+  });
+
+  it('a stale Play after a song took the card leaves the song click alone', async () => {
+    const { metronomeTransport } = await import('./transportRuntime');
+    const held = playingOnACurrentCard(120);
+    metronomeTransport.release();
+    const songClick = {
+      running: () => true,
+      title: () => 'Blackbird',
+      turnOff: () => undefined,
+    };
+    mixerClick.attach(songClick);
+    const cardsBefore = [...native.cardCalls];
+    const stops = calls(native.metronomeStop);
+
+    native.emitTransport({
+      ...notification,
+      action: 'play',
+      playback: 'playing',
+      bpm: 120,
+      cardNumber: held,
+    });
+    mixerClick.detach(songClick);
+    expect(native.cardCalls).toEqual(cardsBefore);
+    expect(native.metronomeStop).toHaveBeenCalledTimes(stops);
   });
 });
