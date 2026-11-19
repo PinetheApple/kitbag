@@ -10,7 +10,9 @@ appId: com.kitbag.app
             notVisible: '${FIXTURE_SONG}.wav'
           commands:
             - tapOn: 'Show roots'
-            - tapOn: 'Downloads'
+            - tapOn:
+                text: 'Downloads'
+                id: 'android:id/title'
       - scrollUntilVisible:
           element: '${FIXTURE_SONG}.wav'
           timeout: 5000
