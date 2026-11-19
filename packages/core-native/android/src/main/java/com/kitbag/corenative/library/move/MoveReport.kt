@@ -18,7 +18,7 @@ object MoveReport {
   val CONSTANTS: Map<String, Any> = mapOf(
     "moveOutcomes" to listOf(DONE, CANCELLED, AWAITING_RELEASE, CLEANUP_DEFERRED, NO_MOVE, FAILED, REFUSED)
       .associateBy { it },
-    "movePhases" to MovePhase.values().map { it.name },
+    "movePhases" to MovePhase.values().associate { LibraryErrors.camelCase(it.name) to it.name },
   ) + LibraryErrors.MOVE_CONSTANTS
 
   fun finished(outcome: MoveOutcome): FinishedReport =

@@ -190,6 +190,16 @@ export type MoveFinished = Readonly<{
   path: string | null;
 }>;
 
+export type MovePhases = Readonly<{
+  preflight: string;
+  copying: string;
+  verifying: string;
+  catchUp: string;
+  switched: string;
+  cleaning: string;
+  done: string;
+}>;
+
 export type MoveOutcomes = Readonly<{
   done: string;
   cancelled: string;
@@ -254,8 +264,7 @@ export type LibraryConstants = Readonly<{
   supportedAudioMimeTypes: readonly string[];
   unsupportedAudioExtensions: readonly string[];
   moveOutcomes: MoveOutcomes;
-  /** In the order a move runs them. */
-  movePhases: readonly string[];
+  movePhases: MovePhases;
   /** Reject codes of the move calls, and the error of a failed or refused move. */
   moveErrors: MoveErrors;
   volumeStates: VolumeStates;

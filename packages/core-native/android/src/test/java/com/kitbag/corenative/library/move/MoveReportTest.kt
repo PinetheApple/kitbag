@@ -27,6 +27,16 @@ class MoveReportTest {
   }
 
   @Test
+  fun `the exported move phases carry every phase under its own name`() {
+    @Suppress("UNCHECKED_CAST")
+    val exported = MoveReport.CONSTANTS.getValue("movePhases") as Map<String, String>
+    assertEquals(MovePhase.values().map { it.name }.toSet(), exported.values.toSet())
+    assertEquals(MovePhase.values().size, exported.size)
+    assertEquals("CATCH_UP", exported["catchUp"])
+    assertEquals("VERIFYING", exported["verifying"])
+  }
+
+  @Test
   fun `the bridge catch-all keeps an unmounted folder's code and calls the rest i-o`() {
     val unavailable = IOException(DataFolderUnavailableException(PATH))
     assertEquals(LibraryErrors.DATA_FOLDER_UNAVAILABLE, MoveReport.codeFor(unavailable))

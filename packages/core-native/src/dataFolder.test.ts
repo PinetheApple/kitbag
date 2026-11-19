@@ -46,7 +46,7 @@ it('passes the away paths and the release through unchanged', async () => {
 it('reads only the move codes from the constants', () => {
   const codes = {
     moveOutcomes: { done: 'done' },
-    movePhases: ['PREFLIGHT'],
+    movePhases: { preflight: 'PREFLIGHT' },
     moveErrors: { io: 'E_MOVE_IO' },
     volumeStates: { mounted: 'mounted' },
   };
