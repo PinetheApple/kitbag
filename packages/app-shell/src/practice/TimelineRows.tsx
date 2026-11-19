@@ -39,6 +39,7 @@ const useStyles = createThemedStyles((theme) => ({
     textAlign: 'right',
     color: theme.color.text3,
   },
+  timeSlot: { width: practiceHistory.timeWidth },
   rail: { width: practiceHistory.railWidth, alignItems: 'center' },
   line: {
     position: 'absolute',
@@ -156,7 +157,7 @@ function PauseRow({ ms }: { readonly ms: number }) {
   const styles = useStyles();
   return (
     <View style={[styles.row, styles.pauseRow]}>
-      <View style={styles.time} />
+      <View style={styles.timeSlot} />
       <View style={styles.rail}>
         <View style={styles.dashed} />
       </View>
