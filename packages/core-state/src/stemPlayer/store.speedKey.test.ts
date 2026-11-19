@@ -115,6 +115,27 @@ describe('opening at a speed the mixer refuses', () => {
   });
 });
 
+describe('the stored speed after a refused open', () => {
+  it('stays stored when only the key changes', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const song = await opened(band(), { speed: STORED_SPEED }, (fake) => {
+      fake.commands.mixerSetRate.mockImplementation((rate) =>
+        Promise.resolve(
+          rate === STORED_SPEED ? KB_RESULT.KB_ERROR_BUSY : KB_RESULT.KB_OK,
+        ),
+      );
+      fake.engine.rate = 0.6;
+    });
+    await song.store.getState().setSongKey(DOWN_TWO);
+    expect(lastSaved(song)).toMatchObject({
+      speed: STORED_SPEED,
+      pitch: DOWN_TWO,
+    });
+    await song.store.getState().resetSpeedKey();
+    expect(lastSaved(song)).toMatchObject({ speed: KB_MIXER_UNITY_RATE });
+  });
+});
+
 describe('changing the speed', () => {
   it('plays the new speed and stores it', async () => {
     const song = await opened(band());
@@ -180,6 +201,25 @@ describe('changing the key', () => {
     await song.store.getState().setSongKey(DOWN_TWO);
     expect(song.store.getState().facts.key?.text).toBe('E♭ maj');
     expect(song.store.getState().recordedFacts.key?.text).toBe('F maj');
+  });
+
+  it('does nothing for the key already set', async () => {
+    const song = await opened(band());
+    await song.store.getState().setSongKey(0);
+    expect(keysSent(song)).toEqual([]);
+    expect(song.records.saveStemSetSpeedKey).not.toHaveBeenCalled();
+  });
+
+  it('keeps taking key changes after one throws', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const song = await opened(band());
+    song.records.saveStemSetSpeedKey.mockImplementationOnce(() => {
+      throw new Error('disk');
+    });
+    await song.store.getState().setSongKey(UP_ONE);
+    await song.store.getState().setSongKey(DOWN_TWO);
+    expect(song.store.getState().songKey).toBe(DOWN_TWO);
+    expect(keysSent(song).at(-1)).toEqual([BASS, DOWN_TWO]);
   });
 
   it('sets one stem apart and back', async () => {

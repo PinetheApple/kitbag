@@ -328,6 +328,7 @@ export function createStemPlayerStore(
       speed: get().speed,
       key: get().songKey,
     });
+    const stored = { speed: KB_MIXER_UNITY_RATE };
     const refreshFacts = () => {
       if (openRecord === null) return;
       set(gridFacts(openRecord, get().tempoMode, shift()));
@@ -400,6 +401,7 @@ export function createStemPlayerStore(
         clampedSpeed(record.speed),
       );
       if (speed === null) return;
+      stored.speed = record.speed;
       start.rateSet(speed);
       const songKey = wholeKey(record.pitch);
       const rows = rowsOf(record);
@@ -478,7 +480,7 @@ export function createStemPlayerStore(
       ...renameActions(context),
       ...tempoActions(context, applyGrid),
       ...retimeActions(context, claim.defer, start, rates),
-      ...speedKeyActions(context, rates, refreshFacts),
+      ...speedKeyActions(context, rates, refreshFacts, stored),
       meterOverrideChanged: (setId, override) => {
         const { status, setId: openSet, beats, downbeatIndices } = get();
         if (status !== 'ready' || openSet !== setId) return;

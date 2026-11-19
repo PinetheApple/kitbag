@@ -383,6 +383,14 @@ describe('readExportSummary', () => {
     expect(summary).toMatchObject({ key: -2, fileName: 'Song (-2 st).wav' });
   });
 
+  it('reads an unshifted key for a song of drums only', async () => {
+    const p = await opened([stem(1, { role: 'drums' })]);
+    p.commands.mixerTrackPitch.mockResolvedValue(3);
+    const summary = await p.store.getState().readExportSummary();
+    expect(summary).toMatchObject({ key: 0, fileName: 'Song.wav' });
+    expect(p.commands.mixerTrackPitch).not.toHaveBeenCalled();
+  });
+
   it('reports no single key when the stems are keyed differently', async () => {
     const p = await opened([stem(1), stem(2)]);
     p.commands.mixerTrackPitch

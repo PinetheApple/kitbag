@@ -17,16 +17,17 @@ export function speedKeyActions(
   { set, get, runtimeOf, session }: ActionContext,
   rates: Pick<RetimeSpeed, 'set'>,
   refreshFacts: () => void,
+  stored: { speed: number },
 ): SpeedKeyActions {
   const editable = () =>
     get().status === 'ready' && get().retime.kind === 'off';
 
   const save = () => {
-    const { setId, speed, songKey, stems } = get();
+    const { setId, songKey, stems } = get();
     if (setId === null) return;
     runtimeOf()
       .records.saveStemSetSpeedKey(setId, {
-        speed,
+        speed: stored.speed,
         pitch: songKey,
         stems: stems.map(({ id, key }) => ({ id, pitch: key })),
       })
@@ -90,20 +91,31 @@ export function speedKeyActions(
 
   let keySteps: Promise<void> = Promise.resolve();
   const changeKeys = (songKey: () => number, keyOf: () => KeyOf) => {
-    keySteps = keySteps.then(() => applyKeys(songKey(), keyOf()));
+    keySteps = keySteps
+      .then(() => applyKeys(songKey(), keyOf()))
+      .catch((error: unknown) => {
+        warn('key not changed', error);
+      });
     return keySteps;
   };
 
   const setSpeed = async (requested: number) => {
     const speed = clampedSpeed(requested);
     const previous = get().speed;
-    if (!editable() || speed === previous) return;
+    if (!editable()) return;
+    if (speed === previous) {
+      if (speed === stored.speed) return;
+      stored.speed = speed;
+      save();
+      return;
+    }
     const opened = session();
     set({ speed });
     refreshFacts();
     const applied = await rates.set(speed);
     if (opened !== session()) return;
     if (applied) {
+      stored.speed = speed;
       save();
       return;
     }
@@ -116,6 +128,7 @@ export function speedKeyActions(
     setSpeed,
     setSongKey: async (requested) => {
       const songKey = wholeKey(requested);
+      if (songKey === get().songKey) return;
       await changeKeys(
         () => songKey,
         () => {
