@@ -2,7 +2,7 @@ import { useSongPlayer } from '@kitbag/core-state';
 import { useCallback, useEffect, useRef } from 'react';
 
 export function useLeaveOnStop(focused: boolean, onBack: () => void) {
-  const stopped = useSongPlayer((s) => s.status === 'idle');
+  const idle = useSongPlayer((s) => s.status === 'idle');
   const seenOpen = useRef(false);
   const left = useRef(false);
   const leave = useCallback(() => {
@@ -15,8 +15,8 @@ export function useLeaveOnStop(focused: boolean, onBack: () => void) {
       left.current = false;
       return;
     }
-    if (!stopped) seenOpen.current = true;
+    if (!idle) seenOpen.current = true;
     else if (seenOpen.current && !left.current) leave();
-  }, [focused, stopped, leave]);
+  }, [focused, idle, leave]);
   return leave;
 }

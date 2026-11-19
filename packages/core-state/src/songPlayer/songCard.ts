@@ -1,4 +1,5 @@
 import { turnClickOff } from '../stemPlayer/clickActions.ts';
+import { plainStart } from '../stemPlayer/actions.ts';
 import type { MixerSessionContext } from '../stemPlayer/mixerSession.ts';
 import type { SongStart } from '../stemPlayer/songStart.ts';
 import { songTransportShown } from '../stemPlayer/songTransport.ts';
@@ -12,12 +13,13 @@ export function songCard(context: SongCardContext) {
   const { set, get, runtimeOf, session, close } = context;
   let shownIn: number | null = null;
   const shown = () => shownIn === session();
+  const plain = plainStart(runtimeOf);
   const start: Pick<SongStart, 'play' | 'cancel'> = {
-    play: () => {
+    ...plain,
+    play: (head) => {
       shownIn = session();
-      runtimeOf().commands.mixerPlay();
+      plain.play(head);
     },
-    cancel: () => false,
   };
   return {
     start,
