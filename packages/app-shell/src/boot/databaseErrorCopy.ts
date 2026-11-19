@@ -1,6 +1,7 @@
 import {
   SQLITE_FULL,
   SQLITE_READONLY,
+  sqliteResultCode,
   type DatabaseOpenError,
 } from '@kitbag/core-db';
 import type { IconName } from '@kitbag/core-design';
@@ -58,21 +59,17 @@ export const DATABASE_ERROR_TEXT = {
   stillFailing: 'Still couldn’t open it. Nothing has been changed.',
   copySaved: 'Copy saved.',
   copyFailed: 'Couldn’t save the copy. Try another place.',
+  relaunchFailed:
+    'Your data opened, but Kitbag couldn’t restart. Close Kitbag and open it again.',
 } as const;
 
 const COPY_NAME_PREFIX = 'Kitbag data';
 const COPY_EXTENSION = '.db';
 const DATE_PART_DIGITS = 2;
-const FIRST_MONTH = 1;
-
-function resultCode(cause: unknown): unknown {
-  return typeof cause === 'object' && cause !== null && 'code' in cause
-    ? cause.code
-    : undefined;
-}
+const MONTH_INDEX_OFFSET = 1;
 
 function storageFrame(cause: unknown): DatabaseErrorFrame {
-  const code = resultCode(cause);
+  const code = sqliteResultCode(cause);
   if (code === SQLITE_FULL) return 'storageFull';
   if (code === SQLITE_READONLY) return 'storageReadOnly';
   return 'open';
@@ -102,7 +99,7 @@ function datePart(value: number): string {
 export function databaseCopyName(now: Date): string {
   const day = [
     String(now.getFullYear()),
-    datePart(now.getMonth() + FIRST_MONTH),
+    datePart(now.getMonth() + MONTH_INDEX_OFFSET),
     datePart(now.getDate()),
   ].join('-');
   return `${COPY_NAME_PREFIX} ${day}${COPY_EXTENSION}`;
