@@ -73,6 +73,7 @@ export const size = {
   stepInlineLargeKey: 28,
   segmentLargeOption: 34,
   segmentTabOption: 40,
+  segmentPickerOption: 40,
   segmentEditRowOption: 32,
   chipLarge: 34,
   transportKeySmall: 40,
