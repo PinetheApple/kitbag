@@ -16,10 +16,14 @@ object LibraryPaths {
   private const val MAX_STEM_CHARS = 48
   private const val MAX_EXTENSION_CHARS = 8
 
-  fun resolve(base: File, relativePath: String, allowBase: Boolean = false): File {
+  fun requireRelative(relativePath: String) {
     if (relativePath.startsWith("/") || relativePath.split('/').any { it == ".." }) {
       throw UnsafeLibraryPathException(relativePath)
     }
+  }
+
+  fun resolve(base: File, relativePath: String, allowBase: Boolean = false): File {
+    requireRelative(relativePath)
     val segments = relativePath.split('/').filter { it.isNotEmpty() && it != "." }
     if (segments.isEmpty() && !allowBase) throw UnsafeLibraryPathException(relativePath)
 

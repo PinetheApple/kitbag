@@ -12,7 +12,7 @@ import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.uimanager.UIManagerHelper
 import com.kitbag.corenative.library.LibraryErrors
 import com.kitbag.corenative.library.LibraryPaths
-import com.kitbag.corenative.library.LibraryStorage
+import com.kitbag.corenative.library.DataFolder
 import com.kitbag.corenative.library.MixdownExport
 import com.kitbag.corenative.library.UnsafeLibraryPathException
 import com.kitbag.corenative.route.OutputRoute
@@ -27,7 +27,6 @@ import com.kitbag.corenative.transport.TransportState
 class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   NativeKitbagCommandsSpec(reactContext) {
 
-  private val libraryBase = LibraryStorage.base(reactContext)
   private val mixdown = MixdownExport(reactContext.cacheDir)
   private val transportListener: (TransportState, PracticeClock) -> Unit = ::emitTransport
   private val songStoppedListener: () -> Unit = ::emitOnSongStopped
@@ -298,7 +297,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   override fun loadTrack(track: Double, relativePath: String, promise: Promise) {
     val file = try {
-      LibraryPaths.resolve(libraryBase, relativePath)
+      LibraryPaths.resolve(DataFolder.root(reactApplicationContext), relativePath)
     } catch (e: UnsafeLibraryPathException) {
       promise.reject(E_UNSAFE_PATH, "Track path escapes the library", e)
       return
