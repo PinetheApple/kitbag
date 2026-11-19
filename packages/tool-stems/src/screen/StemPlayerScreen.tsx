@@ -23,7 +23,9 @@ import { useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { detailTabLabel } from '../logic/detailView.ts';
+import { CLICK_SECTION, type ClickSection } from '../logic/clickView.ts';
 import { hasUnsavedRetime } from '../logic/retimeView.ts';
+import { ClickSheet } from './ClickSheet.tsx';
 import { DetailPane } from './DetailPane.tsx';
 import { ExportCancelledSnackbar, ExportNotice } from './ExportNotice.tsx';
 import { ExportSheet } from './ExportSheet.tsx';
@@ -274,8 +276,18 @@ function useRetimeAsk() {
   return { retiming, shown, askReset, askLeave, closeAsk };
 }
 
+interface ClickSheetOpen {
+  readonly kind: 'click';
+  readonly section: ClickSection;
+}
+
+type OpenSheet = PlayerSheet | ClickSheetOpen;
+
+const clickSectionOf = (sheet: OpenSheet | null) =>
+  typeof sheet === 'object' && sheet !== null ? sheet.section : null;
+
 function usePlayerSheet(retiming: boolean) {
-  const [sheet, setSheet] = useState<PlayerSheet | null>(null);
+  const [sheet, setSheet] = useState<OpenSheet | null>(null);
   if (sheet !== null && retiming) setSheet(null);
   const openMenu = useCallback(() => {
     setSheet('menu');
@@ -286,44 +298,60 @@ function usePlayerSheet(retiming: boolean) {
   const openExport = useCallback(() => {
     setSheet('export');
   }, []);
+  const openClick = useCallback((section: ClickSection) => {
+    setSheet({ kind: 'click', section });
+  }, []);
   const closeSheet = useCallback(() => {
     setSheet(null);
   }, []);
-  return { sheet, openMenu, openMeter, openExport, closeSheet };
+  return { sheet, openMenu, openMeter, openExport, openClick, closeSheet };
 }
 
 interface PlayerSheetsProps {
-  readonly sheet: PlayerSheet | null;
+  readonly sheet: OpenSheet | null;
   readonly bottomInset: number;
   readonly playhead: MixerFrameValues['songSec'];
   readonly onMeter: () => void;
   readonly onExport: () => void;
+  readonly onClick: (section: ClickSection) => void;
   readonly onClose: () => void;
 }
 
-function PlayerSheets({
+function OpenClickSheet({
   sheet,
   bottomInset,
-  playhead,
-  onMeter,
-  onExport,
   onClose,
-}: PlayerSheetsProps) {
+}: Pick<PlayerSheetsProps, 'sheet' | 'bottomInset' | 'onClose'>) {
+  const section = clickSectionOf(sheet);
+  return (
+    <ClickSheet
+      visible={section !== null}
+      section={section ?? CLICK_SECTION.grouping}
+      bottomInset={bottomInset}
+      onClose={onClose}
+    />
+  );
+}
+
+function PlayerSheets(props: PlayerSheetsProps) {
+  const { sheet, bottomInset, onClose } = props;
   return (
     <>
       <PlayerMenu
         visible={sheet === 'menu'}
         bottomInset={bottomInset}
         onClose={onClose}
-        onMeter={onMeter}
-        onExport={onExport}
+        onMeter={props.onMeter}
+        onExport={props.onExport}
+        onClick={props.onClick}
       />
       <StemMeterSheet
         visible={sheet === 'meter'}
         bottomInset={bottomInset}
-        playhead={playhead}
+        playhead={props.playhead}
         onClose={onClose}
       />
+      <OpenClickSheet {...props} />
       <ExportSheet
         visible={sheet === 'export'}
         bottomInset={bottomInset}
@@ -343,7 +371,7 @@ export function StemPlayerScreen({
   const ready = useStemPlayer((s) => s.status === 'ready');
   const acquireSong = useStemPlayer((s) => s.acquireSong);
   const { retiming, shown, askReset, askLeave, closeAsk } = useRetimeAsk();
-  const { sheet, openMenu, openMeter, openExport, closeSheet } =
+  const { sheet, openMenu, openMeter, openExport, openClick, closeSheet } =
     usePlayerSheet(retiming);
   const frame = useStemFrame();
   const acquire = useCallback(
@@ -373,6 +401,7 @@ export function StemPlayerScreen({
         playhead={frame.songSec}
         onMeter={openMeter}
         onExport={openExport}
+        onClick={openClick}
         onClose={closeSheet}
       />
       {shown === 'reset' ? <ResetDialog onClose={closeAsk} /> : null}

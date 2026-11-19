@@ -22,6 +22,7 @@ import {
   POLY_AGAINST_BAR,
   SOUND_COUNT,
 } from './preset-rules';
+import { MAX_CLICK_GROUPS } from './click-settings';
 import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
 
 const source = (path: string) =>
@@ -38,6 +39,7 @@ const headers = {
 const api = source('include/kitbag_api.h');
 const polyApi = source('include/kitbag_metronome_poly_api.h');
 const tunerApi = source('include/kitbag_tuner_api.h');
+const gridApi = source('include/kitbag_metronome_grid_api.h');
 const tuningMode = source('src/tuner/tuning_mode.h');
 
 function constant(
@@ -102,6 +104,12 @@ describe('engine limits mirrored in core-db', () => {
         ]),
       ),
     ).toEqual(RAMP_UNITS);
+  });
+
+  it('match the grid grouping limit in kitbag_metronome_grid_api.h', () => {
+    expect(Number(/#define KB_MAX_GRID_GROUPS (\d+)/.exec(gridApi)?.[1])).toBe(
+      MAX_CLICK_GROUPS,
+    );
   });
 
   it('match kitbag_tuner_api.h', () => {

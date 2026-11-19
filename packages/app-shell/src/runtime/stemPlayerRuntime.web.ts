@@ -14,5 +14,6 @@ configureStemPlayer({
     renameStem: () => Promise.resolve(),
     saveLyricsRetimed: () => Promise.resolve(),
     saveStemSetMeterOverride: () => Promise.resolve(),
+    saveStemSetClick: () => Promise.resolve(),
   },
 });

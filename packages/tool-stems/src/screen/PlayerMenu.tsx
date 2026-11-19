@@ -13,12 +13,14 @@ import { exportBlock, useStemPlayer } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import type { ClickSection } from '../logic/clickView.ts';
 import { exportRowValue } from '../logic/exportView.ts';
 import {
   meterGridState,
   NO_GRID_REASON,
   shownMeter,
 } from '../logic/meterEdit.ts';
+import { ClickRows } from './ClickRows.tsx';
 import { useMixdownProgress } from './useMixdownProgress.ts';
 
 const useStyles = createThemedStyles((theme) => ({
@@ -105,6 +107,7 @@ interface PlayerMenuProps {
   readonly onClose: () => void;
   readonly onExport: () => void;
   readonly onMeter: () => void;
+  readonly onClick: (section: ClickSection) => void;
 }
 
 export function PlayerMenu({
@@ -113,6 +116,7 @@ export function PlayerMenu({
   onClose,
   onExport,
   onMeter,
+  onClick,
 }: PlayerMenuProps) {
   const styles = useStyles();
   const resetMix = useStemPlayer((s) => s.resetMix);
@@ -139,6 +143,7 @@ export function PlayerMenu({
         <Text style={styles.value}>levels, mutes, solos</Text>
       </Pressable>
       <StemMeterRow onMeter={onMeter} />
+      <ClickRows onOpen={onClick} />
       <ExportRow visible={visible} onExport={onExport} />
     </Sheet>
   );

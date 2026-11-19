@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@op-engineering/op-sqlite', () => ({}));
 
+import { CLICK_RATE } from './click-rate';
+import { NO_CLICK } from './click-settings';
 import { connectDatabase } from './client';
 import { GRID_METER } from './meter-override';
 import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
@@ -146,6 +148,7 @@ describe('StemDeck bundles in the song library', () => {
       lyricsRetimed: null,
       meterBeatsPerBar: null,
       barOneSeconds: null,
+      ...NO_CLICK,
       stems: FULL.stems.map((stem) => ({
         ...stem,
         id: expect.any(Number) as number,
@@ -276,6 +279,18 @@ describe('StemDeck bundles in the song library', () => {
       ],
     });
     expect(await handle.db.select().from(stems)).toHaveLength(2);
+  });
+
+  it('keeps the click grouping and rate when the bundle is imported again', async () => {
+    const { library } = setup();
+    const old = await library.insertStemBundle(FULL);
+    const click = { clickGrouping: [3, 2, 2], clickRate: CLICK_RATE.half };
+    await library.saveStemSetClick(old, click);
+    const outcome = await library.replaceStemBundle(
+      { ...FULL, uuid: 'set-uuid-6', jobId: 'another-job' },
+      old,
+    );
+    expect(await library.readStemSet(outcome.id)).toMatchObject(click);
   });
 
   it('keeps the meter override when the bundle is imported again', async () => {
