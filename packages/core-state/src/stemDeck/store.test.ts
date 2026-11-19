@@ -214,6 +214,25 @@ describe('connecting', () => {
     });
   });
 
+  it('clears the filters and reloads the song list when reopened', async () => {
+    const { store, native } = setup();
+    await store.getState().connect(ORIGIN);
+    const loads = native.getJson.mock.calls.length;
+    store.setState({ selected: [A], setlistId: 's1', query: 'way' });
+    const reopened = store.getState().reopenCatalog();
+    expect(store.getState()).toMatchObject({
+      selected: [],
+      setlistId: null,
+      query: '',
+      loadingCatalog: true,
+    });
+    expect(store.getState().catalog).not.toBeNull();
+    await reopened;
+    expect(native.getJson.mock.calls.length).toBeGreaterThan(loads);
+    expect(store.getState().connection.status).toBe('connected');
+    expect(store.getState().loadingCatalog).toBe(false);
+  });
+
   it('lets only the latest connect attempt land', async () => {
     const { store, native } = setup();
     let first: (value: ReturnType<typeof probe>) => void = () => undefined;
@@ -280,7 +299,10 @@ describe('picking and importing', () => {
     const { store, native, emit, addFetchedBundle } = await connected([A]);
     store.getState().selectSongs([A, B]);
     await store.getState().importSelected();
-    expect(store.getState().replacePrompt).toEqual({ titles: ['Way Maker'] });
+    expect(store.getState().replacePrompt).toEqual({
+      match: 'job',
+      titles: ['Way Maker'],
+    });
     expect(native.startImport).not.toHaveBeenCalled();
     await store.getState().replaceInLibrary();
     expect(native.startImport.mock.calls[0]?.[1]).toHaveLength(2);
@@ -290,7 +312,7 @@ describe('picking and importing', () => {
     });
     expect(addFetchedBundle).toHaveBeenCalledWith(
       expect.objectContaining({ uri: 'file:/x/a.zip' }),
-      { replace: true },
+      { kind: 'replaceJob' },
     );
   });
 

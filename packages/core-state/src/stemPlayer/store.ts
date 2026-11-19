@@ -12,7 +12,7 @@ import { mixActions, transportActions } from './actions.ts';
 import { barMarkDownbeats, sameNumbers } from './bars.ts';
 import { clickActions, followNewGrid, releaseClick } from './clickActions.ts';
 import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
-import type { LoopSeconds } from './loop.ts';
+import type { LoopEdge, LoopSeconds } from './loop.ts';
 import { sectionLoopActions } from './loopActions.ts';
 import { overrideDownbeats } from './meterOverride.ts';
 import {
@@ -117,6 +117,7 @@ export interface StemPlayerActions {
   readonly seek: (frame: number) => void;
   readonly skip: (seconds: number) => void;
   readonly markLoop: () => Promise<void>;
+  readonly moveLoopEdge: (edge: LoopEdge, seconds: number) => Promise<void>;
   readonly undoLoop: () => Promise<void>;
   readonly dismissLoopUndo: () => void;
   readonly jumpToSection: (index: number) => Promise<void>;

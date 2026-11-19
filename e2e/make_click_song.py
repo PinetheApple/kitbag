@@ -3,7 +3,7 @@ import struct
 import sys
 import wave
 
-SAMPLE_RATE = 44100
+SAMPLE_RATE = 22050
 BPM = 120
 CLICK_HZ = 1000
 CLICK_SECONDS = 0.02

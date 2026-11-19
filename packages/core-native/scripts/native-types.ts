@@ -51,6 +51,8 @@ export interface NativeSources {
   /** native/audio_core/src/metronome/metronome_types.h — the tempo range. */
   readonly metronomeTypesHeader: string;
   readonly transportPlanHeader: string;
+  /** native/audio_core/include/kitbag_mixdown_api.h — kb_mixdown_state. */
+  readonly mixdownHeader: string;
 }
 
 export interface NativeConstants {
@@ -81,6 +83,9 @@ export interface NativeConstants {
   readonly rampSeconds: Bounds;
   readonly rampUnit: readonly EnumMember[];
   readonly rampState: readonly EnumMember[];
+  readonly mixdownState: readonly EnumMember[];
+  readonly mixdownChannels: number;
+  readonly mixdownBitsPerSample: number;
   readonly bpmReferenceDenominator: number;
   readonly denominators: readonly number[];
   readonly soundNames: readonly string[];

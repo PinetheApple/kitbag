@@ -1,7 +1,7 @@
 appId: com.kitbag.app
 ---
 - runFlow: launch-fresh.yaml
-- runFlow: open-metronome.yaml
+- runFlow: open-metronome-first-time.yaml
 - runFlow:
     file: create-song.yaml
     env:

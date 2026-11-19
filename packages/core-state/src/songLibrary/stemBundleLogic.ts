@@ -1,4 +1,8 @@
-import type { NewStemBundle, StemSetFiles } from '@kitbag/core-db';
+import type {
+  ExistingStemSet,
+  NewStemBundle,
+  StemSetFiles,
+} from '@kitbag/core-db';
 import type {
   ImportedStemBundle,
   LibraryConstants,
@@ -6,6 +10,7 @@ import type {
 } from '@kitbag/core-native';
 
 import { fileRemovals, type Removal } from './logic.ts';
+import type { SongLibraryRecords } from './runtime.ts';
 
 export type BundleRefusalReason =
   | 'notABundle'
@@ -23,6 +28,30 @@ export interface BundleRefusal {
   readonly maxStems: number;
   readonly stemFormat: string;
   readonly supportedStemFormat: string;
+}
+
+export type ReplaceChoice =
+  | { readonly kind: 'add' }
+  | { readonly kind: 'replaceJob' }
+  | { readonly kind: 'replaceSet'; readonly targetId: number };
+
+export interface SongIdentity {
+  readonly title: string;
+  readonly artist: string | null;
+  readonly durationSec: number | null;
+}
+
+export async function newestSameSong(
+  records: Pick<SongLibraryRecords, 'findStemSetMatches'>,
+  { title, artist, durationSec }: SongIdentity,
+): Promise<ExistingStemSet | undefined> {
+  if (durationSec === null) return undefined;
+  const [newest] = await records.findStemSetMatches({
+    title,
+    artist,
+    durationSec,
+  });
+  return newest;
 }
 
 export type BundleAddOutcome =
@@ -100,6 +129,7 @@ export function newStemBundle(
       soloed: stem.soloed,
       pitch: stem.pitch,
     })),
+    hasMix: imported.hasMix,
     bpm: imported.bpm,
     key: imported.key,
     scale: imported.scale,

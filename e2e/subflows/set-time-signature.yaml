@@ -1,0 +1,6 @@
+appId: com.kitbag.app
+---
+- tapOn: 'Time signature, .*'
+- tapOn: '${BEATS} over ${UNIT}'
+- tapOn: 'Set ${BEATS} over ${UNIT}'
+- assertVisible: 'Time signature, ${BEATS} over ${UNIT}'

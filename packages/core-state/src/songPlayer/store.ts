@@ -69,6 +69,7 @@ type SongPlayerActions = Pick<
   | 'seek'
   | 'skip'
   | 'markLoop'
+  | 'moveLoopEdge'
   | 'toggleClick'
 > & {
   readonly open: (songId: number, waveformBars: number) => SongSession;

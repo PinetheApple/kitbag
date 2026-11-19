@@ -102,11 +102,20 @@ describe('stem song added elsewhere', () => {
 
 describe('replaceText', () => {
   it('names the picked file and the song it replaces', () => {
-    const text = replaceText('Redbone.stemdeck.zip', 'Redbone');
+    const text = replaceText('Redbone.stemdeck.zip', 'Redbone', 'job');
     expect(text).toContain('“Redbone.stemdeck.zip”');
     expect(text).toContain('“Redbone” in your library');
-    expect(text).toContain('your names for the song and its stems are kept');
+    expect(text).toContain('Your names for the song and its stems are kept');
     expect(text).toContain('cannot be undone');
+    expect(text).toContain('same StemDeck song');
+  });
+
+  it('says a song match is separated again and can be kept as a second song', () => {
+    const text = replaceText('Redbone.stemdeck.zip', 'Redbone', 'song');
+    expect(text).toContain('“Redbone” in your library, separated again');
+    expect(text).toContain('Keep both');
+    expect(text).not.toContain('same StemDeck song');
+    expect(text).toContain('Bar one and your lyric timing start over');
   });
 });
 

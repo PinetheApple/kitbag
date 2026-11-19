@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { BundleAddOutcome } from '../songLibrary/stemBundleLogic.ts';
+import type {
+  BundleAddOutcome,
+  ReplaceChoice,
+} from '../songLibrary/stemBundleLogic.ts';
 import { createHandOff, type HandOffDeps } from './handOff.ts';
 import { CODES, item, snapshot } from './store.test-helper.ts';
 
@@ -30,7 +33,7 @@ describe('hand-off', () => {
     expect(deps.addFetchedBundle).toHaveBeenCalledTimes(1);
     expect(deps.addFetchedBundle).toHaveBeenCalledWith(
       { uri: URI, name: 'Song aaaaaaaaaaaa', isFolder: false },
-      { replace: false },
+      { kind: 'add' },
     );
     expect(deps.settle.mock.calls).toEqual([
       ['aaaaaaaaaaaa', CODES.settleAdded],
@@ -73,14 +76,22 @@ describe('hand-off', () => {
     expect(deps.settle.mock.calls).toEqual([['aaaaaaaaaaaa', code]]);
   });
 
-  it('replaces only the songs the user agreed to replace', async () => {
+  it('replaces only the songs the user agreed to replace, naming any target', async () => {
     const { deps, handOff } = setup(() => Promise.resolve({ kind: 'added' }));
-    handOff.replacing(['bbbbbbbbbbbb']);
+    const TARGET = 7;
+    handOff.replacing(
+      new Map<string, ReplaceChoice>([
+        ['bbbbbbbbbbbb', { kind: 'replaceJob' }],
+        ['cccccccccccc', { kind: 'replaceSet', targetId: TARGET }],
+      ]),
+    );
     await handOff.receive(adding('aaaaaaaaaaaa'), CODES);
     await handOff.receive(adding('bbbbbbbbbbbb', `${URI}.b`), CODES);
+    await handOff.receive(adding('cccccccccccc', `${URI}.c`), CODES);
     expect(deps.addFetchedBundle.mock.calls.map((call) => call[1])).toEqual([
-      { replace: false },
-      { replace: true },
+      { kind: 'add' },
+      { kind: 'replaceJob' },
+      { kind: 'replaceSet', targetId: TARGET },
     ]);
   });
 

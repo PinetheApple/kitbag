@@ -42,6 +42,7 @@ function bundle(title: string, roles: readonly string[]): NewStemBundle {
       soloed: false,
       pitch: 0,
     })),
+    hasMix: true,
     bpm: null,
     key: null,
     scale: null,
@@ -122,6 +123,7 @@ describe('renaming in the song library', () => {
     await library.renameStem(other?.id ?? 0, 'Keys');
     const outcome = await library.replaceStemBundle(
       bundle('Echo v2', ['vocals', 'other', 'bass']),
+      id,
     );
     expect(await library.readStemSet(outcome.id)).toMatchObject({
       title: 'Echo (live)',
@@ -137,9 +139,10 @@ describe('renaming in the song library', () => {
 
   it('takes the new bundle’s title on replace when the user never renamed it', async () => {
     const library = setup();
-    await library.insertStemBundle(bundle('Echo', ['other']));
+    const id = await library.insertStemBundle(bundle('Echo', ['other']));
     const outcome = await library.replaceStemBundle(
       bundle('Echo v2', ['other']),
+      id,
     );
     expect(await library.readStemSet(outcome.id)).toMatchObject({
       title: 'Charity Gayle - Echo v2',

@@ -4,11 +4,20 @@ tags:
   - pr-370
 ---
 - runFlow: ../../subflows/song-playing-behind-bar.yaml
-- tapOn: 'Pause ${FIXTURE_SONG}'
+- runFlow:
+    file: ../../subflows/tap-while-playing.yaml
+    env:
+      TARGET: 'Pause ${FIXTURE_SONG}'
 - assertVisible: 'Play ${FIXTURE_SONG}'
-- tapOn: 'Play ${FIXTURE_SONG}'
+- runFlow:
+    file: ../../subflows/tap-while-playing.yaml
+    env:
+      TARGET: 'Play ${FIXTURE_SONG}'
 - assertVisible: 'Pause ${FIXTURE_SONG}'
-- tapOn: 'Stop ${FIXTURE_SONG}'
+- runFlow:
+    file: ../../subflows/tap-while-playing.yaml
+    env:
+      TARGET: 'Stop ${FIXTURE_SONG}'
 - extendedWaitUntil:
     notVisible: 'Open ${FIXTURE_SONG}'
     timeout: 5000

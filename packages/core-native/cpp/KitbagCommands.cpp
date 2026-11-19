@@ -230,6 +230,11 @@ double commandMixerTrackFrames(double track) {
   return static_cast<double>(kb_mixer_track_frames(commandEngine(), *wholeTrack));
 }
 
+// Under the command lock: the snapshot reads app-thread mixer state a
+// concurrent load or setter would be writing.
+int32_t commandMixdownStart(const char* path) { return kb_mixdown_start(commandEngine(), path); }
+void commandMixdownCancel() { kb_mixdown_cancel(commandEngine()); }
+
 int32_t commandTunerStart() { return kb_tuner_start(commandEngine()); }
 void commandTunerStop() { kb_tuner_stop(commandEngine()); }
 int32_t commandTunerSetTuning(int32_t instrument, const int32_t* stringMidis, int32_t count) {

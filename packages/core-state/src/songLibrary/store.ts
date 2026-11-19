@@ -37,6 +37,7 @@ import {
   stemSetRemovals,
   type BundleAddOutcome,
   type BundleRefusal,
+  type ReplaceChoice,
 } from './stemBundleLogic.ts';
 import {
   importTracker,
@@ -83,9 +84,12 @@ export interface SongLibraryState {
   readonly codes: LibraryConstants | null;
 }
 
+export type ReplaceMatch = 'job' | 'song';
+
 export interface ReplacePrompt {
   readonly name: string;
   readonly title: string;
+  readonly match: ReplaceMatch;
 }
 
 export interface SongLibraryActions {
@@ -102,10 +106,11 @@ export interface SongLibraryActions {
   correctDuration: (songId: number, durationSec: number) => Promise<void>;
   dismissNotice: () => void;
   confirmReplace: () => Promise<void>;
+  keepBoth: () => Promise<void>;
   cancelReplace: () => void;
   addFetchedBundle: (
     source: BundleSource,
-    options: { readonly replace: boolean },
+    choice: ReplaceChoice,
   ) => Promise<BundleAddOutcome>;
 }
 
@@ -278,6 +283,7 @@ function importActions(
         await bundles.importBundle({ ...folder, isFolder: true });
     },
     confirmReplace: bundles.confirmReplace,
+    keepBoth: bundles.keepBoth,
     cancelReplace: bundles.cancelReplace,
     addFetchedBundle: bundles.addFetchedBundle,
   };

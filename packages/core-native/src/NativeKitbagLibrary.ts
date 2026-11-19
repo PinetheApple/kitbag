@@ -52,6 +52,8 @@ export type StemBundleCheck = Readonly<{
   supportedVersion: Int32;
   jobId: string;
   title: string;
+  artist: string | null;
+  durationSec: Double | null;
   stemCount: Int32;
   maxStems: Int32;
   stemFormat: string;
@@ -99,6 +101,7 @@ export type ImportedStemBundle = Readonly<{
   sampleRate: Int32;
   channels: Int32;
   stems: readonly ImportedStem[];
+  hasMix: boolean;
   bpm: Double | null;
   key: string | null;
   scale: string | null;
@@ -145,6 +148,11 @@ export type LibraryConstants = Readonly<{
   failureUnsupported: string;
   failureInterrupted: string;
   failureInternal: string;
+  /** Reject codes of mixdownStart and shareExport. */
+  exportBadFileName: string;
+  exportNoActivity: string;
+  exportNoShareTarget: string;
+  exportShareFailed: string;
   supportedAudioFamilies: readonly string[];
   supportedAudioExtensions: readonly string[];
   supportedAudioMimeTypes: readonly string[];
@@ -157,6 +165,8 @@ export interface Spec extends TurboModule {
   pickFolder(): Promise<PickedFolder | null>;
   pickBackup(): Promise<PickedBackup | null>;
   shareBackup(fileName: string, contents: string): Promise<void>;
+  /** Only a file mixdownStart wrote; rejects E_BAD_FILE_NAME for any other path. */
+  shareExport(path: string): Promise<void>;
   importAudio(uri: string, relativeDir: string): Promise<ImportedAudio>;
   enqueueAnalysis(
     relativePath: string,

@@ -45,6 +45,7 @@ const FULL: NewStemBundle = {
     soloed: false,
     pitch: name === 'drums' ? 0 : -2,
   })),
+  hasMix: true,
   bpm: 92.5,
   key: 'A',
   scale: 'minor',
@@ -262,7 +263,7 @@ describe('StemDeck bundles in the song library', () => {
         waveformPath: null,
       })),
     };
-    const outcome = await library.replaceStemBundle(replacement);
+    const outcome = await library.replaceStemBundle(replacement, old);
     expect(outcome.replaced?.folder).toBe('stems/0297074f4836');
     expect(outcome.replaced?.files).toHaveLength(FULL.stems.length * 2);
     expect(await library.readStemSet(old)).toBeUndefined();
@@ -284,19 +285,21 @@ describe('StemDeck bundles in the song library', () => {
       meterBeatsPerBar: GRID_METER.triple,
       barOneSeconds: 3.5,
     });
-    const outcome = await library.replaceStemBundle({
-      ...FULL,
-      uuid: 'set-uuid-5',
-    });
+    const outcome = await library.replaceStemBundle(
+      { ...FULL, uuid: 'set-uuid-5' },
+      old,
+    );
     expect(await library.readStemSet(outcome.id)).toMatchObject({
       meterBeatsPerBar: GRID_METER.triple,
       barOneSeconds: 3.5,
     });
   });
 
-  it('replaces nothing when the job is new', async () => {
+  it('replaces nothing when the target is gone', async () => {
     const { library } = setup();
-    const outcome = await library.replaceStemBundle(FULL);
+    const gone = await library.insertStemBundle(BARE);
+    await library.deleteStemSet(gone);
+    const outcome = await library.replaceStemBundle(FULL, gone);
     expect(outcome.replaced).toBeNull();
     expect(await library.readStemSet(outcome.id)).toMatchObject({
       jobId: '0297074f4836',
@@ -311,7 +314,7 @@ describe('StemDeck bundles in the song library', () => {
       uuid: 'set-uuid-4',
       stems: [{ ...BARE.stems[0], filePath: null }],
     } as unknown as NewStemBundle;
-    await expect(library.replaceStemBundle(broken)).rejects.toThrow();
+    await expect(library.replaceStemBundle(broken, old)).rejects.toThrow();
     expect(await library.readStemSet(old)).toMatchObject({
       stems: expect.arrayContaining([
         expect.objectContaining({ name: 'piano' }),
@@ -390,7 +393,7 @@ describe('tap-along lyric retiming', () => {
     const { library } = setup();
     const id = await library.insertStemBundle({ ...FULL, lyrics: SYNCED });
     await library.saveLyricsRetimed(id, TIMES);
-    const outcome = await library.replaceStemBundle({ ...FULL, lyrics });
+    const outcome = await library.replaceStemBundle({ ...FULL, lyrics }, id);
     expect((await library.readStemSet(outcome.id))?.lyricsRetimed).toEqual(
       kept,
     );
@@ -411,10 +414,10 @@ describe('tap-along lyric retiming', () => {
       };
       const id = await library.insertStemBundle({ ...FULL, lyrics });
       await library.saveLyricsRetimed(id, TIMES);
-      const outcome = await library.replaceStemBundle({
-        ...FULL,
-        lyrics: { ...lyrics, plain },
-      });
+      const outcome = await library.replaceStemBundle(
+        { ...FULL, lyrics: { ...lyrics, plain } },
+        id,
+      );
       expect((await library.readStemSet(outcome.id))?.lyricsRetimed).toEqual(
         kept,
       );
@@ -434,9 +437,9 @@ describe('tap-along lyric retiming', () => {
 
   it('stores NULL when re-importing over an unreadable retiming', async () => {
     const { handle, library } = setup();
-    await library.insertStemBundle({ ...FULL, lyrics: SYNCED });
+    const id = await library.insertStemBundle({ ...FULL, lyrics: SYNCED });
     await handle.db.update(stemSets).set({ lyricsRetimed: 'not json' });
-    await library.replaceStemBundle({ ...FULL, lyrics: SYNCED });
+    await library.replaceStemBundle({ ...FULL, lyrics: SYNCED }, id);
     const [row] = await handle.db.select().from(stemSets);
     expect(row?.lyricsRetimed).toBeNull();
   });
@@ -470,11 +473,10 @@ describe('StemDeck bundles over the op-sqlite 17 connection', () => {
   it('inserts, replaces and reads back', async () => {
     const database = connectDatabase(fakeOpSqlite().connection);
     const first = await database.songLibrary.insertStemBundle(FULL);
-    const { id, replaced } = await database.songLibrary.replaceStemBundle({
-      ...FULL,
-      uuid: 'set-uuid-5',
-      folder: 'stems/0297074f4836-2',
-    });
+    const { id, replaced } = await database.songLibrary.replaceStemBundle(
+      { ...FULL, uuid: 'set-uuid-5', folder: 'stems/0297074f4836-2' },
+      first,
+    );
     expect(replaced?.folder).toBe('stems/0297074f4836');
     expect(id).not.toBe(first);
     expect(await database.songLibrary.readStemSet(id)).toMatchObject({

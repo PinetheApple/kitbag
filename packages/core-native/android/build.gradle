@@ -16,6 +16,8 @@ apply plugin: "com.android.library"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+def reactNativeAbis = project.property('reactNativeArchitectures').toString().split(',')*.trim()
+
 android {
   namespace "com.kitbag.corenative"
 
@@ -48,11 +50,9 @@ android {
         // headless host tools where this Android linker flag is wrong (§13.8).
         arguments "-DANDROID_STL=c++_shared",
                   "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384"
-        // The #33 device gate is arm64; building arm64-v8a alone is the leanest
-        // gate config and dodges the 32-bit NDK LTO/ld.gold probe issue on this
-        // host (see build report). This MUST match the app's
-        // reactNativeArchitectures so no ABI ships with a missing libkitbag_jsi.so.
-        abiFilters "arm64-v8a"
+        // The RN plugin filters the app's ABIs by this same property, so every
+        // ABI the app ships carries libkitbag_jsi.so.
+        abiFilters(*reactNativeAbis)
       }
     }
   }
