@@ -56,6 +56,7 @@ interface SegmentProps<T extends string> {
   readonly accent: boolean;
   readonly large: boolean;
   readonly tab: boolean;
+  readonly picker: boolean;
   readonly inline: boolean;
   readonly editRow: boolean;
   readonly minWidthStyle: OptionMinWidth | undefined;
@@ -123,6 +124,7 @@ const useStyles = createThemedStyles((theme) => ({
   largeLabel: textStyle(textRoles.segmentLarge),
   tabOption: { minHeight: size.segmentTabOption },
   tabLabel: textStyle(textRoles.segmentTab),
+  pickerOption: { minHeight: size.segmentPickerOption },
   editRowOption: {
     minHeight: size.segmentEditRowOption,
     paddingHorizontal: inset.segmentEditRowOptionH,
@@ -147,6 +149,7 @@ function Segment<T extends string>({
   accent,
   large,
   tab,
+  picker,
   inline,
   editRow,
   minWidthStyle,
@@ -207,11 +210,12 @@ function Segment<T extends string>({
           styles.option,
           large && styles.largeOption,
           tab && styles.tabOption,
+          picker && styles.pickerOption,
           editRow && styles.editRowOption,
           minWidthStyle,
           row && styles.rowOption,
           selected && styles.optionSelected,
-          selected && large && styles.largeOptionSelected,
+          selected && large && !picker && styles.largeOptionSelected,
         ]}
       >
         <Text
@@ -247,7 +251,8 @@ export function SegmentedControl<T extends string>({
   const byLabel = useTextScaled();
   const editRow = controlSize === 'editRow';
   const tab = controlSize === 'tab';
-  const large = controlSize === 'large' || editRow || tab;
+  const picker = controlSize === 'picker';
+  const large = controlSize === 'large' || editRow || tab || picker;
   const [labelWidths, setLabelWidths] = useState<Partial<Record<T, number>>>(
     {},
   );
@@ -309,6 +314,7 @@ export function SegmentedControl<T extends string>({
           accent={selectedTone === 'accent'}
           large={large}
           tab={tab}
+          picker={picker}
           inline={controlSize === 'inline'}
           editRow={editRow}
           minWidthStyle={minWidthStyle}

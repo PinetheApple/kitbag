@@ -1,7 +1,7 @@
 import {
   isOverridden,
   MenuRow,
-  METER_PENDING,
+  meterCopy,
   MeterRow,
   Sheet,
 } from '@kitbag/core-design';
@@ -40,7 +40,7 @@ function SongMeterRow({ onPress }: { readonly onPress: () => void }) {
       value={override.meterBeatsPerBar ?? detected}
       yours={isOverridden(override)}
       disabled={state !== 'ready'}
-      reason={state === 'failed' ? METER_FAILED : METER_PENDING}
+      reason={state === 'failed' ? METER_FAILED : meterCopy.pending}
       onPress={onPress}
     />
   );

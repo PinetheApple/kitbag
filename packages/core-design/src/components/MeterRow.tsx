@@ -1,4 +1,4 @@
-import { meterRowValue } from '../meterText.ts';
+import { meterCopy, meterRowValue } from '../meterText.ts';
 import { MenuRow } from './MenuRow.tsx';
 
 export interface MeterRowProps {
@@ -11,7 +11,7 @@ export interface MeterRowProps {
 
 export function MeterRow({
   value,
-  yours,
+  yours: overridden,
   disabled = false,
   reason,
   onPress,
@@ -19,9 +19,9 @@ export function MeterRow({
   return (
     <MenuRow
       icon="metronome"
-      label="Meter"
+      label={meterCopy.title}
       detail={disabled ? reason : undefined}
-      value={disabled ? undefined : meterRowValue(value, yours)}
+      value={disabled ? undefined : meterRowValue(value, overridden)}
       disabled={disabled}
       onPress={onPress}
     />

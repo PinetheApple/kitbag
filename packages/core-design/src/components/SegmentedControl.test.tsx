@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 
-import { size, space } from '../roles.ts';
+import { radius, size, space } from '../roles.ts';
 import { wrappedRowGap } from '../segmentHitBox.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
@@ -44,7 +44,12 @@ const OPTIONS = [
   { value: 'distinct', label: 'Distinct' },
 ] as const;
 
-const FLEX_SIZES: readonly SegmentedControlSize[] = ['default', 'large', 'tab'];
+const FLEX_SIZES: readonly SegmentedControlSize[] = [
+  'default',
+  'large',
+  'tab',
+  'picker',
+];
 const CONTENT_SIZES: readonly SegmentedControlSize[] = [
   'inline',
   'editRow',
@@ -152,6 +157,18 @@ describe('SegmentedControl under font scale', () => {
       expect(size.segmentTabOption + reach).toBeGreaterThanOrEqual(
         minTouchTargetDp,
       );
+    });
+  });
+
+  it('draws a picker track at the minimum target on a neutral selected face', async () => {
+    const { themes } = await import('../theme.ts');
+    const { track, faces } = renderAt(1, 'picker');
+    const edges = Number(track.padding) + Number(track.borderWidth);
+    expect(Number(faces[0]?.minHeight) + edges * 2).toBe(minTouchTargetDp);
+    expect(track.borderRadius).toBe(radius.segmentLarge);
+    expect(faces[0]).toMatchObject({
+      borderRadius: radius.segmentLargeOption,
+      backgroundColor: themes.dark.color.surface3,
     });
   });
 

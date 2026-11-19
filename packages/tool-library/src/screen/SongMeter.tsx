@@ -1,4 +1,5 @@
 import {
+  meterCopy,
   MeterSheet,
   snackbar,
   Snackbar,
@@ -13,7 +14,6 @@ import {
   METER_FAILED,
   meterGridState,
   reanalysedText,
-  USE_DETECTED_LABEL,
 } from '../logic/songMeterText.ts';
 import { useSongMeter } from './useSongMeter.ts';
 
@@ -45,7 +45,7 @@ function ReanalysedNotice({
   return (
     <Snackbar
       message={reanalysedText(notice, override)}
-      actionLabel={USE_DETECTED_LABEL}
+      actionLabel={meterCopy.useDetected}
       bottom={snackbar.aboveDock}
       onAction={useDetected}
       onTimeout={dismiss}

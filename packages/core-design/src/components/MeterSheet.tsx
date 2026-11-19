@@ -3,11 +3,10 @@ import { Text, View } from 'react-native';
 import { useDerivedValue, type SharedValue } from 'react-native-reanimated';
 
 import {
-  BAR_ONE_YOURS,
   barOneLabel,
   detectedHint,
   isOverridden,
-  METER_PENDING,
+  meterCopy,
   meterLabel,
   playheadDetail,
   type MeterChoice,
@@ -91,13 +90,13 @@ function MeterPicker({
   );
   return (
     <View style={styles.group}>
-      <SectionHeader label="Beats per bar" />
+      <SectionHeader label={meterCopy.beatsPerBar} />
       <SegmentedControl
         options={options}
         selected={String(override.meterBeatsPerBar ?? detectedMeter)}
         onSelect={pick}
-        accessibilityLabel="Beats per bar"
-        size="large"
+        accessibilityLabel={meterCopy.beatsPerBar}
+        size="picker"
       />
       <Text style={styles.hint}>
         {detectedHint(
@@ -111,15 +110,19 @@ function MeterPicker({
 }
 
 function BarOneDetail({
-  yours,
+  barOneOverridden,
   playheadSeconds,
 }: {
-  readonly yours: boolean;
+  readonly barOneOverridden: boolean;
   readonly playheadSeconds: SharedValue<number>;
 }) {
   const styles = useStyles();
   const live = useDerivedValue(() => playheadDetail(playheadSeconds.value));
-  if (yours) return <Text style={styles.barOneDetail}>{BAR_ONE_YOURS}</Text>;
+  if (barOneOverridden) {
+    return (
+      <Text style={styles.barOneDetail}>{meterCopy.barOneOverridden}</Text>
+    );
+  }
   return (
     <LiveText
       text={live}
@@ -140,40 +143,46 @@ function MeterControls(props: MeterSheetProps) {
     <>
       <MeterPicker {...props} />
       <View style={styles.group}>
-        <SectionHeader label="Bar 1" />
+        <SectionHeader label={meterCopy.barOne} />
         <View style={styles.barOne}>
           <View style={styles.barOneText}>
             <Text style={styles.barOneValue}>{barOneLabel(barOneSeconds)}</Text>
             <BarOneDetail
-              yours={override.barOneSeconds !== null}
+              barOneOverridden={override.barOneSeconds !== null}
               playheadSeconds={playheadSeconds}
             />
           </View>
-          <Button label="Bar 1 here" size="target" onPress={onBarOneHere} />
+          <Button
+            label={meterCopy.barOneHere}
+            size="target"
+            onPress={onBarOneHere}
+          />
         </View>
       </View>
     </>
   );
 }
 
-function MeterFoot({
-  yours,
-  onReset,
-  onClose,
-}: MeterSheetProps & { readonly yours: boolean }) {
+interface MeterFootProps {
+  readonly showOverride: boolean;
+  readonly onReset: () => void;
+  readonly onClose: () => void;
+}
+
+function MeterFoot({ showOverride, onReset, onClose }: MeterFootProps) {
   const styles = useStyles();
   return (
     <View style={styles.foot}>
-      {yours ? (
+      {showOverride ? (
         <Button
-          label="Use detected"
-          icon="reset"
+          label={meterCopy.useDetected}
+          icon="useDetected"
           size="target"
           fill
           onPress={onReset}
         />
       ) : null}
-      <Button label="Done" size="target" fill onPress={onClose} />
+      <Button label={meterCopy.done} size="target" fill onPress={onClose} />
     </View>
   );
 }
@@ -183,19 +192,24 @@ function unavailableText(
   failedReason: string,
 ): string | null {
   if (state === 'ready') return null;
-  return state === 'pending' ? METER_PENDING : failedReason;
+  return state === 'pending' ? meterCopy.pending : failedReason;
 }
 
 export function MeterSheet(props: MeterSheetProps) {
-  const { visible, override, state, notice, bottomInset, onClose } = props;
+  const { visible, override, state, notice, bottomInset, onReset, onClose } =
+    props;
   const unavailable = unavailableText(state, props.failedReason);
-  const yours = unavailable === null && isOverridden(override);
+  const showOverride = unavailable === null && isOverridden(override);
   return (
     <Sheet
       visible={visible}
-      title="Meter"
-      titleAction={yours ? <Badge label="YOURS" icon="edit" /> : undefined}
-      dismissLabel="Close the meter sheet"
+      title={meterCopy.title}
+      titleAction={
+        showOverride ? (
+          <Badge label={meterCopy.overriddenBadge} icon="edit" />
+        ) : undefined
+      }
+      dismissLabel={meterCopy.close}
       {...(bottomInset === undefined ? {} : { bottomInset })}
       notice={notice == null ? undefined : <Snackbar inline {...notice} />}
       onDismiss={onClose}
@@ -205,7 +219,11 @@ export function MeterSheet(props: MeterSheetProps) {
       ) : (
         <SheetHint>{unavailable}</SheetHint>
       )}
-      <MeterFoot yours={yours} {...props} />
+      <MeterFoot
+        showOverride={showOverride}
+        onReset={onReset}
+        onClose={onClose}
+      />
     </Sheet>
   );
 }

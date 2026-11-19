@@ -13,7 +13,6 @@ export const METER_FAILED = 'Needs a beat grid. Re-analyse first.';
 export const UNDO_LABEL = 'Undo';
 export const METER_SAVE_FAILED = 'Could not save the meter.';
 export const TRY_AGAIN_LABEL = 'Try again';
-export const USE_DETECTED_LABEL = 'Use detected';
 export const DETECTED_RESTORED =
   'Back to the detected meter. Saved for this song.';
 
