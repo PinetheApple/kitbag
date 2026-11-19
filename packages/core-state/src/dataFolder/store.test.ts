@@ -312,3 +312,42 @@ describe('requests', () => {
     expect(store.getState().error).toBe(CODES.moveErrors.io);
   });
 });
+
+describe('pending request', () => {
+  it('holds pending from the call until the move and volumes are reread', async () => {
+    const { store, native } = setup();
+    await store.getState().start();
+    let handOff: () => void = () => undefined;
+    native.startMove.mockReturnValue(
+      new Promise<void>((resolve) => {
+        handOff = resolve;
+      }),
+    );
+    const started = store.getState().startMove(CARD);
+    expect(store.getState().pending).toBe(true);
+    handOff();
+    await started;
+    expect(store.getState().pending).toBe(false);
+  });
+
+  it('clears pending after a refusal', async () => {
+    const { store, native } = setup();
+    await store.getState().start();
+    native.cancelMove.mockRejectedValue(rejection(CODES.moveErrors.switched));
+    await store.getState().cancelMove();
+    expect(store.getState()).toMatchObject({
+      pending: false,
+      error: CODES.moveErrors.switched,
+    });
+  });
+
+  it('ignores a second request while one is pending', async () => {
+    const { store, native } = setup();
+    await store.getState().start();
+    const first = store.getState().resumeMove();
+    await store.getState().undoMove();
+    await first;
+    expect(native.resumeMove).toHaveBeenCalledOnce();
+    expect(native.undoMove).not.toHaveBeenCalled();
+  });
+});

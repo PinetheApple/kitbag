@@ -30,6 +30,7 @@ export interface DataFolderState {
   readonly error: string | null;
   readonly holders: PlayerTracks | null;
   readonly released: boolean;
+  readonly pending: boolean;
 }
 
 export interface DataFolderActions {
@@ -85,6 +86,7 @@ const INITIAL: DataFolderState = {
   error: null,
   holders: null,
   released: false,
+  pending: false,
 };
 
 export function pausedMove(state: DataFolderState): MoveStatus | null {
@@ -142,6 +144,8 @@ export function createDataFolderStore(
     };
 
     const request = async (call: () => Promise<void>) => {
+      if (get().pending) return;
+      set({ pending: true });
       try {
         await call();
         set({ error: null });
@@ -149,6 +153,7 @@ export function createDataFolderStore(
         refuse(error);
       }
       await Promise.all([get().refreshMove(), get().refreshVolumes()]);
+      set({ pending: false });
     };
 
     const showMove = (move: MoveStatus | null) => {
