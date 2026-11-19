@@ -40,6 +40,7 @@ describe('StemDeck bundle import', () => {
     expect(files.checkStemBundle).toHaveBeenCalledWith(ZIP.uri, false);
     expect(files.importStemBundle).toHaveBeenCalledWith(ZIP.uri, false);
     expect(files.importAudio).not.toHaveBeenCalled();
+    expect(files.sniffUnsupportedFormat).not.toHaveBeenCalled();
     const [row] = await stemRows(store);
     expect(row).toMatchObject({ title: 'Redbone', stemCount: 2 });
     expect(await records.readStemSet(row?.id ?? 0)).toMatchObject({

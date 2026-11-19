@@ -1,10 +1,18 @@
 export {
+  DatabaseOpenError,
+  type DatabaseOpenErrorKind,
+} from './database-open-error';
+export {
   DATABASE_NAME,
   openDatabase,
   type KitbagDatabase,
   type SetlistRepository,
   type SongPresetRepository,
 } from './client';
+export type {
+  PlayQueueEntry,
+  PlayQueueRepository,
+} from './play-queue-repository';
 export type { Preferences } from './preferences';
 export { COUNT_IN_PREFERENCE_KEYS } from './count-in-preferences';
 export { STANDALONE_METRONOME_KEY } from './standalone-metronome-preference';

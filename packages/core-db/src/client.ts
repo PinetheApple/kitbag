@@ -1,12 +1,15 @@
 import type { DB } from '@op-engineering/op-sqlite';
 import { drizzle } from 'drizzle-orm/op-sqlite';
 
+import { attempt } from './attempt';
 import { createBackupService } from './backup';
 import type { ClickSoundFiles } from './click-sound-files';
 import { createClickSoundRepository } from './click-sound-repository';
+import { DatabaseOpenError } from './database-open-error';
 import * as schema from './schema';
 import { migrate, type MigrationDriver } from './migrate';
 import { openConnection } from './openConnection';
+import { createPlayQueueRepository } from './play-queue-repository';
 import { createPracticeRepository } from './practice-repository';
 import { createPreferences } from './preferences';
 import { createRouteLatencyRepository } from './route-latency-repository';
@@ -43,7 +46,26 @@ export function openDatabase(
   clickSoundFiles: ClickSoundFiles,
   name: string = DATABASE_NAME,
 ) {
-  return connectDatabase(openConnection(name), clickSoundFiles);
+  return connectDatabase(openNativeConnection(name), clickSoundFiles);
+}
+
+function openNativeConnection(name: string): Connection {
+  try {
+    return openConnection(name);
+  } catch (error) {
+    throw DatabaseOpenError.classify('open', error);
+  }
+}
+
+function requireForeignKeys(connection: Connection): void {
+  let enabled: unknown;
+  try {
+    enabled = connection.executeSync('PRAGMA foreign_keys').rows[0]
+      ?.foreign_keys;
+  } catch (error) {
+    throw DatabaseOpenError.classify('foreign-keys', error);
+  }
+  if (enabled !== 1) throw new DatabaseOpenError('foreign-keys');
 }
 
 export function connectDatabase(
@@ -52,14 +74,17 @@ export function connectDatabase(
 ) {
   try {
     migrate(opSqliteMigrationDriver(connection));
+    requireForeignKeys(connection);
   } catch (error) {
     // The caller retries, so a failed open must not leave a connection behind.
-    try {
+    const closeErrors = attempt(() => {
       connection.close();
-    } catch {
-      // The migration error is the one worth reporting.
-    }
-    throw error;
+    });
+    throw error instanceof DatabaseOpenError
+      ? error.withCleanupErrors(closeErrors)
+      : DatabaseOpenError.classify('open', error, {
+          cleanupErrors: closeErrors,
+        });
   }
   const handle = {
     db: drizzle(drizzleClient(connection), { schema }),
@@ -67,6 +92,7 @@ export function connectDatabase(
   };
   return {
     setlists: createSetlistRepository(handle),
+    playQueue: createPlayQueueRepository(handle),
     presets: createSongPresetRepository(handle),
     tunings: createTuningRepository(handle),
     songLibrary: createSongLibraryRepository(handle),

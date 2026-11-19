@@ -1,4 +1,6 @@
+import { attempt } from './attempt';
 import { CLICK_RATE } from './click-rate';
+import { DatabaseOpenError } from './database-open-error';
 import { REPAIR_PRESETS } from './preset-repair';
 import { POLY_AGAINST_BAR, RAMP_UNITS } from './preset-rules';
 import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
@@ -25,19 +27,10 @@ export const V20_SCHEMA_VERSION = 20;
 export const V21_SCHEMA_VERSION = V20_SCHEMA_VERSION + 1;
 export const V22_SCHEMA_VERSION = V21_SCHEMA_VERSION + 1;
 export const V23_SCHEMA_VERSION = V22_SCHEMA_VERSION + 1;
-export const SCHEMA_VERSION = V23_SCHEMA_VERSION + 1;
+export const V24_SCHEMA_VERSION = V23_SCHEMA_VERSION + 1;
+export const SCHEMA_VERSION = V24_SCHEMA_VERSION + 1;
 
 const OLDEST_UPGRADABLE_VERSION = V7_SCHEMA_VERSION;
-
-export class UnsupportedSchemaVersion extends Error {
-  override readonly name = 'UnsupportedSchemaVersion';
-
-  constructor(readonly version: number) {
-    super(
-      `Schema v${String(version)} is older than v${String(OLDEST_UPGRADABLE_VERSION)}, the oldest this app upgrades`,
-    );
-  }
-}
 
 export interface MigrationDriver {
   exec(sql: string): void;
@@ -344,6 +337,30 @@ export const MIGRATE_V23_TO_V24: readonly string[] = [
   'ALTER TABLE songs ADD COLUMN tempo_correction TEXT',
 ];
 
+// song_preset_id loses NOT NULL and gains a CHECK, which SQLite can only do by rebuilding.
+export const MIGRATE_V24_TO_V25: readonly string[] = [
+  `CREATE TABLE setlist_items_next (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  setlist_id INTEGER NOT NULL REFERENCES setlists (id) ON DELETE CASCADE,
+  song_preset_id INTEGER REFERENCES song_presets (id) ON DELETE CASCADE,
+  position INTEGER NOT NULL,
+  stem_set_id INTEGER REFERENCES stem_sets (id) ON DELETE CASCADE,
+  CONSTRAINT setlist_items_one_entry CHECK ((song_preset_id IS NULL) <> (stem_set_id IS NULL))
+)`,
+  `INSERT INTO setlist_items_next (id, setlist_id, song_preset_id, position)
+   SELECT id, setlist_id, song_preset_id, position FROM setlist_items`,
+  "DELETE FROM sqlite_sequence WHERE name = 'setlist_items_next'",
+  `INSERT INTO sqlite_sequence (name, seq)
+   SELECT 'setlist_items_next', seq FROM sqlite_sequence WHERE name = 'setlist_items'`,
+  'DROP TABLE setlist_items',
+  'ALTER TABLE setlist_items_next RENAME TO setlist_items',
+  `CREATE TABLE play_queue (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  stem_set_id INTEGER NOT NULL UNIQUE REFERENCES stem_sets (id) ON DELETE CASCADE,
+  position INTEGER NOT NULL
+)`,
+];
+
 export const BASELINE: readonly string[] = [
   ...V11_BASELINE,
   ...MIGRATE_V11_TO_V12,
@@ -359,6 +376,7 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V21_TO_V22,
   ...MIGRATE_V22_TO_V23,
   ...MIGRATE_V23_TO_V24,
+  ...MIGRATE_V24_TO_V25,
 ];
 
 export const MIGRATE_V7_TO_V8: readonly string[] = [
@@ -370,15 +388,26 @@ export const MIGRATE_V7_TO_V8: readonly string[] = [
 function runStatements(
   driver: MigrationDriver,
   statements: readonly string[],
-): void {
-  driver.exec('BEGIN');
+): unknown[] {
+  const setupErrors = attempt(() => {
+    // Renames and drops must not fire FK actions, and the pragma is a no-op
+    // inside a transaction, so it is toggled around BEGIN.
+    driver.exec('PRAGMA foreign_keys = OFF');
+    driver.exec('BEGIN');
+  });
+  if (setupErrors.length > 0) return setupErrors;
   try {
     for (const statement of statements) driver.exec(statement);
     driver.setUserVersion(SCHEMA_VERSION);
     driver.exec('COMMIT');
+    return [];
   } catch (error) {
-    driver.exec('ROLLBACK');
-    throw error;
+    return [
+      error,
+      ...attempt(() => {
+        driver.exec('ROLLBACK');
+      }),
+    ];
   }
 }
 
@@ -403,7 +432,8 @@ const UPGRADES: readonly {
   { to: V21_SCHEMA_VERSION, steps: MIGRATE_V20_TO_V21 },
   { to: V22_SCHEMA_VERSION, steps: MIGRATE_V21_TO_V22 },
   { to: V23_SCHEMA_VERSION, steps: MIGRATE_V22_TO_V23 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V23_TO_V24 },
+  { to: V24_SCHEMA_VERSION, steps: MIGRATE_V23_TO_V24 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V24_TO_V25 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {
@@ -411,18 +441,37 @@ function upgradeSteps(from: number): readonly string[] {
   return UPGRADES.filter(({ to }) => to > from).flatMap(({ steps }) => steps);
 }
 
-export function migrate(driver: MigrationDriver): void {
-  const from = driver.getUserVersion();
-  if (from !== 0 && from < OLDEST_UPGRADABLE_VERSION)
-    throw new UnsupportedSchemaVersion(from);
+function readUserVersion(driver: MigrationDriver): number {
   try {
-    if (from < SCHEMA_VERSION) {
-      // Renames and drops must not fire FK actions, and the pragma is a no-op
-      // inside a transaction, so it is toggled around BEGIN.
-      driver.exec('PRAGMA foreign_keys = OFF');
-      runStatements(driver, upgradeSteps(from));
-    }
-  } finally {
-    driver.exec('PRAGMA foreign_keys = ON');
+    return driver.getUserVersion();
+  } catch (error) {
+    throw DatabaseOpenError.classify('open', error);
   }
+}
+
+function refuseUnsupported(fromVersion: number): void {
+  if (fromVersion !== 0 && fromVersion < OLDEST_UPGRADABLE_VERSION)
+    throw new DatabaseOpenError('legacy-version', { fromVersion });
+  if (fromVersion > SCHEMA_VERSION)
+    throw new DatabaseOpenError('newer-version', { fromVersion });
+}
+
+export function migrate(driver: MigrationDriver): void {
+  const fromVersion = readUserVersion(driver);
+  refuseUnsupported(fromVersion);
+  const migrationErrors =
+    fromVersion < SCHEMA_VERSION
+      ? runStatements(driver, upgradeSteps(fromVersion))
+      : [];
+  const pragmaErrors = attempt(() => {
+    driver.exec('PRAGMA foreign_keys = ON');
+  });
+  const errors = [...migrationErrors, ...pragmaErrors];
+  if (errors.length === 0) return;
+  const [cause, ...cleanupErrors] = errors;
+  throw DatabaseOpenError.classify(
+    migrationErrors.length > 0 ? 'migration' : 'foreign-keys',
+    cause,
+    { fromVersion, cleanupErrors },
+  );
 }

@@ -244,6 +244,50 @@ describe('song library store', () => {
     });
   });
 
+  it('refuses an extensionless M4A labelled as MP3, by its header', async () => {
+    let importingWhileSniffed: readonly string[] = [];
+    const { store, files } = setup(
+      fakeFiles({
+        pickDocument: vi.fn(() =>
+          Promise.resolve({
+            uri: 'content://tone-noext',
+            name: 'tone-noext',
+            mimeType: 'audio/mpeg',
+          }),
+        ),
+        sniffUnsupportedFormat: vi.fn(() => {
+          importingWhileSniffed = store.getState().importing;
+          return Promise.resolve('m4a');
+        }),
+      }),
+    );
+    await store.getState().importSong();
+    expect(files.sniffUnsupportedFormat).toHaveBeenCalledWith(
+      'content://tone-noext',
+    );
+    expect(importingWhileSniffed).toEqual(['tone-noext']);
+    expect(files.importAudio).not.toHaveBeenCalled();
+    expect(store.getState().notice).toEqual({
+      kind: 'formatRefused',
+      name: 'tone-noext',
+      format: 'm4a',
+      supported: CODES.supportedAudioFamilies,
+    });
+  });
+
+  it('copies the file when the header sniff rejects, leaving errors to the copy', async () => {
+    const { store, files } = setup(
+      fakeFiles({
+        sniffUnsupportedFormat: vi.fn(() =>
+          Promise.reject(new Error('module torn down')),
+        ),
+      }),
+    );
+    await store.getState().importSong();
+    expect(files.importAudio).toHaveBeenCalledOnce();
+    expect(store.getState().notice).toBeNull();
+  });
+
   it('says a copied file could not be added when the database refuses it', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { store, records, files } = setup();

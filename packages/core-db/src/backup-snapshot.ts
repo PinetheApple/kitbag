@@ -1,12 +1,14 @@
 import { asc, inArray, sql } from 'drizzle-orm';
 
 import {
+  itemPresets,
   PREFERENCE_KEYS,
   type Category,
   type LibrarySongRecord,
   type LocalRecords,
   type PracticeSessionRecord,
   type PreferenceCategory,
+  type SetlistItemRecord,
   type SetlistRecord,
   type SongPresetRecord,
 } from './backup-format';
@@ -92,23 +94,46 @@ function songPresetRecord(
   };
 }
 
+type Lookup = (id: number | null) => string | null;
+
+function itemRecord(
+  { songPresetId, stemSetId }: typeof setlistItems.$inferSelect,
+  presetUuid: Lookup,
+  stemSongKey: Lookup,
+): SetlistItemRecord[] {
+  if (songPresetId !== null)
+    return [{ preset: presetUuid(songPresetId) ?? '' }];
+  const key = stemSongKey(stemSetId);
+  return key === null ? [] : [{ stemSong: key }];
+}
+
 async function loadSetlists(
   db: Database,
   rows: (typeof setlists.$inferSelect)[],
-  presetUuid: (id: number | null) => string | null,
+  presetUuid: Lookup,
+  stemSongKey: Lookup,
 ): Promise<SetlistRecord[]> {
   const items = await db
     .select()
     .from(setlistItems)
     .orderBy(asc(setlistItems.position), asc(setlistItems.id));
-  return rows.map(({ uuid, name, active, id }) => ({
-    uuid,
-    name,
-    active,
-    presetUuids: items
+  return rows.map(({ uuid, name, active, id }) => {
+    const records = items
       .filter((item) => item.setlistId === id)
-      .map((item) => presetUuid(item.songPresetId) ?? ''),
-  }));
+      .flatMap((item) => itemRecord(item, presetUuid, stemSongKey));
+    return {
+      uuid,
+      name,
+      active,
+      presetUuids: itemPresets(records),
+      items: records,
+    };
+  });
+}
+
+function keyOf(ids: Map<string, number>): Lookup {
+  const keys = new Map([...ids].map(([key, id]) => [id, key]));
+  return (id) => (id === null ? null : (keys.get(id) ?? null));
 }
 
 function practiceRecord(
@@ -172,7 +197,12 @@ export async function loadSnapshot(db: Database): Promise<Snapshot> {
   const records: LocalRecords = {
     librarySongs: rows.songRows.map(librarySongRecord),
     songPresets: rows.presetRows.map((row) => songPresetRecord(row, songUuid)),
-    setlists: await loadSetlists(db, rows.setlistRows, uuidOf(rows.presetRows)),
+    setlists: await loadSetlists(
+      db,
+      rows.setlistRows,
+      uuidOf(rows.presetRows),
+      keyOf(rows.stemSongs.ids),
+    ),
     tunings: rows.tuningRows.map(({ uuid, name, notes, instrument }) => ({
       uuid,
       name,

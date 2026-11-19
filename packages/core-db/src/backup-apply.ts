@@ -21,6 +21,11 @@ import {
 import type { ImportPlan, Writes } from './backup-plan';
 import { decodeBase64, nullableBytes, presetBytes } from './base64';
 import { fromSeconds, type IdMaps, type Snapshot } from './backup-snapshot';
+import {
+  entryRefs,
+  loadStemEntries,
+  type SetlistEntryContext,
+} from './backup-setlist-entries';
 import { restoreStemSong } from './backup-stem-songs';
 import {
   freshClickSoundFileName,
@@ -80,15 +85,16 @@ async function writeItems(
   db: Database,
   setlistId: number,
   record: SetlistRecord,
-  ids: IdMaps,
+  context: WriteContext,
 ) {
   await db.delete(setlistItems).where(eq(setlistItems.setlistId, setlistId));
-  const rows = record.presetUuids.map((uuid, position) => {
-    const songPresetId = ids.songPresets.get(uuid);
-    if (songPresetId === undefined)
-      throw new Error(`Song preset ${uuid} missing`);
-    return { setlistId, songPresetId, position };
-  });
+  const rows = entryRefs(record, context).map((ref, position) => ({
+    setlistId,
+    position,
+    songPresetId: null,
+    stemSetId: null,
+    ...ref,
+  }));
   if (rows.length > 0) await db.insert(setlistItems).values(rows);
 }
 
@@ -111,7 +117,7 @@ async function upsertSetlist(
         .returning({ id: setlists.id }),
       'Setlist insert',
     ).id;
-  await writeItems(db, id, record, context.ids);
+  await writeItems(db, id, record, context);
   return id;
 }
 
@@ -125,9 +131,8 @@ export interface FileContext {
   log: ClickSoundFileLog;
 }
 
-interface WriteContext extends FileContext {
+interface WriteContext extends FileContext, SetlistEntryContext {
   mode: ImportPlan['mode'];
-  ids: IdMaps;
 }
 
 type Upsert = (
@@ -345,6 +350,8 @@ export async function applyWrites(
   fileContext: FileContext,
 ): Promise<SoundOutcome> {
   const { ids } = snapshot;
+  const deviceStemSets = new Map(ids.stemSongs);
+  const stemEntries = await loadStemEntries(db);
   if (plan.mode === 'replace') {
     for (const category of [...plan.categories].reverse()) {
       await deleteCategory(db, category);
@@ -355,7 +362,12 @@ export async function applyWrites(
         ...snapshot.records.clickSounds.map(({ fileName }) => fileName),
       );
   }
-  await upsertAll(db, plan, writes, { ...fileContext, ids });
+  await upsertAll(db, plan, writes, {
+    ...fileContext,
+    ids,
+    deviceStemSets,
+    stemEntries,
+  });
   if (plan.mode === 'replace') await relinkUntouched(db, plan, snapshot);
   if (plan.categories.includes('setlists'))
     await adoptActiveSetlist(db, plan, ids);

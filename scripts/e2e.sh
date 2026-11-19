@@ -28,6 +28,8 @@ readonly MEDIA_SCAN_ACTION=android.intent.action.MEDIA_SCANNER_SCAN_FILE
 readonly MEDIA_FILES_URI=content://media/external/file
 readonly INDEX_WAIT_SECONDS=60
 readonly INDEX_POLL_SECONDS=2
+readonly CRASH_MARKER='FATAL EXCEPTION'
+readonly CRASH_LINES=4
 declare -rA RUN_SETTINGS=(
   [window_animation_scale]=0
   [transition_animation_scale]=0
@@ -300,13 +302,14 @@ if [[ ! -s $REPORT ]]; then
 fi
 
 fail "flows failed:"
-python3 -I - "$REPORT" "$ARTIFACTS" "$OUT" <<'PY' >&2
+python3 -I - "$REPORT" "$ARTIFACTS" "$OUT" "$CRASH_MARKER" "$CRASH_LINES" <<'PY' >&2
 import shutil
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
 report, artifacts, out = sys.argv[1], Path(sys.argv[2]), Path(sys.argv[3])
+crash_marker, crash_lines = sys.argv[4], int(sys.argv[5])
 failed = 0
 for case in ET.parse(report).iter('testcase'):
     problem = case.find('failure')
@@ -334,6 +337,19 @@ for case in ET.parse(report).iter('testcase'):
         print(f'    screenshot: {saved}')
     else:
         print('    screenshot: none captured')
+    for crash in sorted(artifacts.rglob('crash-report.txt')):
+        if crash.parent.parent.name != flow_dir:
+            continue
+        try:
+            lines = crash.read_text(errors='replace').splitlines()
+        except OSError:
+            print(f'    crash: {crash} (unreadable)')
+            continue
+        # Maestro's own crash report drops the marker line and starts at "Process:".
+        start = next((i for i, line in enumerate(lines) if crash_marker in line), 0)
+        print(f'    crash: {crash}')
+        for line in lines[start:start + crash_lines]:
+            print(f'      {line}')
 PY
 echo "  logcat:  $OUT/logcat.txt" >&2
 echo "  Maestro: $ARTIFACTS" >&2

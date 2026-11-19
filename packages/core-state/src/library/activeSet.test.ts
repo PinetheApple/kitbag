@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { activeSetView } from './activeSet.ts';
-import type { SetlistEntry, SetlistSummary } from './snapshot.ts';
+import {
+  ENTRY_KIND,
+  type SetlistEntry,
+  type SetlistSummary,
+} from './snapshot.ts';
 
 const summary = (
   id: number,
@@ -17,6 +21,7 @@ const summary = (
 
 const entry = (itemId: number, name = '', bpm = 120, presetId = itemId) =>
   ({
+    kind: ENTRY_KIND.preset,
     item: { id: itemId },
     preset: { id: presetId, name, bpm },
   }) as unknown as SetlistEntry;

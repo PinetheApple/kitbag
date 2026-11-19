@@ -145,7 +145,9 @@ describe('backup validation', () => {
 
   it('refuses a setlist that references a preset not in the file', async () => {
     const failure = await rejected((file) => {
-      first(file.setlists).presetUuids = [crypto.randomUUID()];
+      const dangling = crypto.randomUUID();
+      first(file.setlists).presetUuids = [dangling];
+      first(file.setlists).items = [{ preset: dangling }];
     });
     expect(failure).toMatchObject({
       kind: 'invalidRelationship',

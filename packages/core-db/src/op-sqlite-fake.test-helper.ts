@@ -29,7 +29,10 @@ function onMacrotask<T>(work: () => T): Promise<T> {
 // Mirrors op-sqlite 18.2.5: enhanceDB() in src/functions.ts over create_js_rows and
 // create_raw_result in cpp/OPUtils.cpp; async calls settle on a later macrotask.
 export function fakeOpSqlite() {
-  const sqlite = new DatabaseSync(':memory:');
+  const sqlite = new DatabaseSync(':memory:', {
+    // op-sqlite's SQLite build sets no SQLITE_DEFAULT_FOREIGN_KEYS, so they open off.
+    enableForeignKeyConstraints: false,
+  });
   const lastWrite = sqlite.prepare(
     'SELECT changes() AS changes, last_insert_rowid() AS rowid',
   );

@@ -76,16 +76,24 @@ function arraysToBlobs({
   return out as unknown as SongPreset;
 }
 
+type SavedItem = Omit<SetlistItem, 'stemSetId'> & Partial<SetlistItem>;
+
+type SavedTables = Omit<Tables, 'items'> & { items: SavedItem[] };
+
 function load(storage: TextStorage | undefined, key: string): Tables {
   const saved = storage?.getItem(key);
   if (saved === null || saved === undefined) {
     return { setlists: [], items: [], presets: [], nextId: 1 };
   }
-  const parsed = JSON.parse(saved) as Tables;
+  const parsed = JSON.parse(saved) as SavedTables;
   const presets = (parsed.presets as unknown as Record<string, unknown>[]).map(
     arraysToBlobs,
   );
-  return { ...parsed, presets };
+  const items = parsed.items.map((item) => ({
+    ...item,
+    stemSetId: item.stemSetId ?? null,
+  }));
+  return { ...parsed, items, presets };
 }
 
 export function createMemoryStore(
@@ -155,15 +163,10 @@ function moveItem(
 function addItem(
   store: MemoryStore,
   setlistId: number,
-  presetId: number,
+  entry: Pick<SetlistItem, 'songPresetId' | 'stemSetId'>,
   position: number | undefined,
 ): SetlistItem {
-  const item = {
-    id: store.nextId(),
-    setlistId,
-    songPresetId: presetId,
-    position: 0,
-  };
+  const item = { id: store.nextId(), setlistId, ...entry, position: 0 };
   store.tables.items.push(item);
   place(store, item, setlistId, position);
   return { ...item };
@@ -187,6 +190,7 @@ function duplicateSetlist(store: MemoryStore, setlistId: number, name: string) {
       id: store.nextId(),
       setlistId: copy.id,
       songPresetId: item.songPresetId,
+      stemSetId: item.stemSetId,
       position,
     });
   });
@@ -233,7 +237,17 @@ function itemWrites(store: MemoryStore) {
     add: mutating(
       store,
       (setlistId: number, presetId: number, position?: number) =>
-        addItem(store, setlistId, presetId, position),
+        addItem(
+          store,
+          setlistId,
+          { songPresetId: presetId, stemSetId: null },
+          position,
+        ),
+    ),
+    addStemSet: mutating(
+      store,
+      (setlistId: number, stemSetId: number, position?: number) =>
+        addItem(store, setlistId, { songPresetId: null, stemSetId }, position),
     ),
     moveTo: mutating(
       store,

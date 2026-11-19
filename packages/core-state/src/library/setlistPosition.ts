@@ -1,4 +1,9 @@
-import type { SetlistEntry, SetlistSummary } from './snapshot.ts';
+import {
+  isPresetEntry,
+  type PresetSetlistEntry,
+  type SetlistEntry,
+  type SetlistSummary,
+} from './snapshot.ts';
 
 export const SONG_STEP = { previous: -1, next: 1 } as const;
 
@@ -10,12 +15,13 @@ export function activeSetlistOf(
   return setlists.find((summary) => summary.setlist.active);
 }
 
-export function adjacentEntry(
+export function adjacentPresetEntry(
   entries: readonly SetlistEntry[],
   loadedItemId: number | null,
   step: SongStep,
-): SetlistEntry | undefined {
-  const index = entries.findIndex((entry) => entry.item.id === loadedItemId);
-  if (index < 0) return step === SONG_STEP.next ? entries[0] : undefined;
-  return entries[index + step];
+): PresetSetlistEntry | undefined {
+  const playable = entries.filter(isPresetEntry);
+  const index = playable.findIndex((entry) => entry.item.id === loadedItemId);
+  if (index < 0) return step === SONG_STEP.next ? playable[0] : undefined;
+  return playable[index + step];
 }
