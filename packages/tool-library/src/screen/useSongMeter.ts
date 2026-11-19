@@ -11,18 +11,27 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   barOneMovedText,
   DETECTED_RESTORED,
+  METER_SAVE_FAILED,
   meterSetText,
+  TRY_AGAIN_LABEL,
   UNDO_LABEL,
 } from '../logic/songMeterText.ts';
 
-interface Undo {
-  readonly message: string;
-  readonly previous: MeterOverride;
-}
+type Pending =
+  | {
+      readonly kind: 'undo';
+      readonly message: string;
+      readonly previous: MeterOverride;
+    }
+  | {
+      readonly kind: 'failed';
+      readonly next: MeterOverride;
+      readonly message: string | null;
+    };
 
 export interface SongMeter {
   readonly override: MeterOverride;
-  readonly undo: MeterSheetNotice | null;
+  readonly notice: MeterSheetNotice | null;
   readonly onPickMeter: (meter: number) => void;
   readonly onBarOneHere: () => void;
   readonly onReset: () => void;
@@ -34,15 +43,18 @@ export function useSongMeter(songId: number): SongMeter {
   const apply = useSongPlayer((s) => s.meterOverrideChanged);
   const beatAtPlayhead = useSongPlayer((s) => s.playheadBeatSeconds);
   const save = useSongLibrary((s) => s.saveSongMeterOverride);
-  const [undo, setUndo] = useState<Undo | null>(null);
+  const [pending, setPending] = useState<Pending | null>(null);
 
   const change = useCallback(
     async (next: MeterOverride, message: string | null) => {
       const previous = override;
       apply(songId, next);
-      const saved = await save(songId, next);
-      if (!saved) apply(songId, previous);
-      setUndo(saved && message !== null ? { message, previous } : null);
+      if (!(await save(songId, next))) {
+        apply(songId, previous);
+        setPending({ kind: 'failed', next, message });
+        return;
+      }
+      setPending(message === null ? null : { kind: 'undo', message, previous });
     },
     [override, apply, save, songId],
   );
@@ -73,26 +85,26 @@ export function useSongMeter(songId: number): SongMeter {
     void change(NO_METER_OVERRIDE, DETECTED_RESTORED);
   }, [change]);
 
-  const onUndo = useCallback(() => {
-    if (undo !== null) void change(undo.previous, null);
-  }, [undo, change]);
+  const onAction = useCallback(() => {
+    if (pending === null) return;
+    if (pending.kind === 'undo') void change(pending.previous, null);
+    else void change(pending.next, pending.message);
+  }, [pending, change]);
 
-  const dismissUndo = useCallback(() => {
-    setUndo(null);
+  const dismiss = useCallback(() => {
+    setPending(null);
   }, []);
 
-  const notice = useMemo(
-    () =>
-      undo === null
-        ? null
-        : {
-            message: undo.message,
-            actionLabel: UNDO_LABEL,
-            onAction: onUndo,
-            onTimeout: dismissUndo,
-          },
-    [undo, onUndo, dismissUndo],
-  );
+  const notice = useMemo(() => {
+    if (pending === null) return null;
+    const undo = pending.kind === 'undo';
+    return {
+      message: undo ? pending.message : METER_SAVE_FAILED,
+      actionLabel: undo ? UNDO_LABEL : TRY_AGAIN_LABEL,
+      onAction,
+      onTimeout: dismiss,
+    };
+  }, [pending, onAction, dismiss]);
 
-  return { override, undo: notice, onPickMeter, onBarOneHere, onReset };
+  return { override, notice, onPickMeter, onBarOneHere, onReset };
 }

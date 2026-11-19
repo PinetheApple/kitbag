@@ -63,12 +63,12 @@ export function SongMeter({
   const meter = useSongMeter(songId);
   const detected = useSongPlayer((s) => s.detected);
   const state = meterGridState(useSongPlayer(lockBadgeOf));
-  const { undo } = meter;
+  const { notice } = meter;
   return (
     <>
       <View style={styles.noteAnchor}>
-        {!visible && undo !== null ? (
-          <Snackbar {...undo} bottom={snackbar.aboveDock} />
+        {!visible && notice !== null ? (
+          <Snackbar {...notice} bottom={snackbar.aboveDock} />
         ) : (
           <ReanalysedNotice onUseDetected={meter.onReset} />
         )}
@@ -82,7 +82,7 @@ export function SongMeter({
         playheadSeconds={playheadSeconds}
         state={state}
         failedReason={METER_FAILED}
-        notice={undo}
+        notice={notice}
         bottomInset={bottomInset}
         onPickMeter={meter.onPickMeter}
         onBarOneHere={meter.onBarOneHere}

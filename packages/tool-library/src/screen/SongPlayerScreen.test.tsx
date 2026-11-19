@@ -443,6 +443,31 @@ describe('the player menu', () => {
     });
   });
 
+  it('says a meter that could not be saved, once the sheet closes', async () => {
+    commands.save.mockResolvedValueOnce(false);
+    const tree = openMenu();
+    act(() => {
+      (meterRow(tree).props.onPress as () => void)();
+    });
+    await act(async () => {
+      (meterSheet(tree).props.onPickMeter as (meter: number) => void)(3);
+      await Promise.resolve();
+    });
+    expect(meterSheet(tree).props.notice).toMatchObject({
+      message: 'Could not save the meter.',
+      actionLabel: 'Try again',
+    });
+    act(() => {
+      (meterSheet(tree).props.onClose as () => void)();
+    });
+    const shown = tree.root.findAll(
+      (node) =>
+        String(node.type) === 'Snackbar' &&
+        node.props.message === 'Could not save the meter.',
+    );
+    expect(shown).toHaveLength(1);
+  });
+
   it.each([
     ['analysing', 'analyzing', 'Available once the beat is found'],
     ['failed', 'failed', METER_FAILED],

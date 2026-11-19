@@ -92,7 +92,7 @@ describe('the song meter', () => {
     const next = { meterBeatsPerBar: 3, barOneSeconds: null };
     expect(apply).toHaveBeenCalledExactlyOnceWith(SONG, next);
     expect(save).toHaveBeenCalledExactlyOnceWith(SONG, next);
-    expect(current().undo?.message).toBe(
+    expect(current().notice?.message).toBe(
       'Meter set to 3/4. Saved for this song.',
     );
   });
@@ -114,7 +114,7 @@ describe('the song meter', () => {
       meterBeatsPerBar: null,
       barOneSeconds: 105.3,
     });
-    expect(current().undo?.message).toBe(
+    expect(current().notice?.message).toBe(
       'Bar 1 moved to 1:45.3. Saved for this song.',
     );
   });
@@ -136,11 +136,11 @@ describe('the song meter', () => {
       m.onPickMeter(3);
     });
     await tap((m) => {
-      m.undo?.onAction();
+      m.notice?.onAction();
     });
     expect(save).toHaveBeenLastCalledWith(SONG, before);
     expect(player.override).toEqual(before);
-    expect(current().undo).toBeNull();
+    expect(current().notice).toBeNull();
   });
 
   it('back to detected clears meter and bar 1 together', async () => {
@@ -152,7 +152,7 @@ describe('the song meter', () => {
     expect(save).toHaveBeenCalledExactlyOnceWith(SONG, NONE);
   });
 
-  it('puts the bars back when the save fails, offering no undo', async () => {
+  it('puts the bars back when the save fails and says so', async () => {
     player.saves = false;
     await mounted();
     await tap((m) => {
@@ -160,6 +160,27 @@ describe('the song meter', () => {
     });
     expect(player.override).toEqual(NONE);
     expect(apply).toHaveBeenLastCalledWith(SONG, NONE);
-    expect(current().undo).toBeNull();
+    expect(current().notice).toMatchObject({
+      message: 'Could not save the meter.',
+      actionLabel: 'Try again',
+    });
+  });
+
+  it('tries the failed save again from the notice', async () => {
+    player.saves = false;
+    await mounted();
+    await tap((m) => {
+      m.onPickMeter(3);
+    });
+    player.saves = true;
+    await tap((m) => {
+      m.notice?.onAction();
+    });
+    const next = { meterBeatsPerBar: 3, barOneSeconds: null };
+    expect(save).toHaveBeenLastCalledWith(SONG, next);
+    expect(player.override).toEqual(next);
+    expect(current().notice?.message).toBe(
+      'Meter set to 3/4. Saved for this song.',
+    );
   });
 });
