@@ -125,7 +125,11 @@ describe('migrate', () => {
       expect(() => {
         migrate(driver);
       }).toThrow(
-        expect.objectContaining({ name: 'UnsupportedSchemaVersion', version }),
+        expect.objectContaining({
+          name: 'DatabaseOpenError',
+          kind: 'legacy-version',
+          fromVersion: version,
+        }),
       );
       expect(exec).not.toHaveBeenCalled();
       expect(dump(db)).toEqual(before);

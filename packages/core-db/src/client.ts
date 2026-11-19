@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/op-sqlite';
 import { createBackupService } from './backup';
 import type { ClickSoundFiles } from './click-sound-files';
 import { createClickSoundRepository } from './click-sound-repository';
+import { DatabaseOpenError } from './database-open-error';
 import * as schema from './schema';
 import { migrate, type MigrationDriver } from './migrate';
 import { openConnection } from './openConnection';
@@ -44,20 +45,26 @@ export function openDatabase(
   clickSoundFiles: ClickSoundFiles,
   name: string = DATABASE_NAME,
 ) {
-  return connectDatabase(openConnection(name), clickSoundFiles);
+  return connectDatabase(openNativeConnection(name), clickSoundFiles);
 }
 
-export class ForeignKeysOff extends Error {
-  override readonly name = 'ForeignKeysOff';
-
-  constructor() {
-    super('SQLite foreign keys are off on the app connection');
+function openNativeConnection(name: string): Connection {
+  try {
+    return openConnection(name);
+  } catch (error) {
+    throw DatabaseOpenError.classify('open', error);
   }
 }
 
 function requireForeignKeys(connection: Connection): void {
-  const [row] = connection.executeSync('PRAGMA foreign_keys').rows;
-  if (row?.foreign_keys !== 1) throw new ForeignKeysOff();
+  let enabled: unknown;
+  try {
+    enabled = connection.executeSync('PRAGMA foreign_keys').rows[0]
+      ?.foreign_keys;
+  } catch (error) {
+    throw DatabaseOpenError.classify('foreign-keys', error);
+  }
+  if (enabled !== 1) throw new DatabaseOpenError('foreign-keys');
 }
 
 export function connectDatabase(

@@ -17,7 +17,7 @@ vi.mock('@op-engineering/op-sqlite', async () => {
   };
 });
 
-import { connectDatabase, ForeignKeysOff, openDatabase } from './client';
+import { connectDatabase, openDatabase } from './client';
 import { memoryClickSoundFiles } from './click-sound-files.test-helper';
 import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 
@@ -50,7 +50,12 @@ describe('foreign keys on the app connection', () => {
     };
     expect(() =>
       connectDatabase(ignoringForeignKeys, memoryClickSoundFiles().files),
-    ).toThrow(ForeignKeysOff);
+    ).toThrow(
+      expect.objectContaining({
+        name: 'DatabaseOpenError',
+        kind: 'foreign-keys',
+      }),
+    );
     expect(close).toHaveBeenCalledOnce();
   });
 
