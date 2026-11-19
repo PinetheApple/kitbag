@@ -1,0 +1,31 @@
+appId: com.kitbag.app
+name: '#454: a click grouping and rate set in the Player sheet survive a force-stop'
+tags:
+  - issue-454
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- runFlow:
+    file: ../../subflows/import-stem-song.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS}
+- runFlow:
+    file: ../../subflows/open-stem-player-menu.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS}
+- assertVisible: 'Click grouping, Off'
+- assertVisible: 'Click rate, ×1'
+- tapOn: 'Click grouping, Off'
+- tapOn: '2\+2'
+- tapOn: '×2'
+- tapOn: 'Done'
+- tapOn: 'Player menu'
+- assertVisible: 'Click grouping, 2\+2'
+- assertVisible: 'Click rate, ×2'
+- runFlow: ../../subflows/force-stop-relaunch.yaml
+- tapOn: 'Stem songs, .*'
+- runFlow:
+    file: ../../subflows/open-stem-player-menu.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS}
+- assertVisible: 'Click grouping, 2\+2'
+- assertVisible: 'Click rate, ×2'

@@ -15,11 +15,14 @@ readonly EXIT_MISSING_TOOL=3
 readonly EXIT_NO_DEVICE=4
 readonly EXIT_INSTALL_FAILED=5
 readonly EXIT_RUNNER_FAILED=6
+readonly EXIT_NOT_INDEXED=7
 
 readonly FAKE_BIN="$SCRATCH/bin"
 readonly FAKE_MAESTRO="$FAKE_BIN/maestro"
 export ADB_LOG="$SCRATCH/adb.log"
 export MAESTRO_LOG="$SCRATCH/maestro.log"
+export INDEX_POLLS="$SCRATCH/index-polls"
+export SLEEP_LOG="$SCRATCH/sleep.log"
 mkdir -p "$FAKE_BIN"
 
 cat > "$FAKE_BIN/adb" <<'STUB'
@@ -35,6 +38,17 @@ case $1 in
     [[ $2 == settings && $3 == get ]] && echo "${FAKE_ANIMATION:-1.0}"
     [[ $2 == dumpsys && -n ${FAKE_ANR:-} && -e $FAKE_ANR ]] && echo "Window{1 u0 Application Not Responding: launcher}"
     [[ $2 == am && $3 == broadcast && -n ${FAKE_ANR:-} ]] && rm -f "$FAKE_ANR"
+    if [[ $2 == "content query"* ]]; then
+      polls=$(($(cat "$INDEX_POLLS" 2>/dev/null || echo 0) + 1))
+      echo "$polls" > "$INDEX_POLLS"
+      name=${2##*_display_name=\'}
+      name=${name%%\'*}
+      if [[ ${FAKE_INDEXED_AFTER:-0} != never ]] && ((polls > ${FAKE_INDEXED_AFTER:-0})); then
+        echo "Row: 0 _display_name=$name"
+      else
+        echo "No result found."
+      fi
+    fi
     ;;
   exec-out) printf 'PNG' ;;
   logcat) [[ ${2:-} == -d ]] && echo "11-19 E/kitbag: logged" ;;
@@ -73,6 +87,10 @@ XML
     exit 1 ;;
 esac
 STUB
+cat > "$FAKE_BIN/sleep" <<'STUB'
+#!/usr/bin/env bash
+echo "$1" >> "$SLEEP_LOG"
+STUB
 chmod +x "$FAKE_BIN"/*
 
 readonly APK="$SCRATCH/app.apk"
@@ -85,7 +103,7 @@ expect() {
   local name=$1 want_exit=$2 want_text=$3
   shift 3
   local out_dir="$SCRATCH/out-$((PASS + FAIL))" script="$PWD/$SCRIPT" output status
-  rm -f "$ADB_LOG" "$MAESTRO_LOG"
+  rm -f "$ADB_LOG" "$MAESTRO_LOG" "$INDEX_POLLS" "$SLEEP_LOG"
   output=$(cd "${RUN_FROM:-.}" && PATH="$FAKE_BIN:$PATH" MAESTRO="${MAESTRO_UNDER_TEST:-$FAKE_MAESTRO}" \
     XDG_CACHE_HOME="$out_dir" "$script" "$@" 2>&1)
   status=$?
@@ -119,6 +137,9 @@ flow_count() { find e2e/flows -name '*.yaml' | wc -l; }
 maestro_flows() { grep -c '^e2e/flows/.*\.yaml$' "$MAESTRO_LOG"; }
 adb_called() { grep -q -- "$1" "$ADB_LOG"; }
 maestro_got() { grep -qx -- "$1" "$MAESTRO_LOG"; }
+maestro_ran() { [[ -e $MAESTRO_LOG ]]; }
+maestro_skipped() { [[ ! -e $MAESTRO_LOG ]]; }
+sleeps_were() { [[ $(cat "$SLEEP_LOG" 2>/dev/null | wc -l) == "$1" ]]; }
 
 echo "e2e.sh"
 
@@ -143,6 +164,13 @@ expect "every flow passes" "$EXIT_OK" "all flows passed" "$APK"
 check "  ... leaves permissions to the flows' launchApp" bash -c '! grep -q "pm grant" "$ADB_LOG"'
 check "  ... pushes the fixture song" adb_called "push .*e2eclick.wav /sdcard/Download/"
 check "  ... and the fixture click sound" adb_called "push .*e2ehit.wav /sdcard/Download/"
+check "  ... and the stem song with a beat grid" adb_called "push .*e2estems.zip /sdcard/Download/"
+check "  ... and the one without" adb_called "push .*e2enogrid.zip /sdcard/Download/"
+check "  ... whose bundles differ only in beats.json" python3 -I -c '
+import sys, zipfile
+grid, bare = (set(zipfile.ZipFile(p).namelist()) for p in sys.argv[1:])
+sys.exit(grid - bare != {"beats.json"} or bare - grid != set())
+' "$(find "$LAST_OUT_DIR" -name e2estems.zip)" "$(find "$LAST_OUT_DIR" -name e2enogrid.zip)"
 check "  ... runs every flow, no subflows" test "$(maestro_flows)" -eq "$(flow_count)"
 check "  ... on the emulator" maestro_got "emulator-5554"
 check "  ... with a JUnit report" maestro_got "junit"
@@ -150,6 +178,8 @@ check "  ... with analytics and update checks off and a capped heap" \
   maestro_got "analytics=1 update=true opts=-Xmx1g"
 check "  ... and the fixture title passed in" maestro_got "FIXTURE_SONG=e2eclick"
 check "  ... and the fixture sound's name" maestro_got "FIXTURE_SOUND=e2ehit"
+check "  ... and the gridded stem song's title" maestro_got "FIXTURE_STEMS=e2estems"
+check "  ... and the gridless one's" maestro_got "FIXTURE_STEMS_NO_GRID=e2enogrid"
 check "  ... pushes the fixture backup" adb_called "push e2e/fixtures/e2estemsongs.json /sdcard/Download/"
 check "  ... and its name passed in" maestro_got "FIXTURE_BACKUP=e2estemsongs"
 
@@ -189,6 +219,18 @@ check "  ... and restores the animation scales" \
   bash -c '[[ $(grep "settings put global animator_duration_scale" "$ADB_LOG" | tail -1) == *"scale 1.0" ]]'
 check "  ... and saves logcat" bash -c "[[ -s \$(find '$LAST_OUT_DIR' -name logcat.txt) ]]"
 check "  ... and does not list the flow that passed" test "${LAST_OUTPUT/a flow that passed/}" == "$LAST_OUTPUT"
+
+FAKE_INDEXED_AFTER=0 expect "fixtures indexed at once" "$EXIT_OK" "all flows passed" "$APK" metronome
+check "  ... are each scanned" adb_called "MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/e2estems.zip"
+check "  ... and looked up" adb_called "content query .*_display_name='e2enogrid.zip'"
+check "  ... the fixture backup too" adb_called "content query .*_display_name='e2estemsongs.json'"
+check "  ... with no wait" sleeps_were 0
+FAKE_INDEXED_AFTER=3 expect "fixtures indexed after 3 polls" "$EXIT_OK" "all flows passed" "$APK" metronome
+check "  ... wait 3 polls, then run the flows" sleeps_were 3
+check "  ... and Maestro runs" maestro_ran
+FAKE_INDEXED_AFTER=never expect "a fixture never indexed" "$EXIT_NOT_INDEXED" \
+  "e2eclick.wav was pushed but MediaProvider did not index it within 60 s" "$APK" metronome
+check "  ... runs no flow" maestro_skipped
 
 FAKE_RESULT=crash expect "Maestro dies without a report" "$EXIT_RUNNER_FAILED" "without a report" "$APK"
 readonly STALE_OUT="$SCRATCH/stale"

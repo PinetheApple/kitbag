@@ -1,0 +1,7 @@
+appId: com.kitbag.app
+---
+- tapOn: '${STEM_SONG}, .*'
+- extendedWaitUntil:
+    visible: 'Player menu'
+    timeout: 20000
+- tapOn: 'Player menu'

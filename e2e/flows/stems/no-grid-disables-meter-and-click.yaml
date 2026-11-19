@@ -1,0 +1,23 @@
+appId: com.kitbag.app
+name: '#454: a stem song without a beat grid shows Meter and click rows disabled with their reason'
+tags:
+  - issue-454
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- runFlow:
+    file: ../../subflows/import-stem-song.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS_NO_GRID}
+- runFlow:
+    file: ../../subflows/open-stem-player-menu.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS_NO_GRID}
+- assertVisible:
+    text: 'Meter, Needs a beat grid\. This song came without one\.'
+    enabled: false
+- assertVisible:
+    text: 'Click grouping, Needs a beat grid\.'
+    enabled: false
+- assertVisible:
+    text: 'Click rate, Needs a beat grid\.'
+    enabled: false
