@@ -5,7 +5,6 @@ const DRAG = { drag: true };
 const entered = vi.hoisted(() => ({
   settle: undefined as ((finished: boolean) => void) | undefined,
 }));
-const transition = (name: string) => ({ reduceMotion: () => name });
 const settlingTransition = (name: string) => ({
   reduceMotion: () => ({
     withCallback: (settle: (finished: boolean) => void) => {
@@ -44,7 +43,6 @@ vi.mock('react-native', () => ({
 }));
 vi.mock('react-native-reanimated', () => ({
   default: { View: 'Animated.View' },
-  FadeIn: transition('scrimIn'),
   SlideInDown: settlingTransition('sheetIn'),
   useAnimatedStyle: () => DRAG,
   useSharedValue: (value: number) => ({ value }),

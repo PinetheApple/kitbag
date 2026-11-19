@@ -5,29 +5,29 @@ import { removeSheet, upsertSheet } from './sheetSlots.ts';
 describe('sheet slots', () => {
   it('stacks sheets in the order they opened', () => {
     const slots = upsertSheet(
-      upsertSheet([], 'a', 'A', false),
+      upsertSheet([], 'a', 'A', 'open'),
       'b',
       'B',
-      false,
+      'open',
     );
     expect(slots.map((slot) => slot.id)).toEqual(['a', 'b']);
   });
 
   it('updates an open sheet in place', () => {
     const slots = upsertSheet(
-      upsertSheet(upsertSheet([], 'a', 'A', false), 'b', 'B', false),
+      upsertSheet(upsertSheet([], 'a', 'A', 'open'), 'b', 'B', 'open'),
       'a',
       'A2',
-      false,
+      'open',
     );
     expect(slots).toEqual([
-      { id: 'a', node: 'A2', leaving: false },
-      { id: 'b', node: 'B', leaving: false },
+      { id: 'a', node: 'A2', state: 'open' },
+      { id: 'b', node: 'B', state: 'open' },
     ]);
   });
 
   it('removes a closed sheet and leaves the list alone when it was not open', () => {
-    const slots = upsertSheet([], 'a', 'A', false);
+    const slots = upsertSheet([], 'a', 'A', 'open');
     expect(removeSheet(slots, 'a')).toEqual([]);
     expect(removeSheet(slots, 'z')).toBe(slots);
   });

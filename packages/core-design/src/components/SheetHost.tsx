@@ -9,10 +9,15 @@ import {
 import { StyleSheet, View } from 'react-native';
 
 import { readerHiding } from '../readerHiding.ts';
-import { removeSheet, upsertSheet, type SheetSlot } from '../sheetSlots.ts';
+import {
+  removeSheet,
+  upsertSheet,
+  type SheetSlot,
+  type SheetSlotState,
+} from '../sheetSlots.ts';
 
 interface SheetPortal {
-  readonly show: (id: string, node: ReactNode, leaving: boolean) => void;
+  readonly show: (id: string, node: ReactNode, state: SheetSlotState) => void;
   readonly hide: (id: string) => void;
   readonly topInset: number;
 }
@@ -30,9 +35,12 @@ const styles = StyleSheet.create({ app: { flex: 1 } });
 // its own Android window, which sizes itself wrong for the keyboard (#142).
 export function SheetHost({ topInset, children }: SheetHostProps) {
   const [slots, setSlots] = useState<readonly SheetSlot[]>([]);
-  const show = useCallback((id: string, node: ReactNode, leaving: boolean) => {
-    setSlots((current) => upsertSheet(current, id, node, leaving));
-  }, []);
+  const show = useCallback(
+    (id: string, node: ReactNode, state: SheetSlotState) => {
+      setSlots((current) => upsertSheet(current, id, node, state));
+    },
+    [],
+  );
   const hide = useCallback((id: string) => {
     setSlots((current) => removeSheet(current, id));
   }, []);
@@ -40,7 +48,7 @@ export function SheetHost({ topInset, children }: SheetHostProps) {
     () => ({ show, hide, topInset }),
     [show, hide, topInset],
   );
-  const top = slots.findLastIndex((slot) => !slot.leaving);
+  const top = slots.findLastIndex((slot) => slot.state === 'open');
   return (
     <SheetPortalContext.Provider value={portal}>
       <View
@@ -55,7 +63,7 @@ export function SheetHost({ topInset, children }: SheetHostProps) {
           key={slot.id}
           style={StyleSheet.absoluteFill}
           collapsable={false}
-          pointerEvents={slot.leaving ? 'none' : 'auto'}
+          pointerEvents={slot.state === 'leaving' ? 'none' : 'auto'}
           {...readerHiding(index !== top)}
         >
           {slot.node}

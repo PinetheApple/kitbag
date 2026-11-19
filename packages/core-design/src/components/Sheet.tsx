@@ -1,30 +1,20 @@
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  type ReactNode,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import {
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
   type AccessibilityActionEvent,
   type LayoutChangeEvent,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, {
-  FadeIn,
   SlideInDown,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -44,6 +34,7 @@ import { readerHiding } from '../readerHiding.ts';
 import { onHardwareBack } from './hardwareBack';
 import { InlineIcon } from './IconGlyph.tsx';
 import { useSheetPortal } from './SheetHost.tsx';
+import { useSheetExit } from './useSheetExit.ts';
 
 // A scroll view drops every touch outside its frame, so the frame reaches this
 // far into the sheet's padding. The right side stays put: the indicator is there.
@@ -224,20 +215,17 @@ export function Sheet({
     [onDismiss],
   );
   // Focus sent at mount, mid-slide, did not land on the title under TalkBack.
-  const transitions = useMemo(
-    () => ({
-      scrimIn: FadeIn.reduceMotion(motion),
-      sheetIn: SlideInDown.reduceMotion(motion).withCallback((finished) => {
+  const slideIn = useMemo(
+    () =>
+      SlideInDown.reduceMotion(motion).withCallback((finished) => {
         'worklet';
         if (finished) scheduleOnRN(focusTitle);
       }),
-    }),
     [motion, focusTitle],
   );
   const dragY = useSharedValue(0);
   const sheetHeight = useSharedValue(0);
-  const scrimOpacity = useSharedValue(1);
-  const { height: windowHeight } = useWindowDimensions();
+  const scrimOpacity = useSharedValue(0);
 
   const handleLayout = useCallback(
     (event: LayoutChangeEvent) => {
@@ -276,39 +264,16 @@ export function Sheet({
   }));
   const scrimStyle = useAnimatedStyle(() => ({ opacity: scrimOpacity.value }));
 
-  const { show, hide, topInset } = useSheetPortal();
+  const { topInset } = useSheetPortal();
   const slotStyle = useMemo(
     () => [styles.sheetSlot, { marginTop: topInset }],
     [styles.sheetSlot, topInset],
   );
-  const id = useId();
-  const present = useRef(false);
-  const visibleNow = useRef(visible);
-  const finishExit = useCallback(() => {
-    if (visibleNow.current) return;
-    present.current = false;
-    hide(id);
-  }, [hide, id]);
 
-  // A layout `exiting` animation leaves a zombie view that a same-commit insert
-  // overflows (reanimated#7493, RN#57017), so the slot leaves only after this.
   useEffect(() => {
-    visibleNow.current = visible;
-    if (visible) {
-      present.current = true;
-      dragY.value = 0;
-      scrimOpacity.value = 1;
-      onShow?.();
-      return onHardwareBack(onDismiss);
-    }
-    if (!present.current) return undefined;
-    const exit = { reduceMotion: motion };
-    scrimOpacity.value = withTiming(0, exit);
-    dragY.value = withTiming(windowHeight, exit, (finished) => {
-      'worklet';
-      if (finished) scheduleOnRN(finishExit);
-    });
-    return undefined;
+    if (!visible) return undefined;
+    onShow?.();
+    return onHardwareBack(onDismiss);
     // onShow and onDismiss run per opening, not per new callback identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
@@ -316,23 +281,18 @@ export function Sheet({
   const content = (
     <View style={styles.frame} onAccessibilityEscape={onDismiss}>
       <Animated.View
-        entering={transitions.scrimIn}
-        style={StyleSheet.absoluteFill}
+        style={[StyleSheet.absoluteFill, dim && styles.scrim, scrimStyle]}
       >
-        <Animated.View
-          style={[StyleSheet.absoluteFill, dim && styles.scrim, scrimStyle]}
-        >
-          {/* Over a stacked sheet, TalkBack seated focus on the backdrop, the layer's first node. */}
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            accessibilityLabel={dismissLabel}
-            {...BACKDROP_READER_HIDING}
-            onPress={onDismiss}
-          />
-        </Animated.View>
+        {/* Over a stacked sheet, TalkBack seated focus on the backdrop, the layer's first node. */}
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          accessibilityLabel={dismissLabel}
+          {...BACKDROP_READER_HIDING}
+          onPress={onDismiss}
+        />
       </Animated.View>
       {/* Layout animations overwrite transforms, so the drag transform lives on the inner view. */}
-      <Animated.View entering={transitions.sheetIn} style={slotStyle}>
+      <Animated.View entering={slideIn} style={slotStyle}>
         {notice === undefined ? null : (
           <Animated.View style={noticeStyle}>{notice}</Animated.View>
         )}
@@ -381,15 +341,14 @@ export function Sheet({
     </View>
   );
 
-  useEffect(() => {
-    if (present.current) show(id, content, !visible);
+  useSheetExit({
+    visible,
+    content,
+    motion,
+    dragY,
+    scrimOpacity,
+    onReturn: focusTitle,
   });
-  useEffect(
-    () => () => {
-      hide(id);
-    },
-    [hide, id],
-  );
 
   return null;
 }

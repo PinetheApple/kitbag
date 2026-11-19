@@ -13,20 +13,27 @@ interface Timing {
   readonly done?: (finished: boolean) => void;
 }
 
-const REDUCED = 'always';
-const FULL = 'never';
-
-const anim = vi.hoisted(() => ({
-  running: new Set<(finished: boolean) => void>(),
-  motion: 'never',
-}));
+const { anim, REDUCED, FULL } = vi.hoisted(() => {
+  const full = 'never';
+  return {
+    REDUCED: 'always',
+    FULL: full,
+    anim: {
+      running: new Set<(finished: boolean) => void>(),
+      exits: [] as ((finished: boolean) => void)[],
+      motion: full,
+    },
+  };
+});
 const focusReaderOn = vi.hoisted(() => vi.fn());
+const dismissKeyboard = vi.hoisted(() => vi.fn());
 
 vi.mock('react-native', () => ({
   Pressable: 'Pressable',
   ScrollView: 'ScrollView',
   Text: 'Text',
   View: 'View',
+  Keyboard: { dismiss: dismissKeyboard },
   StyleSheet: {
     create: <T,>(styles: T) => styles,
     absoluteFill: { fill: true },
@@ -75,7 +82,6 @@ vi.mock('react-native-reanimated', async () => {
   }
   return {
     default: { View: 'Animated.View' },
-    FadeIn: { reduceMotion: () => 'scrimIn' },
     SlideInDown: settling('sheetIn'),
     useAnimatedStyle: <T,>(style: () => T) => style(),
     useSharedValue,
@@ -85,11 +91,13 @@ vi.mock('react-native-reanimated', async () => {
       config: { reduceMotion: string },
       done?: (finished: boolean) => void,
     ) => {
-      if (config.reduceMotion === 'always' && done !== undefined)
+      if (done !== undefined) anim.exits.push(done);
+      if (config.reduceMotion !== REDUCED) return { to, done };
+      if (done !== undefined)
         queueMicrotask(() => {
           done(true);
         });
-      return config.reduceMotion === 'always' ? to : { to, done };
+      return to;
     },
   };
 });
@@ -133,14 +141,16 @@ const { SheetHost } = await import('./SheetHost.tsx');
 
 const ACTIONS = 'Actions';
 const DELETE = 'Delete';
+const SONG = 'Song';
 const noop = () => undefined;
 
 interface Open {
   readonly actions: boolean;
   readonly remove: boolean;
+  readonly detail?: string | null;
 }
 
-function Pair({ actions, remove }: Open) {
+function Pair({ actions, remove, detail = SONG }: Open) {
   return (
     <SheetHost topInset={0}>
       <Sheet
@@ -149,7 +159,7 @@ function Pair({ actions, remove }: Open) {
         dismissLabel="Close actions"
         onDismiss={noop}
       >
-        {null}
+        {detail === null ? null : h('Detail', { name: detail })}
       </Sheet>
       <Sheet
         visible={remove}
@@ -214,6 +224,8 @@ function finishExits() {
 
 beforeEach(() => {
   anim.running.clear();
+  anim.exits.length = 0;
+  dismissKeyboard.mockClear();
   anim.motion = FULL;
   focusReaderOn.mockClear();
 });
@@ -275,4 +287,53 @@ it('removes the sheet on the next tick under reduce motion', async () => {
     await Promise.resolve();
   });
   expect(titles(tree)).toEqual([]);
+});
+
+it('keeps showing what a sheet last held while it slides out', () => {
+  const tree = mount({ actions: true, remove: false });
+  rerender(tree, { actions: false, remove: false, detail: null });
+  const details = slotTitled(tree, ACTIONS).findAll(
+    (node) => node.type === ('Detail' as never),
+  );
+  expect(details.map((node): unknown => node.props.name)).toEqual([SONG]);
+});
+
+it('drops the keyboard once a sheet starts to leave', () => {
+  const tree = mount({ actions: true, remove: false });
+  expect(dismissKeyboard).not.toHaveBeenCalled();
+  rerender(tree, { actions: false, remove: false });
+  expect(dismissKeyboard).toHaveBeenCalledOnce();
+});
+
+it('moves reader focus back to the title of a sheet shown again mid-exit', () => {
+  const tree = mount({ actions: true, remove: false });
+  rerender(tree, { actions: false, remove: false });
+  rerender(tree, { actions: true, remove: false });
+  expect(focusReaderOn).toHaveBeenCalledExactlyOnceWith({ title: ACTIONS });
+});
+
+it('puts a sheet shown again mid-exit above one opened meanwhile', () => {
+  const tree = mount({ actions: true, remove: false });
+  rerender(tree, { actions: false, remove: true });
+  rerender(tree, { actions: true, remove: true });
+  expect(titles(tree)).toEqual([DELETE, ACTIONS]);
+  expect(slotTitled(tree, DELETE).props.importantForAccessibility).toBe(
+    'no-hide-descendants',
+  );
+  expect(slotTitled(tree, ACTIONS).props).toMatchObject({
+    pointerEvents: 'auto',
+    importantForAccessibility: 'auto',
+  });
+});
+
+it('keeps a sheet shown again when its exit reports finished late', () => {
+  const tree = mount({ actions: true, remove: false });
+  rerender(tree, { actions: false, remove: false });
+  const [settle] = anim.exits.slice(-1);
+  if (settle === undefined) throw new Error('no exit started');
+  rerender(tree, { actions: true, remove: false });
+  act(() => {
+    settle(true);
+  });
+  expect(titles(tree)).toEqual([ACTIONS]);
 });
