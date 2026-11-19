@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 
+import { parseLrc, plainLyricTexts } from './lrc';
 import type { Database } from './repository';
 import { stemSets } from './schema';
 
@@ -74,4 +75,34 @@ export async function retainedRetime(
     row.synced === synced &&
     (synced !== null || row.plain === (next?.plain ?? null));
   return sameSource ? parseRetimedLyrics(row.retimed) : null;
+}
+
+export interface LyricsSource {
+  readonly synced: string | null;
+  readonly plain: string | null;
+  readonly instrumental: boolean;
+}
+
+function bundledLines(lyrics: LyricsSource) {
+  if (lyrics.instrumental) return { count: 0, timed: false };
+  const timed = lyrics.synced === null ? 0 : parseLrc(lyrics.synced).length;
+  if (timed > 0) return { count: timed, timed: true };
+  const plain = lyrics.plain === null ? [] : plainLyricTexts(lyrics.plain);
+  return { count: plain.length, timed: false };
+}
+
+const inOrder = (times: LyricLineTimes) =>
+  times.every((time, i) => time >= (times[i - 1] ?? time));
+
+// Tapping plain lyrics can stop before the last line, so a prefix is a retime.
+export function retimeFits(
+  lyrics: LyricsSource | null,
+  times: LyricLineTimes,
+): boolean {
+  if (lyrics === null) return false;
+  const { count, timed } = bundledLines(lyrics);
+  const countFits = timed
+    ? times.length === count
+    : times.length > 0 && times.length <= count;
+  return countFits && inOrder(times);
 }

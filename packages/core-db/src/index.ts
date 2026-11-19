@@ -30,7 +30,13 @@ export type {
   StoredSection,
   StoredStem,
 } from './stem-bundle-repository';
-export type { LyricLineTimes } from './stem-lyrics';
+export { MS_PER_SECOND, SECONDS_PER_MINUTE, UNITY_GAIN } from './units';
+export { parseLrc, plainLyricTexts, type LyricLine } from './lrc';
+export {
+  retimeFits,
+  type LyricLineTimes,
+  type LyricsSource,
+} from './stem-lyrics';
 export type { StemSetIdentity } from './stem-set-match';
 export { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
 export { ANALYSIS_STATUS, type AnalysisStatus } from './analysis-status';
@@ -90,7 +96,6 @@ export type {
 export {
   CATEGORIES,
   DEFAULT_IMPORT_CATEGORIES,
-  MS_PER_SECOND,
   type Category,
   type Conflict,
   type ImportFailure,

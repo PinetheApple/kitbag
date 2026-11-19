@@ -118,6 +118,7 @@ describe('picking a file', () => {
       'countInSettings',
       'metronomeSettings',
       'clickSounds',
+      'stemSongs',
     ]);
     expect(state.plan.counts.setlists).toMatchObject({ incoming: 2, new: 2 });
   });
@@ -149,6 +150,7 @@ describe('reviewing', () => {
       'countInSettings',
       'metronomeSettings',
       'clickSounds',
+      'stemSongs',
     ]);
     await h.store.getState().toggleCategory('setlists');
     expect(review(h.state()).plan.categories).toEqual([
@@ -158,6 +160,7 @@ describe('reviewing', () => {
       'countInSettings',
       'metronomeSettings',
       'clickSounds',
+      'stemSongs',
     ]);
   });
 

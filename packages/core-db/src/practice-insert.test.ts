@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@op-engineering/op-sqlite', () => ({}));
 
-import { MS_PER_SECOND } from './backup-format';
+import { MS_PER_SECOND } from './units';
 import { connectDatabase } from './client';
 import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 import type { NewPracticeSession } from './practice-repository';

@@ -1,0 +1,32 @@
+{
+  "format": "kitbag-backup",
+  "version": 4,
+  "exportedAt": "2026-11-19T12:00:00.000Z",
+  "categories": ["stemSongs"],
+  "stemSongs": [
+    {
+      "source": "stemdeck",
+      "stemdeckJobId": "e2e-job-not-on-this-phone",
+      "uuid": null,
+      "label": "Echo",
+      "title": null,
+      "meterBeatsPerBar": 3,
+      "barOneSeconds": null,
+      "speed": 1,
+      "lyricsRetimed": null,
+      "clickGrouping": [],
+      "clickRate": "single",
+      "chosenTempoMode": null,
+      "stems": [
+        {
+          "role": "vocals",
+          "name": null,
+          "gain": 1,
+          "muted": false,
+          "soloed": false,
+          "pitch": 0
+        }
+      ]
+    }
+  ]
+}

@@ -13,6 +13,13 @@ data class TransportState(
   val subtitle: String?,
 )
 
+data class TransportChange(
+  val state: TransportState,
+  val practice: PracticeClock,
+  val cardNumber: Int,
+  val tempoSet: Boolean,
+)
+
 enum class TransportAction {
   TEMPO_DOWN,
   PLAY,

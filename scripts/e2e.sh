@@ -18,6 +18,7 @@ readonly FIXTURE_SOUND_SECONDS=1
 readonly FIXTURE_STEMS=e2estems
 readonly FIXTURE_STEMS_NO_GRID=e2enogrid
 readonly FIXTURE_STEMS_SECONDS=8
+readonly FIXTURE_BACKUP=e2estemsongs
 readonly DEVICE_DOWNLOADS=/sdcard/Download
 readonly DEFAULT_MAESTRO_HEAP=-Xmx1g
 readonly ANR_WINDOW='Application Not Responding'
@@ -215,16 +216,25 @@ if anr_window_open; then
 fi
 
 PUSHED=()
-push_fixture() {
-  local maker=$1 name=$2 fixture="$OUT/$2"
-  shift 2
-  python3 -I "e2e/$maker" "$fixture" "$@" &&
-    adb_s push "$fixture" "$DEVICE_DOWNLOADS/" >/dev/null || {
-    fail "could not make or push $fixture"
+push_file() {
+  local file=$1 name
+  name=$(basename "$file")
+  adb_s push "$file" "$DEVICE_DOWNLOADS/" >/dev/null || {
+    fail "could not push $file"
     exit "$EXIT_INSTALL_FAILED"
   }
   adb_s shell am broadcast -a "$MEDIA_SCAN_ACTION" -d "file://$DEVICE_DOWNLOADS/$name" >/dev/null
   PUSHED+=("$name")
+}
+
+push_fixture() {
+  local maker=$1 fixture="$OUT/$2"
+  shift 2
+  python3 -I "e2e/$maker" "$fixture" "$@" || {
+    fail "could not make $fixture"
+    exit "$EXIT_INSTALL_FAILED"
+  }
+  push_file "$fixture"
 }
 
 indexed() {
@@ -244,11 +254,12 @@ wait_indexed() {
   done
 }
 
-step "Pushing the fixture song, click sound and stem songs"
+step "Pushing the fixture song, click sound, stem songs and backup"
 push_fixture make_click_song.py "$FIXTURE_SONG.wav" "$FIXTURE_SECONDS"
 push_fixture make_click_song.py "$FIXTURE_SOUND.wav" "$FIXTURE_SOUND_SECONDS"
 push_fixture make_stem_bundle.py "$FIXTURE_STEMS.zip" "$FIXTURE_STEMS_SECONDS"
 push_fixture make_stem_bundle.py "$FIXTURE_STEMS_NO_GRID.zip" "$FIXTURE_STEMS_SECONDS" --no-grid
+push_file "e2e/fixtures/$FIXTURE_BACKUP.json"
 
 step "Waiting for MediaProvider to index the fixtures"
 for name in "${PUSHED[@]}"; do
@@ -271,6 +282,7 @@ MAESTRO_CLI_NO_ANALYTICS=1 \
   -e FIXTURE_SOUND="$FIXTURE_SOUND" \
   -e FIXTURE_STEMS="$FIXTURE_STEMS" \
   -e FIXTURE_STEMS_NO_GRID="$FIXTURE_STEMS_NO_GRID" \
+  -e FIXTURE_BACKUP="$FIXTURE_BACKUP" \
   "${FLOWS[@]}"
 maestro_status=$?
 

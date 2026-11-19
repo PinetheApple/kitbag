@@ -73,9 +73,29 @@ export function transportActive(
   return running || shown !== undefined;
 }
 
+// With no card of its own, as after a reload, the app has no tempo to prefer.
+export function cardStale(
+  shown: TransportShown | undefined,
+  event: TransportEvent,
+  cardNumber: number,
+): boolean {
+  return shown !== undefined && event.cardNumber !== cardNumber;
+}
+
+// A service on another card reports that card's tempo, so the app's tempo
+// stands unless the action itself set one.
+export function keepsAppTempo(event: TransportEvent, stale: boolean): boolean {
+  return event.rampRunning || (stale && !event.tempoSet);
+}
+
+export interface TempoChoice {
+  readonly keepTempo: boolean;
+}
+
 export function shownAfterNativeChange(
   shown: TransportShown | undefined,
   event: TransportEvent,
+  { keepTempo }: TempoChoice,
 ): TransportShown | undefined {
   if (shown === undefined || event.playback === 'stopped') return undefined;
   const followed = {
@@ -84,7 +104,7 @@ export function shownAfterNativeChange(
     practicePlayedMs: event.practicePlayedMs,
     practiceStretchStartedAt: event.practiceStretchStartedAt,
   };
-  return event.rampRunning
+  return keepTempo
     ? followed
     : { ...followed, bpm: event.bpm, rampRunning: false };
 }
@@ -92,14 +112,13 @@ export function shownAfterNativeChange(
 export function storePatchFor(
   event: TransportEvent,
   current: Pick<MetronomeConfig, 'bpm' | 'ramp'>,
+  { keepTempo }: TempoChoice,
 ): Pick<MetronomeConfig, 'running' | 'bpm' | 'ramp' | 'practice'> {
   const running = event.playback === 'playing';
   return {
     running,
-    bpm: event.rampRunning ? current.bpm : event.bpm,
-    ramp: event.rampRunning
-      ? current.ramp
-      : { ...current.ramp, enabled: false },
+    bpm: keepTempo ? current.bpm : event.bpm,
+    ramp: keepTempo ? current.ramp : { ...current.ramp, enabled: false },
     practice: {
       playedMs: event.practicePlayedMs,
       stretchStartedAt: running ? event.practiceStretchStartedAt : null,

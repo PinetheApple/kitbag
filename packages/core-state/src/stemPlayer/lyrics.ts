@@ -1,6 +1,12 @@
-import type { LyricLineTimes, StoredLyrics } from '@kitbag/core-db';
+import {
+  parseLrc,
+  plainLyricTexts,
+  retimeFits,
+  type LyricLine,
+  type LyricLineTimes,
+  type StoredLyrics,
+} from '@kitbag/core-db';
 
-import { parseLrc, plainLyricTexts, type LyricLine } from './lrc.ts';
 import { lastAtOrBefore, NOT_FOUND } from './search.ts';
 
 export const NO_LINE = NOT_FOUND;
@@ -36,10 +42,6 @@ export interface RetimeTake {
   readonly nextLine: number;
 }
 
-function inOrder(times: readonly number[]): boolean {
-  return times.every((time, i) => time >= (times[i - 1] ?? time));
-}
-
 export function hasRealTime(times: readonly number[]): boolean {
   return times.some((time) => time !== UNTIMED);
 }
@@ -56,13 +58,6 @@ function bundledLines(stored: StoredLyrics): LyricLine[] {
   return plain === null
     ? []
     : plainLyricTexts(plain).map((text) => ({ timeSec: UNTIMED, text }));
-}
-
-function fitsLines(times: LyricLineTimes, bundled: readonly number[]) {
-  const countFits = hasRealTime(bundled)
-    ? times.length === bundled.length
-    : times.length > 0 && times.length <= bundled.length;
-  return countFits && inOrder(times);
 }
 
 export function withTimes(
@@ -82,7 +77,7 @@ export function songLyrics(
   if (stored === null) return NO_LYRICS;
   const base = bundledLines(stored);
   const bundledTimes = base.map((line) => line.timeSec);
-  const usable = retimed !== null && fitsLines(retimed, bundledTimes);
+  const usable = retimed !== null && retimeFits(stored, retimed);
   return {
     lines: withTimes(base, usable ? retimed : bundledTimes),
     bundledTimes,

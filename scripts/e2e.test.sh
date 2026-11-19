@@ -180,6 +180,8 @@ check "  ... and the fixture title passed in" maestro_got "FIXTURE_SONG=e2eclick
 check "  ... and the fixture sound's name" maestro_got "FIXTURE_SOUND=e2ehit"
 check "  ... and the gridded stem song's title" maestro_got "FIXTURE_STEMS=e2estems"
 check "  ... and the gridless one's" maestro_got "FIXTURE_STEMS_NO_GRID=e2enogrid"
+check "  ... pushes the fixture backup" adb_called "push e2e/fixtures/e2estemsongs.json /sdcard/Download/"
+check "  ... and its name passed in" maestro_got "FIXTURE_BACKUP=e2estemsongs"
 
 check "  ... with every animation scale at 0 during the run" \
   bash -c 'for s in window_animation_scale transition_animation_scale animator_duration_scale; do grep -q "settings put global $s 0" "$ADB_LOG" || exit 1; done'
@@ -221,6 +223,7 @@ check "  ... and does not list the flow that passed" test "${LAST_OUTPUT/a flow 
 FAKE_INDEXED_AFTER=0 expect "fixtures indexed at once" "$EXIT_OK" "all flows passed" "$APK" metronome
 check "  ... are each scanned" adb_called "MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/e2estems.zip"
 check "  ... and looked up" adb_called "content query .*_display_name='e2enogrid.zip'"
+check "  ... the fixture backup too" adb_called "content query .*_display_name='e2estemsongs.json'"
 check "  ... with no wait" sleeps_were 0
 FAKE_INDEXED_AFTER=3 expect "fixtures indexed after 3 polls" "$EXIT_OK" "all flows passed" "$APK" metronome
 check "  ... wait 3 polls, then run the flows" sleeps_were 3

@@ -1,11 +1,16 @@
+import type { ClickRate } from './click-rate';
 import type { ClickSound } from './click-sound-repository';
 import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
 import type { MeterOverride } from './meter-override';
 import { STANDALONE_METRONOME_KEY } from './standalone-metronome-preference';
+import type { LyricLineTimes, LyricsSource } from './stem-lyrics';
+import type { BundleTempo } from './stem-tempo';
+import { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
+import type { TempoMode } from './tempo-mode';
+import { MS_PER_SECOND } from './units';
 
 export const BACKUP_FORMAT = 'kitbag-backup';
 export const BACKUP_VERSION = 4;
-export const MS_PER_SECOND = 1000;
 
 export const CATEGORIES = [
   'librarySongs',
@@ -16,6 +21,7 @@ export const CATEGORIES = [
   'countInSettings',
   'metronomeSettings',
   'clickSounds',
+  'stemSongs',
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
 
@@ -26,6 +32,7 @@ export const DEFAULT_IMPORT_CATEGORIES: readonly Category[] = [
   'countInSettings',
   'metronomeSettings',
   'clickSounds',
+  'stemSongs',
 ];
 
 export interface LibrarySongRecord extends Partial<MeterOverride> {
@@ -117,6 +124,29 @@ export interface ClickSoundRecord {
   wav: string;
 }
 
+export interface StemMixRecord {
+  role: string;
+  name: string | null;
+  gain: number;
+  muted: boolean;
+  soloed: boolean;
+  pitch: number;
+}
+
+export interface StemSongRecord extends MeterOverride {
+  source: StemSetSource;
+  stemdeckJobId: string | null;
+  uuid: string | null;
+  label: string;
+  title: string | null;
+  speed: number;
+  lyricsRetimed: LyricLineTimes | null;
+  clickGrouping: readonly number[];
+  clickRate: ClickRate;
+  chosenTempoMode: TempoMode | null;
+  stems: StemMixRecord[];
+}
+
 export interface CategoryRecords {
   librarySongs: LibrarySongRecord[];
   songPresets: SongPresetRecord[];
@@ -126,12 +156,22 @@ export interface CategoryRecords {
   countInSettings: PreferenceRecord[];
   metronomeSettings: PreferenceRecord[];
   clickSounds: ClickSoundRecord[];
+  stemSongs: StemSongRecord[];
 }
 
 export type BackupRecord = CategoryRecords[Category][number];
 
-export type LocalRecords = Omit<CategoryRecords, 'clickSounds'> & {
+export type LocalStemSong = StemSongRecord & {
+  lyrics: LyricsSource | null;
+  tempo: BundleTempo | null;
+};
+
+export type LocalRecords = Omit<
+  CategoryRecords,
+  'clickSounds' | 'stemSongs'
+> & {
   clickSounds: ClickSound[];
+  stemSongs: LocalStemSong[];
 };
 
 export type LocalRecord = LocalRecords[Category][number];
@@ -229,6 +269,14 @@ function isPreference(
   return isPreferenceCategory(category) && 'key' in record;
 }
 
+export function stemSongKey(record: StemSongRecord): string {
+  const identity =
+    record.source === STEM_SET_SOURCE.stemdeck
+      ? record.stemdeckJobId
+      : record.uuid;
+  return `${record.source}:${identity ?? ''}`;
+}
+
 export function recordKey(
   category: Category,
   record: BackupRecord | LocalRecord,
@@ -236,11 +284,13 @@ export function recordKey(
   if (isPreference(category, record)) return record.key;
   if (category === 'clickSounds' && 'slot' in record)
     return String(record.slot);
+  if ('stems' in record) return stemSongKey(record);
   return record.uuid;
 }
 
 export function recordLabel(category: Category, record: BackupRecord): string {
   if (isPreference(category, record)) return record.key;
+  if ('label' in record) return record.label;
   if ('name' in record) return record.name;
   if ('title' in record) return record.title;
   return new Date(record.startTime * MS_PER_SECOND).toISOString();

@@ -24,6 +24,7 @@ import {
   type ImportPlan,
 } from './backup-plan';
 import { loadSnapshot } from './backup-snapshot';
+import { portableStemSong } from './backup-stem-songs';
 import type { ClickSoundFiles } from './click-sound-files';
 import type { DatabaseHandle } from './repository';
 
@@ -79,7 +80,11 @@ async function withAudio(
       wav: await files.read(fileName),
     })),
   );
-  return { ...records, clickSounds };
+  return {
+    ...records,
+    clickSounds,
+    stemSongs: records.stemSongs.map(portableStemSong),
+  };
 }
 
 async function exportBackup(
@@ -112,6 +117,7 @@ async function exportSetlist(
     records: {
       ...records,
       clickSounds: [],
+      stemSongs: [],
       setlists: [{ ...setlist, active: false }],
       songPresets: records.songPresets.filter(({ uuid }) => listed.has(uuid)),
     },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseLrc, plainLyricTexts } from './lrc.ts';
+import { parseLrc, plainLyricTexts } from './lrc';
 
 describe('LRC parsing', () => {
   it('reads hundredths and milliseconds', () => {

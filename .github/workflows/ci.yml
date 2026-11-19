@@ -142,6 +142,7 @@ jobs:
               - 'e2e/subflows/**'
               - 'e2e/shards'
               - 'e2e/*.py'
+              - 'e2e/fixtures/**'
               - 'scripts/e2e.sh'
               - 'scripts/install-maestro.sh'
               - '.github/workflows/ci.yml'
