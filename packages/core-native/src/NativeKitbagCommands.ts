@@ -70,6 +70,14 @@ export type MixdownStartReply = Readonly<{
   path: string;
 }>;
 
+/** kb_fit_constant_tempo's outputs; each reads 0 unless `result` is KB_OK. */
+export type ConstantTempoFit = Readonly<{
+  result: Int32;
+  bpm: Double;
+  anchorSec: Double;
+  beatsPerBar: Int32;
+}>;
+
 export type KitbagCommandsConstants = Readonly<{
   versionName: string;
   versionCode: Double;
@@ -101,6 +109,11 @@ export interface Spec extends TurboModule {
     anchorFrame: Double,
   ): Promise<number>;
   clearGrid(): void;
+  /** Beats go to the fit as 32-bit floats. Rejects E_FIT_FAILED if the bridge throws. */
+  fitConstantTempo(
+    beatTimesSec: readonly Double[],
+    downbeatIndices: readonly Int32[],
+  ): Promise<ConstantTempoFit>;
   setGridGrouping(sizes: readonly Int32[]): Promise<number>;
   setGridRate(rate: Int32): Promise<number>;
   metronomeFollowMixer(enabled: boolean): void;
@@ -184,6 +197,7 @@ export interface Spec extends TurboModule {
 
   transportShow(state: TransportShowState): void;
   transportHide(): void;
+  transportHandOver(): void;
   songTransportShow(state: SongTransportShowState): void;
   songTransportHide(): void;
   setKeepScreenOn(on: boolean): void;

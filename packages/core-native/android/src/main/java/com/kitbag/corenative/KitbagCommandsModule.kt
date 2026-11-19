@@ -83,6 +83,10 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     PlaybackService.hide(reactApplicationContext)
   }
 
+  override fun transportHandOver() {
+    PlaybackService.handOver(reactApplicationContext)
+  }
+
   override fun songTransportShow(state: ReadableMap) {
     PlaybackService.showSong(
       reactApplicationContext,
@@ -219,6 +223,14 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     val times = DoubleArray(beatTimesSec.size()) { i -> beatTimesSec.getDouble(i) }
     val downbeats = IntArray(downbeatIndices.size()) { i -> downbeatIndices.getInt(i) }
     promise.resolve(nativeSetGrid(times, downbeats, anchorFrame))
+  }
+
+  override fun fitConstantTempo(beatTimesSec: ReadableArray, downbeatIndices: ReadableArray, promise: Promise) {
+    try {
+      promise.resolve(ConstantTempoFitter.fit(beatTimesSec, downbeatIndices))
+    } catch (e: Throwable) {
+      promise.reject(ConstantTempoFitter.E_FIT_FAILED, "Constant tempo fit failed", e)
+    }
   }
 
   override fun clearGrid() {

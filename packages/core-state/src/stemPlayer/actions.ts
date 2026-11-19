@@ -95,7 +95,7 @@ export function mixActions(
 
 export type TransportSlice = Pick<
   StemPlayerState,
-  'title' | 'artist' | 'durationFrames' | 'engineRate'
+  'title' | 'artist' | 'durationFrames' | 'engineRate' | 'status'
 >;
 
 export function transportActions(
@@ -127,7 +127,8 @@ export function transportActions(
         return;
       }
       if (start.cancel()) return;
-      const { durationFrames, engineRate } = get();
+      const { durationFrames, engineRate, status } = get();
+      if (status !== 'ready') return;
       let head = engine.position();
       if (head >= restartFromFrame(durationFrames, engineRate)) {
         head = 0;

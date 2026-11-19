@@ -35,7 +35,7 @@ export function songTransportRequests({
         stopCount();
         return;
       case 'seek':
-        if (frame !== null) player.seek(frame);
+        if (frame !== null && player.status === 'ready') player.seek(frame);
         return;
     }
   };

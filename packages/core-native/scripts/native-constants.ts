@@ -110,6 +110,20 @@ export function collectConstants(sources: NativeSources): NativeConstants {
       sources.clickSoundHeader,
       'KB_MAX_CUSTOM_SOUND_SECONDS',
     ),
+    constantTempoBpm: {
+      min: parseDefineInt(
+        sources.constantTempoHeader,
+        'KB_CONSTANT_TEMPO_MIN_BPM',
+      ),
+      max: parseDefineInt(
+        sources.constantTempoHeader,
+        'KB_CONSTANT_TEMPO_MAX_BPM',
+      ),
+    },
+    constantTempoMinBeats: parseDefineInt(
+      sources.constantTempoHeader,
+      'KB_CONSTANT_TEMPO_MIN_BEATS',
+    ),
     bpmReferenceDenominator: parseConstexprInt(
       sources.metronomeHeader,
       'kBpmReferenceDenominator',

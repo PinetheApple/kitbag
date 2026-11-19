@@ -130,7 +130,7 @@ rebuilding the tools on top. What is here now:
 | `design/` | The binding HTML design specs. Precedence, and which variant of a multi-variant file binds, is in SPEC.md §12. |
 | `legacy/` | `android/MediaSessionPlugin.kt` + `AndroidManifest.xml`, the Flutter-era media-session detection that play-along (§8.2, §13.9) still has to port. **Reference only — do not build against them.** Delete them once `MediaNotificationListenerService.kt` stops being a skeleton. |
 | `docs/` | `decisions.md` (why things were decided), `tuner-functional-spec.md`, research notes, and `archive/` (retired trackers and runbooks, historical only). GitHub issues are the tickets. **Read `docs/tuner-research.md`'s warning banner before touching the tuner.** |
-| `e2e/` | Device flows (Maestro): `flows/` one per checked behaviour, `subflows/` the shared steps, `make_click_song.py` the fixture song and click sound `scripts/e2e.sh` pushes. Dev-only; nothing here enters the APK. |
+| `e2e/` | Device flows (Maestro): `flows/` one per checked behaviour, `subflows/` the shared steps, `make_click_song.py` the fixture song and click sound and `make_stem_bundle.py` the fixture stem songs (with and without a beat grid) that `scripts/e2e.sh` pushes. Dev-only; nothing here enters the APK. |
 | `scripts/` | `preflight.sh` (every CI gate locally), `version.sh` + `release-gate.sh` + `verify-apk-signature.sh` (the release path, run by `release.yml`), `install-on-device.sh`, `e2e.sh` + `install-maestro.sh` (device flows), `lint.sh`/`format.sh`/`install-hooks.sh` (native gate), `tsan-check.sh` (the TSan retire-race gate and its control), `changelog.sh`, `run-loop.sh`. |
 
 The old Flutter guide's references — Melos, `pubspec.yaml`, `dart analyze`,

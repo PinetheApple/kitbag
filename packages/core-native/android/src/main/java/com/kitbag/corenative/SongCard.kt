@@ -11,13 +11,15 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.core.app.NotificationCompat
 import androidx.media.app.NotificationCompat.MediaStyle
+import com.kitbag.corenative.transport.CardFence
 import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.SongAction
 import com.kitbag.corenative.transport.SongCommand
+import com.kitbag.corenative.transport.SongControls
+import com.kitbag.corenative.transport.SongEngine
 import com.kitbag.corenative.transport.SongPlayback
 import com.kitbag.corenative.transport.SongProgress
 import com.kitbag.corenative.transport.SongTransport
-import com.kitbag.corenative.transport.endsSong
 import com.kitbag.corenative.transport.mediaArtist
 import kotlin.math.roundToInt
 
@@ -29,8 +31,11 @@ internal class SongCard(
   private val actionIntent: (SongAction) -> PendingIntent,
   private val post: (Notification) -> Unit,
   private val appRequests: () -> ((SongCommand) -> Unit)?,
+  fence: CardFence,
   private val onStopped: () -> Unit,
 ) {
+  private val controls = SongControls(MixerEngine, fence)
+  private var cardNumber = CardFence.NONE
   private var countingIn = false
   private var song: Song? = null
   private var transport: SongTransport? = null
@@ -39,7 +44,8 @@ internal class SongCard(
   private val clock = Handler(Looper.getMainLooper())
   private val tick = Runnable { onTick() }
 
-  fun show(next: Song, playing: Boolean, countingIn: Boolean) {
+  fun show(next: Song, cardNumber: Int, playing: Boolean, countingIn: Boolean) {
+    this.cardNumber = cardNumber
     song = next
     transport = SongTransport(next, EngineTransport.sampleRate())
     published = null
@@ -50,32 +56,20 @@ internal class SongCard(
 
   fun handle(action: SongAction) {
     val songTransport = transport ?: return
-    val app = appRequests()
-    val route = songTransport.route(progress(), action, app != null)
-    route.app?.let { app?.invoke(it) }
-    if (route.engine.any { it.endsSong }) {
-      route.engine.forEach(::execute)
-      onStopped()
-    } else {
-      runCommands(songTransport, route.engine)
-    }
+    settle(controls.press(cardNumber, songTransport, ::progress, action, appRequests()))
   }
 
   fun seekTo(positionMillis: Long) {
     val songTransport = transport ?: return
-    val app = appRequests()
-    val route = songTransport.seekRoute(progress(), positionMillis, app != null)
-    route.app?.let { app?.invoke(it) }
-    runCommands(songTransport, route.engine)
+    settle(controls.seek(cardNumber, songTransport, ::progress, positionMillis, appRequests()))
   }
 
-  private fun runCommands(songTransport: SongTransport, commands: List<SongCommand>) {
-    var expected = progress()
-    for (command in commands) {
-      execute(command)
-      expected = songTransport.applied(expected, command)
+  private fun settle(outcome: SongControls.Outcome) {
+    when (outcome) {
+      SongControls.Outcome.Dropped -> Unit
+      SongControls.Outcome.Stopped -> onStopped()
+      is SongControls.Outcome.Ran -> refresh(outcome.expected)
     }
-    refresh(expected)
   }
 
   fun release() {
@@ -83,20 +77,10 @@ internal class SongCard(
     transport = null
   }
 
-  private fun execute(command: SongCommand) {
-    when (command) {
-      SongCommand.Play -> EngineTransport.mixerPlay()
-      SongCommand.Pause -> EngineTransport.mixerPause()
-      SongCommand.Stop -> EngineTransport.mixerStop()
-      SongCommand.StopCountIn -> EngineTransport.songStop()
-      is SongCommand.Seek -> EngineTransport.mixerSeek(command.frame)
-    }
-  }
-
   private fun progress(): SongProgress {
-    val playing = EngineTransport.mixerPlaying()
+    val playing = MixerEngine.playing()
     if (playing) countingIn = false
-    return SongProgress(playing, EngineTransport.mixerPosition(), countingIn)
+    return SongProgress(playing, MixerEngine.position(), countingIn)
   }
 
   private fun onTick() {
@@ -186,4 +170,20 @@ internal class SongCard(
         SongAction.FORWARD -> R.drawable.kitbag_forward_10
       }
   }
+}
+
+private object MixerEngine : SongEngine {
+  override fun execute(command: SongCommand) {
+    when (command) {
+      SongCommand.Play -> EngineTransport.mixerPlay()
+      SongCommand.Pause -> EngineTransport.mixerPause()
+      SongCommand.Stop -> EngineTransport.mixerStop()
+      SongCommand.StopCountIn -> EngineTransport.songStop()
+      is SongCommand.Seek -> EngineTransport.mixerSeek(command.frame)
+    }
+  }
+
+  override fun position(): Long = EngineTransport.mixerPosition()
+
+  override fun playing(): Boolean = EngineTransport.mixerPlaying()
 }

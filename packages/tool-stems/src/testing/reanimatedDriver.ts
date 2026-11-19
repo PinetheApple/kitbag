@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { afterEach, beforeEach } from 'vitest';
 
 type FrameCallback = (frame: { readonly timestamp: number }) => void;
 
@@ -103,6 +104,36 @@ export function scheduleOnRN<A extends unknown[]>(
   jsHops.count++;
   callback(...args);
 }
+
+export function scheduleOnUI<A extends unknown[]>(
+  worklet: (...args: A) => void,
+  ...args: A
+): void {
+  worklet(...args);
+}
+
+export const cancelAnimation = (): undefined => undefined;
+
+const uiFrameNow = (frame: FrameRequestCallback): number => {
+  frame(timestamp);
+  return 0;
+};
+
+const RAF = 'requestAnimationFrame';
+let ownRaf: PropertyDescriptor | undefined;
+
+beforeEach(() => {
+  ownRaf = Object.getOwnPropertyDescriptor(globalThis, RAF);
+  Object.defineProperty(globalThis, RAF, {
+    value: uiFrameNow,
+    configurable: true,
+    writable: true,
+  });
+});
+afterEach(() => {
+  if (ownRaf === undefined) Reflect.deleteProperty(globalThis, RAF);
+  else Object.defineProperty(globalThis, RAF, ownRaf);
+});
 
 export function runFrame(): void {
   timestamp += FRAME_MS;

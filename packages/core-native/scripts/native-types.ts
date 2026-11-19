@@ -55,6 +55,8 @@ export interface NativeSources {
   readonly mixdownHeader: string;
   /** native/audio_core/include/kitbag_click_sound_api.h — the custom sound slots. */
   readonly clickSoundHeader: string;
+  /** native/audio_core/include/kitbag_constant_tempo_api.h — the fit's bpm range. */
+  readonly constantTempoHeader: string;
 }
 
 export interface NativeConstants {
@@ -92,6 +94,8 @@ export interface NativeConstants {
   readonly mixdownBitsPerSample: number;
   readonly customSoundSlots: number;
   readonly maxCustomSoundSeconds: number;
+  readonly constantTempoBpm: Bounds;
+  readonly constantTempoMinBeats: number;
   readonly bpmReferenceDenominator: number;
   readonly denominators: readonly number[];
   readonly soundNames: readonly string[];
