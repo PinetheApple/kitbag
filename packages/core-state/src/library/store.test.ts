@@ -12,6 +12,7 @@ import {
 import type { createLibraryStore } from './store.ts';
 import { isPresetEntry } from './snapshot.ts';
 import { setup } from './store.test-helper.ts';
+import { cursorOf, UP_NEXT_SOURCE, upNext } from '../playOrder/order.ts';
 
 async function songsIn(
   library: ReturnType<typeof createLibraryStore>,
@@ -390,7 +391,7 @@ describe('library store', () => {
     const around = () => [nameOf(SONG_STEP.previous), nameOf(SONG_STEP.next)];
     const move = (from: number, to: number) =>
       library.getState().reorder(gig, from, to);
-    return { remove, around, move };
+    return { remove, around, move, library, gig };
   }
 
   it('keeps the removed song’s place when an earlier song goes too', async () => {
@@ -406,6 +407,19 @@ describe('library store', () => {
     await remove('C');
     await move(3, 0);
     expect(around()).toEqual(['A', 'B']);
+  });
+
+  it('loads on Next the song Up next names after a removal and a reorder', async () => {
+    const { remove, move, library, gig } = await fiveOnStage();
+    await remove('C', 'A');
+    await move(2, 0);
+    const state = library.getState();
+    const stage = { setlistId: gig, entries: state.entries[gig] ?? [] };
+    const cursor = cursorOf(stage, state.loaded);
+    const named = upNext({ queue: [], stage, cursor });
+    if (named?.source !== UP_NEXT_SOURCE.setlist) throw new Error('no entry');
+    await library.getState().stepSong(SONG_STEP.next);
+    expect(library.getState().loaded?.itemId).toBe(named.entry.item.id);
   });
 
   it('keeps the removed song’s place when a later song goes too', async () => {
