@@ -71,6 +71,7 @@ void Mixer::AdoptTransport(const TransportPlan& plan) {
   } else {
     stream_frame_ = plan.frame;
     jump_base_.store(now, std::memory_order_relaxed);
+    landed_on_end_ = false;
     engaged_.store(false, std::memory_order_relaxed);
     const bool over_user_jump = opens_on_jump_ && !continues_run_;
     continues_run_ = plan.continues_run && !over_user_jump;

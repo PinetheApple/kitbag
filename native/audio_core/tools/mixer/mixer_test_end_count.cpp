@@ -68,18 +68,42 @@ void TestPlayAtTheEndDoesNotCount() {
   CheckCount(mixer, 1, "end count: Play at the end again does not count");
 }
 
+void PauseOnTheLastFrame(kitbag::Mixer* mixer) {
+  LoadRamp(mixer, 0, kLongFrames, 0.0f);
+  mixer->Seek(kLongFrames - kBlock, kZeroClock, false);
+  mixer->Play();
+  RenderBlock(mixer);
+  mixer->Pause();
+  RenderBlocks(mixer, kRestBlocks);
+}
+
 void TestPauseOnTheLastFrameCountsOnPlay() {
   kitbag::Mixer mixer(kSampleRate);
-  LoadRamp(&mixer, 0, kLongFrames, 0.0f);
-  mixer.Seek(kLongFrames - kBlock, kZeroClock, false);
-  mixer.Play();
-  RenderBlock(&mixer);
-  mixer.Pause();
-  RenderBlocks(&mixer, kRestBlocks);
+  PauseOnTheLastFrame(&mixer);
   CheckCount(mixer, 0, "end count: a pause on the last frame has not ended");
   mixer.Play();
   RenderBlocks(&mixer, kRestBlocks);
   CheckCount(mixer, 1, "end count: Play after a pause on the last frame ends");
+}
+
+void TestSeekAfterThePauseDoesNotCount() {
+  kitbag::Mixer moved(kSampleRate);
+  PauseOnTheLastFrame(&moved);
+  moved.Seek(kLongFrames / 2, kZeroClock, false);
+  moved.UnloadTrack(0, kZeroClock, false);
+  moved.Play();
+  RenderBlocks(&moved, kRestBlocks);
+  CheckCount(
+      moved,
+      0,
+      "end count: a seek away, unload and Play does not count"
+  );
+  kitbag::Mixer onto(kSampleRate);
+  PauseOnTheLastFrame(&onto);
+  onto.Seek(kLongFrames, kZeroClock, false);
+  onto.Play();
+  RenderBlocks(&onto, kRestBlocks);
+  CheckCount(onto, 0, "end count: a paused seek onto the end does not count");
 }
 
 void TestSeekToTheEndDoesNotCount() {
@@ -205,6 +229,7 @@ void RunEndCountTests() {
   TestEndCountsOnceAndAgainAfterSeek();
   TestPlayAtTheEndDoesNotCount();
   TestPauseOnTheLastFrameCountsOnPlay();
+  TestSeekAfterThePauseDoesNotCount();
   TestSeekToTheEndDoesNotCount();
   TestEmptyAndUnloadDoNotCount();
   TestLoopOverTheEndNeverCounts();
