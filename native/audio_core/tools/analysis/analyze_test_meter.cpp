@@ -21,9 +21,6 @@ using kitbag_test::Check;
 
 constexpr int kMeterBeats = 30;
 constexpr int kNonNegativeBias = kMeterBeats;
-// Below the ~344 Hz top of the band the downbeat spectral difference reads.
-constexpr std::array<float, 5> kBarPitchesHz =
-    {110.0f, 164.81f, 130.81f, 196.0f, 146.83f};
 constexpr double kGridTempoRatio = 1.5;
 // Straddle meter.cpp's 0.5 margin; 12 differences is its four-bar minimum.
 constexpr double kLeadBelowMargin = 0.49;
