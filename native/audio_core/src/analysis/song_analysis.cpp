@@ -102,8 +102,12 @@ SecondPass PlanSecondPass(
 ) {
   SecondPass pass;
   if (beats.beat_times.size() >= 2) {
-    pass.downbeats =
-        std::make_unique<DownbeatTracker>(rate, beats.beat_times, frames, 0);
+    pass.downbeats = std::make_unique<DownbeatTracker>(
+        rate,
+        beats.beat_times,
+        frames,
+        kDetectBeatsPerBar
+    );
   }
   if (waveform_dir != nullptr) {
     pass.peaks = std::make_unique<WaveformPeakAccumulator>(

@@ -36,6 +36,7 @@ add_library(kitbag_core SHARED
   src/api/api_tuning.cpp
   src/analysis/beat_tracker.cpp
   src/analysis/downbeat.cpp
+src/analysis/meter.cpp
   src/analysis/onset_envelope.cpp
   src/analysis/song_analysis.cpp
   src/media/audio_source.cpp
@@ -387,9 +388,11 @@ if(KITBAG_BUILD_TOOLS)
     tools/analysis/analyze_test_long_grid.cpp
     tools/analysis/analyze_test_length.cpp
     tools/analysis/analyze_test_sustained.cpp
+    tools/analysis/analyze_test_meter.cpp
     src/api/api_analysis.cpp
     src/analysis/song_analysis.cpp
     src/analysis/downbeat.cpp
+    src/analysis/meter.cpp
     src/analysis/waveform_peaks.cpp
     src/analysis/beat_tracker.cpp
     src/analysis/onset_envelope.cpp
@@ -408,6 +411,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/analysis/analyze_memory_verify.cpp
     src/analysis/song_analysis.cpp
     src/analysis/downbeat.cpp
+    src/analysis/meter.cpp
     src/analysis/waveform_peaks.cpp
     src/analysis/beat_tracker.cpp
     src/analysis/onset_envelope.cpp

@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "analysis/block_fill.h"
+#include "analysis/meter.h"
 #include "dsp/rateconversion/Decimator.h"
 #include "dsp/transforms/FFT.h"
 #include "maths/MathAliases.h"
@@ -21,7 +22,6 @@ constexpr int kStage2Factor = kDecimationFactor / kStage1Factor;
 // Beat-grid unit, in original-rate frames, and the decimator's input block.
 constexpr int kDfIncrement = 512;
 constexpr int kDecimatedPerBlock = kDfIncrement / kDecimationFactor;
-constexpr int kDefaultBeatsPerBar = 4;
 // DownBeat's beat frame: next power of two above 1.3 s at the decimated rate.
 constexpr double kBeatFrameSeconds = 1.3;
 // DownBeat::measureSpecDiff compares only the lowest bins of each spectrum.
@@ -82,7 +82,7 @@ DownbeatTracker::DownbeatTracker(
     int beats_per_bar
 )
     : beats_(BeatsToDfUnits(beat_times, sample_rate)),
-      beats_per_bar_(beats_per_bar > 0 ? beats_per_bar : kDefaultBeatsPerBar),
+      beats_per_bar_(std::max(beats_per_bar, kDetectBeatsPerBar)),
       audio_length_(
           (total_frames + kDfIncrement - 1) / kDfIncrement * kDecimatedPerBlock
       ),
@@ -121,7 +121,10 @@ std::vector<int> DownbeatTracker::Finish() {
   }
   if (beats_.size() < 2 || audio_length_ == 0) return {};
   if (next_beat_ + 1 < beats_.size()) return {};
-  return PickDownbeats();
+  if (beats_per_bar_ == kDetectBeatsPerBar) {
+    return PickDownbeats(DetectBeatsPerBar(beat_sd_));
+  }
+  return PickDownbeats(beats_per_bar_);
 }
 
 DownbeatTracker::BeatSpan DownbeatTracker::SpanOf(size_t beat) const {
@@ -190,8 +193,7 @@ void DownbeatTracker::DropBefore(size_t position) {
 
 // DownBeat's phase pick: the bar position whose beat transitions carry the
 // greatest mean spectral change is bar-one.
-std::vector<int> DownbeatTracker::PickDownbeats() const {
-  const int timesig = beats_per_bar_;
+std::vector<int> DownbeatTracker::PickDownbeats(int timesig) const {
   std::vector<double> candidates(timesig, 0.0);
   for (int beat = 0; beat < timesig; ++beat) {
     int count = 0;
