@@ -4,7 +4,6 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
-#include <numbers>
 #include <vector>
 
 #include "analysis/beat_tracker.h"
@@ -57,7 +56,6 @@ constexpr uint32_t kLcgMul = 1664525u;
 constexpr uint32_t kLcgInc = 1013904223u;
 constexpr float kLcgScale = 1.0f / 2147483648.0f;
 constexpr int kMissableBeats = 2;
-constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
 
 float Kick(float t) {
   const float hz =
