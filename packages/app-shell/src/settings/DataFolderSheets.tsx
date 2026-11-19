@@ -97,6 +97,7 @@ interface FaceContext {
   readonly pending: boolean;
   readonly places: Places;
   readonly storeError: string | null;
+  readonly sourceMissing: boolean;
   readonly onChoose: (volumeUuid: string | null) => void;
 }
 
@@ -208,7 +209,11 @@ function sheetFace(sheet: DataFolderSheet, context: FaceContext): SheetFace {
       return {
         title: pausedTitle(sheet.move),
         icon: 'moveFolder',
-        body: <SheetHint>{pausedHint(sheet.move, codes.movePhases)}</SheetHint>,
+        body: (
+          <SheetHint>
+            {pausedHint(sheet.move, codes.movePhases, context.sourceMissing)}
+          </SheetHint>
+        ),
       };
     case 'stopped':
     case 'failed':
@@ -254,6 +259,7 @@ export function DataFolderSheets({ model, media }: DataFolderSheetsProps) {
     pending,
     places,
     storeError,
+    sourceMissing: model.sourceMissing,
     onChoose: model.choose,
   });
   return (

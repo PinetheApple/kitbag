@@ -10,6 +10,7 @@ import {
 } from '@kitbag/core-design';
 import {
   pausedMove,
+  returnSourceMissing,
   useDataFolder,
   type DataFolderStore,
 } from '@kitbag/core-state';
@@ -55,6 +56,7 @@ export function MovePausedBanner() {
   const resumeMove = useDataFolder((s) => s.resumeMove);
   const undoMove = useDataFolder((s) => s.undoMove);
   const refusal = useDataFolder(refusalText);
+  const cardOut = useDataFolder(returnSourceMissing);
   const resume = useCallback(() => {
     void resumeMove();
   }, [resumeMove]);
@@ -76,7 +78,7 @@ export function MovePausedBanner() {
               {pausedTitle(paused)}
             </Text>
             <Text style={styles.hint}>
-              {pausedHint(paused, codes.movePhases)}
+              {pausedHint(paused, codes.movePhases, cardOut)}
             </Text>
             {refusal === null ? null : (
               <Text accessibilityLiveRegion="polite" style={styles.hint}>
@@ -98,7 +100,7 @@ export function MovePausedBanner() {
               key: RESUME,
               label: RESUME,
               primary: true,
-              disabled: pending,
+              disabled: pending || cardOut,
               onPress: resume,
             },
           ]}

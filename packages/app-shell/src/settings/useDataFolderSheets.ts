@@ -3,7 +3,11 @@ import type {
   DataFolderVolumes,
   MoveStatus,
 } from '@kitbag/core-native';
-import { dataFolderStore, useDataFolder } from '@kitbag/core-state';
+import {
+  dataFolderStore,
+  returnSourceMissing,
+  useDataFolder,
+} from '@kitbag/core-state';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState, useSyncExternalStore } from 'react';
 
@@ -26,6 +30,7 @@ export interface DataFolderSheetsModel {
   readonly move: MoveStatus | null;
   readonly error: string | null;
   readonly confirmTarget: string | null;
+  readonly sourceMissing: boolean;
   readonly places: Places;
   readonly open: () => void;
   readonly offerReturn: (volumeUuid: string) => void;
@@ -46,6 +51,7 @@ export function useDataFolderSheets(
   const error = useDataFolder((s) => s.error);
   const pending = useDataFolder((s) => s.pending);
   const codes = useDataFolder((s) => s.codes);
+  const sourceMissing = useDataFolder(returnSourceMissing);
   const returning = controller.returning();
   const sheet = dataFolderSheet({ move, error, volumes, returning }, step);
 
@@ -57,7 +63,12 @@ export function useDataFolderSheets(
 
   return {
     sheet,
-    actions: sheetActions(sheet, pending),
+    actions: sheetActions(sheet, pending).map((action) =>
+      action.id === 'resume' && sourceMissing
+        ? { ...action, disabled: true }
+        : action,
+    ),
+    sourceMissing,
     pending,
     codes,
     volumes,

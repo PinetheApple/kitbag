@@ -26,7 +26,7 @@ import {
 } from './about.ts';
 import { formatAppVersion } from './appVersion.ts';
 import { BackUpRow, RestoreRow } from './BackupRows.tsx';
-import { DataFolderRow } from './DataFolderRow.tsx';
+import { DataFolderRow, ReturnedCardRow } from './DataFolderRow.tsx';
 import { DataFolderSheets } from './DataFolderSheets.tsx';
 import { mediaSize } from './dataFolderText.ts';
 import {
@@ -139,6 +139,7 @@ function DataSection({
           <PracticeValue />
         </EditRow>
         <DataFolderRow onOpen={dataFolder.open} />
+        <ReturnedCardRow onOffer={dataFolder.offerReturn} />
         <EditRow
           label={STORAGE_LABEL}
           accessibilityLabel={

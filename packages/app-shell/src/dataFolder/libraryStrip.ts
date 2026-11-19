@@ -1,5 +1,9 @@
 import { countLabel } from '@kitbag/core-design';
-import type { DataFolderVolumes, MoveStatus } from '@kitbag/core-native';
+import type {
+  DataFolderVolume,
+  DataFolderVolumes,
+  MoveStatus,
+} from '@kitbag/core-native';
 import type { LibraryView } from '@kitbag/core-state';
 
 import { SONG_NOUNS, STEM_SONG_NOUNS } from '../nouns.ts';
@@ -15,6 +19,10 @@ import {
   pausedTitle,
   placeName,
 } from '../settings/dataFolderText.ts';
+import {
+  CARD_BACK_TITLE,
+  returnedStripDetail,
+} from '../settings/returnedCardText.ts';
 import { SEPARATOR } from '../settings/separator.ts';
 
 export interface StripInput {
@@ -22,6 +30,8 @@ export interface StripInput {
   readonly volumes: DataFolderVolumes | null;
   readonly unavailable: number;
   readonly view: LibraryView;
+  readonly offered: DataFolderVolume | null;
+  readonly sourceMissing: boolean;
 }
 
 export type LibraryStrip =
@@ -31,6 +41,12 @@ export type LibraryStrip =
       readonly title: string;
       readonly detail: string;
       readonly percent: number | null;
+    }
+  | {
+      readonly kind: 'returned';
+      readonly volumeUuid: string;
+      readonly title: string;
+      readonly detail: string;
     }
   | {
       readonly kind: 'missing';
@@ -44,6 +60,7 @@ const NOUNS: Readonly<Record<LibraryView, readonly [string, string]>> = {
 };
 
 const STILL_PLAY = 'songs still play';
+const CARD_BACK = 'put the card back';
 
 export function cardMissingTitle(place: string): string {
   return `${capitalised(place)} not found`;
@@ -55,7 +72,7 @@ function missingDetail(count: number, view: LibraryView): string | null {
   return `${countLabel(count, one, many)} on it can’t play until it’s back`;
 }
 
-function moveStrip(move: MoveStatus): LibraryStrip {
+function moveStrip(move: MoveStatus, sourceMissing: boolean): LibraryStrip {
   if (move.switched) {
     const kept = move.error === null || move.running;
     return {
@@ -71,8 +88,21 @@ function moveStrip(move: MoveStatus): LibraryStrip {
     title: move.running
       ? `Moving files to ${placeName(move.targetVolumeUuid)}`
       : pausedTitle(move),
-    detail: `${done} ${ofTotal} ${SEPARATOR} ${STILL_PLAY}`,
+    detail: `${done} ${ofTotal} ${SEPARATOR} ${sourceMissing ? CARD_BACK : STILL_PLAY}`,
     percent: movePercent(move),
+  };
+}
+
+function returnedStrip(
+  card: DataFolderVolume | null,
+  view: LibraryView,
+): LibraryStrip {
+  if (card?.volumeUuid == null) return { kind: 'none' };
+  return {
+    kind: 'returned',
+    volumeUuid: card.volumeUuid,
+    title: CARD_BACK_TITLE,
+    detail: returnedStripDetail(card, view),
   };
 }
 
@@ -81,6 +111,8 @@ export function libraryStrip({
   volumes,
   unavailable,
   view,
+  offered,
+  sourceMissing,
 }: StripInput): LibraryStrip {
   if (volumes?.currentAvailable === false)
     return {
@@ -88,5 +120,7 @@ export function libraryStrip({
       title: cardMissingTitle(placeName(volumes.currentVolumeUuid)),
       detail: missingDetail(unavailable, view),
     };
-  return move === null ? { kind: 'none' } : moveStrip(move);
+  return move === null
+    ? returnedStrip(offered, view)
+    : moveStrip(move, sourceMissing);
 }
