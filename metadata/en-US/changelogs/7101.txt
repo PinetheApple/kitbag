@@ -1,0 +1,1 @@
+• Scrolled sheets, such as Practice, now fade their content out under the title instead of cutting it off.
