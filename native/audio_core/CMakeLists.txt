@@ -36,6 +36,7 @@ endif()
 set(KITBAG_CORE_SOURCES
   src/api/api.cpp
   src/api/api_analysis.cpp
+  src/api/api_constant_tempo.cpp
   src/api/api_grid_click.cpp
   src/api/api_media.cpp
   src/api/api_metronome.cpp
@@ -43,7 +44,9 @@ set(KITBAG_CORE_SOURCES
   src/api/api_rig_click.cpp
   src/api/api_song_start.cpp
   src/api/api_tuning.cpp
+  src/analysis/beat_grid_fit.cpp
   src/analysis/beat_tracker.cpp
+  src/analysis/constant_tempo.cpp
   src/analysis/downbeat.cpp
   src/analysis/meter.cpp
   src/analysis/onset_envelope.cpp
@@ -272,7 +275,11 @@ if(KITBAG_BUILD_TOOLS)
 
   # Links the sources: TrackBeats and SidecarPath are internal, not exported.
   add_executable(beat_tracker_verify tools/analysis/beat_tracker_verify.cpp
-    src/analysis/beat_tracker.cpp src/dsp/fft.cpp)
+    tools/analysis/beat_tracker_test_constant_tempo.cpp
+    tools/analysis/beat_tracker_test_constant_tempo_errors.cpp
+    src/api/api_constant_tempo.cpp src/analysis/constant_tempo.cpp
+    src/analysis/beat_grid_fit.cpp src/analysis/beat_tracker.cpp
+    src/dsp/fft.cpp)
   target_include_directories(beat_tracker_verify PRIVATE src include tools)
   target_link_libraries(beat_tracker_verify PRIVATE m)
 
@@ -470,6 +477,7 @@ if(KITBAG_BUILD_TOOLS)
     src/analysis/downbeat.cpp
     src/analysis/meter.cpp
     src/analysis/waveform_peaks.cpp
+    src/analysis/beat_grid_fit.cpp
     src/analysis/beat_tracker.cpp
     src/analysis/onset_envelope.cpp
     src/dsp/fft.cpp
@@ -489,6 +497,7 @@ if(KITBAG_BUILD_TOOLS)
     src/analysis/downbeat.cpp
     src/analysis/meter.cpp
     src/analysis/waveform_peaks.cpp
+    src/analysis/beat_grid_fit.cpp
     src/analysis/beat_tracker.cpp
     src/analysis/onset_envelope.cpp
     src/dsp/fft.cpp

@@ -17,22 +17,14 @@
 #include "analysis/onset_envelope.h"
 #include "analysis/sidecar_path.h"
 #include "beat_spacing.h"
+#include "check.h"
 #include "metronome/metronome_internal.h"
 
 namespace {
 
-int g_failures = 0;
-// Counted so a deleted TestX() call cannot pass silently: the total is a
-// tripwire on the suite's own shape, not a derived expectation.
-int g_checks = 0;
-
-void Check(bool condition, const char* message) {
-  ++g_checks;
-  if (!condition) {
-    std::fprintf(stderr, "FAIL: %s\n", message);
-    ++g_failures;
-  }
-}
+using kitbag_test::Check;
+using kitbag_test::g_checks;
+using kitbag_test::g_failures;
 
 void CheckPath(const char* dir, const char* song_path, const char* expected) {
   ++g_checks;
@@ -363,9 +355,15 @@ void TestSidecarPath() {
 
 }  // namespace
 
+namespace beat_tracker_test {
+void RunConstantTempoTests();
+void RunErrorTests();
+void RunLimitTests();
+}  // namespace beat_tracker_test
+
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 29;
+constexpr int kExpectedChecks = 64;
 
 int main() {
   TestGridStaysAnchoredAtOrigin();
@@ -377,6 +375,9 @@ int main() {
   TestTripletFeelIsNotFolded();
   TestBoundTemposResolve();
   TestSidecarPath();
+  beat_tracker_test::RunConstantTempoTests();
+  beat_tracker_test::RunErrorTests();
+  beat_tracker_test::RunLimitTests();
 
   if (g_checks != kExpectedChecks) {
     std::fprintf(

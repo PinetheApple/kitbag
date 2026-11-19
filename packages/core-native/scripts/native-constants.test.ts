@@ -52,6 +52,7 @@ const realSources: NativeSources = {
   transportPlanHeader: read('src', 'mixer', 'transport_plan.h'),
   mixdownHeader: read('include', 'kitbag_mixdown_api.h'),
   clickSoundHeader: read('include', 'kitbag_click_sound_api.h'),
+  constantTempoHeader: read('include', 'kitbag_constant_tempo_api.h'),
 };
 
 describe('parseDefineInt', () => {
@@ -298,6 +299,7 @@ describe('collectConstants (real engine source)', () => {
     expect(c.maxTracks).toBe(16);
     expect(c.maxBeats).toBe(16);
     expect(c.maxRampBars).toBe(64);
+    expect(c.constantTempoBpm).toEqual({ min: 30, max: 300 });
     expect(c.muteBars).toEqual({ min: 1, max: 16 });
     expect(c.minRampBars).toBe(1);
     expect(c.bpm).toEqual({ min: 20, max: 400 });

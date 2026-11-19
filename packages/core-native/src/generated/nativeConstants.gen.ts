@@ -199,6 +199,12 @@ export const KB_CUSTOM_SOUND_SLOTS = 2;
 /** Longest custom click sound, in seconds (KB_MAX_CUSTOM_SOUND_SECONDS). */
 export const KB_MAX_CUSTOM_SOUND_SECONDS = 2;
 
+/** Slowest bpm kb_fit_constant_tempo accepts (KB_CONSTANT_TEMPO_MIN_BPM). */
+export const KB_CONSTANT_TEMPO_MIN_BPM = 30;
+
+/** Fastest bpm kb_fit_constant_tempo accepts (KB_CONSTANT_TEMPO_MAX_BPM). */
+export const KB_CONSTANT_TEMPO_MAX_BPM = 300;
+
 /** Metronome output-latency offset range, in ms (kb_metronome_set_latency_offset). */
 export const KB_LATENCY_OFFSET_MS_BOUNDS = {
   min: -300,

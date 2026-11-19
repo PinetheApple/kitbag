@@ -151,6 +151,12 @@ export const KB_CUSTOM_SOUND_SLOTS = ${String(c.customSoundSlots)};
 /** Longest custom click sound, in seconds (KB_MAX_CUSTOM_SOUND_SECONDS). */
 export const KB_MAX_CUSTOM_SOUND_SECONDS = ${String(c.maxCustomSoundSeconds)};
 
+/** Slowest bpm kb_fit_constant_tempo accepts (KB_CONSTANT_TEMPO_MIN_BPM). */
+export const KB_CONSTANT_TEMPO_MIN_BPM = ${String(c.constantTempoBpm.min)};
+
+/** Fastest bpm kb_fit_constant_tempo accepts (KB_CONSTANT_TEMPO_MAX_BPM). */
+export const KB_CONSTANT_TEMPO_MAX_BPM = ${String(c.constantTempoBpm.max)};
+
 /** Metronome output-latency offset range, in ms (kb_metronome_set_latency_offset). */
 export const KB_LATENCY_OFFSET_MS_BOUNDS = {
   min: ${String(c.latencyOffsetMsBounds.min)},

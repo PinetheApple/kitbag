@@ -216,6 +216,10 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     promise.resolve(nativeSetGrid(times, downbeats, anchorFrame))
   }
 
+  override fun fitConstantTempo(beatTimesSec: ReadableArray, downbeatIndices: ReadableArray, promise: Promise) {
+    promise.resolve(ConstantTempoFitter.fit(beatTimesSec, downbeatIndices))
+  }
+
   override fun clearGrid() {
     nativeClearGrid()
   }
