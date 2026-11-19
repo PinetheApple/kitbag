@@ -6,10 +6,14 @@ import { asc, eq } from 'drizzle-orm';
 
 import type { ImportOptions } from './backup-plan';
 import { parseBackup } from './backup-parse';
-import { FOLDER_KEY } from './backup-stem-songs-restore.test-helper';
+import {
+  FOLDER_KEY,
+  STEMDECK_KEY,
+} from './backup-stem-songs-restore.test-helper';
 import {
   addFolderSong,
   addStemDeckSong,
+  JOB,
   stemSongDatabase,
   type StemSongDatabase,
 } from './backup-stem-songs.test-helper';
@@ -17,9 +21,6 @@ import { presetValues, unwrap } from './backup.test-helper';
 import { found } from './repository';
 import { setlistItems, setlists, songPresets, stemSets } from './schema';
 import { STEM_SET_SOURCE } from './stem-set-source';
-
-const ECHO_JOB = 'job-echo-live';
-const ECHO_KEY = `stemdeck:${ECHO_JOB}`;
 
 async function addAnonymousStemSet({ handle }: StemSongDatabase) {
   return found(
@@ -40,7 +41,7 @@ async function mixedSource() {
   const source = stemSongDatabase();
   const opener = await source.presets.create(presetValues('Opener', null));
   const closer = await source.presets.create(presetValues('Closer', null));
-  const echo = await addStemDeckSong(source, ECHO_JOB);
+  const echo = await addStemDeckSong(source, JOB);
   const folder = await addFolderSong(source);
   const anonymous = await addAnonymousStemSet(source);
   const gig = await source.sets.create('Gig');
@@ -51,7 +52,7 @@ async function mixedSource() {
   await source.sets.addStemSet(gig.id, anonymous);
   const items = [
     { preset: opener.uuid },
-    { stemSong: ECHO_KEY },
+    { stemSong: STEMDECK_KEY },
     { preset: closer.uuid },
     { stemSong: FOLDER_KEY },
   ];
@@ -60,7 +61,7 @@ async function mixedSource() {
 
 async function targetWithSongs() {
   const target = stemSongDatabase();
-  const echo = await addStemDeckSong(target, ECHO_JOB);
+  const echo = await addStemDeckSong(target, JOB);
   const folder = await addFolderSong(target);
   return { target, echo, folder };
 }
