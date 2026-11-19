@@ -71,6 +71,7 @@ describe('movingRowKey', () => {
       ['song:2', ['songs/a1/live/Everlong.mp3']],
     ]);
     expect(moving({ path: 'songs/a1/live/wave.bin' }, nested)).toBe('song:2');
+    expect(moving({ path: 'songs/a1/wave.bin' }, nested)).toBeNull();
   });
 
   it.each([['catching up', { phase: PHASES.catchUp }]])(

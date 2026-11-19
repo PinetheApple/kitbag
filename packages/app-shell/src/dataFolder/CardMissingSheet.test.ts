@@ -6,6 +6,7 @@ import { create, type ReactTestRenderer } from 'react-test-renderer';
 import { useStore } from 'zustand';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { DataFolderVolumes } from '@kitbag/core-native';
 import type { DataFolderStore } from '@kitbag/core-state';
 
 import {
@@ -65,8 +66,15 @@ const { CardMissingSheet } = await import('./CardMissingSheet.tsx');
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
-async function mount(onDismiss = vi.fn()) {
-  const folder = fakeFolder(CARD_OUT);
+const INTERNAL_FINE: DataFolderVolumes = {
+  currentVolumeUuid: null,
+  currentAvailable: true,
+  requiredBytes: null,
+  volumes: [],
+};
+
+async function mount(onDismiss = vi.fn(), volumes = CARD_OUT) {
+  const folder = fakeFolder(volumes);
   world.store = folder.store;
   await folder.store.getState().start();
   let tree: ReactTestRenderer | undefined;
@@ -157,6 +165,20 @@ describe('SD card not found', () => {
       ).toBe(true);
     });
     expect(onDismiss).not.toHaveBeenCalled();
+  });
+});
+
+describe('opened from a row on a missing card', () => {
+  it('names the SD card while the data folder itself is fine', async () => {
+    const { tree } = await mount(vi.fn(), INTERNAL_FINE);
+    const sheet = tree.root.findByType('Sheet' as never);
+    expect((sheet.props as { title: string }).title).toBe('SD card not found');
+    const hints = tree.root
+      .findAllByType('Hint' as never)
+      .map((hint) => (hint.props as { children: string }).children);
+    expect(hints).toHaveLength(1);
+    expect(hints[0]).toContain('are on the SD card');
+    expect(button(tree, 'Use internal storage')).toBeUndefined();
   });
 });
 

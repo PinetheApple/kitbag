@@ -35,13 +35,20 @@ function useImporting(): boolean {
   return songs || stemDeck;
 }
 
-function useCardName(rootMissing: boolean): string {
-  return useDataFolder((s) => {
-    const volumes = s.volumes;
-    if (!rootMissing || volumes === null) return THE_CARD;
-    const uuid = volumes.currentVolumeUuid;
-    return volumeName(findVolume(volumes, uuid), uuid);
-  });
+interface MissingPlace {
+  readonly title: string;
+  readonly name: string;
+}
+
+function useMissingPlace(rootMissing: boolean): MissingPlace {
+  const volumes = useDataFolder((s) => s.volumes);
+  if (!rootMissing || volumes === null)
+    return { title: CARD_PLACE, name: THE_CARD };
+  const uuid = volumes.currentVolumeUuid;
+  return {
+    title: placeName(uuid),
+    name: volumeName(findVolume(volumes, uuid), uuid),
+  };
 }
 
 function useRefusal() {
@@ -75,12 +82,9 @@ export function CardMissingSheet({
   const switchToInternal = useDataFolder((s) => s.switchToInternalStorage);
   const refreshVolumes = useDataFolder((s) => s.refreshVolumes);
   const importing = useImporting();
-  const cardName = useCardName(rootMissing);
+  const place = useMissingPlace(rootMissing);
   const { refusal, explain, clear } = useRefusal();
   const offer = internalOffer({ rootMissing, moveActive, importing });
-  const place = useDataFolder((s) =>
-    rootMissing ? placeName(s.volumes?.currentVolumeUuid ?? null) : CARD_PLACE,
-  );
 
   const dismiss = useCallback(() => {
     clear();
@@ -126,13 +130,13 @@ export function CardMissingSheet({
   return (
     <Sheet
       visible={visible}
-      title={cardMissingTitle(place)}
+      title={cardMissingTitle(place.title)}
       titleIcon="sdCard"
       dismissLabel={CLOSE_CARD_MISSING}
       bottomInset={insets.bottom}
       onDismiss={dismiss}
     >
-      {cardMissingHints(cardName, offered).map((hint) => (
+      {cardMissingHints(place.name, offered).map((hint) => (
         <SheetHint key={hint}>{hint}</SheetHint>
       ))}
       {importingNote === null ? null : <SheetHint>{importingNote}</SheetHint>}

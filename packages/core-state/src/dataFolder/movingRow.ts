@@ -7,9 +7,24 @@ export interface RowMatchIndex {
   readonly folders: readonly (readonly [string, string])[];
 }
 
+function folderAt(path: string, end: number): string {
+  return path.slice(0, end + 1);
+}
+
 function folderOf(path: string): string | null {
   const end = path.lastIndexOf(FOLDER_END);
-  return end < 0 ? null : path.slice(0, end + 1);
+  return end < 0 ? null : folderAt(path, end);
+}
+
+function ancestorFolders(path: string): string[] {
+  const folders: string[] = [];
+  for (
+    let end = path.indexOf(FOLDER_END);
+    end >= 0;
+    end = path.indexOf(FOLDER_END, end + 1)
+  )
+    folders.push(folderAt(path, end));
+  return folders;
 }
 
 function folderOwners(
@@ -17,12 +32,7 @@ function folderOwners(
 ): Map<string, string | null> {
   const owners = new Map<string, string | null>();
   for (const [path, key] of files)
-    for (
-      let end = path.indexOf(FOLDER_END);
-      end >= 0;
-      end = path.indexOf(FOLDER_END, end + 1)
-    ) {
-      const folder = path.slice(0, end + 1);
+    for (const folder of ancestorFolders(path)) {
       const owner = owners.get(folder);
       owners.set(folder, owner === undefined || owner === key ? key : null);
     }
