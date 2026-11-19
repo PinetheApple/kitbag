@@ -98,6 +98,10 @@ constexpr EngineProp kEngineProps[] = {
      [](const kb_engine* e) { return ReadClockPair(e).frame; }},
     {"clock_pair_monotonic_ns",
      [](const kb_engine* e) { return ReadClockPair(e).monotonic_ns; }},
+    {"mixdown_progress",
+     [](const kb_engine* e) { return kb_mixdown_progress(e); }},
+    {"mixdown_state",
+     [](const kb_engine* e) { return static_cast<double>(kb_mixdown_current_state(e)); }},
 };
 
 constexpr const char* kPropertyNames[] = {

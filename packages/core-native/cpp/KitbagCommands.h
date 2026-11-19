@@ -68,6 +68,8 @@ double commandMixerRate();
 int32_t commandMixerSetTrackPitch(double track, double semitones);
 int32_t commandMixerTrackPitch(double track);
 double commandMixerTrackFrames(double track);
+int32_t commandMixdownStart(const char* path);
+void commandMixdownCancel();
 
 // Tuner.
 int32_t commandTunerStart();

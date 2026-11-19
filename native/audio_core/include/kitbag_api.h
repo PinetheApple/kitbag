@@ -22,6 +22,7 @@ typedef enum kb_result {
                             source); nothing changed */
   KB_ERROR_INTERNAL = 5, /* the core failed, not the caller: out of memory, or
                             a file that changed while being read */
+  KB_ERROR_NO_SPACE = 6, /* the destination volume is too full to write to */
 } kb_result;
 
 typedef struct kb_engine kb_engine;
@@ -269,6 +270,7 @@ KB_EXPORT kb_result kb_mixer_clear_loop(kb_engine* engine);
 KB_EXPORT int32_t kb_mixer_active_track_count(const kb_engine* engine);
 KB_EXPORT int64_t kb_mixer_track_frames(const kb_engine* engine, int32_t track);
 
+#include "kitbag_mixdown_api.h"
 #include "kitbag_mixer_stretch_api.h"
 #include "kitbag_song_start_api.h"
 

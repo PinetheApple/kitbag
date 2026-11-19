@@ -14,6 +14,7 @@
 #include "mixer/key_bus.h"
 #include "mixer/mixer_app_state.h"
 #include "mixer/mixer_command.h"
+#include "mixer/mixer_snapshot.h"
 #include "mixer/mixer_track.h"
 #include "mixer/transport_plan.h"
 #include "rt/frame_clock.h"
@@ -81,6 +82,8 @@ class Mixer {
   bool soloed(int track) const;
 
   void SetMasterGain(float gain);
+  /// App thread. Loaded tracks as last set, queued commands included.
+  MixSnapshot Snapshot() const;
   float master_gain() const {
     return master_gain_.load(std::memory_order_relaxed);
   }
@@ -173,6 +176,7 @@ class Mixer {
   /// a ring the callback drains (#25).
   uint64_t rt_track_buffered(int track) const;
   bool track_at_end(int track) const;
+  bool track_input_done(int track) const;
   /// Tests only: whether a track's read-ahead thread runs.
   bool track_reading(int track) const;
 
@@ -354,6 +358,7 @@ class Mixer {
   SpscRing<Command, kCommandRingSize> commands_;
   RtPublisher<KeyBusSlot> buses_[kBanks][kKeyBusCount];
   float sample_rate_;
+  MixerAppMix<kMaxTracks> app_mix_;
   // App thread: what the callback will hold once the ring drains.
   int app_pitch_[kMaxTracks] = {};
   float app_rate_ = kUnityRate;

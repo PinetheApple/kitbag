@@ -123,6 +123,10 @@ class AudioSource {
 
   // Realtime-safe polled mirrors.
   bool is_at_end() const;
+  // Everything the reader will deliver is in the ring or already read.
+  bool input_done() const {
+    return end_of_stream_.load(std::memory_order_acquire);
+  }
 
   // Frames the ring holds ready for the next Read. A readiness probe for the
   // setup path priming before playback; realtime-safe but not needed by Read.

@@ -19,6 +19,9 @@ import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisStore
 import com.kitbag.corenative.library.BackupShare
 import com.kitbag.corenative.library.DocumentPicker
+import com.kitbag.corenative.library.ExportFiles
+import com.kitbag.corenative.library.FileShare
+import com.kitbag.corenative.library.LibraryErrors
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
 import com.kitbag.corenative.library.LibraryUsage
@@ -42,7 +45,8 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private val nameLock = Any()
   private val bundles = StemBundleBridge(reactContext.contentResolver, base)
   private val picker = DocumentPicker(reactContext, io, ::rejectLogged)
-  private val backups = BackupShare(reactContext, io, ::rejectLogged)
+  private val files = FileShare(reactContext, io, ::rejectLogged)
+  private val backups = BackupShare(reactContext, files)
 
   private val listener: (AnalysisResult) -> Unit = ::emitAnalysis
 
@@ -68,6 +72,15 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
 
   override fun shareBackup(fileName: String, contents: String, promise: Promise) =
     backups.share(fileName, contents, promise)
+
+  override fun shareFile(path: String, mime: String, promise: Promise) {
+    val file = ExportFiles.resolve(reactApplicationContext.cacheDir, path)
+    if (file == null) {
+      promise.reject(LibraryErrors.BAD_FILE_NAME, "Not an exported file: $path")
+      return
+    }
+    files.share(ExportFiles.shareSpec(mime), promise) { file }
+  }
 
   override fun importAudio(uri: String, relativeDir: String, promise: Promise) {
     io.execute {

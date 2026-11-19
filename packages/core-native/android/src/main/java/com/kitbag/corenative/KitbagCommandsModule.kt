@@ -6,8 +6,10 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
+import com.kitbag.corenative.library.LibraryErrors
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
+import com.kitbag.corenative.library.MixdownExport
 import com.kitbag.corenative.library.UnsafeLibraryPathException
 import com.kitbag.corenative.route.OutputRoute
 import com.kitbag.corenative.route.OutputRouteWatcher
@@ -20,6 +22,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   NativeKitbagCommandsSpec(reactContext) {
 
   private val libraryBase = LibraryStorage.base(reactContext)
+  private val mixdown = MixdownExport(reactContext.cacheDir)
   private val transportListener: (TransportState, PracticeClock) -> Unit = ::emitTransport
   private val songStoppedListener: () -> Unit = ::emitOnSongStopped
   private val outputRoutes =
@@ -351,6 +354,24 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   override fun mixerTrackFrames(track: Double, promise: Promise) {
     promise.resolve(nativeMixerTrackFrames(track))
+  }
+
+  override fun mixdownStart(fileName: String, promise: Promise) {
+    val started = mixdown.start(fileName)
+    if (started == null) {
+      promise.reject(LibraryErrors.BAD_FILE_NAME, "Not an export file name: $fileName")
+      return
+    }
+    promise.resolve(
+      Arguments.createMap().apply {
+        putInt("result", started.result)
+        putString("path", started.path)
+      },
+    )
+  }
+
+  override fun mixdownCancel() {
+    mixdown.cancel()
   }
 
   override fun tunerStart(promise: Promise) {

@@ -136,6 +136,7 @@ export const KB_RESULT = {
   KB_ERROR_DEVICE_START_FAILED: 3,
   KB_ERROR_BUSY: 4,
   KB_ERROR_INTERNAL: 5,
+  KB_ERROR_NO_SPACE: 6,
 } as const;
 export type KB_RESULT = (typeof KB_RESULT)[keyof typeof KB_RESULT];
 
@@ -162,6 +163,16 @@ export const KB_RAMP_STATE = {
   KB_RAMP_STATE_AT_TARGET: 2,
 } as const;
 export type KB_RAMP_STATE = (typeof KB_RAMP_STATE)[keyof typeof KB_RAMP_STATE];
+
+/** kb_mixdown_state enum. */
+export const KB_MIXDOWN_STATE = {
+  KB_MIXDOWN_STATE_IDLE: 0,
+  KB_MIXDOWN_STATE_RUNNING: 1,
+  KB_MIXDOWN_STATE_DONE: 2,
+  KB_MIXDOWN_STATE_FAILED: 3,
+  KB_MIXDOWN_STATE_CANCELLED: 4,
+} as const;
+export type KB_MIXDOWN_STATE = (typeof KB_MIXDOWN_STATE)[keyof typeof KB_MIXDOWN_STATE];
 
 /** Metronome output-latency offset range, in ms (kb_metronome_set_latency_offset). */
 export const KB_LATENCY_OFFSET_MS_BOUNDS = {

@@ -51,6 +51,12 @@ export type OutputRoute = Readonly<{
   certain: boolean;
 }>;
 
+/** `path` is where the render writes, whatever `result` says. */
+export type MixdownStartReply = Readonly<{
+  result: Int32;
+  path: string;
+}>;
+
 export type KitbagCommandsConstants = Readonly<{
   versionName: string;
   versionCode: Double;
@@ -134,6 +140,9 @@ export interface Spec extends TurboModule {
   mixerSetTrackPitch(track: Int32, semitones: Int32): Promise<number>;
   mixerTrackPitch(track: Int32): Promise<number>;
   mixerTrackFrames(track: Int32): Promise<number>;
+  /** Rejects E_BAD_FILE_NAME for a name unsafe as a path; old exports are cleared. */
+  mixdownStart(fileName: string): Promise<MixdownStartReply>;
+  mixdownCancel(): void;
 
   // --- Tuner (kitbag_tuner_api.h) ------------------------------------------
   //

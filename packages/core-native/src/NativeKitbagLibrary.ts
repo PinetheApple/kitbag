@@ -157,6 +157,8 @@ export interface Spec extends TurboModule {
   pickFolder(): Promise<PickedFolder | null>;
   pickBackup(): Promise<PickedBackup | null>;
   shareBackup(fileName: string, contents: string): Promise<void>;
+  /** Only a file mixdownStart wrote; rejects E_BAD_FILE_NAME for any other path. */
+  shareFile(path: string, mime: string): Promise<void>;
   importAudio(uri: string, relativeDir: string): Promise<ImportedAudio>;
   enqueueAnalysis(
     relativePath: string,

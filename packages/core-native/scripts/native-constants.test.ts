@@ -50,6 +50,7 @@ const realSources: NativeSources = {
   tempoRampHeader: read('src', 'metronome', 'tempo_ramp.h'),
   metronomeTypesHeader: read('src', 'metronome', 'metronome_types.h'),
   transportPlanHeader: read('src', 'mixer', 'transport_plan.h'),
+  mixdownHeader: read('include', 'kitbag_mixdown_api.h'),
 };
 
 describe('parseDefineInt', () => {
@@ -359,6 +360,14 @@ describe('collectConstants (real engine source)', () => {
       { name: 'KB_RAMP_STATE_STEPPING', value: 1 },
       { name: 'KB_RAMP_STATE_AT_TARGET', value: 2 },
     ]);
+    expect(c.mixdownState).toEqual([
+      { name: 'KB_MIXDOWN_STATE_IDLE', value: 0 },
+      { name: 'KB_MIXDOWN_STATE_RUNNING', value: 1 },
+      { name: 'KB_MIXDOWN_STATE_DONE', value: 2 },
+      { name: 'KB_MIXDOWN_STATE_FAILED', value: 3 },
+      { name: 'KB_MIXDOWN_STATE_CANCELLED', value: 4 },
+    ]);
+    expect(c.result).toContainEqual({ name: 'KB_ERROR_NO_SPACE', value: 6 });
     // render twice: identical, so generate:check can byte-diff deterministically.
     expect(renderConstants(c)).toBe(renderConstants(c));
   });

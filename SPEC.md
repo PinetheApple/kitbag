@@ -1091,7 +1091,9 @@ Acceptance:
   retiming is saved per song in Kitbag.
 - **Song facts:** key, BPM, tempo stability. Loudness is stored but not shown (owner, 2026-11-01).
 - **Mixdown export:** offline render of the current mix, speed and key, out
-  through the share sheet (§5.5) — never a hardcoded path.
+  through the share sheet (§5.5) — never a hardcoded path. The whole song as a
+  stereo 16-bit PCM WAV at the engine rate, no dither; gain, mute, solo and
+  master apply, the loop and the click do not (owner, #379).
 
 Sections and lyrics line up with playback at every speed.
 

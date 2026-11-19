@@ -11,6 +11,7 @@
 #include "media/decoder.h"
 #include "metronome/metronome.h"
 #include "miniaudio.h"
+#include "mixdown/mixdown_job.h"
 #include "mixer/mixer.h"
 #include "player/player.h"
 #include "rt/clock_pair_mirror.h"
@@ -126,6 +127,13 @@ class Engine {
   Player& player() {
     return player_;
   }
+
+  MixdownJob& mixdown() {
+    return mixdown_;
+  }
+  const MixdownJob& mixdown() const {
+    return mixdown_;
+  }
   const Player& player() const {
     return player_;
   }
@@ -186,6 +194,8 @@ class Engine {
   Decoder decoder_;
   Mixer mixer_{kSampleRate};
   Player player_{kSampleRate};
+  // Last, so it is destroyed first: the render is cancelled and joined.
+  MixdownJob mixdown_{kSampleRate};
 };
 
 }  // namespace kitbag
