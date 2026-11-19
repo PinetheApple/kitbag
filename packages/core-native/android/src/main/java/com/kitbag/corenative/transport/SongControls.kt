@@ -8,7 +8,7 @@ interface SongEngine {
   fun playing(): Boolean
 }
 
-class SongControls(private val engine: SongEngine, private val fence: SongCardFence) {
+class SongControls(private val engine: SongEngine, private val fence: CardFence) {
   sealed interface Outcome {
     data object Dropped : Outcome
 

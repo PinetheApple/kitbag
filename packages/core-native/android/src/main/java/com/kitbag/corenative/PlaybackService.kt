@@ -18,13 +18,16 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.kitbag.corenative.transport.CardEffect
 import com.kitbag.corenative.transport.CardEvent
+import com.kitbag.corenative.transport.CardFence
+import com.kitbag.corenative.transport.CardFences
 import com.kitbag.corenative.transport.CardRouting
+import com.kitbag.corenative.transport.MetronomeControls
+import com.kitbag.corenative.transport.MetronomeEngine
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
 import com.kitbag.corenative.transport.SessionButton
 import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.SongAction
-import com.kitbag.corenative.transport.SongCardFence
 import com.kitbag.corenative.transport.SongCommand
 import com.kitbag.corenative.transport.TransportAction
 import com.kitbag.corenative.transport.TransportChange
@@ -40,6 +43,8 @@ class PlaybackService : Service() {
   private var session: MediaSessionCompat? = null
   private var practice = PracticeClock.IDLE
   private var shownCardNumber = 0
+  private var metronomeCardNumber = CardFence.NONE
+  private val metronomeControls = MetronomeControls(EngineMetronome, fences.metronome)
   private lateinit var card: MetronomeCard
   private var song: SongCard? = null
   private val routing = CardRouting()
@@ -127,11 +132,11 @@ class PlaybackService : Service() {
       ::songIntent,
       ::postForeground,
       { songRequestListener },
-      songFence,
+      fences.song,
     ) { songStopped() }.also { song = it }
     songCard.show(
       next,
-      intent.getIntExtra(EXTRA_SONG_CARD, SongCardFence.NONE),
+      intent.getIntExtra(EXTRA_SONG_CARD, CardFence.NONE),
       intent.getBooleanExtra(EXTRA_PLAYING, true),
       intent.getBooleanExtra(EXTRA_COUNTING_IN, false),
     )
@@ -187,6 +192,7 @@ class PlaybackService : Service() {
     )
     val playing = intent.getBooleanExtra(EXTRA_PLAYING, true)
     shownCardNumber = intent.getIntExtra(EXTRA_CARD_NUMBER, 0)
+    metronomeCardNumber = intent.getIntExtra(EXTRA_METRONOME_CARD, CardFence.NONE)
     practice = PracticeClock(
       intent.getLongExtra(EXTRA_PRACTICE_PLAYED_MS, 0L),
       if (playing) intent.getLongExtra(EXTRA_PRACTICE_STRETCH_STARTED_AT, System.currentTimeMillis()) else null,
@@ -205,12 +211,7 @@ class PlaybackService : Service() {
     val transportModel = model ?: return
     val current = state?.let(::withEngineTempo) ?: return
     val engineBpm = EngineTransport.currentBpm()
-    var next = current
-    val commands = transportModel.commandsFor(current, action)
-    for (command in commands) {
-      execute(command)
-      next = applied(next, command)
-    }
+    val next = metronomeControls.press(metronomeCardNumber, transportModel, current, action) ?: return
     practice = practice.afterPlaying(next.playback == Playback.PLAYING, System.currentTimeMillis())
     state = next
     val step = transportModel.tempoStep(action)
@@ -221,23 +222,6 @@ class PlaybackService : Service() {
   // A running ramp moves the tempo without telling the service, so read it live.
   private fun withEngineTempo(s: TransportState): TransportState =
     if (s.playback == Playback.PLAYING) s.copy(bpm = EngineTransport.currentBpm()) else s
-
-  private fun execute(command: TransportCommand) {
-    when (command) {
-      TransportCommand.Start, TransportCommand.Resume -> EngineTransport.start()
-      TransportCommand.Pause -> EngineTransport.pause()
-      TransportCommand.Stop -> EngineTransport.stop()
-      is TransportCommand.SetTempo -> EngineTransport.setTempo(command.bpm)
-    }
-  }
-
-  private fun applied(s: TransportState, command: TransportCommand): TransportState =
-    when (command) {
-      TransportCommand.Start, TransportCommand.Resume -> s.copy(playback = Playback.PLAYING)
-      TransportCommand.Pause -> s.copy(playback = Playback.PAUSED)
-      TransportCommand.Stop -> s.copy(playback = Playback.STOPPED)
-      is TransportCommand.SetTempo -> s.copy(bpm = command.bpm, rampRunning = false)
-    }
 
   private fun onTick() {
     val transportModel = model ?: return
@@ -373,7 +357,8 @@ class PlaybackService : Service() {
     private const val EXTRA_SUBTITLE = "setlistSubtitle"
     private const val EXTRA_CARD_NUMBER = "cardNumber"
     private const val EXTRA_SONG_CARD = "songCard"
-    private val songFence = SongCardFence()
+    private const val EXTRA_METRONOME_CARD = "metronomeCard"
+    private val fences = CardFences()
 
     @Volatile private var running = false
 
@@ -408,6 +393,7 @@ class PlaybackService : Service() {
         .putExtra(EXTRA_PRACTICE_PLAYED_MS, practicePlayedMs)
         .putExtra(EXTRA_PRACTICE_STRETCH_STARTED_AT, practiceStretchStartedAt)
         .putExtra(EXTRA_CARD_NUMBER, cardNumber)
+        .putExtra(EXTRA_METRONOME_CARD, fences.metronome.keep())
       state.subtitle?.let { intent.putExtra(EXTRA_SUBTITLE, it) }
       start(context, intent)
     }
@@ -417,6 +403,8 @@ class PlaybackService : Service() {
       if (!running && !startRequested) return
       context.startService(Intent(context, PlaybackService::class.java).setAction(ACTION_HIDE))
     }
+
+    fun handOver(context: Context) = fences.handOverMetronome { hide(context) }
 
     fun showSong(context: Context, song: Song, playing: Boolean, countingIn: Boolean) {
       val intent = Intent(context, PlaybackService::class.java)
@@ -428,12 +416,12 @@ class PlaybackService : Service() {
         .putExtra(EXTRA_DURATION_FRAMES, song.durationFrames)
         .putExtra(EXTRA_RESTART_FROM_FRAME, song.restartFromFrame)
         .putExtra(EXTRA_SKIP_SECONDS, song.skipSeconds)
-        .putExtra(EXTRA_SONG_CARD, songFence.issue())
+        .putExtra(EXTRA_SONG_CARD, fences.song.issue())
       start(context, intent)
     }
 
     fun hideSong(context: Context) {
-      songFence.withdraw()
+      fences.song.withdraw()
       if (!running && !startRequested) return
       context.startService(Intent(context, PlaybackService::class.java).setAction(ACTION_SONG_HIDE))
     }
@@ -447,6 +435,17 @@ class PlaybackService : Service() {
         ContextCompat.startForegroundService(context, intent)
         startRequested = true
       }
+    }
+  }
+}
+
+private object EngineMetronome : MetronomeEngine {
+  override fun execute(command: TransportCommand) {
+    when (command) {
+      TransportCommand.Start, TransportCommand.Resume -> EngineTransport.start()
+      TransportCommand.Pause -> EngineTransport.pause()
+      TransportCommand.Stop -> EngineTransport.stop()
+      is TransportCommand.SetTempo -> EngineTransport.setTempo(command.bpm)
     }
   }
 }

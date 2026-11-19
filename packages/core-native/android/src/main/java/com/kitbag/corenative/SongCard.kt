@@ -11,9 +11,9 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.core.app.NotificationCompat
 import androidx.media.app.NotificationCompat.MediaStyle
+import com.kitbag.corenative.transport.CardFence
 import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.SongAction
-import com.kitbag.corenative.transport.SongCardFence
 import com.kitbag.corenative.transport.SongCommand
 import com.kitbag.corenative.transport.SongControls
 import com.kitbag.corenative.transport.SongEngine
@@ -31,11 +31,11 @@ internal class SongCard(
   private val actionIntent: (SongAction) -> PendingIntent,
   private val post: (Notification) -> Unit,
   private val appRequests: () -> ((SongCommand) -> Unit)?,
-  fence: SongCardFence,
+  fence: CardFence,
   private val onStopped: () -> Unit,
 ) {
   private val controls = SongControls(MixerEngine, fence)
-  private var cardNumber = SongCardFence.NONE
+  private var cardNumber = CardFence.NONE
   private var countingIn = false
   private var song: Song? = null
   private var transport: SongTransport? = null
