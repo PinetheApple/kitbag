@@ -1,0 +1,1 @@
+• Fixed a crash when one sheet replaced another, such as tapping Delete song while a song was playing.
