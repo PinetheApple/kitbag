@@ -88,6 +88,10 @@ export function reader(value: unknown, path: string) {
         : get(key, isNumber, 'expected a finite number'),
     nullableString: (key: string) =>
       nullable(key, isString, 'expected a string or null'),
+    optionalNullableString: (key: string) =>
+      object[key] === undefined
+        ? null
+        : nullable(key, isString, 'expected a string or null'),
     nullableNumber,
     presentNullableNumber: <K extends string>(key: K) =>
       ifPresent(key, nullableNumber),

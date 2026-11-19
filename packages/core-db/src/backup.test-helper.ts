@@ -5,6 +5,11 @@ import type { ImportResult } from './backup-format';
 import { createClickSoundRepository } from './click-sound-repository';
 import { memoryClickSoundFiles } from './click-sound-files.test-helper';
 import { COUNT_IN_PREFERENCE_KEYS } from './count-in-preferences';
+import {
+  PRACTICE_LOG_VERSION,
+  STRETCH_END,
+  type PracticeLog,
+} from './practice-log';
 import { createPracticeRepository } from './practice-repository';
 import { createPreferences } from './preferences';
 import { songs, tunings } from './schema';
@@ -24,6 +29,24 @@ const hexBytes = (hex: string) =>
   Uint8Array.from(hex.match(/../g) ?? [], (pair) => parseInt(pair, 16));
 
 export const SESSION_START = new Date('2026-07-14T20:00:00Z');
+
+export const SEEDED_PRACTICE_LOG: PracticeLog = {
+  v: PRACTICE_LOG_VERSION,
+  stretches: [
+    {
+      from: 0,
+      to: 1_800_000,
+      end: STRETCH_END.end,
+      song: { uuid: 'opener', title: 'Opener' },
+      setlist: { uuid: 'friday', name: 'Friday', position: 2 },
+      settings: null,
+      countIn: { bars: 1, distinct: true, sound: 0 },
+      tempo: [[600_000, 124]],
+      endBpm: 124,
+      avgBpm: 122,
+    },
+  ],
+};
 
 export function openBackupDatabase() {
   const handle = openTestDatabase();
@@ -141,7 +164,9 @@ export async function seed(database: BackupDatabase) {
     durationSeconds: 1800,
     avgBpm: 120,
     setlistId: friday.id,
+    setlistName: friday.name,
     songUuids: [opener.uuid, closer.uuid],
+    log: SEEDED_PRACTICE_LOG,
   });
   return { song, opener, closer, friday, acoustic };
 }

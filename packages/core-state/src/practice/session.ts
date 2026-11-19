@@ -1,4 +1,14 @@
-import { MS_PER_SECOND } from '@kitbag/core-db';
+import {
+  MS_PER_SECOND,
+  PRACTICE_LOG_VERSION,
+  STRETCH_END,
+  isStemSong,
+  type LoggedPresetSong,
+  type LoggedStemSong,
+  type LoggedStretch,
+  type PracticeLog,
+  type StretchEnd,
+} from '@kitbag/core-db';
 
 import {
   IDLE_PRACTICE,
@@ -6,35 +16,50 @@ import {
   practiceElapsedMs,
   type PracticeClock,
 } from '../metronome/practice.ts';
+import {
+  closedStretch,
+  isFolding,
+  openStretch,
+  refolded,
+  stretchAfterSample,
+  stretchAfterTempo,
+  withLastEnd,
+  type OpenStretch,
+  type StretchPlace,
+  type StretchSetup,
+} from './stretch.ts';
+import {
+  averageBpm,
+  sampled,
+  startAverage,
+  type TempoAverage,
+} from './tempo.ts';
 
 export const PRACTICE_TEMPO_SAMPLE_MS = 1000;
 export const MIN_SAVED_PLAYED_MS = MS_PER_SECOND;
 
-export interface PracticeSong {
-  readonly uuid: string;
-  readonly title: string;
-}
+export type PracticeSong = LoggedPresetSong;
+export type PracticeStemSong = LoggedStemSong;
 
 export interface PracticeSetlist {
   readonly id: number;
   readonly name: string;
 }
 
+export interface PracticeStage extends PracticeSetlist {
+  readonly uuid: string;
+  readonly position: number | null;
+  readonly itemId: number | null;
+}
+
 export interface PracticeContext {
-  readonly setlist: PracticeSetlist | null;
-  readonly song: PracticeSong | null;
+  readonly setlist: PracticeStage | null;
+  readonly song: PracticeSong | PracticeStemSong | null;
 }
 
 export interface PracticeStretch {
   readonly ms: number;
   readonly title: string | null;
-}
-
-interface TempoAverage {
-  readonly bpmMs: number;
-  readonly ms: number;
-  readonly bpm: number;
-  readonly sampledAt: number | null;
 }
 
 export interface PracticeSession {
@@ -47,6 +72,8 @@ export interface PracticeSession {
   readonly songs: readonly PracticeSong[];
   readonly longest: PracticeStretch | null;
   readonly tempo: TempoAverage;
+  readonly open: OpenStretch | null;
+  readonly stretches: readonly LoggedStretch[];
 }
 
 export interface PracticeSummary {
@@ -59,19 +86,38 @@ export interface PracticeSummary {
   readonly longestStretch: PracticeStretch | null;
 }
 
+export interface PracticeRecording extends PracticeSummary {
+  readonly log: PracticeLog;
+}
+
 function isPlaying(session: PracticeSession): boolean {
   return session.clock.stretchStartedAt !== null;
 }
 
-function sampled(tempo: TempoAverage, at: number, bpm: number): TempoAverage {
-  if (tempo.sampledAt === null) return { ...tempo, bpm, sampledAt: at };
-  const elapsed = Math.max(0, at - tempo.sampledAt);
+function placeOf({ song, setlist }: PracticeContext): StretchPlace {
   return {
-    bpmMs: tempo.bpmMs + tempo.bpm * elapsed,
-    ms: tempo.ms + elapsed,
-    bpm,
-    sampledAt: at,
+    song,
+    setlist:
+      setlist === null
+        ? null
+        : {
+            uuid: setlist.uuid,
+            name: setlist.name,
+            position: setlist.position,
+          },
   };
+}
+
+function songKey(song: PracticeContext['song']): string | null {
+  if (song === null) return null;
+  return isStemSong(song) ? song.stemSongKey : song.uuid;
+}
+
+function samePlace(a: PracticeContext, b: PracticeContext): boolean {
+  return (
+    songKey(a.song) === songKey(b.song) &&
+    a.setlist?.itemId === b.setlist?.itemId
+  );
 }
 
 function longer(
@@ -81,7 +127,7 @@ function longer(
   return longest !== null && longest.ms >= stretch.ms ? longest : stretch;
 }
 
-function withStretchClosed(
+function withLongestClosed(
   session: PracticeSession,
   at: number,
 ): PracticeSession {
@@ -92,14 +138,34 @@ function withStretchClosed(
   return { ...session, longest: longer(session.longest, stretch) };
 }
 
-function withContextPlayed(session: PracticeSession): PracticeSession {
-  const { song, setlist } = session.context;
-  const known =
-    song === null || session.songs.some((played) => played.uuid === song.uuid);
+function withLogClosed(
+  session: PracticeSession,
+  at: number,
+  end: StretchEnd,
+  bpm: number,
+): PracticeSession {
+  const { open, startedAt, stretches } = session;
+  if (open === null) return session;
+  const closed = closedStretch(open, startedAt, at, end, bpm);
   return {
     ...session,
-    practicedSetlist: session.practicedSetlist ?? setlist,
-    songs: known ? session.songs : [...session.songs, song],
+    open: null,
+    stretches: closed === null ? stretches : [...stretches, closed],
+  };
+}
+
+function withContextPlayed(session: PracticeSession): PracticeSession {
+  const { song, setlist } = session.context;
+  const fresh =
+    song !== null &&
+    !isStemSong(song) &&
+    !session.songs.some((played) => played.uuid === song.uuid);
+  const practiced =
+    setlist === null ? null : { id: setlist.id, name: setlist.name };
+  return {
+    ...session,
+    practicedSetlist: session.practicedSetlist ?? practiced,
+    songs: fresh ? [...session.songs, song] : session.songs,
   };
 }
 
@@ -108,6 +174,7 @@ export function startPracticeSession(
   at: number,
   bpm: number,
   context: PracticeContext,
+  setup: StretchSetup,
 ): PracticeSession {
   return withContextPlayed({
     uuid,
@@ -118,30 +185,54 @@ export function startPracticeSession(
     practicedSetlist: null,
     songs: [],
     longest: null,
-    tempo: { bpmMs: 0, ms: 0, bpm, sampledAt: at },
+    tempo: startAverage(at, bpm),
+    open: openStretch(placeOf(context), setup, at, bpm),
+    stretches: [],
   });
 }
 
-export function practiceSessionAfterRunning(
+export function practiceSessionAfterPlay(
   session: PracticeSession,
-  running: boolean,
+  at: number,
+  bpm: number,
+  setup: StretchSetup,
+): PracticeSession {
+  if (isPlaying(session)) return session;
+  return withContextPlayed({
+    ...session,
+    clock: practiceAfterRunning(session.clock, true, at),
+    songStretchFrom: at,
+    tempo: { ...session.tempo, bpm, sampledAt: at },
+    open: openStretch(placeOf(session.context), setup, at, bpm),
+  });
+}
+
+export function practiceSessionAfterPause(
+  session: PracticeSession,
   at: number,
   bpm: number,
 ): PracticeSession {
-  if (running === isPlaying(session)) return session;
-  if (running)
-    return withContextPlayed({
-      ...session,
-      clock: practiceAfterRunning(session.clock, true, at),
-      songStretchFrom: at,
-      tempo: { ...session.tempo, bpm, sampledAt: at },
-    });
-  const closed = withStretchClosed(session, at);
+  if (!isPlaying(session)) return session;
+  const closed = withLogClosed(
+    withLongestClosed(session, at),
+    at,
+    STRETCH_END.pause,
+    bpm,
+  );
   return {
     ...closed,
     clock: practiceAfterRunning(session.clock, false, at),
     tempo: { ...sampled(session.tempo, at, bpm), sampledAt: null },
   };
+}
+
+function withOpen(
+  session: PracticeSession,
+  next: (open: OpenStretch) => OpenStretch,
+): PracticeSession {
+  return session.open === null
+    ? session
+    : { ...session, open: next(session.open) };
 }
 
 export function practiceSessionAfterTempo(
@@ -150,39 +241,108 @@ export function practiceSessionAfterTempo(
   bpm: number,
 ): PracticeSession {
   if (!isPlaying(session)) return session;
-  return { ...session, tempo: sampled(session.tempo, at, bpm) };
+  return withOpen(
+    { ...session, tempo: sampled(session.tempo, at, bpm) },
+    (open) => stretchAfterSample(open, at, bpm),
+  );
 }
 
-function sameSong(a: PracticeSong | null, b: PracticeSong | null): boolean {
-  return a?.uuid === b?.uuid;
+export function practiceSessionAfterTempoChange(
+  session: PracticeSession,
+  at: number,
+  bpm: number,
+  setup: StretchSetup,
+): PracticeSession {
+  if (!isPlaying(session)) return session;
+  const place = placeOf(session.context);
+  return withOpen(
+    { ...session, tempo: sampled(session.tempo, at, bpm) },
+    (open) =>
+      isFolding(open, at)
+        ? refolded(open, place, setup, bpm)
+        : stretchAfterTempo(open, at, bpm),
+  );
+}
+
+function reopened(
+  session: PracticeSession,
+  at: number,
+  end: StretchEnd,
+  bpm: number,
+  setup: StretchSetup,
+): PracticeSession {
+  const { open } = session;
+  const place = placeOf(session.context);
+  if (open === null) return session;
+  if (!isFolding(open, at))
+    return {
+      ...withLogClosed(session, at, end, bpm),
+      open: openStretch(place, setup, at, bpm),
+    };
+  const from = open.from - session.startedAt;
+  return {
+    ...session,
+    open: refolded(open, place, setup, bpm),
+    stretches:
+      end === STRETCH_END.song
+        ? withLastEnd(session.stretches, from, end)
+        : session.stretches,
+  };
+}
+
+export function practiceSessionAfterSettings(
+  session: PracticeSession,
+  at: number,
+  bpm: number,
+  setup: StretchSetup,
+): PracticeSession {
+  if (!isPlaying(session)) return session;
+  return reopened(
+    { ...session, tempo: sampled(session.tempo, at, bpm) },
+    at,
+    STRETCH_END.settings,
+    bpm,
+    setup,
+  );
 }
 
 export function practiceSessionAfterContext(
   session: PracticeSession,
   context: PracticeContext,
   at: number,
+  bpm: number,
+  setup: StretchSetup,
 ): PracticeSession {
   if (!isPlaying(session)) return { ...session, context };
-  if (sameSong(session.context.song, context.song))
+  if (samePlace(session.context, context))
     return withContextPlayed({ ...session, context });
-  const closed = withStretchClosed(session, at);
-  return withContextPlayed({ ...closed, context, songStretchFrom: at });
+  const songChanged = songKey(session.context.song) !== songKey(context.song);
+  const closed = songChanged
+    ? { ...withLongestClosed(session, at), songStretchFrom: at }
+    : session;
+  return withContextPlayed(
+    reopened({ ...closed, context }, at, STRETCH_END.song, bpm, setup),
+  );
 }
 
 export function endPracticeSession(
   session: PracticeSession,
   at: number,
   bpm: number,
-): PracticeSummary {
-  const ended = practiceSessionAfterRunning(session, false, at, bpm);
-  const { tempo } = ended;
+): PracticeRecording {
+  const paused = practiceSessionAfterPause(
+    withLogClosed(session, at, STRETCH_END.end, bpm),
+    at,
+    bpm,
+  );
   return {
-    uuid: ended.uuid,
-    startedAt: ended.startedAt,
-    playedMs: practiceElapsedMs(ended.clock, at),
-    setlist: ended.practicedSetlist,
-    songs: ended.songs,
-    avgBpm: tempo.ms > 0 ? tempo.bpmMs / tempo.ms : tempo.bpm,
-    longestStretch: ended.longest,
+    uuid: paused.uuid,
+    startedAt: paused.startedAt,
+    playedMs: practiceElapsedMs(paused.clock, at),
+    setlist: paused.practicedSetlist,
+    songs: paused.songs,
+    avgBpm: averageBpm(paused.tempo),
+    longestStretch: paused.longest,
+    log: { v: PRACTICE_LOG_VERSION, stretches: paused.stretches },
   };
 }
