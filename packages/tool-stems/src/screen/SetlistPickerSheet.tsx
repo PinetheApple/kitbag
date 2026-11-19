@@ -5,7 +5,11 @@ import {
   SheetHint,
   TextField,
 } from '@kitbag/core-design';
-import { useLibrary, type SetlistSummary } from '@kitbag/core-state';
+import {
+  isPresetEntry,
+  useLibrary,
+  type SetlistSummary,
+} from '@kitbag/core-state';
 import { useCallback, useEffect, useState } from 'react';
 
 import { pickerSubtitle } from '../logic/upNextText.ts';
@@ -29,7 +33,9 @@ interface PickRowProps {
 function PickRow({ summary, stemSetId, onPick }: PickRowProps) {
   const entries = useLibrary((s) => s.entries[summary.setlist.id]);
   const list = entries ?? [];
-  const holds = list.some((e) => 'stemSetId' in e && e.stemSetId === stemSetId);
+  const holds = list.some(
+    (e) => !isPresetEntry(e) && e.stemSetId === stemSetId,
+  );
   const pick = useCallback(() => {
     onPick(summary);
   }, [onPick, summary]);

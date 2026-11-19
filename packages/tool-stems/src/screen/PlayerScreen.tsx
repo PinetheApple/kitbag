@@ -32,7 +32,11 @@ import { ExportSheet } from './ExportSheet.tsx';
 import { LoopUndoSnackbar } from './LoopUndoSnackbar.tsx';
 import { PlayerMenu } from './PlayerMenu.tsx';
 import { type AddedToSetlist } from './SetlistPickerSheet.tsx';
-import { SetlistSheet, useQueueActions } from './queueActions.tsx';
+import {
+  SetlistSheet,
+  useCarriedSkipNotice,
+  useQueueActions,
+} from './queueActions.tsx';
 import { LeaveDialog, ResetDialog, RetimeBar } from './RetimeBar.tsx';
 import { RetimeBody } from './RetimeMode.tsx';
 import { StemAppBar } from './StemAppBar.tsx';
@@ -46,7 +50,8 @@ import { PlayerNoticeSnackbar, usePlayerNotice } from './PlayerNotice.tsx';
 import { TempoSheet } from './TempoSheet.tsx';
 import { UpNextRow } from './UpNextRow.tsx';
 import { UpNextSheet } from './UpNextSheet.tsx';
-import { usePlayOrderNav, type PlayOrderRoutes } from './usePlayOrderNav.ts';
+import { usePlayerRoutes } from './playerRoutes.ts';
+import type { PlayOrderRoutes } from './usePlayOrderNav.ts';
 import { useMixerFrame, type MixerFrameValues } from './useMixerFrame.ts';
 
 export interface StemPlayerScreenProps {
@@ -418,7 +423,7 @@ function PlayerSheets(props: PlayerSheetsProps) {
   );
 }
 
-function PlayerScreen({
+export function PlayerScreen({
   setId,
   focused,
   insets,
@@ -428,15 +433,11 @@ function PlayerScreen({
   onOpenSetlist,
 }: StemPlayerScreenProps) {
   const styles = useStyles();
-  const notice = usePlayerNotice();
-  const routes = useMemo<PlayOrderRoutes>(
-    () => ({ onOpenStemSet, onOpenMetronome, onNotice: notice.showMessage }),
-    [onOpenStemSet, onOpenMetronome, notice.showMessage],
+  const { notice, routes, skip } = usePlayerRoutes(
+    onOpenStemSet,
+    onOpenMetronome,
   );
-  const nav = usePlayOrderNav(routes);
-  const skip = useCallback(() => {
-    void nav.skip();
-  }, [nav]);
+  useCarriedSkipNotice(notice.showMessage);
   const ready = useStemPlayer((s) => s.status === 'ready');
   const acquireSong = useStemPlayer((s) => s.acquireSong);
   const { retiming, shown, askReset, askLeave, closeAsk } = useRetimeAsk();
@@ -489,17 +490,4 @@ function PlayerScreen({
       {shown === 'leave' ? <LeaveDialog onClose={closeAsk} /> : null}
     </View>
   );
-}
-
-export function StemPlayerScreen(props: StemPlayerScreenProps) {
-  const { setId, onOpenStemSet } = props;
-  const [take, setTake] = useState(0);
-  const open = useCallback(
-    (stemSetId: number) => {
-      if (stemSetId === setId) setTake((count) => count + 1);
-      else onOpenStemSet(stemSetId);
-    },
-    [setId, onOpenStemSet],
-  );
-  return <PlayerScreen key={take} {...props} onOpenStemSet={open} />;
 }

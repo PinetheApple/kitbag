@@ -14,7 +14,6 @@ import {
   useStemSongs,
   useUpNext,
 } from '@kitbag/core-state';
-import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { upNextText } from '../logic/upNextText.ts';
@@ -50,9 +49,6 @@ export function UpNextRow({ onOpenSheet, onNext }: UpNextRowProps) {
   const queueLength = usePlayOrder((s) => s.queue.length);
   const { stage, name } = useStage();
   const stems = useStemSongs();
-  const handleNext = useCallback(() => {
-    onNext();
-  }, [onNext]);
   if (next === undefined) return null;
   const text = upNextText(next, {
     queueLength,
@@ -84,14 +80,14 @@ export function UpNextRow({ onOpenSheet, onNext }: UpNextRowProps) {
           icon="metronome"
           iconSize="action"
           label="Open"
-          onPress={handleNext}
+          onPress={onNext}
         />
       ) : (
         <TransportKey
           size="dock"
           icon="next"
           accessibilityLabel={`Next: ${text.title}`}
-          onPress={handleNext}
+          onPress={onNext}
         />
       )}
     </View>

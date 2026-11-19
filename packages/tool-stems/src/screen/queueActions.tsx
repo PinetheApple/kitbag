@@ -24,6 +24,16 @@ export function SetlistSheet(
   return <SetlistPickerSheet {...props} songTitle={title} stemSetId={setId} />;
 }
 
+export function useCarriedSkipNotice(showMessage: (message: string) => void) {
+  const carried = useLibrary((s) => s.carriedSkip);
+  const carrySkip = useLibrary((s) => s.carrySkip);
+  useEffect(() => {
+    if (!carried) return;
+    showMessage(SKIPPED_STEM_SONG);
+    carrySkip(false);
+  }, [carried, carrySkip, showMessage]);
+}
+
 export function useQueueActions(
   notice: ReturnType<typeof usePlayerNotice>,
   closeSheet: () => void,
@@ -32,14 +42,6 @@ export function useQueueActions(
   const enqueue = usePlayOrder((s) => s.enqueue);
   const refresh = usePlayOrder((s) => s.refresh);
   const setId = useStemPlayer((s) => s.setId);
-  const carried = useLibrary((s) => s.carriedSkip);
-  const carrySkip = useLibrary((s) => s.carrySkip);
-  const { showMessage } = notice;
-  useEffect(() => {
-    if (!carried) return;
-    showMessage(SKIPPED_STEM_SONG);
-    carrySkip(false);
-  }, [carried, carrySkip, showMessage]);
   useEffect(() => {
     refresh().catch((error: unknown) => {
       console.warn('[kitbag] play queue read failed', error);

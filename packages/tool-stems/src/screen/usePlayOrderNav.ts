@@ -7,7 +7,8 @@ import {
   useStage,
   type SetlistEntry,
 } from '@kitbag/core-state';
-import { useCallback, useMemo, useRef } from 'react';
+import { useAfterSheetClosed } from '@kitbag/core-design';
+import { useCallback, useMemo } from 'react';
 
 export interface PlayOrderRoutes {
   readonly onOpenStemSet: (stemSetId: number) => void;
@@ -26,23 +27,21 @@ export function leaveOf(entry: SetlistEntry): Leave {
 }
 
 export function useLeaveAfterClose(routes: PlayOrderRoutes) {
-  const leaving = useRef<Leave | null>(null);
-  const leaveFor = useCallback((leave: Leave) => {
-    leaving.current = leave;
-  }, []);
-  const closed = useCallback(() => {
-    const leave = leaving.current;
-    leaving.current = null;
-    if (leave === null) return;
-    if (leave.kind === 'stem') routes.onOpenStemSet(leave.stemSetId);
-    else routes.onOpenMetronome();
-  }, [routes]);
+  const { after, closed } = useAfterSheetClosed();
+  const leaveFor = useCallback(
+    (leave: Leave) => {
+      after(() => {
+        if (leave.kind === 'stem') routes.onOpenStemSet(leave.stemSetId);
+        else routes.onOpenMetronome();
+      });
+    },
+    [after, routes],
+  );
   return { leaveFor, closed };
 }
 
 export function usePlayOrderNav(routes: PlayOrderRoutes) {
   const skipToNext = usePlayOrder((s) => s.skipToNext);
-  const playQueued = usePlayOrder((s) => s.playQueued);
   const loadSong = useLibrary((s) => s.loadSong);
   const openStemEntry = useLibrary((s) => s.openStemEntry);
   const { stage } = useStage();
@@ -64,12 +63,5 @@ export function usePlayOrderNav(routes: PlayOrderRoutes) {
     await openEntry(advance.entry);
     routes.onOpenMetronome();
   }, [skipToNext, routes, openEntry]);
-  const playNow = useCallback(
-    (stemSetId: number) => playQueued(stemSetId),
-    [playQueued],
-  );
-  return useMemo(
-    () => ({ skip, playNow, openEntry }),
-    [skip, playNow, openEntry],
-  );
+  return useMemo(() => ({ skip, openEntry }), [skip, openEntry]);
 }

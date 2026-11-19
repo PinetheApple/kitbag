@@ -3,7 +3,7 @@ import {
   BPM_UNIT,
   entryName,
   isPresetEntry,
-  stemSongFacts,
+  stemFacts,
   stemSongTitle,
   UP_NEXT_SOURCE,
   type OnStage,
@@ -13,9 +13,10 @@ import {
   type UpNext,
 } from '@kitbag/core-state';
 
+import { SEPARATOR } from '../stemDeck/logic/songFacts.ts';
+
 export const QUEUED = 'Queued';
 const METRONOME = 'metronome';
-const SEPARATOR = ' · ';
 
 export interface UpNextContext {
   readonly queueLength: number;
@@ -60,11 +61,6 @@ export function upNextText(next: UpNext, context: UpNextContext): UpNextText {
     source: setlistSource(entry, context),
     metronome: isPresetEntry(entry),
   };
-}
-
-export function stemFacts(stemSetId: number, stems: StemSongs): string {
-  const song = stems.get(stemSetId);
-  return song === undefined ? '' : stemSongFacts(song);
 }
 
 export function setlistRowSubtitle(
