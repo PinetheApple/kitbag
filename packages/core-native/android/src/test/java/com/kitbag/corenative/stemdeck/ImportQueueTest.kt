@@ -162,6 +162,15 @@ class ImportQueueTest {
   }
 
   @Test
+  fun `clearing a queue that is already empty clears nothing`() {
+    assertFalse(ImportQueue().clear())
+    val queue = queue(a)
+    queue.stop(StemDeckFailure.INTERRUPTED)
+    assertTrue(queue.clear())
+    assertFalse(queue.clear())
+  }
+
+  @Test
   fun `clearing does nothing while songs are still coming in`() {
     val queue = queue(a, b)
     queue.next()

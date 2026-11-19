@@ -5,6 +5,7 @@ import {
   addedText,
   finishedText,
   importCardShows,
+  importClearable,
   megabytes,
   retryLabel,
   rowBadge,
@@ -145,5 +146,18 @@ describe('when Stem songs shows the import card', () => {
     expect(importCardShows({ ...done, stopped: 'interrupted' })).toBe(false);
     expect(importCardShows({ ...done, finished: true })).toBe(false);
     expect(importCardShows(null)).toBe(false);
+  });
+});
+
+describe('when the import screen offers Clear', () => {
+  it('offers it while songs are left', () => {
+    const left = view([row('added'), row('notStarted')]);
+    expect(importClearable({ ...left, retryCount: 1 })).toBe(true);
+  });
+
+  it('holds it back while a song is being added or nothing is left', () => {
+    const adding = view([row('adding'), row('notStarted')]);
+    expect(importClearable({ ...adding, retryCount: 1 })).toBe(false);
+    expect(importClearable(view([row('added')]))).toBe(false);
   });
 });

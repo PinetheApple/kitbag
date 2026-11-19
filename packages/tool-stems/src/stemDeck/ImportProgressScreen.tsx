@@ -11,6 +11,7 @@ import { ImportRowView } from './ImportRowView.tsx';
 import {
   addedText,
   finishedText,
+  importClearable,
   retryLabel,
   stopNotice,
 } from './logic/progressText.ts';
@@ -82,10 +83,10 @@ function useClear(onCleared: () => void) {
 }
 
 function StoppedActions({
-  retryCount,
+  view,
   onBack,
 }: {
-  readonly retryCount: number;
+  readonly view: StemDeckImportView;
   readonly onBack: () => void;
 }) {
   const styles = useStemDeckStyles();
@@ -104,18 +105,18 @@ function StoppedActions({
           label={CLOSE}
           onPress={onBack}
         />
-        {retryCount === 0 ? null : (
+        {view.retryCount === 0 ? null : (
           <Button
             fill
             variant="primary"
             size="target"
             icon="reset"
-            label={retryLabel(retryCount)}
+            label={retryLabel(view.retryCount)}
             onPress={retry}
           />
         )}
       </View>
-      {retryCount === 0 ? null : (
+      {importClearable(view) ? (
         <Button
           variant="ghost"
           size="target"
@@ -123,7 +124,7 @@ function StoppedActions({
           accessibilityLabel={CLEAR_LABEL}
           onPress={clear}
         />
-      )}
+      ) : null}
     </>
   );
 }
@@ -163,7 +164,7 @@ function Dock({ view, bottomInset, onBack, onOpenStemSongs }: DockProps) {
     );
   return (
     <View style={dock}>
-      <StoppedActions retryCount={view.retryCount} onBack={onBack} />
+      <StoppedActions view={view} onBack={onBack} />
     </View>
   );
 }

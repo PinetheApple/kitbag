@@ -176,6 +176,10 @@ export function importCardShows(
   return view.running || (view.retryCount > 0 && view.stopped !== USER_STOP);
 }
 
+export function importClearable(view: StemDeckImportView): boolean {
+  return view.retryCount > 0 && view.rows.every((r) => r.phase !== 'adding');
+}
+
 export function statusCardText(view: StemDeckImportView): string {
   if (view.running)
     return `Getting songs from StemDeck${SEPARATOR}${addedText(view)}`;

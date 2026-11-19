@@ -217,6 +217,16 @@ describe('the import card on Stem songs', () => {
     expect(onBack).toHaveBeenCalledOnce();
   });
 
+  it('offers no Clear while a song is still being added', async () => {
+    show(
+      [importRow('Way Maker', 'adding'), importRow('Gratitude', 'notStarted')],
+      { running: false, stopped: 'cancelled', retryCount: 1 },
+    );
+    const screen = await mount(progress());
+    expect(screen.labelled('Clear the unfinished import')).toHaveLength(0);
+    expect(screen.has('Retry 1 song')).toBe(true);
+  });
+
   it('is gone when a stopped import has nothing left', async () => {
     show([importRow('Way Maker', 'added')], {
       running: false,
