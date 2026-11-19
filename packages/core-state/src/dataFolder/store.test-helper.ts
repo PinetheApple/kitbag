@@ -1,4 +1,5 @@
 import type {
+  DataFolderVolume,
   DataFolderVolumes,
   MoveFinished,
   MoveListeners,
@@ -123,4 +124,42 @@ export function setupStore({
       folderChanged();
     },
   };
+}
+
+export const INTERNAL: DataFolderVolume = {
+  volumeUuid: null,
+  name: null,
+  state: CODES.volumeStates.mounted,
+  inUse: true,
+  freeBytes: 5_000,
+  totalBytes: 9_000,
+  awayFiles: 0,
+  awayBytes: 0,
+  awayRequiredBytes: 0,
+  awaySongs: 0,
+  awayStemSongs: 0,
+};
+
+export function card(fields: Partial<DataFolderVolume> = {}): DataFolderVolume {
+  return {
+    volumeUuid: CARD,
+    name: 'SanDisk SD card',
+    state: CODES.volumeStates.mounted,
+    inUse: false,
+    freeBytes: 2_000,
+    totalBytes: 4_000,
+    awayFiles: 6,
+    awayBytes: 1_200,
+    awayRequiredBytes: 1_200,
+    awaySongs: 0,
+    awayStemSongs: 0,
+    ...fields,
+  };
+}
+
+export async function started(volumes: readonly DataFolderVolume[]) {
+  const harness = setupStore();
+  harness.native.listVolumes.mockResolvedValue({ ...VOLUMES, volumes });
+  await harness.store.getState().start();
+  return harness;
 }

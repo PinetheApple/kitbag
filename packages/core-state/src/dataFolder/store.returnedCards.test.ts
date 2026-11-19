@@ -1,47 +1,16 @@
-import type { DataFolderVolume } from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 
 import { DATA_FOLDER_CODES as CODES } from './codes.test-helper.ts';
 import { returnedCards } from './store.ts';
-import { CARD, VOLUMES, setupStore, status } from './store.test-helper.ts';
-
-const INTERNAL: DataFolderVolume = {
-  volumeUuid: null,
-  name: null,
-  state: CODES.volumeStates.mounted,
-  inUse: true,
-  freeBytes: 5_000,
-  totalBytes: 9_000,
-  awayFiles: 0,
-  awayBytes: 0,
-  awayRequiredBytes: 0,
-  awaySongs: 0,
-  awayStemSongs: 0,
-};
-
-function card(fields: Partial<DataFolderVolume> = {}): DataFolderVolume {
-  return {
-    volumeUuid: CARD,
-    name: 'SanDisk SD card',
-    state: CODES.volumeStates.mounted,
-    inUse: false,
-    freeBytes: 2_000,
-    totalBytes: 4_000,
-    awayFiles: 6,
-    awayBytes: 1_200,
-    awayRequiredBytes: 1_200,
-    awaySongs: 0,
-    awayStemSongs: 0,
-    ...fields,
-  };
-}
-
-async function started(volumes: readonly DataFolderVolume[]) {
-  const harness = setupStore();
-  harness.native.listVolumes.mockResolvedValue({ ...VOLUMES, volumes });
-  await harness.store.getState().start();
-  return harness;
-}
+import {
+  CARD,
+  INTERNAL,
+  VOLUMES,
+  card,
+  rejection,
+  started,
+  status,
+} from './store.test-helper.ts';
 
 describe('returned cards', () => {
   it('lists a mounted card that holds away songs', async () => {
@@ -100,9 +69,7 @@ describe('returning a card', () => {
   it('keeps the refusal of a return while another move is pending', async () => {
     const { store, native } = await started([INTERNAL, card()]);
     native.startCardReturn.mockRejectedValue(
-      Object.assign(new Error('refused'), {
-        code: CODES.moveErrors.inProgress,
-      }),
+      rejection(CODES.moveErrors.inProgress),
     );
     await expect(store.getState().returnCard(CARD)).resolves.toBe(false);
     expect(store.getState().error).toBe(CODES.moveErrors.inProgress);

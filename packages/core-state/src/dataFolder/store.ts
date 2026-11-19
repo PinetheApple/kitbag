@@ -33,6 +33,7 @@ export interface DataFolderState {
   readonly holders: PlayerTracks | null;
   readonly released: boolean;
   readonly pending: boolean;
+  readonly declined: readonly string[];
 }
 
 export interface DataFolderActions {
@@ -47,6 +48,7 @@ export interface DataFolderActions {
   readonly undoMove: () => Promise<boolean>;
   readonly switchToInternalStorage: () => Promise<boolean>;
   readonly dismissError: () => void;
+  readonly declineReturn: (volumeUuid: string) => void;
 }
 
 export type DataFolderStore = DataFolderState & DataFolderActions;
@@ -90,6 +92,7 @@ const INITIAL: DataFolderState = {
   holders: null,
   released: false,
   pending: false,
+  declined: [],
 };
 
 export function pausedMove(state: DataFolderState): MoveStatus | null {
@@ -109,6 +112,40 @@ export function returnedCards(
       !volume.inUse &&
       volume.state === codes.volumeStates.mounted &&
       volume.awayFiles > 0,
+  );
+}
+
+export function offeredCards(
+  state: DataFolderState,
+): readonly DataFolderVolume[] {
+  return returnedCards(state).filter(
+    ({ volumeUuid }) =>
+      volumeUuid === null || !state.declined.includes(volumeUuid),
+  );
+}
+
+export function returnSourceMissing(state: DataFolderState): boolean {
+  const { move, volumes, codes } = state;
+  if (move?.cardReturn !== true || volumes === null || codes === null)
+    return false;
+  const source = volumes.volumes.find(
+    ({ volumeUuid }) => volumeUuid === move.sourceVolumeUuid,
+  );
+  return source?.state !== codes.volumeStates.mounted;
+}
+
+// A card stays declined only while it stays in: the next insertion offers it again.
+function stillInserted(
+  declined: readonly string[],
+  volumes: DataFolderVolumes,
+  codes: DataFolderCodes | null,
+): readonly string[] {
+  return declined.filter((uuid) =>
+    volumes.volumes.some(
+      (volume) =>
+        volume.volumeUuid === uuid &&
+        volume.state === codes?.volumeStates.mounted,
+    ),
   );
 }
 
@@ -234,7 +271,9 @@ export function createDataFolderStore(
       },
       refreshVolumes: async () => {
         try {
-          set({ volumes: await deps.native().listVolumes() });
+          const volumes = await deps.native().listVolumes();
+          const { declined, codes } = get();
+          set({ volumes, declined: stillInserted(declined, volumes, codes) });
         } catch (error) {
           warn('Data folder volumes unavailable', error);
         }
@@ -258,6 +297,11 @@ export function createDataFolderStore(
           const paths = awayPaths(await deps.storedFiles());
           await deps.native().switchToInternalStorage(paths);
         }),
+      declineReturn: (volumeUuid) => {
+        const { declined } = get();
+        if (!declined.includes(volumeUuid))
+          set({ declined: [...declined, volumeUuid] });
+      },
       dismissError: () => {
         set({ error: null });
       },
