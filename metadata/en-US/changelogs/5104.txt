@@ -1,0 +1,1 @@
+• Songs analysed by Kitbag show a more precise tempo, measured from the beats it placed; stems of one song recorded at one tempo now read the same BPM. After updating, each song in the library shows "analyzing…" once while its tempo is refreshed.
