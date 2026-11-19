@@ -46,6 +46,7 @@ export interface LibrarySongRow {
   readonly hasGrid: boolean;
   readonly analysisStatus: AnalysisStatus;
   readonly analysisError: string | null;
+  readonly format?: string;
   readonly inSetlist: boolean;
   readonly createdAt: Date;
 }
@@ -141,6 +142,7 @@ async function songRows(db: Database): Promise<LibrarySongRow[]> {
       hasGrid: sql<number>`${songs.beatGrid} IS NOT NULL`,
       analysisStatus: songs.analysisStatus,
       analysisError: songs.analysisError,
+      format: songs.format,
       createdAt: songs.createdAt,
     })
     .from(songs);

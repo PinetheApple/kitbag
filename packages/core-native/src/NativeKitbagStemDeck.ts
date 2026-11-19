@@ -51,8 +51,42 @@ export type StemDeckImportSnapshot = Readonly<{
   items: readonly StemDeckImportItem[];
 }>;
 
+export type StemDeckScanLook = Readonly<{
+  title: string;
+  prompt: string;
+  typeAddress: string;
+  backLabel: string;
+  barColor: string;
+  barInk: string;
+  actionInk: string;
+  scrimColor: string;
+  scrimOpacity: Double;
+  promptInk: string;
+  cornerColor: string;
+  frameDp: Double;
+  cornerDp: Double;
+  strokeDp: Double;
+  cornerRadiusDp: Double;
+  promptGapDp: Double;
+  promptInsetDp: Double;
+  barHeightDp: Double;
+  touchTargetDp: Double;
+  titleSp: Double;
+  actionSp: Double;
+  promptSp: Double;
+}>;
+
+export type StemDeckScan = Readonly<{
+  outcome: string;
+  text: string | null;
+}>;
+
 export type StemDeckConstants = Readonly<{
   unknownBytes: Double;
+  hasCamera: boolean;
+  scanRead: string;
+  scanTypeAddress: string;
+  scanUnavailable: string;
   trustPinned: string;
   trustSystem: string;
   trustNew: string;
@@ -110,6 +144,7 @@ export interface Spec extends TurboModule {
   importSnapshot(): Promise<StemDeckImportSnapshot>;
   settleDownload(jobId: string, outcome: string): void;
   setWatching(watching: boolean): void;
+  scanQr(look: StemDeckScanLook): Promise<StemDeckScan | null>;
   readonly onImport: EventEmitter<StemDeckImportSnapshot>;
 }
 

@@ -1,5 +1,6 @@
 import type {
   StemDeckConstants,
+  StemDeckScan,
   StemDeckImportItem,
   StemDeckImportSnapshot,
   StemDeckProbe,
@@ -7,12 +8,17 @@ import type {
 } from '@kitbag/core-native';
 import { vi } from 'vitest';
 
+import type { PermissionAnswer } from '../permission.ts';
 import type { BundleAddOutcome } from '../songLibrary/stemBundleLogic.ts';
-import type { StemDeckNative } from './runtime.ts';
+import type { StemDeckCamera, StemDeckNative } from './runtime.ts';
 import { createStemDeckStore } from './store.ts';
 
 export const CODES: StemDeckConstants = {
   unknownBytes: -1,
+  hasCamera: true,
+  scanRead: 'read',
+  scanTypeAddress: 'typeAddress',
+  scanUnavailable: 'unavailable',
   trustPinned: 'pinned',
   trustSystem: 'system',
   trustNew: 'new',
@@ -156,6 +162,9 @@ export function fakeNative() {
     ),
     settleDownload: vi.fn(),
     setWatching: vi.fn(),
+    scanQr: vi.fn<StemDeckNative['scanQr']>(() =>
+      Promise.resolve<StemDeckScan | null>(null),
+    ),
     onImport: vi.fn((next: (s: StemDeckImportSnapshot) => void) => {
       listener = next;
       return () => {
@@ -169,7 +178,15 @@ export function fakeNative() {
   return { native, emit };
 }
 
-export function setup(owned: readonly string[] = []) {
+export function fakeCamera(answer: PermissionAnswer = 'granted') {
+  return {
+    check: vi.fn(() => Promise.resolve(answer)),
+    request: vi.fn(() => Promise.resolve(answer)),
+    openSettings: vi.fn(),
+  } satisfies StemDeckCamera;
+}
+
+export function setup(owned: readonly string[] = [], camera = fakeCamera()) {
   const { native, emit } = fakeNative();
   let seen = false;
   const unityNotice = {
@@ -186,6 +203,7 @@ export function setup(owned: readonly string[] = []) {
     unityNotice: () => unityNotice,
     addFetchedBundle,
     inLibrary: (jobId) => Promise.resolve(owned.includes(jobId)),
+    camera: () => camera,
   });
-  return { store, native, emit, unityNotice, addFetchedBundle };
+  return { store, native, emit, unityNotice, addFetchedBundle, camera };
 }
