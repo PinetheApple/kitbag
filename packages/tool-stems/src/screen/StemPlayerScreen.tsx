@@ -7,9 +7,14 @@ export type { StemPlayerScreenProps } from './PlayerScreen.tsx';
 
 function useDisplacedByMetronomeSong(focused: boolean): boolean {
   const loads = useLibrary((s) => s.songLoads);
-  const [seen, setSeen] = useState(loads);
-  if (focused && seen !== loads) setSeen(loads);
-  return !focused && seen !== loads;
+  const [seen, setSeen] = useState({ loads, focused });
+  // A load landing in the render that blurs the player happened while it was in front.
+  if (focused || seen.focused) {
+    if (seen.loads !== loads || seen.focused !== focused)
+      setSeen({ loads, focused });
+    return false;
+  }
+  return seen.loads !== loads;
 }
 
 export function StemPlayerScreen(props: StemPlayerScreenProps) {

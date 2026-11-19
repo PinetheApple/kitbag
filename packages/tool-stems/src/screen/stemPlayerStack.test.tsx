@@ -287,6 +287,18 @@ describe('a metronome song loaded over the player', () => {
     expect(player.records.readStemSet).toHaveBeenCalledTimes(2);
   });
 
+  it('keeps its song when the blur and the load land in one render', async () => {
+    const player = await openFirst();
+    act(() => {
+      libraryStore.setState((s) => ({ songLoads: s.songLoads + 1 }));
+      player.setFocused(false);
+    });
+    await act(flush);
+    expect(player.commands.engineRelease).not.toHaveBeenCalled();
+    expect(player.store.getState().status).toBe('ready');
+    loadMetronomeSong();
+    expect(player.commands.engineRelease).toHaveBeenCalledOnce();
+  });
 
   it('keeps the song when the load happens while it is in front', async () => {
     const player = await openFirst();
