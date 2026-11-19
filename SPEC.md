@@ -2326,8 +2326,8 @@ native and stay native:
 1. **Foreground service** (§5.6) — no RN API exists. A Kotlin service, started and
    stopped through a TurboModule, holding the media session for lock-screen and
    headset controls. **This is the piece with no JS analogue and the one most
-   likely to be underestimated.** Built: `PlaybackService` (#87, #177) carries the
-   metronome and stem songs.
+   likely to be underestimated.** Built: `PlaybackService` (#87, #177, #237) carries the
+   metronome, stem songs and single songs; its Stop ends the single-song session.
 2. **Notification listener** (§8.2) — the existing `MediaSessionPlugin.kt` and
    `NotificationListenerService`, ported from a Flutter plugin to a TurboModule.
    The Android logic is correct and survives; §2.3's `requestPermission` lie and

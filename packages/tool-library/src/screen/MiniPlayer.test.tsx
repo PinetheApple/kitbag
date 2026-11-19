@@ -107,7 +107,7 @@ describe('the mini-player', () => {
     expect(song.close).toHaveBeenCalledOnce();
   });
 
-  it('goes away once the song is stopped from its notification', () => {
+  it('goes away when the session closes', () => {
     const tree = mount();
     givenSong({ status: 'idle', songId: null });
     act(() => {

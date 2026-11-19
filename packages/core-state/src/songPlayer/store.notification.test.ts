@@ -34,6 +34,17 @@ describe('Stop on the notification of a song left playing', () => {
     expect(left.songStopListeners.size).toBe(0);
   });
 
+  it('ends the session of a paused song too', async () => {
+    const left = await leftPlaying();
+    left.player.getState().togglePlay();
+    left.engine.playing = false;
+    left.stopSongFromNotification();
+    expect(left.player.getState()).toMatchObject({
+      songId: null,
+      status: 'idle',
+    });
+  });
+
   it('turns the click off', async () => {
     const left = await leftPlaying();
     await left.player.getState().toggleClick();
@@ -47,10 +58,12 @@ describe('Stop on the notification of a song left playing', () => {
     const left = await leftPlaying();
     const next = left.player.getState().open(OTHER_SONG, BARS);
     await next.loaded;
+    await left.player.getState().toggleClick();
     left.stopSongFromNotification();
     expect(left.player.getState()).toMatchObject({
       songId: OTHER_SONG,
       status: 'ready',
+      click: true,
     });
     expect(next.hold.live()).toBe(true);
   });

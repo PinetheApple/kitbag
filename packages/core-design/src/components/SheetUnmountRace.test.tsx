@@ -122,7 +122,7 @@ it('stops a sheet whose owner unmounts mid-exit before removing it', () => {
   expect(titles(tree)).toEqual([]);
 });
 
-it('survives its screen leaving after the session closed mid-exit', () => {
+it('survives its host unmounting before the removal frame', () => {
   const tree = mount({ actions: true, remove: false });
   rerender(tree, { actions: false, remove: false });
   rerender(tree, { actions: false, owned: false, remove: false });

@@ -23,8 +23,9 @@ export function songCard(context: SongCardContext) {
     start,
     // A Stop from an earlier song's card can land after the next song opened.
     stopped: () => {
+      if (!shown()) return;
       turnClickOff(context);
-      if (shown()) close();
+      close();
     },
     named: (names: Pick<SongPlayerState, 'title' | 'artist'>) => {
       const { title, artist } = get();

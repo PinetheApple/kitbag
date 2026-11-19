@@ -86,6 +86,7 @@ vi.mock('@kitbag/core-design', async (original) => {
         'AppBar',
         {
           actions: props.actions,
+          onBack: props.onBack,
           title: props.title,
           subtitle: props.subtitle,
         },
@@ -388,9 +389,16 @@ describe('a Stop from outside the player', () => {
     });
   }
 
-  it('goes back once when the shown song stops', () => {
+  it('goes back when the shown song stops', () => {
+    stopOutside(mount(), true);
+    expect(onBack).toHaveBeenCalledOnce();
+  });
+
+  it('does not go back twice when the stop lands while leaving', () => {
     const tree = mount();
-    stopOutside(tree, true);
+    act(() => {
+      (tree.root.findByType('AppBar' as never).props.onBack as () => void)();
+    });
     stopOutside(tree, true);
     expect(onBack).toHaveBeenCalledOnce();
   });
