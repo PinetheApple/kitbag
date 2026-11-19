@@ -201,6 +201,7 @@ class PlaybackService : Service() {
   private fun handle(action: TransportAction) {
     val transportModel = model ?: return
     val current = state?.let(::withEngineTempo) ?: return
+    val engineBpm = EngineTransport.currentBpm()
     var next = current
     val commands = transportModel.commandsFor(current, action)
     for (command in commands) {
@@ -209,8 +210,8 @@ class PlaybackService : Service() {
     }
     practice = practice.afterPlaying(next.playback == Playback.PLAYING, System.currentTimeMillis())
     state = next
-    val tempoSet = commands.any { it is TransportCommand.SetTempo }
-    listener?.invoke(TransportChange(next, practice, shownCardNumber, tempoSet))
+    val step = transportModel.tempoStep(action)
+    listener?.invoke(TransportChange(next, practice, shownCardNumber, action, step, engineBpm))
     if (next.playback == Playback.STOPPED) route(CardEvent.MetronomeStopped) else render()
   }
 

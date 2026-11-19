@@ -17,7 +17,9 @@ export type TransportEvent = Readonly<{
   practicePlayedMs: Double;
   practiceStretchStartedAt: Double;
   cardNumber: Int32;
-  tempoSet: boolean;
+  action: string;
+  tempoStep: Int32;
+  engineBpm: Double;
 }>;
 
 export type TransportSetlist = Readonly<{

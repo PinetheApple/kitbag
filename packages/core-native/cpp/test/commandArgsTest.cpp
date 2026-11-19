@@ -43,6 +43,8 @@ kb_result startResult = KB_OK;
 uint64_t countedEnd = 0;
 int32_t countedStartClick = -1;
 uint64_t playedFrom = 0;
+uint64_t startedAt = 0;
+constexpr uint64_t kRenderedFrames = 96000;
 
 void fail(const char* what, double track, double value) {
   std::fprintf(stderr, "%s: track %g, value %g\n", what, track, value);
@@ -159,6 +161,13 @@ void expectSongTransport(void (*command)(), const char* what, const std::string&
   }
 }
 
+void expectServiceStartCannotRestart() {
+  songCalls.clear();
+  kitbag::commandMetronomeStartNow();
+  if (songCalls != "start-at start ") fail(("service start: " + songCalls).c_str(), 0, 0);
+  if (startedAt != kRenderedFrames) fail("service start frame", 0, static_cast<double>(startedAt));
+}
+
 }  // namespace
 
 namespace kitbag {
@@ -215,6 +224,12 @@ extern "C" kb_result kb_mixer_play_at(kb_engine*, uint64_t start) {
   return playResult;
 }
 
+extern "C" uint64_t kb_engine_frames_rendered(const kb_engine*) { return kRenderedFrames; }
+extern "C" void kb_metronome_start(kb_engine*) { songCalls += "restart "; }
+extern "C" void kb_metronome_start_at(kb_engine*, uint64_t frame) {
+  songCalls += "start-at ";
+  startedAt = frame;
+}
 extern "C" void kb_metronome_stop(kb_engine*) { songCalls += "stop "; }
 extern "C" void kb_metronome_pause(kb_engine*) { songCalls += "click-pause "; }
 extern "C" void kb_mixer_pause(kb_engine*) { songCalls += "pause "; }
@@ -258,6 +273,8 @@ int main() {
   expectSongCountInComposed();
   expectSongTransport(kitbag::commandSongPause, "song pause", "click-pause pause ");
   expectSongTransport(kitbag::commandSongStop, "song stop", "stop mixer-stop ");
+
+  expectServiceStartCannotRestart();
 
   return failures == 0 ? 0 : 1;
 }

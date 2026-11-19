@@ -23,7 +23,9 @@ const eventKeys = Object.keys({
   practicePlayedMs: true,
   practiceStretchStartedAt: true,
   cardNumber: true,
-  tempoSet: true,
+  action: true,
+  tempoStep: true,
+  engineBpm: true,
 } satisfies Record<keyof TransportEvent, true>);
 
 const showKeys = Object.keys({

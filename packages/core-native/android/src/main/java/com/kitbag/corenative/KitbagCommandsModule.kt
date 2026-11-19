@@ -130,7 +130,9 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
         putDouble("practicePlayedMs", change.practice.playedMillis.toDouble())
         putDouble("practiceStretchStartedAt", (change.practice.stretchStartedAt ?: 0L).toDouble())
         putInt("cardNumber", change.cardNumber)
-        putBoolean("tempoSet", change.tempoSet)
+        putString("action", change.action.name.lowercase())
+        putInt("tempoStep", change.tempoStep)
+        putDouble("engineBpm", change.engineBpm)
       },
     )
   }
