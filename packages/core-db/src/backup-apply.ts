@@ -1,4 +1,4 @@
-import { eq, inArray, isNotNull, sql } from 'drizzle-orm';
+import { asc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 
 import { ANALYSIS_STATUS } from './analysis-status';
 import {
@@ -13,6 +13,7 @@ import {
   type LibrarySongRecord,
   type PracticeSessionRecord,
   type PreferenceRecord,
+  type SetlistItemRecord,
   type SetlistRecord,
   type SongPresetRecord,
   type StemSongRecord,
@@ -76,20 +77,63 @@ function practiceValues(record: PracticeSessionRecord, ids: IdMaps) {
   };
 }
 
+type EntryRef = { songPresetId: number } | { stemSetId: number };
+
+function presetRef(uuid: string, ids: IdMaps): EntryRef {
+  const songPresetId = ids.songPresets.get(uuid);
+  if (songPresetId === undefined)
+    throw new Error(`Song preset ${uuid} missing`);
+  return { songPresetId };
+}
+
+function itemRef(item: SetlistItemRecord, context: WriteContext): EntryRef {
+  if ('preset' in item) return presetRef(item.preset, context.ids);
+  const stemSetId = context.stemSets.get(item.stemSong);
+  if (stemSetId === undefined)
+    throw new Error(`Stem song ${item.stemSong} missing`);
+  return { stemSetId };
+}
+
+// A file from before setlist items cannot speak for stem entries, so they stay.
+function entryRefs(record: SetlistRecord, context: WriteContext): EntryRef[] {
+  if (record.items !== undefined)
+    return record.items.map((item) => itemRef(item, context));
+  const kept = context.stemEntries.get(record.uuid) ?? [];
+  return [
+    ...record.presetUuids.map((uuid) => presetRef(uuid, context.ids)),
+    ...kept.map((stemSetId) => ({ stemSetId })),
+  ];
+}
+
 async function writeItems(
   db: Database,
   setlistId: number,
   record: SetlistRecord,
-  ids: IdMaps,
+  context: WriteContext,
 ) {
   await db.delete(setlistItems).where(eq(setlistItems.setlistId, setlistId));
-  const rows = record.presetUuids.map((uuid, position) => {
-    const songPresetId = ids.songPresets.get(uuid);
-    if (songPresetId === undefined)
-      throw new Error(`Song preset ${uuid} missing`);
-    return { setlistId, songPresetId, position };
-  });
+  const rows = entryRefs(record, context).map((ref, position) => ({
+    setlistId,
+    position,
+    songPresetId: null,
+    stemSetId: null,
+    ...ref,
+  }));
   if (rows.length > 0) await db.insert(setlistItems).values(rows);
+}
+
+async function loadStemEntries(db: Database) {
+  const rows = await db
+    .select({ uuid: setlists.uuid, stemSetId: setlistItems.stemSetId })
+    .from(setlistItems)
+    .innerJoin(setlists, eq(setlists.id, setlistItems.setlistId))
+    .where(isNotNull(setlistItems.stemSetId))
+    .orderBy(asc(setlistItems.position), asc(setlistItems.id));
+  const entries = new Map<string, number[]>();
+  for (const { uuid, stemSetId } of rows)
+    if (stemSetId !== null)
+      entries.set(uuid, [...(entries.get(uuid) ?? []), stemSetId]);
+  return entries;
 }
 
 async function upsertSetlist(
@@ -111,7 +155,7 @@ async function upsertSetlist(
         .returning({ id: setlists.id }),
       'Setlist insert',
     ).id;
-  await writeItems(db, id, record, context.ids);
+  await writeItems(db, id, record, context);
   return id;
 }
 
@@ -128,6 +172,8 @@ export interface FileContext {
 interface WriteContext extends FileContext {
   mode: ImportPlan['mode'];
   ids: IdMaps;
+  stemSets: ReadonlyMap<string, number>;
+  stemEntries: ReadonlyMap<string, number[]>;
 }
 
 type Upsert = (
@@ -345,6 +391,8 @@ export async function applyWrites(
   fileContext: FileContext,
 ): Promise<SoundOutcome> {
   const { ids } = snapshot;
+  const stemSets = new Map(ids.stemSongs);
+  const stemEntries = await loadStemEntries(db);
   if (plan.mode === 'replace') {
     for (const category of [...plan.categories].reverse()) {
       await deleteCategory(db, category);
@@ -355,7 +403,12 @@ export async function applyWrites(
         ...snapshot.records.clickSounds.map(({ fileName }) => fileName),
       );
   }
-  await upsertAll(db, plan, writes, { ...fileContext, ids });
+  await upsertAll(db, plan, writes, {
+    ...fileContext,
+    ids,
+    stemSets,
+    stemEntries,
+  });
   if (plan.mode === 'replace') await relinkUntouched(db, plan, snapshot);
   if (plan.categories.includes('setlists'))
     await adoptActiveSetlist(db, plan, ids);

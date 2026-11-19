@@ -14,6 +14,7 @@ import {
   type LibrarySongRecord,
   type LocalRecord,
   type Resolutions,
+  type SetlistRecord,
   type StemSongRecord,
   stemSongKey,
 } from './backup-format';
@@ -35,6 +36,7 @@ export interface CategoryPlan {
   conflicts: Conflict[];
   deletes: number;
   notOnDevice?: number;
+  stemEntriesNotOnDevice?: number;
 }
 
 export interface ImportPlan {
@@ -57,16 +59,30 @@ export type Writes = Partial<Record<Category, Write[]>>;
 // does, and a version-only difference is not one the user can judge.
 const MERGE_IGNORED_FIELDS = new Set(['active', 'analysisVersion']);
 
-function canonical(record: BackupRecord): string {
+function canonical(record: object): string {
   const fields = Object.keys(record).filter(
     (field) => !MERGE_IGNORED_FIELDS.has(field),
   );
   return JSON.stringify(record, fields.sort());
 }
 
+// A file from before setlist items compares on presetUuids alone.
+function sameSetlist(mine: SetlistRecord, theirs: SetlistRecord): boolean {
+  const comparable = (setlist: SetlistRecord) => ({
+    ...setlist,
+    items:
+      theirs.items === undefined
+        ? undefined
+        : setlist.items?.map((item) => JSON.stringify(item)),
+  });
+  return canonical(comparable(mine)) === canonical(comparable(theirs));
+}
+
 // A sound is its UUID: a renamed copy of the same sound is not a difference.
 function sameRecord(mine: LocalRecord, theirs: BackupRecord): boolean {
   if ('slot' in mine) return 'slot' in theirs && mine.uuid === theirs.uuid;
+  if ('presetUuids' in mine && 'presetUuids' in theirs)
+    return sameSetlist(mine, theirs);
   return canonical(mine) === canonical(theirs);
 }
 
@@ -212,6 +228,38 @@ function planStemSongs(
   return state;
 }
 
+function setlistsOnDevice(
+  incoming: readonly SetlistRecord[],
+  snapshot: Snapshot,
+) {
+  const local = snapshot.ids.stemSongs;
+  let dropped = 0;
+  const records = incoming.map((setlist) => {
+    if (setlist.items === undefined) return setlist;
+    const items = setlist.items.filter(
+      (item) => 'preset' in item || local.has(item.stemSong),
+    );
+    dropped += setlist.items.length - items.length;
+    return { ...setlist, items };
+  });
+  return { records, dropped };
+}
+
+function planSetlists(
+  mode: ImportMode,
+  incoming: readonly SetlistRecord[],
+  snapshot: Snapshot,
+  resolutions: Resolutions,
+): MergeState {
+  const { records, dropped } = setlistsOnDevice(incoming, snapshot);
+  const state =
+    mode === 'replace'
+      ? planReplace(records, snapshot.records.setlists.length)
+      : planMerge('setlists', records, snapshot, resolutions);
+  state.summary.stemEntriesNotOnDevice = dropped;
+  return state;
+}
+
 function resolvedRef(
   uuid: string | null,
   target: Category,
@@ -276,6 +324,13 @@ function planCategory(
     return planStemSongs(
       mode,
       incoming as readonly StemSongRecord[],
+      snapshot,
+      resolutions,
+    );
+  if (category === 'setlists')
+    return planSetlists(
+      mode,
+      incoming as readonly SetlistRecord[],
       snapshot,
       resolutions,
     );
