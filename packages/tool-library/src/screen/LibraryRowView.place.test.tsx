@@ -53,6 +53,7 @@ const ROW = {
   artist: '',
   durationSec: 250,
   bpm: 158,
+  tempoCorrection: 'none',
 } as unknown as LibrarySongRow;
 
 const handlers = {
