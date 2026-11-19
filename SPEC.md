@@ -902,7 +902,7 @@ working. Changes:
 
 - **Store relative paths.** Flutter stores absolute, contradicting its own doc.
   Breaks on iOS, where the container UUID changes per launch. Paths are relative
-  to their base directory, always.
+  to the data folder, always.
 - **Downbeats** into the grid (§4.3).
 - **Re-analyse** action for a song.
 - Each song records the analyser version (`KB_BEAT_ANALYSIS_VERSION`) that made
@@ -1564,7 +1564,7 @@ rather than starting from zero.
 | `SongPresets`: + `poly_against` INTEGER (0 = the bar, 1..16), default 0 | §5.2 — poly N against M; a v4 backup without `polyAgainst` reads as the bar; schema v18 |
 | `route_latency`: + `name` TEXT, + `kind` TEXT (the route's display name and `OutputRoute` kind when calibrated) | §12.5 — the Output & latency sheet lists calibrated routes that are not connected; schema v19 |
 | `Songs`: + `analysis_version` INTEGER (NULL = no version reported, counted as outdated), + `meter_beats_per_bar` INTEGER (3 or 4; NULL = the detected meter), + `bar_one_seconds` REAL (NULL = the detected bar one); `StemSets`: + `meter_beats_per_bar`, + `bar_one_seconds`, same meanings | §6.2 — older grids re-analyse in the background; the meter override survives re-analysis and a stem re-import; schema v20 |
-| **All paths relative** to the base directory | §2.3 (iOS) and **D11** (the directory is now user-movable) |
+| **All paths relative** to the data folder | §2.3 (iOS) and **D11** (the folder can move between internal storage and an SD card) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
 | BPM cache table | §8.5 |
 | Per-output-route latency calibration | §12.5 |
@@ -1603,6 +1603,7 @@ Two migration notes that are not obvious from the table:
 | `kitbag-metronome.html` | Supersedes the metronome section of `kitbag-ui.html`. Adds setlists, setlist detail, preset editor, four sheets, the numpad, practice summary, notification/lock screen. |
 | `kitbag-playalong.html` | Supersedes the Play-along section. Adds the locked state, seven more states, five sheets, and a code audit. |
 | `kitbag-settings.html` | Designs Settings, latency calibration, restore. **Supersedes exactly one §06 card** — "Settings stay contextual" — and nothing else. |
+| `kitbag-data-folder.html` | **The Data folder** (D11; #170). Extends `kitbag-settings.html`'s Data section with the Data folder row and its chooser, and draws the move (confirmation, progress, cancel, the paused banner on Home), its failures, the Songs list during a move, and songs on a missing SD card. Recorded in `docs/decisions.md`, 2026-11-19. |
 | `kitbag-metronome-b.html` ("Chosen") and `kitbag-metronome-status.html` (variant A, Q6 pulse marks, poly row) | Owner-approved layout B (#175). **Supersede the metronome screen in `kitbag-metronome.html` §02, and §03's sheets and numpad, where they differ**, except sizes and vertical layout, which the #243 frame in `kitbag-metronome.html` §02 sets. §02's setlists, setlist detail and preset editor, and §04 onward, stay binding. Recorded in `docs/decisions.md`, 2026-10-30; `docs/research/metronome-b-parity.md` is the value table. |
 | `kitbag-metronome-setlist.html` | **D2 only** ("Chosen (owner, 2026-10-30)"; #205). Supersedes the app bar in `kitbag-metronome-b.html` while a setlist is active, and adds the setlist song-list sheet. Options A–D are rejected alternatives. Recorded in `docs/decisions.md`, 2026-10-30. |
 | `kitbag-metronome-poly.html` | **A and the main-screen poly row only** ("Chosen (owner, 2026-10-31)"; #203). Supersedes the Polyrhythm section of the Practice sheet in `kitbag-metronome-b.html` and the poly row in `kitbag-metronome-status.html`, and adds the song editor's Poly and Against rows. Options B and C are rejected alternatives. Recorded in `docs/decisions.md`, 2026-10-31. |
@@ -1811,18 +1812,15 @@ the supersession: ≤7 primary choices.)
   no chevron — the viewer is later work, so the row promises nothing behind it.
   The numbers are already computed; average tempo is the one addition, and it is
   the stat a musician reads.
-- **Base directory stays, and becomes authoritative** (**D11**). This reverses
-  `kitbag-settings.html` §03, which draws it cut. It is write-only today — a
-  picker storing a path no code has ever read, while library and stems hardcode
-  the documents dir and export hardcodes Downloads — and the fix is to make it
-  real, not to delete it. **Library, stems, export and the database all resolve
-  against it**, and every stored path is relative to it (§11.2).
-  **Scoped in, not discovered later**: a file migration when the directory
-  changes, plus SAF / persisted-URI handling on Android — which is the same gap
-  that makes the hardcoded `/storage/emulated/0/Download` fail today.
+- **Data folder** (**D11**). The row names the volume in use and its free space
+  ("Internal storage · 41.2 GB free"). Song audio, stems and waveforms resolve
+  against it, and every stored path is relative to it (§11.2). The database and
+  analysis scratch stay private to the app. The choices are Kitbag's own folder
+  on internal storage or on a portable SD card, listed as volumes; there is no
+  system folder picker. Changing it moves the files (D11).
 - **Storage is its companion, not its replacement.** It reports what is on disk
-  and where, and offers "Remove missing files". The picker relocates; Storage
-  reports.
+  and where, and offers "Remove missing files". Storage reports; Data folder
+  relocates.
 - **Theme and haptics are new**, and they are the cheapest rows here.
 - **Data moves through the system.** Backup goes out through the share sheet,
   restore comes in through the picker. **Kitbag writes to no path of its own
@@ -1922,7 +1920,7 @@ decisions they carry are the reason the files read as they now do:
 
 | File | Edit | Decision |
 |---|---|---|
-| `kitbag-settings.html` §03 | **Base directory is not cut.** It returns as an authoritative picker; Storage becomes its companion, not its replacement. | D11 |
+| `kitbag-settings.html` §03 | **Data folder is not cut.** It returns as an authoritative setting; Storage becomes its companion, not its replacement. | D11 |
 | `kitbag-metronome.html` §02 | `7/4` **went back to `7/8`** — the denominator is being built, so the mock's original claim is buildable. | D1 |
 | `kitbag-metronome.html` §02 | LEDs are a **row with grouping, up to 8 per line, wrapping at a group boundary**. Resolves the file's own "knowingly untrue" flag — and the build's circle is what changes, not the mock. | D9 |
 | `kitbag-playalong.html` §04 | **Delete the ad state.** | D10 |
@@ -1943,9 +1941,6 @@ decisions they carry are the reason the files read as they now do:
 
 - **Standalone song library** — the metronome spec draws the entry point (the
   "All songs" row) but not the screen behind it.
-- **Base directory picker + file migration** (D11) — newly in scope, and it has no
-  design. Needs the picker, the "moving your files" progress state, and the
-  failure path when the target is unwritable.
 - **GetSongBPM key row** (D7) — a Settings row that takes a personal key. Small,
   but undesigned, and it needs the attribution copy.
 - **Practice log viewer** — deferred by decision 2026-07-17. The summary sheet is
@@ -2522,24 +2517,35 @@ after. **Free-tier users are most users and this is the honest failure**: a
 temporarily-wrong click you can see is wrong beats a tool that silently mutes your
 practice on a guess. Removes a row from §8.10.
 
-### D11 — Base directory: **wire it**. It is a feature.
+### D11 — Data folder: **wire it**. It is a feature.
 
-The opposite of what `kitbag-settings.html` §03 draws. The picker returns and
-becomes **authoritative**: library, stems, export and the database all resolve
-against it.
+The Settings row is **Data folder**, and it is **authoritative**: song audio,
+stems and waveforms resolve against it. `design/kitbag-data-folder.html` draws
+every state.
 
-**This is real work and it is now scoped in**, not discovered later:
-- A **file migration** — moving existing content when the directory changes.
-- **Scoped-storage handling** on Android (SAF / persisted URI permissions), which
-  is the reason the hardcoded `/storage/emulated/0/Download` fails today.
-- Every path stored **relative to it** (§6.2, §11.2), which was already required
-  for iOS and is now required twice over.
+- **Media follows the folder.** The database and analysis scratch stay private to
+  the app, whatever the folder.
+- **Two locations:** Kitbag's own folder on internal storage, or Kitbag's own
+  folder on a portable SD card. The chooser lists volumes; there is no system
+  folder picker and no persisted-URI permission.
+- **A move is copy → verify → switch → delete.** Every file is copied and
+  verified before the folder switches; then all the old copies are deleted at
+  once, after no player still has a song loaded from them. Until the switch,
+  songs play from the old copy.
+- **Cancel** is offered only before the switch, and removes the new copies.
+- **A move interrupted by the app being killed** waits on Home for Resume or
+  Undo; it does not restart on its own.
+- **Import stays allowed** during a move. A new song goes to the current folder
+  and the move picks it up.
+- **A missing SD card** leaves its songs listed as unavailable, never deleted;
+  "Remove missing files" skips them. The user can switch to internal storage for
+  new songs. When the card returns, its songs play from it, and a move to
+  internal storage is offered.
+- **Uninstalling** removes the card copy too: it lives in Kitbag's own folder.
+- Every path stored **relative to it** (§6.2, §11.2).
 
 `Storage` (§12.5) stays as the reporting sheet — what is on disk, where, and
-"remove missing files". It reports; the picker relocates.
-
-**`kitbag-settings.html` needs an edit**: it draws Base directory as cut and
-Storage as its replacement. Storage is now its companion, not its substitute.
+"remove missing files". It reports; Data folder relocates.
 
 ### D12 — Merge migration: **accept the duplicate**.
 

@@ -1081,3 +1081,20 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   is, still playing if it was. Any other row tap opens the player paused. This refines the
   2026-11-07 "row tap opens paused" entries, which now apply to every row but that one, and
   confirms the 2026-11-11 attach entry above. **[user]**
+
+- **2026-11-19 · Data folder (§12.5, D11, #170)** — The Settings row is named **Data folder**,
+  and its value is the volume's free space ("Internal storage · 41.2 GB free"). During a move
+  each song plays from its old copy until the new copy is verified and the folder switches. Old
+  copies are deleted all at once at the end, not file by file. Import stays allowed during a
+  move. When the SD card is missing and the user chooses "Use internal storage", the card's songs
+  stay listed as unavailable, and a move to internal storage is offered when the card returns.
+  The database stays private to the app, and there is no system folder picker (SAF); the data
+  folder is Kitbag's own folder on internal storage or on a portable SD card. Design:
+  `design/kitbag-data-folder.html`. This replaces the SAF part of the 2026-09-26 ruling (5).
+  **[user]**
+- **2026-11-19 · Data folder move details (D11, #170)** — The primary external app folder is not
+  offered, because it is the same physical storage as internal. Songs on a mounted card play from
+  the card until the user accepts the offered move. A move interrupted by the app being killed
+  waits on the Home banner for Resume or Undo and does not restart on its own. Cancel is offered
+  only before the switch. Old copies are deleted only once no player still has a song loaded from
+  them. **[recorded — lane call, owner may overturn]**
