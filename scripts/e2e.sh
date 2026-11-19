@@ -8,6 +8,7 @@ readonly EXIT_MISSING_TOOL=3
 readonly EXIT_NO_DEVICE=4
 readonly EXIT_INSTALL_FAILED=5
 readonly EXIT_RUNNER_FAILED=6
+readonly EXIT_NOT_INDEXED=7
 
 readonly DEFAULT_SERIAL=emulator-5554
 readonly FIXTURE_SONG=e2eclick
@@ -22,6 +23,10 @@ readonly DEFAULT_MAESTRO_HEAP=-Xmx1g
 readonly ANR_WINDOW='Application Not Responding'
 readonly ANR_WAIT_SECONDS=30
 readonly ANR_POLL_SECONDS=2
+readonly MEDIA_SCAN_ACTION=android.intent.action.MEDIA_SCANNER_SCAN_FILE
+readonly MEDIA_FILES_URI=content://media/external/file
+readonly INDEX_WAIT_SECONDS=60
+readonly INDEX_POLL_SECONDS=2
 declare -rA RUN_SETTINGS=(
   [window_animation_scale]=0
   [transition_animation_scale]=0
@@ -49,6 +54,8 @@ Animation scales are 0 and error dialogs hidden during the run, and an ANR
 dialog already open is closed, so another app's ANR cannot cover the app; a
 hung app still fails its flow.
 All four settings are restored on exit.
+The pushed fixtures are scanned, and no flow runs until MediaProvider lists
+each one, so the picker cannot open on an empty Downloads.
 
 exit 0  every flow passed
 exit 1  a flow failed; the flow and its failing step are printed
@@ -57,6 +64,7 @@ exit 3  required tool missing
 exit 4  the device is not attached and ready
 exit 5  install or fixture push failed
 exit 6  Maestro failed without writing a report
+exit 7  a pushed fixture was never indexed; the file is named
 USAGE
 }
 
@@ -206,14 +214,34 @@ if anr_window_open; then
   fi
 fi
 
+PUSHED=()
 push_fixture() {
-  local maker=$1 fixture="$OUT/$2"
+  local maker=$1 name=$2 fixture="$OUT/$2"
   shift 2
   python3 -I "e2e/$maker" "$fixture" "$@" &&
     adb_s push "$fixture" "$DEVICE_DOWNLOADS/" >/dev/null || {
     fail "could not make or push $fixture"
     exit "$EXIT_INSTALL_FAILED"
   }
+  adb_s shell am broadcast -a "$MEDIA_SCAN_ACTION" -d "file://$DEVICE_DOWNLOADS/$name" >/dev/null
+  PUSHED+=("$name")
+}
+
+indexed() {
+  adb_s shell "content query --uri $MEDIA_FILES_URI --projection _display_name --where \"_display_name='$1'\"" |
+    grep -qF "_display_name=$1"
+}
+
+wait_indexed() {
+  local name=$1 waited=0
+  until indexed "$name"; do
+    ((waited < INDEX_WAIT_SECONDS)) || {
+      fail "$name was pushed but MediaProvider did not index it within ${INDEX_WAIT_SECONDS} s; the picker would not list it"
+      exit "$EXIT_NOT_INDEXED"
+    }
+    sleep "$INDEX_POLL_SECONDS"
+    waited=$((waited + INDEX_POLL_SECONDS))
+  done
 }
 
 step "Pushing the fixture song, click sound and stem songs"
@@ -221,6 +249,11 @@ push_fixture make_click_song.py "$FIXTURE_SONG.wav" "$FIXTURE_SECONDS"
 push_fixture make_click_song.py "$FIXTURE_SOUND.wav" "$FIXTURE_SOUND_SECONDS"
 push_fixture make_stem_bundle.py "$FIXTURE_STEMS.zip" "$FIXTURE_STEMS_SECONDS"
 push_fixture make_stem_bundle.py "$FIXTURE_STEMS_NO_GRID.zip" "$FIXTURE_STEMS_SECONDS" --no-grid
+
+step "Waiting for MediaProvider to index the fixtures"
+for name in "${PUSHED[@]}"; do
+  wait_indexed "$name"
+done
 
 step "Running ${#FLOWS[@]} flow(s)"
 adb_s logcat -c 2>/dev/null
