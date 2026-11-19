@@ -132,7 +132,7 @@ function fakeEngine() {
   };
 }
 
-function songClickOver({ releaseEndsIt }: { releaseEndsIt: boolean }) {
+function fakeSongClick({ releaseEndsIt }: { releaseEndsIt: boolean }) {
   let running = true;
   const turnOff = () => {
     running = false;
@@ -143,7 +143,7 @@ function songClickOver({ releaseEndsIt }: { releaseEndsIt: boolean }) {
 
 function standalone({ releaseEndsIt = true } = {}) {
   const engine = fakeEngine();
-  const songClick = songClickOver({ releaseEndsIt });
+  const songClick = fakeSongClick({ releaseEndsIt });
   const store = createMetronomeStore(
     engine.commands,
     () => NOW_FRAME,
@@ -278,13 +278,16 @@ describe("standalone edits while a song's click runs", () => {
     expect(engine.pattern()).toEqual(stored());
   });
 
-  it('sends the whole held pattern with the first edit after the click goes off', () => {
-    const { engine, songClick, store, stored } = standalone();
-    store.getState().setSounds(NORMAL_SOUND, ACCENT_SOUND);
-    songClick.turnOff();
-    store.getState().setSubdivision(EDITED_SUBDIVISION);
-    expect(engine.pattern()).toEqual(stored());
-  });
+  it.each(EDITS)(
+    '$name after the click goes off sends the whole held pattern, itself included',
+    (edit) => {
+      const { engine, songClick, store, stored } = standalone();
+      store.getState().setSounds(ACCENT_SOUND, NORMAL_SOUND);
+      songClick.turnOff();
+      edit.apply(store.getState());
+      expect(engine.pattern()).toEqual(stored());
+    },
+  );
 
   it('sends the held pattern when playback starts outside start()', () => {
     const { engine, songClick, store, stored } = standalone();

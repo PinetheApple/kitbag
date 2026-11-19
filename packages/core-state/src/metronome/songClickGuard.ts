@@ -33,7 +33,7 @@ export function guardSongClick(
     commands.setBarMute(enabled, playBars, muteBars);
   };
   const hold =
-    <A extends unknown[]>(send: () => (...args: A) => void) =>
+    <A extends unknown[]>(send: (...args: A) => void) =>
     (...args: A) => {
       if (shouldHold()) {
         held = true;
@@ -43,7 +43,7 @@ export function guardSongClick(
         restore();
         return;
       }
-      send()(...args);
+      send(...args);
     };
   const guarded: MetronomeCommands = {
     start: (...args) => commands.start(...args),
@@ -59,16 +59,16 @@ export function guardSongClick(
     setTempo: (...args) => {
       commands.setTempo(...args);
     },
-    setBeats: hold(() => commands.setBeats),
-    setSubdivision: hold(() => commands.setSubdivision),
+    setBeats: hold(commands.setBeats),
+    setSubdivision: hold(commands.setSubdivision),
     setSubdivisionAccents: (...args) => {
       commands.setSubdivisionAccents(...args);
     },
-    setAccent: hold(() => commands.setAccent),
-    setPoly: hold(() => commands.setPoly),
-    setPolyAccent: hold(() => commands.setPolyAccent),
-    setPolyAgainst: hold(() => commands.setPolyAgainst),
-    setSounds: hold(() => commands.setSounds),
+    setAccent: hold(commands.setAccent),
+    setPoly: hold(commands.setPoly),
+    setPolyAccent: hold(commands.setPolyAccent),
+    setPolyAgainst: hold(commands.setPolyAgainst),
+    setSounds: hold(commands.setSounds),
     previewSound: (...args) => {
       commands.previewSound(...args);
     },
@@ -84,7 +84,7 @@ export function guardSongClick(
     setRamp: (...args) => {
       commands.setRamp(...args);
     },
-    setBarMute: hold(() => commands.setBarMute),
+    setBarMute: hold(commands.setBarMute),
     engineHold: () => commands.engineHold(),
     engineRelease: () => {
       commands.engineRelease();
