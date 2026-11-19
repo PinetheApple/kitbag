@@ -58,6 +58,7 @@ describe('play order on the library stage', () => {
       stemSetId: a,
       itemId: first.id,
       setlistId: gig,
+      index: 1,
     });
   });
 
@@ -75,6 +76,42 @@ describe('play order on the library stage', () => {
     expect(await order.getState().skipToNext()).toMatchObject({
       advance: { stemSetId: a },
       skipped: false,
+    });
+  });
+
+  it('carries on with the entry that moved up when the one on stage is removed', async () => {
+    const { library, order, gig, b, first } = await setup();
+    await library.getState().openStemEntry(first.id, gig);
+    await library.getState().removeFromSet(first.id);
+    expect(order.getState().upNext()).toMatchObject({
+      entry: { stemSetId: b },
+    });
+  });
+
+  it('carries on the same way when the stem song on stage is deleted', async () => {
+    const { library, order, handle, gig, a, b, first } = await setup();
+    await library.getState().openStemEntry(first.id, gig);
+    await deleteStemSet(handle.db, a);
+    await library.getState().refresh();
+    expect(order.getState().upNext()).toMatchObject({
+      entry: { stemSetId: b },
+    });
+  });
+
+  it('ends when the last entry was on stage and is removed', async () => {
+    const { library, order, gig, second } = await setup();
+    await library.getState().openStemEntry(second.id, gig);
+    await library.getState().removeFromSet(second.id);
+    expect(await order.getState().advance()).toEqual({ kind: ADVANCE.end });
+  });
+
+  it('follows the entry on stage through a reorder before it is removed', async () => {
+    const { library, order, gig, b, first } = await setup();
+    await library.getState().openStemEntry(first.id, gig);
+    await library.getState().reorder(gig, 0, 2);
+    await library.getState().removeFromSet(first.id);
+    expect(order.getState().upNext()).toMatchObject({
+      entry: { stemSetId: b },
     });
   });
 });

@@ -26,6 +26,7 @@ export interface LoadedPreset {
   readonly presetId: number;
   readonly itemId: number | null;
   readonly setlistId: number | null;
+  readonly index?: number;
 }
 
 export interface LoadedStem {
@@ -33,6 +34,7 @@ export interface LoadedStem {
   readonly stemSetId: number;
   readonly itemId: number;
   readonly setlistId: number;
+  readonly index: number;
 }
 
 export type LoadedSong = LoadedPreset | LoadedStem;
@@ -149,6 +151,23 @@ function discardedNow(
     settings: presetFromMetronome(live),
     at: deps.now(),
   };
+}
+
+function indexIn(
+  entries: readonly SetlistEntry[] | undefined,
+  itemId: number,
+): number {
+  return (entries ?? []).findIndex((entry) => entry.item.id === itemId);
+}
+
+function followedIndex(
+  loaded: LoadedSong | null,
+  entries: LibrarySnapshot['entries'],
+): LoadedSong | null {
+  if (loaded?.setlistId == null || loaded.itemId === null) return loaded;
+  const index = indexIn(entries[loaded.setlistId], loaded.itemId);
+  if (index < 0 || index === loaded.index) return loaded;
+  return { ...loaded, index };
 }
 
 function copyName(name: string): string {
@@ -306,7 +325,9 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       await leaveOrWarn();
       return;
     }
-    set({ loaded: { presetId: preset.id, itemId, setlistId } });
+    const index = indexIn(get().entries[setlistId], itemId);
+    const at = index < 0 ? {} : { index };
+    set({ loaded: { presetId: preset.id, itemId, setlistId, ...at } });
     try {
       await pin(setlistId, itemId);
     } catch {
@@ -325,11 +346,13 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       await link(preset, itemId ?? null, setlistId ?? null);
     },
     openStemEntry: async (itemId: number, setlistId: number) => {
-      const entry = get().entries[setlistId]?.find((e) => e.item.id === itemId);
+      const entries = get().entries[setlistId];
+      const index = indexIn(entries, itemId);
+      const entry = entries?.[index];
       if (entry === undefined || isPresetEntry(entry)) return false;
       noteDiscard();
       const { stemSetId } = entry;
-      set({ loaded: { presetId: null, stemSetId, itemId, setlistId } });
+      set({ loaded: { presetId: null, stemSetId, itemId, setlistId, index } });
       try {
         await pin(setlistId, itemId);
       } catch {
@@ -350,14 +373,17 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       const first = target();
       if (first === undefined) return NO_STEP;
       if (!isPresetEntry(first.entry)) await get().refresh();
+      const skipped =
+        indexIn(get().entries[first.setlistId], first.entry.item.id) < 0;
       const next = target();
-      const skipped = next?.entry.item.id !== first.entry.item.id;
       if (next === undefined) return { entry: undefined, skipped };
       const { entry, setlistId } = next;
-      if (isPresetEntry(entry))
+      if (isPresetEntry(entry)) {
         await get().loadSong(entry.preset.id, entry.item.id, setlistId);
-      else await get().openStemEntry(entry.item.id, setlistId);
-      return { entry, skipped };
+        return { entry, skipped };
+      }
+      const opened = await get().openStemEntry(entry.item.id, setlistId);
+      return { entry: opened ? entry : undefined, skipped };
     },
     leaveSetlist: async () => {
       noteDiscard();
@@ -415,7 +441,8 @@ function readActions(deps: LibraryDeps, set: SetState, get: Get) {
         set({ ready: true, failed: true });
         return;
       }
-      set({ ...snapshot, ready: true, failed: false });
+      const loaded = followedIndex(get().loaded, snapshot.entries);
+      set({ ...snapshot, loaded, ready: true, failed: false });
       const query = get().results?.query;
       if (query === undefined) return;
       try {

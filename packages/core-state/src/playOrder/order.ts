@@ -66,7 +66,11 @@ export function cursorOf(
 ): SetlistCursor | null {
   if (loaded?.itemId == null || loaded.setlistId !== stage.setlistId)
     return null;
-  return cursorAt(stage, loaded.itemId);
+  const { setlistId, itemId, index } = loaded;
+  if (setlistId === null) return null;
+  return index === undefined
+    ? cursorAt(stage, itemId)
+    : { setlistId, itemId, index };
 }
 
 export function entriesAfter(

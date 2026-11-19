@@ -12,7 +12,9 @@ const song = (id: number) =>
   ({ kind: 'song', id }) as SongLibraryStore['rows'][number];
 
 function setup() {
-  const songs = createStore(() => ({ rows: stems(1, 2) }) as unknown as SongLibraryStore);
+  const songs = createStore(
+    () => ({ rows: stems(1, 2) }) as unknown as SongLibraryStore,
+  );
   const libraryRefresh = vi.fn(() => Promise.resolve());
   const orderRefresh = vi.fn(() => Promise.resolve());
   const library = createStore(

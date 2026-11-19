@@ -124,6 +124,7 @@ describe('library store', () => {
       presetId: song,
       itemId: entry.item.id,
       setlistId: gig,
+      index: 0,
     });
   });
 
@@ -187,6 +188,7 @@ describe('library store', () => {
       stemSetId: stem,
       itemId: item.id,
       setlistId: gig,
+      index: 1,
     });
     expect(metronome.getState().bpm).toBe(bpm);
     expect(library.getState().played).toContain(item.id);
@@ -206,6 +208,29 @@ describe('library store', () => {
     expect(
       entries.map((e) => (isPresetEntry(e) ? e.preset.name : e.stemSetId)),
     ).toEqual(['One', 'Two', 'Three', stem, stem]);
+  });
+
+  it('moves a stem entry past metronome entries, as one order', async () => {
+    const { library, repos, handle, gig } = await onStage();
+    const stem = await insertStemSet(handle.db, 'Redbone');
+    await repos.setlists.addStemSet(gig, stem, 1);
+    await library.getState().refresh();
+    await library.getState().reorder(gig, 1, 3);
+    const order = (library.getState().entries[gig] ?? []).map((e) =>
+      isPresetEntry(e) ? e.preset.name : e.stemSetId,
+    );
+    expect(order).toEqual(['One', 'Two', 'Three', stem]);
+  });
+
+  it('does not call a stem song reordered since the setlist was read skipped', async () => {
+    const { library, repos, handle, gig } = await onStage();
+    const stem = await insertStemSet(handle.db, 'Redbone');
+    const item = await repos.setlists.addStemSet(gig, stem, 1);
+    await library.getState().refresh();
+    await repos.setlists.move(item.id, 3);
+    const step = await library.getState().stepSong(SONG_STEP.next);
+    expect(step.skipped).toBe(false);
+    expect(loadedName(library)).toBe('Two');
   });
 
   it('skips a stem song deleted since the setlist was read, and says so', async () => {
@@ -436,6 +461,7 @@ describe('library store', () => {
       presetId: id,
       itemId: entry.item.id,
       setlistId: gig,
+      index: 0,
     });
   });
 

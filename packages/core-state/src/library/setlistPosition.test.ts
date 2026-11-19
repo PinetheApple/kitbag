@@ -14,16 +14,12 @@ const entries = [entry(10), entry(11), entry(12)];
 
 describe('adjacentEntry', () => {
   it('steps to the song either side', () => {
-    expect(adjacentEntry(entries, 11, SONG_STEP.previous)).toBe(
-      entries[0],
-    );
+    expect(adjacentEntry(entries, 11, SONG_STEP.previous)).toBe(entries[0]);
     expect(adjacentEntry(entries, 11, SONG_STEP.next)).toBe(entries[2]);
   });
 
   it('has no previous song before the first', () => {
-    expect(
-      adjacentEntry(entries, 10, SONG_STEP.previous),
-    ).toBeUndefined();
+    expect(adjacentEntry(entries, 10, SONG_STEP.previous)).toBeUndefined();
   });
 
   it('has no next song after the last', () => {
@@ -32,9 +28,7 @@ describe('adjacentEntry', () => {
 
   it('starts from the first song when none from the set is loaded', () => {
     expect(adjacentEntry(entries, null, SONG_STEP.next)).toBe(entries[0]);
-    expect(
-      adjacentEntry(entries, 99, SONG_STEP.previous),
-    ).toBeUndefined();
+    expect(adjacentEntry(entries, 99, SONG_STEP.previous)).toBeUndefined();
   });
 
   it('steps across stem songs and metronome songs alike', () => {
