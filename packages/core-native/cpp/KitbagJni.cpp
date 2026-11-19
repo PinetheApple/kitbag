@@ -308,6 +308,11 @@ Java_com_kitbag_corenative_EngineTransport_nativeMixerStop(JNIEnv*, jobject) {
 }
 
 JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeSongStop(JNIEnv*, jobject) {
+  kitbag::commandSongStop();
+}
+
+JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_EngineTransport_nativeMixerSeek(JNIEnv*, jobject, jdouble frame) {
   kitbag::commandMixerSeek(frame);
 }

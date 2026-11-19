@@ -14,6 +14,8 @@ import com.kitbag.corenative.route.OutputRouteWatcher
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
 import com.kitbag.corenative.transport.Song
+import com.kitbag.corenative.transport.SongCommand
+import com.kitbag.corenative.transport.appAction
 import com.kitbag.corenative.transport.TransportState
 
 class KitbagCommandsModule(reactContext: ReactApplicationContext) :
@@ -22,6 +24,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private val libraryBase = LibraryStorage.base(reactContext)
   private val transportListener: (TransportState, PracticeClock) -> Unit = ::emitTransport
   private val songStoppedListener: () -> Unit = ::emitOnSongStopped
+  private val songRequestListener: (SongCommand) -> Unit = ::emitSongRequest
   private val outputRoutes =
     OutputRouteWatcher(reactContext, ::outputDeviceId, ::emitOutputRoute)
 
@@ -32,6 +35,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     }
     PlaybackService.listener = transportListener
     PlaybackService.songStoppedListener = songStoppedListener
+    PlaybackService.songRequestListener = songRequestListener
     outputRoutes.start()
   }
 
@@ -40,6 +44,9 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     if (PlaybackService.listener === transportListener) PlaybackService.listener = null
     if (PlaybackService.songStoppedListener === songStoppedListener) {
       PlaybackService.songStoppedListener = null
+    }
+    if (PlaybackService.songRequestListener === songRequestListener) {
+      PlaybackService.songRequestListener = null
     }
     outputRoutes.stop()
     super.invalidate()
@@ -78,6 +85,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
         skipSeconds = state.getDouble("skipSeconds"),
       ),
       state.getBoolean("playing"),
+      state.getBoolean("countingIn"),
     )
   }
 
@@ -112,6 +120,15 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
         putBoolean("rampRunning", state.rampRunning)
         putDouble("practicePlayedMs", practice.playedMillis.toDouble())
         putDouble("practiceStretchStartedAt", (practice.stretchStartedAt ?: 0L).toDouble())
+      },
+    )
+  }
+
+  private fun emitSongRequest(request: SongCommand) {
+    emitOnSongTransport(
+      Arguments.createMap().apply {
+        putString("action", request.appAction)
+        if (request is SongCommand.Seek) putDouble("frame", request.frame.toDouble()) else putNull("frame")
       },
     )
   }

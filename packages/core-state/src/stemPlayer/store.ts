@@ -19,6 +19,10 @@ import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
 import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
 import { mixerSession, type MixerHold } from './mixerSession.ts';
 import { mixSaver } from './mixSaver.ts';
+import {
+  showCountOnSongCard,
+  songTransportRequests,
+} from './notificationTransport.ts';
 import { renameActions } from './renameActions.ts';
 import { retimeActions, retimeAnchor } from './retimeActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
@@ -237,7 +241,7 @@ export function createStemPlayerStore(
     requestedTracks = 0;
   };
 
-  return createStore<StemPlayerStore>((set, get) => {
+  return createStore<StemPlayerStore>((set, get, store) => {
     const mixer = mixerSession({
       set,
       get,
@@ -270,7 +274,22 @@ export function createStemPlayerStore(
     });
     mixer.onScrubSeek(start.afterSeek);
     mixer.onClickReleased(start.endCountNow);
-    mixer.onSongStopped(start.songStopped);
+    const card = showCountOnSongCard(store, runtimeOf, start.counting);
+    mixer.onSongStopped(() => {
+      card.stopped();
+      start.songStopped();
+    });
+    mixer.onSongTransport(
+      songTransportRequests({
+        get,
+        runtimeOf,
+        counting: start.counting,
+        stopCount: () => {
+          card.stopped();
+          start.stop();
+        },
+      }),
+    );
     const clicks = clickActions(context, mixer.pendingClick, start);
     const anchorRetime = retimeAnchor(context);
     const afterSeek = (frame: number) => {
