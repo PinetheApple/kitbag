@@ -9,6 +9,7 @@ import {
   type LibraryStemSetRow,
   type PlayOrderRepositories,
 } from '@kitbag/core-state';
+import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -136,6 +137,55 @@ describe('Play next from the player', () => {
     expect(p.byLabel('In Up next').props.accessibilityState).toEqual({
       disabled: true,
     });
+  });
+});
+
+function holdAnimationFrames() {
+  const held: FrameRequestCallback[] = [];
+  vi.stubGlobal('requestAnimationFrame', (frame: FrameRequestCallback) =>
+    held.push(frame),
+  );
+  const drain = () => {
+    vi.unstubAllGlobals();
+    for (const frame of held.splice(0)) frame(0);
+  };
+  return { drain };
+}
+
+describe('Add to setlist from the player', () => {
+  it('says where the song went only once the sheet has closed', async () => {
+    const addStemToSetlist = vi.fn(() => Promise.resolve());
+    libraryStore.setState({
+      setlists: [
+        {
+          setlist: { id: GIG, name: 'Gig', active: false },
+          songCount: 0,
+          rampCount: 0,
+        },
+      ] as never,
+      entries: { [GIG]: [] },
+      refresh: () => Promise.resolve(),
+      addStemToSetlist,
+    });
+    const p = await mountTracked();
+    await p.press(MENU);
+    await p.press('Add to setlist');
+    const frames = holdAnimationFrames();
+    const gig = p.renderer.root.find(
+      (node) =>
+        typeof node.type === 'string' &&
+        String(node.props.accessibilityLabel).startsWith('Gig'),
+    );
+    await act(async () => {
+      (gig.props.onPress as () => void)();
+      await Promise.resolve();
+    });
+    await flush();
+    expect(addStemToSetlist).toHaveBeenCalledWith(GIG, SET_ID);
+    expect(p.has('Added to Gig')).toBe(false);
+    act(frames.drain);
+    await flush();
+    expect(p.has('Added to Gig')).toBe(true);
   });
 });
 

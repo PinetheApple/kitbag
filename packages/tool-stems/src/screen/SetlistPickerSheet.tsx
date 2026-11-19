@@ -4,6 +4,7 @@ import {
   Sheet,
   SheetHint,
   TextField,
+  useAfterSheetClosed,
 } from '@kitbag/core-design';
 import {
   isPresetEntry,
@@ -88,7 +89,10 @@ export interface SetlistPickerSheetProps {
   readonly onAdded: (added: AddedToSetlist) => void;
 }
 
-function usePicker(props: SetlistPickerSheetProps) {
+function usePicker(
+  props: SetlistPickerSheetProps,
+  afterClose: (then: () => void) => void,
+) {
   const addStemToSetlist = useLibrary((s) => s.addStemToSetlist);
   const createSetlist = useLibrary((s) => s.createSetlist);
   const [error, setError] = useState<string | null>(null);
@@ -102,10 +106,12 @@ function usePicker(props: SetlistPickerSheetProps) {
         setError(ADD_FAILED);
         return;
       }
+      afterClose(() => {
+        onAdded({ setlistId, name });
+      });
       onDismiss();
-      onAdded({ setlistId, name });
     },
-    [addStemToSetlist, stemSetId, onDismiss, onAdded],
+    [addStemToSetlist, stemSetId, onDismiss, onAdded, afterClose],
   );
   const pick = useCallback(
     (summary: SetlistSummary) => {
@@ -131,7 +137,8 @@ export function SetlistPickerSheet(props: SetlistPickerSheetProps) {
   const setlists = useLibrary((s) => s.setlists);
   const refresh = useLibrary((s) => s.refresh);
   const [naming, setNaming] = useState(false);
-  const picker = usePicker(props);
+  const exit = useAfterSheetClosed();
+  const picker = usePicker(props, exit.after);
   const { visible, onDismiss } = props;
   useEffect(() => {
     if (!visible) return;
@@ -151,6 +158,7 @@ export function SetlistPickerSheet(props: SetlistPickerSheetProps) {
       dismissLabel="Close Add to setlist"
       bottomInset={props.bottomInset}
       onDismiss={onDismiss}
+      onClosed={exit.closed}
     >
       {naming ? (
         <NameStep onCreate={picker.create} />
