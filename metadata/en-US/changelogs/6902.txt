@@ -1,0 +1,1 @@
+• Pressing Play on the song notification, system controls or a headset right after switching songs no longer starts the next song early or from the wrong position.
