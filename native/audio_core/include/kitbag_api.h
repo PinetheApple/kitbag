@@ -23,7 +23,9 @@ typedef enum kb_result {
   KB_ERROR_INTERNAL = 5, /* the core failed, not the caller: out of memory, or
                             a file that changed while being read */
   KB_ERROR_NO_SPACE = 6, /* the destination volume is too full to write to */
-  KB_ERROR_TOO_LONG = 7, /* past what the output format can hold */
+  KB_ERROR_TOO_LONG = 7, /* past what the output format can hold, or a sound
+                            past the custom click sound limit */
+  KB_ERROR_SILENT = 8,   /* the audio never reaches an audible level */
 } kb_result;
 
 typedef struct kb_engine kb_engine;
@@ -175,6 +177,7 @@ KB_EXPORT double kb_metronome_current_bpm(const kb_engine* engine);
 /* 1 during count-in; current_beat and bar_phase follow the count bars. */
 KB_EXPORT int32_t kb_metronome_counting_in(const kb_engine* engine);
 
+#include "kitbag_click_sound_api.h"
 #include "kitbag_metronome_poly_api.h"
 #include "kitbag_metronome_subdivision_api.h"
 #include "kitbag_metronome_trainer_api.h"

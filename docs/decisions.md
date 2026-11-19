@@ -1118,6 +1118,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   must not take the click away; a Click sounds backup category keyed by slot; restore resets a
   reference to Tick unless the same sound (by UUID) is in that slot. Song import's list includes
   AIFF, so the copy reads “WAV, MP3, FLAC or AIFF”. **[REC TAKEN, owner may overturn]**
+  Prepare also trims trailing silence before the 2 s check, so a 1 s hit with a long quiet tail
+  is kept as about 1 s; “silence” is an absolute -60 dBFS, so a source whose noise floor sits above
+  that keeps its noise and may be refused as too long; the kept sound ends with a 5 ms linear
+  fade so the cut never clicks. **[REC TAKEN, owner may overturn]**
 
 - **2026-11-19 · Grid grouping and click rate (#383, §4.3)** — (1) A bar whose
   length differs from the grouping's sum keeps only its downbeat accent. (2) At

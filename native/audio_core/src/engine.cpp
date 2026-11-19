@@ -138,6 +138,7 @@ void Engine::StopDevice() {
 // publishing thread, so the watchdog leaves them for the next Start or Stop.
 void Engine::ReleaseRetired() {
   metronome_.ReleaseRetiredGrids();
+  custom_sounds_.ReclaimAll();
   mixer_.ReleaseRetiredSources();
   player_.ReleaseRetiredSources();
 }

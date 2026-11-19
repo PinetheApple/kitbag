@@ -3,42 +3,24 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <filesystem>
 #include <limits>
-#include <system_error>
 #include <utility>
+
+#include "media/part_file.h"
+#include "media/riff_bytes.h"
 
 namespace kitbag {
 namespace {
 
+using riff::kRiffPreambleBytes;
+using riff::PutU16;
+
 constexpr uint16_t kPcmFormat = 1;
-constexpr uint32_t kFmtChunkBytes = 16;
-// RIFF counts everything after its own tag and size field.
-constexpr uint32_t kRiffPreambleBytes = 8;
-constexpr unsigned kByteBits = 8;
-constexpr size_t kTagChars = 4;
-constexpr unsigned kByteMask = 0xFF;
 constexpr float kS16Max = std::numeric_limits<int16_t>::max();
-
-void PutU16(std::vector<uint8_t>* out, uint16_t value) {
-  out->push_back(static_cast<uint8_t>(value & kByteMask));
-  out->push_back(static_cast<uint8_t>(value >> kByteBits));
-}
-
-void PutU32(std::vector<uint8_t>* out, uint32_t value) {
-  for (unsigned shift = 0; shift < sizeof(uint32_t) * kByteBits;
-       shift += kByteBits) {
-    out->push_back(static_cast<uint8_t>((value >> shift) & kByteMask));
-  }
-}
 
 int16_t ToS16(float sample) {
   const float clamped = std::clamp(sample, -1.0f, 1.0f);
   return static_cast<int16_t>(std::lround(clamped * kS16Max));
-}
-
-void PutTag(std::vector<uint8_t>* out, const char (&tag)[kTagChars + 1]) {
-  out->insert(out->end(), tag, tag + kTagChars);
 }
 
 }  // namespace
@@ -72,21 +54,13 @@ bool WavWriter::Open(
 
 bool WavWriter::WriteHeader(uint64_t frames) {
   const auto data = static_cast<uint32_t>(frames * kBytesPerFrame);
-  std::vector<uint8_t> header;
-  header.reserve(kHeaderBytes);
-  PutTag(&header, "RIFF");
-  PutU32(&header, kHeaderBytes - kRiffPreambleBytes + data);
-  PutTag(&header, "WAVE");
-  PutTag(&header, "fmt ");
-  PutU32(&header, kFmtChunkBytes);
-  PutU16(&header, kPcmFormat);
-  PutU16(&header, kChannels);
-  PutU32(&header, sample_rate_);
-  PutU32(&header, sample_rate_ * kBytesPerFrame);
-  PutU16(&header, kBytesPerFrame);
-  PutU16(&header, static_cast<uint16_t>(kBitsPerSample));
-  PutTag(&header, "data");
-  PutU32(&header, data);
+  const std::vector<uint8_t> header = riff::WavHeader(
+      {kPcmFormat,
+       static_cast<uint16_t>(kChannels),
+       sample_rate_,
+       static_cast<uint16_t>(kBitsPerSample)},
+      data
+  );
   return std::fseek(file_, 0, SEEK_SET) == 0 &&
          std::fwrite(header.data(), 1, header.size(), file_) == header.size();
 }
@@ -108,9 +82,7 @@ bool WavWriter::Finish() {
   if (file_ == nullptr) return false;
   const bool written = WriteHeader(frames_);
   const bool closed = std::fclose(std::exchange(file_, nullptr)) == 0;
-  std::error_code error;
-  if (written && closed) std::filesystem::rename(part_, path_, error);
-  if (!written || !closed || error) {
+  if (!written || !closed || CommitPartFile(path_) != FileWrite::kOk) {
     Abort();
     return false;
   }
