@@ -77,7 +77,7 @@ interface StripBodyProps {
   readonly icon: IconName;
   readonly bad: boolean;
   readonly title: string;
-  readonly detail: string;
+  readonly detail: string | null;
   readonly trailing: ReactNode;
 }
 
@@ -90,7 +90,7 @@ function StripBody({ icon, bad, title, detail, trailing }: StripBodyProps) {
       </View>
       <View style={styles.text}>
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.detail}>{detail}</Text>
+        {detail === null ? null : <Text style={styles.detail}>{detail}</Text>}
       </View>
       {trailing}
     </View>

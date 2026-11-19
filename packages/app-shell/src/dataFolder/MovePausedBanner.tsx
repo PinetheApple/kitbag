@@ -10,8 +10,12 @@ import {
   textStyle,
   useTheme,
 } from '@kitbag/core-design';
-import { dataFolderStore, pausedMove, useDataFolder } from '@kitbag/core-state';
-import { useCallback, useState } from 'react';
+import {
+  pausedMove,
+  useDataFolder,
+  type DataFolderStore,
+} from '@kitbag/core-state';
+import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 
 import { moveErrorText, pausedHint } from '../settings/dataFolderMoveText.ts';
@@ -44,21 +48,14 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-function useRefusal() {
-  const [refusal, setRefusal] = useState<string | null>(null);
-  const settle = useCallback((acted: boolean) => {
-    const { error, codes, move } = dataFolderStore.getState();
-    if (acted || error === null || codes === null) {
-      setRefusal(null);
-      return;
-    }
-    const places = {
-      source: move?.sourceVolumeUuid ?? null,
-      target: move?.targetVolumeUuid ?? null,
-    };
-    setRefusal(moveErrorText(error, codes, places).body);
-  }, []);
-  return { refusal, settle };
+function refusalText(state: DataFolderStore): string | null {
+  const { error, codes, move } = state;
+  if (error === null || codes === null) return null;
+  const places = {
+    source: move?.sourceVolumeUuid ?? null,
+    target: move?.targetVolumeUuid ?? null,
+  };
+  return moveErrorText(error, codes, places).body;
 }
 
 export function MovePausedBanner() {
@@ -69,13 +66,13 @@ export function MovePausedBanner() {
   const pending = useDataFolder((s) => s.pending);
   const resumeMove = useDataFolder((s) => s.resumeMove);
   const undoMove = useDataFolder((s) => s.undoMove);
-  const { refusal, settle } = useRefusal();
+  const refusal = useDataFolder(refusalText);
   const resume = useCallback(() => {
-    void resumeMove().then(settle);
-  }, [resumeMove, settle]);
+    void resumeMove();
+  }, [resumeMove]);
   const undo = useCallback(() => {
-    void undoMove().then(settle);
-  }, [undoMove, settle]);
+    void undoMove();
+  }, [undoMove]);
   if (paused === null || codes === null) return null;
   return (
     <Card emphasis="activeGroup">

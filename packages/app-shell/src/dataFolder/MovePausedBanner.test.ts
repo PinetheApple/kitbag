@@ -9,7 +9,7 @@ import type { StoreApi } from 'zustand/vanilla';
 import { describe, expect, it, vi } from 'vitest';
 
 import { move } from '../settings/dataFolderMove.test-helper.ts';
-import { fakeFolder } from './dataFolder.test-helper.ts';
+import { CARD_OUT, fakeFolder, refusal } from './dataFolder.test-helper.ts';
 
 const world = vi.hoisted(() => ({
   store: null as StoreApi<DataFolderStore> | null,
@@ -47,7 +47,6 @@ vi.mock('@kitbag/core-state', async (original) => {
 });
 
 const { MovePausedBanner } = await import('./MovePausedBanner.tsx');
-const { CARD_OUT } = await import('./dataFolder.test-helper.ts');
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -72,11 +71,16 @@ const texts = (tree: ReactTestRenderer) =>
     .findAllByType('Text' as never)
     .map((node) => String((node.props as { children: unknown }).children));
 
-async function press(tree: ReactTestRenderer, label: string) {
+function button(tree: ReactTestRenderer, label: string) {
   const found = tree.root
     .findAllByType('Button' as never)
     .find((node) => (node.props as { label: string }).label === label);
   if (found === undefined) throw new Error(`no ${label} button`);
+  return found;
+}
+
+async function press(tree: ReactTestRenderer, label: string) {
+  const found = button(tree, label);
   await act(async () => {
     (found.props as { onPress: () => void }).onPress();
     await Promise.resolve();
@@ -116,5 +120,52 @@ describe('the Home banner for a move the app was closed in', () => {
   ])('never shows for a move that is %s', async (_state, status) => {
     const { tree } = await mount(status);
     expect(tree.toJSON()).toBeNull();
+  });
+});
+
+describe('a refused banner action', () => {
+  it('says why Resume was refused', async () => {
+    const { tree, native } = await mount(KILLED);
+    native.resumeMove.mockRejectedValueOnce(
+      refusal('E_MOVE_TARGET_UNAVAILABLE'),
+    );
+    await press(tree, 'Resume');
+    await vi.waitFor(() => {
+      expect(texts(tree)).toContain(
+        'Kitbag lost the SD card and stopped before switching. Every song still plays from internal storage.',
+      );
+    });
+  });
+
+  it('says why Undo was refused', async () => {
+    const { tree, native } = await mount(KILLED);
+    native.undoMove.mockRejectedValueOnce(refusal('E_MOVE_RUNNING'));
+    await press(tree, 'Undo');
+    await vi.waitFor(() => {
+      expect(texts(tree)).toContain('Wait for it to stop, then undo it.');
+    });
+  });
+
+  it('drops the reason once the store clears it, as Settings does', async () => {
+    const { tree, native, store } = await mount(KILLED);
+    native.resumeMove.mockRejectedValueOnce(refusal('E_MOVE_RUNNING'));
+    await press(tree, 'Resume');
+    await vi.waitFor(() => {
+      expect(texts(tree)).toHaveLength(3);
+    });
+    act(() => {
+      store.getState().dismissError();
+    });
+    expect(texts(tree)).toHaveLength(2);
+  });
+
+  it('holds both buttons while a request is pending', async () => {
+    const { tree, store } = await mount(KILLED);
+    act(() => {
+      store.setState({ pending: true });
+    });
+    const disabled = (label: string) =>
+      (button(tree, label).props as { disabled: boolean }).disabled;
+    expect([disabled('Resume'), disabled('Undo')]).toEqual([true, true]);
   });
 });

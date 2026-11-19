@@ -21,6 +21,8 @@ export const CODES = {
   movePhases: { copying: 'COPYING', verifying: 'VERIFYING' },
   moveErrors: {
     io: 'E_MOVE_IO',
+    targetUnavailable: 'E_MOVE_TARGET_UNAVAILABLE',
+    running: 'E_MOVE_RUNNING',
     noMove: 'E_MOVE_NO_MOVE',
     importLockHeld: 'E_MOVE_IMPORT_LOCK_HELD',
     cardMounted: 'E_MOVE_CARD_MOUNTED',
@@ -79,4 +81,8 @@ export function hostMock(name: string) {
   return function Host(props: Props) {
     return createElement(name, props, props.children);
   };
+}
+
+export function refusal(code: string): Error {
+  return Object.assign(new Error('refused'), { code });
 }

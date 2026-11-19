@@ -34,7 +34,7 @@ export type LibraryStrip =
   | {
       readonly kind: 'missing';
       readonly title: string;
-      readonly detail: string;
+      readonly detail: string | null;
     };
 
 const NOUNS: Readonly<Record<LibraryView, readonly [string, string]>> = {
@@ -48,7 +48,8 @@ export function cardMissingTitle(volumeUuid: string | null): string {
   return `${capitalised(placeName(volumeUuid))} not found`;
 }
 
-function missingDetail(count: number, view: LibraryView): string {
+function missingDetail(count: number, view: LibraryView): string | null {
+  if (count === 0) return null;
   const [one, many] = NOUNS[view];
   return `${countLabel(count, one, many)} on it can’t play until it’s back`;
 }

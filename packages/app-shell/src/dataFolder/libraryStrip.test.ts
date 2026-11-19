@@ -81,6 +81,14 @@ describe('the Songs list strip', () => {
     ).toMatchObject({ detail: '1 stem song on it can’t play until it’s back' });
   });
 
+  it('gives no count line before any song on the card is counted', () => {
+    expect(libraryStrip(input({ volumes: CARD_OUT }))).toEqual({
+      kind: 'missing',
+      title: 'SD card not found',
+      detail: null,
+    });
+  });
+
   it('puts a missing card before a move', () => {
     const paused = move({ running: false, paused: true });
     expect(

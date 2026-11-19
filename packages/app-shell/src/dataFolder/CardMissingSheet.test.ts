@@ -8,7 +8,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DataFolderStore } from '@kitbag/core-state';
 
-import { AWAY_PATHS, CARD_OUT, fakeFolder } from './dataFolder.test-helper.ts';
+import {
+  AWAY_PATHS,
+  CARD_OUT,
+  fakeFolder,
+  refusal,
+} from './dataFolder.test-helper.ts';
 
 const world = vi.hoisted(() => ({
   store: null as StoreApi<DataFolderStore> | null,
@@ -121,7 +126,7 @@ describe('SD card not found', () => {
   it.each([
     ['a song import', () => (world.importing = ['Everlong.mp3'])],
     ['a StemDeck import', () => (world.stemDeckRunning = true)],
-  ])('never switches while %s holds the folder', async (_name, start) => {
+  ])('holds Use internal storage while %s runs', async (_name, start) => {
     start();
     const { tree, native } = await mount();
     const offer = button(tree, 'Use internal storage');
@@ -140,7 +145,7 @@ describe('SD card not found', () => {
   it('keeps the sheet open and says why when the switch is refused', async () => {
     const { tree, native, onDismiss } = await mount();
     native.switchToInternalStorage.mockRejectedValueOnce(
-      Object.assign(new Error('refused'), { code: 'E_MOVE_CARD_MOUNTED' }),
+      refusal('E_MOVE_CARD_MOUNTED'),
     );
     await press(tree, 'Use internal storage');
     await vi.waitFor(() => {
@@ -152,5 +157,17 @@ describe('SD card not found', () => {
       ).toBe(true);
     });
     expect(onDismiss).not.toHaveBeenCalled();
+  });
+});
+
+describe('a press while another request is pending', () => {
+  it('sends nothing and shows no older error', async () => {
+    const { tree, native, store } = await mount();
+    act(() => {
+      store.setState({ pending: true, error: 'E_MOVE_CARD_MOUNTED' });
+    });
+    await press(tree, 'Use internal storage');
+    expect(native.switchToInternalStorage).not.toHaveBeenCalled();
+    expect(tree.root.findAllByType('Hint' as never)).toHaveLength(2);
   });
 });

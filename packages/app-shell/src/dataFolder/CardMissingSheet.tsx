@@ -90,7 +90,7 @@ export function CardMissingSheet({
     dismiss();
   }, [refreshVolumes, dismiss]);
   const switchInternal = useCallback(() => {
-    if (offer !== 'offer') return;
+    if (offer !== 'offer' || dataFolderStore.getState().pending) return;
     clear();
     void switchToInternal().then((acted) => {
       if (acted) onDismiss();
