@@ -40,6 +40,7 @@ import { StemList } from './StemList.tsx';
 import { StemMeterSheet } from './StemMeterSheet.tsx';
 import { WAVEFORM_BARS } from './StemRowView.tsx';
 import { StemTransport } from './StemTransport.tsx';
+import { TempoSheet } from './TempoSheet.tsx';
 import { useMixerFrame, type MixerFrameValues } from './useMixerFrame.ts';
 
 export interface StemPlayerScreenProps {
@@ -281,30 +282,32 @@ interface ClickSheetOpen {
   readonly section: ClickSection;
 }
 
-type OpenSheet = PlayerSheet | ClickSheetOpen;
+const TEMPO_SHEET = { kind: 'tempo' } as const;
+
+type OpenSheet = PlayerSheet | ClickSheetOpen | typeof TEMPO_SHEET;
 
 const clickSectionOf = (sheet: OpenSheet | null) =>
-  typeof sheet === 'object' && sheet !== null ? sheet.section : null;
+  typeof sheet === 'object' && sheet?.kind === 'click' ? sheet.section : null;
 
 function usePlayerSheet(retiming: boolean) {
   const [sheet, setSheet] = useState<OpenSheet | null>(null);
   if (sheet !== null && retiming) setSheet(null);
-  const openMenu = useCallback(() => {
-    setSheet('menu');
+  const handlers = useMemo(() => {
+    const opener = (next: OpenSheet | null) => () => {
+      setSheet(next);
+    };
+    return {
+      openMenu: opener('menu'),
+      openMeter: opener('meter'),
+      openExport: opener('export'),
+      openTempo: opener(TEMPO_SHEET),
+      openClick: (section: ClickSection) => {
+        setSheet({ kind: 'click', section });
+      },
+      closeSheet: opener(null),
+    };
   }, []);
-  const openMeter = useCallback(() => {
-    setSheet('meter');
-  }, []);
-  const openExport = useCallback(() => {
-    setSheet('export');
-  }, []);
-  const openClick = useCallback((section: ClickSection) => {
-    setSheet({ kind: 'click', section });
-  }, []);
-  const closeSheet = useCallback(() => {
-    setSheet(null);
-  }, []);
-  return { sheet, openMenu, openMeter, openExport, openClick, closeSheet };
+  return { sheet, ...handlers };
 }
 
 interface PlayerSheetsProps {
@@ -313,6 +316,7 @@ interface PlayerSheetsProps {
   readonly playhead: MixerFrameValues['songSec'];
   readonly onMeter: () => void;
   readonly onExport: () => void;
+  readonly onTempo: () => void;
   readonly onClick: (section: ClickSection) => void;
   readonly onClose: () => void;
 }
@@ -343,12 +347,18 @@ function PlayerSheets(props: PlayerSheetsProps) {
         onClose={onClose}
         onMeter={props.onMeter}
         onExport={props.onExport}
+        onTempo={props.onTempo}
         onClick={props.onClick}
       />
       <StemMeterSheet
         visible={sheet === 'meter'}
         bottomInset={bottomInset}
         playhead={props.playhead}
+        onClose={onClose}
+      />
+      <TempoSheet
+        visible={sheet === TEMPO_SHEET}
+        bottomInset={bottomInset}
         onClose={onClose}
       />
       <OpenClickSheet {...props} />
@@ -371,8 +381,7 @@ export function StemPlayerScreen({
   const ready = useStemPlayer((s) => s.status === 'ready');
   const acquireSong = useStemPlayer((s) => s.acquireSong);
   const { retiming, shown, askReset, askLeave, closeAsk } = useRetimeAsk();
-  const { sheet, openMenu, openMeter, openExport, openClick, closeSheet } =
-    usePlayerSheet(retiming);
+  const sheets = usePlayerSheet(retiming);
   const frame = useStemFrame();
   const acquire = useCallback(
     () => acquireSong(setId, WAVEFORM_BARS),
@@ -391,18 +400,19 @@ export function StemPlayerScreen({
         {retiming ? (
           <RetimeBar onAskReset={askReset} onAskLeave={askLeave} />
         ) : (
-          <StemAppBar onBack={onBack} onMenu={ready ? openMenu : null} />
+          <StemAppBar onBack={onBack} onMenu={ready ? sheets.openMenu : null} />
         )}
         <Body bottom={insets.bottom} frame={frame} onBack={onBack} />
       </View>
       <PlayerSheets
-        sheet={sheet}
+        sheet={sheets.sheet}
         bottomInset={insets.bottom}
         playhead={frame.songSec}
-        onMeter={openMeter}
-        onExport={openExport}
-        onClick={openClick}
-        onClose={closeSheet}
+        onMeter={sheets.openMeter}
+        onExport={sheets.openExport}
+        onTempo={sheets.openTempo}
+        onClick={sheets.openClick}
+        onClose={sheets.closeSheet}
       />
       {shown === 'reset' ? <ResetDialog onClose={closeAsk} /> : null}
       {shown === 'leave' ? <LeaveDialog onClose={closeAsk} /> : null}

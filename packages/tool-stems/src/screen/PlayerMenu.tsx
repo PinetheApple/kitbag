@@ -21,6 +21,7 @@ import {
   shownMeter,
 } from '../logic/meterEdit.ts';
 import { ClickRows } from './ClickRows.tsx';
+import { TempoRow } from './TempoSheet.tsx';
 import { useMixdownProgress } from './useMixdownProgress.ts';
 
 const useStyles = createThemedStyles((theme) => ({
@@ -107,6 +108,7 @@ interface PlayerMenuProps {
   readonly onClose: () => void;
   readonly onExport: () => void;
   readonly onMeter: () => void;
+  readonly onTempo: () => void;
   readonly onClick: (section: ClickSection) => void;
 }
 
@@ -116,6 +118,7 @@ export function PlayerMenu({
   onClose,
   onExport,
   onMeter,
+  onTempo,
   onClick,
 }: PlayerMenuProps) {
   const styles = useStyles();
@@ -143,6 +146,7 @@ export function PlayerMenu({
         <Text style={styles.value}>levels, mutes, solos</Text>
       </Pressable>
       <StemMeterRow onMeter={onMeter} />
+      <TempoRow onOpen={onTempo} />
       <ClickRows onOpen={onClick} />
       <ExportRow visible={visible} onExport={onExport} />
     </Sheet>
