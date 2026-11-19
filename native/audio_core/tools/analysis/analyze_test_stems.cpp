@@ -7,6 +7,7 @@
 #include "analysis/beat_tracker.h"
 #include "analysis/onset_envelope.h"
 #include "analyze_test_support.h"
+#include "beat_spacing.h"
 #include "check.h"
 #include "metronome/metronome_internal.h"
 
@@ -41,14 +42,36 @@ constexpr int kAttackStride = 3;
 constexpr double kMaxTempoErrorBpm = 0.25;
 constexpr double kMaxStemSpreadBpm = 1.0;
 constexpr double kMaxGridLengthSpread = 0.01;
-// Louder noise leaves no beat peak at all and quieter noise no slope, so the
-// pad sits inside a narrow band.
+// Louder noise leaves no beat peak and quieter noise no slope; a weaker accent
+// leaves the double-lag peak under the gain gate. The pad sits in a narrow band.
 constexpr double kSwellLagHops = 31.2;
-constexpr float kSwellAttackSec = 0.22f;
-constexpr float kSwellChordAmp = 0.1f;
-constexpr float kSwellNoiseAmp = 0.022f;
-constexpr int kSwellBeatsPerBar = 4;
+constexpr float kSwellAttackSec = 0.2f;
+constexpr float kSwellNoiseAmp = 0.06f;
+constexpr int kSwellBeats = 24;
 constexpr uint32_t kSwellNoiseSeed = 7u;
+constexpr float kAccentAmp = 0.18f;
+// A pulse slower than the tracked range whose doubled-lag peak halves below the
+// fastest tracked lag.
+constexpr double kEdgeLagHops = 91.0;
+constexpr float kEdgeAttackSec = 0.1f;
+constexpr float kEdgeNoiseAmp = 0.01f;
+constexpr float kEdgeAccentAmp = 0.3f;
+constexpr int kEdgeBeats = 60;
+constexpr float kAccentAttackSec = 0.01f;
+constexpr float kAccentDecayPerSec = 8.0f;
+constexpr int kRippleBeats = 200;
+constexpr float kRippleChordAttackSec = 0.1f;
+constexpr float kRippleRiseSec = 0.35f;
+constexpr float kRippleDecayPerSec = 4.0f;
+constexpr float kRipplePerSec = 8.0f;
+constexpr float kRippleAmp = 0.6f;
+constexpr float kRippleBaseHz = 440.0f;
+constexpr uint32_t kRipplePitchSteps = 24;
+constexpr float kSemitonesPerOctave = 12.0f;
+constexpr uint32_t kRippleSeed = 2u;
+constexpr uint32_t kUniformShift = 8;
+constexpr uint32_t kUniformMask = 0xFFFFFFu;
+constexpr double kUniformScale = 1.0 / 16777216.0;
 
 size_t BeatFrame(int beat, double bpm) {
   const double period = kSecondsPerMinute * kSampleRate / bpm;
@@ -102,40 +125,141 @@ std::vector<float> MakeChordStem(double bpm) {
   return pcm;
 }
 
-float BarSwell(size_t frame, double bar_frames) {
+float Swell(size_t frame, double swell_frames) {
   const auto phase =
-      static_cast<float>(static_cast<double>(frame) / bar_frames);
+      static_cast<float>(static_cast<double>(frame) / swell_frames);
   return 0.5f - 0.5f * std::cos(kTwoPi * phase);
 }
 
-// Noise swelling once a bar slopes the onset autocorrelation, so the chords'
-// broad beat peak crests short of the period while its double does not.
-std::vector<float> MakeSwellingPadStem(double bpm) {
-  std::vector<float> pcm(BeatFrame(kStemBeats, bpm) * 2, 0.0f);
+struct PadShape {
+  double bpm;
+  int beats;
+  float attack_sec;
+  float noise_amp;
+  float accent_amp;
+};
+
+float Accent(const PadShape& shape, int beat, float t) {
+  if (beat % kBeatsPerChord != 0) return 0.0f;
+  return shape.accent_amp * std::fmin(t / kAccentAttackSec, 1.0f) *
+         std::exp(-t * kAccentDecayPerSec);
+}
+
+// Slow noise slopes the onset autocorrelation, so the chords' broad beat peak
+// crests short of the period; accents at each chord change keep its double clear.
+std::vector<float> MakeSwellingPadStem(const PadShape& shape) {
+  std::vector<float> pcm(BeatFrame(shape.beats, shape.bpm) * 2, 0.0f);
   const float rate = static_cast<float>(kSampleRate);
-  const double bar_frames =
-      kSecondsPerMinute * kSampleRate / bpm * kSwellBeatsPerBar;
+  const double swell_frames =
+      kSecondsPerMinute * kSampleRate / shape.bpm * kSwellBeats;
   uint32_t noise = kSwellNoiseSeed;
-  for (int b = 0; b < kStemBeats; ++b) {
-    const size_t start = BeatFrame(b, bpm);
-    const size_t end = BeatFrame(b + 1, bpm);
+  for (int b = 0; b < shape.beats; ++b) {
+    const size_t start = BeatFrame(b, shape.bpm);
+    const size_t end = BeatFrame(b + 1, shape.bpm);
     for (size_t f = start; f < end; ++f) {
       const float t = static_cast<float>(f - start) / rate;
-      const float attack = std::fmin(t / kSwellAttackSec, 1.0f);
-      const float chord =
-          kSwellChordAmp * attack * Chord(b, static_cast<float>(f) / rate);
+      const float level = kChordAmp * std::fmin(t / shape.attack_sec, 1.0f) +
+                          Accent(shape, b, t);
+      const float chord = level * Chord(b, static_cast<float>(f) / rate);
       const float pad =
-          kSwellNoiseAmp * BarSwell(f, bar_frames) * LcgNoise(noise);
+          shape.noise_amp * Swell(f, swell_frames) * LcgNoise(noise);
       SetFrame(pcm, f, chord + pad);
     }
   }
   return pcm;
 }
 
+void CheckEdgeStaysInRange() {
+  const PadShape shape{
+      LagBpm(kEdgeLagHops),
+      kEdgeBeats,
+      kEdgeAttackSec,
+      kEdgeNoiseAmp,
+      kEdgeAccentAmp
+  };
+  const BeatResult r = AnalyzePcm(MakeSwellingPadStem(shape));
+  std::printf(
+      "analyze_verify: pad at %.2f BPM, doubled lag past the range -> %.2f\n",
+      shape.bpm,
+      r.bpm
+  );
+  Check(
+      r.bpm <= kitbag::kMaxTrackedBpm * (1.0 + kBpmTolerance),
+      "stems: a refined tempo never leaves the tracked range"
+  );
+}
+
+double LcgUniform(uint32_t& state) {
+  state = state * kLcgMul + kLcgInc;
+  return static_cast<double>((state >> kUniformShift) & kUniformMask) *
+         kUniformScale;
+}
+
+void AddRippleNote(std::vector<float>& pcm, size_t start, float hz) {
+  const float rate = static_cast<float>(kSampleRate);
+  const auto length = static_cast<size_t>(2.0f * kRippleRiseSec * rate);
+  const size_t frames = pcm.size() / 2;
+  for (size_t f = start; f < start + length && f < frames; ++f) {
+    const float t = static_cast<float>(f - start) / rate;
+    const float level =
+        t < kRippleRiseSec
+            ? t / kRippleRiseSec
+            : std::exp(-(t - kRippleRiseSec) * kRippleDecayPerSec);
+    const float v = kRippleAmp * level * std::sin(kTwoPi * hz * t);
+    pcm[f * 2] += v;
+    pcm[f * 2 + 1] += v;
+  }
+}
+
+// Slow-rising notes off the grid under steady chords: the beat lag is already
+// right, and the strongest peak near its double is a ripple in a trough.
+std::vector<float> MakeRippleStem(double bpm) {
+  std::vector<float> pcm(BeatFrame(kRippleBeats, bpm) * 2, 0.0f);
+  const float rate = static_cast<float>(kSampleRate);
+  for (int b = 0; b < kRippleBeats; ++b) {
+    const size_t start = BeatFrame(b, bpm);
+    for (size_t f = start; f < BeatFrame(b + 1, bpm); ++f) {
+      const float t = static_cast<float>(f - start) / rate;
+      const float level =
+          kChordAmp * std::fmin(t / kRippleChordAttackSec, 1.0f);
+      SetFrame(pcm, f, level * Chord(b, static_cast<float>(f) / rate));
+    }
+  }
+  uint32_t state = kRippleSeed;
+  const double song_sec = static_cast<double>(pcm.size() / 2) / kSampleRate;
+  for (double t = 0.0;;) {
+    t -= std::log(1.0 - LcgUniform(state)) / kRipplePerSec;
+    if (t >= song_sec) break;
+    LcgUniform(state);
+    const auto step =
+        static_cast<float>((state >> kUniformShift) % kRipplePitchSteps);
+    const float hz = kRippleBaseHz * std::exp2(step / kSemitonesPerOctave);
+    AddRippleNote(pcm, static_cast<size_t>(t * kSampleRate), hz);
+  }
+  return pcm;
+}
+
+void CheckRippleKeepsTempo() {
+  const double bpm = LagBpm(kSwellLagHops);
+  const BeatResult r = AnalyzePcm(MakeRippleStem(bpm));
+  std::printf(
+      "analyze_verify: off-grid ripple at %.2f BPM -> %.2f (%zu beats)\n",
+      bpm,
+      r.bpm,
+      r.beat_times.size()
+  );
+  Check(
+      std::fabs(r.bpm - bpm) <= kMaxStemSpreadBpm,
+      "stems: a ripple near the doubled lag leaves a right tempo alone"
+  );
+}
+
 void CheckSwellingPadAgrees() {
   const double bpm = LagBpm(kSwellLagHops);
   const BeatResult clicks = AnalyzePcm(MakeClickStem(bpm));
-  const BeatResult pad = AnalyzePcm(MakeSwellingPadStem(bpm));
+  const PadShape
+      shape{bpm, kStemBeats, kSwellAttackSec, kSwellNoiseAmp, kAccentAmp};
+  const BeatResult pad = AnalyzePcm(MakeSwellingPadStem(shape));
   const auto click_beats = static_cast<double>(clicks.beat_times.size());
   const auto pad_beats = static_cast<double>(pad.beat_times.size());
   std::printf(
@@ -213,6 +337,8 @@ void RunStemTests() {
   for (const double bpm : kStemTempos) CheckStemsAgree(bpm);
   CheckSkippedBeat(kStemTempos[0]);
   CheckSwellingPadAgrees();
+  CheckRippleKeepsTempo();
+  CheckEdgeStaysInRange();
 }
 
 }  // namespace analyze_test

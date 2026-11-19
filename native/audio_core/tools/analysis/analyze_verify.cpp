@@ -261,7 +261,7 @@ void RunGuardTests() {
 
 }  // namespace
 
-constexpr int kExpectedChecks = 180;
+constexpr int kExpectedChecks = 184;
 
 int Verdict() {
   if (kitbag_test::g_checks != kExpectedChecks) {

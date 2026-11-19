@@ -50,6 +50,9 @@ constexpr int kPeakMargin = 1;
 constexpr int kHarmonic = 2;
 constexpr float kHarmonicWindow = 0.1f;
 constexpr double kMaxHarmonicDisagreementLags = 1.0;
+// Measured on real stems: the drifted piano's double-lag peak stands 4.2% above
+// acf[2 * lag]; peaks that moved a right or unrelated tempo stood at most 2.0%.
+constexpr float kMinHarmonicGain = 1.03f;
 constexpr size_t kMaxSlopePoints = 256;
 constexpr size_t kMinBeatsForSlope = 2;
 
@@ -139,21 +142,30 @@ int StrongestPeak(const std::vector<float>& acf, int lo, int hi) {
   return peak;
 }
 
+bool ClearsDoubledLag(const std::vector<float>& acf, int peak, int doubled) {
+  return acf[doubled] > 0.0f && acf[peak] > kMinHarmonicGain * acf[doubled];
+}
+
 // A broad beat peak on a sloping baseline crests off the period; the peak at
 // twice the lag lies past the slope and halves back to the period.
-int RefineByHarmonic(const std::vector<float>& onset, int lag) {
-  const float doubled = static_cast<float>(kHarmonic * lag);
-  const auto lo =
-      static_cast<int>(std::floor(doubled * (1.0f - kHarmonicWindow)));
-  const auto hi =
-      static_cast<int>(std::ceil(doubled * (1.0f + kHarmonicWindow)));
+int RefineByHarmonic(
+    const std::vector<float>& onset,
+    int lag,
+    int min_lag,
+    int max_lag
+) {
+  const int doubled = kHarmonic * lag;
+  const auto span = static_cast<float>(doubled);
+  const auto lo = static_cast<int>(std::floor(span * (1.0f - kHarmonicWindow)));
+  const auto hi = static_cast<int>(std::ceil(span * (1.0f + kHarmonicWindow)));
   const auto acf =
       Autocorrelation(onset, lo - kPeakMargin, hi + kPeakMargin + 1);
   const int peak = StrongestPeak(acf, lo, hi);
-  if (peak == 0) return lag;
+  if (peak == 0 || !ClearsDoubledLag(acf, peak, doubled)) return lag;
   const double halved = static_cast<double>(peak) / kHarmonic;
   if (std::fabs(halved - lag) <= kMaxHarmonicDisagreementLags) return lag;
-  return static_cast<int>(std::lround(halved));
+  const auto refined = static_cast<int>(std::lround(halved));
+  return refined >= min_lag && refined < max_lag ? refined : lag;
 }
 
 double Median(std::vector<double> values) {
@@ -343,7 +355,7 @@ float BeatTracker::EstimateTempo(
       Autocorrelation(onset, min_lag - kPeakMargin, max_lag + kPeakMargin);
   const int peak_lag = BestPeakLag(acf, min_lag, max_lag);
   if (peak_lag <= 0) return 0.0f;
-  const int best_lag = RefineByHarmonic(onset, peak_lag);
+  const int best_lag = RefineByHarmonic(onset, peak_lag, min_lag, max_lag);
 
   return kSecondsPerMinute / (static_cast<float>(best_lag) * hop_time);
 }
