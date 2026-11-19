@@ -32,6 +32,8 @@ const { anim, REDUCED, FULL } = vi.hoisted(() => {
   };
 });
 const focusReaderOn = vi.hoisted(() => vi.fn());
+const keyboard = vi.hoisted(() => ({ height: { value: 0 } }));
+const frames = vi.hoisted(() => [] as (() => void)[]);
 const dismissKeyboard = vi.hoisted(() => vi.fn());
 
 vi.mock('react-native', () => ({
@@ -86,10 +88,19 @@ vi.mock('react-native-reanimated', async () => {
     });
     return shared;
   }
+  function useAnimatedStyle<T>(updater: () => T) {
+    const [handle] = useState(() => ({ updater }));
+    handle.updater = updater;
+    return handle;
+  }
   return {
     default: { View: 'Animated.View' },
     SlideInDown: settling('sheetIn'),
-    useAnimatedStyle: <T,>(style: () => T) => style(),
+    cancelAnimation: (shared: { value: number }) => {
+      const at = shared.value;
+      shared.value = at;
+    },
+    useAnimatedStyle,
     useSharedValue,
     withSpring: (to: number) => to,
     withTiming: (
@@ -119,13 +130,14 @@ vi.mock('react-native-gesture-handler', () => {
   };
 });
 vi.mock('react-native-keyboard-controller', () => ({
-  useReanimatedKeyboardAnimation: () => ({ height: { value: 0 } }),
+  useReanimatedKeyboardAnimation: () => keyboard,
 }));
-vi.mock('react-native-worklets', () => ({
-  scheduleOnRN: (fn: () => void) => {
-    fn();
-  },
-}));
+vi.mock('react-native-worklets', () => {
+  const run = <A extends unknown[]>(fn: (...args: A) => void, ...args: A) => {
+    fn(...args);
+  };
+  return { scheduleOnRN: run, scheduleOnUI: run };
+});
 vi.mock('./IconGlyph.tsx', () => ({ InlineIcon: 'InlineIcon' }));
 vi.mock('./hardwareBack', () => ({ onHardwareBack: () => () => undefined }));
 vi.mock('../readerFocus', () => ({ focusReaderOn }));
@@ -148,27 +160,32 @@ const { SheetHost } = await import('./SheetHost.tsx');
 const ACTIONS = 'Actions';
 const DELETE = 'Delete';
 const SONG = 'Song';
+const KEYBOARD_OPEN = -300;
+const KEYBOARD_CLOSING = -120;
 const noop = () => undefined;
 
 interface Open {
   readonly actions: boolean;
+  readonly owned?: boolean;
   readonly remove: boolean;
   readonly detail?: string | null;
   readonly focus?: RefObject<HostInstance | null>;
 }
 
-function Pair({ actions, remove, detail = SONG, focus }: Open) {
+function Pair({ actions, owned = true, remove, detail = SONG, focus }: Open) {
   return (
     <SheetHost topInset={0}>
-      <Sheet
-        visible={actions}
-        title={ACTIONS}
-        dismissLabel="Close actions"
-        onDismiss={noop}
-        {...(focus === undefined ? {} : { initialFocusRef: focus })}
-      >
-        {detail === null ? null : h('Detail', { name: detail })}
-      </Sheet>
+      {owned ? (
+        <Sheet
+          visible={actions}
+          title={ACTIONS}
+          dismissLabel="Close actions"
+          onDismiss={noop}
+          {...(focus === undefined ? {} : { initialFocusRef: focus })}
+        >
+          {detail === null ? null : h('Detail', { name: detail })}
+        </Sheet>
+      ) : null}
       <Sheet
         visible={remove}
         title={DELETE}
@@ -230,7 +247,39 @@ function finishExits() {
   });
 }
 
+function runFrame() {
+  act(() => {
+    for (const frame of frames.splice(0)) frame();
+  });
+}
+
+function settleFrames() {
+  while (frames.length > 0) runFrame();
+}
+
+interface StyleHandle {
+  readonly updater: () => { paddingBottom?: number };
+}
+
+function cardPadding(tree: ReactTestRenderer, title: string): unknown {
+  const handles = slotTitled(tree, title)
+    .findAll((node) => Array.isArray(node.props.style))
+    .flatMap((node) => node.props.style as unknown[])
+    .filter(
+      (style): style is StyleHandle =>
+        typeof (style as Partial<StyleHandle> | null)?.updater === 'function',
+    );
+  return handles
+    .map((handle) => handle.updater().paddingBottom)
+    .find((padding) => padding !== undefined);
+}
+
 beforeEach(() => {
+  frames.length = 0;
+  vi.stubGlobal('requestAnimationFrame', (frame: () => void) =>
+    frames.push(frame),
+  );
+  keyboard.height.value = 0;
   anim.running.clear();
   anim.exits.length = 0;
   dismissKeyboard.mockClear();
@@ -243,7 +292,65 @@ it('keeps a sheet swapped out in one commit until its exit finishes', () => {
   rerender(tree, { actions: false, remove: true });
   expect(titles(tree)).toEqual([ACTIONS, DELETE]);
   finishExits();
+  settleFrames();
   expect(titles(tree)).toEqual([DELETE]);
+});
+
+it('removes a leaving slot only after a frame has run past its exit', () => {
+  const tree = mount({ actions: true, remove: false });
+  rerender(tree, { actions: false, remove: true });
+  finishExits();
+  expect(titles(tree)).toEqual([ACTIONS, DELETE]);
+  let framesRun = 0;
+  while (titles(tree).length > 1 && frames.length > 0) {
+    runFrame();
+    framesRun += 1;
+  }
+  expect(framesRun).toBeGreaterThan(0);
+  expect(titles(tree)).toEqual([DELETE]);
+});
+
+it('keeps a sheet shown again after its exit finished but before removal', () => {
+  const tree = mount({ actions: true, remove: false });
+  rerender(tree, { actions: false, remove: false });
+  finishExits();
+  rerender(tree, { actions: true, remove: false });
+  settleFrames();
+  expect(titles(tree)).toEqual([ACTIONS]);
+});
+
+it('lets only the latest exit remove a sheet hidden, shown and hidden again', () => {
+  const tree = mount({ actions: true, remove: false });
+  rerender(tree, { actions: false, remove: false });
+  finishExits();
+  rerender(tree, { actions: true, remove: false });
+  rerender(tree, { actions: false, remove: false });
+  settleFrames();
+  expect(titles(tree)).toEqual([ACTIONS]);
+  finishExits();
+  settleFrames();
+  expect(titles(tree)).toEqual([]);
+});
+
+it('stops a sheet whose owner unmounts mid-exit before removing it', () => {
+  const tree = mount({ actions: true, remove: false });
+  rerender(tree, { actions: false, remove: false });
+  rerender(tree, { actions: false, owned: false, remove: false });
+  expect(anim.running.size).toBe(0);
+  expect(titles(tree)).toEqual([ACTIONS]);
+  settleFrames();
+  expect(titles(tree)).toEqual([]);
+});
+
+it('follows the keyboard while open and holds its padding while leaving', () => {
+  const tree = mount({ actions: true, remove: false });
+  const closed = cardPadding(tree, ACTIONS);
+  keyboard.height.value = KEYBOARD_OPEN;
+  const open = cardPadding(tree, ACTIONS);
+  expect(open).not.toEqual(closed);
+  rerender(tree, { actions: false, remove: false });
+  keyboard.height.value = KEYBOARD_CLOSING;
+  expect(cardPadding(tree, ACTIONS)).toEqual(open);
 });
 
 it('leaves no layout exit animation in the tree', () => {
@@ -287,13 +394,14 @@ it('keeps a sheet that is shown again before its exit finishes', () => {
   expect(slotTitled(tree, ACTIONS).props.pointerEvents).toBe('auto');
 });
 
-it('removes the sheet on the next tick under reduce motion', async () => {
+it('removes the sheet once its immediate exit settles under reduce motion', async () => {
   anim.motion = REDUCED;
   const tree = mount({ actions: true, remove: false });
   rerender(tree, { actions: false, remove: false });
   await act(async () => {
     await Promise.resolve();
   });
+  settleFrames();
   expect(titles(tree)).toEqual([]);
 });
 

@@ -24,7 +24,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
+import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 
 import type { IconName } from '../icons.ts';
 import { layout, opacity, size, space, textRoles } from '../roles.ts';
@@ -138,6 +138,11 @@ const useStyles = createThemedStyles((theme) => ({
     backgroundColor: SCRIM,
   },
 }));
+
+function sheetPaddingBottom(bottomInset: number, keyboardHeight: number) {
+  'worklet';
+  return space.cardPadding + Math.max(bottomInset, -keyboardHeight);
+}
 
 export type SheetHintSize = 'default' | 'large';
 export type SheetTitleSize = 'default' | 'large' | 'screen';
@@ -264,11 +269,36 @@ export function Sheet({
   // Edge to edge, nothing resizes for the keyboard and RN's keyboard events
   // only fire on a layout pass (#142). Height is negative while it is open.
   const keyboard = useReanimatedKeyboardAnimation();
-  const sheetStyle = useAnimatedStyle(() => ({
-    paddingBottom:
-      space.cardPadding + Math.max(bottomInset, -keyboard.height.value),
-    transform: [{ translateY: dragY.value }],
-  }));
+  const leavingPadding = useSharedValue(0);
+  const openSheetStyle = () => {
+    'worklet';
+    return {
+      paddingBottom: sheetPaddingBottom(bottomInset, keyboard.height.value),
+      transform: [{ translateY: dragY.value }],
+    };
+  };
+  const leavingSheetStyle = () => {
+    'worklet';
+    return {
+      paddingBottom: leavingPadding.value,
+      transform: [{ translateY: dragY.value }],
+    };
+  };
+  useEffect(() => {
+    if (visible) return;
+    scheduleOnUI(() => {
+      'worklet';
+      leavingPadding.value = sheetPaddingBottom(
+        bottomInset,
+        keyboard.height.value,
+      );
+    });
+    // The padding freezes once per exit, not per new inset.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+  const sheetStyle = useAnimatedStyle(
+    visible ? openSheetStyle : leavingSheetStyle,
+  );
   const noticeStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: dragY.value }],
   }));
