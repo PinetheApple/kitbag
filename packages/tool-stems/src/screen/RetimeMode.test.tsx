@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { pressHardwareBack } from '../testing/reactNativeHosts.ts';
 import {
+  at,
   CLOSE,
   DIALOG_TITLE,
   flush,
@@ -82,8 +83,18 @@ describe('opening retime', () => {
     const player = await mountTracked(SONG_DETAILS);
     await player.press('Lyrics');
     player.frames(3.6);
+    player.engine.position = at(3.6);
     await player.press(RETIME);
     expect(player.has(slowed('Line 2 of 3'))).toBe(true);
+    expect(player.store.getState().retime).toMatchObject({ nextLine: 2 });
+  });
+
+  it('takes the line from the engine head, not the drawn playhead', async () => {
+    const player = await mountTracked(SONG_DETAILS);
+    await player.press('Lyrics');
+    player.frames(0);
+    player.engine.position = at(3.6);
+    await player.press(RETIME);
     expect(player.store.getState().retime).toMatchObject({ nextLine: 2 });
   });
 

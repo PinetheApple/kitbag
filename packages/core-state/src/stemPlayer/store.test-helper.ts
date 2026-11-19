@@ -181,6 +181,9 @@ export function fakeRuntime(set: StemSetRecord) {
     saveLyricsRetimed: vi.fn<StemPlayerRecords['saveLyricsRetimed']>(() =>
       Promise.resolve(),
     ),
+    saveStemSetMeterOverride: vi.fn<
+      StemPlayerRecords['saveStemSetMeterOverride']
+    >(() => Promise.resolve()),
     saveStemSetClick: vi.fn<StemPlayerRecords['saveStemSetClick']>(
       (_id, patch) => {
         stored = { ...stored, ...patch };

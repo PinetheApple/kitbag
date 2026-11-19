@@ -3,6 +3,7 @@ import {
   Icon,
   opacity,
   rowLabel,
+  size,
   stemPlayer,
   textRoles,
   textStyle,
@@ -28,6 +29,10 @@ const useStyles = createThemedStyles((theme) => ({
     gap: stemPlayer.menuRowGap,
     minHeight: stemPlayer.menuRowMinHeight,
   },
+  divided: {
+    borderBottomWidth: size.stroke,
+    borderBottomColor: theme.color.line,
+  },
   disabled: { opacity: opacity.muted },
   body: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
   label: { ...textStyle(textRoles.menuRow), color: theme.color.text },
@@ -47,26 +52,28 @@ function ClickRow({ icon, title, value, reason, onPress }: ClickRowProps) {
   const styles = useStyles();
   const disabled = reason !== null;
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={rowLabel(title, reason ?? value)}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      style={[styles.row, disabled && styles.disabled]}
-      onPress={onPress}
-    >
-      <Icon name={icon} size="title" color="text2" />
-      <View style={styles.body}>
-        <Text style={styles.label}>{title}</Text>
-        {disabled ? <Text style={styles.detail}>{reason}</Text> : null}
-      </View>
-      {disabled ? null : (
-        <>
-          <Text style={styles.value}>{value}</Text>
-          <Icon name="forward" size="title" color="decor" />
-        </>
-      )}
-    </Pressable>
+    <View style={styles.divided}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={rowLabel(title, reason ?? value)}
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        style={[styles.row, disabled && styles.disabled]}
+        onPress={onPress}
+      >
+        <Icon name={icon} size="title" color="text2" />
+        <View style={styles.body}>
+          <Text style={styles.label}>{title}</Text>
+          {disabled ? <Text style={styles.detail}>{reason}</Text> : null}
+        </View>
+        {disabled ? null : (
+          <>
+            <Text style={styles.value}>{value}</Text>
+            <Icon name="forward" size="title" color="decor" />
+          </>
+        )}
+      </Pressable>
+    </View>
   );
 }
 

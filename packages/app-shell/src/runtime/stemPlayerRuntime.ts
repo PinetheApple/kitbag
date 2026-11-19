@@ -24,6 +24,8 @@ configureStemPlayer({
     renameStem: (id, name) => getDatabase().songLibrary.renameStem(id, name),
     saveLyricsRetimed: (id, times) =>
       getDatabase().songLibrary.saveLyricsRetimed(id, times),
+    saveStemSetMeterOverride: (id, patch) =>
+      getDatabase().songLibrary.saveStemSetMeterOverride(id, patch),
     saveStemSetClick: (id, patch) =>
       getDatabase().songLibrary.saveStemSetClick(id, patch),
   },

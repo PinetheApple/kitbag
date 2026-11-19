@@ -395,6 +395,14 @@ export {
 } from './stemPlayer/meterOverride.ts';
 export { impliedMeter } from './stemPlayer/barMeter.ts';
 export {
+  GRID_METER,
+  GRID_METERS,
+  isGridMeter,
+  NO_METER_OVERRIDE,
+  type GridMeter,
+  type MeterOverride,
+} from '@kitbag/core-db';
+export {
   clickKeyLabel,
   loopEndFrames,
   loopKeyLabel,

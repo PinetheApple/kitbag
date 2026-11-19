@@ -67,6 +67,7 @@ export type StemPlayerRecords = Pick<
   | 'saveStemMix'
   | 'renameStem'
   | 'saveLyricsRetimed'
+  | 'saveStemSetMeterOverride'
   | 'saveStemSetClick'
 >;
 

@@ -19,7 +19,7 @@ export const NO_METER_OVERRIDE: MeterOverride = {
   barOneSeconds: null,
 };
 
-function isGridMeter(value: number | null): value is GridMeter {
+export function isGridMeter(value: number | null): value is GridMeter {
   return GRID_METERS.some((meter) => meter === value);
 }
 

@@ -24,7 +24,8 @@ import {
 import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
 import type { LoopEdge, LoopSeconds } from './loop.ts';
 import { sectionLoopActions } from './loopActions.ts';
-import { overrideDownbeats } from './meterOverride.ts';
+import { FALLBACK_BEATS_PER_BAR } from './barMeter.ts';
+import { detectedMeter, overrideDownbeats } from './meterOverride.ts';
 import {
   NO_LYRICS,
   songLyrics,
@@ -45,7 +46,7 @@ import { retimeActions, retimeAnchor } from './retimeActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
 import { sortedSections } from './sections.ts';
 import { countPending, songStart } from './songStart.ts';
-import { secondsToFrames } from './time.ts';
+import { framesToSeconds, secondsToFrames } from './time.ts';
 
 const MIX_SAVE_DELAY_MS = 600;
 export const SCRUB_SEEK_DELAY_MS = 120;
@@ -101,6 +102,8 @@ export interface StemPlayerState {
   readonly beats: readonly number[];
   readonly downbeatIndices: readonly number[];
   readonly meterOverride: MeterOverride;
+  readonly detectedMeter: number;
+  readonly detectedBarOneSeconds: number;
   readonly loop: LoopState;
   readonly loopFailure: LoopFailure | null;
   readonly undoableLoop: LoopSeconds | null;
@@ -150,6 +153,11 @@ export interface StemPlayerActions {
     setId: number,
     override: MeterOverride,
   ) => void;
+  readonly saveMeterOverride: (
+    setId: number,
+    override: MeterOverride,
+  ) => Promise<void>;
+  readonly playheadSeconds: () => number;
 }
 
 export type StemPlayerStore = StemPlayerState &
@@ -190,6 +198,8 @@ const closedState: StemPlayerState = {
   beats: [],
   downbeatIndices: [],
   meterOverride: NO_METER_OVERRIDE,
+  detectedMeter: FALLBACK_BEATS_PER_BAR,
+  detectedBarOneSeconds: 0,
   loop: { kind: 'off' },
   loopFailure: null,
   undoableLoop: null,
@@ -383,6 +393,10 @@ export function createStemPlayerStore(
         record.bars,
         record.beats.length,
       );
+      const detected = detectedMeter({
+        beats: record.beats,
+        downbeatIndices: markedDownbeatIndices,
+      });
       set({
         status: 'ready',
         title: record.songTitle ?? record.title,
@@ -396,6 +410,8 @@ export function createStemPlayerStore(
         beats: record.beats,
         downbeatIndices: songDownbeats(record.beats, record),
         meterOverride: meterOverrideOf(record),
+        detectedMeter: detected.meter,
+        detectedBarOneSeconds: detected.barOneSeconds,
         clickGrouping: record.clickGrouping,
         clickRate: record.clickRate,
         sections: sortedSections(record.sections),
@@ -461,6 +477,10 @@ export function createStemPlayerStore(
         });
       },
       ...exportActions(context),
+      saveMeterOverride: (setId, override) =>
+        runtimeOf().records.saveStemSetMeterOverride(setId, override),
+      playheadSeconds: () =>
+        framesToSeconds(runtimeOf().engine.position(), get().engineRate),
     };
   });
 }

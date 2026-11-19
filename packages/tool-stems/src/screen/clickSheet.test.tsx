@@ -44,13 +44,20 @@ async function openClickSheet(change = SEVEN_BEAT_SONG) {
 }
 
 describe('the click rows in the Player sheet', () => {
-  it('sit between Reset mix and Export mix with the saved values', async () => {
+  it('sit between Meter and Export mix with the saved values', async () => {
     const p = await mountTracked(SEVEN_BEAT_SONG);
     player = p;
     await p.press(MENU);
     const texts = p.texts();
-    const order = ['Reset mix', 'Click grouping', 'Click rate', 'Export mix'];
+    const order = [
+      'Reset mix',
+      'Meter',
+      'Click grouping',
+      'Click rate',
+      'Export mix',
+    ];
     const at = order.map((text) => texts.indexOf(text));
+    expect(at).not.toContain(-1);
     expect(at).toEqual([...at].sort((a, b) => a - b));
     expect(p.byLabel(RATE_SINGLE).props.accessibilityState).toEqual({
       disabled: false,
