@@ -7,6 +7,9 @@ const SHOWN_DECIMALS = 1;
 
 type ByteUnit = typeof BASE_UNIT | (typeof LARGER_UNITS)[number];
 
+const GIGABYTE = BYTES_PER_UNIT ** LARGER_UNITS.length;
+const GIGABYTE_UNIT: ByteUnit = 'GB';
+
 export function formatBytes(bytes: number): string {
   let value = bytes;
   let unit: ByteUnit = BASE_UNIT;
@@ -21,4 +24,10 @@ export function formatBytes(bytes: number): string {
       ? String(Math.round(value))
       : decimal;
   return `${shown} ${unit}`;
+}
+
+// Volume space keeps its GB decimal: 41.2 GB free, not 41 GB.
+export function formatSpace(bytes: number): string {
+  if (bytes < GIGABYTE) return formatBytes(bytes);
+  return `${(bytes / GIGABYTE).toFixed(SHOWN_DECIMALS)} ${GIGABYTE_UNIT}`;
 }
