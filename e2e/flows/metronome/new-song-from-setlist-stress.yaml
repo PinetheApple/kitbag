@@ -1,0 +1,22 @@
+appId: com.kitbag.app
+name: '#488: New song from the metronome, tapped again and again in a setlist, keeps the app alive'
+tags:
+  - issue-488
+env:
+  ITERATIONS: 10
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- runFlow: ../../subflows/open-metronome-first-time.yaml
+- runFlow: ../../subflows/setlist-of-two-songs.yaml
+- tapOn: 'Setlists'
+- tapOn: 'Gig, .*'
+- evalScript: ${output.iteration = 0}
+- repeat:
+    times: ${ITERATIONS}
+    commands:
+      - evalScript: ${output.iteration = output.iteration + 1}
+      - runFlow:
+          label: 'New song from the metronome, ${output.iteration} of ${ITERATIONS}'
+          file: ../../subflows/add-new-song-to-setlist.yaml
+          env:
+            BPM: 120
