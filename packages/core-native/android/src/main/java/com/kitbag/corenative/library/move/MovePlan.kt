@@ -8,6 +8,8 @@ data class MoveSourceFile(val path: String, val size: Long, val modified: Long)
 object MovePlan {
   private val MOVED_DIRS = listOf(LibraryPaths.SONGS_DIR_NAME, LibraryPaths.STEMS_DIR_NAME)
 
+  fun requiredBytes(root: File): Long = scan(root).sumOf { it.size } + MoveRunner.FREE_SPACE_MARGIN_BYTES
+
   fun scan(root: File): List<MoveSourceFile> {
     val base = root.canonicalFile
     return MOVED_DIRS.flatMap { dirName ->

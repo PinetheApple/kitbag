@@ -1,5 +1,6 @@
 package com.kitbag.corenative.library.move
 
+import com.kitbag.corenative.library.AwayManifest
 import com.kitbag.corenative.library.DataFolder
 import com.kitbag.corenative.library.DataFolderLocation
 import com.kitbag.corenative.library.DurableFiles
@@ -35,14 +36,31 @@ sealed interface MoveOutcome {
 
   object NoMove : MoveOutcome
 
+  object CleanupDeferred : MoveOutcome
+
   data class Failed(val failure: MoveFailure, val path: String? = null) : MoveOutcome
+
+  data class Refused(val refusal: MoveRefusal) : MoveOutcome
 }
 
-data class MoveProgress(val phase: MovePhase, val doneBytes: Long, val totalBytes: Long, val path: String?)
+data class MoveProgress(
+  val phase: MovePhase,
+  val doneBytes: Long,
+  val totalBytes: Long,
+  val doneFiles: Int,
+  val totalFiles: Int,
+  val path: String?,
+)
+
+fun MoveState.progress(path: String?): MoveProgress {
+  val done = files.filter { if (phase == MovePhase.VERIFYING) it.verified else it.copied }
+  return MoveProgress(phase, done.sumOf { it.size }, totalBytes, done.size, files.size, path)
+}
 
 class MoveRunner(
   private val folder: DataFolder,
   private val journal: MoveJournal,
+  private val leftovers: AwayManifest,
   private val availableBytes: (File) -> Long,
   private val gate: ReleaseGate,
   private val listener: (MoveProgress) -> Unit = {},
@@ -57,15 +75,19 @@ class MoveRunner(
 
   fun pending(): MoveState? = journal.load()
 
+  fun running(): Boolean = running.get()
+
   fun start(target: DataFolderLocation): MoveOutcome {
     val source = folder.location()
     require(source != target) { "The data folder is already there" }
+    finishLeftovers()
     val sourceState = folder.rootState()
     if (sourceState !is RootState.Mounted || !sourceState.known) {
       return MoveOutcome.Failed(MoveFailure.SOURCE_UNAVAILABLE)
     }
     val files = MovePlan.scan(sourceState.root).map { MoveEntry(it.path, it.size, it.modified) }
     val state = synchronized(cancelOrSwitchLock) {
+      journal.load()?.takeIf { !running.get() && it.phase >= MovePhase.SWITCHED }?.let(::parkIfSourceGone)
       check(journal.load() == null) { "A move is already in progress" }
       begin(save(MoveState(source, target, MovePhase.PREFLIGHT, files)))
     }
@@ -259,7 +281,36 @@ class MoveRunner(
   private fun maybeSwitched(state: MoveState): Boolean =
     folder.storedLocation().let { stored -> stored == null || stored == state.target }
 
+  @Synchronized
+  fun finishLeftovers(): Boolean {
+    val parked = leftovers.load() ?: return false
+    var finished = true
+    for ((volumeUuid, paths) in parked) {
+      val root = mountedRoot(DataFolderLocation.Card(volumeUuid))
+      if (root == null) {
+        finished = false
+        continue
+      }
+      try {
+        paths.forEach { deleteCopy(root, it) }
+        leftovers.remove(volumeUuid)
+      } catch (e: IOException) {
+        finished = false
+      }
+    }
+    return finished
+  }
+
+  private fun parkIfSourceGone(state: MoveState): Boolean {
+    val card = state.source as? DataFolderLocation.Card ?: return false
+    if (mountedRoot(card) != null) return false
+    leftovers.record(card.volumeUuid, state.files.map { it.path })
+    journal.clear()
+    return true
+  }
+
   private fun cleaning(state: MoveState): MoveState {
+    if (parkIfSourceGone(state)) throw Stop(MoveOutcome.CleanupDeferred)
     val sourceRoot = mountedRoot(state.source) ?: throw Stop(MoveOutcome.Failed(MoveFailure.SOURCE_UNAVAILABLE))
     if (!gate.released(sourceRoot)) throw Stop(MoveOutcome.AwaitingRelease)
     state.files.forEach { deleteCopy(sourceRoot, it.path) }
@@ -307,11 +358,7 @@ class MoveRunner(
     return state
   }
 
-  private fun emit(state: MoveState, path: String?) {
-    val verifying = state.phase == MovePhase.VERIFYING
-    val done = state.files.filter { if (verifying) it.verified else it.copied }.sumOf { it.size }
-    listener(MoveProgress(state.phase, done, state.totalBytes, path))
-  }
+  private fun emit(state: MoveState, path: String?) = listener(state.progress(path))
 
   private fun MoveState.withEntry(entry: MoveEntry): MoveState {
     val others = files.filter { it.path != entry.path }

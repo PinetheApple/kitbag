@@ -98,6 +98,10 @@ class DataFolder(
         ?: RootState.Unmounted(location.volumeUuid)
     }
 
+  fun volume(volumeUuid: String): PortableVolume? = volumes.find(volumeUuid)
+
+  fun portableVolumes(): List<PortableVolume> = volumes.portable()
+
   private fun cardRoot(volumeUuid: String): File? =
     volumes.find(volumeUuid)?.takeIf { it.mounted }?.let { File(it.filesDir, DIR_NAME) }
 

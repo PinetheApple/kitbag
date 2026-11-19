@@ -7,15 +7,27 @@ import org.json.JSONObject
 
 data class AwayFiles(val volumeUuid: String, val paths: Set<String>, val mountedRoot: File?)
 
-class AwayManifest(file: File, warn: (message: String, cause: Exception) -> Unit) {
-  private val state = JsonStateFile(file, "songs absent from the root stay unknown", warn)
+class AwayManifest(
+  file: File,
+  warn: (message: String, cause: Exception) -> Unit,
+  unreadableMessage: String = "songs absent from the root stay unknown",
+) {
+  private val state = JsonStateFile(file, unreadableMessage, warn)
 
   fun load(): Map<String, Set<String>>? = state.read(emptyMap(), ::away)
 
   @Synchronized
   fun record(volumeUuid: String, relativePaths: Collection<String>) {
-    val existing = load() ?: throw IOException("Refusing to overwrite an unreadable $FILE_NAME")
+    val existing = load() ?: throw IOException("Refusing to overwrite an unreadable ${state.name}")
     state.write(json(existing + (volumeUuid to existing[volumeUuid].orEmpty() + relativePaths)))
+  }
+
+  @Synchronized
+  fun remove(volumeUuid: String) {
+    val existing = load() ?: throw IOException("Refusing to overwrite an unreadable ${state.name}")
+    if (volumeUuid !in existing) return
+    val rest = existing - volumeUuid
+    if (rest.isEmpty()) state.delete() else state.write(json(rest))
   }
 
   private fun away(json: JSONObject): Map<String, Set<String>> {

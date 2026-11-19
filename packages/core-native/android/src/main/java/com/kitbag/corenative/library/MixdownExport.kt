@@ -14,6 +14,8 @@ class MixdownExport(private val cacheDir: File) {
 
   fun cancel() = nativeCancel()
 
+  fun running() = nativeRunning()
+
   private external fun nativeStart(path: String): Int
 
   private external fun nativeCancel()
