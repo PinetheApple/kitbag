@@ -38,12 +38,17 @@ class ManifestCheck(
   val stemCount: Int = 0,
   val manifest: BundleManifest? = null,
   val stemFormat: String = "",
+  private val headingArtist: String? = null,
 ) {
+  val artist: String? get() = manifest?.artist ?: headingArtist
+  val durationSec: Double? get() = manifest?.durationSec
+
   fun copyWith(
     refusal: String?,
     manifest: BundleManifest? = this.manifest,
     stemFormat: String = this.stemFormat,
-  ) = ManifestCheck(refusal, format, version, jobId, title, stemCount, manifest, stemFormat)
+    headingArtist: String? = this.headingArtist,
+  ) = ManifestCheck(refusal, format, version, jobId, title, stemCount, manifest, stemFormat, headingArtist)
 }
 
 object StemBundleManifest {

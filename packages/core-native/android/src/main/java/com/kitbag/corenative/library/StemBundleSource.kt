@@ -11,6 +11,9 @@ interface BundleSource {
 
   fun <T> withManifest(read: (InputStream?) -> T): T
 
+  // A text member read without reaching the stems; null if none precedes them.
+  fun <T> withLeadingMember(name: String, read: (InputStream?) -> T): T
+
   // The stream belongs to the source: read it, do not close it.
   fun forEachMember(wanted: (String) -> Boolean, visit: (String, InputStream) -> Unit)
 
@@ -28,6 +31,20 @@ class ZipBundleSource(private val size: Long, private val open: () -> InputStrea
       val zip = ZipInputStream(raw.buffered())
       read(if (seekToManifest(zip)) zip else null)
     }
+
+  override fun <T> withLeadingMember(name: String, read: (InputStream?) -> T): T =
+    open().use { raw ->
+      val zip = ZipInputStream(raw.buffered())
+      read(if (seekBeforeStems(zip, name)) zip else null)
+    }
+
+  private fun seekBeforeStems(zip: ZipInputStream, name: String): Boolean {
+    while (true) {
+      val entry = zip.nextEntry ?: return false
+      if (entry.name.startsWith(StemBundleManifest.STEMS_PREFIX)) return false
+      if (!entry.isDirectory && entry.name == name) return true
+    }
+  }
 
   private fun seekToManifest(zip: ZipInputStream): Boolean {
     while (true) {

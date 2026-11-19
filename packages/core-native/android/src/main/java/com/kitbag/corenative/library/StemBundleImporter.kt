@@ -24,6 +24,7 @@ class ImportedBundle(
   val grid: BundleGrid,
   val bpm: Double?,
   val lyrics: BundleLyrics?,
+  val hasMix: Boolean,
 ) {
   val artist: String? get() = manifest.artist ?: metadata.heading?.artist
 }
@@ -41,9 +42,12 @@ class StemBundleImporter(
 
   fun check(source: BundleSource): ManifestCheck {
     val check = try {
-      source.withManifest { input ->
-        StemBundleManifest.check(input?.let { readCapped(it, MAX_MANIFEST_BYTES) ?: "" }, maxStems)
-      }
+      withHeadingArtist(
+        source,
+        source.withManifest { input ->
+          StemBundleManifest.check(input?.let { readCapped(it, MAX_MANIFEST_BYTES) ?: "" }, maxStems)
+        },
+      )
     } catch (e: ZipException) {
       warn("The bundle is not a readable zip", e)
       return ManifestCheck(StemBundleRefusal.UNREADABLE)
@@ -78,17 +82,28 @@ class StemBundleImporter(
             relativePath = LibraryPaths.relativize(base, File(folder, stem.fileName)),
             waveformRelativePath = waveforms[stem.name]?.let { LibraryPaths.relativize(base, File(folder, it)) },
             frames = stem.frames,
-            mix = mix.getValue(stem.name),
+            mix = mix?.getValue(stem.name) ?: StemMix(),
           )
         },
         metadata = metadata,
         grid = grid,
         bpm = members.bpm(metadata, grid),
         lyrics = lyrics,
+        hasMix = mix != null,
       )
     } finally {
       staging.deleteRecursively()
     }
+  }
+
+  // The import stores the manifest artist, else the metadata heading's; the
+  // check must report the same one or a re-import cannot match it.
+  private fun withHeadingArtist(source: BundleSource, check: ManifestCheck): ManifestCheck {
+    if (check.refusal != null || check.manifest?.artist != null) return check
+    val text = source.withLeadingMember(StemBundleMembers.METADATA) { input ->
+      input?.let { readCapped(it, MAX_MEMBER_BYTES) }
+    }
+    return check.copyWith(null, headingArtist = members.metadata(text).heading?.artist)
   }
 
   // Only names the manifest or the format defines are read, and nothing taken

@@ -96,6 +96,63 @@ describe('importing a song already in the library', () => {
   });
 });
 
+describe('importing a song StemDeck separated again', () => {
+  const LIBRARY_SONG = { id: 41, title: 'Gratitude' };
+  const SEPARATED_AGAIN = 'Replace “Gratitude”?';
+
+  async function picked() {
+    connected({
+      ...CATALOG,
+      songs: CATALOG.songs.map((song) =>
+        song.jobId === SONG_B ? { ...song, sameSong: LIBRARY_SONG } : song,
+      ),
+    });
+    const onImporting = vi.fn();
+    const screen = await mount(songList(onImporting));
+    await screen.press(WAY_MAKER);
+    await screen.press(GRATITUDE);
+    await screen.press('Import 2 songs');
+    return { screen, onImporting, native: live().native };
+  }
+
+  it('asks Skip, Keep both or Replace before downloading', async () => {
+    const { screen, onImporting, native } = await picked();
+    expect(screen.has(SEPARATED_AGAIN)).toBe(true);
+    expect(screen.labelled('Keep both')).toHaveLength(1);
+    expect(screen.labelled('Keep current')).toHaveLength(0);
+    expect(native.startImport).not.toHaveBeenCalled();
+    expect(onImporting).not.toHaveBeenCalled();
+  });
+
+  it('keeps both by importing it as a new song', async () => {
+    const { screen, onImporting, native } = await picked();
+    await screen.press('Keep both');
+    expect(native.startImport.mock.calls[0]?.[1]).toEqual([
+      expect.objectContaining({ jobId: SONG_A }),
+      expect.objectContaining({ jobId: SONG_B }),
+    ]);
+    expect(onImporting).toHaveBeenCalledOnce();
+  });
+
+  it('skips only the matched song and still imports the new one', async () => {
+    const { screen, onImporting, native } = await picked();
+    await screen.press('Skip');
+    expect(screen.has(SEPARATED_AGAIN)).toBe(false);
+    expect(native.startImport.mock.calls[0]?.[1]).toEqual([
+      expect.objectContaining({ jobId: SONG_A }),
+    ]);
+    expect(onImporting).toHaveBeenCalledOnce();
+  });
+
+  it('imports nothing when the sheet is dismissed', async () => {
+    const { screen, onImporting, native } = await picked();
+    await screen.press('Don’t import');
+    expect(screen.has(SEPARATED_AGAIN)).toBe(false);
+    expect(native.startImport).not.toHaveBeenCalled();
+    expect(onImporting).not.toHaveBeenCalled();
+  });
+});
+
 describe('the StemDeck song list', () => {
   it('goes back to Connect when the connection is gone', async () => {
     stemDeckStore.getState().disconnect();

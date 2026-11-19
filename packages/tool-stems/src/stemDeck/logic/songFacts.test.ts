@@ -16,6 +16,7 @@ const SONG: StemDeckSong = {
   durationSec: 481,
   lanes: ['vocals', 'drums', 'bass', 'guitar', 'piano', 'other'],
   inLibrary: false,
+  sameSong: null,
 };
 
 const DAY_MS = 86_400_000;

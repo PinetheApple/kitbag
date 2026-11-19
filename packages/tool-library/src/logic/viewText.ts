@@ -8,6 +8,14 @@ export const SPEED_KEY_LABEL = `Speed ${SPEED_KEY_TEXT}, not built yet`;
 export const SPEED_NOTE =
   "Speed isn't built yet. It arrives with the stem player's.";
 
+export const REPLACE_SHEET_TEXT = {
+  dismiss: 'Keep the current song',
+  cancel: 'Cancel',
+} as const;
+
+export const replaceSheetTitle = (title: string) => `Replace “${title}”?`;
+export const replaceButtonLabel = (title: string) => `Replace ${title}`;
+
 export interface ViewText {
   readonly title: string;
   readonly search: string;

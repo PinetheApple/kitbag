@@ -9,6 +9,7 @@ import {
 import {
   analysisFailure,
   cleanName,
+  REPLACE_LABELS,
   useSongLibrary,
   type LibraryRow,
 } from '@kitbag/core-state';
@@ -16,7 +17,12 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { View, type TextInput } from 'react-native';
 
 import { canReanalyze, failureText, replaceText } from '../logic/notices.ts';
-import { REANALYZE_LABEL } from '../logic/viewText.ts';
+import {
+  REANALYZE_LABEL,
+  REPLACE_SHEET_TEXT,
+  replaceButtonLabel,
+  replaceSheetTitle,
+} from '../logic/viewText.ts';
 
 const useStyles = createThemedStyles(() => ({
   stack: { gap: space.controlGap },
@@ -187,27 +193,48 @@ function ReplaceSheet({ bottomInset }: Pick<SheetProps, 'bottomInset'>) {
   const styles = useStyles();
   const prompt = useSongLibrary((s) => s.replacePrompt);
   const confirmReplace = useSongLibrary((s) => s.confirmReplace);
+  const keepBothCopies = useSongLibrary((s) => s.keepBoth);
   const cancel = useSongLibrary((s) => s.cancelReplace);
   const confirm = useCallback(() => {
     void confirmReplace();
   }, [confirmReplace]);
+  const keepBoth = useCallback(() => {
+    void keepBothCopies();
+  }, [keepBothCopies]);
   const title = prompt?.title ?? '';
+  const match = prompt?.match ?? 'job';
+  const canKeepBoth = match === 'song';
   return (
     <Sheet
       visible={prompt !== null}
-      title={`Replace “${title}”?`}
-      dismissLabel="Keep the current song"
+      title={replaceSheetTitle(title)}
+      dismissLabel={REPLACE_SHEET_TEXT.dismiss}
       bottomInset={bottomInset}
       onDismiss={cancel}
     >
-      <SheetHint>{replaceText(prompt?.name ?? '', title)}</SheetHint>
+      <SheetHint>{replaceText(prompt?.name ?? '', title, match)}</SheetHint>
       <View style={styles.row}>
-        <Button fill variant="ghost" label="Keep current" onPress={cancel} />
+        <Button
+          fill
+          variant="ghost"
+          label={
+            canKeepBoth ? REPLACE_SHEET_TEXT.cancel : REPLACE_LABELS.keepCurrent
+          }
+          onPress={cancel}
+        />
+        {canKeepBoth ? (
+          <Button
+            fill
+            variant="tonal"
+            label={REPLACE_LABELS.keepBoth}
+            onPress={keepBoth}
+          />
+        ) : null}
         <Button
           fill
           variant="destructive"
-          label="Replace"
-          accessibilityLabel={`Replace ${title}`}
+          label={REPLACE_LABELS.replace}
+          accessibilityLabel={replaceButtonLabel(title)}
           onPress={confirm}
         />
       </View>
