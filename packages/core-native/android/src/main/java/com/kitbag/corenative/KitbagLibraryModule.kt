@@ -91,23 +91,25 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private fun libraryRoot() = DataFolder.root(reactApplicationContext)
 
   override fun importAudio(uri: String, relativeDir: String, promise: Promise) {
-    io.execute {
-      var root: File? = null
-      var dir: File? = null
-      var reserved: File? = null
-      try {
-        val source = Uri.parse(uri)
-        val displayName = picker.displayName(source)
-        root = libraryRoot()
-        dir = LibraryPaths.resolve(root, relativeDir, allowBase = true)
-        reserved = reserveTarget(dir, source, displayName ?: source.lastPathSegment)
-        copyInto(source, reserved)
-        promise.resolve(importedAudio(root, reserved, displayName))
-      } catch (e: Exception) {
-        reserved?.delete()
-        if (dir != null && dir != root?.canonicalFile) dir.delete()
-        rejectLogged(promise, E_IMPORT_FAILED, "Import failed", e)
-      }
+    io.execute { DataFolder.get(reactApplicationContext).importing { importAudioLocked(uri, relativeDir, promise) } }
+  }
+
+  private fun importAudioLocked(uri: String, relativeDir: String, promise: Promise) {
+    var root: File? = null
+    var dir: File? = null
+    var reserved: File? = null
+    try {
+      val source = Uri.parse(uri)
+      val displayName = picker.displayName(source)
+      root = libraryRoot()
+      dir = LibraryPaths.resolve(root, relativeDir, allowBase = true)
+      reserved = reserveTarget(dir, source, displayName ?: source.lastPathSegment)
+      copyInto(source, reserved)
+      promise.resolve(importedAudio(root, reserved, displayName))
+    } catch (e: Exception) {
+      reserved?.delete()
+      if (dir != null && dir != root?.canonicalFile) dir.delete()
+      rejectLogged(promise, E_IMPORT_FAILED, "Import failed", e)
     }
   }
 
@@ -273,7 +275,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun importStemBundle(uri: String, isFolder: Boolean, promise: Promise) {
     io.execute {
       try {
-        promise.resolve(bundles.import(uri, isFolder))
+        promise.resolve(DataFolder.get(reactApplicationContext).importing { bundles.import(uri, isFolder) })
       } catch (e: StemBundleRefusedException) {
         rejectLogged(promise, e.refusal, "The bundle was refused", e)
       } catch (e: Exception) {

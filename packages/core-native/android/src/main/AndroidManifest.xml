@@ -8,7 +8,10 @@
   <uses-feature android:name="android.hardware.camera" android:required="false" />
   <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
-  <application android:usesCleartextTraffic="true">
+  <application
+      android:usesCleartextTraffic="true"
+      android:fullBackupContent="@xml/kitbag_backup_rules"
+      android:dataExtractionRules="@xml/kitbag_data_extraction_rules">
     <service
         android:name="com.kitbag.corenative.PlaybackService"
         android:exported="false"
