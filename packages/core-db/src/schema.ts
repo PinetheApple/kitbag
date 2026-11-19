@@ -9,6 +9,7 @@ import {
 } from 'drizzle-orm/sqlite-core';
 
 import { ANALYSIS_STATUS, ANALYSIS_STATUSES } from './analysis-status';
+import { CLICK_RATE, CLICK_RATES } from './click-rate';
 import {
   DEFAULT_DENOMINATOR,
   POLY_AGAINST_BAR,
@@ -180,6 +181,10 @@ export const stemSets = sqliteTable(
     renamed: integer('renamed', { mode: 'boolean' }).notNull().default(false),
     meterBeatsPerBar: integer('meter_beats_per_bar'),
     barOneSeconds: real('bar_one_seconds'),
+    clickGrouping: text('click_grouping'),
+    clickRate: text('click_rate', { enum: CLICK_RATES })
+      .notNull()
+      .default(CLICK_RATE.single),
   },
   (table) => [
     uniqueIndex('stem_sets_stemdeck_job_id')

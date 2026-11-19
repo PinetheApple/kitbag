@@ -1,6 +1,11 @@
 import { and, eq } from 'drizzle-orm';
 
 import {
+  saveStemSetClick,
+  stemSetClickOf,
+  type StemSetClick,
+} from './click-settings';
+import {
   meterOverrideOf,
   saveMeterOverride,
   type MeterOverride,
@@ -28,6 +33,7 @@ interface KeptOnReplace {
   readonly retimed: LyricLineTimes | null;
   readonly meter: MeterOverride;
   readonly speed: number;
+  readonly click: StemSetClick;
   readonly mixes: readonly RoleMix[];
 }
 
@@ -71,6 +77,8 @@ export async function readKept(
       meterBeatsPerBar: stemSets.meterBeatsPerBar,
       barOneSeconds: stemSets.barOneSeconds,
       speed: stemSets.speed,
+      clickGrouping: stemSets.clickGrouping,
+      clickRate: stemSets.clickRate,
       jobId: stemSets.stemdeckJobId,
     })
     .from(stemSets)
@@ -82,6 +90,7 @@ export async function readKept(
     retimed: sameJob ? await retainedRetime(db, id, bundle.lyrics) : null,
     meter: carriedMeter(meterOverrideOf(row), sameJob),
     speed: row.speed,
+    click: stemSetClickOf(row),
     mixes: bundle.hasMix ? [] : await readRoleMixes(db, id),
   };
 }
@@ -94,6 +103,7 @@ export async function applyKept(
   await applyUserNames(db, id, kept.names);
   await saveLyricsRetimed(db, id, kept.retimed);
   await saveMeterOverride(db, stemSets, id, kept.meter);
+  await saveStemSetClick(db, id, kept.click);
   await db
     .update(stemSets)
     .set({ speed: kept.speed })

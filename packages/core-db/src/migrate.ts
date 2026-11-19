@@ -1,3 +1,4 @@
+import { CLICK_RATE } from './click-rate';
 import { REPAIR_PRESETS } from './preset-repair';
 import { POLY_AGAINST_BAR, RAMP_UNITS } from './preset-rules';
 import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
@@ -7,7 +8,7 @@ import {
   MIGRATE_V16_TO_V17,
 } from './migrate-stems';
 
-export const SCHEMA_VERSION = 20;
+export const SCHEMA_VERSION = 21;
 export const V7_SCHEMA_VERSION = 7;
 export const V8_SCHEMA_VERSION = 8;
 export const V9_SCHEMA_VERSION = 9;
@@ -21,6 +22,7 @@ export const V16_SCHEMA_VERSION = 16;
 export const V17_SCHEMA_VERSION = 17;
 export const V18_SCHEMA_VERSION = 18;
 export const V19_SCHEMA_VERSION = 19;
+export const V20_SCHEMA_VERSION = 20;
 
 const OLDEST_UPGRADABLE_VERSION = V7_SCHEMA_VERSION;
 
@@ -309,6 +311,11 @@ export const MIGRATE_V19_TO_V20: readonly string[] = [
   'ALTER TABLE songs ADD COLUMN analysis_version INTEGER',
 ];
 
+export const MIGRATE_V20_TO_V21: readonly string[] = [
+  'ALTER TABLE stem_sets ADD COLUMN click_grouping TEXT',
+  `ALTER TABLE stem_sets ADD COLUMN click_rate TEXT NOT NULL DEFAULT '${CLICK_RATE.single}'`,
+];
+
 export const BASELINE: readonly string[] = [
   ...V11_BASELINE,
   ...MIGRATE_V11_TO_V12,
@@ -320,6 +327,7 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V17_TO_V18,
   ...MIGRATE_V18_TO_V19,
   ...MIGRATE_V19_TO_V20,
+  ...MIGRATE_V20_TO_V21,
 ];
 
 export const MIGRATE_V7_TO_V8: readonly string[] = [
@@ -360,7 +368,8 @@ const UPGRADES: readonly {
   { to: V17_SCHEMA_VERSION, steps: MIGRATE_V16_TO_V17 },
   { to: V18_SCHEMA_VERSION, steps: MIGRATE_V17_TO_V18 },
   { to: V19_SCHEMA_VERSION, steps: MIGRATE_V18_TO_V19 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V19_TO_V20 },
+  { to: V20_SCHEMA_VERSION, steps: MIGRATE_V19_TO_V20 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V20_TO_V21 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {

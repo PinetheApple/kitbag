@@ -5,7 +5,7 @@ import {
   buildV16Fixture,
   pragma,
   rows,
-  V20_STEM_SET_COLUMNS,
+  V21_STEM_SET_COLUMNS,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -26,7 +26,7 @@ describe('migrate v16 to v17', () => {
       beforeSets.map((row) => ({
         ...(row as object),
         renamed: 0,
-        ...V20_STEM_SET_COLUMNS,
+        ...V21_STEM_SET_COLUMNS,
       })),
     );
     expect(stemRows()).toEqual(
