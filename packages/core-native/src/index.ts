@@ -74,6 +74,7 @@ export {
   backupFilesAvailable,
   pickBackup,
   saveBackup,
+  saveDatabaseCopy,
   shareBackup,
 } from './backupFiles';
 export {

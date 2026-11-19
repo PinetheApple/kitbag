@@ -114,6 +114,9 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun saveBackup(fileName: String, contents: String, promise: Promise) =
     picker.saveBackup(fileName, contents, promise)
 
+  override fun saveDatabaseCopy(databaseName: String, fileName: String, promise: Promise) =
+    picker.saveDatabaseCopy(databaseName, fileName, promise)
+
   override fun shareExport(path: String, promise: Promise) {
     val file = ExportFiles.resolve(reactApplicationContext.cacheDir, path)
     if (file == null) {

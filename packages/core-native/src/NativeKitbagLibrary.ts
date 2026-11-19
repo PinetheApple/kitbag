@@ -269,6 +269,8 @@ export interface Spec extends TurboModule {
   shareBackup(fileName: string, contents: string): Promise<void>;
   /** Resolves false when the user cancels the save dialog. */
   saveBackup(fileName: string, contents: string): Promise<boolean>;
+  /** Copies the database file as it is on disk, without opening it; false when cancelled. */
+  saveDatabaseCopy(databaseName: string, fileName: string): Promise<boolean>;
   /** Only a file mixdownStart wrote; rejects E_BAD_FILE_NAME for any other path. */
   shareExport(path: string): Promise<void>;
   /** Rejects E_BAD_FILE_NAME for a name unsafe as a click sound file. The name must be

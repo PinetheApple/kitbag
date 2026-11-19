@@ -11,6 +11,7 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.WritableMap
+import java.io.File
 import java.io.IOException
 import java.io.OutputStream
 import java.util.concurrent.Executor
@@ -21,7 +22,7 @@ class DocumentPicker(
   private val rejectLogged: (Promise, String, String, Exception) -> Unit,
 ) : ActivityEventListener {
 
-  private class Pending(val promise: Promise, val request: Int, val contents: String?)
+  private class Pending(val promise: Promise, val request: Int, val contents: String?, val source: File?)
 
   private var pending: Pending? = null
 
@@ -56,6 +57,19 @@ class DocumentPicker(
     startPick(intent, REQUEST_SAVE_BACKUP, promise, contents)
   }
 
+  fun saveDatabaseCopy(databaseName: String, fileName: String, promise: Promise) {
+    if (!BackupFiles.isSafeDatabaseName(databaseName) || !BackupFiles.isSafeCopyName(fileName)) {
+      promise.reject(LibraryErrors.BAD_FILE_NAME, "Not a database copy: $databaseName as $fileName")
+      return
+    }
+    val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+      addCategory(Intent.CATEGORY_OPENABLE)
+      type = BackupFiles.DATABASE_MIME
+      BackupSave.dialogExtras(fileName).forEach { (key, value) -> putExtra(key, value) }
+    }
+    startPick(intent, REQUEST_SAVE_DATABASE, promise, source = context.getDatabasePath(databaseName))
+  }
+
   fun pickFolder(promise: Promise) {
     startPick(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQUEST_PICK_FOLDER, promise)
   }
@@ -67,7 +81,13 @@ class DocumentPicker(
     }
   }
 
-  private fun startPick(intent: Intent, requestCode: Int, promise: Promise, contents: String? = null) {
+  private fun startPick(
+    intent: Intent,
+    requestCode: Int,
+    promise: Promise,
+    contents: String? = null,
+    source: File? = null,
+  ) {
     val activity = context.currentActivity
     if (activity == null) {
       promise.reject(LibraryErrors.NO_ACTIVITY, "No foreground activity to show the picker from")
@@ -78,7 +98,7 @@ class DocumentPicker(
         promise.reject(LibraryErrors.PICK_IN_PROGRESS, "A picker is already open")
         return
       }
-      pending = Pending(promise, requestCode, contents)
+      pending = Pending(promise, requestCode, contents, source)
     }
     activity.runOnUiThread {
       try {
@@ -102,6 +122,10 @@ class DocumentPicker(
     val uri = data?.data
     if (requestCode == REQUEST_SAVE_BACKUP) {
       save(resultCode == Activity.RESULT_OK, uri, taken.contents, promise)
+      return
+    }
+    if (requestCode == REQUEST_SAVE_DATABASE) {
+      copy(resultCode == Activity.RESULT_OK, uri, taken.source, promise)
       return
     }
     if (resultCode != Activity.RESULT_OK || uri == null) {
@@ -131,6 +155,16 @@ class DocumentPicker(
         promise.resolve(BackupSave.complete(saved, uri?.toString(), checkNotNull(contents), ::openForWrite, ::discard))
       } catch (e: Exception) {
         rejectLogged(promise, LibraryErrors.SAVE_FAILED, "Could not save the backup", e)
+      }
+    }
+  }
+
+  private fun copy(saved: Boolean, uri: Uri?, source: File?, promise: Promise) {
+    io.execute {
+      try {
+        promise.resolve(BackupSave.copyFile(saved, uri?.toString(), checkNotNull(source), ::openForWrite, ::discard))
+      } catch (e: Exception) {
+        rejectLogged(promise, LibraryErrors.SAVE_FAILED, "Could not save the database copy", e)
       }
     }
   }
@@ -183,8 +217,14 @@ class DocumentPicker(
     private const val REQUEST_PICK_FOLDER = 0x4b43
     private const val REQUEST_PICK_BACKUP = 0x4b44
     private const val REQUEST_SAVE_BACKUP = 0x4b46
-    private val PICK_REQUESTS =
-      setOf(REQUEST_PICK_DOCUMENT, REQUEST_PICK_FOLDER, REQUEST_PICK_BACKUP, REQUEST_SAVE_BACKUP)
+    private const val REQUEST_SAVE_DATABASE = 0x4b47
+    private val PICK_REQUESTS = setOf(
+      REQUEST_PICK_DOCUMENT,
+      REQUEST_PICK_FOLDER,
+      REQUEST_PICK_BACKUP,
+      REQUEST_SAVE_BACKUP,
+      REQUEST_SAVE_DATABASE,
+    )
 
     private val ZIP_MIME_TYPES = listOf("application/zip", "application/x-zip-compressed")
     val PICKABLE_MIME_TYPES = (SupportedAudio.MIME_TYPES + ZIP_MIME_TYPES).toTypedArray()
