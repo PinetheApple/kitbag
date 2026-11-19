@@ -1214,13 +1214,16 @@ phone. That page defines the format; this spec does not copy it.
 - **Backup:** its own Restore category, Stem songs, carrying each stem song's
   settings and never its audio: rename, meter and bar one, retiming, speed,
   click grouping and rate, chosen tempo mode, and per stem name, mix and key.
-  A StemDeck song matches the one on the phone with the same job id, a folder
-  song the same UUID; one with no match is skipped and the report says how
-  many are not on this phone. Merge reviews a value changed on both sides as a
-  conflict, and a song still at its import values takes the backup's; the
-  retiming restores only if it fits the phone's lyrics. Replace overwrites the
-  matched songs and deletes none. An older backup leaves local stem songs
-  untouched (#407).
+  A StemDeck song matches the one on the phone with the same job id; a folder
+  song matches by UUID, so only on the phone that imported it. One with no
+  match is skipped, and the restore screen and report count it apart as not on
+  this phone. A song with no rename in the backup keeps the phone's name. Merge
+  takes the backup without asking when every setting that differs is still at
+  its import value on the phone; a StemDeck song's mix and key never count as
+  that, since the bundle may have shipped them. Otherwise the song is a
+  conflict. Retiming restores only if it fits the phone's lyrics, a tempo mode
+  only if the phone's bundle can build it. Replace overwrites the matched songs
+  and deletes none. An older backup leaves local stem songs untouched (#407).
 - Out of scope: separation, lead/backing vocal split, lyric transcription,
   search and download — StemDeck's job, on hardware built for it.
 

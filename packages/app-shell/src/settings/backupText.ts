@@ -87,6 +87,7 @@ const NOTHING_DELETED = 'Deletes nothing you have';
 const FILES_NOT_INCLUDED = 'files not included';
 const NOT_ON_DEVICE = 'not on this phone';
 const REPLACE_EVERYTHING = 'Replace everything';
+const MERGE_NOTHING = 'Merge nothing';
 const MERGE_LABEL_CATEGORIES = 2;
 const NOTHING_CHANGED = 'Nothing was changed.';
 
@@ -124,10 +125,17 @@ export function sourceDetail(
 
 const notOnDevice = (plan: CategoryPlan | undefined) => plan?.notOnDevice ?? 0;
 
+const restorable = (category: Category, plan: CategoryPlan | undefined) =>
+  category === 'stemSongs'
+    ? (plan?.incoming ?? 0) - notOnDevice(plan)
+    : (plan?.incoming ?? 0);
+
 function stemSongsValue(incoming: number, plan: CategoryPlan | undefined) {
+  if (plan === undefined) return String(incoming);
   const missing = notOnDevice(plan);
-  if (missing === 0) return String(incoming);
-  return `${String(incoming)} ${SEPARATOR} ${String(missing)} ${NOT_ON_DEVICE}`;
+  const matched = String(restorable('stemSongs', plan));
+  if (missing === 0) return matched;
+  return `${matched} ${SEPARATOR} ${String(missing)} ${NOT_ON_DEVICE}`;
 }
 
 export function categoryValue(
@@ -158,13 +166,16 @@ export function modeHint(plan: ImportPlan): string {
     : `Deletes your ${joined(deleted, 'and')}`;
 }
 
+const nothingToRestore = (category: Category, counts: ImportPlan['counts']) =>
+  category === 'stemSongs' && restorable(category, counts[category]) === 0;
+
 function incomingList(
   categories: readonly Category[],
   counts: ImportPlan['counts'],
 ): string {
   return joined(
     categories.map((category) =>
-      counted(category, counts[category]?.incoming ?? 0),
+      counted(category, restorable(category, counts[category])),
     ),
     '&',
   );
@@ -172,7 +183,10 @@ function incomingList(
 
 export function applyLabel(plan: ImportPlan): string {
   if (plan.mode === 'replace') return REPLACE_EVERYTHING;
-  const named = ordered(plan).slice(0, MERGE_LABEL_CATEGORIES);
+  const named = ordered(plan)
+    .filter((category) => !nothingToRestore(category, plan.counts))
+    .slice(0, MERGE_LABEL_CATEGORIES);
+  if (named.length === 0) return MERGE_NOTHING;
   return `Merge ${incomingList(named, plan.counts)}`;
 }
 
@@ -217,10 +231,14 @@ export function restoredText(
   counts: ImportPlan['counts'],
 ): string {
   const categories = RESTORE_ORDER.filter(
-    (category) => counts[category] !== undefined,
+    (category) =>
+      counts[category] !== undefined && !nothingToRestore(category, counts),
   );
   const verb = mode === 'merge' ? 'Merged' : 'Replaced with';
-  const restored = `${verb} ${incomingList(categories, counts)}.`;
+  const restored =
+    categories.length === 0
+      ? NOTHING_CHANGED
+      : `${verb} ${incomingList(categories, counts)}.`;
   const missing = notOnDevice(counts.stemSongs);
   if (missing === 0) return restored;
   return `${restored} ${counted('stemSongs', missing)} ${NOT_ON_DEVICE}.`;

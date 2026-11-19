@@ -1,5 +1,5 @@
 appId: com.kitbag.app
-name: '#407: restore lists stem songs with how many are not on this phone'
+name: '#407: restore counts a stem song not on this phone and merges nothing'
 tags:
   - pr-407
 ---
@@ -25,9 +25,10 @@ tags:
           timeout: 5000
 - tapOn: '${FIXTURE_BACKUP}.json'
 - extendedWaitUntil:
-    visible: 'Stem songs, 1 · 1 not on this phone'
+    visible: 'Stem songs, 0 · 1 not on this phone'
     timeout: 10000
-- tapOn: 'Merge 1 stem song'
+- assertNotVisible: 'Merge \d+ stem songs?'
+- tapOn: 'Merge nothing'
 - extendedWaitUntil:
-    visible: 'Merged 1 stem song. 1 stem song not on this phone.'
+    visible: 'Nothing was changed. 1 stem song not on this phone.'
     timeout: 10000
