@@ -7,6 +7,7 @@ import {
   type RefObject,
 } from 'react';
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -119,7 +120,11 @@ const useStyles = createThemedStyles((theme) => ({
     left: 0,
     right: 0,
     height: SHEET_TOUCH_ROOM,
-    experimental_backgroundImage: `linear-gradient(to bottom, ${theme.color.surface1}, ${withAlpha(theme.color.surface1, FADED_OUT)})`,
+    ...(Platform.OS === 'web'
+      ? { backgroundColor: theme.color.surface1 }
+      : {
+          experimental_backgroundImage: `linear-gradient(to bottom, ${theme.color.surface1}, ${withAlpha(theme.color.surface1, FADED_OUT)})`,
+        }),
     pointerEvents: 'none',
   },
   content: {

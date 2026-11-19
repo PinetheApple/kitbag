@@ -35,6 +35,7 @@ const focusReaderOn = vi.hoisted(() => vi.fn());
 const dismissKeyboard = vi.hoisted(() => vi.fn());
 
 vi.mock('react-native', () => ({
+  Platform: { OS: 'android' },
   Pressable: 'Pressable',
   ScrollView: 'ScrollView',
   Text: 'Text',
