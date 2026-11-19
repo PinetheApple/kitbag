@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@op-engineering/op-sqlite', () => ({}));
@@ -24,6 +26,10 @@ import { CLICK_RATE } from './click-rate';
 const STEMDECK_KEY = `stemdeck:${JOB}`;
 const FOLDER_KEY = `folder:${FOLDER_UUID}`;
 const OTHER_JOB = 'job-other';
+const E2E_BACKUP = new URL(
+  '../../../e2e/fixtures/e2estemsongs.json',
+  import.meta.url,
+);
 
 interface ExportedFile {
   categories: string[];
@@ -237,6 +243,17 @@ describe('stem song settings in a backup', () => {
     expect(plan).toMatchObject({
       ok: false,
       error: { kind: 'invalidField', path: `$.stemSongs[0].${field}` },
+    });
+  });
+
+  it('reads the device flow fixture as one stem song not on this device', async () => {
+    const plan = unwrap(
+      await stemSongDatabase().backup.plan(readFileSync(E2E_BACKUP, 'utf8')),
+    );
+    expect(plan.categories).toEqual(['stemSongs']);
+    expect(plan.counts.stemSongs).toMatchObject({
+      incoming: 1,
+      notOnDevice: 1,
     });
   });
 });

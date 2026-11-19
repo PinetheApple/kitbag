@@ -148,6 +148,8 @@ check "  ... with a JUnit report" maestro_got "junit"
 check "  ... with analytics and update checks off and a capped heap" \
   maestro_got "analytics=1 update=true opts=-Xmx1g"
 check "  ... and the fixture title passed in" maestro_got "FIXTURE_SONG=e2eclick"
+check "  ... pushes the fixture backup" adb_called "push e2e/fixtures/e2estemsongs.json /sdcard/Download/"
+check "  ... and its name passed in" maestro_got "FIXTURE_BACKUP=e2estemsongs"
 
 check "  ... with every animation scale at 0 during the run" \
   bash -c 'for s in window_animation_scale transition_animation_scale animator_duration_scale; do grep -q "settings put global $s 0" "$ADB_LOG" || exit 1; done'

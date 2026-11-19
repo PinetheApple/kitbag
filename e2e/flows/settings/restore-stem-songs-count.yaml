@@ -1,0 +1,33 @@
+appId: com.kitbag.app
+name: '#407: restore lists stem songs with how many are not on this phone'
+tags:
+  - pr-407
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- tapOn: 'Settings'
+- scrollUntilVisible:
+    element: 'Restore from backup'
+    timeout: 5000
+- tapOn: 'Restore from backup'
+- retry:
+    maxRetries: 2
+    commands:
+      - runFlow:
+          when:
+            notVisible: '${FIXTURE_BACKUP}.json'
+          commands:
+            - tapOn: 'Show roots'
+            - tapOn:
+                text: 'Downloads'
+                id: 'android:id/title'
+      - scrollUntilVisible:
+          element: '${FIXTURE_BACKUP}.json'
+          timeout: 5000
+- tapOn: '${FIXTURE_BACKUP}.json'
+- extendedWaitUntil:
+    visible: 'Stem songs, 1 · 1 not on this phone'
+    timeout: 10000
+- tapOn: 'Merge 0 stem songs'
+- extendedWaitUntil:
+    visible: 'Merged 0 stem songs. 1 stem song not on this phone.'
+    timeout: 10000
