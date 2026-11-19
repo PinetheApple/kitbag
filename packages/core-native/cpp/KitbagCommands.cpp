@@ -99,6 +99,12 @@ int32_t commandSetGrid(const double* beatTimesSec, int32_t count, const int32_t*
 }
 
 void commandClearGrid() { kb_metronome_clear_grid(commandEngine()); }
+int32_t commandSetGridGrouping(const int32_t* sizes, int32_t count) {
+  return kb_metronome_set_grid_grouping(commandEngine(), sizes, count);
+}
+int32_t commandSetGridRate(int32_t rate) {
+  return kb_metronome_set_grid_rate(commandEngine(), rate);
+}
 void commandFollowMixer(bool enabled) {
   kb_metronome_follow_mixer(commandEngine(), flag(enabled));
 }

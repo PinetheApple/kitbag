@@ -22,6 +22,8 @@ void commandSetTempo(double bpm);
 int32_t commandSetGrid(const double* beatTimesSec, int32_t count, const int32_t* downbeats,
                        int32_t downbeatCount, double anchorFrame);
 void commandClearGrid();
+int32_t commandSetGridGrouping(const int32_t* sizes, int32_t count);
+int32_t commandSetGridRate(int32_t rate);
 void commandFollowMixer(bool enabled);
 
 void commandSetBeats(int32_t beatsPerBar, int32_t denominator);

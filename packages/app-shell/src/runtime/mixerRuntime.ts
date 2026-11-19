@@ -73,6 +73,8 @@ const commands: StemPlayerCommands = {
   clearGrid: () => {
     getKitbagCommands().clearGrid();
   },
+  setGridGrouping: (sizes) => getKitbagCommands().setGridGrouping(sizes),
+  setGridRate: (rate) => getKitbagCommands().setGridRate(rate),
   metronomeFollowMixer: (enabled) => {
     getKitbagCommands().metronomeFollowMixer(enabled);
   },
