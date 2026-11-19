@@ -1,11 +1,27 @@
 import type { LibraryStemSetRow } from '@kitbag/core-db';
 
+import { isPresetEntry, type SetlistEntry } from '../library/snapshot.ts';
+
 import { bpmFact, shortKeyName } from '../stemPlayer/facts.ts';
 import { formatClockSeconds } from '../text.ts';
 
 const FACT_SEPARATOR = ' · ';
 
 export const SKIPPED_STEM_SONG = 'Skipped a stem song that was deleted';
+export const STEMS_BADGE = 'STEMS';
+export const UNKNOWN_STEM_SONG = 'Stem song';
+
+export type StemSongs = ReadonlyMap<number, LibraryStemSetRow>;
+
+export function stemSongTitle(stemSetId: number, stems: StemSongs): string {
+  return stems.get(stemSetId)?.title ?? UNKNOWN_STEM_SONG;
+}
+
+export function entryName(entry: SetlistEntry, stems: StemSongs): string {
+  return isPresetEntry(entry)
+    ? entry.preset.name
+    : stemSongTitle(entry.stemSetId, stems);
+}
 
 function lengthOf(row: LibraryStemSetRow): string | null {
   return row.durationSec > 0

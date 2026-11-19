@@ -22,7 +22,7 @@ import {
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { STEMS_BADGE } from '../logic/setlistEntry.ts';
+import { STEMS_BADGE } from '@kitbag/core-state';
 import {
   songListHint,
   songListRows,

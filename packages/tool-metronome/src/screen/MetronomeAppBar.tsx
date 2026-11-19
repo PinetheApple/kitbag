@@ -43,7 +43,7 @@ import {
   stepA11yLabel,
   type SongChipText,
 } from '../logic/setlistChip.ts';
-import { entryName } from '../logic/setlistEntry.ts';
+import { entryName } from '@kitbag/core-state';
 import { LoadedSongSheet } from './LoadedSongSheet.tsx';
 import { SetlistSongsSheet } from './SetlistSongsSheet.tsx';
 import { UnsavedDot, useLoadedSongUnsaved } from './UnsavedChanges.tsx';

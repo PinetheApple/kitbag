@@ -217,6 +217,7 @@ export {
 export {
   ADVANCE,
   advanceOf,
+  entriesAfter,
   onStageOf,
   UP_NEXT_SOURCE,
   upNext,
@@ -231,10 +232,20 @@ export {
   type PlayOrderStore,
   type SkipResult,
 } from './playOrder/store.ts';
-export { usePlayOrder, useUpNext } from './playOrder/usePlayOrder.ts';
+export {
+  usePlayOrder,
+  useStage,
+  useUpNext,
+  type Stage,
+} from './playOrder/usePlayOrder.ts';
 export { bindStemSetRemovals } from './playOrder/stemSetRemovals.ts';
 export {
+  entryName,
   SKIPPED_STEM_SONG,
+  STEMS_BADGE,
+  stemSongTitle,
+  UNKNOWN_STEM_SONG,
+  type StemSongs,
   stemSongFacts,
   stemSongListFacts,
   stemSongsById,

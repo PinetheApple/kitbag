@@ -2,6 +2,7 @@ import {
   createThemedStyles,
   Icon,
   isOverridden,
+  MenuRow,
   MeterRow,
   Sheet,
   size,
@@ -9,7 +10,7 @@ import {
   textRoles,
   textStyle,
 } from '@kitbag/core-design';
-import { exportBlock, useStemPlayer } from '@kitbag/core-state';
+import { exportBlock, usePlayOrder, useStemPlayer } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -102,7 +103,35 @@ function StemMeterRow({ onMeter }: { readonly onMeter: () => void }) {
   );
 }
 
-interface PlayerMenuProps {
+interface QueueRowsProps {
+  readonly onPlayNext: () => void;
+  readonly onAddToSetlist: () => void;
+}
+
+function QueueRows({ onPlayNext, onAddToSetlist }: QueueRowsProps) {
+  const styles = useStyles();
+  const setId = useStemPlayer((s) => s.setId);
+  const queued = usePlayOrder((s) =>
+    s.queue.some((entry) => entry.stemSetId === setId),
+  );
+  return (
+    <View style={styles.divided}>
+      <MenuRow
+        icon={queued ? 'inUpNext' : 'playNext'}
+        label={queued ? 'In Up next' : 'Play next'}
+        disabled={queued}
+        onPress={onPlayNext}
+      />
+      <MenuRow
+        icon="addToSetlist"
+        label="Add to setlist"
+        onPress={onAddToSetlist}
+      />
+    </View>
+  );
+}
+
+interface PlayerMenuProps extends QueueRowsProps {
   readonly visible: boolean;
   readonly bottomInset: number;
   readonly onClose: () => void;
@@ -120,6 +149,8 @@ export function PlayerMenu({
   onMeter,
   onTempo,
   onClick,
+  onPlayNext,
+  onAddToSetlist,
 }: PlayerMenuProps) {
   const styles = useStyles();
   const resetMix = useStemPlayer((s) => s.resetMix);
@@ -135,6 +166,7 @@ export function PlayerMenu({
       bottomInset={bottomInset}
       onDismiss={onClose}
     >
+      <QueueRows onPlayNext={onPlayNext} onAddToSetlist={onAddToSetlist} />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Reset mix: every level to 0 dB, nothing muted or soloed"

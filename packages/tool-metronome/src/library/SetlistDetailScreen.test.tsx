@@ -34,6 +34,8 @@ vi.mock('@kitbag/core-design', () => ({
 }));
 vi.mock('@kitbag/core-state', () => ({
   ENTRY_KIND: { preset: 'preset', stem: 'stem' },
+  STEMS_BADGE: 'STEMS',
+  UNKNOWN_STEM_SONG: 'Stem song',
   isPresetEntry: (e: { kind: string }) => e.kind === 'preset',
   stemSongFacts: () => '3:52 · A maj · 104 BPM',
   useStemSongs: () => new Map([[9, { id: 9, title: 'Night Bus' }]]),

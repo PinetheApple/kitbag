@@ -69,6 +69,15 @@ export function cursorOf(
   return cursorAt(stage, loaded.itemId);
 }
 
+export function entriesAfter(
+  stage: OnStage,
+  cursor: SetlistCursor | null,
+): readonly SetlistEntry[] {
+  const next = nextSetlistEntry(stage, cursor);
+  if (next === undefined) return [];
+  return stage.entries.slice(stage.entries.indexOf(next));
+}
+
 function entryAfter(
   entries: readonly SetlistEntry[],
   cursor: SetlistCursor,

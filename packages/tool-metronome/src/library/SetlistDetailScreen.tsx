@@ -21,7 +21,7 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
-import { STEMS_BADGE, UNKNOWN_STEM_SONG } from '../logic/setlistEntry.ts';
+import { STEMS_BADGE, UNKNOWN_STEM_SONG } from '@kitbag/core-state';
 import { setlistTitle, songSubtitle } from '../logic/songSummary.ts';
 import { useCustomSoundViews } from '../screen/CustomSounds.tsx';
 import type { ShellMeasuredInsets } from '../screen/MetronomeScreen.tsx';

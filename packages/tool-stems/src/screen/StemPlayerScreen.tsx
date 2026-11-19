@@ -31,6 +31,8 @@ import { ExportCancelledSnackbar, ExportNotice } from './ExportNotice.tsx';
 import { ExportSheet } from './ExportSheet.tsx';
 import { LoopUndoSnackbar } from './LoopUndoSnackbar.tsx';
 import { PlayerMenu } from './PlayerMenu.tsx';
+import { type AddedToSetlist } from './SetlistPickerSheet.tsx';
+import { SetlistSheet, useQueueActions } from './queueActions.tsx';
 import { LeaveDialog, ResetDialog, RetimeBar } from './RetimeBar.tsx';
 import { RetimeBody } from './RetimeMode.tsx';
 import { StemAppBar } from './StemAppBar.tsx';
@@ -40,7 +42,11 @@ import { StemList } from './StemList.tsx';
 import { StemMeterSheet } from './StemMeterSheet.tsx';
 import { WAVEFORM_BARS } from './StemRowView.tsx';
 import { StemTransport } from './StemTransport.tsx';
+import { PlayerNoticeSnackbar, usePlayerNotice } from './PlayerNotice.tsx';
 import { TempoSheet } from './TempoSheet.tsx';
+import { UpNextRow } from './UpNextRow.tsx';
+import { UpNextSheet } from './UpNextSheet.tsx';
+import { usePlayOrderNav, type PlayOrderRoutes } from './usePlayOrderNav.ts';
 import { useMixerFrame, type MixerFrameValues } from './useMixerFrame.ts';
 
 export interface StemPlayerScreenProps {
@@ -48,13 +54,16 @@ export interface StemPlayerScreenProps {
   readonly focused: boolean;
   readonly insets: { readonly top: number; readonly bottom: number };
   readonly onBack: () => void;
+  readonly onOpenStemSet: (stemSetId: number) => void;
+  readonly onOpenMetronome: () => void;
+  readonly onOpenSetlist: (setlistId: number) => void;
 }
 
 const MIX = 'mix';
 const DETAILS = 'details';
 type Tab = typeof MIX | typeof DETAILS;
 type RetimeAsk = 'reset' | 'leave';
-type PlayerSheet = 'menu' | 'meter' | 'export';
+type PlayerSheet = 'menu' | 'meter' | 'export' | 'upNext' | 'setlists';
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
@@ -110,15 +119,17 @@ function Notices() {
   );
 }
 
-function Dock({
-  frame,
-  bottom,
-}: {
+interface DockProps {
   readonly frame: MixerFrameValues;
   readonly bottom: number;
-}) {
+  readonly onOpenUpNext: () => void;
+  readonly onNext: () => void;
+}
+
+function Dock({ frame, bottom, onOpenUpNext, onNext }: DockProps) {
   return (
     <PlayerDock bottomInset={bottom}>
+      <UpNextRow onOpenSheet={onOpenUpNext} onNext={onNext} />
       <Scrubber frame={frame} />
       <StemTransport playing={frame.playing} />
     </PlayerDock>
@@ -226,9 +237,19 @@ interface BodyProps {
   readonly bottom: number;
   readonly frame: MixerFrameValues;
   readonly onBack: () => void;
+  readonly onOpenUpNext: () => void;
+  readonly onNext: () => void;
+  readonly notice: ReturnType<typeof usePlayerNotice>;
 }
 
-function Body({ bottom, frame, onBack }: BodyProps) {
+function Body({
+  bottom,
+  frame,
+  onBack,
+  onOpenUpNext,
+  onNext,
+  notice,
+}: BodyProps) {
   const styles = useStyles();
   const status = useStemPlayer((s) => s.status);
   const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
@@ -251,8 +272,14 @@ function Body({ bottom, frame, onBack }: BodyProps) {
         )}
         <LoopUndoSnackbar />
         <ExportCancelledSnackbar />
+        <PlayerNoticeSnackbar notice={notice} />
       </View>
-      <Dock frame={frame} bottom={bottom} />
+      <Dock
+        frame={frame}
+        bottom={bottom}
+        onOpenUpNext={onOpenUpNext}
+        onNext={onNext}
+      />
     </>
   );
 }
@@ -300,6 +327,8 @@ function usePlayerSheet(retiming: boolean) {
       openMenu: opener('menu'),
       openMeter: opener('meter'),
       openExport: opener('export'),
+      openUpNext: opener('upNext'),
+      openSetlists: opener('setlists'),
       openTempo: opener(TEMPO_SHEET),
       openClick: (section: ClickSection) => {
         setSheet({ kind: 'click', section });
@@ -311,6 +340,10 @@ function usePlayerSheet(retiming: boolean) {
 }
 
 interface PlayerSheetsProps {
+  readonly routes: PlayOrderRoutes;
+  readonly onPlayNext: () => void;
+  readonly onAddToSetlist: () => void;
+  readonly onAddedToSetlist: (added: AddedToSetlist) => void;
   readonly sheet: OpenSheet | null;
   readonly bottomInset: number;
   readonly playhead: MixerFrameValues['songSec'];
@@ -349,6 +382,20 @@ function PlayerSheets(props: PlayerSheetsProps) {
         onExport={props.onExport}
         onTempo={props.onTempo}
         onClick={props.onClick}
+        onPlayNext={props.onPlayNext}
+        onAddToSetlist={props.onAddToSetlist}
+      />
+      <UpNextSheet
+        {...props.routes}
+        visible={sheet === 'upNext'}
+        bottomInset={bottomInset}
+        onDismiss={onClose}
+      />
+      <SetlistSheet
+        visible={sheet === 'setlists'}
+        bottomInset={bottomInset}
+        onDismiss={onClose}
+        onAdded={props.onAddedToSetlist}
       />
       <StemMeterSheet
         visible={sheet === 'meter'}
@@ -376,12 +423,25 @@ export function StemPlayerScreen({
   focused,
   insets,
   onBack,
+  onOpenStemSet,
+  onOpenMetronome,
+  onOpenSetlist,
 }: StemPlayerScreenProps) {
   const styles = useStyles();
+  const notice = usePlayerNotice();
+  const routes = useMemo<PlayOrderRoutes>(
+    () => ({ onOpenStemSet, onOpenMetronome, onNotice: notice.showMessage }),
+    [onOpenStemSet, onOpenMetronome, notice.showMessage],
+  );
+  const nav = usePlayOrderNav(routes);
+  const skip = useCallback(() => {
+    void nav.skip();
+  }, [nav]);
   const ready = useStemPlayer((s) => s.status === 'ready');
   const acquireSong = useStemPlayer((s) => s.acquireSong);
   const { retiming, shown, askReset, askLeave, closeAsk } = useRetimeAsk();
   const sheets = usePlayerSheet(retiming);
+  const queue = useQueueActions(notice, sheets.closeSheet, onOpenSetlist);
   const frame = useStemFrame();
   const acquire = useCallback(
     () => acquireSong(setId, WAVEFORM_BARS),
@@ -402,9 +462,20 @@ export function StemPlayerScreen({
         ) : (
           <StemAppBar onBack={onBack} onMenu={ready ? sheets.openMenu : null} />
         )}
-        <Body bottom={insets.bottom} frame={frame} onBack={onBack} />
+        <Body
+          bottom={insets.bottom}
+          frame={frame}
+          onBack={onBack}
+          onOpenUpNext={sheets.openUpNext}
+          onNext={skip}
+          notice={notice}
+        />
       </View>
       <PlayerSheets
+        routes={routes}
+        onPlayNext={queue.playNext}
+        onAddToSetlist={sheets.openSetlists}
+        onAddedToSetlist={queue.added}
         sheet={sheets.sheet}
         bottomInset={insets.bottom}
         playhead={frame.songSec}

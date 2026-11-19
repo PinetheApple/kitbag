@@ -56,6 +56,14 @@ vi.mock('./SongFactChips.tsx', () => ({ SongFactChips: () => nothing() }));
 vi.mock('./StemList.tsx', () => ({ StemList: () => nothing() }));
 vi.mock('./StemTransport.tsx', () => ({ StemTransport: () => nothing() }));
 vi.mock('./StemRowView.tsx', () => ({ WAVEFORM_BARS: spies.bars }));
+vi.mock('./UpNextSheet.tsx', () => ({ UpNextSheet: () => nothing() }));
+vi.mock('./usePlayOrderNav.ts', () => ({
+  usePlayOrderNav: () => ({ skip: nothing }),
+}));
+vi.mock('./queueActions.tsx', () => ({
+  SetlistSheet: () => nothing(),
+  useQueueActions: () => ({ playNext: nothing, added: nothing }),
+}));
 
 describe('the stem player screen', () => {
   beforeEach(() => {
@@ -74,6 +82,9 @@ describe('the stem player screen', () => {
         focused: true,
         insets: INSETS,
         onBack: nothing,
+        onOpenStemSet: nothing,
+        onOpenMetronome: nothing,
+        onOpenSetlist: nothing,
       }),
     );
     const cleanups = spies.effects.map((effect) => effect());

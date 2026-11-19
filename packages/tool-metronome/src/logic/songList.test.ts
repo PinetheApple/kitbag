@@ -2,7 +2,7 @@ import { ENTRY_KIND, type SetlistEntry } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import { entry } from './fixtures.test-helper.ts';
-import { UNKNOWN_STEM_SONG } from './setlistEntry.ts';
+import { UNKNOWN_STEM_SONG } from '@kitbag/core-state';
 import { songListHint, songListRows } from './songList.ts';
 
 const NO_STEMS = new Map();

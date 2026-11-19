@@ -149,11 +149,24 @@ const noBack = () => undefined;
 export const SET_ID = 7;
 export const STEMS = [stem(1), stem(2)];
 
+export interface PlayerRoutes {
+  readonly onOpenStemSet: (stemSetId: number) => void;
+  readonly onOpenMetronome: () => void;
+  readonly onOpenSetlist: (setlistId: number) => void;
+}
+
+const NO_ROUTES: PlayerRoutes = {
+  onOpenStemSet: noBack,
+  onOpenMetronome: noBack,
+  onOpenSetlist: noBack,
+};
+
 interface PlayerTreeProps {
   readonly setId?: number;
   readonly focused?: boolean;
   readonly onBack?: () => void;
   readonly onRender?: ProfilerOnRenderCallback;
+  readonly routes?: PlayerRoutes;
 }
 
 export function playerTree({
@@ -161,6 +174,7 @@ export function playerTree({
   focused = true,
   onBack = noBack,
   onRender = noRenderProbe,
+  routes = NO_ROUTES,
 }: PlayerTreeProps = {}) {
   return (
     <ThemeProvider mode="dark">
@@ -171,6 +185,7 @@ export function playerTree({
             focused={focused}
             insets={INSETS}
             onBack={onBack}
+            {...routes}
           />
         </Profiler>
       </SheetHost>
@@ -225,11 +240,16 @@ export async function mountPlayer(
   const commit = vi.fn();
   const scrolls = vi.fn();
   const onBack = vi.fn();
+  const routes = {
+    onOpenStemSet: vi.fn(),
+    onOpenMetronome: vi.fn(),
+    onOpenSetlist: vi.fn(),
+  };
   const renderer = create(<></>, {
     createNodeMock: (element) => ({ scrollTo: scrolls, element }),
   });
   const tree = (focused: boolean) =>
-    playerTree({ focused, onBack, onRender: commit });
+    playerTree({ focused, onBack, onRender: commit, routes });
   await act(async () => {
     renderer.update(tree(true));
     await tick();
@@ -267,6 +287,7 @@ export async function mountPlayer(
     commit,
     scrolls,
     onBack,
+    routes,
     labelled,
     byLabel,
     byText,

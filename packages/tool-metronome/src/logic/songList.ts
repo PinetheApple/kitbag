@@ -5,7 +5,7 @@ import {
   type SetlistEntry,
 } from '@kitbag/core-state';
 
-import { entryName, type StemSongs } from './setlistEntry.ts';
+import { entryName, type StemSongs } from '@kitbag/core-state';
 
 export interface SongListRow {
   readonly itemId: number;
