@@ -57,19 +57,34 @@ describe('moving a loop edge', () => {
   });
 
   it.each([
-    ['A past B', 'start', 2],
-    ['B before A', 'end', 0.1],
-  ] as const)('refuses %s and keeps the loop', async (_, edge, seconds) => {
+    ['A past B on the last beat before B', 'start', 2, RATE, RATE * 1.5],
+    ['B before A on the first beat after A', 'end', 0.1, RATE * 0.5, RATE],
+  ] as const)('lands %s', async (_, edge, seconds, startFrame, endFrame) => {
     const { store, commands } = await looped();
     await store.getState().moveLoopEdge(edge, seconds);
-    expect(commands.mixerSetLoop).not.toHaveBeenCalled();
-    expect(store.getState().loopFailure).toBe('tooShort');
-    expect(store.getState().loop).toEqual({
-      kind: 'on',
-      startSec: 0.5,
-      endSec: 1.5,
-    });
+    expect(commands.mixerSetLoop).toHaveBeenCalledExactlyOnceWith(
+      startFrame,
+      endFrame,
+    );
+    expect(store.getState().loopFailure).toBe(null);
   });
+
+  it.each([
+    ['A past B', 'start', 2],
+    ['B before A', 'end', 0.1],
+  ] as const)(
+    'refuses %s with no beat on its own side and keeps the loop',
+    async (_, edge, seconds) => {
+      const { store, commands } = await looped(
+        songRecord({ beats: [], downbeatIndices: [] }),
+      );
+      const before = store.getState().loop;
+      await store.getState().moveLoopEdge(edge, seconds);
+      expect(commands.mixerSetLoop).not.toHaveBeenCalled();
+      expect(store.getState().loopFailure).toBe('tooShort');
+      expect(store.getState().loop).toEqual(before);
+    },
+  );
 
   it.each([
     ['a start dropped just before the end', 'start', 1.4, RATE, RATE * 1.5],
@@ -86,6 +101,17 @@ describe('moving a loop edge', () => {
       expect(store.getState().loopFailure).toBe(null);
     },
   );
+
+  it('settles a move the mixer rejects as a failed loop, keeping the loop', async () => {
+    const { store, commands } = await looped();
+    const before = store.getState().loop;
+    commands.mixerSetLoop.mockRejectedValueOnce(new Error('mixer gone'));
+    await expect(
+      store.getState().moveLoopEdge('end', 2.6),
+    ).resolves.toBeUndefined();
+    expect(store.getState().loopFailure).toBe('engine');
+    expect(store.getState().loop).toEqual(before);
+  });
 
   it('sends nothing when the edge snaps back to where it was', async () => {
     const { store, commands } = await looped();

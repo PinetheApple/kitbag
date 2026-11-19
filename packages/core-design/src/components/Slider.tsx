@@ -29,7 +29,6 @@ import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 
 const NOT_DRAGGING = -1;
-const DRAG_SLOP = 6;
 const A11Y_ACTIONS = [
   { name: 'increment', label: 'More' },
   { name: 'decrement', label: 'Less' },
@@ -121,8 +120,8 @@ function useSliderGesture(props: SliderProps, width: SharedValue<number>) {
     scheduleOnRN(onRelease, target);
   };
   const pan = Gesture.Pan()
-    .activeOffsetX([-DRAG_SLOP, DRAG_SLOP])
-    .failOffsetY([-DRAG_SLOP, DRAG_SLOP])
+    .activeOffsetX([-sliderGeometry.dragSlop, sliderGeometry.dragSlop])
+    .failOffsetY([-sliderGeometry.dragSlop, sliderGeometry.dragSlop])
     .onStart(() => {
       origin.value = value.value;
     })

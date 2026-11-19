@@ -375,6 +375,7 @@ export {
   type RetimeTap,
   type SongLyrics,
 } from './stemPlayer/lyrics.ts';
+export { beatBeside, type BeatDirection } from './stemPlayer/beatStep.ts';
 export { NO_SECTION, sectionAt } from './stemPlayer/sections.ts';
 export {
   nearestBeat,

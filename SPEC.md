@@ -976,7 +976,7 @@ working. Changes:
 - Optional beat-snapped scrub.
 - **A-B loop**, beat-snapped, equal-power crossfade 5–20ms. The A|B key marks
   A then B at the playhead, a third tap clears; the A and B handles on the
-  waveform drag, beat-snapped.
+  scrub bar drag, beat-snapped.
 - Speed control in the transport, driven by the same stretch stage as the stem
   player (§7.6). Single-file playback gets it when the stem player has it; until
   then the 1.0× key stays in place, looks disabled, and shows a note on tap.
