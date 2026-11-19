@@ -30,6 +30,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_library(kitbag_core SHARED
   src/api/api.cpp
   src/api/api_analysis.cpp
+  src/api/api_grid_click.cpp
   src/api/api_media.cpp
   src/api/api_metronome.cpp
   src/api/api_mixdown.cpp
@@ -50,6 +51,7 @@ add_library(kitbag_core SHARED
   src/dsp/fft.cpp
   src/metronome/click_voices.cpp
   src/metronome/grid_bars.cpp
+  src/metronome/grid_click.cpp
   src/metronome/metronome.cpp
   src/metronome/metronome_count_in.cpp
   src/metronome/metronome_grid.cpp
@@ -154,6 +156,7 @@ if(KITBAG_BUILD_TOOLS)
   set(KITBAG_METRONOME_SOURCES
     src/metronome/click_voices.cpp
     src/metronome/grid_bars.cpp
+    src/metronome/grid_click.cpp
     src/metronome/metronome.cpp
     src/metronome/metronome_count_in.cpp
     src/metronome/metronome_grid.cpp
@@ -170,6 +173,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_signature.cpp
     tools/metronome/metronome_test_grid.cpp
     tools/metronome/metronome_test_grid_bars.cpp
+    tools/metronome/metronome_test_grid_grouping.cpp
     tools/metronome/metronome_test_latency.cpp
     tools/metronome/metronome_test_latency_free.cpp
     tools/metronome/metronome_test_startat.cpp
@@ -214,6 +218,7 @@ if(KITBAG_BUILD_TOOLS)
                             tools/abi_test_grid_long.cpp tools/abi_verify_tuner.cpp
                             tools/abi_test_engine_hold.cpp tools/abi_test_engine_stress.cpp
                             tools/abi_test_poly.cpp tools/abi_test_subdivision_accents.cpp
+                            tools/abi_test_grid_click.cpp
                             tools/abi_test_rig_click.cpp
                             tools/abi_test_engine_clock.cpp
                             tools/abi_test_mixer_rate.cpp)
@@ -235,7 +240,8 @@ if(KITBAG_BUILD_TOOLS)
                                   tools/stem_sync_test_bars.cpp
                                   tools/stem_sync_test_count_in.cpp
                                   tools/stem_sync_test_count_in_silent.cpp
-                                  tools/stem_sync_count_in_support.cpp)
+                                  tools/stem_sync_count_in_support.cpp
+                                  tools/stem_sync_test_grouping.cpp)
   target_include_directories(stem_sync_verify PRIVATE src tools tools/media)
   target_link_libraries(stem_sync_verify PRIVATE kitbag_core)
 

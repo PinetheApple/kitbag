@@ -16,6 +16,8 @@ enum class MetronomeCommandType : uint8_t {
   kSetBeats,
   kSetSubdivision,
   kSetSubdivisionAccents,
+  kSetGridGrouping,
+  kSetGridRate,
   kSetAccent,
   kSetPoly,
   kSetPolyAccent,

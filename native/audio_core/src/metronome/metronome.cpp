@@ -40,6 +40,19 @@ void Metronome::SetSubdivisionAccents(int subdivision, int32_t slot_mask) {
   commands_.Push(command);
 }
 
+void Metronome::SetGridGrouping(std::span<const int32_t> sizes) {
+  Command command{CommandType::kSetGridGrouping};
+  command.frame = GridClick::Pack(sizes);
+  command.int_a = static_cast<int32_t>(sizes.size());
+  commands_.Push(command);
+}
+
+void Metronome::SetGridRate(int32_t rate) {
+  Command command{CommandType::kSetGridRate};
+  command.int_a = rate;
+  commands_.Push(command);
+}
+
 void Metronome::SetAccent(int beat_index, int32_t accent) {
   Command command{CommandType::kSetAccent};
   command.int_a = beat_index;
@@ -180,11 +193,10 @@ bool Metronome::RouteCommand(const Command& command) {
     case CommandType::kSetTempo:
     case CommandType::kSetLatencyOffset:
     case CommandType::kSetFollowMixer:
-      return ApplyTransportCommand(command) || ApplyClockCommand(command);
     case CommandType::kSetRamp:
     case CommandType::kSetBarMute:
     case CommandType::kSetCountIn:
-      return ApplyTrainerCommand(command);
+      return ApplyTransportCommand(command) || ApplyClockCommand(command);
     case CommandType::kSetBeats:
     case CommandType::kSetSubdivision:
     case CommandType::kSetSubdivisionAccents:
@@ -192,11 +204,12 @@ bool Metronome::RouteCommand(const Command& command) {
     case CommandType::kSetPoly:
     case CommandType::kSetPolyAccent:
     case CommandType::kSetPolyAgainst:
-      return ApplyPatternCommand(command);
+    case CommandType::kSetGridGrouping:
+    case CommandType::kSetGridRate:
     case CommandType::kSetSounds:
     case CommandType::kPreviewSound:
     case CommandType::kSetVolume:
-      return ApplyOutputCommand(command);
+      return ApplyPatternCommand(command) || ApplyOutputCommand(command);
   }
   return false;
 }
@@ -218,7 +231,7 @@ bool Metronome::ApplyClockCommand(const Command& command) {
       return true;
     }
     default:
-      return false;
+      return ApplyTrainerCommand(command);
   }
 }
 

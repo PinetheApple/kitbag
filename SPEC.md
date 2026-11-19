@@ -471,6 +471,13 @@ the subdivision mute that follows it, `current_beat` and `bar_phase` count the
 song's bars. Beats before the first downbeat are a pickup: normal, outside any
 bar, and never bar-muted; the mirrors count them back from the first bar.
 
+**Grouping and click rate (#383).** `kb_metronome_set_grid_grouping` splits a
+bar into groups (3+2+2): the first beat of each later group plays the accented
+subdivision click, and a bar whose length differs from the grouping's sum keeps
+only its downbeat accent. `kb_metronome_set_grid_rate` adds a normal click
+halfway through each measured interval (x2), or sounds every other beat counted
+from each downbeat, restarting at every downbeat (x1/2).
+
 **Downbeats absent → no bar accent.** Every grid beat sounds normal,
 `current_beat` reads 0, `bar_phase` sweeps each beat, and bar mute does not
 apply. An accent the core cannot place on a real bar actively misleads (#300);

@@ -8,6 +8,17 @@
 /** Max beats a single measured grid may carry (KB_MAX_GRID_BEATS). */
 export const KB_MAX_GRID_BEATS = 65536;
 
+/** Most groups a grid bar grouping may hold (KB_MAX_GRID_GROUPS). */
+export const KB_MAX_GRID_GROUPS = 8;
+
+/** kb_grid_rate: the click rate under a grid (kb_metronome_set_grid_rate). */
+export const KB_GRID_RATE = {
+  KB_GRID_RATE_SINGLE: 0,
+  KB_GRID_RATE_DOUBLE: 1,
+  KB_GRID_RATE_HALF: 2,
+} as const;
+export type KB_GRID_RATE = (typeof KB_GRID_RATE)[keyof typeof KB_GRID_RATE];
+
 /** Beat tracker version stamped on each successful analysis result (KB_BEAT_ANALYSIS_VERSION). */
 export const KB_BEAT_ANALYSIS_VERSION = 3;
 

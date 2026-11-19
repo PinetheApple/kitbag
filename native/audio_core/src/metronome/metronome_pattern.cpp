@@ -67,6 +67,10 @@ void Metronome::SetSubdivisionAccentRow(
   AccentRowFor(subdivision) = static_cast<uint16_t>(slot_mask);
 }
 
+bool Metronome::SubdivisionSlotAccented(int subdivision, int slot) const {
+  return ((AccentRowFor(subdivision) >> slot) & 1U) != 0;
+}
+
 uint16_t& Metronome::AccentRowFor(int subdivision) {
   return subdivision_accents_[subdivision - kMinSubdivision];
 }
@@ -99,7 +103,7 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
       SetPolyAgainstState(command.int_a);
       return true;
     default:
-      return false;
+      return ApplyGridClickCommand(command);
   }
 }
 

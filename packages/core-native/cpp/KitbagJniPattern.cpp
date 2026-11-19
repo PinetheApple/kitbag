@@ -21,6 +21,21 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetSubdivisionAccents(JNIE
   kitbag::commandSetSubdivisionAccents(subdivision, slotMask);
 }
 
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetGridGrouping(JNIEnv* env, jobject, jintArray sizes) {
+  if (sizes == nullptr) return static_cast<jint>(kitbag::commandSetGridGrouping(nullptr, 0));
+  const jsize count = env->GetArrayLength(sizes);
+  jint* elems = env->GetIntArrayElements(sizes, nullptr);
+  const int32_t result = kitbag::commandSetGridGrouping(elems, static_cast<int32_t>(count));
+  env->ReleaseIntArrayElements(sizes, elems, JNI_ABORT);
+  return static_cast<jint>(result);
+}
+
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetGridRate(JNIEnv*, jobject, jint rate) {
+  return static_cast<jint>(kitbag::commandSetGridRate(rate));
+}
+
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetAccent(JNIEnv*, jobject, jint beatIndex, jint accent) {
   kitbag::commandSetAccent(beatIndex, accent);

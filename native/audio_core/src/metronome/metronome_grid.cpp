@@ -69,8 +69,7 @@ void Metronome::SeekGridCursor(const BeatGrid& grid, double song_seconds) {
       std::lower_bound(times.begin(), times.end(), song_seconds - kGridEpsilon);
   grid_state_.cursor = static_cast<size_t>(first_at_or_after - times.begin());
   grid_state_.beat_index = static_cast<int64_t>(grid_state_.cursor) - 1;
-  grid_state_.next_sub =
-      FirstUnsoundedSub(times, grid_state_.cursor, subdivision_, song_seconds);
+  ResyncSub(grid, song_seconds);
   SyncGridBar(grid);
 }
 
@@ -91,16 +90,58 @@ void Metronome::SyncGridBar(const BeatGrid& grid) {
           : grid.bars[static_cast<size_t>(grid_state_.beat_index)].bar;
 }
 
+bool Metronome::ApplyGridClickCommand(const Command& command) {
+  switch (command.type) {
+    case CommandType::kSetGridGrouping:
+      grid_click_.SetGrouping(command.frame, command.int_a);
+      return true;
+    case CommandType::kSetGridRate:
+      grid_click_.SetRate(command.int_a);
+      grid_state_.resync_sub = true;
+      return true;
+    default:
+      return false;
+  }
+}
+
+void Metronome::ResyncSub(const BeatGrid& grid, double song_seconds) {
+  grid_state_.resync_sub = false;
+  grid_state_.next_sub = FirstUnsoundedSub(
+      grid.beat_times_sec,
+      grid_state_.cursor,
+      grid_click_.TicksPerBeat(subdivision_),
+      song_seconds
+  );
+}
+
 // The standalone accent row and its mutes are not the song's (SPEC.md §4.3).
-void Metronome::OnGridBeat(const GridBar& bar, uint32_t sample_rate) {
+void Metronome::OnGridBeat(const BeatGrid& grid, uint32_t sample_rate) {
+  const auto beat = static_cast<size_t>(grid_state_.beat_index);
+  const GridBar& bar = grid.bars[beat];
   current_beat_.store(bar.position, std::memory_order_relaxed);
   if (BarIsMuted(current_bar_)) return;
-  const bool accented = bar.bar != GridBar::kNoBar && bar.position == 0;
-  TriggerPreset(
-      accented ? accent_sound_ : normal_sound_,
-      accented,
-      sample_rate
-  );
+  const bool has_bars = grid.bars.back().bar != GridBar::kNoBar;
+  switch (grid_click_.Level(bar, grid_state_.beat_index, has_bars)) {
+    case GridBeatLevel::kSilent:
+      return;
+    case GridBeatLevel::kNormal:
+      TriggerPreset(normal_sound_, false, sample_rate);
+      return;
+    case GridBeatLevel::kGroup:
+      TriggerSubdivisionVoice(true, sample_rate);
+      return;
+    case GridBeatLevel::kBar:
+      TriggerPreset(accent_sound_, true, sample_rate);
+      return;
+  }
+}
+
+void Metronome::OnGridTick(int tick, uint32_t sample_rate) {
+  if (grid_click_.IsHalfBeat(tick, subdivision_)) {
+    TriggerPreset(normal_sound_, false, sample_rate);
+    return;
+  }
+  TriggerSubdivision(subdivision_, tick % subdivision_, sample_rate);
 }
 
 void Metronome::RenderGridBeat(
@@ -109,6 +150,7 @@ void Metronome::RenderGridBeat(
     uint32_t sample_rate
 ) {
   const auto& times = grid.beat_times_sec;
+  if (grid_state_.resync_sub) ResyncSub(grid, song_seconds);
   if (!BeatDue(times, grid_state_, song_seconds)) {
     RenderGridSubdivision(grid, song_seconds, sample_rate);
     return;
@@ -126,10 +168,7 @@ void Metronome::RenderGridBeat(
   // Re-anchoring the constant-tempo phase onto this beat is what makes
   // ClearGrid's "keeps its phase" true (SPEC.md §4.2.1).
   beat_position_ = static_cast<double>(grid_state_.beat_index) - LatencyBeats();
-  OnGridBeat(
-      grid.bars[static_cast<size_t>(grid_state_.beat_index)],
-      sample_rate
-  );
+  OnGridBeat(grid, sample_rate);
 }
 
 // Subdivisions divide the measured interval, so they drift with the song the
@@ -140,21 +179,19 @@ void Metronome::RenderGridSubdivision(
     uint32_t sample_rate
 ) {
   const auto& times = grid.beat_times_sec;
-  if (subdivision_ <= 1 || grid_state_.cursor == 0 ||
-      grid_state_.cursor >= times.size() ||
-      grid_state_.next_sub >= subdivision_) {
+  const int ticks = grid_click_.TicksPerBeat(subdivision_);
+  if (ticks <= 1 || grid_state_.cursor == 0 ||
+      grid_state_.cursor >= times.size() || grid_state_.next_sub >= ticks) {
     return;
   }
   const double previous = times[grid_state_.cursor - 1];
   const double interval = times[grid_state_.cursor] - previous;
-  const double tick = previous + interval * grid_state_.next_sub / subdivision_;
+  const double tick = previous + interval * grid_state_.next_sub / ticks;
   if (song_seconds + kGridEpsilon >= tick && tick <= grid_state_.fire_limit) {
     const int slot = grid_state_.next_sub++;
     grid_state_.last_onset = {tick, grid.anchor_frame};
     // The tick sits in [cursor-1, cursor]: current_bar_ is its owning beat's.
-    if (!BarIsMuted(current_bar_)) {
-      TriggerSubdivision(subdivision_, slot, sample_rate);
-    }
+    if (!BarIsMuted(current_bar_)) OnGridTick(slot, sample_rate);
   }
 }
 

@@ -30,7 +30,7 @@ using kitbag_test::g_failures;
 using stem_sync::kSampleRate;
 using stem_sync::kStereo;
 
-constexpr int kExpectedChecks = 83;
+constexpr int kExpectedChecks = 88;
 constexpr uint32_t kBlock = 512;
 constexpr int64_t kStemFrames = 240000;
 // Uneven spacing, so a click on a constant tempo cannot pass for the grid.
@@ -309,6 +309,7 @@ void RunRateSuites() {
   stem_sync::RunReanchorTests(pulses);
   stem_sync::RunBarTests(pulses);
   stem_sync::RunCountInTests(pulses);
+  stem_sync::RunGroupingTests(pulses);
   std::filesystem::remove(pulses);
 }
 
