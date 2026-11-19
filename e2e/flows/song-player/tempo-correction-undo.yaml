@@ -1,5 +1,5 @@
 appId: com.kitbag.app
-name: "#472: the song player's Tempo correction scales the tempo, and Undo puts ×1 back"
+name: "#472: the song player's Tempo correction relabels the tempo, Undo puts ×1 back, and ×3/2 survives a relaunch"
 tags:
   - pr-472
 ---
@@ -16,12 +16,20 @@ tags:
 - tapOn: 'Tempo correction, as detected, 120 BPM'
 - tapOn: 'One and a half times, 180 BPM'
 - assertVisible: 'Tempo set to one and a half times, 180 BPM. Saved for this song.'
-- tapOn: 'Done'
-# Undo floats above the dock for six seconds after Done, so the row is read straight away.
-- tapOn: 'More'
-- assertVisible: 'Tempo correction, one and a half times, 180 BPM'
-- back
 - tapOn: 'Undo'
+- tapOn: 'Done'
 - tapOn: 'More'
 - assertVisible: 'Tempo correction, as detected, 120 BPM'
+- tapOn: 'Tempo correction, as detected, 120 BPM'
+- tapOn: 'One and a half times, 180 BPM'
+- assertVisible: 'Tempo set to one and a half times, 180 BPM. Saved for this song.'
+- tapOn: 'Done'
+- runFlow: ../../subflows/force-stop-relaunch.yaml
+- tapOn: 'Songs, .*'
+- tapOn: '${FIXTURE_SONG}, .*'
+- extendedWaitUntil:
+    visible: 'Play'
+    timeout: 10000
+- tapOn: 'More'
+- assertVisible: 'Tempo correction, one and a half times, 180 BPM'
 - back
