@@ -501,19 +501,21 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   override fun focusReaderView(viewTag: Double) {
     val tag = viewTag.toInt()
-    UiThreadUtil.runOnUiThread { focusWhenMounted(tag, FOCUS_RETRY_FRAMES) }
+    UiThreadUtil.runOnUiThread { focusAfterMount(tag, FOCUS_RETRY_FRAMES) }
   }
 
-  // A view committed this frame mounts in Fabric's next frame dispatch.
-  private fun focusWhenMounted(tag: Int, framesLeft: Int) {
-    val uiManager = UIManagerHelper.getUIManagerForReactTag(reactApplicationContext, tag)
-    // resolveView throws when the tag's view state outlived its view.
-    val view = runCatching { uiManager?.resolveView(tag) }.getOrNull()
-    when {
-      view != null ->
+  // Fabric mounts in a frame callback posted before ours, and preallocates views
+  // detached, so only an attached view has been mounted.
+  private fun focusAfterMount(tag: Int, framesLeft: Int) {
+    Choreographer.getInstance().postFrameCallback {
+      val uiManager = UIManagerHelper.getUIManagerForReactTag(reactApplicationContext, tag)
+      // resolveView throws when the tag has no view state yet or its view is gone.
+      val view = runCatching { uiManager?.resolveView(tag) }.getOrNull()
+      if (view != null && view.isAttachedToWindow) {
         view.performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
-      framesLeft > 0 ->
-        Choreographer.getInstance().postFrameCallback { focusWhenMounted(tag, framesLeft - 1) }
+      } else if (framesLeft > 0) {
+        focusAfterMount(tag, framesLeft - 1)
+      }
     }
   }
 }
