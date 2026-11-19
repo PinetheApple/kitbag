@@ -38,11 +38,11 @@ export interface DataFolderActions {
   readonly stop: () => void;
   readonly refreshVolumes: () => Promise<void>;
   readonly refreshMove: () => Promise<void>;
-  readonly startMove: (volumeUuid: string | null) => Promise<void>;
-  readonly cancelMove: () => Promise<void>;
-  readonly resumeMove: () => Promise<void>;
-  readonly undoMove: () => Promise<void>;
-  readonly switchToInternalStorage: () => Promise<void>;
+  readonly startMove: (volumeUuid: string | null) => Promise<boolean>;
+  readonly cancelMove: () => Promise<boolean>;
+  readonly resumeMove: () => Promise<boolean>;
+  readonly undoMove: () => Promise<boolean>;
+  readonly switchToInternalStorage: () => Promise<boolean>;
   readonly dismissError: () => void;
 }
 
@@ -144,16 +144,19 @@ export function createDataFolderStore(
     };
 
     const request = async (call: () => Promise<void>) => {
-      if (get().pending) return;
+      if (get().pending) return false;
       set({ pending: true });
+      let acted = true;
       try {
         await call();
         set({ error: null });
       } catch (error) {
+        acted = false;
         refuse(error);
       }
       await Promise.all([get().refreshMove(), get().refreshVolumes()]);
       set({ pending: false });
+      return acted;
     };
 
     const showMove = (move: MoveStatus | null) => {
@@ -162,11 +165,14 @@ export function createDataFolderStore(
     };
 
     const onFinished = (finished: MoveFinished) => {
-      set(
-        finished.error === null
-          ? { finished }
-          : { finished, error: finished.error },
-      );
+      const outcomes = get().codes?.moveOutcomes;
+      const settled =
+        finished.outcome !== outcomes?.failed &&
+        finished.outcome !== outcomes?.refused;
+      set({
+        finished,
+        error: settled ? null : (finished.error ?? get().error),
+      });
       void get().refreshMove();
       void get().refreshVolumes();
     };

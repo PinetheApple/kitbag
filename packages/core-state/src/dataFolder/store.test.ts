@@ -100,9 +100,10 @@ function setup({
     listeners?.progress(next);
   };
   const finish = async (finished: MoveFinished) => {
+    const reads = native.moveStatus.mock.calls.length;
     listeners?.finished(finished);
     await vi.waitFor(() => {
-      expect(native.moveStatus).toHaveBeenCalledTimes(2);
+      expect(native.moveStatus).toHaveBeenCalledTimes(reads + 1);
     });
   };
   const setTracks = (next: PlayerTracks) => {
@@ -349,5 +350,53 @@ describe('pending request', () => {
     await first;
     expect(native.resumeMove).toHaveBeenCalledOnce();
     expect(native.undoMove).not.toHaveBeenCalled();
+  });
+});
+
+describe('finishing clears a stale error', () => {
+  it('drops an earlier refusal once a move finishes well', async () => {
+    const { store, native, finish } = setup();
+    await store.getState().start();
+    native.startMove.mockRejectedValue(
+      rejection(CODES.moveErrors.foregroundRefused),
+    );
+    await store.getState().startMove(CARD);
+    expect(store.getState().error).toBe(CODES.moveErrors.foregroundRefused);
+    await finish({ outcome: CODES.moveOutcomes.done, error: null, path: null });
+    expect(store.getState().error).toBeNull();
+  });
+
+  it('keeps the error of a refused finish', async () => {
+    const { store, finish } = setup();
+    await store.getState().start();
+    await finish({
+      outcome: CODES.moveOutcomes.refused,
+      error: CODES.moveErrors.running,
+      path: null,
+    });
+    expect(store.getState().error).toBe(CODES.moveErrors.running);
+  });
+});
+
+describe('whether a request acted', () => {
+  it('answers true when the call ran and was accepted', async () => {
+    const { store } = setup();
+    await store.getState().start();
+    await expect(store.getState().undoMove()).resolves.toBe(true);
+  });
+
+  it('answers false when refused', async () => {
+    const { store, native } = setup();
+    await store.getState().start();
+    native.undoMove.mockRejectedValue(rejection(CODES.moveErrors.running));
+    await expect(store.getState().undoMove()).resolves.toBe(false);
+  });
+
+  it('answers false when dropped behind a pending request', async () => {
+    const { store } = setup();
+    await store.getState().start();
+    const first = store.getState().resumeMove();
+    await expect(store.getState().undoMove()).resolves.toBe(false);
+    await first;
   });
 });
