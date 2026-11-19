@@ -1,0 +1,1 @@
+• StemDeck imports now keep the song's tempo setting (constant or following the band) for an upcoming tempo switch in the stem player.
