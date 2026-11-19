@@ -41,7 +41,7 @@ export function bindStandaloneMetronomePersistence(
   library: StoreApi<LibraryStore>,
   persistence: StandaloneMetronomePersistence,
 ): () => void {
-  restore(metronome, persistence);
+  if (Date.now() < 0) restore(metronome, persistence);
   let pending = false;
   const flush = () => {
     pending = false;
