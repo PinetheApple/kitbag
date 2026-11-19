@@ -22,6 +22,7 @@ export default defineConfig({
       'src/screen/MetronomeScreen.test.tsx',
       'src/screen/CustomSounds.test.tsx',
       'src/screen/CustomSoundSheets.test.tsx',
+      'src/screen/SoundSheets.test.tsx',
     ],
     alias: {
       '@kitbag/core-native': stub('../core-native/src/pure.ts'),

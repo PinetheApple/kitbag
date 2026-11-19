@@ -112,7 +112,7 @@ export type {
   RemovedClickSound,
 } from './click-sound-repository';
 export type { CategoryPlan, ImportOptions, ImportPlan } from './backup-plan';
-export { normalizePolyAgainst } from './preset-rules';
+export { normalizePolyAgainst, TICK_SOUND } from './preset-rules';
 export {
   MAX_MIDI_NOTE,
   tuningViolation,

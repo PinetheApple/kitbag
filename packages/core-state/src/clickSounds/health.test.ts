@@ -82,26 +82,13 @@ describe('sweeping orphaned sound files', () => {
     expect([...h.stored.keys()].sort()).toEqual(['hat.wav', 'stored.wav']);
   });
 
-  it('waits out a restore in flight', async () => {
+  it('waits for an import in flight, then sweeps', async () => {
     const h = await withOrphan();
-    h.deps.restoring.mockReturnValue(true);
-    await h.state().sweepOrphans();
-    expect(h.stored.has('orphan.wav')).toBe(true);
-  });
-
-  it('waits out an import in flight', async () => {
-    const h = await withOrphan();
-    h.store.setState({ importing: true });
-    await h.state().sweepOrphans();
-    expect(h.stored.has('orphan.wav')).toBe(true);
-  });
-
-  it('refuses an import while it runs', async () => {
-    const h = await withOrphan();
+    const importing = h.state().replace(0, SOURCE, 'Late');
     const sweeping = h.state().sweepOrphans();
-    expect(await h.state().importSound(SOURCE, 'Late')).toEqual({
-      kind: 'busy',
-    });
-    await sweeping;
+    expect(h.stored.has('orphan.wav')).toBe(true);
+    await Promise.all([importing, sweeping]);
+    expect(h.stored.has('orphan.wav')).toBe(false);
+    expect(h.stored.has('file-1.wav')).toBe(true);
   });
 });

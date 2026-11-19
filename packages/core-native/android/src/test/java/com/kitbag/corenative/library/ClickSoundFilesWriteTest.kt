@@ -69,4 +69,18 @@ class ClickSoundFilesWriteTest {
   fun namesNothingBeforeTheDirExists() {
     assertEquals(emptyList<String>(), ClickSoundFiles.names(root))
   }
+
+  @Test
+  fun deletesOnlyThePartialFilesInItsDir() {
+    val kept = target()
+    ClickSoundFiles.write(kept, wav)
+    val partial = File(target("b.wav").path + ClickSoundFiles.PART_SUFFIX)
+    partial.writeBytes(wav)
+    val other = File(ClickSoundFiles.dir(root), "notes.txt")
+    other.writeBytes(wav)
+    ClickSoundFiles.deletePartials(root)
+    assertFalse(partial.exists())
+    assertArrayEquals(wav, kept.readBytes())
+    assertArrayEquals(wav, other.readBytes())
+  }
 }

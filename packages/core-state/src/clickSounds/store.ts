@@ -14,6 +14,7 @@ import {
   type ClickSoundNotice,
   type ClickSoundProblem,
 } from './notices.ts';
+import { clickSoundLock, type ClickSoundLock } from './lock.ts';
 import { getClickSounds, type ClickSoundDeps } from './runtime.ts';
 
 export type ClickSoundOutcome =
@@ -56,6 +57,7 @@ function warn(what: string, error: unknown) {
 
 export function createClickSoundStore(
   deps: () => ClickSoundDeps = getClickSounds,
+  lock: ClickSoundLock = clickSoundLock,
 ) {
   return createStore<ClickSoundStore>()((set, get) => {
     const refresh = async () => {
@@ -165,18 +167,17 @@ export function createClickSoundStore(
       return saved(slot);
     };
 
-    const exclusive = async <T>(idle: T, work: () => Promise<T>) => {
-      if (get().importing) return idle;
+    const oneAtATime = async (
+      work: () => Promise<ClickSoundOutcome>,
+    ): Promise<ClickSoundOutcome> => {
+      if (get().importing) return { kind: 'busy' };
       set({ importing: true });
       try {
-        return await work();
+        return await lock.run(work);
       } finally {
         set({ importing: false });
       }
     };
-
-    const oneAtATime = (work: () => Promise<ClickSoundOutcome>) =>
-      exclusive<ClickSoundOutcome>({ kind: 'busy' }, work);
 
     const sweep = async () => {
       const { listFiles, repository } = deps();
@@ -264,28 +265,33 @@ export function createClickSoundStore(
       preparing: null,
       notice: null,
       formats: [],
-      sync: async () => {
-        const sounds = await deps().repository().list();
-        const unavailable: number[] = [];
-        for (const slot of SLOTS) {
-          const sound = sounds.find((stored) => stored.slot === slot) ?? null;
-          if (!(await applyToEngine(slot, sound))) unavailable.push(slot);
-        }
-        set({ sounds, unavailable, formats: formats() });
-      },
+      sync: () =>
+        lock.run(async () => {
+          const sounds = await deps().repository().list();
+          const unavailable: number[] = [];
+          for (const slot of SLOTS) {
+            const sound = sounds.find((stored) => stored.slot === slot) ?? null;
+            if (!(await applyToEngine(slot, sound))) unavailable.push(slot);
+          }
+          set({ sounds, unavailable, formats: formats() });
+        }),
       importSound: (sourceUri, name) => oneAtATime(() => add(sourceUri, name)),
       replace: (slot, sourceUri, name) =>
         oneAtATime(() => replace(slot, sourceUri, name)),
-      rename: async (slot, name) => {
-        await deps().repository().rename(slot, name);
-        await refresh();
-      },
+      rename: (slot, name) =>
+        lock.run(async () => {
+          await deps().repository().rename(slot, name);
+          await refresh();
+        }),
       remove: async (slot) => {
-        const { removed, songsReset } = await deps().repository().remove(slot);
-        deps().clear(slot);
-        if (removed !== null) await discard(removed.fileName);
-        available(slot);
-        await refresh();
+        const songsReset = await lock.run(async () => {
+          const removal = await deps().repository().remove(slot);
+          deps().clear(slot);
+          if (removal.removed !== null) await discard(removal.removed.fileName);
+          available(slot);
+          await refresh();
+          return removal.songsReset;
+        });
         await deps().afterRemove(customSoundId(slot));
         return songsReset;
       },
@@ -302,10 +308,11 @@ export function createClickSoundStore(
       dismissNotice: () => {
         set({ notice: null });
       },
-      sweepOrphans: async () => {
-        if (deps().restoring()) return;
-        await exclusive(undefined, sweep);
-      },
+      sweepOrphans: () =>
+        lock.run(async () => {
+          await deps().clearPartials();
+          await sweep();
+        }),
     };
   });
 }

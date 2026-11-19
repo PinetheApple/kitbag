@@ -14,7 +14,7 @@ import {
   textStyle,
   TransportKey,
 } from '@kitbag/core-design';
-import { useMetronome } from '@kitbag/core-state';
+import { metronomeStore, useMetronome } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -132,11 +132,12 @@ export function SoundListSheet({
   const shownRole = role ?? SOUND_ROLE.normal;
   const choose = useCallback(
     (id: number) => {
-      const next = soundsWith(sounds, shownRole, id);
+      const current = metronomeStore.getState().sounds;
+      const next = soundsWith(current, shownRole, id);
       setSounds(next.normal, next.accent);
       previewSound(id, shownRole === SOUND_ROLE.accent);
     },
-    [sounds, shownRole, setSounds, previewSound],
+    [shownRole, setSounds, previewSound],
   );
   const pick = useCallback(
     (id: number) => {

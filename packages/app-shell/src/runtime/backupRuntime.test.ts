@@ -52,7 +52,7 @@ configureClickSounds({
   pickDocument: vi.fn(),
   constants: vi.fn(),
   listFiles: vi.fn(),
-  restoring: vi.fn(),
+  clearPartials: vi.fn(),
 });
 
 await import('./backupRuntime.ts');

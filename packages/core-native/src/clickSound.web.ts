@@ -24,3 +24,6 @@ export const deleteClickSound: typeof Native.deleteClickSound = () =>
 
 export const listClickSounds: typeof Native.listClickSounds = () =>
   Promise.resolve([]);
+
+export const clearClickSoundPartials: typeof Native.clearClickSoundPartials =
+  () => Promise.resolve();

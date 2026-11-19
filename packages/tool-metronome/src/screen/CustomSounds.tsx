@@ -105,11 +105,12 @@ function PreparingCard({ fileName }: { readonly fileName: string }) {
 interface SoundRowProps {
   readonly view: CustomSoundView;
   readonly selected: boolean;
+  readonly busy: boolean;
   readonly onPick: (id: number) => void;
   readonly onOptions: (sound: ClickSound) => void;
 }
 
-function SoundRow({ view, selected, onPick, onOptions }: SoundRowProps) {
+function SoundRow({ view, selected, busy, onPick, onOptions }: SoundRowProps) {
   const styles = useStyles();
   const scaled = useTextScaled();
   const { id, sound, available } = view;
@@ -125,7 +126,7 @@ function SoundRow({ view, selected, onPick, onOptions }: SoundRowProps) {
         label={sound.name}
         accessibilityLabel={tileLabel(sound.name, available)}
         selected={selected && available}
-        disabled={!available}
+        disabled={!available || busy}
         oneLine={!scaled}
         style={styles.tile}
         onPress={handlePick}
@@ -133,6 +134,7 @@ function SoundRow({ view, selected, onPick, onOptions }: SoundRowProps) {
       <BarIconButton
         icon="more"
         label={optionsLabel(sound.name)}
+        disabled={busy}
         onPress={handleOptions}
       />
     </View>
@@ -158,6 +160,7 @@ export function CustomSounds({
   const views = useCustomSoundViews();
   const hint = useImportHint();
   const preparing = useClickSounds((s) => s.preparing);
+  const busy = useClickSounds((s) => s.importing || s.preparing !== null);
   const importPicked = useClickSounds((s) => s.importPicked);
   const full = views.length >= KB_CUSTOM_SOUND_SLOTS;
   const handleImport = useCallback(() => {
@@ -179,6 +182,7 @@ export function CustomSounds({
           key={view.sound.slot}
           view={view}
           selected={view.id === selected}
+          busy={busy}
           onPick={onPick}
           onOptions={onOptions}
         />

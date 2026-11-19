@@ -194,6 +194,17 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  override fun clearClickSoundPartials(promise: Promise) {
+    io.execute {
+      try {
+        ClickSoundFiles.deletePartials(reactApplicationContext.filesDir)
+        promise.resolve(null)
+      } catch (e: Exception) {
+        rejectLogged(promise, E_DELETE_FAILED, "Could not clear partial click sounds", e)
+      }
+    }
+  }
+
   private fun clickSoundFile(fileName: String, promise: Promise): File? {
     val target = ClickSoundFiles.resolve(reactApplicationContext.filesDir, fileName)
     if (target == null) promise.reject(LibraryErrors.BAD_FILE_NAME, "Not a click sound file name: $fileName")

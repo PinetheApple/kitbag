@@ -6,6 +6,7 @@ import { KB_RESULT, type PickedDocument } from '@kitbag/core-native';
 import { vi } from 'vitest';
 
 import { CODES } from '../songLibrary/store.test-helper.ts';
+import { createClickSoundLock } from './lock.ts';
 import type { ClickSoundDeps } from './runtime.ts';
 import { createClickSoundStore } from './store.ts';
 
@@ -45,8 +46,16 @@ export function harness(database: BackupDatabase = openBackupDatabase()) {
     ),
     constants: () => CODES,
     listFiles: vi.fn(() => Promise.resolve([...stored.keys()])),
-    restoring: vi.fn(() => false),
+    clearPartials: vi.fn(() => Promise.resolve()),
   } satisfies ClickSoundDeps;
-  const store = createClickSoundStore(() => deps);
-  return { database, deps, stored, store, state: () => store.getState() };
+  const lock = createClickSoundLock();
+  const store = createClickSoundStore(() => deps, lock);
+  return {
+    database,
+    deps,
+    stored,
+    store,
+    lock,
+    state: () => store.getState(),
+  };
 }

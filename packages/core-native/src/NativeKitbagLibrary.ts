@@ -277,6 +277,8 @@ export interface Spec extends TurboModule {
   writeClickSound(fileName: string, wavBase64: string): Promise<void>;
   deleteClickSound(fileName: string): Promise<void>;
   listClickSounds(): Promise<readonly string[]>;
+  /** Only while no prepare or write is in flight. */
+  clearClickSoundPartials(): Promise<void>;
   importAudio(uri: string, relativeDir: string): Promise<ImportedAudio>;
   enqueueAnalysis(
     relativePath: string,

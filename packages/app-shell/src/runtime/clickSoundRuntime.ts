@@ -1,5 +1,6 @@
 import { freshClickSoundFileName } from '@kitbag/core-db';
 import {
+  clearClickSoundPartials,
   clearCustomSound,
   deleteClickSound,
   getKitbagLibrary,
@@ -11,7 +12,6 @@ import {
   clickSoundStore,
   configureClickSounds,
   releaseRemovedSound,
-  restoreStore,
 } from '@kitbag/core-state';
 
 import { getDatabase } from './database.ts';
@@ -28,8 +28,13 @@ configureClickSounds({
   pickDocument: () => getKitbagLibrary().pickDocument(),
   constants: () => getKitbagLibrary().getConstants(),
   listFiles: listClickSounds,
-  restoring: () => restoreStore.getState().restore.phase === 'applying',
+  clearPartials: clearClickSoundPartials,
 });
 
 const sounds = clickSoundStore.getState();
-void sounds.sync().then(sounds.sweepOrphans);
+void sounds
+  .sync()
+  .then(sounds.sweepOrphans)
+  .catch((error: unknown) => {
+    console.warn('[kitbag] click sounds did not load', error);
+  });

@@ -183,6 +183,13 @@ describe('the Your sounds block', () => {
     expect(drawn.options).toHaveLength(1);
   });
 
+  it('locks the tiles and their options while a file is prepared', () => {
+    store.state = { ...store.state, sounds: [RIMSHOT], preparing: 'Hat.wav' };
+    draw();
+    expect(drawn.tiles[0]).toMatchObject({ disabled: true });
+    expect(drawn.options[0]).toMatchObject({ disabled: true });
+  });
+
   it('hands the imported sound’s id to the sheet', async () => {
     const importPicked = vi.fn(() => Promise.resolve(KICK));
     Object.assign(store.state, { importPicked });

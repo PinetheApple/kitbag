@@ -15,6 +15,7 @@ import {
   isReplaceConfirmed,
   toggledCategories,
 } from './categories.ts';
+import { clickSoundLock, type ClickSoundLock } from '../clickSounds/lock.ts';
 import { getBackup, type BackupDeps } from './runtime.ts';
 
 export type RestoreFailure = ImportFailure | { readonly kind: 'unreadable' };
@@ -86,7 +87,10 @@ interface PlanRequest {
   readonly resolutions: Resolutions;
 }
 
-export function createRestoreStore(deps: () => BackupDeps = getBackup) {
+export function createRestoreStore(
+  deps: () => BackupDeps = getBackup,
+  lock: ClickSoundLock = clickSoundLock,
+) {
   return createStore<RestoreStore>()((set, get) => {
     let request = 0;
     const show = (restore: RestoreState) => {
@@ -129,9 +133,9 @@ export function createRestoreStore(deps: () => BackupDeps = getBackup) {
 
     const finish = async (state: RestoreReview, confirmReplace: boolean) => {
       show({ ...state, phase: 'applying' });
-      const result = await deps()
-        .service()
-        .apply(state.plan, { confirmReplace });
+      const result = await lock.run(() =>
+        deps().service().apply(state.plan, { confirmReplace }),
+      );
       if (result.ok) {
         show({ phase: 'done', mode: state.plan.mode, ...result.value });
         await deps().afterRestore(result.value);

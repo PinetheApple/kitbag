@@ -73,8 +73,11 @@ function SoundRow(props: {
     setOpen(false);
   }, []);
   const change = useCallback(
-    (perAccentSounds: PerAccentSounds) => {
-      update((d) => ({ ...d, sound: perAccentSounds.normal, perAccentSounds }));
+    (next: (sounds: PerAccentSounds) => PerAccentSounds) => {
+      update((d) => {
+        const perAccentSounds = next(d.perAccentSounds);
+        return { ...d, sound: perAccentSounds.normal, perAccentSounds };
+      });
     },
     [update],
   );

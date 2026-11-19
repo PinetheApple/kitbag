@@ -25,8 +25,9 @@ tags:
 - eraseText
 - inputText: 'Rim'
 - tapOn: 'Save the new name for ${FIXTURE_SOUND}'
-- hideKeyboard
-- assertVisible: 'Rim, your sound'
+- extendedWaitUntil:
+    visible: 'Rim, your sound'
+    timeout: 5000
 - tapOn: 'Options for Rim'
 - tapOn: 'Remove sound'
 - assertVisible: 'Accent beats go back to Tick.*'

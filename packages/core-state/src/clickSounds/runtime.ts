@@ -24,7 +24,7 @@ export interface ClickSoundDeps {
   readonly pickDocument: () => Promise<PickedDocument | null>;
   readonly constants: () => LibraryConstants;
   readonly listFiles: () => Promise<readonly string[]>;
-  readonly restoring: () => boolean;
+  readonly clearPartials: () => Promise<void>;
 }
 
 let configured: ClickSoundDeps | undefined;

@@ -42,7 +42,9 @@ interface SoundSheetProps {
 
 export interface SoundPickerSheetProps extends SoundSheetProps {
   readonly sounds: PerAccentSounds;
-  readonly onChange: (sounds: PerAccentSounds) => void;
+  readonly onChange: (
+    update: (sounds: PerAccentSounds) => PerAccentSounds,
+  ) => void;
 }
 
 export function SoundPickerSheet({
@@ -59,10 +61,10 @@ export function SoundPickerSheet({
   const menu = useCustomSoundMenu();
   const pick = useCallback(
     (id: number) => {
-      onChange(soundsWith(sounds, role, id));
+      onChange((current) => soundsWith(current, role, id));
       previewSound(id, role === SOUND_ROLE.accent);
     },
-    [onChange, previewSound, role, sounds],
+    [onChange, previewSound, role],
   );
   const pickOption = useCallback(
     (value: string) => {
@@ -73,9 +75,9 @@ export function SoundPickerSheet({
   const usedBy = useCallback((id: number) => rolesUsing(sounds, id), [sounds]);
   const handleRemoved = useCallback(
     (id: number) => {
-      onChange(withoutSound(sounds, id));
+      onChange((current) => withoutSound(current, id));
     },
-    [onChange, sounds],
+    [onChange],
   );
   return (
     <>

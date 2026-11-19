@@ -77,3 +77,7 @@ export function deleteClickSound(fileName: string): Promise<void> {
 export function listClickSounds(): Promise<readonly string[]> {
   return getKitbagLibrary().listClickSounds();
 }
+
+export function clearClickSoundPartials(): Promise<void> {
+  return getKitbagLibrary().clearClickSoundPartials();
+}
