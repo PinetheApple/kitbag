@@ -1,0 +1,1 @@
+• StemDeck songs now show the tempo set in StemDeck's grid instead of the tempo StemDeck detected.
