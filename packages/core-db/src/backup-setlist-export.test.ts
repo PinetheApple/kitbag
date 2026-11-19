@@ -23,6 +23,7 @@ describe('single-setlist export', () => {
         name: 'Friday',
         active: false,
         presetUuids: [closer.uuid, opener.uuid],
+        items: [{ preset: closer.uuid }, { preset: opener.uuid }],
       },
     ]);
     expect(file.records.songPresets.map((p) => p.uuid).sort()).toEqual(
