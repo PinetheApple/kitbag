@@ -19,6 +19,7 @@ import {
   type LyricLineTimes,
 } from './stem-lyrics';
 import { applyUserNames, readUserNames, type UserNames } from './stem-rename';
+import { STEM_SET_PITCH } from './stem-speed-key';
 import {
   carriedTempoMode,
   saveChosenTempoMode,
@@ -105,7 +106,7 @@ export async function readKept(
       bundle.tempo,
     ),
     speed: row.speed,
-    pitch: row.pitch,
+    pitch: bundle.hasMix ? STEM_SET_PITCH.unshifted : row.pitch,
     click: stemSetClickOf(row),
     mixes: bundle.hasMix ? [] : await readRoleMixes(db, id),
   };

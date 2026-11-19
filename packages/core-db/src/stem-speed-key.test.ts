@@ -35,7 +35,19 @@ describe('stem song speed and key', () => {
     expect(set?.stems.map(({ pitch }) => pitch)).toEqual([BASS_KEY, 0]);
   });
 
-  it('keeps the speed and song key when the song is imported again', async () => {
+  it('drops the song key with the old mix when the new bundle brings its own', async () => {
+    const { database, id } = await keyedSong();
+    const { id: replaced } = await database.library.replaceStemBundle(
+      { ...bundle(JOB), hasMix: true },
+      id,
+    );
+    expect(await database.library.readStemSet(replaced)).toMatchObject({
+      speed: SPEED,
+      pitch: 0,
+    });
+  });
+
+  it('keeps the speed and song key with the old mix on a re-import', async () => {
     const { database, id } = await keyedSong();
     const { id: replaced } = await database.library.replaceStemBundle(
       bundle(JOB),
