@@ -1,5 +1,5 @@
-// core-db may not import core-native (§13.1), so these mirror metronome.h and
-// kitbag_api.h; engine-limits.test.ts fails if either side drifts.
+// core-db may not import core-native (§13.1), so these mirror the engine headers;
+// engine-limits.test.ts fails if either side drifts.
 export const MIN_BPM = 20;
 export const MAX_BPM = 400;
 export const MAX_BEATS = 16;
@@ -30,6 +30,9 @@ export const DENOMINATORS: readonly number[] = [
 ];
 export const DEFAULT_DENOMINATOR = Denominator.Quarter;
 export const SOUND_COUNT = 6;
+export const CUSTOM_SOUND_SLOTS = 2;
+export const SOUND_ID_COUNT = SOUND_COUNT + CUSTOM_SOUND_SLOTS;
+export const TICK_SOUND = 4;
 export const ACCENT_LEVELS = 3;
 export const NORMAL_ACCENT = 1;
 
@@ -158,10 +161,20 @@ function rampLengthBound(unit: number): PresetBound | undefined {
   };
 }
 
+// PRESET_BOUNDS is also the v9 repair, which predates the custom sound slots.
+const SOUND_ID_BOUND: PresetBound = {
+  field: 'sound',
+  column: 'sound',
+  low: 0,
+  high: SOUND_ID_COUNT - 1,
+  integer: true,
+};
+
 function boundViolation(preset: PresetShape): RuleViolation | undefined {
-  const timed = rampLengthBound(preset.rampUnit);
-  const bounds = PRESET_BOUNDS.map((bound) =>
-    bound.field === timed?.field ? timed : bound,
+  const overrides = [rampLengthBound(preset.rampUnit), SOUND_ID_BOUND];
+  const bounds = PRESET_BOUNDS.map(
+    (bound) =>
+      overrides.find((override) => override?.field === bound.field) ?? bound,
   );
   const failed = bounds.find(
     (bound) => !nullOrWithin(preset[bound.field], bound),
@@ -193,7 +206,7 @@ function blobViolation(preset: PresetShape): RuleViolation | undefined {
       'perAccentSounds',
       preset.perAccentSounds,
       [0, PER_ACCENT_SOUND_BYTES],
-      SOUND_COUNT,
+      SOUND_ID_COUNT,
     ],
     ['polyAccents', preset.polyAccents, [preset.polyBeats], ACCENT_LEVELS],
   ];

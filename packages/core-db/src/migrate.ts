@@ -8,7 +8,7 @@ import {
   MIGRATE_V16_TO_V17,
 } from './migrate-stems';
 
-export const SCHEMA_VERSION = 21;
+export const SCHEMA_VERSION = 22;
 export const V7_SCHEMA_VERSION = 7;
 export const V8_SCHEMA_VERSION = 8;
 export const V9_SCHEMA_VERSION = 9;
@@ -23,6 +23,7 @@ export const V17_SCHEMA_VERSION = 17;
 export const V18_SCHEMA_VERSION = 18;
 export const V19_SCHEMA_VERSION = 19;
 export const V20_SCHEMA_VERSION = 20;
+export const V21_SCHEMA_VERSION = 21;
 
 const OLDEST_UPGRADABLE_VERSION = V7_SCHEMA_VERSION;
 
@@ -316,6 +317,16 @@ export const MIGRATE_V20_TO_V21: readonly string[] = [
   `ALTER TABLE stem_sets ADD COLUMN click_rate TEXT NOT NULL DEFAULT '${CLICK_RATE.single}'`,
 ];
 
+// No CHECK on the slot: the engine owns the slot count and may grow it.
+export const MIGRATE_V21_TO_V22: readonly string[] = [
+  `CREATE TABLE click_sounds (
+  slot INTEGER PRIMARY KEY,
+  uuid TEXT NOT NULL,
+  name TEXT NOT NULL,
+  file_name TEXT NOT NULL
+)`,
+];
+
 export const BASELINE: readonly string[] = [
   ...V11_BASELINE,
   ...MIGRATE_V11_TO_V12,
@@ -328,6 +339,7 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V18_TO_V19,
   ...MIGRATE_V19_TO_V20,
   ...MIGRATE_V20_TO_V21,
+  ...MIGRATE_V21_TO_V22,
 ];
 
 export const MIGRATE_V7_TO_V8: readonly string[] = [
@@ -369,7 +381,8 @@ const UPGRADES: readonly {
   { to: V18_SCHEMA_VERSION, steps: MIGRATE_V17_TO_V18 },
   { to: V19_SCHEMA_VERSION, steps: MIGRATE_V18_TO_V19 },
   { to: V20_SCHEMA_VERSION, steps: MIGRATE_V19_TO_V20 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V20_TO_V21 },
+  { to: V21_SCHEMA_VERSION, steps: MIGRATE_V20_TO_V21 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V21_TO_V22 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {

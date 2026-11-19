@@ -8,6 +8,7 @@ const connection = vi.hoisted(() => ({
 vi.mock('@op-engineering/op-sqlite', () => ({ open: () => connection }));
 
 import { openDatabase } from './client';
+import { memoryClickSoundFiles } from './click-sound-files.test-helper';
 
 const MIGRATION_FAILURE = new Error('disk I/O error');
 
@@ -23,7 +24,9 @@ beforeEach(() => {
 
 describe('openDatabase', () => {
   it('closes the connection when the migration throws, then rethrows', () => {
-    expect(() => openDatabase('failing')).toThrow(MIGRATION_FAILURE);
+    expect(() =>
+      openDatabase(memoryClickSoundFiles().files, 'failing'),
+    ).toThrow(MIGRATION_FAILURE);
     expect(connection.close).toHaveBeenCalledOnce();
   });
 
@@ -31,14 +34,16 @@ describe('openDatabase', () => {
     connection.close.mockImplementation(() => {
       throw new Error('close failed');
     });
-    expect(() => openDatabase('failing')).toThrow(MIGRATION_FAILURE);
+    expect(() =>
+      openDatabase(memoryClickSoundFiles().files, 'failing'),
+    ).toThrow(MIGRATION_FAILURE);
   });
 
   it('leaves the connection open when the migration succeeds', () => {
     connection.executeSync.mockImplementation(() => ({
       rows: [{ user_version: 0 }],
     }));
-    openDatabase('ok');
+    openDatabase(memoryClickSoundFiles().files, 'ok');
     expect(connection.close).not.toHaveBeenCalled();
   });
 });

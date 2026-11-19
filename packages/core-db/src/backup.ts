@@ -5,9 +5,15 @@ import {
   ImportRejected,
   type BackupFile,
   type Category,
+  type CategoryRecords,
   type ImportResult,
+  type LocalRecords,
 } from './backup-format';
-import { applyWrites } from './backup-apply';
+import {
+  applyWrites,
+  type ClickSoundFileLog,
+  type FileContext,
+} from './backup-apply';
 import { parseBackup } from './backup-parse';
 import {
   computePlan,
@@ -17,10 +23,16 @@ import {
   type ImportPlan,
 } from './backup-plan';
 import { loadSnapshot } from './backup-snapshot';
+import type { ClickSoundFiles } from './click-sound-files';
 import type { DatabaseHandle } from './repository';
 
 export interface ApplyOptions {
   confirmReplace?: boolean;
+}
+
+export interface ApplyReport {
+  counts: Partial<Record<Category, CategoryPlan>>;
+  soundResets: number;
 }
 
 async function asResult<T>(work: () => Promise<T>): Promise<ImportResult<T>> {
@@ -55,16 +67,33 @@ function withDependencies(categories: readonly Category[]): Category[] {
   );
 }
 
+async function withAudio(
+  records: LocalRecords,
+  files: ClickSoundFiles,
+  categories: readonly Category[],
+): Promise<CategoryRecords> {
+  const local = categories.includes('clickSounds') ? records.clickSounds : [];
+  const clickSounds = await Promise.all(
+    local.map(async ({ fileName, ...sound }) => ({
+      ...sound,
+      wav: await files.read(fileName),
+    })),
+  );
+  return { ...records, clickSounds };
+}
+
 async function exportBackup(
   { db }: DatabaseHandle,
-  categories: readonly Category[],
+  files: ClickSoundFiles,
+  requested: readonly Category[],
 ): Promise<string> {
   const { records } = await loadSnapshot(db);
+  const categories = withDependencies(requested);
   return serializeBackup({
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    categories: withDependencies(categories),
-    records,
+    categories,
+    records: await withAudio(records, files, categories),
   });
 }
 
@@ -82,6 +111,7 @@ async function exportSetlist(
     categories: withDependencies(['setlists']),
     records: {
       ...records,
+      clickSounds: [],
       setlists: [{ ...setlist, active: false }],
       songPresets: records.songPresets.filter(({ uuid }) => listed.has(uuid)),
     },
@@ -99,9 +129,10 @@ const revalidated = (file: BackupFile) => parseBackup(serializeBackup(file));
 
 async function applyPlan(
   { db }: DatabaseHandle,
+  fileContext: FileContext,
   plan: ImportPlan,
   options: ApplyOptions,
-): Promise<Partial<Record<Category, CategoryPlan>>> {
+): Promise<ApplyReport> {
   if (plan.mode === 'replace' && options.confirmReplace !== true)
     throw new ImportRejected({ kind: 'replaceNotConfirmed' });
   if (plan.unresolved.length > 0)
@@ -114,16 +145,37 @@ async function applyPlan(
   const fresh = computePlan(file, snapshot, plan);
   if (planFingerprint(fresh.plan) !== planFingerprint(plan))
     throw new ImportRejected({ kind: 'stalePlan' });
-  await applyWrites(db, fresh.plan, fresh.writes, snapshot);
-  return fresh.plan.counts;
+  const soundResets = await applyWrites(
+    db,
+    fresh.plan,
+    fresh.writes,
+    snapshot,
+    fileContext,
+  );
+  return { counts: fresh.plan.counts, soundResets };
 }
 
-export function createBackupService(handle: DatabaseHandle) {
+async function removeAll(files: ClickSoundFiles, fileNames: string[]) {
+  await Promise.allSettled(fileNames.map((fileName) => files.remove(fileName)));
+}
+
+export function createBackupService(
+  handle: DatabaseHandle,
+  files: ClickSoundFiles,
+) {
   const { serial, transaction } = handle.transactor;
+  const apply = async (plan: ImportPlan, options: ApplyOptions = {}) => {
+    const log: ClickSoundFileLog = { written: [], replaced: [] };
+    const result = await asResult(() =>
+      transaction(() => applyPlan(handle, { files, log }, plan, options)),
+    );
+    await removeAll(files, result.ok ? log.replaced : log.written);
+    return result;
+  };
   return {
     summary: () => serial(() => summary(handle)),
     export: (categories: readonly Category[] = CATEGORIES) =>
-      serial(() => exportBackup(handle, categories)),
+      serial(() => exportBackup(handle, files, categories)),
     exportSetlist: (setlistUuid: string) =>
       serial(() => exportSetlist(handle, setlistUuid)),
     plan: (input: string, options: ImportOptions = {}) =>
@@ -137,8 +189,7 @@ export function createBackupService(handle: DatabaseHandle) {
             ).plan,
         ),
       ),
-    apply: (plan: ImportPlan, options: ApplyOptions = {}) =>
-      asResult(() => transaction(() => applyPlan(handle, plan, options))),
+    apply,
   };
 }
 

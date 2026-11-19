@@ -1,3 +1,4 @@
+import type { ClickSound } from './click-sound-repository';
 import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
 import type { MeterOverride } from './meter-override';
 import { STANDALONE_METRONOME_KEY } from './standalone-metronome-preference';
@@ -14,6 +15,7 @@ export const CATEGORIES = [
   'practiceSessions',
   'countInSettings',
   'metronomeSettings',
+  'clickSounds',
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
 
@@ -23,6 +25,7 @@ export const DEFAULT_IMPORT_CATEGORIES: readonly Category[] = [
   'tunings',
   'countInSettings',
   'metronomeSettings',
+  'clickSounds',
 ];
 
 export interface LibrarySongRecord extends Partial<MeterOverride> {
@@ -107,6 +110,13 @@ export interface PreferenceRecord {
   value: string;
 }
 
+export interface ClickSoundRecord {
+  slot: number;
+  uuid: string;
+  name: string;
+  wav: string;
+}
+
 export interface CategoryRecords {
   librarySongs: LibrarySongRecord[];
   songPresets: SongPresetRecord[];
@@ -115,9 +125,16 @@ export interface CategoryRecords {
   practiceSessions: PracticeSessionRecord[];
   countInSettings: PreferenceRecord[];
   metronomeSettings: PreferenceRecord[];
+  clickSounds: ClickSoundRecord[];
 }
 
 export type BackupRecord = CategoryRecords[Category][number];
+
+export type LocalRecords = Omit<CategoryRecords, 'clickSounds'> & {
+  clickSounds: ClickSound[];
+};
+
+export type LocalRecord = LocalRecords[Category][number];
 
 export interface BackupFile {
   version: typeof BACKUP_VERSION;
@@ -207,13 +224,17 @@ export function isPreferenceCategory(
 
 function isPreference(
   category: Category,
-  record: BackupRecord,
+  record: BackupRecord | LocalRecord,
 ): record is PreferenceRecord {
   return isPreferenceCategory(category) && 'key' in record;
 }
 
-export function recordKey(category: Category, record: BackupRecord): string {
-  return isPreference(category, record) ? record.key : record.uuid;
+export function recordKey(
+  category: Category,
+  record: BackupRecord | LocalRecord,
+): string {
+  if (isPreference(category, record)) return record.key;
+  return 'slot' in record ? String(record.slot) : record.uuid;
 }
 
 export function recordLabel(category: Category, record: BackupRecord): string {

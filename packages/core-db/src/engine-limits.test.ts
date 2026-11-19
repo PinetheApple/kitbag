@@ -20,7 +20,9 @@ import {
   MIN_BPM,
   NORMAL_ACCENT,
   POLY_AGAINST_BAR,
+  CUSTOM_SOUND_SLOTS,
   SOUND_COUNT,
+  TICK_SOUND,
 } from './preset-rules';
 import { MAX_CLICK_GROUPS } from './click-settings';
 import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
@@ -37,6 +39,7 @@ const headers = {
   'tempo_ramp.h': source('src/metronome/tempo_ramp.h'),
 };
 const api = source('include/kitbag_api.h');
+const clickSoundApi = source('include/kitbag_click_sound_api.h');
 const polyApi = source('include/kitbag_metronome_poly_api.h');
 const tunerApi = source('include/kitbag_tuner_api.h');
 const gridApi = source('include/kitbag_metronome_grid_api.h');
@@ -63,6 +66,8 @@ describe('engine limits mirrored in core-db', () => {
     expect(constant('kMaxPolyAgainst')).toBe('kMaxBeats');
     expect(MAX_POLY_AGAINST).toBe(MAX_BEATS);
     expect(Number(constant('kSoundCount'))).toBe(SOUND_COUNT);
+    expect(Number(constant('kTickSound'))).toBe(TICK_SOUND);
+    expect(constant('kDefaultNormalSound')).toBe('kTickSound');
     expect(Number(constant('kMaxSubdivision'))).toBe(MAX_SUBDIVISION);
     expect(Number(constant('kMaxBars', 'tempo_ramp.h'))).toBe(MAX_RAMP_BARS);
     expect(Number(constant('kMinSeconds', 'tempo_ramp.h'))).toBe(
@@ -83,6 +88,13 @@ describe('engine limits mirrored in core-db', () => {
     expect(Number(/#define KB_POLY_AGAINST_BAR (\d+)/.exec(polyApi)?.[1])).toBe(
       POLY_AGAINST_BAR,
     );
+  });
+
+  it('match the custom sound slots in kitbag_click_sound_api.h', () => {
+    expect(
+      Number(/#define KB_CUSTOM_SOUND_SLOTS (\d+)/.exec(clickSoundApi)?.[1]),
+    ).toBe(CUSTOM_SOUND_SLOTS);
+    expect(constant('kFirstCustomSound')).toBe('kSoundCount');
   });
 
   it('match the kb_accent enum in kitbag_api.h', () => {

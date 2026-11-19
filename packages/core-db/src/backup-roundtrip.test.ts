@@ -134,6 +134,7 @@ describe('backup round trip', () => {
       practiceSessions: 1,
       countInSettings: 3,
       metronomeSettings: 1,
+      clickSounds: 0,
     });
   });
 

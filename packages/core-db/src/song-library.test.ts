@@ -11,6 +11,7 @@ import { packFloat32, packInt32 } from './packing';
 import { createSongLibraryRepository } from './song-library-repository';
 import { createSongPresetRepository } from './song-preset-repository';
 import { openTestDatabase } from './sqlite.test-helper';
+import { memoryClickSoundFiles } from './click-sound-files.test-helper';
 
 const open: ReturnType<typeof openTestDatabase>[] = [];
 
@@ -367,7 +368,10 @@ describe('song library repository', () => {
 
 describe('song library over the op-sqlite 17 connection', () => {
   it('imports, analyzes, lists and deletes', async () => {
-    const database = connectDatabase(fakeOpSqlite().connection);
+    const database = connectDatabase(
+      fakeOpSqlite().connection,
+      memoryClickSoundFiles().files,
+    );
     const id = await database.songLibrary.insertSong(song('Everlong'));
     expect(await database.songLibrary.claimUnfinishedAnalyses()).toEqual([
       expect.objectContaining({ uuid: 'uuid-Everlong' }),

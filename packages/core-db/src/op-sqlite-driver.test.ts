@@ -14,10 +14,14 @@ import {
 } from './backup.test-helper';
 import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 import { INSTRUMENTS } from './tuning-rules';
+import { memoryClickSoundFiles } from './click-sound-files.test-helper';
 
 describe('drizzle over the op-sqlite connection', () => {
   it('runs repository reads and writes', async () => {
-    const database = connectDatabase(fakeOpSqlite().connection);
+    const database = connectDatabase(
+      fakeOpSqlite().connection,
+      memoryClickSoundFiles().files,
+    );
 
     const setlist = await database.setlists.create('Friday');
     expect(await database.setlists.list()).toEqual([setlist]);
@@ -52,7 +56,10 @@ describe('drizzle over the op-sqlite connection', () => {
       const file = await source.backup.export();
 
       const { connection } = fakeOpSqlite();
-      const database = connectDatabase(connection);
+      const database = connectDatabase(
+        connection,
+        memoryClickSoundFiles().files,
+      );
       await database.presets.create(presetValues('Mine', null));
       const mine = await database.setlists.create('Mine');
       await database.setlists.selectActive(mine.id);

@@ -60,8 +60,11 @@ export {
 export {
   clearCustomSound,
   customSoundLoaded,
+  deleteClickSound,
   loadCustomSound,
   prepareClickSound,
+  readClickSound,
+  writeClickSound,
   type LoadCustomSoundResult,
   type PrepareClickSoundResult,
 } from './clickSound';

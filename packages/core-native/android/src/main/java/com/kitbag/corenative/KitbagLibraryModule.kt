@@ -2,6 +2,7 @@ package com.kitbag.corenative
 
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.util.Base64
 import android.util.Log
 import android.webkit.MimeTypeMap
 import com.facebook.react.bridge.Arguments
@@ -95,11 +96,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private fun libraryRoot() = dataFolder().root()
 
   override fun prepareClickSound(sourceUri: String, fileName: String, promise: Promise) {
-    val target = ClickSoundFiles.resolve(reactApplicationContext.filesDir, fileName)
-    if (target == null) {
-      promise.reject(LibraryErrors.BAD_FILE_NAME, "Not a click sound file name: $fileName")
-      return
-    }
+    val target = clickSoundFile(fileName, promise) ?: return
     io.execute {
       var staging: File? = null
       try {
@@ -119,6 +116,47 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
         staging?.delete()
       }
     }
+  }
+
+  override fun readClickSound(fileName: String, promise: Promise) {
+    val target = clickSoundFile(fileName, promise) ?: return
+    io.execute {
+      try {
+        promise.resolve(Base64.encodeToString(target.readBytes(), Base64.NO_WRAP))
+      } catch (e: Exception) {
+        rejectLogged(promise, E_CLICK_SOUND_FAILED, "Could not read the click sound", e)
+      }
+    }
+  }
+
+  override fun writeClickSound(fileName: String, wav: String, promise: Promise) {
+    val target = clickSoundFile(fileName, promise) ?: return
+    io.execute {
+      try {
+        ClickSoundFiles.write(target, Base64.decode(wav, Base64.NO_WRAP))
+        promise.resolve(null)
+      } catch (e: Exception) {
+        rejectLogged(promise, E_CLICK_SOUND_FAILED, "Could not write the click sound", e)
+      }
+    }
+  }
+
+  override fun deleteClickSound(fileName: String, promise: Promise) {
+    val target = clickSoundFile(fileName, promise) ?: return
+    io.execute {
+      try {
+        ClickSoundFiles.delete(target)
+        promise.resolve(null)
+      } catch (e: Exception) {
+        rejectLogged(promise, E_DELETE_FAILED, "Could not delete the click sound", e)
+      }
+    }
+  }
+
+  private fun clickSoundFile(fileName: String, promise: Promise): File? {
+    val target = ClickSoundFiles.resolve(reactApplicationContext.filesDir, fileName)
+    if (target == null) promise.reject(LibraryErrors.BAD_FILE_NAME, "Not a click sound file name: $fileName")
+    return target
   }
 
   private fun copyFrom(source: Uri, file: File) {
@@ -425,6 +463,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     private const val E_IMPORT_FAILED = "E_IMPORT_FAILED"
     private const val E_RESULTS_FAILED = "E_RESULTS_FAILED"
     private const val E_DELETE_FAILED = "E_DELETE_FAILED"
+    private const val E_CLICK_SOUND_FAILED = "E_CLICK_SOUND_FAILED"
     private const val E_LIST_FAILED = "E_LIST_FAILED"
     private const val E_WAVEFORM_FAILED = "E_WAVEFORM_FAILED"
     private const val E_STORAGE_FAILED = "E_STORAGE_FAILED"

@@ -1,4 +1,6 @@
+import type { ClickSoundRepository } from '@kitbag/core-db';
 import {
+  configureClickSounds,
   configureStandaloneMetronomePersistence,
   createMetronomeStore,
   getBackup,
@@ -35,6 +37,18 @@ vi.mock('@kitbag/core-native', async (actual) => ({
   ...(await actual<typeof import('@kitbag/core-native')>()),
   getKitbagCommands: () => engine,
 }));
+
+const clickSounds = { list: vi.fn(() => Promise.resolve([])) };
+configureClickSounds({
+  repository: () => clickSounds as unknown as ClickSoundRepository,
+  prepare: vi.fn(),
+  load: vi.fn(),
+  clear: vi.fn(),
+  deleteFile: vi.fn(),
+  newUuid: vi.fn(),
+  freshFileName: vi.fn(),
+  afterRemove: vi.fn(),
+});
 
 await import('./backupRuntime.ts');
 
@@ -80,14 +94,16 @@ it('restores through the app database', () => {
   expect(getBackup().service()).toBe(service);
 });
 
-it('reloads setlists, library songs and tunings after a restore', async () => {
+it('reloads setlists, library songs, tunings and click sounds after a restore', async () => {
   const { refresh, refreshSongs, loadCustomTunings } = stubRefreshes();
+  clickSounds.list.mockClear();
 
   await getBackup().afterRestore();
 
   expect(refresh).toHaveBeenCalledOnce();
   expect(refreshSongs).toHaveBeenCalledOnce();
   expect(loadCustomTunings).toHaveBeenCalledOnce();
+  expect(clickSounds.list).toHaveBeenCalledOnce();
 });
 
 it('plays and keeps the restored standalone settings over the unloaded song', async () => {

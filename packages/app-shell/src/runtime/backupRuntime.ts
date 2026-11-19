@@ -1,5 +1,6 @@
 import { pickBackup, shareBackup } from '@kitbag/core-native';
 import {
+  clickSoundStore,
   configureBackup,
   libraryStore,
   reloadCountInPersistence,
@@ -20,6 +21,7 @@ export async function refreshAfterRestore(): Promise<void> {
     libraryStore.getState().refresh(),
     songLibraryStore.getState().refresh(),
     tunerStore.getState().loadCustomTunings(),
+    clickSoundStore.getState().sync(),
   ]);
 }
 

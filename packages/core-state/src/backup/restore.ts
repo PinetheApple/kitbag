@@ -42,6 +42,7 @@ export type RestoreState =
       readonly phase: 'done';
       readonly mode: ImportMode;
       readonly counts: Partial<Record<Category, CategoryPlan>>;
+      readonly soundResets: number;
     };
 
 export interface RestoreActions {
@@ -132,7 +133,7 @@ export function createRestoreStore(deps: () => BackupDeps = getBackup) {
         .service()
         .apply(state.plan, { confirmReplace });
       if (result.ok) {
-        show({ phase: 'done', mode: state.plan.mode, counts: result.value });
+        show({ phase: 'done', mode: state.plan.mode, ...result.value });
         await deps().afterRestore();
         return;
       }

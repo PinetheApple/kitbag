@@ -13,6 +13,7 @@ import '@/runtime/swipeHintRuntime';
 import '@/runtime/appearanceRuntime';
 import '@/runtime/countInRuntime';
 import '@/runtime/standaloneMetronomeRuntime';
+import '@/runtime/clickSoundRuntime';
 import '@/runtime/backupRuntime';
 import '@/runtime/transportRuntime';
 import '@/runtime/keepAwakeRuntime';

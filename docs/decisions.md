@@ -1125,6 +1125,12 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   While the metronome follows the mixer (song and stem players), a custom id plays Tick, the
   same coercion as the count-in; the standalone metronome, setlists and song presets keep
   custom sounds. **[REC TAKEN, owner may overturn]**
+  Storage and restore (slice 3): a `click_sounds` row holds slot, UUID, name and the
+  prepared file's name; the file name is fresh on every write, so a restore never overwrites a
+  file the engine may be reading, and the UUID alone says whether two sounds are the same. After a
+  restore, a restored song keeps a custom sound only if the backup's sound for that slot is the
+  one now in it; a song already on the device keeps it only if its slot still holds the sound it
+  held before. Every other reference becomes Tick. **[recorded — lane call, owner may overturn]**
 
 - **2026-11-19 · Grid grouping and click rate (#383, §4.3)** — (1) A bar whose
   length differs from the grouping's sum keeps only its downbeat accent. (2) At

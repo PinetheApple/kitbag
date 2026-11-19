@@ -10,6 +10,7 @@ import {
   type BackupFile,
   type Category,
   type CategoryRecords,
+  type ClickSoundRecord,
   type LibrarySongRecord,
   type PracticeSessionRecord,
   type PreferenceCategory,
@@ -27,7 +28,9 @@ import {
   type Reader,
 } from './backup-reader';
 import { decodeBase64, presetBytes } from './base64';
+import { isClickSoundSlot } from './click-sound-repository';
 import {
+  CUSTOM_SOUND_SLOTS,
   MIN_RAMP_STEP,
   normalizePolyAgainst,
   POLY_AGAINST_BAR,
@@ -183,6 +186,25 @@ function readPracticeSession(
   };
 }
 
+function readClickSound(value: unknown, path: string): ClickSoundRecord {
+  const r = reader(value, path);
+  const record = {
+    slot: r.count('slot'),
+    uuid: r.uuid('uuid'),
+    name: r.string('name'),
+    wav: r.blob('wav'),
+  };
+  if (!isClickSoundSlot(record.slot))
+    invalidField(
+      `${path}.slot`,
+      `expected 0–${String(CUSTOM_SOUND_SLOTS - 1)}`,
+    );
+  if (record.name.trim() === '') invalidField(`${path}.name`, 'expected text');
+  if (base64Length(record.wav) === 0)
+    invalidField(`${path}.wav`, 'expected audio bytes');
+  return record;
+}
+
 function preferenceReader(category: PreferenceCategory) {
   const keys: readonly string[] = PREFERENCE_KEYS[category];
   return (value: unknown, path: string): PreferenceRecord => {
@@ -204,6 +226,7 @@ const READERS: {
   practiceSessions: readPracticeSession,
   countInSettings: preferenceReader('countInSettings'),
   metronomeSettings: preferenceReader('metronomeSettings'),
+  clickSounds: readClickSound,
 };
 
 function readCategory<C extends Category>(

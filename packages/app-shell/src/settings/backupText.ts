@@ -38,6 +38,7 @@ export const RESTORE_ORDER: readonly Category[] = [
   'librarySongs',
   'countInSettings',
   'metronomeSettings',
+  'clickSounds',
 ];
 
 export const CATEGORY_LABELS: Readonly<Record<Category, string>> = {
@@ -48,6 +49,7 @@ export const CATEGORY_LABELS: Readonly<Record<Category, string>> = {
   librarySongs: 'Library songs',
   countInSettings: 'Count-in',
   metronomeSettings: 'Metronome',
+  clickSounds: 'Click sounds',
 };
 
 const NOUNS: Readonly<Record<Category, readonly [string, string]>> = {
@@ -58,6 +60,7 @@ const NOUNS: Readonly<Record<Category, readonly [string, string]>> = {
   librarySongs: ['library song', 'library songs'],
   countInSettings: ['count-in setting', 'count-in settings'],
   metronomeSettings: ['metronome setup', 'metronome setups'],
+  clickSounds: ['click sound', 'click sounds'],
 };
 
 const MONTHS = [

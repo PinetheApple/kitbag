@@ -242,6 +242,13 @@ export const routeLatency = sqliteTable('route_latency', {
   kind: text('kind'),
 });
 
+export const clickSounds = sqliteTable('click_sounds', {
+  slot: integer('slot').primaryKey(),
+  uuid: text('uuid').notNull(),
+  name: text('name').notNull(),
+  fileName: text('file_name').notNull(),
+});
+
 export const preferences = sqliteTable('preferences', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),

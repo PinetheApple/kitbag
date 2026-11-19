@@ -4,8 +4,8 @@ import {
   MS_PER_SECOND,
   PREFERENCE_KEYS,
   type Category,
-  type CategoryRecords,
   type LibrarySongRecord,
+  type LocalRecords,
   type PracticeSessionRecord,
   type PreferenceCategory,
   type SetlistRecord,
@@ -15,6 +15,7 @@ import { encodeBase64, nullableBase64, presetBase64 } from './base64';
 import { meterOverrideOf } from './meter-override';
 import type { Database } from './repository';
 import {
+  clickSounds,
   practiceSessions,
   preferences,
   setlistItems,
@@ -27,7 +28,7 @@ import {
 export type IdMaps = Record<Category, Map<string, number>>;
 
 export interface Snapshot {
-  records: CategoryRecords;
+  records: LocalRecords;
   ids: IdMaps;
 }
 
@@ -152,13 +153,17 @@ async function loadRows(db: Database) {
       .orderBy(asc(practiceSessions.id)),
     countInRows: await loadPreferences(db, 'countInSettings'),
     metronomeRows: await loadPreferences(db, 'metronomeSettings'),
+    clickSoundRows: await db
+      .select()
+      .from(clickSounds)
+      .orderBy(asc(clickSounds.slot)),
   };
 }
 
 export async function loadSnapshot(db: Database): Promise<Snapshot> {
   const rows = await loadRows(db);
   const songUuid = uuidOf(rows.songRows);
-  const records: CategoryRecords = {
+  const records: LocalRecords = {
     librarySongs: rows.songRows.map(librarySongRecord),
     songPresets: rows.presetRows.map((row) => songPresetRecord(row, songUuid)),
     setlists: await loadSetlists(db, rows.setlistRows, uuidOf(rows.presetRows)),
@@ -173,6 +178,7 @@ export async function loadSnapshot(db: Database): Promise<Snapshot> {
     ),
     countInSettings: preferenceRecords(rows.countInRows),
     metronomeSettings: preferenceRecords(rows.metronomeRows),
+    clickSounds: rows.clickSoundRows,
   };
   return { records, ids: idMaps(rows) };
 }
@@ -188,5 +194,8 @@ function idMaps(rows: Awaited<ReturnType<typeof loadRows>>): IdMaps {
     practiceSessions: byUuid(rows.practiceRows),
     countInSettings: preferenceIds(rows.countInRows),
     metronomeSettings: preferenceIds(rows.metronomeRows),
+    clickSounds: new Map(
+      rows.clickSoundRows.map(({ slot }) => [String(slot), slot]),
+    ),
   };
 }

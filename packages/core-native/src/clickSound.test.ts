@@ -10,7 +10,12 @@ const commands = vi.hoisted(() => ({
   clearCustomSound: vi.fn(),
   customSoundLoaded: vi.fn(),
 }));
-const library = vi.hoisted(() => ({ prepareClickSound: vi.fn() }));
+const library = vi.hoisted(() => ({
+  prepareClickSound: vi.fn(),
+  readClickSound: vi.fn(),
+  writeClickSound: vi.fn(),
+  deleteClickSound: vi.fn(),
+}));
 
 vi.mock('./NativeKitbagCommands', () => ({
   getKitbagCommands: () => commands,
@@ -22,12 +27,16 @@ vi.mock('./NativeKitbagLibrary', () => ({
 const {
   clearCustomSound,
   customSoundLoaded,
+  deleteClickSound,
   loadCustomSound,
   prepareClickSound,
+  readClickSound,
+  writeClickSound,
 } = await import('./clickSound.ts');
 
 const SOURCE = 'content://picked/rimshot.flac';
 const FILE = 'sound-a.wav';
+const WAV = 'UklGRiQAAAA=';
 const LAST_SLOT = KB_CUSTOM_SOUND_SLOTS - 1;
 const UNKNOWN_RESULT = 99;
 const OUT_OF_RANGE_SLOTS = [-1, KB_CUSTOM_SOUND_SLOTS, 0.5, Number.NaN];
@@ -115,4 +124,18 @@ it('clears and polls a slot through the command module', async () => {
   await expect(customSoundLoaded(LAST_SLOT)).resolves.toBe(true);
   expect(commands.clearCustomSound).toHaveBeenCalledExactlyOnceWith(LAST_SLOT);
   expect(commands.customSoundLoaded).toHaveBeenCalledExactlyOnceWith(LAST_SLOT);
+});
+
+it('reads, writes and deletes a click sound file through the library module', async () => {
+  library.readClickSound.mockResolvedValue(WAV);
+  library.writeClickSound.mockResolvedValue(undefined);
+  library.deleteClickSound.mockResolvedValue(undefined);
+
+  await expect(readClickSound(FILE)).resolves.toBe(WAV);
+  await writeClickSound(FILE, WAV);
+  await deleteClickSound(FILE);
+
+  expect(library.readClickSound).toHaveBeenCalledExactlyOnceWith(FILE);
+  expect(library.writeClickSound).toHaveBeenCalledExactlyOnceWith(FILE, WAV);
+  expect(library.deleteClickSound).toHaveBeenCalledExactlyOnceWith(FILE);
 });
