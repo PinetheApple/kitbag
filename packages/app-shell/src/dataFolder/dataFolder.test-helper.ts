@@ -70,7 +70,11 @@ export function fakeFolder(
     native: () => native,
     storedFiles: () =>
       Promise.resolve(
-        AWAY_PATHS.map((path) => ({ row: {} as never, audioPaths: [path] })),
+        AWAY_PATHS.map((path) => ({
+          row: {} as never,
+          audioPaths: [path],
+          waveformPaths: [],
+        })),
       ),
     players: {
       tracks: () => ({ song: null, stems: null }),

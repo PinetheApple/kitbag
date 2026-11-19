@@ -125,7 +125,7 @@ class MoveRunner(
           MovePhase.COPYING -> copying(state)
           MovePhase.VERIFYING -> verifying(state)
           MovePhase.CATCH_UP -> catchUp(state)
-          MovePhase.SWITCHED -> save(promoted(state).copy(phase = MovePhase.CLEANING))
+          MovePhase.SWITCHED -> save(state.copy(phase = MovePhase.CLEANING))
           MovePhase.CLEANING -> cleaning(state)
           MovePhase.DONE -> {
             journal.clear()
@@ -179,7 +179,7 @@ class MoveRunner(
         val sha256 = DurableFiles.copyAndHash(source, File(copyRoot, entry.path), cancelRequested::get)
         save(next.withEntry(entry.copy(sha256 = sha256)))
       } else {
-        if (sourceGone(state)) throw Stop(MoveOutcome.Failed(MoveFailure.SOURCE_UNAVAILABLE))
+        if (mountedRoot(state.source) == null) throw Stop(MoveOutcome.Failed(MoveFailure.SOURCE_UNAVAILABLE))
         save(next.copy(files = next.files - entry))
       }
       emit(next, entry.path)
@@ -208,7 +208,7 @@ class MoveRunner(
   }
 
   private fun catchUp(state: MoveState): MoveState {
-    if (state.kind == MoveKind.CARD_RETURN) return switchTo(state)
+    if (state.kind == MoveKind.CARD_RETURN) return folder.switching { switchTo(state) }
     if (switched(state)) return save(state.copy(phase = MovePhase.SWITCHED))
     val (sourceRoot, targetRoot) = roots(state)
     return folder.switching {
@@ -247,7 +247,9 @@ class MoveRunner(
   private fun switchTo(state: MoveState): MoveState =
     synchronized(cancelOrSwitchLock) {
       if (cancelRequested.get()) throw InterruptedIOException()
-      if (state.kind == MoveKind.FOLDER) {
+      if (state.kind == MoveKind.CARD_RETURN) {
+        placeReturned(state)
+      } else {
         folder.select(state.target)
         listOf(state.source, state.target).filterIsInstance<DataFolderLocation.Card>()
           .forEach { folder.forgetAway(it.volumeUuid) }
@@ -255,28 +257,28 @@ class MoveRunner(
       save(state.copy(phase = MovePhase.SWITCHED))
     }
 
-  private fun promoted(state: MoveState): MoveState {
-    val card = state.source as? DataFolderLocation.Card
-    if (state.kind != MoveKind.CARD_RETURN || card == null) return state
+  private fun placeReturned(state: MoveState) {
+    val card = state.source as DataFolderLocation.Card
     val targetRoot = mountedRoot(state.target) ?: throw Stop(MoveOutcome.Failed(MoveFailure.TARGET_UNAVAILABLE))
     for (entry in state.files) {
-      CardReturn.promote(targetRoot, entry.path)
+      CardReturn.place(targetRoot, entry.path)
       emit(state, entry.path)
     }
-    folder.forgetAway(card.volumeUuid)
-    return state
+    folder.forgetAway(card.volumeUuid, state.files.map { it.path })
   }
 
   private fun switched(state: MoveState) = folder.storedLocation() == state.target
 
   private fun maybeSwitched(state: MoveState): Boolean {
-    if (state.kind == MoveKind.CARD_RETURN) return state.phase >= MovePhase.SWITCHED
+    if (state.kind == MoveKind.CARD_RETURN) return state.phase >= MovePhase.SWITCHED || anyPlaced(state)
     return folder.storedLocation().let { stored -> stored == null || stored == state.target }
   }
 
-  // A return planned only files present on the card, so one gone means the card went, not a deleted song.
-  private fun sourceGone(state: MoveState): Boolean =
-    state.kind == MoveKind.CARD_RETURN || mountedRoot(state.source) == null
+  // Preflight proved every planned path absent on the target, so one there now was placed by this return.
+  private fun anyPlaced(state: MoveState): Boolean {
+    val targetRoot = mountedRoot(state.target) ?: return false
+    return state.phase >= MovePhase.CATCH_UP && state.files.any { File(targetRoot, it.path).exists() }
+  }
 
   private fun copyRoot(state: MoveState, targetRoot: File): File =
     if (state.kind == MoveKind.CARD_RETURN) CardReturn.stagingRoot(targetRoot) else targetRoot

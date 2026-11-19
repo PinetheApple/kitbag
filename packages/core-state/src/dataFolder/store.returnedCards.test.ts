@@ -1,5 +1,5 @@
 import type { DataFolderVolume } from '@kitbag/core-native';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { DATA_FOLDER_CODES as CODES } from './codes.test-helper.ts';
 import { returnedCards } from './store.ts';
@@ -59,6 +59,20 @@ describe('returned cards', () => {
     progress(status());
     expect(returnedCards(store.getState())).toEqual([]);
     progress(status({ running: false, paused: true }));
+    expect(returnedCards(store.getState())).toEqual([]);
+  });
+
+  it('lists none while the data folder itself is unavailable', async () => {
+    const { store, native, folderChanged } = await started([INTERNAL, card()]);
+    native.listVolumes.mockResolvedValue({
+      ...VOLUMES,
+      currentAvailable: false,
+      volumes: [INTERNAL, card()],
+    });
+    folderChanged();
+    await vi.waitFor(() => {
+      expect(store.getState().volumes?.currentAvailable).toBe(false);
+    });
     expect(returnedCards(store.getState())).toEqual([]);
   });
 

@@ -18,13 +18,11 @@ internal object CardReturn {
 
   fun stagedPath(path: String) = "$STAGING_DIR_NAME/$path"
 
-  fun promote(targetRoot: File, path: String) {
+  // No staged file: placed by an earlier attempt, or placed and since deleted with its song.
+  fun place(targetRoot: File, path: String) {
     val staged = LibraryPaths.resolve(stagingRoot(targetRoot), path)
     val placed = LibraryPaths.resolve(targetRoot, path)
-    if (!staged.isFile) {
-      if (placed.isFile) return
-      throw IOException("Neither the copy nor its staged file is there: $path")
-    }
+    if (!staged.isFile) return
     val dir = placed.parentFile ?: throw IOException("No folder for $path")
     if (!dir.isDirectory && !dir.mkdirs()) throw IOException("Could not create the folder for $path")
     if (!staged.renameTo(placed)) throw IOException("Could not move $path into place")

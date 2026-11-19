@@ -28,6 +28,12 @@ class AwayManifest(
   fun remove(volumeUuid: String) = replace(volumeUuid, emptySet())
 
   @Synchronized
+  fun removeAway(volumeUuid: String, relativePaths: Collection<String>) {
+    val existing = load() ?: throw UnreadableStateException(state.name)
+    replace(volumeUuid, existing[volumeUuid].orEmpty() - relativePaths.toSet())
+  }
+
+  @Synchronized
   fun replace(volumeUuid: String, relativePaths: Set<String>) {
     val existing = load() ?: throw UnreadableStateException(state.name)
     if (existing[volumeUuid].orEmpty() == relativePaths) return

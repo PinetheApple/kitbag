@@ -83,7 +83,7 @@ export function setupStore({
         audioPaths: ['songs/a/a.mp3'],
         waveformPaths: ['songs/a/a.kwav'],
       },
-      { row: stemsRow(), audioPaths: ['stems/r/bass.flac'] },
+      { row: stemsRow(), audioPaths: ['stems/r/bass.flac'], waveformPaths: [] },
     ]),
   );
   const store = createDataFolderStore({

@@ -116,6 +116,9 @@ class DataFolder(
 
   fun forgetAway(volumeUuid: String) = awayManifest.remove(volumeUuid)
 
+  fun forgetAway(volumeUuid: String, relativePaths: Collection<String>) =
+    awayManifest.removeAway(volumeUuid, relativePaths)
+
   fun awayOn(volumeUuid: String): Set<String>? = awayManifest.load()?.let { it[volumeUuid].orEmpty() }
 
   fun awayOnCard(volumeUuid: String): List<File> {

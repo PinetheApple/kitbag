@@ -101,7 +101,8 @@ export function returnedCards(
   state: DataFolderState,
 ): readonly DataFolderVolume[] {
   const { codes, volumes, move, pending } = state;
-  if (codes === null || volumes === null || move !== null || pending) return [];
+  const busy = move !== null || pending || folderUnavailable(state);
+  if (codes === null || volumes === null || busy) return [];
   return volumes.volumes.filter(
     (volume) =>
       volume.volumeUuid !== null &&

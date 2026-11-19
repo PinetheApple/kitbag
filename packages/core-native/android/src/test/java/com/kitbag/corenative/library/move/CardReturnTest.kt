@@ -4,7 +4,9 @@ import com.kitbag.corenative.library.AwayManifest
 import com.kitbag.corenative.library.DataFolderLocation
 import com.kitbag.corenative.library.LibraryFile
 import com.kitbag.corenative.library.move.MoveFixture.Companion.CARD_UUID
+import com.kitbag.corenative.library.move.MoveFixture.Companion.DRUMS
 import com.kitbag.corenative.library.move.MoveFixture.Companion.IMPORTED
+import com.kitbag.corenative.library.move.MoveFixture.Companion.OTHER_CARD_UUID
 import com.kitbag.corenative.library.move.MoveFixture.Companion.SONG
 import com.kitbag.corenative.library.move.MoveFixture.Companion.WAVEFORM
 import java.io.File
@@ -49,6 +51,14 @@ class CardReturnTest {
   private fun stagedFiles() =
     fx.internalRoot.walkTopDown().filter { it.isFile && it.path.contains(STAGING_SEGMENT) }.toList()
 
+  private fun killedMidPlacement(): MoveRunner {
+    var placed = 0
+    return fx.runner {
+      val placing = it.phase >= MovePhase.CATCH_UP && it.path != null
+      if (placing && ++placed == PLACED_BEFORE_KILL) throw MoveFixture.Killed()
+    }
+  }
+
   private fun assertReturned() {
     assertEquals(DataFolderLocation.Internal, fx.location())
     assertEquals(fx.hashes(away), onInternal())
@@ -75,7 +85,10 @@ class CardReturnTest {
   @Test
   fun `an away song plays from the card until its copy is verified and switched`() {
     val seen = mutableListOf<LibraryFile>()
-    fx.runner { if (it.phase <= MovePhase.CATCH_UP) seen.add(fx.folder.resolve(SONG)) }.returnCard(card)
+    val beforePlacing = { p: MoveProgress ->
+      p.phase < MovePhase.CATCH_UP || p.phase == MovePhase.CATCH_UP && p.path == null
+    }
+    fx.runner { if (beforePlacing(it)) seen.add(fx.folder.resolve(SONG)) }.returnCard(card)
     assertTrue(seen.isNotEmpty())
     assertTrue(seen.all { it == LibraryFile.Present(File(fx.cardRoot, SONG).canonicalFile) })
   }
@@ -94,14 +107,73 @@ class CardReturnTest {
   }
 
   @Test
-  fun `a kill halfway through the switch resumes without losing a song`() {
-    var renames = 0
-    val killer = fx.runner {
-      if (it.phase == MovePhase.SWITCHED && it.path != null && ++renames == 2) throw MoveFixture.Killed()
-    }
-    assertThrows(MoveFixture.Killed::class.java) { killer.returnCard(card) }
+  fun `a kill halfway through placing the copies resumes without losing a song`() {
+    assertThrows(MoveFixture.Killed::class.java) { killedMidPlacement().returnCard(card) }
+    assertEquals(MovePhase.CATCH_UP, fx.newProcess().pending()?.phase)
     assertEquals(MoveOutcome.Done, fx.newProcess().resume())
     assertReturned()
+  }
+
+  @Test
+  fun `a return killed mid-placement survives an ejected card and another move`() {
+    assertThrows(MoveFixture.Killed::class.java) { killedMidPlacement().returnCard(card) }
+    fx.mount(card = false, otherCard = true)
+    fx.folder = fx.newFolder()
+    fx.moves().start(DataFolderLocation.Card(OTHER_CARD_UUID))
+    fx.mount(card = true, otherCard = true)
+    fx.folder = fx.newFolder()
+    val runner = fx.runner()
+    runner.finishLeftovers()
+    runner.resume()
+    away.keys.forEach { assertTrue(it, fx.folder.resolve(it) is LibraryFile.Present) }
+  }
+
+  @Test
+  fun `undo is refused once a copy has been placed, and resume finishes`() {
+    assertThrows(MoveFixture.Killed::class.java) { killedMidPlacement().returnCard(card) }
+    assertFalse(fx.newProcess().cancel())
+    assertEquals(MoveOutcome.Done, fx.newProcess().resume())
+    assertReturned()
+  }
+
+  @Test
+  fun `a song deleted after its copy was placed does not stall the return`() {
+    assertThrows(MoveFixture.Killed::class.java) { killedMidPlacement().returnCard(card) }
+    assertTrue(File(fx.internalRoot, WAVEFORM).delete())
+    assertEquals(MoveOutcome.Done, fx.newProcess().resume())
+    assertEquals(fx.hashes(away - WAVEFORM), onInternal())
+    assertEquals(emptyMap<String, Set<String>>(), awayList())
+    assertEquals(setOf(NOT_AWAY), fx.visibleFiles(fx.cardRoot).keys)
+  }
+
+  @Test
+  fun `an IO failure while placing the copies is resumed`() {
+    val blocker = File(fx.internalRoot, BLOCKED_DIR)
+    val failing = fx.runner {
+      if (it.phase == MovePhase.CATCH_UP && it.path == null) {
+        blocker.parentFile.mkdirs()
+        blocker.writeText("in the way")
+      }
+    }
+    assertEquals(MoveOutcome.Failed(MoveFailure.IO), failing.returnCard(card))
+    assertEquals(MovePhase.CATCH_UP, fx.runner().pending()?.phase)
+    assertTrue(blocker.delete())
+    assertEquals(MoveOutcome.Done, fx.newProcess().resume())
+    assertReturned()
+  }
+
+  @Test
+  fun `a file gone from a still-mounted card stays away while the rest return`() {
+    var copied = 0
+    val losing = fx.runner {
+      if (it.phase == MovePhase.COPYING && it.path != null && ++copied == 1) {
+        assertTrue(File(fx.cardRoot, DRUMS).delete())
+      }
+    }
+    assertEquals(MoveOutcome.Done, losing.returnCard(card))
+    assertEquals(fx.hashes(away - DRUMS), onInternal())
+    assertEquals(mapOf(CARD_UUID to setOf(DRUMS)), awayList())
+    assertFalse(fx.journalFile.exists())
   }
 
   @Test
@@ -214,5 +286,7 @@ class CardReturnTest {
   companion object {
     private const val NOT_AWAY = "songs/z/z.mp3"
     private const val STAGING_SEGMENT = "/.card-return/"
+    private const val BLOCKED_DIR = "stems/job1"
+    private const val PLACED_BEFORE_KILL = 2
   }
 }
