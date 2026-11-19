@@ -1,6 +1,6 @@
 import type { MeterSheetNotice } from '@kitbag/core-design';
 import {
-  GRID_METERS,
+  isGridMeter,
   NO_METER_OVERRIDE,
   useSongLibrary,
   useSongPlayer,
@@ -66,12 +66,11 @@ export function useSongMeter(songId: number): SongMeter {
 
   const onPickMeter = useCallback(
     (meter: number) => {
-      const picked = GRID_METERS.find((m) => m === meter);
       const shown = override.meterBeatsPerBar ?? detectedMeter;
-      if (picked === undefined || picked === shown) return;
+      if (!isGridMeter(meter) || meter === shown) return;
       void change(
-        { ...override, meterBeatsPerBar: picked },
-        meterSetText(picked),
+        { ...override, meterBeatsPerBar: meter },
+        meterSetText(meter),
       );
     },
     [override, detectedMeter, change],

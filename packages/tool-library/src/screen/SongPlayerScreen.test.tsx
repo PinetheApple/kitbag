@@ -143,6 +143,7 @@ vi.mock('@kitbag/core-state', async (original) => {
   };
   return {
     GRID_METERS: [3, 4],
+    isGridMeter: (meter: number) => [3, 4].includes(meter),
     NO_METER_OVERRIDE: { meterBeatsPerBar: null, barOneSeconds: null },
     analysisFailure: () => library.failure,
     beatBeside,

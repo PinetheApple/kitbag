@@ -38,6 +38,7 @@ export {
   GRID_METER,
   GRID_METERS,
   type GridMeter,
+  isGridMeter,
   type MeterOverride,
   type MeterOverridePatch,
   meterOverrideOf,

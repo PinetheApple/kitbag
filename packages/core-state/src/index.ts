@@ -388,7 +388,9 @@ export {
   type DetectedMeter,
 } from './stemPlayer/meterOverride.ts';
 export {
+  GRID_METER,
   GRID_METERS,
+  isGridMeter,
   NO_METER_OVERRIDE,
   type GridMeter,
   type MeterOverride,

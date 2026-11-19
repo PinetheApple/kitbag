@@ -30,7 +30,7 @@ const apply = vi.hoisted(() =>
 const save = vi.hoisted(() => vi.fn(() => Promise.resolve(player.saves)));
 
 vi.mock('@kitbag/core-state', () => ({
-  GRID_METERS: [3, 4],
+  isGridMeter: (meter: number) => [3, 4].includes(meter),
   NO_METER_OVERRIDE: { meterBeatsPerBar: null, barOneSeconds: null },
   useSongPlayer: (select: (state: unknown) => unknown) =>
     select({
