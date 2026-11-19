@@ -86,6 +86,7 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
       return true;
     case CommandType::kSetSubdivision:
       subdivision_ = Clamp(command.int_a, kMinSubdivision, kMaxSubdivision);
+      grid_state_.resync_sub = true;
       return true;
     case CommandType::kSetSubdivisionAccents:
       SetSubdivisionAccentRow(command.int_a, command.int_b);
@@ -103,7 +104,7 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
       SetPolyAgainstState(command.int_a);
       return true;
     default:
-      return ApplyGridClickCommand(command);
+      return false;
   }
 }
 

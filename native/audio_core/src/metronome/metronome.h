@@ -241,7 +241,7 @@ class Metronome {
   void OnGridTick(int tick, uint32_t sample_rate);
   void OnSubdivisionTick(int64_t speaker_beat, int slot, uint32_t sample_rate);
   void TriggerSubdivision(int subdivision, int slot, uint32_t sample_rate);
-  void TriggerSubdivisionVoice(bool accented, uint32_t sample_rate);
+  void TriggerSubdivisionVoice(Accent accent, uint32_t sample_rate);
   bool SubdivisionSlotAccented(int subdivision, int slot) const;
   void OnRigTick(int slot, uint32_t sample_rate);
   uint16_t& AccentRowFor(int subdivision);
@@ -369,6 +369,7 @@ class Metronome {
   RtPublisher<BeatGrid> grid_;
   GridState grid_state_;
   GridClick grid_click_;
+  uint32_t click_epoch_ = 0;  // app thread
   // Bar counter, -1 until the first downbeat after Start. Incremented at
   // constant tempo, derived from the grid in grid mode — SPEC.md §4.2.1.
   int64_t current_bar_ = -1;

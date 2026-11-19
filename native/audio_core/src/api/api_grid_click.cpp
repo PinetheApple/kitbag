@@ -8,6 +8,10 @@ using kitbag::ToEngine;
 
 namespace {
 
+static_assert(
+    kitbag::Metronome::kMaxBeats < (1 << kitbag::GridClick::kGroupBits)
+);
+
 bool ValidGrouping(const int32_t* sizes, int32_t count) {
   if (count < 0 || count > KB_MAX_GRID_GROUPS) return false;
   if (count > 0 && sizes == nullptr) return false;

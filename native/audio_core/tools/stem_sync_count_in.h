@@ -40,7 +40,7 @@ kb_engine* OpenEngine(const std::string& stem, double rate);
 Start PlanStart(kb_engine* engine, double rate);
 bool CountIn(kb_engine* engine, const Start& start, int32_t start_click);
 // A beat sounds on the first output frame whose song position reaches it.
-int64_t GridClick(int64_t out, int64_t head, double rate, double beat);
+int64_t HeardFrame(int64_t out, int64_t head, double rate, double beat);
 size_t FirstBeatAfter(int64_t head);
 std::vector<int64_t> CountClicks(const Start& start);
 void RenderUntil(kb_engine* engine, Take* take, int64_t frame);

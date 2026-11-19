@@ -475,8 +475,12 @@ bar, and never bar-muted; the mirrors count them back from the first bar.
 bar into groups (3+2+2): the first beat of each later group plays the accented
 subdivision click, and a bar whose length differs from the grouping's sum keeps
 only its downbeat accent. `kb_metronome_set_grid_rate` adds a normal click
-halfway through each measured interval (x2), or sounds every other beat counted
-from each downbeat, restarting at every downbeat (x1/2).
+halfway through each measured interval (x2), or sounds every other beat (x1/2),
+counted from each group's first beat under a grouping and from each downbeat
+otherwise; at x1/2 subdivisions divide the span from one click to the next.
+`set_grid` and `clear_grid` reset both, so the caller sends them again after
+each `set_grid`. A count-in stays plain under any grouping or rate. Owner may
+overturn these (`docs/decisions.md`, 2026-11-19).
 
 **Downbeats absent → no bar accent.** Every grid beat sounds normal,
 `current_beat` reads 0, `bar_phase` sweeps each beat, and bar mute does not

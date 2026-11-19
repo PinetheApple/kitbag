@@ -51,10 +51,9 @@ KB_EXPORT kb_result kb_metronome_set_grid(
  * sounded, not on the next sample. */
 KB_EXPORT void kb_metronome_clear_grid(kb_engine* engine);
 
-/* Most groups a grid bar grouping may hold (kb_metronome_set_grid_grouping). */
 #define KB_MAX_GRID_GROUPS 8
 
-/* Click rate under a grid, relative to the grid's beats. */
+/* Click rate relative to the grid's beats. */
 typedef enum kb_grid_rate {
   KB_GRID_RATE_SINGLE = 0,
   KB_GRID_RATE_DOUBLE = 1,
@@ -64,9 +63,11 @@ typedef enum kb_grid_rate {
 /* Accent a grid's bars in groups, such as 3+2+2 for a 7-beat bar. While a bar's
  * length equals the sum of sizes, the first beat of each later group plays the
  * accent sound's accented subdivision click, quieter than the bar's downbeat;
- * any other bar keeps only its downbeat accent. Applies only while a grid is
- * set, survives kb_metronome_clear_grid and stop, and takes effect from the
- * next beat. count 0 clears the grouping (sizes may then be NULL).
+ * any other bar keeps only its downbeat accent. count 0 clears the grouping
+ * (sizes may then be NULL). Takes effect from the next beat.
+ * kb_metronome_set_grid and kb_metronome_clear_grid reset the grouping to none
+ * and the rate to KB_GRID_RATE_SINGLE: send both again after each set_grid.
+ * A count-in sounds plain whatever the grouping and rate.
  * Returns KB_ERROR_INVALID_ARGUMENT for a negative count or one above
  * KB_MAX_GRID_GROUPS, NULL sizes with a positive count, a size below 1, or
  * sizes summing above Metronome::kMaxBeats; KB_ERROR_BUSY when the command
@@ -77,12 +78,12 @@ KB_EXPORT kb_result kb_metronome_set_grid_grouping(
     int32_t count
 );
 /* Click rate under a grid. KB_GRID_RATE_DOUBLE adds a normal click halfway
- * between each pair of grid beats, following the grid's own spacing.
- * KB_GRID_RATE_HALF sounds every other beat counted from each bar's downbeat,
- * restarting at every downbeat, so an odd bar's last beat and the next
- * downbeat both sound; a grid without downbeats counts from its first beat.
- * Subdivisions divide each half beat at DOUBLE and are unchanged at HALF.
- * Survives kb_metronome_clear_grid and stop; constant tempo ignores it.
+ * between each pair of grid beats, following the grid's own spacing, and
+ * subdivisions divide each half. KB_GRID_RATE_HALF sounds every other beat,
+ * counted from each group's first beat under a grouping and from each downbeat
+ * otherwise, so every downbeat and group start sounds; a grid without
+ * downbeats counts from its first beat. Subdivisions divide the span from one
+ * click to the next. Reset by set_grid and clear_grid as above.
  * Returns KB_ERROR_INVALID_ARGUMENT for a rate outside kb_grid_rate and
  * KB_ERROR_BUSY when the command ring is full. */
 KB_EXPORT kb_result kb_metronome_set_grid_rate(kb_engine* engine, int32_t rate);

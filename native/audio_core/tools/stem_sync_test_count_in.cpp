@@ -19,7 +19,7 @@ using click_take::SameClicks;
 using count_in::CountClicks;
 using count_in::FirstBeatAfter;
 using count_in::FirstStem;
-using count_in::GridClick;
+using count_in::HeardFrame;
 using count_in::kBarBeats;
 using count_in::kClickOn;
 using count_in::kCountBeats;
@@ -55,8 +55,8 @@ bool CountInClickOn(kb_engine* engine, const Start& start) {
 
 int64_t Midway(int64_t out, int64_t head, double rate, size_t beat) {
   const std::vector<double> beats = Beats();
-  return (GridClick(out, head, rate, beats[beat]) +
-          GridClick(out, head, rate, beats[beat + 1])) /
+  return (HeardFrame(out, head, rate, beats[beat]) +
+          HeardFrame(out, head, rate, beats[beat + 1])) /
          2;
 }
 
@@ -64,7 +64,7 @@ std::vector<int64_t> CountedStartClicks(const Start& start) {
   std::vector<int64_t> clicks = CountClicks(start);
   const std::vector<double> beats = Beats();
   for (size_t i = kStartBeat; i < kStartBeat + kGridClicks; ++i) {
-    clicks.push_back(GridClick(start.end, start.head, start.rate, beats[i]));
+    clicks.push_back(HeardFrame(start.end, start.head, start.rate, beats[i]));
   }
   return clicks;
 }
@@ -75,7 +75,7 @@ std::vector<int64_t> ResumeClicks(const Run& run) {
   const size_t first = FirstBeatAfter(kResumeSeek);
   for (size_t i = first; i < first + kResumeClicks; ++i) {
     clicks.push_back(
-        GridClick(run.resumed_at, kResumeSeek, run.start.rate, beats[i])
+        HeardFrame(run.resumed_at, kResumeSeek, run.start.rate, beats[i])
     );
   }
   return clicks;

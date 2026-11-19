@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <span>
@@ -13,8 +14,9 @@
 namespace stem_sync {
 namespace {
 
-using count_in::GridClick;
+using count_in::HeardFrame;
 using count_in::kStartBeat;
+using grid_levels::Midpoint;
 using kitbag_test::Check;
 
 constexpr double kSlow = 0.75;
@@ -24,8 +26,8 @@ constexpr int32_t kSevenBeats = 7;
 constexpr int32_t kThreeTwoTwo[] = {3, 2, 2};
 constexpr int32_t kTwoTwoThree[] = {2, 2, 3};
 constexpr int32_t kTwoOne[] = {2, 1};
-// Beat i's level on 7-beat bars from beat 1, grouped 3+2+2.
-constexpr char kThreeTwoTwoBeats[] = "nBnnGnGnBnnGnGnBnnGnGnBnnGnGnBnnGnGn";
+constexpr char kLevelOfBeatInThreeTwoTwoBarsFromBeatOne[] =
+    "nBnnGnGnBnnGnGnBnnGnGnBnnGnGnBnnGnGn";
 constexpr size_t kPausedBeat = 10;
 constexpr size_t kSeekBeat = 16;
 constexpr double kPastHalf = 0.6;
@@ -75,29 +77,67 @@ kb_engine* OpenSevenBeatBars(const std::string& stem) {
   return engine;
 }
 
-// Every beat and half from song frame head on, heard from output frame out.
 void AddEvents(
     std::vector<Event>* events,
-    int64_t out,
-    int64_t head,
-    int64_t until
+    int64_t heard_from,
+    int64_t song_from,
+    int64_t heard_until
 ) {
   const std::vector<double> beats = Beats();
   for (size_t i = 0; i < beats.size(); ++i) {
-    if (beats[i] > static_cast<double>(head)) {
+    if (beats[i] > static_cast<double>(song_from)) {
       events->push_back(
-          {GridClick(out, head, kSlow, beats[i]), kThreeTwoTwoBeats[i]}
+          {HeardFrame(heard_from, song_from, kSlow, beats[i]),
+           kLevelOfBeatInThreeTwoTwoBarsFromBeatOne[i]}
       );
     }
     const double half =
-        i + 1 < beats.size() ? (beats[i] + beats[i + 1]) / 2.0 : -1.0;
-    if (half > static_cast<double>(head)) {
+        i + 1 < beats.size() ? Midpoint(beats[i], beats[i + 1]) : -1.0;
+    if (half > static_cast<double>(song_from)) {
       events->push_back(
-          {GridClick(out, head, kSlow, half), grid_levels::kNormal}
+          {HeardFrame(heard_from, song_from, kSlow, half), grid_levels::kNormal}
       );
     }
   }
-  std::erase_if(*events, [&](const Event& e) { return e.frame >= until; });
+  std::erase_if(*events, [&](const Event& e) {
+    return e.frame >= heard_until;
+  });
+}
+
+void ExpectLevels(
+    const std::string& got,
+    const std::string& want,
+    size_t clicks,
+    size_t want_clicks,
+    const std::string& label
+) {
+  Check(got == want && clicks == want_clicks, label.c_str());
+  if (got != want || clicks != want_clicks) {
+    std::fprintf(
+        stderr,
+        "  got %s (%zu clicks), expected %s (%zu clicks)\n",
+        got.c_str(),
+        clicks,
+        want.c_str(),
+        want_clicks
+    );
+  }
+}
+
+size_t Sounding(const std::string& levels) {
+  return levels.size() -
+         static_cast<size_t>(
+             std::count(levels.begin(), levels.end(), grid_levels::kSilent)
+         );
+}
+
+size_t ClicksFrom(const Take& take, int64_t frame) {
+  const std::vector<int64_t> clicks = click_take::DetectClicks(take.right);
+  return static_cast<size_t>(
+      std::count_if(clicks.begin(), clicks.end(), [&](int64_t c) {
+        return c >= frame;
+      })
+  );
 }
 
 void ExpectEvents(
@@ -111,17 +151,7 @@ void ExpectEvents(
     got += grid_levels::LevelAt(take.right, e.frame);
     want += e.level;
   }
-  const size_t clicks = click_take::DetectClicks(take.right).size();
-  Check(got == want && clicks == events.size(), label.c_str());
-  if (got != want || clicks != events.size()) {
-    std::fprintf(
-        stderr,
-        "  got %s (%zu clicks), expected %s\n",
-        got.c_str(),
-        clicks,
-        want.c_str()
-    );
-  }
+  ExpectLevels(got, want, ClicksFrom(take, 0), events.size(), label);
 }
 
 struct SeekRun {
@@ -139,7 +169,7 @@ SeekRun PlayPauseSeek(kb_engine* engine) {
   count_in::RenderUntil(
       engine,
       &run.take,
-      GridClick(0, 0, kSlow, beats[kPausedBeat]) + kRingFrames
+      HeardFrame(0, 0, kSlow, beats[kPausedBeat]) + kRingFrames
   );
   run.paused_at = static_cast<int64_t>(run.take.right.size());
   kb_mixer_pause(engine);
@@ -150,13 +180,16 @@ SeekRun PlayPauseSeek(kb_engine* engine) {
   kb_mixer_seek(engine, run.seek);
   run.resumed_at = static_cast<int64_t>(run.take.right.size());
   kb_mixer_play(engine);
-  run.end = GridClick(run.resumed_at, run.seek, kSlow, beats[kLastBeat]) + 1;
+  run.end = HeardFrame(run.resumed_at, run.seek, kSlow, beats[kLastBeat]) + 1;
   count_in::RenderUntil(engine, &run.take, run.end + kRingFrames);
   return run;
 }
 
 void TestSeekAtSlowSpeed(const std::string& stem) {
+  const std::string label =
+      "grid grouping: 3+2+2 at x2 holds through a seek at 0.75x";
   kb_engine* engine = OpenSevenBeatBars(stem);
+  Check(engine != nullptr, label.c_str());
   if (engine == nullptr) return;
   SetGridClick(engine, kThreeTwoTwo, KB_GRID_RATE_DOUBLE);
   const SeekRun run = PlayPauseSeek(engine);
@@ -166,22 +199,7 @@ void TestSeekAtSlowSpeed(const std::string& stem) {
   std::vector<Event> resumed;
   AddEvents(&resumed, run.resumed_at, run.seek, run.end);
   events.insert(events.end(), resumed.begin(), resumed.end());
-  ExpectEvents(
-      run.take,
-      events,
-      "grid grouping: 3+2+2 at x2 holds through a seek at 0.75x"
-  );
-}
-
-void ExpectLevels(
-    const std::string& got,
-    const std::string& want,
-    const std::string& label
-) {
-  Check(got == want, label.c_str());
-  if (got != want) {
-    std::fprintf(stderr, "  got %s, expected %s\n", got.c_str(), want.c_str());
-  }
+  ExpectEvents(run.take, events, label);
 }
 
 std::string LoopLevels(
@@ -219,13 +237,19 @@ void ExpectLoop(
 ) {
   std::string want;
   for (int i = 0; i < kLoopPasses; ++i) want += pass;
-  ExpectLevels(LoopLevels(stem, groups, rate), want, label);
+  const std::string got = LoopLevels(stem, groups, rate);
+  ExpectLevels(got, want, got.size(), want.size(), label);
 }
 
-std::string
+struct Counted {
+  std::string levels;
+  size_t clicks = 0;
+};
+
+Counted
 CountedLevels(const std::string& stem, int32_t rate, size_t beat_count) {
   kb_engine* engine = count_in::OpenEngine(stem, kSlow);
-  if (engine == nullptr) return "";
+  if (engine == nullptr) return {};
   SetGridClick(engine, kTwoOne, rate);
   Take take;
   RenderPaced(engine, &take, count_in::kSettleBlocks);
@@ -234,22 +258,15 @@ CountedLevels(const std::string& stem, int32_t rate, size_t beat_count) {
   const std::vector<double> beats = Beats();
   std::vector<int64_t> frames;
   for (size_t i = kStartBeat; i < kStartBeat + beat_count; ++i) {
-    frames.push_back(GridClick(start.end, start.head, kSlow, beats[i]) + 1);
+    frames.push_back(HeardFrame(start.end, start.head, kSlow, beats[i]) + 1);
     if (rate == KB_GRID_RATE_DOUBLE && i + 1 < kStartBeat + beat_count) {
-      frames.push_back(
-          GridClick(
-              start.end,
-              start.head,
-              kSlow,
-              (beats[i] + beats[i + 1]) / 2.0
-          ) +
-          1
-      );
+      const double half = Midpoint(beats[i], beats[i + 1]);
+      frames.push_back(HeardFrame(start.end, start.head, kSlow, half) + 1);
     }
   }
   count_in::RenderUntil(engine, &take, frames.back() + kRingFrames);
   kb_engine_destroy(engine);
-  return grid_levels::Levels(take.right, frames);
+  return {grid_levels::Levels(take.right, frames), ClicksFrom(take, start.end)};
 }
 
 void ExpectCounted(
@@ -259,7 +276,8 @@ void ExpectCounted(
     const std::string& want,
     const std::string& label
 ) {
-  ExpectLevels(CountedLevels(stem, rate, beat_count), want, label);
+  const Counted got = CountedLevels(stem, rate, beat_count);
+  ExpectLevels(got.levels, want, got.clicks, Sounding(want), label);
 }
 
 }  // namespace

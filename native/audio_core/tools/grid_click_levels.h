@@ -14,16 +14,19 @@ namespace grid_levels {
 using kitbag::metronome_detail::kAccentAmplitude;
 using kitbag::metronome_detail::kAccentedSubdivisionGain;
 using kitbag::metronome_detail::kBeatAmplitude;
+using kitbag::metronome_detail::kSubdivisionAmplitude;
 
 constexpr char kBar = 'B';
 constexpr char kGroup = 'G';
 constexpr char kNormal = 'n';
+constexpr char kTick = 't';
 constexpr char kSilent = '-';
 constexpr char kMisplaced = 'x';
 
 constexpr double kGroupAmplitude = kAccentAmplitude * kAccentedSubdivisionGain;
 constexpr double kBarFloor = (kAccentAmplitude + kGroupAmplitude) / 2.0;
 constexpr double kGroupFloor = (kGroupAmplitude + kBeatAmplitude) / 2.0;
+constexpr double kTickFloor = (kBeatAmplitude + kSubdivisionAmplitude) / 2.0;
 constexpr float kLoud = 1e-2f;
 // Under half the closest pair of clicks these fixtures place.
 constexpr int64_t kSearchFrames = 1200;
@@ -54,7 +57,16 @@ inline char LevelAt(const std::vector<float>& channel, int64_t frame) {
     peak = std::max(peak, std::fabs(channel[static_cast<size_t>(k)]));
   }
   if (peak > kBarFloor) return kBar;
-  return peak > kGroupFloor ? kGroup : kNormal;
+  if (peak > kGroupFloor) return kGroup;
+  return peak > kTickFloor ? kNormal : kTick;
+}
+
+inline double Midpoint(double a, double b) {
+  return (a + b) / 2.0;
+}
+
+inline int64_t BlockStart(int64_t frame, int64_t block_frames) {
+  return frame - frame % block_frames;
 }
 
 inline std::string

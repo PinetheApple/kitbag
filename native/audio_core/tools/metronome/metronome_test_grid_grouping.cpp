@@ -1,69 +1,38 @@
-#include <cmath>
-#include <iterator>
 #include <string>
 
-#include "grid_click_levels.h"
-#include "metronome/grid_bars.h"
-#include "metronome_test_audio.h"
+#include "grid_click_fixture.h"
 
 namespace metronome_test {
 namespace {
 
-// Uneven, and from beat 12 the tempo jumps, so a midpoint at a fixed tempo
-// lands outside the search window around the true one.
-constexpr double kBeatsSec[] = {0.1,  0.61, 1.09, 1.62, 2.11,  2.6,
-                                3.13, 3.61, 4.12, 4.6,  5.11,  5.63,
-                                6.1,  6.49, 6.91, 7.3,  7.71,  8.13,
-                                8.52, 8.93, 9.31, 9.72, 10.14, 10.53};
-constexpr size_t kBeatCount = std::size(kBeatsSec);
-constexpr double kTailSec = 0.5;
-constexpr int32_t kSevenBeatBars[] = {1, 8, 15, 22};
+using grid_click::Configure;
+using grid_click::ExpectLevelString;
+using grid_click::kBeatsSec;
+using grid_click::kSevenBeatBars;
+using grid_click::kThreeTwoTwo;
+using grid_click::kTwoTwoThree;
+using grid_levels::Midpoint;
+
 constexpr int32_t kSixBeatMiddle[] = {1, 8, 14, 21};
-constexpr int32_t kThreeTwoTwo[] = {3, 2, 2};
-constexpr int32_t kTwoTwoThree[] = {2, 2, 3};
 constexpr double kClearAtSec = 3.4;
 constexpr double kRingOutSec = 0.5;
 
-std::unique_ptr<kitbag::BeatGrid> Grid(std::span<const int32_t> downbeats) {
-  auto grid = std::make_unique<kitbag::BeatGrid>();
-  grid->beat_times_sec.assign(std::begin(kBeatsSec), std::end(kBeatsSec));
-  grid->bars = kitbag::GridBars(downbeats, kBeatCount);
-  return grid;
-}
-
-void Configure(
-    kitbag::Metronome& metronome,
-    std::span<const int32_t> downbeats,
-    std::span<const int32_t> grouping,
-    int32_t rate
-) {
-  metronome.SetSounds(kBeepSound, kBeepSound);
-  metronome.SetGridGrouping(grouping);
-  metronome.SetGridRate(rate);
-  metronome.SetGrid(Grid(downbeats), 0, true);
-  metronome.Start();
-}
-
 std::vector<int64_t> EventFrames(bool halves) {
   std::vector<int64_t> frames;
-  for (size_t i = 0; i < kBeatCount; ++i) {
+  for (size_t i = 0; i < std::size(kBeatsSec); ++i) {
     frames.push_back(FramesFor(kBeatsSec[i]));
-    if (halves && i + 1 < kBeatCount) {
-      frames.push_back(FramesFor((kBeatsSec[i] + kBeatsSec[i + 1]) / 2.0));
+    if (halves && i + 1 < std::size(kBeatsSec)) {
+      frames.push_back(FramesFor(Midpoint(kBeatsSec[i], kBeatsSec[i + 1])));
     }
   }
   return frames;
 }
 
-std::vector<float> Take(kitbag::Metronome& metronome) {
-  return RenderLeft(metronome, FramesFor(kBeatsSec[kBeatCount - 1] + kTailSec));
-}
-
-std::string WithHalves(const std::string& beats) {
+std::string WithHalves(const std::string& beats, char half) {
   std::string events;
   for (size_t i = 0; i < beats.size(); ++i) {
     events += beats[i];
-    if (i + 1 < beats.size()) events += grid_levels::kNormal;
+    if (i + 1 < beats.size()) events += half;
   }
   return events;
 }
@@ -74,21 +43,19 @@ struct LevelCase {
   std::span<const int32_t> grouping;
   int32_t rate;
   std::string want;
+  int32_t subdivision = kitbag::Metronome::kMinSubdivision;
 };
 
 void ExpectLevels(const LevelCase& c) {
   kitbag::Metronome metronome;
-  Configure(metronome, c.downbeats, c.grouping, c.rate);
+  metronome.SetSubdivision(c.subdivision);
+  Configure(metronome, kBeatsSec, c.downbeats, c.grouping, c.rate);
+  const bool halves = c.want.size() > std::size(kBeatsSec);
   const std::string got = grid_levels::Levels(
-      Take(metronome),
-      EventFrames(c.rate == KB_GRID_RATE_DOUBLE)
+      grid_click::TakeAll(metronome, kBeatsSec),
+      EventFrames(halves)
   );
-  const std::string detail = "got " + got + ", expected " + c.want;
-  CheckCase(
-      got == c.want,
-      std::string("grid grouping: ") + c.label,
-      detail.c_str()
-  );
+  ExpectLevelString(got, c.want, c.label);
 }
 
 void TestGroupedLevels() {
@@ -112,23 +79,46 @@ void TestGroupedLevels() {
   for (const LevelCase& c : cases) ExpectLevels(c);
 }
 
-void TestRateLevels() {
+void TestDoubleAndHalfLevels() {
   const LevelCase cases[] = {
       {"x2 halves each measured interval, across the tempo change",
        kSevenBeatBars,
        kThreeTwoTwo,
        KB_GRID_RATE_DOUBLE,
-       WithHalves("nBnnGnGnBnnGnGnBnnGnGnBn")},
-      {"x1/2 restarts on each downbeat of an odd bar",
+       WithHalves("nBnnGnGnBnnGnGnBnnGnGnBn", grid_levels::kNormal)},
+      {"x1/2 with 2+2+3 clicks 0, 2, 4, 6 of each bar",
        kSevenBeatBars,
        kTwoTwoThree,
        KB_GRID_RATE_HALF,
        "nB-G-G-nB-G-G-nB-G-G-nB-"},
+      {"x1/2 with 3+2+2 restarts on every group start",
+       kSevenBeatBars,
+       kThreeTwoTwo,
+       KB_GRID_RATE_HALF,
+       "nB-nG-G-B-nG-G-B-nG-G-B-"},
+  };
+  for (const LevelCase& c : cases) ExpectLevels(c);
+}
+
+void TestHalfWithoutGrouping() {
+  const LevelCase cases[] = {
+      {"x1/2 restarts on each downbeat of an odd bar",
+       kSevenBeatBars,
+       {},
+       KB_GRID_RATE_HALF,
+       "nB-n-n-nB-n-n-nB-n-n-nB-"},
       {"x1/2 without downbeats counts from the first beat",
        {},
        {},
        KB_GRID_RATE_HALF,
        "n-n-n-n-n-n-n-n-n-n-n-n-"},
+      {"x1/2 subdivisions divide the span to the next click",
+       kSevenBeatBars,
+       {},
+       KB_GRID_RATE_HALF,
+       "nt" + std::string("B-t-n-t-n-t-nt") + "B-t-n-t-n-t-nt" +
+           "B-t-n-t-n-t-nt" + "B--",
+       kitbag::Metronome::kMinSubdivision + 1},
   };
   for (const LevelCase& c : cases) ExpectLevels(c);
 }
@@ -137,17 +127,19 @@ std::vector<float> RenderClearing(bool set_first) {
   kitbag::Metronome metronome;
   Configure(
       metronome,
+      kBeatsSec,
       kSevenBeatBars,
       set_first ? std::span<const int32_t>(kThreeTwoTwo)
                 : std::span<const int32_t>(),
       set_first ? KB_GRID_RATE_DOUBLE : KB_GRID_RATE_SINGLE
   );
-  const int64_t clear_at = FramesFor(kClearAtSec);
+  const int64_t clear_at =
+      grid_levels::BlockStart(FramesFor(kClearAtSec), kBlockFrames);
   return RenderLeft(
       metronome,
-      FramesFor(kBeatsSec[kBeatCount - 1] + kTailSec),
+      FramesFor(kBeatsSec[std::size(kBeatsSec) - 1] + grid_click::kTailSec),
       [&](int64_t rendered) {
-        if (rendered != clear_at - clear_at % kBlockFrames) return;
+        if (rendered != clear_at) return;
         metronome.SetGridGrouping({});
         metronome.SetGridRate(KB_GRID_RATE_SINGLE);
       }
@@ -172,29 +164,24 @@ void TestClearRestoresOutput() {
   );
 }
 
-// Switched to x2 just after a midpoint passed: that midpoint must not sound late.
-void TestRateSwitchSkipsPassedHalf() {
+void TestSetGridResets() {
   kitbag::Metronome metronome;
-  Configure(metronome, kSevenBeatBars, {}, KB_GRID_RATE_SINGLE);
-  const double half = (kBeatsSec[2] + kBeatsSec[3]) / 2.0;
-  const int64_t switch_at = FramesFor(half) + 2 * kBlockFrames;
-  const std::vector<float> left =
-      RenderLeft(metronome, FramesFor(kBeatsSec[5]), [&](int64_t rendered) {
-        if (rendered == switch_at - switch_at % kBlockFrames) {
-          metronome.SetGridRate(KB_GRID_RATE_DOUBLE);
-        }
-      });
-  const std::vector<int64_t> frames = {
-      switch_at - switch_at % kBlockFrames,
-      FramesFor(kBeatsSec[3]),
-      FramesFor((kBeatsSec[3] + kBeatsSec[4]) / 2.0)
-  };
-  const std::string got = grid_levels::Levels(left, frames);
-  const std::string detail = "got " + got + ", expected -nn";
-  CheckCase(
-      got == "-nn",
-      "grid grouping: x2 set mid-beat skips a passed half",
-      detail.c_str()
+  Configure(
+      metronome,
+      kBeatsSec,
+      kSevenBeatBars,
+      kThreeTwoTwo,
+      KB_GRID_RATE_DOUBLE
+  );
+  metronome.SetGrid(grid_click::Grid(kBeatsSec, kSevenBeatBars), 0, true);
+  const std::string got = grid_levels::Levels(
+      grid_click::TakeAll(metronome, kBeatsSec),
+      EventFrames(true)
+  );
+  ExpectLevelString(
+      got,
+      WithHalves("nBnnnnnnBnnnnnnBnnnnnnBn", grid_levels::kSilent),
+      "set_grid resets the grouping and the rate"
   );
 }
 
@@ -202,9 +189,11 @@ void TestRateSwitchSkipsPassedHalf() {
 
 void RunGridGroupingTests() {
   TestGroupedLevels();
-  TestRateLevels();
+  TestDoubleAndHalfLevels();
+  TestHalfWithoutGrouping();
   TestClearRestoresOutput();
-  TestRateSwitchSkipsPassedHalf();
+  TestSetGridResets();
+  grid_click::RunGridRateSwitchTests();
 }
 
 }  // namespace metronome_test

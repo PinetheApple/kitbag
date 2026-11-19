@@ -18,7 +18,7 @@ using click_take::SameClicks;
 using count_in::CountClicks;
 using count_in::CountIn;
 using count_in::FirstStem;
-using count_in::GridClick;
+using count_in::HeardFrame;
 using count_in::kClickOff;
 using count_in::kHalfFrame;
 using count_in::kNotFound;
@@ -54,7 +54,7 @@ kb_engine* OpenClickOff(const std::string& ramp, Take* take, Start* start) {
 }
 
 int64_t SongClick(const Start& start, size_t beat) {
-  return GridClick(start.end, start.head, start.rate, Beats()[beat]);
+  return HeardFrame(start.end, start.head, start.rate, Beats()[beat]);
 }
 
 int64_t ClickOnFrame(const Start& start) {
