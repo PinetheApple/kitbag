@@ -3,22 +3,18 @@ import {
   NO_METER_OVERRIDE,
   TEMPO_CORRECTION,
   TEMPO_CORRECTIONS,
-  type LibraryRow,
   type SongRecord,
   type TempoCorrection,
 } from '@kitbag/core-db';
 import { describe, expect, it, vi } from 'vitest';
-import { createStore } from 'zustand/vanilla';
 
 import { songRow } from '../storage/fixtures.test-helper.ts';
 import { overrideDisagrees } from './songGrid.ts';
 import {
-  BARS,
-  fakeSongRuntime,
+  opened,
   openedSong,
   SONG_ID,
   songRecord,
-  songStore,
 } from './store.test-helper.ts';
 
 const PRECISION = 9;
@@ -156,14 +152,7 @@ describe('re-analysing a corrected song', () => {
       downbeatIndices: BAR_ONE_SONG.downbeatIndices.map((i) => i + shifted),
     };
     const newBarOne = BAR_ONE_SONG.beats[BAR_ONE_INDEX + shifted] ?? Number.NaN;
-    const fake = fakeSongRuntime(first);
-    const library = createStore(() => ({
-      rows: [songRow({ id: SONG_ID })] as readonly LibraryRow[],
-      ready: true,
-      failed: false,
-    }));
-    const player = songStore(fake, undefined, library);
-    await player.getState().open(SONG_ID, BARS).loaded;
+    const { player, library, ...fake } = await opened(first);
     fake.records.readSong.mockResolvedValue(reanalysed);
     library.setState({ rows: [songRow({ id: SONG_ID, bpm: 121 })] });
     await vi.waitFor(() => {

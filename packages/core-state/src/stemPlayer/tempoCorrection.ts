@@ -37,8 +37,6 @@ export function scaleBeats(
   return scaled;
 }
 
-// The detected meter is kept: bars of that many scaled beats, from the scaled
-// beat nearest bar 1.
 export function correctedGrid(
   grid: DetectedGrid,
   correction: TempoCorrection,

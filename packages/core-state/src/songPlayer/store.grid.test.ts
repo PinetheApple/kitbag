@@ -12,6 +12,7 @@ import { songRow } from '../storage/fixtures.test-helper.ts';
 import {
   BARS,
   fakeSongRuntime,
+  settle,
   SONG_ID,
   songRecord,
   songStore,
@@ -41,8 +42,6 @@ function rowOf(song: SongRecord): LibrarySongRow {
     analysisStatus: song.analysisStatus,
   });
 }
-
-const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 async function playing(first: SongRecord) {
   const fake = fakeSongRuntime(first);

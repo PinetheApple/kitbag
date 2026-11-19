@@ -28,18 +28,14 @@ export function songGrid(
   correction: TempoCorrection,
 ): SongGrid {
   const found = detectedMeter(analysed);
-  const corrected = correctedGrid(
-    analysed,
-    correction,
-    override.barOneSeconds ?? found.barOneSeconds,
-  );
+  const barOneSeconds = override.barOneSeconds ?? found.barOneSeconds;
+  const corrected = correctedGrid(analysed, correction, barOneSeconds);
   if (corrected === analysed)
     return {
       beats: analysed.beats,
       downbeatIndices: overrideDownbeats(analysed, override),
       detected: found,
     };
-  const barOneSeconds = override.barOneSeconds ?? found.barOneSeconds;
   return {
     beats: corrected.beats,
     downbeatIndices: overrideDownbeats(corrected, {

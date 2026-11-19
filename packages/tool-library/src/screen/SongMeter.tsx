@@ -7,7 +7,6 @@ import {
 } from '@kitbag/core-design';
 import { GRID_METERS, useSongPlayer } from '@kitbag/core-state';
 import { useCallback } from 'react';
-import { StyleSheet, View } from 'react-native';
 
 import { lockBadgeOf } from '../logic/lockText.ts';
 import {
@@ -15,11 +14,8 @@ import {
   meterGridState,
   reanalysedText,
 } from '../logic/songMeterText.ts';
+import { NoteAnchor } from './NoteAnchor.tsx';
 import { useSongMeter } from './useSongMeter.ts';
-
-const styles = StyleSheet.create({
-  noteAnchor: { height: 0 },
-});
 
 interface SongMeterProps {
   readonly songId: number;
@@ -68,14 +64,14 @@ export function SongMeter({
   const reanalysedOnScreen = !visible && notice === null;
   return (
     <>
-      <View style={styles.noteAnchor}>
+      <NoteAnchor>
         {changeNoteOnScreen ? (
           <Snackbar {...notice} bottom={snackbar.aboveDock} />
         ) : null}
         {reanalysedOnScreen ? (
           <ReanalysedNotice onUseDetected={meter.onReset} />
         ) : null}
-      </View>
+      </NoteAnchor>
       <MeterSheet
         visible={visible}
         options={GRID_METERS}

@@ -7,7 +7,6 @@ import {
   snackbar,
   Snackbar,
   space,
-  type MeterSheetNotice,
 } from '@kitbag/core-design';
 import { useSongPlayer, type TempoCorrection } from '@kitbag/core-state';
 import { useMemo } from 'react';
@@ -18,11 +17,11 @@ import {
   TEMPO_CORRECTION_COPY,
   tempoCorrectionOptions,
 } from '../logic/tempoCorrectionText.ts';
+import { NoteAnchor } from './NoteAnchor.tsx';
 import { useSongTempoCorrection } from './useSongTempoCorrection.ts';
 
 const styles = StyleSheet.create({
   group: { gap: space.controlGap },
-  noteAnchor: { height: 0 },
 });
 
 interface SongTempoCorrectionProps {
@@ -60,20 +59,6 @@ function TempoPicker({ correction, onPick }: PickerProps) {
   );
 }
 
-function FloatingNote({
-  notice,
-}: {
-  readonly notice: MeterSheetNotice | null;
-}) {
-  return (
-    <View style={styles.noteAnchor}>
-      {notice === null ? null : (
-        <Snackbar {...notice} bottom={snackbar.aboveDock} />
-      )}
-    </View>
-  );
-}
-
 export function SongTempoCorrection({
   songId,
   visible,
@@ -83,7 +68,11 @@ export function SongTempoCorrection({
   const { correction, notice, onPick } = useSongTempoCorrection(songId);
   return (
     <>
-      <FloatingNote notice={visible ? null : notice} />
+      <NoteAnchor>
+        {visible || notice === null ? null : (
+          <Snackbar {...notice} bottom={snackbar.aboveDock} />
+        )}
+      </NoteAnchor>
       <Sheet
         visible={visible}
         title={TEMPO_CORRECTION_COPY.title}

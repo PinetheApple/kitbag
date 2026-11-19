@@ -1,6 +1,12 @@
-import { TEMPO_CORRECTION, type SongRecord } from '@kitbag/core-db';
+import {
+  TEMPO_CORRECTION,
+  type LibraryRow,
+  type SongRecord,
+} from '@kitbag/core-db';
 import { vi } from 'vitest';
+import { createStore } from 'zustand/vanilla';
 
+import { songRow } from '../storage/fixtures.test-helper.ts';
 import type { MixerClaim } from '../stemPlayer/mixerClaim.ts';
 import { fakeRuntime, RATE, record } from '../stemPlayer/store.test-helper.ts';
 import { secondsToFrames } from '../stemPlayer/time.ts';
@@ -89,4 +95,18 @@ export async function openedSong(song: SongRecord = songRecord()) {
   await store.getState().open(SONG_ID, BARS).loaded;
   fake.commands.mixerClearLoop.mockClear();
   return { ...fake, store };
+}
+
+export const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+export async function opened(first: SongRecord) {
+  const fake = fakeSongRuntime(first);
+  const library = createStore(() => ({
+    rows: [songRow({ id: SONG_ID })] as readonly LibraryRow[],
+    ready: true,
+    failed: false,
+  }));
+  const player = songStore(fake, undefined, library);
+  await player.getState().open(SONG_ID, BARS).loaded;
+  return { ...fake, library, player };
 }

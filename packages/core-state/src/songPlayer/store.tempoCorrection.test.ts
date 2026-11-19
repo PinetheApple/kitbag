@@ -2,21 +2,18 @@ import {
   GRID_METER,
   NO_METER_OVERRIDE,
   TEMPO_CORRECTION,
-  type LibraryRow,
   type SongRecord,
 } from '@kitbag/core-db';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createStore } from 'zustand/vanilla';
 
 import { songRow } from '../storage/fixtures.test-helper.ts';
 import { scaleBeats } from '../stemPlayer/tempoCorrection.ts';
 import {
-  BARS,
-  fakeSongRuntime,
+  opened,
   openedSong,
+  settle,
   SONG_ID,
   songRecord,
-  songStore,
 } from './store.test-helper.ts';
 
 const DETECTED_BPM = 120;
@@ -145,14 +142,7 @@ describe('a re-analysis of a corrected song', () => {
       ...ANALYSED,
       tempoCorrection: TEMPO_CORRECTION.double,
     };
-    const fake = fakeSongRuntime(first);
-    const library = createStore(() => ({
-      rows: [songRow({ id: SONG_ID })] as readonly LibraryRow[],
-      ready: true,
-      failed: false,
-    }));
-    const player = songStore(fake, undefined, library);
-    await player.getState().open(SONG_ID, BARS).loaded;
+    const { player, library, ...fake } = await opened(first);
     fake.records.readSong.mockResolvedValue(REANALYSED);
     library.setState({ rows: [songRow({ id: SONG_ID, bpm: 100 })] });
     await vi.waitFor(() => {
@@ -169,18 +159,9 @@ describe('a re-analysis of a corrected song', () => {
 });
 
 describe('a re-read while a picked factor saves', () => {
-  const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
-
   it('keeps the picked factor until the save settles', async () => {
     vi.useRealTimers();
-    const fake = fakeSongRuntime(ANALYSED);
-    const library = createStore(() => ({
-      rows: [songRow({ id: SONG_ID })] as readonly LibraryRow[],
-      ready: true,
-      failed: false,
-    }));
-    const player = songStore(fake, undefined, library);
-    await player.getState().open(SONG_ID, BARS).loaded;
+    const { player, library, ...fake } = await opened(ANALYSED);
     player.getState().tempoCorrectionChanged(SONG_ID, TEMPO_CORRECTION.double);
     fake.records.readSong.mockResolvedValue({
       ...ANALYSED,
@@ -190,7 +171,7 @@ describe('a re-read while a picked factor saves', () => {
     await vi.waitFor(() => {
       expect(fake.records.readSong).toHaveBeenCalledTimes(2);
     });
-    await tick();
+    await settle();
     expect(player.getState()).toMatchObject({
       tempoCorrection: TEMPO_CORRECTION.double,
       beats: DOUBLE_BEATS,
