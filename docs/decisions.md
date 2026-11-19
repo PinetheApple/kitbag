@@ -531,7 +531,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   scroll; the numeral is capped at 128 sp under font scaling, compact only; the new gaps
   apply in roomy too; dropdown padding is unchanged; and a lone status row takes the
   lower slot. 360×800, busy (16/16 + poly + two status rows) at font scale 1.15 scrolls
-  by about 20 dp, which hides half the ramp row until you scroll. The mockup's 16 dp spare
+  by about 24 dp: while playing, the poly row sits behind the pinned status rows until you
+  scroll, and a drag on the beat dots scrolls instead of changing tempo. The mockup's 16 dp spare
   does not survive the poly bracket band.
 
 - **2026-10-31 · Subdivision accents: slot 0 and the sound (§17 D2, §12.5, #170)** —
