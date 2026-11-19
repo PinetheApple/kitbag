@@ -16,18 +16,31 @@ constexpr int kMaxShownClicks = 4;
 
 // A voice starts at phase zero, so its trigger frame is the silent one before
 // the first audible sample.
-inline std::vector<int64_t> DetectClicks(const std::vector<float>& channel) {
-  std::vector<int64_t> clicks;
-  int64_t quiet = kGapFrames;
-  for (size_t k = 0; k < channel.size(); ++k) {
-    if (std::fabs(channel[k]) <= kSilence) {
-      ++quiet;
-      continue;
+class ClickStream {
+ public:
+  void Feed(float sample) {
+    const int64_t frame = frame_++;
+    if (std::fabs(sample) <= kSilence) {
+      ++quiet_;
+      return;
     }
-    if (quiet >= kGapFrames) clicks.push_back(static_cast<int64_t>(k) - 1);
-    quiet = 0;
+    if (quiet_ >= kGapFrames) clicks_.push_back(frame - 1);
+    quiet_ = 0;
   }
-  return clicks;
+  const std::vector<int64_t>& clicks() const {
+    return clicks_;
+  }
+
+ private:
+  int64_t frame_ = 0;
+  int64_t quiet_ = kGapFrames;
+  std::vector<int64_t> clicks_;
+};
+
+inline std::vector<int64_t> DetectClicks(const std::vector<float>& channel) {
+  ClickStream stream;
+  for (float sample : channel) stream.Feed(sample);
+  return stream.clicks();
 }
 
 inline float Peak(const std::vector<float>& channel, size_t from, size_t to) {
