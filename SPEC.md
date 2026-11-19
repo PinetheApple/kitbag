@@ -1520,8 +1520,7 @@ as a base to build on.
 The schema is the durable part and survives the stack change. The Flutter
 build's tables were `Setlists`, `Songs`, `PracticeSessions`, `Tunings`,
 `LibrarySongs`, `StemSets`, `Stems` (schema v6). The React Native schema is at v20
-(`packages/core-db/src/migrate.ts`). It upgrades databases from v7 on and refuses
-anything older, the Flutter v6 database included.
+(`packages/core-db/src/migrate.ts`); §11.1 sets which versions it upgrades.
 
 ### 11.1 Persistence layer
 
@@ -1540,11 +1539,11 @@ versions 1–6 with `UnsupportedSchemaVersion` and leaves the file untouched.
 
 | Change | Reason |
 |---|---|
-| `Songs` → `SongPresets`; `LibrarySongs` → `Songs` | §5.4 — the names invert their meaning today |
+| `SongPresets` holds presets, `Songs` holds library tracks (Flutter's `Songs` and `LibrarySongs`); both from v7 | §5.4 — the Flutter names inverted their meaning |
 | `SongPresets`: + ramp config, bar-mute config, count-in, notes, per-accent sounds | §5.3, §5.4 |
 | `SongPresets`: + time signature **denominator** | **D1** — new column; 2/4/8/16 |
-| `SongPresets`: **drop `volume` and `latencyOffset`** | **D3** — both are global rig setup; the columns are unreadable-vs-default today |
-| `SongPresets`: decouple from `Setlists` | §5.4 — songs must exist standalone; setlists reference |
+| `SongPresets`: **no `volume` or `latencyOffset`** | **D3** — both are global rig setup; absent from v7 |
+| `SongPresets`: standalone; `setlist_items` links them to `Setlists` | §5.4 — songs must exist standalone; setlists reference; from v7 |
 | `SongPresets`: + phase nudge, + track identity tuple | §8.8, **D4** — `(title, artist, source, length)`, nullable library-song FK when known |
 | `Setlists`: + `active` flag; a partial unique index (`WHERE active = 1`) allows at most one active row | §5.4 — one active setlist; schema v8 |
 | `SongPresets`: + `polyAccents` BLOB, one `kb_accent` byte per poly slot | §5.2, §5.4 — the poly row has its own accent states and they round-trip; schema v8 |
@@ -1569,7 +1568,7 @@ versions 1–6 with `UnsupportedSchemaVersion` and leaves the file untouched.
 | BPM cache table | §8.5 |
 | Per-output-route latency calibration | §12.5 |
 | Global subdivision-accent patterns, keyed by subdivision count | **D2** |
-| UUIDs on exportable rows | §12.4 — merge needs stable identity. Backfilled on migration; **D12** accepts the first-merge duplicate. |
+| UUIDs on exportable rows | §12.4 — merge needs stable identity. NOT NULL from v7; `practice_sessions` backfilled at v9; **D12** accepts the first-merge duplicate. |
 
 Beat grids stay Float32 BLOBs of per-beat timestamps (handles tempo drift).
 Waveform peaks stay `.kwav` binary sidecars. Neither crosses into JS as a buffer
@@ -1583,10 +1582,8 @@ All three decisions this schema was waiting on landed 2026-07-17: **D1**
 **D3** (drop `volume`/`latencyOffset`), **D4** (track identity tuple). §11.2 is
 buildable as written.
 
-Two migration notes that are not obvious from the table:
+One migration note that is not obvious from the table:
 
-- **There is no upgrade from the Flutter v6 database** (§11.1). The runner starts
-  from v7; a fresh install builds the current schema from zero.
 - **`SongPresets` gains a nullable FK to the library song** alongside the D4
   identity tuple. When a track later joins the library, the preset migrates from
   tuple-matching to id-matching. That transition is a migration, not a lookup.
@@ -2253,7 +2250,7 @@ prove it kept anything.
 |---|---|---|
 | **Native, headless** | `native/audio_core/tools/` — already exists (`metronome_verify.cpp`, `tuner_verify.cpp` render offline and assert onsets against the beat grid) | §4 in full, with **no UI at all**. This is why Phase 1 is testable before any React exists. |
 | **Native, new** | Mixer test (`mixer_verify`); **metronome soak/jitter harness** (§5.8) — `click_soak` + `click_soak_verify`, run via `scripts/soak-analyze.sh` (#88) | The 4h soak and the click-vs-grid offset, measured from a recording. The harness exists and is gated on synthetic and engine-rendered fixtures; the 4h device recording and the speaker-path offset have not been run. |
-| **DB** | Drizzle migrations against fixture v7–v19 databases | An upgrading user keeps their setlists; a database older than v7 is refused untouched (§11.1). |
+| **DB** | Drizzle migrations against fixture v7–v19 databases | An upgrading user keeps their setlists; the §11.1 version floor holds. |
 | **Logic** | Jest | Tap-tempo interval averaging (§8.5), BPM match scoring, the phase-modular arithmetic (§8.6), preset round-trip (§5.8). |
 | **Component** | React Native Testing Library | Steppers, LED tap-cycle, sheet behaviour. |
 | **Lint rules** | The ported eval harness (§13.6) | Architecture rules actually fire. |
@@ -2321,7 +2318,7 @@ spec said to do it before deciding.
 **Closed 2026-07-24** (PR #39). The 60fps gate passed on a device (#33).
 
 `core-native` + the JSI HostObject + the TurboModule + the eval-harnessed lint
-rules + the Drizzle migration off the existing v6 database (retired in #170). Proves §13.2 and
+rules + the Drizzle migration off the existing v6 database. Proves §13.2 and
 §13.3 on a device with one screen and no product.
 
 **Gate: the 60fps rule (§13.3) is verified on a real device before any tool is

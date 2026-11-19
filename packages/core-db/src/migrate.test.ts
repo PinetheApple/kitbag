@@ -72,7 +72,13 @@ const PRE_V7_VERSIONS = Array.from(
   (_, index) => index + 1,
 );
 
-const UUID_TABLES = ['setlists', 'songs', 'stem_sets', 'tunings'];
+const NOT_NULL_UUID_TABLES = [
+  'setlists',
+  'songs',
+  'song_presets',
+  'stem_sets',
+  'tunings',
+];
 
 function buildPreV7Database(version: number): DatabaseSync {
   const db = new DatabaseSync(':memory:');
@@ -126,10 +132,10 @@ describe('migrate', () => {
     },
   );
 
-  it('requires a uuid on every exportable row of a fresh database', () => {
+  it('declares uuid NOT NULL on a fresh database, practice_sessions aside', () => {
     const db = new DatabaseSync(':memory:');
     migrate(nodeSqliteDriver(db));
-    for (const table of UUID_TABLES)
+    for (const table of NOT_NULL_UUID_TABLES)
       expect(
         rows<{ name: string; notnull: number }>(
           db,
@@ -324,14 +330,12 @@ describe('migrate', () => {
 
   it('rolls the whole upgrade back when a later step fails', () => {
     const db = buildV7Fixture();
-    db.exec('CREATE TABLE setlists_one_active_blocker (id INTEGER)');
-    db.exec(
-      'CREATE INDEX setlists_one_active ON setlists_one_active_blocker (id)',
-    );
+    db.exec('CREATE TABLE practice_sessions_uuid (id INTEGER)');
     expect(() => {
       migrate(nodeSqliteDriver(db));
-    }).toThrow();
+    }).toThrow('practice_sessions_uuid');
     expect(columnNames(db, 'setlists')).not.toContain('active');
+    expect(columnNames(db, 'song_presets')).not.toContain('poly_accents');
     expect(pragma(db, 'user_version')).toBe(V7_SCHEMA_VERSION);
   });
 
