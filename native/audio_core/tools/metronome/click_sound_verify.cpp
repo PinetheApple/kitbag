@@ -23,7 +23,7 @@ using kitbag_test::Check;
 namespace {
 
 constexpr uint32_t kRaceBlock = 64;
-constexpr int kRaceBlocks = 20000;
+constexpr int kRacePublishes = 3000;
 constexpr int kTriggerStride = 7;
 constexpr float kRaceLevel = 0.5F;
 constexpr size_t kRaceMinFrames = 300;
@@ -40,8 +40,9 @@ struct RaceState {
   std::vector<uint64_t> publish_frames;
 };
 
-void RenderLoop(RaceState* state) {
-  for (int block = 0; block < kRaceBlocks; ++block) {
+uint64_t RenderLoop(RaceState* state) {
+  uint64_t blocks = 0;
+  while (!state->done.load(std::memory_order_acquire)) {
     state->voices.BeginBlock();
     for (uint32_t i = 0; i < kRaceBlock; ++i) {
       const int slot = static_cast<int>(i) % kitbag::kCustomSoundSlots;
@@ -52,29 +53,33 @@ void RenderLoop(RaceState* state) {
           std::fabs(sample) <= kRaceLevel * SampleVoices::kMaxVoices;
     }
     state->clock.fetch_add(kRaceBlock, std::memory_order_relaxed);
+    ++blocks;
   }
-  state->done.store(true, std::memory_order_release);
+  return blocks;
 }
 
-int PublishLoop(RaceState* state) {
-  int publishes = 0;
-  while (!state->done.load(std::memory_order_acquire)) {
+// Paced on the render clock, one block apart, so the run spans many grace
+// windows however the two threads are scheduled.
+void PublishLoop(RaceState* state) {
+  for (int publish = 0; publish < kRacePublishes; ++publish) {
+    const uint64_t due = static_cast<uint64_t>(publish) * kRaceBlock;
+    while (state->clock.load(std::memory_order_relaxed) < due) {
+      std::this_thread::yield();
+    }
     const uint64_t now = state->clock.load(std::memory_order_relaxed);
     state->publish_frames.push_back(now);
-    const int slot = publishes % kitbag::kCustomSoundSlots;
-    if (publishes % kTriggerStride == 0) {
+    const int slot = publish % kitbag::kCustomSoundSlots;
+    if (publish % kTriggerStride == 0) {
       state->voices.Clear(slot, now, true);
     } else {
       const size_t frames =
           kRaceMinFrames +
-          (static_cast<size_t>(publishes) * 131) % kRaceFrameSpread;
+          (static_cast<size_t>(publish) * 131) % kRaceFrameSpread;
       state->voices
           .Publish(slot, std::vector<float>(frames, kRaceLevel), now, true);
     }
-    ++publishes;
-    std::this_thread::yield();
   }
-  return publishes;
+  state->done.store(true, std::memory_order_release);
 }
 
 size_t StillInGrace(const std::vector<uint64_t>& frames, uint64_t now) {
@@ -87,15 +92,17 @@ size_t StillInGrace(const std::vector<uint64_t>& frames, uint64_t now) {
 
 void TestLoadWhileRendering() {
   RaceState state;
-  std::thread render(RenderLoop, &state);
-  const int publishes = PublishLoop(&state);
+  uint64_t blocks = 0;
+  std::thread render([&state, &blocks] { blocks = RenderLoop(&state); });
+  PublishLoop(&state);
   render.join();
-  const size_t in_grace =
-      StillInGrace(state.publish_frames, state.publish_frames.back());
+  const uint64_t first = state.publish_frames.front();
+  const uint64_t last = state.publish_frames.back();
+  const size_t in_grace = StillInGrace(state.publish_frames, last);
   std::printf(
-      "  race: %d publishes against %d blocks, %zu retired, %zu in grace\n",
-      publishes,
-      kRaceBlocks,
+      "  race: %d publishes over %llu blocks, %zu retired, %zu in grace\n",
+      kRacePublishes,
+      static_cast<unsigned long long>(blocks),
       state.voices.retired_size(),
       in_grace
   );
@@ -104,12 +111,11 @@ void TestLoadWhileRendering() {
       "race: every rendered sample is finite and within the pool's reach"
   );
   Check(
-      publishes > kRaceBlocks / kTriggerStride,
-      "race: the app thread published throughout the render"
+      last > first + kGrace,
+      "race: the clock ran past a grace window while publishing"
   );
   Check(
-      state.voices.retired_size() <= in_grace &&
-          in_grace < static_cast<size_t>(publishes),
+      state.voices.retired_size() <= in_grace,
       "race: only sounds retired within the last grace window are still held"
   );
 }

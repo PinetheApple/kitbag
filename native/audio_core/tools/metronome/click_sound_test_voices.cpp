@@ -127,22 +127,24 @@ void TestEmptySlotFallsBack() {
   );
 }
 
-// Gain 2^k per hit: dropping the new hit, stealing the newest and stealing
-// the oldest each leave a different sum.
+// Hit k lands on frame k at gain 2^k over a ramp, so a dropped hit, a wrong
+// steal or a stolen voice keeping its cursor each sum differently.
 void TestOldestVoiceIsStolen() {
   SampleVoices voices;
-  voices.Publish(1, std::vector<float>(kBlock * 2, 1.0F), 0, false);
+  std::vector<float> ramp(kBlock * 2);
+  for (size_t i = 0; i < ramp.size(); ++i) ramp[i] = static_cast<float>(i + 1);
+  voices.Publish(1, ramp, 0, false);
   voices.BeginBlock();
   float last = 0.0F;
-  float gain = 1.0F;
-  float all = 0.0F;
   for (int hit = 0; hit <= SampleVoices::kMaxVoices; ++hit) {
-    voices.Trigger(1, gain);
-    all += gain;
-    gain *= 2.0F;
+    voices.Trigger(1, std::ldexp(1.0F, hit));
     last = voices.Render();
   }
-  Check(last == all - 1.0F, "voice: a hit past the pool replaces the oldest");
+  float expected = 0.0F;
+  for (int hit = 1; hit <= SampleVoices::kMaxVoices; ++hit) {
+    expected += ramp[SampleVoices::kMaxVoices - hit] * std::ldexp(1.0F, hit);
+  }
+  Check(last == expected, "voice: a hit past the pool replaces the oldest");
 }
 
 void TestBuiltInPeakIsClickSoundPeak() {
