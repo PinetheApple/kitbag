@@ -1,4 +1,8 @@
-import type { LibraryRow, LibrarySongRow } from '@kitbag/core-db';
+import {
+  TEMPO_CORRECTION,
+  type LibraryRow,
+  type LibrarySongRow,
+} from '@kitbag/core-db';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -28,6 +32,7 @@ function song(
     artist: 'Foo Fighters',
     durationSec: 250,
     bpm: null,
+    tempoCorrection: TEMPO_CORRECTION.none,
     hasGrid: false,
     analysisStatus: 'pending',
     analysisError: null,

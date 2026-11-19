@@ -49,6 +49,7 @@ export interface LibrarySongRow {
   readonly artist: string;
   readonly durationSec: number;
   readonly bpm: number | null;
+  readonly tempoCorrection: TempoCorrection;
   readonly hasGrid: boolean;
   readonly analysisStatus: AnalysisStatus;
   readonly analysisError: string | null;
@@ -146,6 +147,7 @@ async function songRows(db: Database): Promise<LibrarySongRow[]> {
       artist: songs.artist,
       durationSec: songs.duration,
       bpm: songs.bpm,
+      tempoCorrection: songs.tempoCorrection,
       hasGrid: sql<number>`${songs.beatGrid} IS NOT NULL`,
       analysisStatus: songs.analysisStatus,
       analysisError: songs.analysisError,
@@ -156,6 +158,7 @@ async function songRows(db: Database): Promise<LibrarySongRow[]> {
   return rows.map((row) => ({
     ...row,
     kind: 'song',
+    tempoCorrection: tempoCorrectionOf(row.tempoCorrection),
     hasGrid: row.hasGrid !== 0,
     inSetlist: listed.has(row.id),
   }));

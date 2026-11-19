@@ -71,6 +71,14 @@ describe('song tempo correction', () => {
     expect((await library.readSong(id))?.tempoCorrection).toBe(c);
   });
 
+  it('lists the song with its factor', async () => {
+    const { library, id } = await analysedSong();
+    await library.saveSongTempoCorrection(id, TEMPO_CORRECTION.half);
+    expect(await library.list()).toMatchObject([
+      { kind: 'song', id, tempoCorrection: TEMPO_CORRECTION.half },
+    ]);
+  });
+
   it('stores ×1 as NULL', async () => {
     const { handle, library, id } = await analysedSong();
     await library.saveSongTempoCorrection(id, TEMPO_CORRECTION.double);
