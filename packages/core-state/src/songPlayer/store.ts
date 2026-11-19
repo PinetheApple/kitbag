@@ -1,8 +1,11 @@
 import {
   ANALYSIS_STATUS,
+  meterOverrideOf,
+  NO_METER_OVERRIDE,
   type AnalysisStatus,
   type LibraryRow,
   type LibrarySongRow,
+  type MeterOverride,
   type SongRecord,
 } from '@kitbag/core-db';
 import { KB_RESULT } from '@kitbag/core-native';
@@ -17,9 +20,17 @@ import {
   followNewGrid,
   type ClickSlice,
 } from '../stemPlayer/clickActions.ts';
-import { sameNumbers } from '../stemPlayer/bars.ts';
+import { FALLBACK_BEATS_PER_BAR } from '../stemPlayer/barMeter.ts';
+import { sameNumbers, usableDownbeats } from '../stemPlayer/bars.ts';
+import { snapToBeat } from '../stemPlayer/loop.ts';
 import { loopActions, type LoopSlice } from '../stemPlayer/loopActions.ts';
-import { overrideDownbeats } from '../stemPlayer/meterOverride.ts';
+import {
+  detectedMeter,
+  isMeterOverridden,
+  overrideDownbeats,
+  type DetectedGrid,
+  type DetectedMeter,
+} from '../stemPlayer/meterOverride.ts';
 import { UNITY_GAIN, UNSHIFTED_KEY } from '../stemPlayer/mix.ts';
 import {
   createMixerClaim,
@@ -54,6 +65,9 @@ interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
   readonly bpm: number | null;
   readonly analysisStatus: AnalysisStatus;
   readonly envelope: readonly number[] | null;
+  readonly meterOverride: MeterOverride;
+  readonly detected: DetectedMeter;
+  readonly meterNotice: DetectedMeter | null;
 }
 
 interface SongSession {
@@ -74,6 +88,12 @@ type SongPlayerActions = Pick<
 > & {
   readonly open: (songId: number, waveformBars: number) => SongSession;
   readonly close: () => void;
+  readonly meterOverrideChanged: (
+    songId: number,
+    override: MeterOverride,
+  ) => void;
+  readonly playheadBeatSeconds: () => number | null;
+  readonly dismissMeterNotice: () => void;
 };
 
 export type SongPlayerStore = SongPlayerState & SongPlayerActions;
@@ -102,6 +122,9 @@ const closedState: SongPlayerState = {
   beats: [],
   downbeatIndices: [],
   envelope: null,
+  meterOverride: NO_METER_OVERRIDE,
+  detected: { meter: FALLBACK_BEATS_PER_BAR, barOneSeconds: 0 },
+  meterNotice: null,
   loop: { kind: 'off' },
   loopFailure: null,
   click: false,
@@ -131,6 +154,28 @@ function songDownbeats(record: SongRecord): readonly number[] {
   return overrideDownbeats(record, record);
 }
 
+function meterFactsOf(record: SongRecord) {
+  return {
+    meterOverride: meterOverrideOf(record),
+    detected: detectedMeter(record),
+  };
+}
+
+const NO_GRID: DetectedGrid = { beats: [], downbeatIndices: [] };
+
+function sameGrid(a: DetectedGrid, b: DetectedGrid): boolean {
+  return (
+    sameNumbers(a.beats, b.beats) &&
+    sameNumbers(a.downbeatIndices, b.downbeatIndices)
+  );
+}
+
+function overrideDisagrees(record: SongRecord): boolean {
+  if (!isMeterOverridden(meterOverrideOf(record))) return false;
+  const detected = usableDownbeats(record.downbeatIndices, record.beats.length);
+  return !sameNumbers(songDownbeats(record), detected);
+}
+
 export function createSongPlayerStore(
   runtimeOf: () => SongPlayerRuntime = getSongPlayer,
   options: SongPlayerOptions = {},
@@ -148,6 +193,7 @@ export function createSongPlayerStore(
   let waveformBars = 0;
   let shownWaveform: string | null = null;
   let latestWaveform: string | null = null;
+  let detectedGrid = NO_GRID;
 
   const teardownTracks = () => {
     const { commands } = runtimeOf();
@@ -258,12 +304,14 @@ export function createSongPlayerStore(
         set({ status: 'failed' });
         return;
       }
+      detectedGrid = record;
       set({
         status: 'ready',
         engineRate,
         durationFrames,
         beats: record.beats,
         downbeatIndices: songDownbeats(record),
+        ...meterFactsOf(record),
       });
       if (decoded > 0)
         correctStoredLength(record, framesToSeconds(decoded, engineRate));
@@ -285,8 +333,14 @@ export function createSongPlayerStore(
           sameNumbers(beats, record.beats) &&
           sameNumbers(downbeatIndices, downbeats)
         );
+      const reanalysed = ready && !sameGrid(detectedGrid, record);
+      if (ready) detectedGrid = record;
+      const facts = meterFactsOf(record);
+      const notice = reanalysed && overrideDisagrees(record);
       set({
         ...factsOf(record),
+        ...(ready ? facts : {}),
+        ...(notice ? { meterNotice: facts.detected } : {}),
         ...(regrid ? { beats: record.beats, downbeatIndices: downbeats } : {}),
       });
       if (ready) showWaveform(opened, record.waveformPath);
@@ -340,6 +394,7 @@ export function createSongPlayerStore(
         }
         const opened = mixer.begin();
         holders = 0;
+        detectedGrid = NO_GRID;
         waveformBars = bars;
         shownWaveform = null;
         latestWaveform = null;
@@ -351,6 +406,29 @@ export function createSongPlayerStore(
         return { hold: sharedHold(opened), loaded: loading };
       },
       close: mixer.close,
+      meterOverrideChanged: (songId, override) => {
+        const { status, songId: openSong, downbeatIndices } = get();
+        if (status !== 'ready' || openSong !== songId) return;
+        const meterOverride = meterOverrideOf(override);
+        const downbeats = overrideDownbeats(detectedGrid, meterOverride);
+        if (sameNumbers(downbeats, downbeatIndices)) {
+          set({ meterOverride, meterNotice: null });
+          return;
+        }
+        set({ meterOverride, meterNotice: null, downbeatIndices: downbeats });
+        void followNewGrid(context);
+      },
+      playheadBeatSeconds: () => {
+        const { beats, engineRate } = get();
+        const playhead = framesToSeconds(
+          runtimeOf().engine.position(),
+          engineRate,
+        );
+        return beats.length === 0 ? null : snapToBeat(playhead, beats);
+      },
+      dismissMeterNotice: () => {
+        set({ meterNotice: null });
+      },
       ...transportActions(get, runtimeOf, scrubSeek),
       ...loopActions(context),
       ...clickActions(context, mixer.pendingClick),

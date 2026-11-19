@@ -394,6 +394,7 @@ export {
 export {
   overrideDownbeats,
   type DetectedGrid,
+  type DetectedMeter,
 } from './stemPlayer/meterOverride.ts';
 export { impliedMeter } from './stemPlayer/barMeter.ts';
 export {

@@ -1,0 +1,22 @@
+appId: com.kitbag.app
+---
+- tapOn: 'Meter, ${FROM}'
+- tapOn: '${TO}'
+- assertVisible: 'Meter set to ${TO}. Saved for this song.'
+- tapOn: 'Done'
+- tapOn: 'More'
+- assertVisible: 'Meter, ${TO} · yours'
+- tapOn: 'Meter, ${TO} · yours'
+- tapOn: 'Use detected'
+- assertVisible: 'Back to the detected meter. Saved for this song.'
+- tapOn: 'Undo'
+- tapOn: 'Done'
+- runFlow: force-stop-relaunch.yaml
+- tapOn: 'Songs, .*'
+- tapOn: '${FIXTURE_SONG}, .*'
+- extendedWaitUntil:
+    visible: 'Play'
+    timeout: 10000
+- tapOn: 'More'
+- assertVisible: 'Meter, ${TO} · yours'
+- back

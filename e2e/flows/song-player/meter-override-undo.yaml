@@ -1,0 +1,29 @@
+appId: com.kitbag.app
+name: "#332: the song player's Meter row saves a meter, and Undo's restore survives a relaunch"
+tags:
+  - pr-332
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- runFlow: ../../subflows/import-fixture-song.yaml
+- tapOn: '${FIXTURE_SONG}, .*'
+- extendedWaitUntil:
+    visible: 'Play'
+    timeout: 10000
+- tapOn: 'More'
+- extendedWaitUntil:
+    visible: 'Meter, [34]/4'
+    timeout: 60000
+- runFlow:
+    when:
+      visible: 'Meter, 4/4'
+    file: ../../subflows/meter-override-undo.yaml
+    env:
+      FROM: '4/4'
+      TO: '3/4'
+- runFlow:
+    when:
+      visible: 'Meter, 3/4'
+    file: ../../subflows/meter-override-undo.yaml
+    env:
+      FROM: '3/4'
+      TO: '4/4'

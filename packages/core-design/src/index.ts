@@ -47,6 +47,7 @@ export * from './components/ListRow.tsx';
 export * from './components/LinearProgress.tsx';
 export * from './components/LiveSlot.tsx';
 export * from './components/LiveText.tsx';
+export * from './components/MenuRow.tsx';
 export * from './components/MeterRow.tsx';
 export * from './components/MeterSheet.tsx';
 export * from './components/NumpadKeypad.tsx';
