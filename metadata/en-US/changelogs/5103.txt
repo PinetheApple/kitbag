@@ -1,0 +1,1 @@
+• With TalkBack on, a sheet opened over another sheet now starts on its title; close it from TalkBack's actions menu.
