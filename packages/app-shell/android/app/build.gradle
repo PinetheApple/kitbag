@@ -100,8 +100,6 @@ if (kitbagMinor > kitbagMaxMinor || kitbagPatch > kitbagMaxPatch || kitbagVersio
     throw new GradleException("kitbag: version ${kitbagVersionName} is out of versionCode bounds (minor <= ${kitbagMaxMinor}, patch <= ${kitbagMaxPatch}, versionCode ${kitbagMinVersionCode}..${kitbagMaxVersionCode})")
 }
 
-// Release signing (#48). The keystore lives outside the repo; these three names
-// are the only channel into the build.
 def kitbagKeystorePath = System.getenv('ANDROID_KEYSTORE_PATH')
 def kitbagKeystorePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
 def kitbagKeyAlias = System.getenv('ANDROID_KEY_ALIAS')
@@ -119,14 +117,8 @@ android {
 
     namespace 'com.kitbag.app'
 
-    // Prefab is still needed for the app's own New-Architecture native aggregation
-    // (the generated react_codegen_* / appmodules build resolves jsi/reactnative
-    // via prefab). What moved OUT is core-native's externalNativeBuild: the C++
-    // core and its JSI glue are built ONCE, by the @kitbag/core-native Android
-    // library module (SPEC §13.1/§13.8), which owns the externalNativeBuild for
-    // core-native/android/CMakeLists.txt. The app depends on that library via
-    // autolinking and packages libkitbag_jsi.so from it; it must not run that CMake
-    // itself, or kitbag_core would be built twice.
+    // The generated appmodules build resolves jsi/reactnative through prefab; core-native's
+    // CMake runs only in its own library module, or kitbag_core would build twice.
     buildFeatures {
         prefab true
     }
@@ -149,9 +141,7 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
-        // PKCS12, so the store and key share one password and there is no
-        // separate key-password variable. Values come from the environment
-        // (.env locally, repository secrets in CI) and never from a tracked file.
+        // PKCS12: store and key share one password, so there is no key-password variable.
         release {
             if (kitbagCanSignRelease) {
                 storeFile file(kitbagKeystorePath)
@@ -167,15 +157,12 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // Falls back to the debug key when the environment is unset, so an
-            // ordinary local build still works. That makes a debug-signed release
-            // possible, which is unrecoverable once published — scripts/verify-apk-signature.sh
-            // is the gate that stops one leaving the machine.
+            // A debug-signed release cannot be recalled once published; scripts/verify-apk-signature.sh gates it.
             signingConfig kitbagCanSignRelease ? signingConfigs.release : signingConfigs.debug
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             def enablePngCrunchInRelease = findProperty('android.enablePngCrunchInReleaseBuilds') ?: 'true'
             crunchPngs enablePngCrunchInRelease.toBoolean()
         }

@@ -52,7 +52,7 @@ Builds:
     # Hermes ships as an official prebuilt binary, named and exempted in
     # F-Droid's Inclusion Policy.
     scanignore:
-      - node_modules/react-native/sdks/hermesc/linux64-bin/hermesc
+      - node_modules/hermes-compiler/hermesc/linux64-bin/hermesc
     # The whole JS dependency tree is build-time only once the bundle is
     # produced; this is also what keeps lightningcss's native binary out of
     # the scanned/distributed output.

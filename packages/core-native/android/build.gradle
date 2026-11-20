@@ -1,16 +1,5 @@
-// Android library module for @kitbag/core-native (SPEC §13.1: the JSI/TurboModule
-// surface is owned by this package, nothing else). This is the module RN
-// autolinking discovers and the React Native codegen runs against: applying the
-// `com.facebook.react` plugin makes codegen emit `NativeKitbagCommandsSpec` (from
-// src/NativeKitbagCommands.ts) into this module's generated source set, so the
-// hand-written KitbagCommandsModule can extend it. No app module can generate that
-// spec without also owning the TurboModule surface — which is exactly what §13.1
-// forbids, hence the module lives here.
-//
-// The C++ core does not move (§13.8): externalNativeBuild points at this package's
-// android/CMakeLists.txt, which add_subdirectory()s native/audio_core in place and
-// builds libkitbag_jsi.so ONCE, here. The app no longer runs this CMake (its
-// externalNativeBuild block was removed) so kitbag_core is built a single time.
+// Codegen runs here so only this package owns the TurboModule surface; this module's
+// CMake is the single build of kitbag_core (the app must not run it too).
 
 apply plugin: "com.android.library"
 apply plugin: "org.jetbrains.kotlin.android"
@@ -20,15 +9,14 @@ def reactNativeAbis = project.property('reactNativeArchitectures').toString().sp
 
 android {
   namespace "com.kitbag.corenative"
+  // AGP 9 only creates unit-test tasks for the tested build type; CI runs testReleaseUnitTest.
+  testBuildType "release"
 
   compileSdk rootProject.ext.compileSdkVersion
   buildToolsVersion rootProject.ext.buildToolsVersion
   ndkVersion rootProject.ext.ndkVersion
 
   buildFeatures {
-    // find_package(ReactAndroid|fbjni CONFIG) in CMakeLists.txt resolves the
-    // prefab-published jsi/reactnative/fbjni artifacts; without this there is no
-    // jsi/jsi.h on the include path (same requirement the app module had).
     prefab true
     buildConfig true
   }
@@ -40,18 +28,10 @@ android {
     externalNativeBuild {
       cmake {
         cppFlags "-std=c++20"
-        // -z max-page-size=16384 aligns every shared lib CMake links here to
-        // 16 KB ELF LOAD segments. Android 15+ devices with a 16 KB page size
-        // reject 4 KB-aligned .so at install (#33). Applied as a global
-        // CMAKE_SHARED_LINKER_FLAGS so it reaches BOTH shared targets we build
-        // and package — kitbag_jsi and the kitbag_core it links (qm_dsp is
-        // STATIC and folds in). It lives here, not in the shared
-        // native/audio_core CMakeLists, because that tree is also configured for
-        // headless host tools where this Android linker flag is wrong (§13.8).
+        // 16 KB pages reject 4 KB-aligned .so at install (#33); set here, not in audio_core,
+        // because that tree also builds host tools where this linker flag is wrong.
         arguments "-DANDROID_STL=c++_shared",
                   "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384"
-        // The RN plugin filters the app's ABIs by this same property, so every
-        // ABI the app ships carries libkitbag_jsi.so.
         abiFilters(*reactNativeAbis)
       }
     }
@@ -66,16 +46,13 @@ android {
   sourceSets {
     main {
       java {
-        // Where `com.facebook.react` codegen writes NativeKitbagCommandsSpec.
         srcDirs += "${project.buildDir}/generated/source/codegen/java"
       }
     }
   }
 
   packagingOptions {
-    // React Native ships these .so files itself; a library must not re-package
-    // them or the app build fails on duplicates (same list the RN library
-    // template excludes).
+    // React Native ships these itself; re-packaging them fails the app build on duplicates.
     excludes = [
       "**/libc++_shared.so",
       "**/libfbjni.so",
@@ -89,19 +66,18 @@ android {
     targetCompatibility JavaVersion.VERSION_17
   }
 
-  kotlinOptions {
-    jvmTarget = "17"
-  }
-
   lint {
     abortOnError false
   }
 }
 
+kotlin {
+  compilerOptions {
+    jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+  }
+}
+
 dependencies {
-  // Provides the prefab jsi/reactnative/fbjni artifacts and the TurboModule /
-  // BaseReactPackage / codegen'd spec base classes on the Kotlin classpath. Its
-  // version is pinned by the React Native Gradle Plugin, same as the app module.
   implementation "com.facebook.react:react-android"
   implementation "androidx.media:media:1.7.0"
   implementation "androidx.work:work-runtime:2.12.0"
