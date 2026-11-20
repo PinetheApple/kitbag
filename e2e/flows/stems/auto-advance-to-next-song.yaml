@@ -44,19 +44,18 @@ env:
     file: ../../subflows/tap-while-playing.yaml
     env:
       TARGET: 'Play'
+# Each check reads the screen in about 7 s while a song plays, so only these two run then.
 - extendedWaitUntil:
     visible: 'Playing ${FIXTURE_STEMS_NO_GRID} · 2 of 3'
     timeout: 30000
-- assertVisible: '${FIXTURE_STEMS_NO_GRID}'
-- assertNotVisible: '${FIXTURE_STEMS}'
 - assertVisible: 'Pause'
-- assertVisible: 'Up next: New song, ${SETLIST} · 3 of 3 · metronome'
-- assertVisible: 'Open'
 - extendedWaitUntil:
     visible: 'Play'
     timeout: 60000
 - assertVisible: '${FIXTURE_STEMS_NO_GRID}'
+- assertNotVisible: '${FIXTURE_STEMS}'
 - assertVisible: 'Up next: New song, ${SETLIST} · 3 of 3 · metronome'
+- assertVisible: 'Open'
 - tapOn: 'Open'
 - extendedWaitUntil:
     visible: 'New song, Setlist ${SETLIST}, song 3 of 3'
