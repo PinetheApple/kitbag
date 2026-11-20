@@ -83,16 +83,26 @@ function settingsChange({ set, get }: SongClickContext) {
   };
 }
 
-export function songClickEngine(context: SongClickContext) {
-  const { get, metronome } = context;
+interface SongClickEngineContext extends SongClickContext {
+  readonly counting: () => boolean;
+}
+
+export function songClickEngine(context: SongClickEngineContext) {
+  const { get, metronome, counting } = context;
   const { commands } = metronome;
   const change = settingsChange(context);
+  let lent = false;
 
   const push = (sounds: PerAccentSounds, accents: readonly KB_ACCENT[]) => {
     commands.setSounds(sounds.normal, sounds.accent);
     accents.forEach((accent, beat) => {
       commands.setAccent(beat, accent);
     });
+  };
+
+  const giveBack = () => {
+    const { sounds, accents } = metronome.store.getState();
+    push(sounds, accents);
   };
 
   const fittedTo = (song: SongMeter): SongClickSettings => {
@@ -111,13 +121,25 @@ export function songClickEngine(context: SongClickContext) {
 
   return {
     clickStarting: () => {
+      lent = false;
       const { sounds, accents } = get().clickSettings;
       push(sounds, accents);
     },
+    countArmed: () => {
+      if (get().click || lent) return;
+      lent = true;
+      const { sounds } = get().clickSettings;
+      commands.setSounds(sounds.normal, sounds.accent);
+    },
+    countOver: () => {
+      if (!lent) return;
+      lent = false;
+      if (!get().click) giveBack();
+    },
     followSong: (state: SongClickSlice, previous: SongClickSlice) => {
       if (previous.click && !state.click) {
-        const { sounds, accents } = metronome.store.getState();
-        push(sounds, accents);
+        if (counting()) lent = true;
+        else giveBack();
       }
       const meterChanged = songMeter(state) !== songMeter(previous);
       if (state.songId !== null && meterChanged) fitToMeter(state);

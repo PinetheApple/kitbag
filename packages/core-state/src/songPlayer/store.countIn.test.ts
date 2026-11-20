@@ -1,10 +1,20 @@
 import { GRID_METER, NO_METER_OVERRIDE } from '@kitbag/core-db';
-import { KB_COUNT_IN_OFF } from '@kitbag/core-native';
+import { KB_COUNT_IN_OFF, KB_SOUND_NAMES } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { songRow } from '../storage/fixtures.test-helper.ts';
 import { COUNT_IN_DRAIN_MARGIN_SECONDS } from '../stemPlayer/countedStart.ts';
+import { createMixerClick } from '../stemPlayer/mixerClick.ts';
 import { at } from '../stemPlayer/store.test-helper.ts';
-import { openedSong, SONG_ID, songRecord } from './store.test-helper.ts';
+import { createSongPlayerStore } from './store.ts';
+import {
+  BARS,
+  fakeSongRuntime,
+  opened,
+  openedSong,
+  SONG_ID,
+  songRecord,
+} from './store.test-helper.ts';
 
 const ONE_BAR = 1;
 const TWO_BARS = 2;
@@ -13,6 +23,23 @@ const BEAT = 0.5;
 const MID_SONG = at(1.2);
 const SONG_END = at(10);
 const LATE_DOWNBEAT = 2;
+const INTRO_BEATS = 16;
+const INTRO_PAUSE = 3;
+const SEEK_IN_BAR_TWO = 2.2;
+const BAR_TWO = 2;
+const SONG_SOUNDS = {
+  normal: KB_SOUND_NAMES.length - 1,
+  accent: KB_SOUND_NAMES.length - 2,
+} as const;
+const introSong = () =>
+  songRecord({
+    durationSec: 12,
+    beats: Array.from(
+      { length: INTRO_BEATS + 2 * BAR_BEATS },
+      (_, i) => i * BEAT,
+    ),
+    downbeatIndices: [INTRO_BEATS, INTRO_BEATS + BAR_BEATS],
+  });
 const countEnd = (bars: number) =>
   at(COUNT_IN_DRAIN_MARGIN_SECONDS) + bars * BAR_BEATS * at(BEAT);
 
@@ -156,5 +183,149 @@ describe('during the count', () => {
     expect(song.commands.songStop).toHaveBeenCalledOnce();
     expect(song.commands.mixerPlay).not.toHaveBeenCalled();
     expect(song.store.getState().songId).toBeNull();
+  });
+});
+
+describe('a pause inside the intro', () => {
+  async function pausedInIntro(): Promise<Song> {
+    const song = await songWithCountIn(KB_COUNT_IN_OFF, {
+      record: introSong(),
+    });
+    song.store.getState().togglePlay();
+    song.engine.playing = true;
+    song.engine.position = at(INTRO_PAUSE);
+    song.store.getState().togglePlay();
+    song.engine.playing = false;
+    song.store.getState().setClickCountIn(ONE_BAR);
+    vi.clearAllMocks();
+    return song;
+  }
+
+  it('resumes where it paused without counting, though the count-in changed', async () => {
+    const song = await pausedInIntro();
+    song.store.getState().togglePlay();
+    expect(song.commands.mixerPlay).toHaveBeenCalledOnce();
+    expect(song.commands.songCountIn).not.toHaveBeenCalled();
+    expect(song.commands.mixerSeek).not.toHaveBeenCalled();
+  });
+
+  it('counts in after a seek back to the start', async () => {
+    const song = await pausedInIntro();
+    song.store.getState().seek(0);
+    song.store.getState().togglePlay();
+    expect(counts(song)).toHaveLength(1);
+    expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+  });
+});
+
+describe('a count with the click off', () => {
+  async function songSoundsSet(): Promise<Song> {
+    const song = await songWithCountIn(ONE_BAR, { click: false });
+    song.store
+      .getState()
+      .setClickSounds(SONG_SOUNDS.normal, SONG_SOUNDS.accent);
+    vi.clearAllMocks();
+    return song;
+  }
+
+  const setSounds = (song: Song) => song.standalone.commands.setSounds;
+  const standaloneSounds = (song: Song) => {
+    const { normal, accent } = song.standalone.store.getState().sounds;
+    return [normal, accent];
+  };
+
+  it("plays the song's sounds, set before the count is scheduled", async () => {
+    const song = await songSoundsSet();
+    song.store.getState().togglePlay();
+    expect(setSounds(song).mock.calls).toEqual([
+      [SONG_SOUNDS.normal, SONG_SOUNDS.accent],
+    ]);
+    const [soundsAt] = setSounds(song).mock.invocationCallOrder;
+    const [countAt] = song.commands.songCountIn.mock.invocationCallOrder;
+    expect(soundsAt).toBeLessThan(countAt ?? 0);
+  });
+
+  it("gives the standalone's sounds back once the count is over", async () => {
+    const song = await songSoundsSet();
+    song.store.getState().togglePlay();
+    song.engine.now = countEnd(ONE_BAR);
+    await vi.runAllTimersAsync();
+    expect(setSounds(song).mock.lastCall).toEqual(standaloneSounds(song));
+  });
+
+  it("gives the standalone's sounds back when a pause cancels the count", async () => {
+    const song = await songSoundsSet();
+    song.store.getState().togglePlay();
+    song.store.getState().togglePlay();
+    expect(setSounds(song).mock.lastCall).toEqual(standaloneSounds(song));
+  });
+
+  it("keeps the song's sounds when the click goes off mid-count", async () => {
+    const song = await songWithCountIn();
+    song.store.getState().togglePlay();
+    await song.store.getState().toggleClick();
+    expect(setSounds(song)).not.toHaveBeenCalled();
+    song.engine.now = countEnd(ONE_BAR);
+    await vi.runAllTimersAsync();
+    expect(setSounds(song).mock.lastCall).toEqual(standaloneSounds(song));
+  });
+});
+
+describe('changes during the count', () => {
+  it('a library re-read with a new grid counts in again', async () => {
+    const song = await opened(songRecord());
+    song.player.getState().setClickCountIn(ONE_BAR);
+    vi.clearAllMocks();
+    song.player.getState().togglePlay();
+    song.records.readSong.mockResolvedValue(
+      songRecord({ downbeatIndices: [1, 1 + BAR_BEATS] }),
+    );
+    song.library.setState({ rows: [songRow({ id: SONG_ID })] });
+    await vi.runAllTimersAsync();
+    expect(song.commands.songPause).toHaveBeenCalledOnce();
+    expect(song.commands.songCountIn).toHaveBeenCalledTimes(2);
+  });
+
+  it('turning the click off and on counts in again with the new click', async () => {
+    const song = await counting();
+    await song.store.getState().toggleClick();
+    await song.store.getState().toggleClick();
+    expect(counts(song).map((call) => call[3])).toEqual([true, false, true]);
+    expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+  });
+
+  it('Play on the standalone metronome starts the song at once', async () => {
+    const fake = fakeSongRuntime();
+    const click = createMixerClick();
+    const store = createSongPlayerStore(() => fake.runtime, {
+      metronome: fake.metronome,
+      mixerClick: click,
+    });
+    await store.getState().open(SONG_ID, BARS).loaded;
+    store.getState().setClickCountIn(ONE_BAR);
+    store.getState().togglePlay();
+    click.release();
+    expect(fake.commands.mixerPlay).toHaveBeenCalledOnce();
+    expect(store.getState().countEndFrame).toBeNull();
+  });
+
+  it('closing stops the song unstarted without stopping the mixer', async () => {
+    const song = await counting();
+    song.store.getState().close();
+    expect(song.commands.songStop).toHaveBeenCalledOnce();
+    expect(song.commands.mixerStop).not.toHaveBeenCalled();
+    expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+  });
+
+  it('a seek counts in again from the bar it lands in', async () => {
+    const song = await counting();
+    song.store.getState().seek(at(SEEK_IN_BAR_TWO));
+    expect(song.commands.songPause).toHaveBeenCalledOnce();
+    expect(song.commands.mixerSeek.mock.calls).toEqual([
+      [0],
+      [at(SEEK_IN_BAR_TWO)],
+      [at(BAR_TWO)],
+    ]);
+    expect(counts(song)).toHaveLength(2);
   });
 });
