@@ -5,14 +5,13 @@ import {
   BARS,
   countingSong,
   opened,
-  RATE,
   record,
   SONG_DETAILS,
+  SONG_FRAMES,
   stem,
   TWO_FOUR,
 } from './store.test-helper.ts';
 
-const SONG_FRAMES = 10 * RATE;
 const NEXT_SET_ID = 8;
 const nextSong = record([stem(2)], {
   id: NEXT_SET_ID,
