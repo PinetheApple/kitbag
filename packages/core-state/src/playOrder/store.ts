@@ -1,7 +1,7 @@
 import type { PlayQueueEntry, PlayQueueRepository } from '@kitbag/core-db';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
-import { libraryStore } from '../library/store.ts';
+import { libraryStore, type LibraryStore } from '../library/store.ts';
 import {
   ADVANCE,
   advanceOf,
@@ -36,7 +36,7 @@ export interface PlayOrderActions {
   advance: () => Promise<Advance>;
   skipToNext: () => Promise<SkipResult>;
   peekNext: () => Promise<SkipResult>;
-  commitNext: (next: Advance) => Promise<void>;
+  commitNext: (next: Advance, stands?: () => boolean) => Promise<boolean>;
 }
 
 export type PlayOrderStore = PlayOrderState & PlayOrderActions;
@@ -50,6 +50,23 @@ export interface PlayOrderDeps {
     itemId: number,
     setlistId: number,
   ) => Promise<unknown>;
+  readonly markStage: () => RestoreStage;
+}
+
+export type RestoreStage = () => void;
+
+interface Commit {
+  readonly write: () => Promise<unknown>;
+  readonly revert: () => Promise<void>;
+}
+
+export function stageMarkOf(library: StoreApi<LibraryStore>) {
+  return (): RestoreStage => {
+    const { loaded, played, discarded } = library.getState();
+    return () => {
+      library.setState({ loaded, played, discarded });
+    };
+  };
 }
 
 const stageNow = () => onStageOf(libraryStore.getState());
@@ -61,6 +78,7 @@ const defaultDeps: PlayOrderDeps = {
   refreshStage: () => libraryStore.getState().refresh(),
   playSetlistEntry: (itemId, setlistId) =>
     libraryStore.getState().openStemEntry(itemId, setlistId),
+  markStage: stageMarkOf(libraryStore),
 };
 
 type SetState = StoreApi<PlayOrderStore>['setState'];
@@ -87,6 +105,58 @@ function queueActions(deps: PlayOrderDeps, set: SetState, get: Get) {
   };
 }
 
+const ALWAYS = () => true;
+
+function queueCommit(deps: PlayOrderDeps, get: Get, stemSetId: number): Commit {
+  const { queue } = get();
+  const through = queue.findIndex((entry) => entry.stemSetId === stemSetId);
+  const taken = queue.slice(0, through + 1);
+  return {
+    write: () => get().playQueued(stemSetId),
+    revert: async () => {
+      for (const [position, entry] of taken.entries())
+        await deps.queue().add(entry.stemSetId, position);
+      await get().refresh();
+    },
+  };
+}
+
+function setlistCommit(
+  deps: PlayOrderDeps,
+  itemId: number,
+  setlistId: number,
+): Commit {
+  const restore = deps.markStage();
+  return {
+    write: () => deps.playSetlistEntry(itemId, setlistId),
+    revert: () => {
+      if (deps.cursor()?.itemId === itemId) restore();
+      return Promise.resolve();
+    },
+  };
+}
+
+function commitOf(deps: PlayOrderDeps, get: Get, next: Advance) {
+  if (next.kind !== ADVANCE.play) return null;
+  if (next.setlistItemId === null)
+    return queueCommit(deps, get, next.stemSetId);
+  const { setlistId } = deps.stage();
+  if (setlistId === null) return null;
+  return setlistCommit(deps, next.setlistItemId, setlistId);
+}
+
+async function kept({ write, revert }: Commit, stands: () => boolean) {
+  try {
+    await write();
+  } catch (error) {
+    await revert();
+    throw error;
+  }
+  if (stands()) return true;
+  await revert();
+  return false;
+}
+
 function orderActions(deps: PlayOrderDeps, get: Get) {
   const peekNext = async (): Promise<SkipResult> => {
     const expected = get().upNext();
@@ -94,12 +164,9 @@ function orderActions(deps: PlayOrderDeps, get: Get) {
     const next = advanceOf(get().upNext());
     return { advance: next, skipped: advanceSkipped(expected, next) };
   };
-  const commitNext = async (next: Advance) => {
-    if (next.kind !== ADVANCE.play) return;
-    const { setlistId } = deps.stage();
-    if (next.setlistItemId === null) await get().playQueued(next.stemSetId);
-    else if (setlistId !== null)
-      await deps.playSetlistEntry(next.setlistItemId, setlistId);
+  const commitNext = async (next: Advance, stands = ALWAYS) => {
+    const commit = commitOf(deps, get, next);
+    return commit === null || kept(commit, stands);
   };
   const skipToNext = async () => {
     const step = await peekNext();

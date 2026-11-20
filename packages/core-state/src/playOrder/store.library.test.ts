@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { SONG_STEP } from '../library/setlistPosition.ts';
 import { setup as librarySetup } from '../library/store.test-helper.ts';
 import { ADVANCE, cursorOf, onStageOf } from './order.ts';
-import { createPlayOrderStore } from './store.ts';
+import { createPlayOrderStore, stageMarkOf } from './store.ts';
 
 async function setup() {
   const { library, repos, handle } = librarySetup();
@@ -19,6 +19,7 @@ async function setup() {
     refreshStage: () => library.getState().refresh(),
     playSetlistEntry: (itemId, setlistId) =>
       library.getState().openStemEntry(itemId, setlistId),
+    markStage: stageMarkOf(library),
   });
   const gig = await library.getState().createSetlist('Gig');
   const warmUp = await library.getState().newSongFromCurrent('Warm-up', gig);
@@ -60,6 +61,15 @@ describe('play order on the library stage', () => {
       setlistId: gig,
       index: 1,
     });
+  });
+
+  it('puts the library stage back when a press undoes the step', async () => {
+    const { library, order } = await setup();
+    const { loaded, played, discarded } = library.getState();
+    const step = await order.getState().peekNext();
+    const stood = await order.getState().commitNext(step.advance, () => false);
+    expect(stood).toBe(false);
+    expect(library.getState()).toMatchObject({ loaded, played, discarded });
   });
 
   it('says a stem song deleted after it was shown as up next was skipped', async () => {
@@ -128,6 +138,7 @@ describe('play order after removals around the entry on stage', () => {
       refreshStage: () => library.getState().refresh(),
       playSetlistEntry: (itemId, setlistId) =>
         library.getState().openStemEntry(itemId, setlistId),
+      markStage: stageMarkOf(library),
     });
     const gig = await library.getState().createSetlist('Gig');
     const ids: Record<string, { stemSetId: number; itemId: number }> = {};

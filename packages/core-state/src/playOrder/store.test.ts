@@ -16,10 +16,42 @@ afterEach(() => {
   for (const { connection } of handles.splice(0)) connection.close();
 });
 
-async function setup() {
+const DISK_FULL = 'disk full';
+
+function deferred() {
+  let resolve: () => void = () => undefined;
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+function heldWrite() {
+  const write = deferred();
+  let standing = true;
+  return {
+    afterWrite: () => write.promise,
+    stands: () => standing,
+    press: () => {
+      standing = false;
+    },
+    release: write.resolve,
+  };
+}
+
+async function setup(
+  afterWrite: () => Promise<void> = () => Promise.resolve(),
+) {
   const handle = openTestDatabase();
   handles.push(handle);
-  const queue = createPlayQueueRepository(handle);
+  const repository = createPlayQueueRepository(handle);
+  const queue = {
+    ...repository,
+    takeThrough: async (stemSetId: number) => {
+      await repository.takeThrough(stemSetId);
+      await afterWrite();
+    },
+  };
   const library = {
     setlists: createSetlistRepository(handle),
     presets: createSongPresetRepository(handle),
@@ -58,7 +90,13 @@ async function setup() {
     refreshStage: reload,
     playSetlistEntry: (itemId) => {
       onStage = itemId;
-      return Promise.resolve();
+      return afterWrite();
+    },
+    markStage: () => {
+      const at = onStage;
+      return () => {
+        onStage = at;
+      };
     },
   });
   const putOnStage = (itemId: number) => {
@@ -194,5 +232,83 @@ describe('play order', () => {
       stemSetId: a,
       setlistItemId: again.id,
     });
+  });
+});
+
+describe('a press while the next step is committed', () => {
+  it('leaves a queued song queued', async () => {
+    const hold = heldWrite();
+    const { order, c } = await setup(hold.afterWrite);
+    await order.getState().enqueue(c);
+    const step = await order.getState().peekNext();
+    const commit = order.getState().commitNext(step.advance, hold.stands);
+    hold.press();
+    hold.release();
+    expect(await commit).toBe(false);
+    expect(queuedIds(order)).toEqual([c]);
+    expect(await order.getState().peekNext()).toEqual(step);
+  });
+
+  it('leaves the setlist cursor where it was', async () => {
+    const hold = heldWrite();
+    const { order, click, putOnStage } = await setup(hold.afterWrite);
+    putOnStage(click.id);
+    const step = await order.getState().peekNext();
+    const commit = order.getState().commitNext(step.advance, hold.stands);
+    hold.press();
+    hold.release();
+    expect(await commit).toBe(false);
+    expect(await order.getState().peekNext()).toEqual(step);
+  });
+
+  it('keeps an entry the press itself put on stage', async () => {
+    const hold = heldWrite();
+    const { order, click, first, putOnStage } = await setup(hold.afterWrite);
+    putOnStage(click.id);
+    const step = await order.getState().peekNext();
+    const commit = order.getState().commitNext(step.advance, hold.stands);
+    hold.press();
+    putOnStage(first.id);
+    hold.release();
+    expect(await commit).toBe(false);
+    expect((await order.getState().peekNext()).advance).toMatchObject({
+      kind: ADVANCE.open,
+    });
+  });
+
+  it('takes the step when the end still stands', async () => {
+    const hold = heldWrite();
+    const { order, c } = await setup(hold.afterWrite);
+    await order.getState().enqueue(c);
+    const step = await order.getState().peekNext();
+    const commit = order.getState().commitNext(step.advance, hold.stands);
+    hold.release();
+    expect(await commit).toBe(true);
+    expect(queuedIds(order)).toEqual([]);
+  });
+});
+
+describe('a commit whose write fails', () => {
+  const failing = () => Promise.reject(new Error(DISK_FULL));
+
+  it('puts the queued song back', async () => {
+    const { order, c } = await setup(failing);
+    await order.getState().enqueue(c);
+    const step = await order.getState().peekNext();
+    await expect(order.getState().commitNext(step.advance)).rejects.toThrow(
+      DISK_FULL,
+    );
+    await order.getState().refresh();
+    expect(queuedIds(order)).toEqual([c]);
+  });
+
+  it('puts the setlist cursor back', async () => {
+    const { order, click, putOnStage } = await setup(failing);
+    putOnStage(click.id);
+    const step = await order.getState().peekNext();
+    await expect(order.getState().commitNext(step.advance)).rejects.toThrow(
+      DISK_FULL,
+    );
+    expect(await order.getState().peekNext()).toEqual(step);
   });
 });
