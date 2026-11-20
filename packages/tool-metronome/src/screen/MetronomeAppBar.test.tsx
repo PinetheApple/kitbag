@@ -53,14 +53,16 @@ vi.mock('./useStepSong.ts', () => ({ useStepSong: () => vi.fn() }));
 
 const { MetronomeAppBar } = await import('./MetronomeAppBar.tsx');
 
-function stepButtons(): Record<string, boolean> {
+function stepKeys() {
   let tree: ReactTestRenderer | undefined;
   act(() => {
     tree = create(createElement(MetronomeAppBar, { bottomInset: 0 }));
   });
-  const buttons = tree?.root.findAll(
-    (node) => node.type === ('BarIconButton' as never),
-  );
+  return tree?.root.findAll((node) => node.type === ('BarIconButton' as never));
+}
+
+function stepButtons(): Record<string, boolean> {
+  const buttons = stepKeys();
   return Object.fromEntries(
     (buttons ?? []).map((button) => [
       button.props.icon as string,
@@ -80,5 +82,29 @@ describe('the stage bar after the on-stage song is removed', () => {
     stage.entries = [entry(1, 'A'), entry(2, 'B')];
     stage.index = 1;
     expect(stepButtons()).toEqual({ previous: false, next: false });
+  });
+});
+
+describe('the stage bar keys', () => {
+  it('draws Previous and Next as filled keys', () => {
+    stage.entries = [entry(1, 'A'), entry(2, 'B'), entry(3, 'C')];
+    stage.index = 1;
+    expect(
+      (stepKeys() ?? []).map(
+        (key) => [key.props.icon, key.props.filled] as const,
+      ),
+    ).toEqual([
+      ['previous', true],
+      ['next', true],
+    ]);
+  });
+
+  it('disables Previous on the first song and Next on the last', () => {
+    stage.entries = [entry(REMOVED_ITEM, 'A'), entry(4, 'B')];
+    stage.index = 0;
+    expect(stepButtons()).toEqual({ previous: true, next: false });
+    stage.entries = [entry(4, 'A'), entry(REMOVED_ITEM, 'B')];
+    stage.index = 1;
+    expect(stepButtons()).toEqual({ previous: false, next: true });
   });
 });

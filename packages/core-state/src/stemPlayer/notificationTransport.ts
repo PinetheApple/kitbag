@@ -26,6 +26,7 @@ export interface SongTransportRequestOptions {
   readonly counting: () => boolean;
   readonly stopCount: () => void;
   readonly next?: (session: number) => void;
+  readonly previous?: (session: number) => void;
 }
 
 export function songTransportRequests({
@@ -34,6 +35,7 @@ export function songTransportRequests({
   counting,
   stopCount,
   next,
+  previous,
 }: SongTransportRequestOptions): (request: SongTransportRequest) => void {
   const playing = () => runtimeOf().engine.playing();
   return ({ action, frame, shownSession }) => {
@@ -53,6 +55,9 @@ export function songTransportRequests({
         return;
       case 'next':
         next?.(shownSession);
+        return;
+      case 'previous':
+        previous?.(shownSession);
         return;
     }
   };

@@ -2,12 +2,15 @@ import {
   ENTRY_KIND,
   libraryStore,
   metronomeStore,
+  playOrderStore,
   type LibrarySongRow,
   type LibraryStemSetRow,
   type PlayOrderRepositories,
   type QueuedSong,
 } from '@kitbag/core-state';
 import { vi } from 'vitest';
+
+import { flush, mountTracked } from './playerHarness.test-helper.tsx';
 
 export const GIG = 5;
 export const BALLAD_ITEM = 31;
@@ -117,4 +120,14 @@ export function metronomeEntryOnStage() {
   });
   const start = vi.spyOn(metronomeStore.getState(), 'start');
   return { loadSong, start };
+}
+
+export async function withQueue(...songs: (number | QueuedSong)[]) {
+  setQueued(
+    songs.map((entry) => (typeof entry === 'number' ? stems(entry) : entry)),
+  );
+  const player = await mountTracked();
+  await playOrderStore.getState().refresh();
+  await flush();
+  return player;
 }

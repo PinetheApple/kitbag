@@ -30,6 +30,7 @@ import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
 import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
 import { mixerSession, type MixerHold } from './mixerSession.ts';
 import { mixSaver } from './mixSaver.ts';
+import { cardPresses, type CardPressActions } from './cardPresses.ts';
 import { stemSongAdvance } from './stemSongAdvance.ts';
 import { stemSongHolds } from './stemSongHolds.ts';
 import {
@@ -41,7 +42,6 @@ import { retimeActions, retimeAnchor } from './retimeActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
 import { sortedSections } from './sections.ts';
 import {
-  ADVANCE_CAUSE,
   endedOnLastFrame,
   songEnds,
   type AdvanceListener,
@@ -140,7 +140,7 @@ export interface StemPlayerState {
   readonly retimeFailure: RetimeFailure | null;
 }
 
-export interface StemPlayerActions {
+export interface StemPlayerActions extends CardPressActions {
   readonly open: (setId: number, waveformBars: number) => Promise<void>;
   readonly acquireSong: (setId: number, waveformBars: number) => MixerHold;
   readonly advanceTo: (setId: number) => Promise<AdvanceOutcome>;
@@ -150,7 +150,6 @@ export interface StemPlayerActions {
     waveformBars: number,
   ) => Promise<AdvanceOutcome>;
   readonly handOver: () => void;
-  readonly pressNext: () => void;
   readonly onSongEnd: (listener: AdvanceListener) => () => void;
   readonly songStillEnded: () => boolean;
   readonly stopAdvancing: () => void;
@@ -297,6 +296,7 @@ export function createStemPlayerStore(
       mixer.current,
     );
     mixer.onSongEnded(ends.reported);
+    const presses = cardPresses(mixer.current, ends);
     const holds = stemSongHolds({ mixer, get, ends, runtimeOf, start });
     holds.onCardStop(() => {
       card.stopped();
@@ -311,7 +311,7 @@ export function createStemPlayerStore(
           card.stopped();
           start.stop();
         },
-        next: ends.pressedNext,
+        ...presses.requests,
       }),
     );
     const speedKey = speedKeySession(context, start.rateSet, () => openRecord);
@@ -448,9 +448,7 @@ export function createStemPlayerStore(
         return mixer.hold(acquired);
       },
       ...advancing,
-      pressNext: () => {
-        ends.pressedNext(mixer.current(), ADVANCE_CAUSE.nextInApp);
-      },
+      ...presses.actions,
       onSongEnd: ends.subscribe,
       songStillEnded: ends.stands,
       stopAdvancing: holds.gaveUp,

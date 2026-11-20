@@ -27,7 +27,7 @@ import {
   useSongLibrary,
   useSongPlayer,
 } from '@kitbag/core-state';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { CLICK_GROUP } from '../logic/clickChipText.ts';
@@ -42,7 +42,7 @@ import type { BadgeSpec } from '../logic/rowText.ts';
 import { songTitle } from '../logic/songTitle.ts';
 import { REANALYZE_LABEL } from '../logic/viewText.ts';
 import { frameAtTap } from '../logic/waveSeek.ts';
-import type { UsePlayhead } from './playhead.ts';
+import type { SongPlayhead, UsePlayhead } from './playhead.ts';
 import { EndedSetlistSnackbar } from './EndedSetlistSnackbar.tsx';
 import { SongClickChips } from './SongClickChips.tsx';
 import {
@@ -70,7 +70,10 @@ export interface SongPlayerScreenProps {
   readonly onOpenStemSet: (stemSetId: number) => void;
   readonly onOpenSong: (songId: number) => void;
   readonly usePlayhead: UsePlayhead;
+  readonly renderUpNext?: RenderUpNext;
 }
+
+export type RenderUpNext = (songSec: SongPlayhead['songSec']) => ReactNode;
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
@@ -244,6 +247,7 @@ interface BodyProps {
   readonly onCloseTempo: () => void;
   readonly usePlayhead: UsePlayhead;
   readonly clickSheet: SongClickSheetState;
+  readonly renderUpNext: RenderUpNext | undefined;
 }
 
 function Body({
@@ -256,6 +260,7 @@ function Body({
   onCloseTempo,
   usePlayhead,
   clickSheet,
+  renderUpNext,
 }: BodyProps) {
   const styles = useStyles();
   const status = useSongPlayer((s) => s.status);
@@ -302,7 +307,11 @@ function Body({
         bottomInset={bottom}
         onClose={onCloseTempo}
       />
-      <SongTransport playing={playhead.playing} bottomInset={bottom} />
+      <SongTransport
+        playing={playhead.playing}
+        bottomInset={bottom}
+        upNext={renderUpNext?.(playhead.songSec)}
+      />
     </>
   );
 }
@@ -315,6 +324,7 @@ export function SongPlayerScreen({
   onOpenStemSet,
   onOpenSong,
   usePlayhead,
+  renderUpNext,
 }: SongPlayerScreenProps) {
   const styles = useStyles();
   const open = useSongPlayer((s) => s.open);
@@ -369,6 +379,7 @@ export function SongPlayerScreen({
         onCloseTempo={closeTempo}
         usePlayhead={usePlayhead}
         clickSheet={clickSheet}
+        renderUpNext={renderUpNext}
       />
       <SongPlayerMenu
         songId={songId}

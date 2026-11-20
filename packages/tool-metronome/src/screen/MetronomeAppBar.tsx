@@ -310,6 +310,7 @@ function StageBar({
     <>
       <AppBar packed onBack={onBack}>
         <BarIconButton
+          filled
           icon="previous"
           size="skip"
           color="text"
@@ -326,6 +327,7 @@ function StageBar({
           onPress={handleOpenList}
         />
         <BarIconButton
+          filled
           icon="next"
           size="skip"
           color="text"

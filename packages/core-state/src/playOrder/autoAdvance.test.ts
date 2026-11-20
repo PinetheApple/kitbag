@@ -15,7 +15,7 @@ import {
   type ArrivalState,
   type AutoAdvanceDeps,
 } from './autoAdvance.ts';
-import { restingPlayer } from './autoAdvance.test-helper.ts';
+import { NO_BACK, restingPlayer } from './autoAdvance.test-helper.ts';
 import { ADVANCE, type Advance } from './order.ts';
 import { SKIP } from './queuedSongText.ts';
 import type { SkipResult, Undo } from './store.ts';
@@ -95,6 +95,7 @@ function harness(
     candidates: () => candidates,
     commitOpen,
     arrivals,
+    ...NO_BACK,
   });
   const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
   const songEnds = async () => {

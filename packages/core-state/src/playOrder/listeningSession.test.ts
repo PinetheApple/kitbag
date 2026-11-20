@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import type { QueuedSong } from '@kitbag/core-db';
+
+import { heardStore } from './heard.ts';
+import { HUM, NIGHT_BUS, plain } from './heard.test-helper.ts';
 import {
+  endListeningSession,
   endSessionOnCardStop,
+  recordHeardSongs,
   stopSongAndSession,
   type ListeningDeps,
 } from './listeningSession.ts';
@@ -45,5 +51,48 @@ describe('the listening session', () => {
     const wiring = deps();
     endSessionOnCardStop(wiring)();
     expect(wiring.listening()).toBe(0);
+  });
+});
+
+describe('the songs heard in the listening session', () => {
+  function recording(first: QueuedSong | null) {
+    let shown = first;
+    let changed: () => void = () => undefined;
+    const hear = vi.fn<(song: QueuedSong) => void>();
+    recordHeardSongs({
+      shown: () => shown,
+      subscribe: (listener) => {
+        changed = listener;
+        return () => undefined;
+      },
+      hear,
+    });
+    const show = (song: QueuedSong | null) => {
+      shown = song;
+      changed();
+    };
+    return { hear, show };
+  }
+
+  it('hears each song as it shows, once while it stays', () => {
+    const { hear, show } = recording(NIGHT_BUS);
+    show(NIGHT_BUS);
+    show(HUM);
+    expect(hear.mock.calls).toEqual([[NIGHT_BUS], [HUM]]);
+  });
+
+  it('hears a song again when it shows after nothing played', () => {
+    const { hear, show } = recording(HUM);
+    show(null);
+    show(HUM);
+    expect(hear.mock.calls).toEqual([[HUM], [HUM]]);
+  });
+});
+
+describe('ending the listening session', () => {
+  it('forgets the songs heard in it', () => {
+    heardStore.setState({ heard: [plain(HUM)] });
+    endListeningSession();
+    expect(heardStore.getState().heard).toEqual([]);
   });
 });

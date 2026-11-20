@@ -1,15 +1,48 @@
-import { SongPlayerScreen } from '@kitbag/tool-library';
-import { useMixerFrame } from '@kitbag/tool-stems';
+import { useSongPlayer } from '@kitbag/core-state';
+import {
+  SongPlayerScreen,
+  type SongPlayerScreenProps,
+} from '@kitbag/tool-library';
+import { UpNextRow, useMixerFrame } from '@kitbag/tool-stems';
 import { useIsFocused, useLocalSearchParams, useNavigation } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
+import { useQueueSheet } from '@/queue/useQueueSheet';
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
 interface SongRouteNavigation {
   readonly setParams: (params: { readonly id: string }) => void;
+}
+
+type RenderUpNext = NonNullable<SongPlayerScreenProps['renderUpNext']>;
+
+function useSongUpNext(bottomInset: number, onOpenSong: (id: number) => void) {
+  const routes = useLibraryRoutes();
+  const place = useMemo(
+    () => ({
+      playsInPlace: false,
+      routes: { onOpenStemSet: routes.replaceStemSet, onOpenSong },
+    }),
+    [routes.replaceStemSet, onOpenSong],
+  );
+  const queue = useQueueSheet(bottomInset, place);
+  const pressNext = useSongPlayer((s) => s.pressNext);
+  const pressPrevious = useSongPlayer((s) => s.pressPrevious);
+  const renderUpNext = useCallback<RenderUpNext>(
+    (songSec) => (
+      <UpNextRow
+        songSec={songSec}
+        onOpenSheet={queue.open}
+        onNext={pressNext}
+        onPrevious={pressPrevious}
+      />
+    ),
+    [queue.open, pressNext, pressPrevious],
+  );
+  return { renderUpNext, sheet: queue.sheet };
 }
 
 function SongPlayerRoute() {
@@ -24,16 +57,21 @@ function SongPlayerRoute() {
     },
     [navigation],
   );
+  const upNext = useSongUpNext(insets.bottom, follow);
   return (
-    <SongPlayerScreen
-      songId={Number(id)}
-      focused={focused}
-      insets={insets}
-      onBack={routes.back}
-      onOpenStemSet={routes.replaceStemSet}
-      onOpenSong={follow}
-      usePlayhead={useMixerFrame}
-    />
+    <>
+      <SongPlayerScreen
+        songId={Number(id)}
+        focused={focused}
+        insets={insets}
+        onBack={routes.back}
+        onOpenStemSet={routes.replaceStemSet}
+        onOpenSong={follow}
+        usePlayhead={useMixerFrame}
+        renderUpNext={upNext.renderUpNext}
+      />
+      {upNext.sheet}
+    </>
   );
 }
 

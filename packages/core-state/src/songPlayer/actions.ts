@@ -26,6 +26,10 @@ export type SongPlayerActions = Pick<
   | 'handToMetronome'
   | 'handOver'
   | 'takeOver'
+  | 'pressNext'
+  | 'pressPrevious'
+  | 'onPrevious'
+  | 'playheadSeconds'
 > &
   SongClickActions & {
     readonly open: (songId: number, waveformBars: number) => SongSession;

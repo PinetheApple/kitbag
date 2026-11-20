@@ -116,10 +116,19 @@ class SongControlsTest {
   }
 
   @Test
-  fun `a previous on the shown card restarts the song`() {
+  fun `a previous on the shown card goes to the app and leaves the engine alone`() {
     val card = fence.issue()
     engine.head = 95 * 48_000L
     press(card, songA, PREVIOUS)
+    assertEquals(listOf<SongCommand>(SongCommand.Previous), requests)
+    assertEquals(emptyList<SongCommand>(), engine.calls)
+  }
+
+  @Test
+  fun `a previous with no app listening restarts the song`() {
+    val card = fence.issue()
+    engine.head = 95 * 48_000L
+    controls.press(card, SongTransport(songA, rate), { progress() }, PREVIOUS, null)
     assertEquals(listOf<SongCommand>(SongCommand.Seek(0L)), engine.calls)
   }
 

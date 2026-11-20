@@ -20,6 +20,8 @@ export const QUEUE_TEXT = {
   nothingQueued: 'Nothing queued',
   nothingQueuedReason:
     'Use Play next or Add to queue on a song. When this song ends, playback stops.',
+  playbackStops: 'Playback stops when this song ends',
+  previous: 'Previous',
   remove: 'Remove',
   metronomeBadge: 'METRONOME',
   metronomeSong: 'Metronome song',

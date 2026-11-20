@@ -58,7 +58,7 @@ export type SongTransportOrder = Readonly<{
 }>;
 
 export type SongTransportRequest = Readonly<{
-  action: 'play' | 'pause' | 'stop' | 'seek' | 'next';
+  action: 'play' | 'pause' | 'stop' | 'seek' | 'next' | 'previous';
   frame: Double | null;
   shownSession: Int32;
 }>;

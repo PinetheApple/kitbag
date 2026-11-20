@@ -9,6 +9,7 @@ import type {
 import {
   showCountOnSongCard,
   songTransportRequests,
+  type SongTransportRequestOptions,
 } from '../stemPlayer/notificationTransport.ts';
 import type { MixerRuntime } from '../stemPlayer/runtime.ts';
 import {
@@ -29,6 +30,8 @@ type SongPlayerStoreApi = Pick<
   StoreApi<SongPlayerState & Pick<SongPlayerActions, 'togglePlay' | 'seek'>>,
   'getState' | 'subscribe'
 >;
+
+type CardPresses = Pick<SongTransportRequestOptions, 'next' | 'previous'>;
 
 export interface CountSounds {
   readonly countArmed: () => void;
@@ -56,7 +59,7 @@ function showCountOutsideApp(
   store: SongPlayerStoreApi,
   runtimeOf: () => MixerRuntime,
   start: SongStart,
-  next: (session: number) => void,
+  presses: CardPresses,
 ): void {
   mixer.onScrubSeek(start.afterSeek);
   mixer.onClickReleased(start.endCountNow);
@@ -75,7 +78,7 @@ function showCountOutsideApp(
         card.stopped();
         start.stop();
       },
-      next,
+      ...presses,
     }),
   );
 }
@@ -96,7 +99,7 @@ export function songCount(
   mixer: ReturnType<typeof mixerSession>,
   store: SongPlayerStoreApi,
   sounds: CountSounds,
-  next: (session: number) => void,
+  presses: CardPresses,
 ): SongStart {
   const { get, runtimeOf, session } = context;
   const start = songStart({
@@ -137,7 +140,7 @@ export function songCount(
       start.afterSeek(frame);
     },
   };
-  showCountOutsideApp(mixer, store, runtimeOf, count, next);
+  showCountOutsideApp(mixer, store, runtimeOf, count, presses);
   lendSoundsForCount(store, sounds);
   return count;
 }

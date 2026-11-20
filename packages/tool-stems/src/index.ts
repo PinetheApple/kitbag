@@ -4,6 +4,7 @@ export {
 } from './screen/StemPlayerScreen.tsx';
 export { useMixerFrame } from './screen/useMixerFrame.ts';
 export { QueueSheet, type QueueSheetProps } from './screen/QueueSheet.tsx';
+export { UpNextRow, type UpNextRowProps } from './screen/UpNextRow.tsx';
 export {
   AddStemSongSheet,
   type AddStemSongSheetProps,

@@ -24,6 +24,7 @@ import {
   type MixerClick,
 } from '../stemPlayer/mixerClick.ts';
 import { ATTACHABLE, mixerSession } from '../stemPlayer/mixerSession.ts';
+import { cardPresses } from '../stemPlayer/cardPresses.ts';
 import {
   endedOnLastFrame,
   songEnds,
@@ -148,7 +149,8 @@ export function createSongPlayerStore(
     mixer.onLastRelease({ keepsSong: () => get().status === 'ready' });
     const context = { set, get, runtimeOf, session: mixer.current };
     const presets = songPresetActions({ ...context, live });
-    const count = songCount(context, mixer, api, clickEngine, ends.pressedNext);
+    const presses = cardPresses(mixer.current, ends);
+    const count = songCount(context, mixer, api, clickEngine, presses.requests);
     const gridFollowers = { gridReplaced: count.gridReplaced };
     const card = songCard({
       ...context,
@@ -358,6 +360,7 @@ export function createSongPlayerStore(
           songId,
         ),
       handOver: mixer.handOver,
+      ...presses.actions,
       onSongEnd: ends.subscribe,
       songStillEnded: ends.stands,
       stopAdvancing: () => {
@@ -391,6 +394,8 @@ export function createSongPlayerStore(
         if (get().songId === songId) heldCorrection = null;
       },
       playheadBeatSeconds: () => playheadBeatSeconds(get(), runtimeOf()),
+      playheadSeconds: () =>
+        framesToSeconds(runtimeOf().engine.position(), get().engineRate),
       dismissMeterNotice: () => {
         set({ meterNotice: null });
       },
