@@ -255,6 +255,23 @@ describe('the actions sheet of a stem song', () => {
     expect(new Set(queue.reads)).toEqual(new Set([false]));
   });
 
+  it('draws the new buttons as the mockup does: 20 dp icons, left-aligned', () => {
+    const { tree } = openStemRow('present');
+    for (const label of ['Play next', 'Add to setlist'])
+      expect(button(tree, label).props).toMatchObject({
+        iconSize: 'sheetButton',
+        align: 'start',
+      });
+  });
+
+  it('fades In Up next rather than clearing its fill', () => {
+    const { tree } = openStemRow('present', [NIGHT_BUS]);
+    expect(button(tree, 'In Up next').props).toMatchObject({
+      disabled: true,
+      fadedWhenDisabled: true,
+    });
+  });
+
   it('does not say a song was queued when queueing failed', async () => {
     const { tree } = openStemRow('present');
     queue.queueSong.mockResolvedValueOnce(false);

@@ -113,14 +113,18 @@ function QueueButtons({
       <Button
         label={queued ? QUEUE_TEXT.inUpNext : QUEUE_TEXT.playNext}
         icon={queued ? 'inUpNext' : 'playNext'}
+        iconSize="sheetButton"
+        align="start"
         variant="tonal"
         disabled={queued}
-        outlinedWhenDisabled
+        fadedWhenDisabled
         onPress={onPlayNext}
       />
       <Button
         label={QUEUE_TEXT.addToSetlist}
         icon="addToSetlist"
+        iconSize="sheetButton"
+        align="start"
         variant="tonal"
         onPress={onAddToSetlist}
       />

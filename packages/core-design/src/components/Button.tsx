@@ -25,6 +25,7 @@ import {
 import { InlineIcon } from './IconGlyph.tsx';
 
 export type ButtonVariant = 'primary' | 'tonal' | 'ghost' | 'destructive';
+export type ButtonAlign = 'center' | 'start';
 export type ButtonSize =
   'default' | 'sheet' | 'prompt' | 'target' | 'small' | 'bar';
 
@@ -59,6 +60,8 @@ export interface ButtonProps {
   readonly iconTone?: 'label' | 'accent';
   readonly disabled?: boolean;
   readonly outlinedWhenDisabled?: boolean;
+  readonly fadedWhenDisabled?: boolean;
+  readonly align?: ButtonAlign;
   readonly fill?: boolean;
   readonly accessibilityLabel?: string;
   /** Gaps to the controls above and below, for the 48dp hit box; a number
@@ -81,6 +84,15 @@ const useStyles = createThemedStyles((theme) => ({
   },
   fill: {
     flex: 1,
+  },
+  start: {
+    justifyContent: 'flex-start',
+  },
+  startLabel: {
+    textAlign: 'left',
+  },
+  faded: {
+    opacity: opacity.muted,
   },
   fillFace: {
     flexGrow: 1,
@@ -172,15 +184,16 @@ export function Button({
   iconTone = 'label',
   disabled = false,
   outlinedWhenDisabled = false,
+  fadedWhenDisabled = false,
+  align = 'center',
   fill = false,
   accessibilityLabel,
   neighbourGapDp = space.controlGap,
   size: buttonSize = 'default',
 }: ButtonProps) {
   const styles = useStyles();
-  const labelStyle = disabled
-    ? styles.disabledLabel
-    : styles[`${variant}Label`];
+  const cleared = disabled && !fadedWhenDisabled;
+  const labelStyle = cleared ? styles.disabledLabel : styles[`${variant}Label`];
   return (
     <Pressable
       accessibilityRole="button"
@@ -199,8 +212,10 @@ export function Button({
           styles[variant],
           buttonSize !== 'default' && styles[buttonSize],
           fill && styles.fillFace,
-          disabled && styles.disabled,
-          disabled && outlinedWhenDisabled && styles.disabledOutline,
+          align === 'start' && styles.start,
+          cleared && styles.disabled,
+          cleared && outlinedWhenDisabled && styles.disabledOutline,
+          disabled && fadedWhenDisabled && styles.faded,
         ]}
       >
         {icon === undefined ? null : (
@@ -218,6 +233,7 @@ export function Button({
           style={[
             styles.label,
             buttonSize === 'small' && styles.smallLabel,
+            align === 'start' && styles.startLabel,
             labelStyle,
           ]}
         >
