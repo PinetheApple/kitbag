@@ -117,8 +117,7 @@ android {
 
     namespace 'com.kitbag.app'
 
-    // The generated appmodules build resolves jsi/reactnative through prefab; core-native's
-    // CMake runs only in its own library module, or kitbag_core would build twice.
+    // The generated appmodules build resolves jsi/reactnative through prefab.
     buildFeatures {
         prefab true
     }

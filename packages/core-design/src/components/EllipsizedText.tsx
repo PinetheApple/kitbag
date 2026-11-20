@@ -23,9 +23,7 @@ export function EllipsizedText({
   numberOfLines = 1,
 }: EllipsizedTextProps) {
   const { fontScale } = useWindowDimensions();
-  const flat = StyleSheet.flatten(style);
-  const fontSize = flat?.fontSize;
-  const opacity = flat?.opacity;
+  const { fontSize, opacity } = StyleSheet.flatten(style) ?? {};
   if (fontSize === undefined || !isTextScaled(fontScale) || children === '')
     return (
       <Text style={style} numberOfLines={numberOfLines} ellipsizeMode="tail">

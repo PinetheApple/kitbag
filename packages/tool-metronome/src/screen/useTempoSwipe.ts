@@ -13,11 +13,16 @@ import {
   swipeTempo,
 } from '../logic/swipeTempo.ts';
 
+export interface TempoSwipeScope {
+  readonly enabled: boolean;
+}
+
 export function useTempoSwipe(
   currentBpm: SharedValue<number>,
   onTempo: (bpm: number) => void,
-  enabled: boolean,
+  scope: TempoSwipeScope,
 ) {
+  const { enabled } = scope;
   const swipe = useSharedValue(startSwipe(0));
 
   const handleStep = useCallback(

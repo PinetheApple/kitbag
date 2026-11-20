@@ -22,13 +22,13 @@ import {
 } from '@kitbag/core-state';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
-  type LayoutChangeEvent,
   Pressable,
   ScrollView,
-  type ScrollViewInstance,
   Text,
   useWindowDimensions,
   View,
+  type LayoutChangeEvent,
+  type ScrollViewInstance,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,

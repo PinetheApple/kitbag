@@ -30,7 +30,7 @@ import {
   type QueuedSong,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { type TextInputInstance, View } from 'react-native';
+import { View, type TextInputInstance } from 'react-native';
 
 import {
   canReanalyze,

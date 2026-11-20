@@ -5,7 +5,7 @@ import {
   type StemDeckStore,
 } from '@kitbag/core-state';
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
-import { ScrollView, Text, type TextInputInstance, View } from 'react-native';
+import { ScrollView, Text, View, type TextInputInstance } from 'react-native';
 
 import { AddressField } from './AddressField.tsx';
 import {

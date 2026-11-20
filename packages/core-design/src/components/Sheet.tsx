@@ -7,16 +7,16 @@ import {
   type RefObject,
 } from 'react';
 import {
-  type AccessibilityActionEvent,
-  type HostInstance,
-  type LayoutChangeEvent,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  type TextInstance,
   View,
+  type AccessibilityActionEvent,
+  type HostInstance,
+  type LayoutChangeEvent,
+  type TextInstance,
 } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
