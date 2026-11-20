@@ -142,6 +142,9 @@ vi.mock('react-native-reanimated', async () => {
     },
     useAnimatedStyle,
     useSharedValue,
+    scrollTo: (_ref: unknown, _x: number, y: number) => {
+      anim.scrolls.push(y);
+    },
     withSpring: (to: number) => to,
     withTiming: (
       to: number,
@@ -336,6 +339,7 @@ beforeEach(() => {
   anim.exits.length = 0;
   anim.reactions.length = 0;
   anim.frameCallbacks.length = 0;
+  anim.scrolls.length = 0;
   dismissKeyboard.mockClear();
   anim.motion = FULL;
   focusReaderOn.mockClear();

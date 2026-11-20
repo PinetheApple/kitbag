@@ -12,8 +12,10 @@ import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  scrollTo,
   type SharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnUI } from 'react-native-worklets';
 
 import { size, textRoles } from '../roles.ts';
 import { wheelPicker } from '../metronomeRoles.ts';
@@ -130,7 +132,18 @@ export function WheelPicker({
   const initialOffset = useRef({ x: 0, y: index * PITCH }).current;
   const liveIndex = useSharedValue(index);
   const live = useSheetContentLive();
+  const stale = useSharedValue(false);
+  const moving = useSharedValue(false);
   const count = values.length;
+
+  const resync = useCallback(
+    (animated: boolean) => {
+      'worklet';
+      liveIndex.value = index;
+      scrollTo(scroll, 0, index * PITCH, animated);
+    },
+    [liveIndex, index, scroll],
+  );
 
   useEffect(() => {
     liveIndex.value = index;
@@ -140,13 +153,16 @@ export function WheelPicker({
   useAnimatedReaction(
     () => live.value,
     (now, previous) => {
-      if (now && previous === false) liveIndex.value = index;
+      if (!now && previous === true) stale.value = true;
+      if (!now || previous !== false) return;
+      resync(false);
+      if (!moving.value) stale.value = false;
     },
   );
 
   const handleScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
-      if (!live.value) return;
+      if (!live.value || stale.value) return;
       const next = wheelIndex(event.contentOffset.y, PITCH, count);
       if (liveIndex.value !== next) liveIndex.value = next;
     },
@@ -160,20 +176,36 @@ export function WheelPicker({
     [values, selected, onSelect],
   );
 
+  const handleBeginDrag = useCallback(() => {
+    stale.value = false;
+  }, [stale]);
+
+  const handleMomentumBegin = useCallback(() => {
+    moving.value = true;
+  }, [moving]);
+
   const handleMomentumEnd = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      settle(event.nativeEvent.contentOffset.y);
+      moving.value = false;
+      if (!stale.value) {
+        settle(event.nativeEvent.contentOffset.y);
+        return;
+      }
+      if (!live.value) return;
+      stale.value = false;
+      scheduleOnUI(resync, true);
     },
-    [settle],
+    [moving, stale, live, settle, resync],
   );
 
   const handleDragEnd = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (stale.value) return;
       if ((event.nativeEvent.velocity?.y ?? 0) === 0) {
         settle(event.nativeEvent.contentOffset.y);
       }
     },
-    [settle],
+    [stale, settle],
   );
 
   const handleAccessibilityAction = useCallback(
@@ -204,6 +236,8 @@ export function WheelPicker({
           decelerationRate="fast"
           contentOffset={initialOffset}
           contentContainerStyle={styles.content}
+          onScrollBeginDrag={handleBeginDrag}
+          onMomentumScrollBegin={handleMomentumBegin}
           onMomentumScrollEnd={handleMomentumEnd}
           onScrollEndDrag={handleDragEnd}
           onScroll={handleScroll}

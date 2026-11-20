@@ -64,6 +64,30 @@ function scrollTo(tree: ReactTestRenderer, y: number) {
   });
 }
 
+type ScrollProp =
+  'onScrollBeginDrag' | 'onMomentumScrollBegin' | 'onMomentumScrollEnd';
+
+function scrollEvent(tree: ReactTestRenderer, prop: ScrollProp, y = 0) {
+  const scroll = tree.root.find(
+    (node) => node.type === ('Animated.ScrollView' as never),
+  );
+  const handler = scroll.props[prop] as (event: {
+    nativeEvent: { contentOffset: { y: number } };
+  }) => void;
+  act(() => {
+    handler({ nativeEvent: { contentOffset: { y } } });
+  });
+}
+
+function wheelIn(onSelect: (value: number) => void) {
+  return h(WheelPicker, {
+    values: VALUES,
+    selected: VALUES[0] ?? 0,
+    onSelect,
+    accessibilityLabel: 'Beats',
+  });
+}
+
 function chosenValues(tree: ReactTestRenderer): unknown[] {
   return tree.root
     .findAll((node) => node.type === ('Animated.Text' as never))
@@ -211,6 +235,42 @@ it('resyncs a wheel to its selection when its sheet reopens mid-exit', () => {
   rerender(tree, inSheet(content, true));
   runReactions();
   expect(chosenValues(tree)).toEqual([String(VALUES[0])]);
+});
+
+it('drops a fling that outlives its sheet into a reopen and shows the selection again', () => {
+  const onSelect = vi.fn();
+  const content = wheelIn(onSelect);
+  const tree = mount(inSheet(content, true));
+  runReactions();
+  scrollEvent(tree, 'onScrollBeginDrag');
+  scrollTo(tree, FAR_DOWN);
+  scrollEvent(tree, 'onMomentumScrollBegin');
+  rerender(tree, inSheet(content, false));
+  runReactions();
+  rerender(tree, inSheet(content, true));
+  runReactions();
+  scrollTo(tree, FAR_DOWN);
+  scrollEvent(tree, 'onMomentumScrollEnd', FAR_DOWN);
+  expect(onSelect).not.toHaveBeenCalled();
+  expect(chosenValues(tree)).toEqual([String(VALUES[0])]);
+  expect(anim.scrolls.at(-1)).toBe(0);
+});
+
+it('drops a fling that ends while its sheet leaves and selects normally after the reopen', () => {
+  const onSelect = vi.fn();
+  const content = wheelIn(onSelect);
+  const tree = mount(inSheet(content, true));
+  runReactions();
+  scrollEvent(tree, 'onMomentumScrollBegin');
+  rerender(tree, inSheet(content, false));
+  runReactions();
+  scrollEvent(tree, 'onMomentumScrollEnd', FAR_DOWN);
+  expect(onSelect).not.toHaveBeenCalled();
+  rerender(tree, inSheet(content, true));
+  runReactions();
+  expect(anim.scrolls.at(-1)).toBe(0);
+  scrollEvent(tree, 'onMomentumScrollEnd', FAR_DOWN);
+  expect(onSelect).toHaveBeenCalledWith(VALUES.at(-1));
 });
 
 it('drops a lifted row when its sheet reopens mid-exit', () => {
