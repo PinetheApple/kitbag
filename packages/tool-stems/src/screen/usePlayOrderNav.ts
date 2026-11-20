@@ -1,9 +1,6 @@
 import {
-  ADVANCE,
   handOverQueued,
   isPresetEntry,
-  SKIP,
-  skippedText,
   usePlayOrder,
   type QueuedSong,
   type SetlistEntry,
@@ -59,18 +56,7 @@ export function useLeaveAfterClose(routes: PlayOrderRoutes, visible: boolean) {
   return { leaveFor, closed };
 }
 
-export function usePlayOrderNav(routes: PlayOrderRoutes) {
-  const skipToNext = usePlayOrder((s) => s.skipToNext);
+export function usePlayOrderNav() {
   const openEntry = usePlayOrder((s) => s.openEntry);
-  const skip = useCallback(async () => {
-    const { advance, skipped } = await skipToNext();
-    if (skipped !== null)
-      routes.onNotice(skippedText({ reason: SKIP.deleted, kind: skipped }));
-    if (advance.kind === ADVANCE.stems) routes.onOpenStemSet(advance.stemSetId);
-    if (advance.kind === ADVANCE.song) handOverToSong(routes, advance.songId);
-    if (advance.kind !== ADVANCE.open) return;
-    await openEntry(advance.entry);
-    routes.onOpenMetronome();
-  }, [skipToNext, routes, openEntry]);
-  return useMemo(() => ({ skip, openEntry }), [skip, openEntry]);
+  return useMemo(() => ({ openEntry }), [openEntry]);
 }

@@ -1,4 +1,5 @@
 import {
+  autoAdvanceDeps,
   configurePlayOrder,
   ENTRY_KIND,
   libraryStore,
@@ -7,15 +8,11 @@ import {
   SKIPPED_STEM_SONG,
   songLibraryStore,
   songPlayerStore,
+  startAutoAdvance,
   type LibrarySongRow,
   type QueuedSong,
 } from '@kitbag/core-state';
-import {
-  playerWaveBars,
-  Sheet,
-  Snackbar,
-  SwipeDeleteRow,
-} from '@kitbag/core-design';
+import { playerWaveBars, Snackbar, SwipeDeleteRow } from '@kitbag/core-design';
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -27,7 +24,6 @@ import {
   stemRow,
   stems,
 } from './playQueue.test-helper.ts';
-import { SpeedKeySheet } from './SpeedKeySheet.tsx';
 import {
   flush,
   mountTracked,
@@ -47,6 +43,7 @@ const UP_NEXT_ROW = 'Up next: Night Bus, Next in queue · 1 more after it';
 const QUEUE_KEY = 'Queue, 2 up next';
 
 configurePlayOrder({ queue: fakeQueue() });
+startAutoAdvance(autoAdvanceDeps(playerWaveBars));
 
 const hum = {
   kind: 'song',
@@ -476,46 +473,28 @@ describe('the setlist part of Up next', () => {
 });
 
 describe('opening the next song', () => {
-  it('releases the open song and opens the new one paused when the route moves on', async () => {
+  it('plays the next stem song from Next, keeping the player through the route change', async () => {
     const p = await withQueue(NIGHT_BUS);
     await p.press('Next: Night Bus');
     await flush();
+    expect(p.routes.onOpenStemSet).toHaveBeenCalledWith(NIGHT_BUS);
     await p.showSet(NIGHT_BUS);
     expect(
       (p.records.readStemSet.mock.calls as unknown[][]).map((call) => call[0]),
     ).toEqual([SET_ID, NIGHT_BUS]);
     expect(p.store.getState().setId).toBe(NIGHT_BUS);
-    expect(p.commands.mixerPlay).not.toHaveBeenCalled();
+    expect(p.commands.mixerPlay).toHaveBeenCalledOnce();
+    expect(queued).toEqual([]);
   });
 
-  it('opens the song again when the next one is the song already open', async () => {
+  it('plays the open song again from the start when it is the next one', async () => {
     songLibraryStore.setState({ rows: [stemRow(SET_ID, 'Open song')] });
     const p = await withQueue(SET_ID);
     await p.press('Next: Open song');
     await flush();
     expect(p.routes.onOpenStemSet).not.toHaveBeenCalled();
     expect(p.records.readStemSet).toHaveBeenCalledTimes(2);
-    expect(p.commands.mixerPlay).not.toHaveBeenCalled();
-  });
-
-  it('shows no sheet once the open song opens again', async () => {
-    songLibraryStore.setState({ rows: [stemRow(SET_ID, 'Open song')] });
-    const p = await withQueue(SET_ID);
-    const speed = p.byLabel('Speed').props.onAccessibilityAction as (
-      event: unknown,
-    ) => void;
-    await act(async () => {
-      speed({ nativeEvent: { actionName: 'activate' } });
-      await flush();
-    });
-    expect(p.renderer.root.findByType(SpeedKeySheet).props.visible).toBe(true);
-    await p.press('Next: Open song');
-    await flush();
-    expect(p.records.readStemSet).toHaveBeenCalledTimes(2);
-    const shown = p.renderer.root
-      .findAllByType(Sheet)
-      .filter((sheet) => sheet.props.visible === true);
-    expect(shown).toHaveLength(0);
+    expect(p.commands.mixerPlay).toHaveBeenCalledOnce();
   });
 
   it('shows a skip carried from the metronome', async () => {

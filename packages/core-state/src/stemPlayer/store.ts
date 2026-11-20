@@ -148,6 +148,7 @@ export interface StemPlayerActions {
     waveformBars: number,
   ) => Promise<AdvanceOutcome>;
   readonly handOver: () => void;
+  readonly pressNext: () => void;
   readonly onSongEnd: (listener: AdvanceListener) => () => void;
   readonly songStillEnded: () => boolean;
   readonly stopAdvancing: () => void;
@@ -445,6 +446,9 @@ export function createStemPlayerStore(
         return mixer.hold(acquired);
       },
       ...advancing,
+      pressNext: () => {
+        ends.pressedNext(mixer.current());
+      },
       onSongEnd: ends.subscribe,
       songStillEnded: ends.stands,
       stopAdvancing: holds.gaveUp,

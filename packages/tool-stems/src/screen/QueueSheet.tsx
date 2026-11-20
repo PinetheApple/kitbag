@@ -224,7 +224,7 @@ const stemsOf = (stemSetId: number): QueuedSong => ({
 });
 
 function useQueuePlay(props: QueueSheetProps) {
-  const nav = usePlayOrderNav(props);
+  const nav = usePlayOrderNav();
   const playQueued = usePlayOrder((s) => s.playQueued);
   const exit = useLeaveAfterClose(props, props.visible);
   const { onDismiss, playsInPlace } = props;
