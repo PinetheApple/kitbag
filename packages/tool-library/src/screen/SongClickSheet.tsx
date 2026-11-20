@@ -44,6 +44,8 @@ export function useSongClickSheet() {
   return { group, open, close };
 }
 
+export type SongClickSheetState = ReturnType<typeof useSongClickSheet>;
+
 interface GroupHeaderProps {
   readonly label: string;
   readonly headerRef: RefObject<View | null>;
@@ -76,7 +78,6 @@ function CountInGroup({ headerRef }: Pick<GroupHeaderProps, 'headerRef'>) {
         selected={String(bars)}
         onSelect={select}
       />
-      <SheetHint>{SONG_CLICK_TEXT.countInNote}</SheetHint>
     </>
   );
 }

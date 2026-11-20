@@ -4,6 +4,7 @@ import type { MetronomeConfig } from './store.ts';
 export interface SongClickGuard {
   readonly commands: MetronomeCommands;
   readonly restore: () => void;
+  readonly owe: () => void;
 }
 
 // The song's click plays through the one engine metronome's sounds,
@@ -90,5 +91,8 @@ export function guardSongClick(
       commands.engineRelease();
     },
   };
-  return { commands: guarded, restore };
+  const owe = () => {
+    held = true;
+  };
+  return { commands: guarded, restore, owe };
 }

@@ -36,6 +36,8 @@ import {
 } from '../songLibrary/store.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 import { songCard } from './songCard.ts';
+import { countingNow, songCount } from './songCount.ts';
+import { songWaveform } from './songWaveform.ts';
 import {
   linkedPreset,
   readyState,
@@ -100,9 +102,6 @@ export function createSongPlayerStore(
   let masterToRestore: number | null = null;
   let loading: Promise<void> = Promise.resolve();
   let holders = 0;
-  let waveformBars = 0;
-  let shownWaveform: string | null = null;
-  let latestWaveform: string | null = null;
   let detectedGrid = NO_GRID;
   // Set while a picked factor is saving, so a re-read cannot bring back an older one.
   let heldCorrection: TempoCorrection | null = null;
@@ -116,7 +115,8 @@ export function createSongPlayerStore(
   };
 
   return createStore<SongPlayerStore>((set, get, api) => {
-    const clickEngine = songClickEngine({ set, get, metronome });
+    const counting = countingNow(get, runtimeOf);
+    const clickEngine = songClickEngine({ set, get, metronome, counting });
     const clickSettings = songClickActions({ set, get, metronome });
     api.subscribe(clickEngine.followSong);
     const mixer = mixerSession({
@@ -127,7 +127,11 @@ export function createSongPlayerStore(
       claim,
       mixerClick: songClick,
       isOpen: () => get().songId !== null,
+      beforeTeardown: () => {
+        if (counting()) clickEngine.countDropped();
+      },
       teardownTracks,
+      counting,
       resetState: () => {
         set(closedState);
       },
@@ -151,25 +155,12 @@ export function createSongPlayerStore(
     };
     const context = { set, get, runtimeOf, session: mixer.current };
     const presets = songPresetActions({ ...context, live });
-    const card = songCard({ ...context, close: mixer.close });
+    const count = songCount(context, mixer, api, clickEngine);
+    const gridFollowers = { gridReplaced: count.gridReplaced };
+    const card = songCard({ ...context, close: mixer.close, start: count });
     mixer.onSongStopped(card.stopped);
 
-    const showWaveform = (opened: number, path: string | null) => {
-      if (path === null || path === shownWaveform || path === latestWaveform)
-        return;
-      latestWaveform = path;
-      runtimeOf()
-        .readWaveform(path, waveformBars)
-        .then((envelope) => {
-          if (!live(opened) || path !== latestWaveform) return;
-          shownWaveform = path;
-          set({ envelope });
-        })
-        .catch((error: unknown) => {
-          if (path === latestWaveform) latestWaveform = null;
-          console.warn('[kitbag] song waveform unreadable', error);
-        });
-    };
+    const waveform = songWaveform({ set, runtimeOf, live });
 
     const correctStoredLength = (record: SongRecord, decodedSec: number) => {
       const driftSec = Math.abs(decodedSec - record.durationSec);
@@ -191,7 +182,7 @@ export function createSongPlayerStore(
     const becomeReady = async (opened: number, loaded: LoadedSong) => {
       detectedGrid = loaded.record;
       set(readyState(loaded, get().clickSettings));
-      showWaveform(opened, loaded.record.waveformPath);
+      waveform.show(opened, loaded.record.waveformPath);
       if (loaded.preset !== undefined && !get().click)
         await get().toggleClick();
     };
@@ -250,7 +241,7 @@ export function createSongPlayerStore(
         detected: grid.detected,
         ...(regrid ? shownGrid(grid) : {}),
       });
-      if (regrid) void followNewGrid(context);
+      if (regrid) void followNewGrid(context, gridFollowers);
     };
 
     const endAsGone = () => {
@@ -277,8 +268,8 @@ export function createSongPlayerStore(
         ...(notice ? { meterNotice: grid.detected } : {}),
         ...(regrid ? shownGrid(grid) : {}),
       });
-      if (ready) showWaveform(opened, record.waveformPath);
-      if (regrid) void followNewGrid(context);
+      if (ready) waveform.show(opened, record.waveformPath);
+      if (regrid) void followNewGrid(context, gridFollowers);
     };
 
     const refreshFacts = async (opened: number, songId: number) => {
@@ -330,9 +321,7 @@ export function createSongPlayerStore(
         holders = 0;
         detectedGrid = NO_GRID;
         heldCorrection = null;
-        waveformBars = bars;
-        shownWaveform = null;
-        latestWaveform = null;
+        waveform.reset(bars);
         set({
           ...closedState,
           ...clickSettings.seeded(closedState),
@@ -376,9 +365,17 @@ export function createSongPlayerStore(
       dismissMeterNotice: () => {
         set({ meterNotice: null });
       },
-      ...transportActions(get, runtimeOf, scrubSeek, undefined, card.start),
+      ...transportActions(
+        get,
+        runtimeOf,
+        scrubSeek,
+        count.afterSeek,
+        card.start,
+      ),
       ...loopActions(context),
       ...clickActions(context, mixer.pendingClick, {
+        recountWithClickOff: count.recountWithClickOff,
+        recountWithClickOn: count.recountWithClickOn,
         clickStarting: clickEngine.clickStarting,
       }),
       ...clickSettings.actions,
