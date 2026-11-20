@@ -14,8 +14,9 @@ export type AdvanceOutcome =
 
 type EndSlice = Pick<
   StemPlayerState,
-  'status' | 'durationFrames' | 'engineRate' | 'retime'
->;
+  'status' | 'durationFrames' | 'engineRate'
+> &
+  Partial<Pick<StemPlayerState, 'retime'>>;
 
 // By the time the end report arrives a press may have restarted the song or
 // another song may have opened.
@@ -24,7 +25,8 @@ export function endedOnLastFrame(
   engine: StemPlayerEngine,
   counting: boolean,
 ): boolean {
-  if (song.status !== 'ready' || song.retime.kind === 'recording') return false;
+  if (song.status !== 'ready' || song.retime?.kind === 'recording')
+    return false;
   if (counting || engine.playing()) return false;
   return (
     engine.position() >= restartFromFrame(song.durationFrames, song.engineRate)
@@ -107,11 +109,10 @@ export interface AdvanceSteps {
   readonly play: () => void;
 }
 
-export async function advanceSong(
+export async function startSong(
   steps: AdvanceSteps,
   setId: number,
 ): Promise<AdvanceOutcome> {
-  if (!steps.ends.stands()) return ADVANCE_OUTCOME.displaced;
   const opened = steps.begin(setId);
   await steps.load(opened, setId);
   if (!steps.live(opened)) return ADVANCE_OUTCOME.displaced;
@@ -123,4 +124,12 @@ export async function advanceSong(
   if (steps.ends.stoppedSince(opened)) return ADVANCE_OUTCOME.stopped;
   steps.play();
   return ADVANCE_OUTCOME.playing;
+}
+
+export function advanceSong(
+  steps: AdvanceSteps,
+  setId: number,
+): Promise<AdvanceOutcome> {
+  if (!steps.ends.stands()) return Promise.resolve(ADVANCE_OUTCOME.displaced);
+  return startSong(steps, setId);
 }

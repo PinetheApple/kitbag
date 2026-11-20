@@ -16,6 +16,7 @@ const queued = (...stemSetIds: number[]) =>
   stemSetIds.map((stemSetId, position): PlayQueueEntry => ({
     id: 100 + position,
     stemSetId,
+    songId: null,
     position,
   }));
 const stem = (itemId: number, stemSetId: number) =>
@@ -52,7 +53,7 @@ describe('up next', () => {
   it('is the first queued song, ahead of the setlist', () => {
     expect(upNext(onStageAt(1, queued(7, 8)))).toEqual({
       source: UP_NEXT_SOURCE.queue,
-      stemSetId: 7,
+      song: { kind: 'stems', id: 7 },
     });
   });
 
@@ -133,11 +134,25 @@ describe('up next after the setlist changes', () => {
 
 describe('advance', () => {
   it('plays a queued stem song', () => {
-    expect(advanceOf({ source: UP_NEXT_SOURCE.queue, stemSetId: 7 })).toEqual({
+    expect(
+      advanceOf({
+        source: UP_NEXT_SOURCE.queue,
+        song: { kind: 'stems', id: 7 },
+      }),
+    ).toEqual({
       kind: ADVANCE.play,
       stemSetId: 7,
       setlistItemId: null,
     });
+  });
+
+  it('plays a queued single song', () => {
+    expect(
+      advanceOf({
+        source: UP_NEXT_SOURCE.queue,
+        song: { kind: 'song', id: 7 },
+      }),
+    ).toEqual({ kind: ADVANCE.song, songId: 7 });
   });
 
   it('plays a setlist stem song and names its entry', () => {

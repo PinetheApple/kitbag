@@ -24,7 +24,7 @@ export function addedToSetlistNotice(
   return {
     message: `Added to ${name}`,
     action: {
-      label: QUEUE_TEXT.openSetlist,
+      label: QUEUE_TEXT.open,
       onPress: () => {
         onOpenSetlist(setlistId);
       },

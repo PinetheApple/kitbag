@@ -66,6 +66,8 @@ export interface SongPlayerScreenProps {
   readonly focused: boolean;
   readonly insets: { readonly top: number; readonly bottom: number };
   readonly onBack: () => void;
+  readonly onOpenStemSet: (stemSetId: number) => void;
+  readonly onOpenSong: (songId: number) => void;
   readonly usePlayhead: UsePlayhead;
 }
 
@@ -309,6 +311,8 @@ export function SongPlayerScreen({
   focused,
   insets,
   onBack,
+  onOpenStemSet,
+  onOpenSong,
   usePlayhead,
 }: SongPlayerScreenProps) {
   const styles = useStyles();
@@ -318,7 +322,11 @@ export function SongPlayerScreen({
     [open, songId],
   );
   useFocusedMixerHold(focused, acquire);
-  const leave = useLeaveOnStop(focused, onBack);
+  const follow = useMemo(
+    () => ({ songId, onOpenStemSet, onOpenSong }),
+    [songId, onOpenStemSet, onOpenSong],
+  );
+  const leave = useLeaveOnStop(focused, onBack, follow);
   const [menuOpen, setMenuOpen] = useState(false);
   const openMenu = useCallback(() => {
     setMenuOpen(true);

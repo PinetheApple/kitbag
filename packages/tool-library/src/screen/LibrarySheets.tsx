@@ -12,6 +12,7 @@ import {
   useNotice,
   useQueueNotices,
   type AddedToSetlist,
+  type QueueAction,
 } from '@kitbag/core-design';
 import {
   cleanName,
@@ -23,6 +24,7 @@ import {
   useSongLibrary,
   type AnalysisFailure,
   type LibraryRow,
+  type QueuedSong,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { View, type TextInput } from 'react-native';
@@ -97,62 +99,105 @@ function sheetNotice(
   return away ? UNAVAILABLE_TEXT : null;
 }
 
+type QueueVerb = (queued: boolean) => void;
+
 interface QueueButtonsProps {
-  readonly stemSetId: number;
-  readonly onPlayNext: () => void;
+  readonly song: LibraryRow;
+  readonly onPlayNext: QueueVerb;
+  readonly onAddToQueue: QueueVerb;
   readonly onAddToSetlist: () => void;
 }
 
 function QueueButtons({
-  stemSetId,
+  song,
   onPlayNext,
+  onAddToQueue,
   onAddToSetlist,
 }: QueueButtonsProps) {
-  const queued = useIsQueued(stemSetId);
+  const queued = useIsQueued(song);
+  const playNext = useCallback(() => {
+    onPlayNext(queued);
+  }, [onPlayNext, queued]);
+  const addToQueue = useCallback(() => {
+    onAddToQueue(queued);
+  }, [onAddToQueue, queued]);
   return (
     <>
       <Button
-        label={queued ? QUEUE_TEXT.inUpNext : QUEUE_TEXT.playNext}
-        icon={queued ? 'inUpNext' : 'playNext'}
+        label={QUEUE_TEXT.playNext}
+        icon="playNext"
         iconSize="sheetButton"
         align="start"
         variant="tonal"
-        disabled={queued}
-        disabledLook="faded"
-        onPress={onPlayNext}
+        onPress={playNext}
       />
       <Button
-        label={QUEUE_TEXT.addToSetlist}
-        icon="addToSetlist"
+        label={queued ? QUEUE_TEXT.moveToEnd : QUEUE_TEXT.addToQueue}
+        icon="addToQueue"
         iconSize="sheetButton"
         align="start"
         variant="tonal"
-        onPress={onAddToSetlist}
+        onPress={addToQueue}
       />
+      {song.kind === 'stems' ? (
+        <Button
+          label={QUEUE_TEXT.addToSetlist}
+          icon="addToSetlist"
+          iconSize="sheetButton"
+          align="start"
+          variant="tonal"
+          onPress={onAddToSetlist}
+        />
+      ) : null}
     </>
   );
 }
 
 interface ActionsSheetProps extends SheetProps {
-  readonly onPlayNext: (stemSetId: number) => void;
+  readonly onPlayNext: QueueAction<QueuedSong>;
+  readonly onAddToQueue: QueueAction<QueuedSong>;
 }
 
-function ActionsSheet({ menu, bottomInset, onPlayNext }: ActionsSheetProps) {
+function useRowQueue(
+  target: LibraryRow | null,
+  close: () => void,
+  { onPlayNext, onAddToQueue }: Omit<ActionsSheetProps, keyof SheetProps>,
+) {
+  const queueWith = useCallback(
+    (verb: QueueAction<QueuedSong>): QueueVerb =>
+      (queued) => {
+        close();
+        if (target !== null)
+          verb({ song: target, title: target.title, queued });
+      },
+    [close, target],
+  );
+  return useMemo(
+    () => ({
+      playNext: queueWith(onPlayNext),
+      addToQueue: queueWith(onAddToQueue),
+    }),
+    [queueWith, onPlayNext, onAddToQueue],
+  );
+}
+
+function ActionsSheet({
+  menu,
+  bottomInset,
+  onPlayNext,
+  onAddToQueue,
+}: ActionsSheetProps) {
   const styles = useStyles();
   const reanalyze = useSongLibrary((s) => s.reanalyze);
   const { target, close, openRename, openDelete, openSetlists } = menu;
   const failure = useRowFailure(target);
   const away = useRowFiles(target) === 'unavailable';
   const failureNotice = sheetNotice(failure, away);
-  const stemSetId = target?.kind === 'stems' && !away ? target.id : null;
   const retry = useCallback(() => {
     close();
     if (target?.kind === 'song') void reanalyze(target.id);
   }, [close, reanalyze, target]);
-  const playNext = useCallback(() => {
-    close();
-    if (stemSetId !== null) onPlayNext(stemSetId);
-  }, [close, onPlayNext, stemSetId]);
+  const queue = useRowQueue(target, close, { onPlayNext, onAddToQueue });
   const title = target?.title ?? '';
   return (
     <Sheet
@@ -166,10 +211,11 @@ function ActionsSheet({ menu, bottomInset, onPlayNext }: ActionsSheetProps) {
         <SheetHint>{failureNotice.text}</SheetHint>
       )}
       <View style={styles.stack}>
-        {stemSetId === null ? null : (
+        {target === null || away ? null : (
           <QueueButtons
-            stemSetId={stemSetId}
-            onPlayNext={playNext}
+            song={target}
+            onPlayNext={queue.playNext}
+            onAddToQueue={queue.addToQueue}
             onAddToSetlist={openSetlists}
           />
         )}
@@ -347,22 +393,21 @@ function SetlistsSheet({ menu, bottomInset, onAdded }: SetlistsSheetProps) {
 }
 
 interface LibrarySheetsProps extends SheetProps {
-  readonly stemRows: boolean;
   readonly onOpenSetlist: (setlistId: number) => void;
 }
 
-export function LibrarySheets({
-  stemRows,
-  onOpenSetlist,
-  ...props
-}: LibrarySheetsProps) {
+export function LibrarySheets({ onOpenSetlist, ...props }: LibrarySheetsProps) {
   const notice = useNotice();
-  useQueueRefresh(stemRows);
+  useQueueRefresh(true);
   const queueSong = useQueueSong();
   const queue = useQueueNotices(notice, queueSong, onOpenSetlist);
   return (
     <>
-      <ActionsSheet {...props} onPlayNext={queue.playNext} />
+      <ActionsSheet
+        {...props}
+        onPlayNext={queue.playNext}
+        onAddToQueue={queue.addToQueue}
+      />
       <RenameSheet {...props} />
       <DeleteSheet {...props} />
       <SetlistsSheet {...props} onAdded={queue.added} />

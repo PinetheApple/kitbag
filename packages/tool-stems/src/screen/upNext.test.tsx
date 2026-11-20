@@ -6,8 +6,10 @@ import {
   playOrderStore,
   SKIPPED_STEM_SONG,
   songLibraryStore,
+  type LibrarySongRow,
   type LibraryStemSetRow,
   type PlayOrderRepositories,
+  type QueuedSong,
 } from '@kitbag/core-state';
 import { Sheet, Snackbar } from '@kitbag/core-design';
 import { act } from 'react';
@@ -27,33 +29,46 @@ const GIG = 5;
 const BALLAD_ITEM = 31;
 const BALLAD_PRESET = 41;
 const TIN_ROOF = 22;
+const HUM = 23;
 const MENU = 'Player menu';
 const UP_NEXT_ROW = 'Up next: Night Bus, Queued · 1 more after it';
 
-let queued: number[] = [];
+const stems = (id: number): QueuedSong => ({ kind: 'stems', id });
+const single = (id: number): QueuedSong => ({ kind: 'song', id });
+
+let queued: QueuedSong[] = [];
+
+const indexOf = (song: QueuedSong) =>
+  queued.findIndex((entry) => entry.kind === song.kind && entry.id === song.id);
+
+const entryOf = (song: QueuedSong, position: number) => ({
+  id: position + 1,
+  stemSetId: song.kind === 'stems' ? song.id : null,
+  songId: song.kind === 'song' ? song.id : null,
+  position,
+});
 
 function fakeQueue(): PlayOrderRepositories['queue'] {
-  const entries = () =>
-    queued.map((stemSetId, position) => ({
-      id: stemSetId,
-      stemSetId,
-      position,
-    }));
   const done = () => Promise.resolve();
   return {
-    list: () => Promise.resolve(entries()),
-    add: (stemSetId: number) => {
-      if (!queued.includes(stemSetId)) queued.push(stemSetId);
-      const position = queued.indexOf(stemSetId);
-      return Promise.resolve({ id: stemSetId, stemSetId, position });
+    list: () => Promise.resolve(queued.map(entryOf)),
+    add: (song, position) => {
+      if (indexOf(song) < 0)
+        queued.splice(position ?? queued.length, 0, { ...song });
+      return Promise.resolve(entryOf(song, indexOf(song)));
     },
-    move: done,
-    remove: (stemSetId: number) => {
-      queued = queued.filter((id) => id !== stemSetId);
+    move: (song, position) => {
+      const at = indexOf(song);
+      if (at >= 0) queued.splice(position, 0, ...queued.splice(at, 1));
       return done();
     },
-    takeThrough: (stemSetId: number) => {
-      queued = queued.slice(queued.indexOf(stemSetId) + 1);
+    remove: (song) => {
+      const at = indexOf(song);
+      queued = queued.filter((_, index) => index !== at);
+      return done();
+    },
+    takeThrough: (song) => {
+      queued = queued.slice(indexOf(song) + 1);
       return done();
     },
     clear: () => {
@@ -79,10 +94,19 @@ const song = (id: number, title: string): LibraryStemSetRow => ({
   createdAt: new Date(0),
 });
 
+const hum = {
+  kind: 'song',
+  id: HUM,
+  title: 'Hum',
+  artist: '',
+  durationSec: 200,
+  bpm: 90,
+} as LibrarySongRow;
+
 beforeEach(() => {
   queued = [];
   songLibraryStore.setState({
-    rows: [song(NIGHT_BUS, 'Night Bus'), song(TIN_ROOF, 'Tin Roof')],
+    rows: [song(NIGHT_BUS, 'Night Bus'), song(TIN_ROOF, 'Tin Roof'), hum],
   });
 });
 
@@ -124,26 +148,46 @@ function metronomeEntryOnStage() {
   return { loadSong, start };
 }
 
-async function withQueue(...ids: number[]) {
-  queued = ids;
+async function withQueue(...songs: (number | QueuedSong)[]) {
+  queued = songs.map((entry) =>
+    typeof entry === 'number' ? stems(entry) : entry,
+  );
   const player = await mountTracked();
   await playOrderStore.getState().refresh();
   await flush();
   return player;
 }
 
-describe('Play next from the player', () => {
-  it('queues the open song once and says so', async () => {
-    const p = await mountTracked();
+describe('Play next and Add to queue from the player', () => {
+  it('puts the open song first on Play next and says so', async () => {
+    const p = await withQueue(NIGHT_BUS);
+    const { title } = p.store.getState();
     await p.press(MENU);
     await p.press('Play next');
     await flush();
-    expect(queued).toEqual([SET_ID]);
-    expect(p.has('Added to Up next')).toBe(true);
+    expect(queued).toEqual([stems(SET_ID), stems(NIGHT_BUS)]);
+    expect(p.has(`${title} plays next`)).toBe(true);
+  });
+
+  it('puts the open song last on Add to queue, and Open shows the queue', async () => {
+    const p = await withQueue(NIGHT_BUS);
+    const { title } = p.store.getState();
     await p.press(MENU);
-    expect(p.byLabel('In Up next').props.accessibilityState).toEqual({
-      disabled: true,
-    });
+    await p.press('Add to queue');
+    await flush();
+    expect(queued).toEqual([stems(NIGHT_BUS), stems(SET_ID)]);
+    expect(p.has(`Added to queue: ${title}`)).toBe(true);
+    await p.press('Open');
+    expect(p.has('Clear queue')).toBe(true);
+  });
+
+  it('offers Move to end of queue once the open song is queued', async () => {
+    const p = await withQueue(SET_ID, NIGHT_BUS);
+    await p.press(MENU);
+    await p.press('Move to end of queue');
+    await flush();
+    expect(queued).toEqual([stems(NIGHT_BUS), stems(SET_ID)]);
+    expect(p.has('Moved to end of queue')).toBe(true);
   });
 });
 
@@ -244,7 +288,31 @@ describe('the Up next row', () => {
     await p.press('Next: Night Bus');
     await flush();
     expect(p.routes.onOpenStemSet).toHaveBeenCalledWith(NIGHT_BUS);
-    expect(queued).toEqual([TIN_ROOF]);
+    expect(queued).toEqual([stems(TIN_ROOF)]);
+  });
+});
+
+describe('a queued single song', () => {
+  it('shows in the Up next row and Next hands over to the song player', async () => {
+    const p = await withQueue(single(HUM), TIN_ROOF);
+    expect(p.has('Hum')).toBe(true);
+    await p.press('Next: Hum');
+    await flush();
+    expect(p.routes.onOpenSong).toHaveBeenCalledWith(HUM);
+    expect(p.routes.onOpenStemSet).not.toHaveBeenCalled();
+    expect(queued).toEqual([stems(TIN_ROOF)]);
+  });
+
+  it('plays from its Up next sheet row in the song player', async () => {
+    const p = await withQueue(NIGHT_BUS, single(HUM));
+    await p.press(UP_NEXT_ROW);
+    expect(p.has('3:20 · 90 BPM')).toBe(true);
+    await p.press('2. Hum, queued. Plays it now');
+    await flush();
+    p.frames(0, 4);
+    await flush();
+    expect(queued).toEqual([]);
+    expect(p.routes.onOpenSong).toHaveBeenCalledWith(HUM);
   });
 });
 
@@ -270,14 +338,14 @@ describe('the Up next sheet', () => {
     await p.press(UP_NEXT_ROW);
     await p.press('Remove Night Bus from Up next');
     await flush();
-    expect(queued).toEqual([TIN_ROOF]);
+    expect(queued).toEqual([stems(TIN_ROOF)]);
   });
 
   it('asks before clearing the queue', async () => {
     const p = await withQueue(NIGHT_BUS, TIN_ROOF);
     await p.press(UP_NEXT_ROW);
     await p.press('Clear queue');
-    expect(queued).toEqual([NIGHT_BUS, TIN_ROOF]);
+    expect(queued).toEqual([stems(NIGHT_BUS), stems(TIN_ROOF)]);
     expect(p.has('The 2 queued songs leave Up next.')).toBe(true);
     await p.press('Clear');
     await flush();

@@ -123,6 +123,7 @@ export function mixerSession({
     teardownTracks();
   };
 
+  let handingOver = false;
   // A second close, from a screen whose session was already displaced, must
   // not stop whatever displaced it.
   const close = () => {
@@ -131,10 +132,13 @@ export function mixerSession({
     mixerClick.detach(clickSource);
     pendingClick.cancel();
     session++;
-    teardown({ keepCard: false });
+    teardown({ keepCard: handingOver });
     resetState();
-    releaseEngine?.();
+    const release = releaseEngine;
     releaseEngine = null;
+    // The next player takes its engine hold in this task; releasing after it keeps the engine up.
+    if (handingOver) queueMicrotask(() => release?.());
+    else release?.();
     songStopSubscription?.remove();
     songStopSubscription = null;
     songTransportSubscription?.remove();
@@ -251,6 +255,14 @@ export function mixerSession({
     hasHolders: () => holders > 0,
     live,
     close,
+    handOver: () => {
+      handingOver = true;
+      try {
+        close();
+      } finally {
+        handingOver = false;
+      }
+    },
     current: () => session,
     card: (): SongCardOwner => ({ session, followsPlayOrder }),
     pendingClick,

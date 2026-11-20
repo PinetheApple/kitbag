@@ -298,6 +298,7 @@ export {
 export {
   createPlayOrderStore,
   playOrderStore,
+  QUEUE_FRONT,
   type PlayOrderStore,
   type SkipResult,
 } from './playOrder/store.ts';
@@ -308,12 +309,15 @@ export {
   useQueueSong,
   useStage,
   useUpNext,
+  type QueueSong,
+  type QueueSongs,
   type Stage,
 } from './playOrder/usePlayOrder.ts';
 export { bindStemSetRemovals } from './playOrder/stemSetRemovals.ts';
 export {
   ARRIVAL,
   arrivalStore,
+  autoAdvanceDeps,
   SKIP,
   startAutoAdvance,
   type Arrival,
@@ -321,6 +325,7 @@ export {
   type ArrivalState,
   type SetlistPlace,
   type Skip,
+  type WaveformBars,
 } from './playOrder/autoAdvance.ts';
 export { startCardOrder } from './playOrder/cardOrder.ts';
 export {
@@ -333,16 +338,21 @@ export {
   SKIPPED_STEM_SONG,
   SKIPPED_UNOPENED_STEM_SONG,
   STEMS_BADGE,
+  queuedSongFacts,
+  queuedSongTitle,
   stemSongTitle,
+  UNKNOWN_SONG,
   UNKNOWN_STEM_SONG,
   upNextTitle,
+  type LibrarySongs,
+  type SingleSongs,
   type StemSongs,
   stemFacts,
   stemSongFacts,
   stemSongListFacts,
   stemSongsById,
 } from './playOrder/stemSongText.ts';
-export { useStemSongs } from './playOrder/useStemSongs.ts';
+export { useLibrarySongs, useStemSongs } from './playOrder/useStemSongs.ts';
 export {
   configurePlayOrder,
   type PlayOrderRepositories,
@@ -358,6 +368,7 @@ export {
   toBlob,
 } from './library/presetMapping.ts';
 export type { Setlist, SetlistItem, SongPreset } from '@kitbag/core-db';
+export { queuedSongOf, sameQueuedSong, type QueuedSong } from '@kitbag/core-db';
 export { useSongLibrary } from './songLibrary/useSongLibrary.ts';
 export {
   createSongLibraryStore,

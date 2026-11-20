@@ -5,6 +5,7 @@ import {
   stopSongAndSession,
   upNextTitle,
   useLibrary,
+  useLibrarySongs,
   useSongPlayer,
   useStage,
   useStemPlayer,
@@ -129,8 +130,8 @@ function useSetlistSpot(setId: number): SetlistSpot | null {
 
 function useNextTitle(): string | null {
   const next = useUpNext();
-  const stems = useStemSongs();
-  return next === undefined ? null : upNextTitle(next, stems);
+  const library = useLibrarySongs();
+  return next === undefined ? null : upNextTitle(next, library);
 }
 
 function useStemTitle(setId: number): string {

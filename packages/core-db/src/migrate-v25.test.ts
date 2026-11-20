@@ -2,7 +2,12 @@ import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 
 import { migrate, SCHEMA_VERSION } from './migrate';
-import { buildV24Fixture, pragma, rows } from './migrate-fixtures.test-helper';
+import {
+  buildV24Fixture,
+  buildV25Fixture,
+  pragma,
+  rows,
+} from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
 const PLAY_QUEUE_COLUMNS = [
@@ -69,8 +74,10 @@ describe('migrate v24 to v25', () => {
     expect(created?.id).toBeGreaterThan(last?.id ?? 0);
   });
 
-  it('gives a fresh database an ordered play queue', () => {
-    expect(columns(freshDatabase(), 'play_queue')).toEqual(PLAY_QUEUE_COLUMNS);
+  it('gives the database an ordered play queue', () => {
+    expect(columns(buildV25Fixture(), 'play_queue')).toEqual(
+      PLAY_QUEUE_COLUMNS,
+    );
   });
 
   it.each([

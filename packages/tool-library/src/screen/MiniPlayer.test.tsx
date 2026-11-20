@@ -15,7 +15,8 @@ const players = vi.hoisted(() => ({
   stem: {},
   library: {},
   stage: {},
-  next: undefined as { source: string; stemSetId: number } | undefined,
+  next: undefined as
+    { source: string; song: { kind: string; id: number } } | undefined,
   togglePlay: vi.fn(),
   stopSongAndSession: vi.fn(),
 }));
@@ -38,6 +39,10 @@ vi.mock('@kitbag/core-state', async (original) => ({
   useUpNext: () => players.next,
   useStemSongs: () =>
     new Map([[QUEUED_ID, { id: QUEUED_ID, title: 'King of Kings' }]]),
+  useLibrarySongs: () => ({
+    stems: new Map([[QUEUED_ID, { id: QUEUED_ID, title: 'King of Kings' }]]),
+    songs: new Map(),
+  }),
 }));
 
 const { MiniPlayer, useMiniPlayerShown } = await import('./MiniPlayer.tsx');
@@ -198,14 +203,20 @@ describe('the mini-player for a stem song', () => {
 
   it('names the song up next', () => {
     givenStemSong();
-    players.next = { source: 'queue', stemSetId: QUEUED_ID };
+    players.next = {
+      source: 'queue',
+      song: { kind: 'stems', id: QUEUED_ID },
+    };
     expect(bar(mount()).detail).toBe('Charity Gayle · Next: King of Kings');
   });
 
   it('says where a setlist song sits in its setlist', () => {
     givenStemSong();
     fromGig(5);
-    players.next = { source: 'queue', stemSetId: QUEUED_ID };
+    players.next = {
+      source: 'queue',
+      song: { kind: 'stems', id: QUEUED_ID },
+    };
     expect(bar(mount()).detail).toBe('Charity Gayle · Sunday worship · 2 of 5');
   });
 

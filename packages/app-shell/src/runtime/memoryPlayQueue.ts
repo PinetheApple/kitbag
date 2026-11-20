@@ -1,56 +1,60 @@
-import type { PlayQueueEntry, PlayQueueRepository } from '@kitbag/core-db';
+import {
+  queuedSongOf,
+  sameQueuedSong,
+  type PlayQueueEntry,
+  type PlayQueueRepository,
+  type QueuedSong,
+} from '@kitbag/core-db';
 
 function clampedIndex(position: number | undefined, length: number): number {
   return Math.max(0, Math.min(position ?? length, length));
 }
 
 export function createMemoryPlayQueue(): PlayQueueRepository {
-  let order: number[] = [];
+  let order: PlayQueueEntry[] = [];
   let nextId = 1;
-  const ids = new Map<number, number>();
+  const indexOf = (song: QueuedSong) =>
+    order.findIndex((entry) => sameQueuedSong(queuedSongOf(entry), song));
   const entries = (): PlayQueueEntry[] =>
-    order.map((stemSetId, position) => ({
-      id: ids.get(stemSetId) ?? 0,
-      stemSetId,
-      position,
-    }));
-  const place = (stemSetId: number, position: number | undefined) => {
-    order = order.filter((id) => id !== stemSetId);
-    order.splice(clampedIndex(position, order.length), 0, stemSetId);
+    order.map((entry, position) => ({ ...entry, position }));
+  const place = (entry: PlayQueueEntry, position: number | undefined) => {
+    order = order.filter((queued) => queued.id !== entry.id);
+    order.splice(clampedIndex(position, order.length), 0, entry);
   };
-  const entryOf = (stemSetId: number): PlayQueueEntry => {
-    const found = entries().find((entry) => entry.stemSetId === stemSetId);
+  const entryOf = (song: QueuedSong): PlayQueueEntry => {
+    const found = entries()[indexOf(song)];
     if (found === undefined) throw new Error('Play queue entry not found');
     return found;
   };
   return {
     list: () => Promise.resolve(entries()),
-    add: (stemSetId, position) => {
-      if (!ids.has(stemSetId)) {
-        ids.set(stemSetId, nextId);
+    add: (song, position) => {
+      if (indexOf(song) < 0) {
+        const keyed =
+          song.kind === 'song'
+            ? { songId: song.id, stemSetId: null }
+            : { songId: null, stemSetId: song.id };
+        place({ id: nextId, ...keyed, position: 0 }, position);
         nextId += 1;
-        place(stemSetId, position);
       }
-      return Promise.resolve(entryOf(stemSetId));
+      return Promise.resolve(entryOf(song));
     },
-    move: (stemSetId, position) => {
-      if (ids.has(stemSetId)) place(stemSetId, position);
+    move: (song, position) => {
+      const entry = order[indexOf(song)];
+      if (entry !== undefined) place(entry, position);
       return Promise.resolve();
     },
-    remove: (stemSetId) => {
-      order = order.filter((id) => id !== stemSetId);
-      ids.delete(stemSetId);
+    remove: (song) => {
+      const at = indexOf(song);
+      order = order.filter((_, index) => index !== at);
       return Promise.resolve();
     },
-    takeThrough: (stemSetId) => {
-      const through = order.indexOf(stemSetId);
-      for (const id of order.slice(0, through + 1)) ids.delete(id);
-      order = order.slice(through + 1);
+    takeThrough: (song) => {
+      order = order.slice(indexOf(song) + 1);
       return Promise.resolve();
     },
     clear: () => {
       order = [];
-      ids.clear();
       return Promise.resolve();
     },
   };

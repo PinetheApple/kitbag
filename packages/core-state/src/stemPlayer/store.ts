@@ -43,6 +43,8 @@ import {
   advanceSong,
   endedOnLastFrame,
   songEnds,
+  startSong,
+  type AdvanceSteps,
   type AdvanceListener,
   type AdvanceOutcome,
 } from './songEnd.ts';
@@ -143,6 +145,11 @@ export interface StemPlayerActions {
   readonly open: (setId: number, waveformBars: number) => Promise<void>;
   readonly acquireSong: (setId: number, waveformBars: number) => MixerHold;
   readonly advanceTo: (setId: number) => Promise<AdvanceOutcome>;
+  readonly takeOver: (
+    setId: number,
+    waveformBars: number,
+  ) => Promise<AdvanceOutcome>;
+  readonly handOver: () => void;
   readonly onSongEnd: (listener: AdvanceListener) => () => void;
   readonly songStillEnded: () => boolean;
   readonly stopAdvancing: () => void;
@@ -413,6 +420,21 @@ export function createStemPlayerStore(
       }
     };
 
+    const startSteps = (
+      begin: (setId: number) => number,
+      bars: () => number,
+    ): AdvanceSteps => ({
+      ends,
+      begin,
+      load: (opened, id) => loadSession(opened, id, bars()),
+      live,
+      ready: () => get().status === 'ready',
+      play: () => {
+        get().togglePlay();
+        set({ advanceCountEnd: get().countEndFrame });
+      },
+    });
+
     return {
       ...closedState,
       exportState: NO_EXPORT,
@@ -430,23 +452,29 @@ export function createStemPlayerStore(
       },
       advanceTo: (setId) =>
         advanceSong(
-          {
-            ends,
-            begin: (id) => {
+          startSteps(
+            (id) => {
               const opened = mixer.advance();
               showLoading(id, id);
               return opened;
             },
-            load: (opened, id) => loadSession(opened, id, waveformBars),
-            live,
-            ready: () => get().status === 'ready',
-            play: () => {
-              get().togglePlay();
-              set({ advanceCountEnd: get().countEndFrame });
-            },
-          },
+            () => waveformBars,
+          ),
           setId,
         ),
+      takeOver: (setId, bars) =>
+        startSong(
+          startSteps(
+            (id) => {
+              const opened = mixer.begin();
+              showLoading(id);
+              return opened;
+            },
+            () => bars,
+          ),
+          setId,
+        ),
+      handOver: mixer.handOver,
       onSongEnd: ends.subscribe,
       songStillEnded: ends.stands,
       stopAdvancing: holds.gaveUp,

@@ -56,6 +56,7 @@ function showCountOutsideApp(
   store: SongPlayerStoreApi,
   runtimeOf: () => MixerRuntime,
   start: SongStart,
+  next: (session: number) => void,
 ): void {
   mixer.onScrubSeek(start.afterSeek);
   mixer.onClickReleased(start.endCountNow);
@@ -74,6 +75,7 @@ function showCountOutsideApp(
         card.stopped();
         start.stop();
       },
+      next,
     }),
   );
 }
@@ -94,6 +96,7 @@ export function songCount(
   mixer: ReturnType<typeof mixerSession>,
   store: SongPlayerStoreApi,
   sounds: CountSounds,
+  next: (session: number) => void,
 ): SongStart {
   const { get, runtimeOf, session } = context;
   const start = songStart({
@@ -134,7 +137,7 @@ export function songCount(
       start.afterSeek(frame);
     },
   };
-  showCountOutsideApp(mixer, store, runtimeOf, count);
+  showCountOutsideApp(mixer, store, runtimeOf, count, next);
   lendSoundsForCount(store, sounds);
   return count;
 }

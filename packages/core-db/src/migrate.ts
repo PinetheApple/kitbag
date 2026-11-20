@@ -31,7 +31,8 @@ export const V24_SCHEMA_VERSION = V23_SCHEMA_VERSION + 1;
 export const V25_SCHEMA_VERSION = V24_SCHEMA_VERSION + 1;
 export const V26_SCHEMA_VERSION = V25_SCHEMA_VERSION + 1;
 export const V27_SCHEMA_VERSION = V26_SCHEMA_VERSION + 1;
-export const SCHEMA_VERSION = V27_SCHEMA_VERSION + 1;
+export const V28_SCHEMA_VERSION = V27_SCHEMA_VERSION + 1;
+export const SCHEMA_VERSION = V28_SCHEMA_VERSION + 1;
 
 export const OLDEST_UPGRADABLE_VERSION = V7_SCHEMA_VERSION;
 
@@ -382,6 +383,23 @@ export const MIGRATE_V27_TO_V28: readonly string[] = [
   'ALTER TABLE songs ADD COLUMN speed REAL NOT NULL DEFAULT 1',
 ];
 
+export const MIGRATE_V28_TO_V29: readonly string[] = [
+  `CREATE TABLE play_queue_next (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  stem_set_id INTEGER UNIQUE REFERENCES stem_sets (id) ON DELETE CASCADE,
+  song_id INTEGER UNIQUE REFERENCES songs (id) ON DELETE CASCADE,
+  position INTEGER NOT NULL,
+  CONSTRAINT play_queue_one_song CHECK ((stem_set_id IS NULL) <> (song_id IS NULL))
+)`,
+  `INSERT INTO play_queue_next (id, stem_set_id, position)
+   SELECT id, stem_set_id, position FROM play_queue`,
+  "DELETE FROM sqlite_sequence WHERE name = 'play_queue_next'",
+  `INSERT INTO sqlite_sequence (name, seq)
+   SELECT 'play_queue_next', seq FROM sqlite_sequence WHERE name = 'play_queue'`,
+  'DROP TABLE play_queue',
+  'ALTER TABLE play_queue_next RENAME TO play_queue',
+];
+
 export const BASELINE: readonly string[] = [
   ...V11_BASELINE,
   ...MIGRATE_V11_TO_V12,
@@ -401,6 +419,7 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V25_TO_V26,
   ...MIGRATE_V26_TO_V27,
   ...MIGRATE_V27_TO_V28,
+  ...MIGRATE_V28_TO_V29,
 ];
 
 export const MIGRATE_V7_TO_V8: readonly string[] = [
@@ -460,7 +479,8 @@ const UPGRADES: readonly {
   { to: V25_SCHEMA_VERSION, steps: MIGRATE_V24_TO_V25 },
   { to: V26_SCHEMA_VERSION, steps: MIGRATE_V25_TO_V26 },
   { to: V27_SCHEMA_VERSION, steps: MIGRATE_V26_TO_V27 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V27_TO_V28 },
+  { to: V28_SCHEMA_VERSION, steps: MIGRATE_V27_TO_V28 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V28_TO_V29 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {

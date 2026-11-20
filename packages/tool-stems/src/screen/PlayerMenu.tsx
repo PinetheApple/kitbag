@@ -131,22 +131,37 @@ function ResetSpeedKeyRow({ onDone }: { readonly onDone: () => void }) {
   );
 }
 
+type QueueVerb = (queued: boolean) => void;
+
 interface QueueRowsProps {
-  readonly onPlayNext: () => void;
+  readonly onPlayNext: QueueVerb;
+  readonly onAddToQueue: QueueVerb;
   readonly onAddToSetlist: () => void;
 }
 
-function QueueRows({ onPlayNext, onAddToSetlist }: QueueRowsProps) {
+function QueueRows({
+  onPlayNext,
+  onAddToQueue,
+  onAddToSetlist,
+}: QueueRowsProps) {
   const styles = useStyles();
   const setId = useStemPlayer((s) => s.setId);
-  const queued = useIsQueued(setId);
+  const queued = useIsQueued(
+    setId === null ? null : { kind: 'stems', id: setId },
+  );
+  const playNext = useCallback(() => {
+    onPlayNext(queued);
+  }, [onPlayNext, queued]);
+  const addToQueue = useCallback(() => {
+    onAddToQueue(queued);
+  }, [onAddToQueue, queued]);
   return (
     <View style={styles.divided}>
+      <MenuRow icon="playNext" label={QUEUE_TEXT.playNext} onPress={playNext} />
       <MenuRow
-        icon={queued ? 'inUpNext' : 'playNext'}
-        label={queued ? QUEUE_TEXT.inUpNext : QUEUE_TEXT.playNext}
-        disabled={queued}
-        onPress={onPlayNext}
+        icon="addToQueue"
+        label={queued ? QUEUE_TEXT.moveToEnd : QUEUE_TEXT.addToQueue}
+        onPress={addToQueue}
       />
       <MenuRow
         icon="addToSetlist"
@@ -176,6 +191,7 @@ export function PlayerMenu({
   onTempo,
   onClick,
   onPlayNext,
+  onAddToQueue,
   onAddToSetlist,
 }: PlayerMenuProps) {
   const styles = useStyles();
@@ -192,7 +208,11 @@ export function PlayerMenu({
       bottomInset={bottomInset}
       onDismiss={onClose}
     >
-      <QueueRows onPlayNext={onPlayNext} onAddToSetlist={onAddToSetlist} />
+      <QueueRows
+        onPlayNext={onPlayNext}
+        onAddToQueue={onAddToQueue}
+        onAddToSetlist={onAddToSetlist}
+      />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Reset mix: every level to 0 dB, nothing muted or soloed"

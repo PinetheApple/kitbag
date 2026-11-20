@@ -1,6 +1,10 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
-import type { LibraryRow, LibrarySongRow } from '@kitbag/core-state';
+import type {
+  LibraryRow,
+  LibrarySongRow,
+  QueuedSong,
+} from '@kitbag/core-state';
 import { act, createElement, useEffect, type ReactNode } from 'react';
 import { create, type ReactTestRenderer } from 'react-test-renderer';
 import { describe, expect, it, vi } from 'vitest';
@@ -21,9 +25,14 @@ const shown = vi.hoisted(
 );
 
 const queue = vi.hoisted(() => ({
-  queueSong: vi.fn<(stemSetId: number) => Promise<boolean>>(() =>
-    Promise.resolve(true),
-  ),
+  verbs: {
+    playNext: vi.fn<(song: QueuedSong) => Promise<boolean>>(() =>
+      Promise.resolve(true),
+    ),
+    addToQueue: vi.fn<(song: QueuedSong) => Promise<boolean>>(() =>
+      Promise.resolve(true),
+    ),
+  },
   reads: [] as boolean[],
 }));
 
@@ -59,9 +68,9 @@ vi.mock('@kitbag/core-state', async (original) => ({
   useQueueRefresh: (enabled: boolean) => {
     queue.reads.push(enabled);
   },
-  useQueueSong: () => queue.queueSong,
-  useIsQueued: (stemSetId: number | null) =>
-    stemSetId !== null && shown.queue.includes(stemSetId),
+  useQueueSong: () => queue.verbs,
+  useIsQueued: (song: QueuedSong | null) =>
+    song !== null && shown.queue.includes(song.id),
   useSetlistPicker: () => ({
     picks: [],
     onOpen: vi.fn(),
@@ -100,7 +109,6 @@ function openActions(
       createElement(LibrarySheets, {
         menu,
         bottomInset: 0,
-        stemRows: false,
         onOpenSetlist: vi.fn(),
       }),
     );
@@ -163,7 +171,13 @@ describe('the actions sheet of a song on a missing SD card', () => {
 
   it('keeps both once the card is back', () => {
     const actions = sheet(openActions(null, 'present'));
-    expect(actions.buttons).toEqual(['Rename', REANALYZE_LABEL, 'Delete song']);
+    expect(actions.buttons).toEqual([
+      'Play next',
+      'Add to queue',
+      'Rename',
+      REANALYZE_LABEL,
+      'Delete song',
+    ]);
   });
 });
 
@@ -193,24 +207,34 @@ function Harness({
   return createElement(LibrarySheets, {
     menu,
     bottomInset: 0,
-    stemRows: true,
     onOpenSetlist,
   });
 }
 
-function openStemRow(files: unknown, queued: number[] = []): Library {
+const hum = {
+  kind: 'song',
+  id: NIGHT_BUS,
+  title: 'Hum',
+} as LibraryRow;
+
+function openRow(row: LibraryRow, files: unknown, queued: number[]): Library {
   shown.failure = null;
   shown.files = files;
   shown.queue = queued;
-  queue.queueSong.mockClear();
+  queue.verbs.playNext.mockClear();
+  queue.verbs.addToQueue.mockClear();
   queue.reads.length = 0;
   const onOpenSetlist = vi.fn();
   let tree: ReactTestRenderer | undefined;
   act(() => {
-    tree = create(createElement(Harness, { row: nightBus, onOpenSetlist }));
+    tree = create(createElement(Harness, { row, onOpenSetlist }));
   });
   if (tree === undefined) throw new Error('not mounted');
   return { tree, onOpenSetlist };
+}
+
+function openStemRow(files: unknown, queued: number[] = []): Library {
+  return openRow(nightBus, files, queued);
 }
 
 function button(tree: ReactTestRenderer, label: string) {
@@ -237,44 +261,35 @@ function snack(tree: ReactTestRenderer) {
 }
 
 describe('the actions sheet of a stem song', () => {
-  it('offers Play next and Add to setlist above Rename', () => {
+  it('offers Play next, Add to queue and Add to setlist above Rename', () => {
     const { tree } = openStemRow('present');
     expect(sheet(tree).buttons).toEqual([
       'Play next',
+      'Add to queue',
       'Add to setlist',
       'Rename',
       'Delete stem song',
     ]);
   });
 
-  it('reads the play queue on the Stem songs list only', () => {
+  it('reads the play queue on both lists', () => {
     openStemRow('present');
-    expect(new Set(queue.reads)).toEqual(new Set([true]));
-    queue.reads.length = 0;
     openActions(null, 'present');
-    expect(new Set(queue.reads)).toEqual(new Set([false]));
+    expect(new Set(queue.reads)).toEqual(new Set([true]));
   });
 
-  it('draws the new buttons as the mockup does: 20 dp icons, left-aligned', () => {
+  it('draws the queue buttons as the mockup does: 20 dp icons, left-aligned', () => {
     const { tree } = openStemRow('present');
-    for (const label of ['Play next', 'Add to setlist'])
+    for (const label of ['Play next', 'Add to queue', 'Add to setlist'])
       expect(button(tree, label).props).toMatchObject({
         iconSize: 'sheetButton',
         align: 'start',
       });
   });
 
-  it('fades In Up next rather than clearing its fill', () => {
-    const { tree } = openStemRow('present', [NIGHT_BUS]);
-    expect(button(tree, 'In Up next').props).toMatchObject({
-      disabled: true,
-      disabledLook: 'faded',
-    });
-  });
-
   it('does not say a song was queued when queueing failed', async () => {
     const { tree } = openStemRow('present');
-    queue.queueSong.mockResolvedValueOnce(false);
+    queue.verbs.playNext.mockResolvedValueOnce(false);
     await press(tree, 'Play next');
     expect(snack(tree)).toBeUndefined();
   });
@@ -284,18 +299,53 @@ describe('the actions sheet of a stem song', () => {
     expect(sheet(tree).buttons).toEqual(['Rename']);
   });
 
-  it('reads In Up next, disabled, once the song is queued', () => {
-    const { tree } = openStemRow('present', [NIGHT_BUS]);
-    expect(button(tree, 'In Up next').props.disabled).toBe(true);
-    expect(sheet(tree).buttons).not.toContain('Play next');
-  });
-
-  it('queues the song, closes the sheet and says so', async () => {
+  it('puts the song first on Play next, closes the sheet and says so', async () => {
     const { tree } = openStemRow('present');
     await press(tree, 'Play next');
-    expect(queue.queueSong).toHaveBeenCalledWith(NIGHT_BUS);
+    expect(queue.verbs.playNext).toHaveBeenCalledWith(nightBus);
+    expect(queue.verbs.addToQueue).not.toHaveBeenCalled();
     expect(tree.root.findAllByType('Sheet' as never)).toHaveLength(0);
-    expect(snack(tree)?.message).toBe('Added to Up next');
+    expect(snack(tree)?.message).toBe('Night Bus plays next');
+  });
+
+  it('puts the song last on Add to queue and says so', async () => {
+    const { tree } = openStemRow('present');
+    await press(tree, 'Add to queue');
+    expect(queue.verbs.addToQueue).toHaveBeenCalledWith(nightBus);
+    expect(queue.verbs.playNext).not.toHaveBeenCalled();
+    expect(snack(tree)?.message).toBe('Added to queue: Night Bus');
+  });
+
+  it('offers Move to end of queue for a queued song, and says which move happened', async () => {
+    const queued = openStemRow('present', [NIGHT_BUS]);
+    expect(sheet(queued.tree).buttons.slice(0, 2)).toEqual([
+      'Play next',
+      'Move to end of queue',
+    ]);
+    await press(queued.tree, 'Move to end of queue');
+    expect(queue.verbs.addToQueue).toHaveBeenCalledWith(nightBus);
+    expect(snack(queued.tree)?.message).toBe('Moved to end of queue');
+    const again = openStemRow('present', [NIGHT_BUS]);
+    await press(again.tree, 'Play next');
+    expect(snack(again.tree)?.message).toBe('Moved to play next');
+  });
+});
+
+describe('the actions sheet of a single song', () => {
+  it('offers Play next and Add to queue but no setlist, which holds stem songs', () => {
+    const { tree } = openRow(hum, 'present', []);
+    expect(sheet(tree).buttons.slice(0, 3)).toEqual([
+      'Play next',
+      'Add to queue',
+      'Rename',
+    ]);
+  });
+
+  it('queues the single song itself', async () => {
+    const { tree } = openRow(hum, 'present', []);
+    await press(tree, 'Add to queue');
+    expect(queue.verbs.addToQueue).toHaveBeenCalledWith(hum);
+    expect(snack(tree)?.message).toBe('Added to queue: Hum');
   });
 });
 

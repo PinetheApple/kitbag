@@ -1,8 +1,8 @@
 import {
   ARRIVAL,
   arrivalStore,
+  useLibrarySongs,
   useStemPlayer,
-  useStemSongs,
   type Arrival,
   type MixerHold,
 } from '@kitbag/core-state';
@@ -34,22 +34,27 @@ export function useRouteAcquire(
 }
 
 function follow(arrival: Arrival, setId: number, routes: PlayOrderRoutes) {
-  if (arrival.kind === ARRIVAL.metronome) routes.onOpenMetronome();
-  else if (arrival.kind !== ARRIVAL.gaveUp && arrival.stemSetId !== setId)
-    routes.onOpenStemSet(arrival.stemSetId);
+  if (arrival.kind === ARRIVAL.metronome) {
+    routes.onOpenMetronome();
+    return;
+  }
+  if (arrival.kind === ARRIVAL.gaveUp) return;
+  const { song } = arrival;
+  if (song.kind === 'song') routes.onOpenSong(song.id);
+  else if (song.id !== setId) routes.onOpenStemSet(song.id);
 }
 
 export function useArrivalFollow(setId: number, routes: PlayOrderRoutes) {
-  const stems = useStemSongs();
+  const library = useLibrarySongs();
   useEffect(
     () =>
       arrivalStore.subscribe(({ arrival }, previous) => {
         if (arrival === null || arrival.serial === previous.arrival?.serial)
           return;
         follow(arrival, setId, routes);
-        const message = arrivalText(arrival, stems);
+        const message = arrivalText(arrival, library);
         if (message !== null) routes.onNotice(message);
       }),
-    [setId, routes, stems],
+    [setId, routes, library],
   );
 }

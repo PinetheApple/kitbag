@@ -3,6 +3,7 @@ import {
   useLeftSetlistNotice,
   useQueueNotices,
   type Notice,
+  type QueueAction,
   type SetlistPickerSheetProps,
 } from '@kitbag/core-design';
 import {
@@ -13,8 +14,9 @@ import {
   useSetlistPicker,
   useEndedSetlistNotice,
   useStemPlayer,
+  type QueuedSong,
 } from '@kitbag/core-state';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 type SetlistSheetProps = Pick<
   SetlistPickerSheetProps,
@@ -39,25 +41,39 @@ export function useCarriedSkipNotice(showMessage: (message: string) => void) {
   }, [carried, carrySkip, showMessage]);
 }
 
+function useQueueThisSong(closeSheet: () => void) {
+  const setId = useStemPlayer((s) => s.setId);
+  const title = useStemPlayer((s) => s.title);
+  return useCallback(
+    (verb: QueueAction<QueuedSong>) => (queued: boolean) => {
+      closeSheet();
+      if (setId !== null)
+        verb({ song: { kind: 'stems', id: setId }, title, queued });
+    },
+    [closeSheet, setId, title],
+  );
+}
+
 export function useQueueActions(
   notice: Notice,
   closeSheet: () => void,
   onOpenSetlist: (setlistId: number) => void,
+  onOpenQueue: () => void,
 ) {
-  const setId = useStemPlayer((s) => s.setId);
   useQueueRefresh(true);
   const queueSong = useQueueSong();
-  const { playNext: queueNext, added } = useQueueNotices(
-    notice,
-    queueSong,
-    onOpenSetlist,
-  );
-  const playNext = useCallback(() => {
-    closeSheet();
-    if (setId !== null) queueNext(setId);
-  }, [closeSheet, setId, queueNext]);
+  const queue = useQueueNotices(notice, queueSong, onOpenSetlist, onOpenQueue);
+  const thisSong = useQueueThisSong(closeSheet);
   const rejoinSetlist = useLibrary((s) => s.rejoinSetlist);
   const leftSetlist = useLeftSetlistNotice(notice, rejoinSetlist);
   useEndedSetlistNotice(leftSetlist);
-  return { playNext, added, leftSetlist };
+  return useMemo(
+    () => ({
+      playNext: thisSong(queue.playNext),
+      addToQueue: thisSong(queue.addToQueue),
+      added: queue.added,
+      leftSetlist,
+    }),
+    [thisSong, queue, leftSetlist],
+  );
 }

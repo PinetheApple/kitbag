@@ -8,30 +8,44 @@ import {
 } from 'react-test-renderer';
 import { vi } from 'vitest';
 
-import { SongPlayerScreen } from './SongPlayerScreen.tsx';
+import {
+  SongPlayerScreen,
+  type SongPlayerScreenProps,
+} from './SongPlayerScreen.tsx';
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
 export const onBack = vi.fn();
+export const onOpenStemSet = vi.fn();
+export const onOpenSong = vi.fn();
 
 const playhead = () => ({}) as never;
 
-export function screen(focused: boolean) {
+export function screen(
+  focused: boolean,
+  routes: Partial<SongPlayerScreenProps> = {},
+) {
   return createElement(SongPlayerScreen, {
     songId: 1,
     focused,
     insets: { top: 0, bottom: 0 },
     onBack,
+    onOpenStemSet,
+    onOpenSong,
     usePlayhead: playhead,
+    ...routes,
   });
 }
 
-export function mount(focused = true): ReactTestRenderer {
+export function mount(
+  focused = true,
+  routes: Partial<SongPlayerScreenProps> = {},
+): ReactTestRenderer {
   let tree: ReactTestRenderer | undefined;
   act(() => {
-    tree = create(screen(focused));
+    tree = create(screen(focused, routes));
   });
   if (tree === undefined) throw new Error('not mounted');
   return tree;

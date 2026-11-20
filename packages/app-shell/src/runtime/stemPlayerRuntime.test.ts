@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   configureStemPlayer: vi.fn(),
+  autoAdvanceDeps: vi.fn(),
   startAutoAdvance: vi.fn(),
   startCardOrder: vi.fn(),
   endSessionOnCardStop: vi.fn(),
@@ -24,6 +25,7 @@ vi.mock('@kitbag/core-native', () => ({
   setTrackKey: mocks.setTrackKey,
 }));
 vi.mock('@kitbag/core-state', () => ({
+  autoAdvanceDeps: mocks.autoAdvanceDeps,
   configureStemPlayer: mocks.configureStemPlayer,
   startAutoAdvance: mocks.startAutoAdvance,
   startCardOrder: mocks.startCardOrder,

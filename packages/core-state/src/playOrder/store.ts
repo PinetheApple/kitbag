@@ -1,4 +1,10 @@
-import type { PlayQueueEntry, PlayQueueRepository } from '@kitbag/core-db';
+import {
+  queuedSongOf,
+  sameQueuedSong,
+  type PlayQueueEntry,
+  type PlayQueueRepository,
+  type QueuedSong,
+} from '@kitbag/core-db';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { libraryStore, type LibraryStore } from '../library/store.ts';
@@ -14,6 +20,7 @@ import {
   cursorOf,
   onStageOf,
   upNext,
+  queuedSongOfAdvance,
   type Advance,
   type OnStage,
   type SetlistCursor,
@@ -32,11 +39,13 @@ export interface SkipResult {
 
 export interface PlayOrderActions {
   refresh: () => Promise<void>;
-  enqueue: (stemSetId: number, position?: number) => Promise<void>;
-  moveQueued: (stemSetId: number, position: number) => Promise<void>;
-  removeQueued: (stemSetId: number) => Promise<void>;
+  enqueue: (song: QueuedSong, position?: number) => Promise<void>;
+  playNext: (song: QueuedSong) => Promise<void>;
+  addToQueue: (song: QueuedSong) => Promise<void>;
+  moveQueued: (song: QueuedSong, position: number) => Promise<void>;
+  removeQueued: (song: QueuedSong) => Promise<void>;
   clearQueue: () => Promise<void>;
-  playQueued: (stemSetId: number) => Promise<void>;
+  playQueued: (song: QueuedSong) => Promise<void>;
   upNext: () => UpNext | undefined;
   advance: () => Promise<Advance>;
   skipToNext: () => Promise<SkipResult>;
@@ -110,6 +119,9 @@ const defaultDeps: PlayOrderDeps = {
   markStage: stageMarkOf(libraryStore),
 };
 
+export const QUEUE_FRONT = 0;
+const QUEUE_END = Number.MAX_SAFE_INTEGER;
+
 type SetState = StoreApi<PlayOrderStore>['setState'];
 type Get = StoreApi<PlayOrderStore>['getState'];
 
@@ -131,18 +143,25 @@ function queueActions(
     edits.count++;
     return refreshAfter(work);
   };
+  const placed = (song: QueuedSong, position: number) => {
+    const queue = deps.queue();
+    return edit(
+      queue.add(song, position).then(() => queue.move(song, position)),
+    );
+  };
   return {
     refresh: async () => {
       set({ queue: await deps.queue().list() });
     },
-    enqueue: (stemSetId: number, position?: number) =>
-      refreshAfter(deps.queue().add(stemSetId, position)),
-    moveQueued: (stemSetId: number, position: number) =>
-      edit(deps.queue().move(stemSetId, position)),
-    removeQueued: (stemSetId: number) => edit(deps.queue().remove(stemSetId)),
+    enqueue: (song: QueuedSong, position?: number) =>
+      refreshAfter(deps.queue().add(song, position)),
+    playNext: (song: QueuedSong) => placed(song, QUEUE_FRONT),
+    addToQueue: (song: QueuedSong) => placed(song, QUEUE_END),
+    moveQueued: (song: QueuedSong, position: number) =>
+      edit(deps.queue().move(song, position)),
+    removeQueued: (song: QueuedSong) => edit(deps.queue().remove(song)),
     clearQueue: () => edit(deps.queue().clear()),
-    playQueued: (stemSetId: number) =>
-      edit(deps.queue().takeThrough(stemSetId)),
+    playQueued: (song: QueuedSong) => edit(deps.queue().takeThrough(song)),
   };
 }
 
@@ -154,22 +173,24 @@ function queueCommit(
   deps: PlayOrderDeps,
   get: Get,
   edits: QueueEdits,
-  stemSetId: number,
+  song: QueuedSong,
 ): Commit {
   const { queue } = get();
-  const through = queue.findIndex((entry) => entry.stemSetId === stemSetId);
+  const through = queue.findIndex((entry) =>
+    sameQueuedSong(queuedSongOf(entry), song),
+  );
   const taken = queue.slice(0, through + 1);
   let ours = edits.count;
   return {
     write: () => {
-      const taking = get().playQueued(stemSetId);
+      const taking = get().playQueued(song);
       ours = edits.count;
       return taking;
     },
     revert: async () => {
       if (edits.count !== ours) return;
       for (const [position, entry] of taken.entries())
-        await deps.queue().add(entry.stemSetId, position);
+        await deps.queue().add(queuedSongOf(entry), position);
       await get().refresh();
     },
   };
@@ -199,9 +220,9 @@ function commitOf(
   edits: QueueEdits,
   next: Advance,
 ) {
-  if (next.kind !== ADVANCE.play) return null;
-  if (next.setlistItemId === null)
-    return queueCommit(deps, get, edits, next.stemSetId);
+  const queued = queuedSongOfAdvance(next);
+  if (queued !== null) return queueCommit(deps, get, edits, queued);
+  if (next.kind !== ADVANCE.play || next.setlistItemId === null) return null;
   const { setlistId } = deps.stage();
   if (setlistId === null) return null;
   const itemId = next.setlistItemId;

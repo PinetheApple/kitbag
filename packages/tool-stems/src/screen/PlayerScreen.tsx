@@ -72,6 +72,7 @@ export interface StemPlayerScreenProps {
   readonly insets: { readonly top: number; readonly bottom: number };
   readonly onBack: () => void;
   readonly onOpenStemSet: (stemSetId: number) => void;
+  readonly onOpenSong: (songId: number) => void;
   readonly onOpenMetronome: () => void;
   readonly onOpenSetlist: (setlistId: number) => void;
 }
@@ -328,7 +329,8 @@ function useRetimeAsk() {
 
 interface PlayerSheetsProps {
   readonly routes: PlayOrderRoutes;
-  readonly onPlayNext: () => void;
+  readonly onPlayNext: (queued: boolean) => void;
+  readonly onAddToQueue: (queued: boolean) => void;
   readonly onAddToSetlist: () => void;
   readonly onAddedToSetlist: (added: AddedToSetlist) => void;
   readonly onLeftSetlist: UpNextSheetProps['onLeftSetlist'];
@@ -371,6 +373,7 @@ function PlayerSheets(props: PlayerSheetsProps) {
         onTempo={props.onTempo}
         onClick={props.onClick}
         onPlayNext={props.onPlayNext}
+        onAddToQueue={props.onAddToQueue}
         onAddToSetlist={props.onAddToSetlist}
       />
       <UpNextSheet
@@ -418,12 +421,14 @@ export function PlayerScreen({
   insets,
   onBack,
   onOpenStemSet,
+  onOpenSong,
   onOpenMetronome,
   onOpenSetlist,
 }: StemPlayerScreenProps) {
   const styles = useStyles();
   const { notice, routes, skip } = usePlayerRoutes(
     onOpenStemSet,
+    onOpenSong,
     onOpenMetronome,
   );
   useCarriedSkipNotice(notice.showMessage);
@@ -432,7 +437,12 @@ export function PlayerScreen({
   const acquireSong = useStemPlayer((s) => s.acquireSong);
   const { retiming, shown, askReset, askLeave, closeAsk } = useRetimeAsk();
   const sheets = usePlayerSheet(retiming);
-  const queue = useQueueActions(notice, sheets.closeSheet, onOpenSetlist);
+  const queue = useQueueActions(
+    notice,
+    sheets.closeSheet,
+    onOpenSetlist,
+    sheets.openUpNext,
+  );
   const frame = useStemFrame();
   const acquireAt = useCallback(
     (id: number) => acquireSong(id, WAVEFORM_BARS),
@@ -467,6 +477,7 @@ export function PlayerScreen({
       <PlayerSheets
         routes={routes}
         onPlayNext={queue.playNext}
+        onAddToQueue={queue.addToQueue}
         onAddToSetlist={sheets.openSetlists}
         onAddedToSetlist={queue.added}
         onLeftSetlist={queue.leftSetlist}

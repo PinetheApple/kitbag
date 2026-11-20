@@ -1,4 +1,9 @@
-import type { PlayQueueEntry } from '@kitbag/core-db';
+import {
+  queuedSongOf,
+  sameQueuedSong,
+  type PlayQueueEntry,
+  type QueuedSong,
+} from '@kitbag/core-db';
 
 import { adjacentEntry, SONG_STEP } from '../library/setlistPosition.ts';
 import {
@@ -11,7 +16,7 @@ import type { LibraryState } from '../library/store.ts';
 export const UP_NEXT_SOURCE = { queue: 'queue', setlist: 'setlist' } as const;
 
 export type UpNext =
-  | { readonly source: typeof UP_NEXT_SOURCE.queue; readonly stemSetId: number }
+  | { readonly source: typeof UP_NEXT_SOURCE.queue; readonly song: QueuedSong }
   | {
       readonly source: typeof UP_NEXT_SOURCE.setlist;
       readonly entry: SetlistEntry;
@@ -37,7 +42,12 @@ export interface PlayOrder {
   readonly cursor: SetlistCursor | null;
 }
 
-export const ADVANCE = { play: 'play', open: 'open', end: 'end' } as const;
+export const ADVANCE = {
+  play: 'play',
+  song: 'song',
+  open: 'open',
+  end: 'end',
+} as const;
 
 export type Advance =
   | {
@@ -45,6 +55,7 @@ export type Advance =
       readonly stemSetId: number;
       readonly setlistItemId: number | null;
     }
+  | { readonly kind: typeof ADVANCE.song; readonly songId: number }
   | { readonly kind: typeof ADVANCE.open; readonly entry: PresetSetlistEntry }
   | { readonly kind: typeof ADVANCE.end };
 
@@ -115,11 +126,19 @@ export function upNext({
 }: PlayOrder): UpNext | undefined {
   const [queued] = queue;
   if (queued !== undefined)
-    return { source: UP_NEXT_SOURCE.queue, stemSetId: queued.stemSetId };
+    return { source: UP_NEXT_SOURCE.queue, song: queuedSongOf(queued) };
   const entry = nextSetlistEntry(stage, cursor);
   return entry === undefined
     ? undefined
     : { source: UP_NEXT_SOURCE.setlist, entry };
+}
+
+export function queuedSongOfAdvance(advance: Advance): QueuedSong | null {
+  if (advance.kind === ADVANCE.song)
+    return { kind: 'song', id: advance.songId };
+  if (advance.kind !== ADVANCE.play || advance.setlistItemId !== null)
+    return null;
+  return { kind: 'stems', id: advance.stemSetId };
 }
 
 function itemIdOf(advance: Advance): number | null {
@@ -134,21 +153,18 @@ export function advanceSkipped(
   if (expected === undefined) return false;
   if (expected.source === UP_NEXT_SOURCE.setlist)
     return itemIdOf(advance) !== expected.entry.item.id;
-  return !(
-    advance.kind === ADVANCE.play &&
-    advance.setlistItemId === null &&
-    advance.stemSetId === expected.stemSetId
-  );
+  const queued = queuedSongOfAdvance(advance);
+  return queued === null || !sameQueuedSong(queued, expected.song);
 }
 
 export function advanceOf(next: UpNext | undefined): Advance {
   if (next === undefined) return { kind: ADVANCE.end };
-  if (next.source === UP_NEXT_SOURCE.queue)
-    return {
-      kind: ADVANCE.play,
-      stemSetId: next.stemSetId,
-      setlistItemId: null,
-    };
+  if (next.source === UP_NEXT_SOURCE.queue) {
+    const { song } = next;
+    return song.kind === 'song'
+      ? { kind: ADVANCE.song, songId: song.id }
+      : { kind: ADVANCE.play, stemSetId: song.id, setlistItemId: null };
+  }
   const { entry } = next;
   if (isPresetEntry(entry)) return { kind: ADVANCE.open, entry };
   return {

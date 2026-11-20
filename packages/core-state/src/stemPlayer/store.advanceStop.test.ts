@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { AutoAdvanceDeps } from '../playOrder/autoAdvance.ts';
 import { startAutoAdvance } from '../playOrder/autoAdvance.ts';
+import { restingPlayer } from '../playOrder/autoAdvance.test-helper.ts';
 import { ADVANCE, type Advance } from '../playOrder/order.ts';
 import type { SkipResult, Undo } from '../playOrder/store.ts';
 import { ADVANCE_OUTCOME } from './songEnd.ts';
@@ -119,8 +120,18 @@ async function followingPlayOrder() {
   );
   const player = song.store.getState();
   const deps: AutoAdvanceDeps = {
-    onSongEnd: player.onSongEnd,
-    advanceTo: player.advanceTo,
+    players: {
+      stems: {
+        onSongEnd: player.onSongEnd,
+        advanceTo: player.advanceTo,
+        takeOver: (id) => player.takeOver(id, 0),
+        handOver: player.handOver,
+        stillEnded: player.songStillEnded,
+        stopAdvancing: player.stopAdvancing,
+        handToMetronome: player.handToMetronome,
+      },
+      song: restingPlayer(),
+    },
     peekNext: () =>
       new Promise((resolve) => {
         peeked = resolve;
@@ -128,10 +139,7 @@ async function followingPlayOrder() {
     commitNext,
     placeOf: () => null,
     candidates: () => 1,
-    stillEnded: player.songStillEnded,
-    stopAdvancing: player.stopAdvancing,
     commitOpen: () => Promise.resolve(false),
-    handToMetronome: player.handToMetronome,
     arrivals: { setState: vi.fn() } as unknown as AutoAdvanceDeps['arrivals'],
   };
   startAutoAdvance(deps);

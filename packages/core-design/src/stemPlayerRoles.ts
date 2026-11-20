@@ -52,6 +52,7 @@ export const stemPlayer = {
   menuRowGap: 12,
   countPanelPadding: 14,
   countPanelGap: 8,
+  waveBars: 26,
 } as const;
 
 export const songPlayer = {

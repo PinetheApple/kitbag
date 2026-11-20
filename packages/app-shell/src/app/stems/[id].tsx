@@ -30,6 +30,7 @@ function StemPlayerRoute() {
       insets={insets}
       onBack={routes.back}
       onOpenStemSet={follow}
+      onOpenSong={routes.replaceSong}
       onOpenMetronome={routes.toMetronome}
       onOpenSetlist={routes.openSetlist}
     />
