@@ -1,34 +1,15 @@
-import { useCallback, type ReactNode } from 'react';
-import { Text, View } from 'react-native';
+import { useCallback } from 'react';
+import { View } from 'react-native';
 
-import { space, textRoles } from '../roles.ts';
-import { stemPlayer } from '../stemPlayerRoles.ts';
-import { textStyle } from '../textStyle.ts';
+import { space } from '../roles.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
-import { minTouchTargetDp } from '../tokens.ts';
 import type { NeighbourGaps } from '../touchTarget.ts';
 import { PresetButton } from './PresetButton.tsx';
 import { SheetHint } from './Sheet.tsx';
 import { StepControl, type StepDelta } from './StepControl.tsx';
+import { SHEET_STEPPER_GAPS, StepperRow } from './StepperRow.tsx';
 
-export const SHEET_STEPPER_GAPS = {
-  top: space.sectionGap,
-  bottom: space.sectionGap,
-};
-
-const useStyles = createThemedStyles((theme) => ({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: stemPlayer.menuRowGap,
-    minHeight: minTouchTargetDp,
-  },
-  label: {
-    ...textStyle(textRoles.menuRow),
-    color: theme.color.text,
-    flexGrow: 1,
-    flexShrink: 1,
-  },
+const useStyles = createThemedStyles(() => ({
   presets: { flexDirection: 'row', gap: space.controlGap },
 }));
 
@@ -64,24 +45,8 @@ export function SpeedStepper({
       accented={accented}
       neighbourGapDp={gaps}
       onStep={onStep}
-      {...(onOpen === undefined ? {} : { onValuePress: onOpen })}
+      onValuePress={onOpen}
     />
-  );
-}
-
-export function StepperRow({
-  label,
-  children,
-}: {
-  readonly label: string;
-  readonly children: ReactNode;
-}) {
-  const styles = useStyles();
-  return (
-    <View style={styles.row}>
-      <Text style={styles.label}>{label}</Text>
-      {children}
-    </View>
   );
 }
 

@@ -60,10 +60,6 @@ function lockSource(speed: number): string {
   return `${how} · ${LOCK_SOURCE}`;
 }
 
-export function playedBpm(bpm: number | null, speed: number): number | null {
-  return bpm === null ? null : bpm * speed;
-}
-
 function withBpm(bpmText: string | null, detail: string): string {
   return bpmText === null ? detail : `${bpmText} · ${detail}`;
 }
@@ -100,13 +96,21 @@ export function barBadge(
     : { label: fact.text, spoken: fact.spoken, tone: 'default' };
 }
 
-export function lockText(
-  badge: SongBadge,
-  click: boolean,
-  bpmText: string | null,
-  failure: AnalysisFailure | null,
-  speed: number,
-): LockText {
+export interface LockTextInput {
+  readonly badge: SongBadge;
+  readonly click: boolean;
+  readonly bpmText: string | null;
+  readonly failure: AnalysisFailure | null;
+  readonly speed: number;
+}
+
+export function lockText({
+  badge,
+  click,
+  bpmText,
+  failure,
+  speed,
+}: LockTextInput): LockText {
   switch (badge) {
     case 'pending':
     case 'analyzing':

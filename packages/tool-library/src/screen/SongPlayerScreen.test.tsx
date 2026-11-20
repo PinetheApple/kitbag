@@ -6,12 +6,8 @@ import {
   space,
   type LoopHandles,
 } from '@kitbag/core-design';
-import { act, createElement, type ReactNode } from 'react';
-import {
-  create,
-  type ReactTestInstance,
-  type ReactTestRenderer,
-} from 'react-test-renderer';
+import { act } from 'react';
+import type { ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SONG_CLICK_TEXT } from '../logic/clickChipText.ts';
@@ -21,279 +17,51 @@ import {
   REANALYZE_LABEL,
   SONG_SPEED_TEXT,
 } from '../logic/viewText.ts';
+import {
+  mount,
+  onBack,
+  screen,
+  styleAround,
+} from './SongPlayerScreen.mount.test-helper.ts';
+import {
+  commands,
+  display,
+  library,
+  meter,
+  mixer,
+  OPEN_SONG,
+  resetScreenState,
+  SONG_SECONDS,
+  tempo,
+  transport,
+} from './SongPlayerScreen.mocks.test-helper.ts';
 
-type Props = Record<string, unknown> & { readonly children?: ReactNode };
-
-const OPEN_SONG = { songId: 1, title: 'A song', artist: 'An artist', bpm: 120 };
-const CLOSED_SONG = { songId: null, title: '', artist: null, bpm: null };
-const ENGINE_RATE = 48_000;
-const SONG_SECONDS = 200;
-const DROPPED_FRACTION = 0.25;
-
-const display = vi.hoisted(() => ({
-  speed: 1,
-  scaled: false,
-  status: 'ready',
-  song: {},
-  analysis: { analysisStatus: 'done', beats: [0] as readonly number[] },
-}));
-const library = vi.hoisted(
-  (): { rows: readonly unknown[]; failure: unknown; files: unknown } => ({
-    rows: [],
-    failure: null,
-    files: null,
-  }),
+vi.mock('react-native', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).reactNativeMock(),
 );
-const commands = vi.hoisted(() => ({
-  close: vi.fn(),
-  reanalyze: vi.fn(),
-  save: vi.fn(() => Promise.resolve(true)),
-  dismissMeterNotice: vi.fn(),
-}));
-const tempo = vi.hoisted(() => ({ correction: 'none' }));
-const meter = vi.hoisted((): { override: unknown; notice: unknown } => ({
-  override: { meterBeatsPerBar: null, barOneSeconds: null },
-  notice: null,
-}));
-const transport = vi.hoisted(() => ({
-  markLoop: vi.fn(),
-  moveLoopEdge: vi.fn(),
-  skip: vi.fn(),
-  togglePlay: vi.fn(),
-  toggleClick: vi.fn(),
-  setSpeed: vi.fn(),
-  resetSpeed: vi.fn(),
-}));
-const mixer = vi.hoisted(() => ({
-  session: 0,
-  opens: 0,
-  displaced: 0,
-  releases: 0,
-}));
 
-vi.mock('react-native', () => ({
-  View: 'View',
-  ScrollView: 'ScrollView',
-  Text: 'Text',
-  StyleSheet: { create: <T,>(styles: T) => styles },
-}));
+vi.mock('./SongClickChips.tsx', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).clickChipsMock(),
+);
 
-vi.mock('./SongClickChips.tsx', async () => {
-  const { createElement: h } = await import('react');
-  return { SongClickChips: (props: Props) => h('SongClickChips', props) };
-});
+vi.mock('react-native-reanimated', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).reanimatedMock(),
+);
 
-vi.mock('react-native-reanimated', () => ({
-  useSharedValue: (value: unknown) => ({ value }),
-}));
+vi.mock('@kitbag/core-design', async (original) =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).coreDesignMock(
+    original,
+  ),
+);
 
-vi.mock('@kitbag/core-design', async (original) => {
-  const { createElement: h } = await import('react');
-  const parent = (props: Props) => props.children;
-  const nothing = () => null;
-  return {
-    ...(await original<Record<string, unknown>>()),
-    AppBar: (props: Props) =>
-      h(
-        'AppBar',
-        {
-          actions: props.actions,
-          onBack: props.onBack,
-          title: props.title,
-          subtitle: props.subtitle,
-        },
-        props.trailing as ReactNode,
-      ),
-    Button: (props: Props) => h('Button', props),
-    Sheet: (props: Props) =>
-      props.visible === true
-        ? h('Sheet', { title: props.title }, props.children)
-        : null,
-    SectionHeader: (props: Props) => h('SectionHeader', props),
-    SegmentedControl: (props: Props) => h('SegmentedControl', props),
-    SheetHint: (props: Props) => h('SheetHint', null, props.children),
-    Badge: (props: Props) => h('Badge', { label: props.label }),
-    MenuRow: (props: Props) => h('MenuRow', props),
-    MeterRow: (props: Props) => h('MeterRow', props),
-    MeterSheet: (props: Props) => h('MeterSheet', props),
-    BeatWaveform: nothing,
-    Card: parent,
-    Chip: () => h('Chip'),
-    PickerGrid: nothing,
-    BeatLedRow: nothing,
-    createThemedStyles: (build: (theme: unknown) => unknown) => () =>
-      build({ color: {} }),
-    EmptyState: (props: Props) =>
-      h('EmptyState', { title: props.title, reason: props.reason }),
-    PlayerDock: parent,
-    PlayerTransport: (props: Props) =>
-      h('PlayerTransport', props, props.extraKey as ReactNode),
-    Snackbar: (props: Props) => h('Snackbar', props),
-    TransportKey: (props: Props) => h('TransportKey', props),
-    SpeedGroup: (props: Props) => h('SpeedGroup', props),
-    ScrubRow: (props: Props) =>
-      h('ScrubRow', { loopHandles: props.loopHandles }),
-    textStyle: () => ({}),
-    useTextScaled: () => display.scaled,
-  };
-});
+vi.mock('@kitbag/core-state', async (original) =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).coreStateMock(
+    original,
+  ),
+);
 
-vi.mock('@kitbag/core-state', async (original) => {
-  const {
-    useFocusedMixerHold,
-    playerSongBadge,
-    beatBeside,
-    formatClockSeconds,
-    correctedBpm,
-    TEMPO_CORRECTION,
-    TEMPO_CORRECTIONS,
-    formatName,
-    joinedFormatNames,
-    SOUND_OPTIONS,
-    SOUND_ROLE,
-    SOUND_ROLE_OPTIONS,
-    layoutBeatLeds,
-    soundLabel,
-    soundPickerLabel,
-    soundsWith,
-    countInBarsFromOption,
-    isUnitySpeed,
-    speedHint,
-    speedKeyCopy,
-    speedPercentText,
-    speedPresetTexts,
-    steppedSpeed,
-  } = await original<{
-    useFocusedMixerHold: unknown;
-    playerSongBadge: unknown;
-    beatBeside: unknown;
-    formatClockSeconds: unknown;
-    correctedBpm: unknown;
-    TEMPO_CORRECTION: unknown;
-    TEMPO_CORRECTIONS: unknown;
-    formatName: unknown;
-    joinedFormatNames: unknown;
-    SOUND_OPTIONS: unknown;
-    SOUND_ROLE: unknown;
-    SOUND_ROLE_OPTIONS: unknown;
-    layoutBeatLeds: unknown;
-    soundLabel: unknown;
-    soundPickerLabel: unknown;
-    soundsWith: unknown;
-    countInBarsFromOption: unknown;
-    isUnitySpeed: unknown;
-    speedHint: unknown;
-    speedKeyCopy: unknown;
-    speedPercentText: unknown;
-    speedPresetTexts: unknown;
-    steppedSpeed: unknown;
-  }>();
-  const open = () => {
-    const mine = ++mixer.session;
-    mixer.opens++;
-    const live = () => mine === mixer.session;
-    return {
-      hold: {
-        live,
-        release: () => {
-          if (!live()) return;
-          mixer.session++;
-          mixer.releases++;
-        },
-      },
-    };
-  };
-  return {
-    GRID_METERS: [3, 4],
-    isGridMeter: (meter: number) => [3, 4].includes(meter),
-    NO_METER_OVERRIDE: { meterBeatsPerBar: null, barOneSeconds: null },
-    analysisFailure: () => library.failure,
-    rowFilesOf: () => library.files,
-    beatBeside,
-    formatClockSeconds,
-    correctedBpm,
-    TEMPO_CORRECTION,
-    TEMPO_CORRECTIONS,
-    formatName,
-    joinedFormatNames,
-    SOUND_OPTIONS,
-    SOUND_ROLE,
-    SOUND_ROLE_OPTIONS,
-    layoutBeatLeds,
-    soundLabel,
-    soundPickerLabel,
-    soundsWith,
-    countInBarsFromOption,
-    isUnitySpeed,
-    speedHint,
-    speedKeyCopy,
-    speedPercentText,
-    speedPresetTexts,
-    steppedSpeed,
-    bpmFact: (bpm: number | null) =>
-      bpm === null
-        ? null
-        : {
-            value: String(Math.round(bpm)),
-            text: `${String(Math.round(bpm))} BPM`,
-            spoken: '',
-          },
-    clickKeyLabel: () => '',
-    framesToSeconds: (frames: number, rate: number) => frames / rate,
-    loopEndFrames: () => null,
-    loopKeyLabel: () => '',
-    SKIP_SECONDS: 10,
-    playerSongBadge,
-    useFocusedMixerHold,
-    useLoopScrub: () => ({}),
-    useSongLibrary: (select: (state: unknown) => unknown) =>
-      select({
-        rows: library.rows,
-        codes: {},
-        reanalyze: commands.reanalyze,
-        saveSongMeterOverride: commands.save,
-        saveSongTempoCorrection: commands.save,
-      }),
-    useSongPlayer: (select: (state: unknown) => unknown) =>
-      select({
-        status: display.status,
-        speed: display.speed,
-        ...display.song,
-        click: false,
-        durationFrames: SONG_SECONDS * ENGINE_RATE,
-        engineRate: ENGINE_RATE,
-        ...display.analysis,
-        loop: { kind: 'off' },
-        meterOverride: meter.override,
-        detected: { meter: 4, barOneSeconds: 2.3 },
-        meterNotice: meter.notice,
-        dismissMeterNotice: commands.dismissMeterNotice,
-        meterOverrideChanged: vi.fn(),
-        tempoCorrection: tempo.correction,
-        detectedBpm: 104,
-        tempoCorrectionChanged: vi.fn(),
-        tempoCorrectionSettled: vi.fn(),
-        playheadBeatSeconds: () => null,
-        clickSettings: {
-          countInBars: 0,
-          sounds: { normal: 1, accent: 0 },
-          accents: [2, 1, 1, 1],
-          dirty: false,
-        },
-        open,
-        close: commands.close,
-        ...transport,
-      }),
-  };
-});
-
-const { SongPlayerScreen } = await import('./SongPlayerScreen.tsx');
-
-(
-  globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
-).IS_REACT_ACT_ENVIRONMENT = true;
-
-const onBack = vi.fn();
+const CLOSED_SONG = { songId: null, title: '', artist: null, bpm: null };
+const DROPPED_FRACTION = 0.25;
 
 const UNSUPPORTED = {
   kind: 'unsupported',
@@ -308,54 +76,8 @@ function failWith(failure: unknown) {
   library.rows = [{ kind: 'song', id: OPEN_SONG.songId }];
   library.failure = failure;
 }
-const playhead = () => ({}) as never;
 
-function screen(focused: boolean) {
-  return createElement(SongPlayerScreen, {
-    songId: 1,
-    focused,
-    insets: { top: 0, bottom: 0 },
-    onBack,
-    usePlayhead: playhead,
-  });
-}
-
-function mount(focused = true): ReactTestRenderer {
-  let tree: ReactTestRenderer | undefined;
-  act(() => {
-    tree = create(screen(focused));
-  });
-  if (tree === undefined) throw new Error('not mounted');
-  return tree;
-}
-
-function styleAround(tree: ReactTestRenderer, type: string) {
-  let host: ReactTestInstance | null = tree.root.findByType(
-    type as never,
-  ).parent;
-  while (host !== null && typeof host.type !== 'string') host = host.parent;
-  const style: unknown = host?.props.style;
-  return Object.assign({}, ...[style].flat(Infinity)) as Record<
-    string,
-    unknown
-  >;
-}
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  display.speed = 1;
-  display.scaled = false;
-  display.status = 'ready';
-  display.song = OPEN_SONG;
-  display.analysis = { analysisStatus: 'done', beats: [0] };
-  library.rows = [];
-  library.failure = null;
-  library.files = null;
-  meter.override = { meterBeatsPerBar: null, barOneSeconds: null };
-  meter.notice = null;
-  tempo.correction = 'none';
-  Object.assign(mixer, { session: 0, opens: 0, displaced: 0, releases: 0 });
-});
+beforeEach(resetScreenState);
 
 describe('the song player layout', () => {
   it('keeps the click toggle beside the text at the default size', () => {
@@ -873,24 +595,7 @@ describe('a song with no beat grid', () => {
   });
 });
 
-describe('the transport', () => {
-  function speedKey(tree: ReactTestRenderer) {
-    return tree.root
-      .findByType('PlayerTransport' as never)
-      .findByType('TransportKey' as never);
-  }
-
-  function openSpeed(): ReactTestRenderer {
-    const tree = mount();
-    act(() => {
-      (speedKey(tree).props.onPress as () => void)();
-    });
-    return tree;
-  }
-
-  const speedGroup = (tree: ReactTestRenderer) =>
-    tree.root.findByType('SpeedGroup' as never);
-
+describe('the loop key on the transport', () => {
   it('labels the loop key A|B and marks the loop with it', () => {
     const dock = mount().root.findByType('PlayerTransport' as never);
     expect(dock.props.loopText).toBe(LOOP_KEY_TEXT);
@@ -898,77 +603,6 @@ describe('the transport', () => {
       (dock.props.onLoop as () => void)();
     });
     expect(transport.markLoop).toHaveBeenCalledOnce();
-  });
-
-  it('shows full speed on a plain, live key', () => {
-    expect(speedKey(mount()).props).toMatchObject({
-      text: '100%',
-      selected: false,
-      accessibilityLabel: 'Speed 100%',
-    });
-    expect(speedKey(mount()).props.muted).toBeUndefined();
-  });
-
-  it('accents the key while the song is slowed', () => {
-    display.speed = 0.9;
-    expect(speedKey(mount()).props).toMatchObject({
-      text: '90%',
-      selected: true,
-    });
-  });
-
-  it('opens the speed sheet for this song with the song tempo', () => {
-    const tree = openSpeed();
-    const sheet = tree.root.findByType('Sheet' as never);
-    expect(sheet.props.title).toBe(SONG_SPEED_TEXT.title);
-    expect(speedGroup(tree).props).toMatchObject({
-      value: '100%',
-      accented: false,
-      hint: 'Song 120 BPM',
-    });
-    expect(tree.root.findAllByType('Snackbar' as never)).toHaveLength(0);
-  });
-
-  it('names the tempo that plays and marks the preset at a slower speed', () => {
-    display.speed = 0.9;
-    const group = speedGroup(openSpeed());
-    expect(group.props.hint).toBe('Song 120 BPM, plays at 108 BPM');
-    expect(
-      (group.props.presets as readonly { label: string; selected: boolean }[])
-        .filter(({ selected }) => selected)
-        .map(({ label }) => label),
-    ).toEqual(['90%']);
-  });
-
-  it('says there is no BPM for a song without one', () => {
-    display.song = { ...OPEN_SONG, bpm: null };
-    expect(speedGroup(openSpeed()).props.hint).toBe(
-      'No beat grid, so there is no BPM to show',
-    );
-  });
-
-  it('sets a picked preset and a stepped speed', () => {
-    const group = speedGroup(openSpeed());
-    act(() => {
-      (group.props.onPick as (speed: number) => void)(0.75);
-      (group.props.onStep as (delta: number) => void)(-1);
-    });
-    expect(transport.setSpeed.mock.calls).toEqual([[0.75], [0.95]]);
-  });
-});
-
-describe('the song tempo at a slower speed', () => {
-  it('shows the tempo that plays in the app bar and on the lock card', () => {
-    display.speed = 0.9;
-    const tree = mount();
-    expect(tree.root.findByType('Badge' as never).props.label).toBe('108 BPM');
-    expect(
-      tree.root.findAll(
-        (node) =>
-          String(node.type) === 'Text' &&
-          node.props.children === '108 BPM · grid ready',
-      ),
-    ).toHaveLength(1);
   });
 });
 

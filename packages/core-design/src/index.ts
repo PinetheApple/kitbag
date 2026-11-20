@@ -71,6 +71,7 @@ export { focusReaderOn, setReaderFocuser } from './readerFocus';
 export * from './readerHiding.ts';
 export * from './components/StepControl.tsx';
 export * from './components/SpeedGroup.tsx';
+export * from './components/StepperRow.tsx';
 export * from './components/TextField.tsx';
 export * from './components/ToolTile.tsx';
 export * from './components/TransportKey.tsx';

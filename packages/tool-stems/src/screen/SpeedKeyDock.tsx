@@ -35,9 +35,6 @@ interface StepperProps {
   readonly onOpen?: () => void;
 }
 
-const opener = (onOpen: (() => void) | undefined) =>
-  onOpen === undefined ? {} : { onValuePress: onOpen };
-
 export function usePlayerSpeedStep() {
   const speed = useStemPlayer((s) => s.speed);
   const setSpeed = useStemPlayer((s) => s.setSpeed);
@@ -82,7 +79,7 @@ export function SongKeyStepper({ gaps, onOpen }: StepperProps) {
       accented={songKey !== UNSHIFTED_KEY}
       neighbourGapDp={gaps}
       onStep={step}
-      {...opener(onOpen)}
+      onValuePress={onOpen}
     />
   );
 }

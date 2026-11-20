@@ -49,6 +49,16 @@ describe('song speed on open', () => {
   });
 });
 
+describe('reattaching a song', () => {
+  it('keeps its speed without setting the rate again', async () => {
+    const song = await openedSong(songRecord({ speed: SLOWED }));
+    song.commands.mixerSetRate.mockClear();
+    await song.store.getState().open(SONG_ID, BARS).loaded;
+    expect(song.store.getState().speed).toBe(SLOWED);
+    expect(song.commands.mixerSetRate).not.toHaveBeenCalled();
+  });
+});
+
 describe('changing song speed', () => {
   it('plays the new speed and saves it for the song', async () => {
     const song = await openedSong();
@@ -100,6 +110,17 @@ describe('the count-in at a song speed', () => {
     });
     song.store.getState().togglePlay();
     expect(counts(song)[0]?.[1]).toBe(at(BEAT) / HALF);
+  });
+
+  it('restarts a count in progress at the new speed, without starting the song', async () => {
+    const song = await songWithCountIn();
+    song.store.getState().togglePlay();
+    await song.store.getState().setSpeed(HALF);
+    expect(counts(song).map(([, beatFrames]) => beatFrames)).toEqual([
+      at(BEAT),
+      at(BEAT) / HALF,
+    ]);
+    expect(song.commands.mixerPlay).not.toHaveBeenCalled();
   });
 
   it('follows a speed changed after the song opened', async () => {

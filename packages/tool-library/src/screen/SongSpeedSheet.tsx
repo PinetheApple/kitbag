@@ -12,7 +12,7 @@ import {
 } from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
 
-import { playedBpm } from '../logic/lockText.ts';
+import { playedBpm } from '../logic/playedBpm.ts';
 import { SONG_SPEED_TEXT } from '../logic/viewText.ts';
 
 export interface SongSpeedSheetProps {

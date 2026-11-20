@@ -36,8 +36,8 @@ import {
   barStatusOf,
   lockBadgeOf,
   lockText,
-  playedBpm,
 } from '../logic/lockText.ts';
+import { playedBpm } from '../logic/playedBpm.ts';
 import type { BadgeSpec } from '../logic/rowText.ts';
 import { songTitle } from '../logic/songTitle.ts';
 import { REANALYZE_LABEL } from '../logic/viewText.ts';
@@ -195,7 +195,13 @@ function LockCard({ songId }: { readonly songId: number }) {
   const onReanalyze = useCallback(() => {
     void reanalyze(songId);
   }, [reanalyze, songId]);
-  const text = lockText(badge, click, bpm?.text ?? null, failure, speed);
+  const text = lockText({
+    badge,
+    click,
+    bpmText: bpm?.text ?? null,
+    failure,
+    speed,
+  });
   const row = (
     <View style={[styles.lock, scaled && styles.lockStacked]}>
       <View style={scaled ? styles.lockTextStacked : styles.lockText}>
