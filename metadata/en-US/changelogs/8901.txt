@@ -1,0 +1,1 @@
+• Fixed opening another song while a stem setlist moved on by itself sometimes skipping a setlist or Up next song.
