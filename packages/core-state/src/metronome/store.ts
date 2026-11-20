@@ -111,6 +111,7 @@ export interface MetronomeActions {
   setCountIn: (config: CountInConfig) => void;
   setCountInScope: (scope: CountInScope) => void;
   owePattern: () => void;
+  onStarting: (listener: () => void) => () => void;
   start: () => void;
   stop: () => void;
   pause: () => void;
@@ -298,8 +299,7 @@ function transportActions(
   commands: MetronomeCommands,
   nowFrame: NowFrame,
   tempo: EngineTempo,
-  songClick: SongClick,
-  restoreStandalone: () => void,
+  beforeStart: () => void,
 ): Pick<MetronomeActions, 'setBarMute' | 'start' | 'stop' | 'pause'> {
   return {
     setBarMute: (config) => {
@@ -321,9 +321,7 @@ function transportActions(
     },
 
     start: () => {
-      // Left locked, the song's grid would clock this start and its stop end it.
-      songClick.release();
-      restoreStandalone();
+      beforeStart();
       commands.metronomeStart(nowFrame());
       set({ running: true });
     },
@@ -350,6 +348,7 @@ export function createMetronomeStore(
   songClick: SongClick = mixerClick,
 ): StoreApi<MetronomeStore> {
   let holds = 0;
+  const starting = new Set<() => void>();
   // A song count keeps the click active after release, and the count's voice is
   // copied when it arms, so a running standalone takes its pattern at once.
   const guard = guardSongClick(
@@ -365,14 +364,12 @@ export function createMetronomeStore(
       ...patternActions(set, get, engine),
       ...soundActions(set, get, engine, () => holds > 0),
       ...tempoActions(set, get, engine, tempo),
-      ...transportActions(
-        set,
-        engine,
-        nowFrame,
-        tempo,
-        songClick,
-        guard.restore,
-      ),
+      ...transportActions(set, engine, nowFrame, tempo, () => {
+        for (const listener of starting) listener();
+        // Left locked, the song's grid would clock this start and its stop end it.
+        songClick.release();
+        guard.restore();
+      }),
       holdEngine: () => {
         const release = acquireEngineHold(commands);
         let held = true;
@@ -388,6 +385,12 @@ export function createMetronomeStore(
         set({ countInScope });
       },
       owePattern: guard.owe,
+      onStarting: (listener) => {
+        starting.add(listener);
+        return () => {
+          starting.delete(listener);
+        };
+      },
       resetPractice: () => {
         set((s) => ({ practice: resetPracticeClock(s.practice, now()) }));
       },

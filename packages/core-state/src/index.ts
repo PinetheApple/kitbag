@@ -332,7 +332,7 @@ export {
   endSessionOnCardStop,
   stopSongAndSession,
 } from './playOrder/listeningSession.ts';
-export { stopStemSongOnMetronomeLoad } from './playOrder/metronomeTakeover.ts';
+export { stopSongsForMetronome } from './playOrder/metronomeTakeover.ts';
 export {
   entryName,
   SKIPPED_STEM_SONG,

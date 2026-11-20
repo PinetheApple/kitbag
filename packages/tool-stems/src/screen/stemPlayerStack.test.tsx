@@ -2,7 +2,7 @@ import {
   libraryStore,
   RETIME_PLAYBACK_RATE,
   stemPlayerStore,
-  stopStemSongOnMetronomeLoad,
+  stopSongsForMetronome,
 } from '@kitbag/core-state';
 import { record } from '@kitbag/core-state/src/stemPlayer/store.test-helper.ts';
 import { act } from 'react';
@@ -104,7 +104,7 @@ async function uncover(player: Player, order: BackOrder): Promise<void> {
 let stopTakeover: () => void = () => undefined;
 
 beforeAll(() => {
-  stopTakeover = stopStemSongOnMetronomeLoad();
+  stopTakeover = stopSongsForMetronome();
 });
 
 afterAll(() => {

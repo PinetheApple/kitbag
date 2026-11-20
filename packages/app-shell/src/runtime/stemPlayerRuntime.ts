@@ -8,7 +8,7 @@ import {
   songCountIn,
   startAutoAdvance,
   startCardOrder,
-  stopStemSongOnMetronomeLoad,
+  stopSongsForMetronome,
 } from '@kitbag/core-state';
 
 import { getDatabase } from './database.ts';
@@ -44,4 +44,4 @@ configureStemPlayer({
 startAutoAdvance(autoAdvanceDeps(playerWaveBars));
 startCardOrder();
 endSessionOnCardStop();
-stopStemSongOnMetronomeLoad();
+stopSongsForMetronome();
