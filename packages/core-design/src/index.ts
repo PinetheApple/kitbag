@@ -34,6 +34,8 @@ export * from './ThemeProvider.tsx';
 export * from './components/AppBar.tsx';
 export * from './components/Badge.tsx';
 export * from './components/BeatLed.tsx';
+export * from './components/CountSquare.tsx';
+export * from './components/countSquareState.ts';
 export * from './components/ClickBeatStrip.tsx';
 export * from './components/Button.tsx';
 export * from './components/Card.tsx';

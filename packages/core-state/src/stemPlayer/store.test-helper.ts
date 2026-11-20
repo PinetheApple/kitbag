@@ -112,6 +112,7 @@ export function fakeRuntime(set: StemSetRecord) {
     rate: KB_MIXER_UNITY_RATE,
   };
   const songStopped = new Set<() => void>();
+  const songEnded = new Set<() => void>();
   const songRequests = new Set<(request: SongTransportRequest) => void>();
   const commands = {
     start: vi.fn(() => Promise.resolve(0)),
@@ -171,6 +172,10 @@ export function fakeRuntime(set: StemSetRecord) {
         return { remove: () => songRequests.delete(handler) };
       },
     ),
+    onSongEnded: vi.fn((handler: () => void) => {
+      songEnded.add(handler);
+      return { remove: () => songEnded.delete(handler) };
+    }),
   };
   const records = {
     readStemSet: vi.fn(() =>
@@ -253,6 +258,13 @@ export function fakeRuntime(set: StemSetRecord) {
       handler();
     });
   };
+  const endSong = (frame: number) => {
+    engine.playing = false;
+    engine.position = frame;
+    songEnded.forEach((handler) => {
+      handler();
+    });
+  };
   const requestFromNotification = (request: SongTransportRequest) => {
     songRequests.forEach((handler) => {
       handler(request);
@@ -269,6 +281,8 @@ export function fakeRuntime(set: StemSetRecord) {
     mixdownEngine,
     stopSongFromNotification,
     songStopListeners: songStopped,
+    endSong,
+    songEndListeners: songEnded,
     requestFromNotification,
     songRequestListeners: songRequests,
   };

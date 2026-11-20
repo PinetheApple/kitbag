@@ -16,7 +16,7 @@ internal const val MOVE_LOG_TAG = "KitbagDataFolderMove"
 class DataFolderMoves(
   val folder: DataFolder,
   journal: MoveJournal,
-  leftovers: AwayManifest,
+  val leftovers: AwayManifest,
   availableBytes: (File) -> Long,
   mixdownRunning: () -> Boolean,
   private val now: () -> Long = System::currentTimeMillis,
@@ -102,6 +102,8 @@ class DataFolderMoves(
   private fun cleanupWaiting(): Boolean = status()?.awaitingRelease == true
 
   fun finishLeftovers(): Boolean = runner.finishLeftovers()
+
+  fun supersede(relativePath: String) = runner.supersede(relativePath)
 
   private fun settle(run: () -> MoveOutcome): MoveOutcome {
     live = null

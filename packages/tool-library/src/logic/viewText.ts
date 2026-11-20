@@ -68,8 +68,6 @@ export const PLAYER_MENU_TEXT = {
   dismiss: 'Close the player menu',
   reanalyzeDetail: 'Find the beat again',
   countIn: 'Count-in',
-  countInValue: 'Off',
-  countInDetail: 'Arrives with count-in for songs',
   stop: 'Stop',
   stopDetail: 'Ends the song and the mini-player',
 } as const;
