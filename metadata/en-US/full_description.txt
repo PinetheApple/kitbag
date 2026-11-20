@@ -1,12 +1,14 @@
-Kitbag is a practice toolkit for musicians: a metronome, a tuner and a stem
-player in one local-first Android app, with a realtime C++ audio core.
+Kitbag is a practice toolkit for musicians: a metronome, a tuner, and a song
+and stem player in one local-first Android app, with a realtime C++ audio core.
 
 Metronome
 - Set the tempo by swiping anywhere, tapping it in or typing it on a numpad.
 - Italian tempo markings, from Largo to Presto.
 - An editable row of beat lights: group and wrap beats, and set an accent on each.
 - A polyrhythm row, subdivisions, tempo ramps, bar muting and a count-in.
-- Presets and setlists stored on the device, with a summary of each practice session.
+- Import your own click sounds.
+- Presets and setlists stored on the device, with a summary of each practice
+  session and a practice history you can browse.
 - Controls in the notification while the app is in the background.
 
 Tuner
@@ -14,14 +16,26 @@ Tuner
   adjustable A4 reference.
 
 Songs and stems
-- Import songs; Kitbag finds the tempo and beat grid in the background.
+- Import songs; Kitbag finds the tempo, beat grid and meter in the background.
+- Play a song with a click locked to its bars, an A-B loop and a count-in.
+- Slow a song down to half speed; each song keeps its own speed.
 - Play a song from its separate stems, with volume, mute and solo for each.
+- Change a stem song's speed and key.
+- See song sections and follow synced lyrics.
+- Save a stem mix as a WAV file.
+- Import songs from StemDeck, as a file or from your own StemDeck server.
+- Put stem songs in setlists and queue what plays next.
+- Stem songs keep playing in the background, with controls in the notification.
+- Single songs keep playing in the background too, with the same notification.
+- A stem song played from a setlist or Up next has Next and Previous in the
+  notification and on the lock screen.
 
 Settings
 - Calibrate the output latency per audio route, and back up or restore your
   library through files you choose.
+- Keep your songs on an SD card, choose a light or dark theme, and keep the
+  screen awake while you practise.
 
-Not in this build: play-along with other apps, and speed or key changes in the
-stem player.
+Not in this build: play-along with other apps.
 
 Kitbag needs no account and contains no ads, analytics or trackers.

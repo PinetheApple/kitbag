@@ -8,15 +8,17 @@ conversation. `SPEC.md` is the authority; this file is the glossary.
 **Song preset** (`SongPresets`):
 Everything the metronome knows about a song — tempo, time signature, subdivision,
 accents, polyrhythm, sound, count-in, ramp, bar-mute, notes. Exists standalone; a
-setlist *references* presets rather than owning them. Round-trips losslessly
-through the preset editor.
+setlist *references* presets and stem songs rather than owning them. A preset tied
+to a song (`library_song_id`) is that song's saved click and is hidden from All
+songs. Round-trips losslessly through the preset editor.
 _Avoid_: "song" unqualified (ambiguous — see below); `Songs` (that name now means
 the library table).
 
 **Song** (`Songs`, formerly `LibrarySongs`):
 An imported audio file plus its analysis — BPM, beat grid, downbeats, waveform
 sidecar. The thing you play.
-_Avoid_: `LibrarySongs` (old name); "library song" (now redundant).
+_Avoid_: `LibrarySongs` (old name); "library song" (now redundant). Still spelled
+`librarySongs` in the backup format and `library_song_id` in `song_presets`.
 
 > The rename inverts the old meaning: `Songs` used to be presets and
 > `LibrarySongs` used to be audio files. SPEC.md §5.4.
@@ -42,25 +44,45 @@ The sample-frame counter incremented only in the audio callback
 SPEC.md §4.1 exists to remove.
 
 **Tool** / **plugin**:
-A feature that declares itself to the shell (id, name, icon, routes, home tile,
-optional settings schema). The shell is a registry. First-party only; no public
-SDK yet. SPEC.md §9.
+A feature in its own `tool-*` package, listed in the shell's registry
+(`app-shell/src/home/registry.ts`) and shaped after the `ToolPlugin` contract
+(id, name, icon, routes, home tile, optional settings). First-party only; no
+public SDK yet. SPEC.md §9.
 _Avoid_: "module", "feature package".
 
 **Rig**:
-Volume and latency offset — hardware setup, not performance. Lives in Settings,
-global, never per song. SPEC.md §17 D3.
+Click volume and the latency offset of each output route — hardware setup, not
+performance. Lives in Settings → Rig, never per song. SPEC.md §17 D3.
 _Avoid_: "audio settings" (too broad).
 
 **Play along**:
 The user-facing name for locking the click to what Spotify et al. is playing.
 _Avoid_: "Media Sync" in UI copy — that is the *engineering* name (SPEC.md §8) and
-the package is `tool_sync`; the AppBar must not say it.
+the package is `tool-sync`; no screen title or app bar may say it. Not built yet.
 
----
+**Stem song** (`stem_sets` + `stems`):
+A song as separate stems, usually a StemDeck bundle, played in the stem player.
+SPEC.md §7.
 
-> **Removed 2026-07-17:** `core_services` (a Riverpod provider package) was the
-> only entry in this file. Riverpod and the Dart packages are gone — SPEC.md §13.
-> Its successor is `core-state` (Zustand), and the *rule* survives unchanged:
-> concrete state lives in exactly one package so the abstract contract stays
-> abstract (SPEC.md §9.4).
+**Play-next queue** (`play_queue`):
+The stem songs queued to play after the current one, each at most once. SPEC.md
+§11.2.
+
+**Data folder**:
+Where imported songs and stems live, on internal storage or an SD card. SPEC.md
+§17 D11.
+
+**Mini-player**:
+The bar that keeps a single song playing on Home and Songs after its player
+closes. SPEC.md §6.3.
+
+**Custom click sound** (`click_sounds`):
+A user-imported click in a numbered slot, identified by UUID. SPEC.md §5.3.
+
+**Practice session** (`practice_sessions`):
+A period of practice, recorded with its context and summarised when it ends.
+SPEC.md §5.7.
+**Practice history**:
+The list of past practice sessions, newest first, each opening its detail and
+offering Repeat; a session can be deleted with Undo. Opens from Settings and the
+Home practice tile. SPEC.md §5.7.

@@ -66,10 +66,11 @@ description.
 
 ---
 
-## 2. Current state
+## 2. 2026-07-17 audit (historical)
 
 Ground truth as of 2026-07-17, audited against the Flutter build. Cite this
-when deciding what to port and what to leave.
+when deciding what to port and what to leave. Status now is in §15; "Fixed by"
+notes mark the rows later work closed.
 
 ### 2.1 Genuinely works — port the behaviour, not the code
 
@@ -78,7 +79,7 @@ when deciding what to port and what to leave.
 | **Metronome engine** | Lookahead scheduler, sample-accurate click. C++. **Keeps running untouched.** |
 | **Metronome UI** | Swipe tempo, ±5/±10, TAP, 3-state accent LEDs, polyrhythm second row, subdivisions 1–16, tempo ramp, bar muting. The healthiest part of the codebase and the reference for the React port. |
 | **Setlist/song CRUD** | Create/rename/delete/reorder, on-stage pager, live-BPM autosave. |
-| **Export/import** | `kitbag_export.json` v3. Works; §5.4 and §12.4 change it to v4. |
+| **Export/import** | `kitbag_export.json` v3. Works; §5.4 and §12.4 change it to v4. **Fixed by #107** (v4 backup). |
 | **Beat analysis pipeline** | Import → background isolate → `kb_analyze_song` → BPM + beat grid (Float32 BLOB) + `.kwav` waveform sidecar. Real. The isolate becomes a worker (§13.5). |
 | **Waveform render** | `.kwav` parser + painter, tap-to-seek. Painter is Flutter; the parser and format are portable. |
 | **Media session detection (Android)** | `MediaSessionManager` via `NotificationListenerService`. Correct approach, keeps its Kotlin. |
@@ -88,10 +89,10 @@ when deciding what to port and what to leave.
 
 | Area | Reality |
 |---|---|
-| **Stem player** | ~90% by LOC, **0% functional**. `_decodeFile` returns `null`; `setTrackData` is never called; `track_count_` stays 0, so gain/mute/solo all early-return and `play()` auto-stops instantly. UI reports ready. |
-| **Library phase lock** | Dart `Timer`-driven, ±16ms and GC-jittered. Restarts the native sequencer every beat. Latency offset exists, never set. Not sample-accurate. |
+| **Stem player** | ~90% by LOC, **0% functional**. `_decodeFile` returns `null`; `setTrackData` is never called; `track_count_` stays 0, so gain/mute/solo all early-return and `play()` auto-stops instantly. UI reports ready. **Fixed by #182.** |
+| **Library phase lock** | Dart `Timer`-driven, ±16ms and GC-jittered. Restarts the native sequencer every beat. Latency offset exists, never set. Not sample-accurate. **Fixed by #315 and #342** (native song player, click on the song's grid). |
 | **Media sync phase lock** | Does not exist. `sync_screen.dart:222-232` is `setTempo(); start();` — right tempo, arbitrary phase. |
-| **Metronome notifications** | Service + listener fully written, **referenced by nothing**. No foreground service — metronome dies when backgrounded. |
+| **Metronome notifications** | Service + listener fully written, **referenced by nothing**. No foreground service — metronome dies when backgrounded. **Fixed by #158.** |
 
 Note what this table means for the migration: the stem player and both phase
 locks are **not ports**. There is nothing working to port. They are first
@@ -113,9 +114,11 @@ faithfully reproduces them has failed.
   unconditionally without opening Android settings. Reports a grant that never
   happened. **This Kotlin is being ported; fix it in the port.**
 - `mixer.cpp:107-109` — any stem whose sample rate ≠ 48kHz is **silently
-  skipped**. A 44.1kHz stem set plays as silence with no error.
+  skipped**. A 44.1kHz stem set plays as silence with no error. **Fixed by
+  #26** (resampling source).
 - `mixer.cpp:14` — `SetTrackData` does `t.pcm.assign()` while the audio thread
   may be reading `tr.pcm` in `Process`. Data race / use-after-realloc.
+  **Fixed by #26** (atomic pointer swap, #8).
 - ~~`mixer.cpp:140-141` — read head advances by `max_read`; the comment on :139
   says minimum. Unequal-length stems desync.~~ **Withdrawn 2026-07-20.**
   Measured: every track is indexed by one shared `read_frame_`, so stems have
@@ -175,16 +178,22 @@ moot. Two entries survive as instructions rather than deletions:
   plays the click. Separate clocks, separate graphs, no shared sample
   reference. **§4.1 fixes this, not React.** Do not reach for
   `react-native-track-player` — it is the same mistake with a different name.
+  **Fixed by #26 and #315.**
 - **No downbeat detection.** `beat_tracker.cpp` is hand-rolled, not QM-DSP
   BarBeatTrack, which the original research chose and nobody built. It yields
   beats but not bar-ones.
-  **Unaffected by the migration; §4.3 fixes it.**
+  **Unaffected by the migration; §4.3 fixes it.** **Fixed by #26** (QM-DSP, #13).
 - **Single shared metronome controller.** `PlayAlongScreen` mutates the
   standalone metronome's tempo with no save/restore. §6.4 and §8.9 fix this;
   the migration is a good moment to, since the state layer is being rewritten.
+  **Fixed for songs by #536 and #537:** a song's click sound and accents stay
+  with the song and the standalone ones return when it stops, and standalone
+  edits stay off a running song click. Play along (§8.9) is not built.
 - **No tests** in `tool_sync`, `tool_stems`, `tool_library`. No native mixer
   test. No metronome soak/jitter harness. **The migration does not fix this and
-  makes it more urgent** — see §14.
+  makes it more urgent** — see §14. **Fixed by #26 and #159** (`mixer_verify`,
+  the click soak harness) and the `tool-stems` and `tool-library` suites;
+  `tool-sync` has no code yet.
 
 ---
 
@@ -1580,8 +1589,6 @@ Investigate, in this order:
   bass B0.
 - **Detection band.** Constraining to the preset's per-string band is the
   octave-error fix; confirm it is applied. (`kb_tuner_set_band` exists.)
-- **Benchmark against the reference tuner app** (one app, chosen by the owner)
-  on the same device and instrument. It is the UX bar.
 
 Treat the current implementation as a prototype that identified the problem, not
 as a base to build on.
@@ -1589,7 +1596,7 @@ as a base to build on.
 ### 10.2 Behaviour (when built)
 
 - Chromatic + instrument presets; auto string detection; A4 415–466Hz.
-- **Hold detected notes longer** — calibrate to the reference tuner app's feel.
+- **Hold detected notes longer.**
 - **Reset on re-entry.** The in-tune green state currently persists after leaving
   and returning.
 - **Custom tunings** — user-defined note lists (Drop D, DADGAD), saved.
@@ -1599,10 +1606,9 @@ as a base to build on.
   ring = in tune, amber glow = detected), giant note readout, graduated red→green
   strip with a fixed centre line, Auto/A4/Chromatic chips. The built tuner does
   not.
-- **Needle position carries the signal; colour reinforces.** Users of the reference
-  tuner app revolted when a redesign removed the graduated strip with a centre
-  line; we keep it. Position + "TUNE UP ↑" text + colour = three redundant channels,
-  colourblind-safe (§12.6).
+- **Needle position carries the signal; colour reinforces.** The graduated strip
+  with a centre line stays. Position + "TUNE UP ↑" text + colour = three
+  redundant channels, colourblind-safe (§12.6).
 - In-tune lock: needle snaps to centre, peg ring turns green, one confirmation
   haptic tick. **No sound** — you are listening to the string.
 - Median filter (3–5 frames) + EMA on cents; settle <150ms.
@@ -1620,7 +1626,7 @@ as a base to build on.
 
 The schema is the durable part and survives the stack change. The Flutter
 build's tables were `Setlists`, `Songs`, `PracticeSessions`, `Tunings`,
-`LibrarySongs`, `StemSets`, `Stems` (schema v6). The React Native schema is at v25
+`LibrarySongs`, `StemSets`, `Stems` (schema v6). The React Native schema is at v28
 (`packages/core-db/src/migrate.ts`); §11.1 sets which versions it upgrades.
 
 ### 11.1 Persistence layer
@@ -2192,7 +2198,7 @@ with custom rules. The four rules from §9.4, translated:
 Plus `eslint-plugin-boundaries` for the import graph in §13.1, which is cheaper
 than hand-rolling it.
 
-**The eval harness ports with the rules.** `packages/app_shell/eval/` scores lint
+**The eval harness ports with the rules.** `packages/app-shell/eval/` scores lint
 rules against `*_pass` / `*_fail` scenario files, and it is the reason a rule
 change can be verified rather than hoped at. Port it — same shape, TS scenarios,
 same "all scenarios must pass before submitting work" gate. `dart run custom_lint`
@@ -2423,7 +2429,8 @@ spec said to do it before deciding.
 
 `core-native` + the JSI HostObject + the TurboModule + the eval-harnessed lint
 rules + the Drizzle migration off the existing v6 database. Proves §13.2 and
-§13.3 on a device with one screen and no product.
+§13.3 on a device with one screen and no product. (The v6 upgrade was later
+removed by #419; §11.1.)
 
 **Gate: the 60fps rule (§13.3) is verified on a real device before any tool is
 built on top of it.** If a worklet-driven `SharedValue` cannot hold a beat sweep
@@ -2439,11 +2446,44 @@ steady, that is a foundation problem and everything above it is rework.
    and get a real device reading first** (§8.3).
 5. **Tuner** (§10) — after §10.1's research.
 
-**Status 2026-10-30:** 1 is built; its redesign (#175) and the practice summary
-(#80, #85) are open. 2 is partly built: import and background beat
-analysis exist (#160), a single-song player does not. 3 is built; device
-verification pending (#137, #177 open), and speed and key (§7.6, #138) are not
-built. 4 has not started; `tool-sync` is a skeleton. 5 is built (#117, #127).
+**Status 2026-11-20.** Each claim cites a merged PR. Some merged features still
+need a phone check, tracked in #516 and the open feature issues.
+
+- **1 is built:** setlists and the preset editor (#130), layout B (#193),
+  on-stage previous and next (#207), poly N against M (#238), practice
+  summaries (#276, #278), custom click sounds (#473) and practice history
+  (#524, #533). The history list, session detail, Repeat and delete with Undo are built
+  (#533); the device check with several saved sessions is still open (#286).
+- **2 is built:** import with background beat analysis (#162) and meter
+  detection (#408); the single-song player on the native engine (#315) with
+  its click on the song's bars (#342), its own click sound and accents (#536,
+  #543), an A-B loop (#418), count-in (#546), a mini-player (#370) and the
+  media notification shared with the metronome, whose Stop ends the song
+  (#515). Background playback with lock-screen and headset control is in place
+  (#515) but not yet checked on a device (#237).
+  Speed from 50% to 100%, saved per song and restored on open (#555); the click
+  on the beat and the notification bar at a slower speed still need a device
+  check.
+- **3 is built:** the stem player (#182) with background playback and a media
+  notification (#186), StemDeck import from a zip or folder (#169) and from a
+  server (#404), sections and synced lyrics (#305), speed and key (#331,
+  #530), WAV mixdown (#439), setlists and a play-next queue (#499, #525, #549)
+  and playing the next song when one ends (#544), with Next and Previous on
+  the notification and lock screen for a song played from a setlist or Up next
+  (#563; its device check is owed in #382).
+- **4 has not started;** `tool-sync` is a skeleton.
+- **5 is built** (#119, #127).
+- **Around the tools:** the Home hub (#111) with Arrange (#244); Settings
+  (#224, #231) with Rig (#255, #268, #269), Tools (#272), backup and restore
+  (#107, #282, #394, #479, #494) and the data folder on internal storage or an
+  SD card (#462, #470, #500, #506, #519; the card move is emulator-checked in
+  the #532 and #548 re-checks, phone check pending); a database that fails to open blocks
+  on a screen naming the failure (#514), and a copy is kept before a schema
+  upgrade (#518). Every Settings section is built; #170 stays open for its
+  device check, including latency calibration on wired and Bluetooth output.
+- **Releases:** every merge to `main` publishes a signed APK as a GitHub
+  release (#216). The F-Droid submission is drafted in `metadata/` (#61) and
+  not yet sent (§17.1).
 
 Plugin extensibility (§9) is not a phase; it is how each of the above is built.
 

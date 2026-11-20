@@ -117,7 +117,7 @@ app was deleted on 2026-07-17.
 | `SPEC.md` | Product and technical spec. §17 records the locked decisions; §17.1 what is still open. |
 | `design/` | The binding HTML design specs. SPEC.md §12 gives precedence and which variant of a multi-variant file binds. |
 | `legacy/` | `android/MediaSessionPlugin.kt` + `AndroidManifest.xml`, the Flutter-era media-session detection that play along (§8.2, §13.9) still has to port into the skeleton `MediaNotificationListenerService.kt`. Reference only, never a build input; delete it once that port lands. |
-| `docs/` | `decisions.md` (rulings on what SPEC.md leaves open), `tuner-functional-spec.md`, `tuner-research.md` (read its warning banner before touching the tuner), research notes, and `archive/` (historical only). |
+| `docs/` | `decisions.md` (rulings on what SPEC.md leaves open), `tuner-functional-spec.md` (the tuner's contract), research notes, and `archive/` (historical only). |
 | `e2e/` | Maestro device flows: `flows/` one per checked behaviour, `subflows/` shared steps, and the fixture generators `make_click_song.py` and `make_stem_bundle.py` that `scripts/e2e.sh` pushes. Dev-only; nothing here enters the APK. |
 | `scripts/` | `preflight.sh` (the CI gate set locally), `version.sh`, `release-gate.sh`, `verify-apk-signature.sh`, `release-notes.sh` and `changelog.sh` (the release path), `install-on-device.sh`, `e2e.sh` + `install-maestro.sh` (device flows), `lint.sh`, `format.sh` and `install-hooks.sh` (lint gate), `tsan-check.sh` (the TSan retire-race gate), `web-check.sh` (web bundle free of native-only modules), `soak-analyze.sh` (judges a recorded metronome against its grid), `build-icons.sh` (launcher and splash rasters from `design/kitbag-mark.svg`), and a `*.test.sh` beside each script that has tests. |
 
@@ -236,11 +236,12 @@ the tools, one issue per PR against `main`. As of 2026-11-20:
   Home hub, the tuner, song import with background beat analysis, the single-song
   player (`PlaybackService` carries single songs as it does the metronome and
   stem songs, and its Stop ends the session; #237), the stem player with speed
-  and key in the core, and a Settings screen whose issue (#170) is still open for
-  the settings it lacks.
+  and key (#530), setlists and a play-next queue (#525), and a Settings screen
+  whose issue (#170) is still open for the settings it lacks.
 - **Not started:** play along (§8); `tool-sync` is a skeleton.
 - **Open work:** `gh issue list --state open` is the current list; among it are
-  stem speed and key controls (#328) and stem songs on the phone (#134).
+  the device checks for stem setlists (#382) and stem songs on the phone
+  (#134).
 - **Owed:** the phone checks for merged features (#516).
 
 ## Honesty rules

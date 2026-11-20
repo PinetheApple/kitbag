@@ -1,12 +1,13 @@
 # Contributing to Kitbag
 
-**[SPEC.md](SPEC.md) is the source of truth.** Read §2 before believing any status
-claim in this repo, and §15 for what to work on.
+**[SPEC.md](SPEC.md) is the source of truth.** §15 holds the current status and
+what to work on; §2 is the 2026-07-17 audit behind the honesty rules.
 
 ## Ground rules
 
-- **One tool = one package.** New functionality lands as a plugin implementing the
-  `ToolPlugin` contract, not as additions to the shell (SPEC.md §9).
+- **One tool = one package.** Each tool lives in its own `tool-*` package. The
+  shell lists the tools in `app-shell/src/home/registry.ts`, shaped after the
+  `ToolPlugin` contract in `core-plugin-api` (SPEC.md §9).
 - **The audio callback is sacred.** No allocation, no locks, no logging, no
   syscalls on the realtime thread. Commands in via lock-free rings, data out via
   polled reads (SPEC.md §4.5).
@@ -34,21 +35,25 @@ Turborepo + Gradle). Both have gates, and they are separate.
 put anything you will run twice into `scripts/`. [AGENTS.md](AGENTS.md) holds the
 full working contract and the reasons behind it.
 
-1. Native changes: build and run the verify tools.
+1. Native changes: build and run the verify tools for the area you touched.
+   CI runs every `*_verify` tool (`.github/workflows/ci.yml`).
    ```sh
    cmake -S native/audio_core -B native/audio_core/build -G Ninja -DKITBAG_BUILD_TOOLS=ON
    cmake --build native/audio_core/build
-   ./native/audio_core/build/metronome_verify   # must stay green
+   ./native/audio_core/build/metronome_verify   # one of them; all must stay green
    ```
 2. `tuner_verify` is a CI gate like the rest (green since #117). **Don't make a
    failing check pass by loosening it.**
-3. Before committing, run the lint gate (or install the hook so it runs itself):
+3. Before committing, run `bash scripts/preflight.sh` (every CI gate, with
+   auto-fixes; `--no-fix` checks only). To run only the lint gate, or have the
+   hook run it on each commit:
    ```sh
    bash scripts/install-hooks.sh   # once per clone — pre-commit runs the gate
    bash scripts/lint.sh --staged   # what the hook runs; --staged = touched files
    bash scripts/format.sh          # fix formatting in place
    ```
-   The hook lints staged files only, so drift in a file you didn't touch never
+   The hook lints staged files only: clang-format, clang-tidy and the 400-line
+   cap on C++, and eslint on TS/JS. Drift in a file you didn't touch never
    blocks you — but touching a file means bringing it into conformance. The
    clang-tidy step needs the compile DB (configure once with
    `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`).
@@ -85,8 +90,9 @@ could disagree, the config wins, because it is the one that runs.
 | Area | Config | Gates |
 |---|---|---|
 | C++ format | `native/audio_core/.clang-format` | Google style, **C++20**, 2-space, 80-col, pointer-left |
-| C++ static | `native/audio_core/.clang-tidy` | Naming (members `_`, `kConstant`, `CamelCase` types), **magic numbers**, lean bugprone/perf. Naming + magic numbers gate; rest advisory |
+| C++ static | `native/audio_core/.clang-tidy` | Naming (members `_`, `kConstant`, `CamelCase` types), **magic numbers**, lean bugprone/perf. Naming, magic numbers, braces and function size gate; rest advisory |
 | C++ tests | `native/audio_core/tools/.clang-tidy` | Same, minus magic numbers — fixtures use literal scenario values by design |
+| C++ file length | `scripts/lint.sh` | ≤ 400 lines, tests included |
 | TS/React | `eslint.config.mjs`, `prettier.config.mjs`, `tsconfig.base.json` | `--max-warnings 0`; strict TS; the §13.1 import zones |
 
 What a linter **can't** check — enforced by the `code-reviewer` agent, which reads
@@ -102,14 +108,13 @@ both, see the Ralph loop in `AGENTS.md`):
 - **Three checks before you write a comment.** (1) *Is this why already written at
   the definition?* Rationale belongs there, once — `audio_source_drain.h` restated
   `RampSamples`' own docstring, and two copies of a why are free to drift apart.
-  (2) *Am I patching a signature?* `Drain(source, block, start_sample)` took frames
-  and samples in adjacent parameters, so prose had to carry the units and three call
-  sites did the multiply by hand — put the units in the name instead. (3) *Would a
-  rename absorb it?* Then rename. A name carries **what**; only prose carries
+  (2) *Am I patching a signature?* `Drain(source, block, start_sample)` takes frames
+  and samples in adjacent parameters, so prose has to carry the units — put the
+  units in the name instead. (3) *Would a rename absorb it?* Then rename. A name carries **what**; only prose carries
   **why** — never try to name a rationale, and never comment what a name would say.
 - **An unnameable function is a merged one.** When no verb fits, it is usually two
-  functions: `VerifyBlock` checked ramp order over one span and silence over
-  another, unrelated properties, which is why the name went vague. Split it before
+  functions: `VerifyBlock` checks ramp order over one span and silence over
+  another, unrelated properties, which is why the name is vague. Split it before
   reaching for a clarifying comment.
 - **Name a number when it carries non-obvious intent** — a latency bound, a BPM
   range, a DSP threshold. **Leave shared idiom alone**: in a test,
@@ -118,4 +123,5 @@ both, see the Ralph loop in `AGENTS.md`):
 - **C++ method naming is Google's accessor exception** — `PascalCase` for actions
   (`Start`, `SetTempo`), `snake_case` for accessors mirroring state (`is_running`,
   `bar_phase`). The linter can't express this without false-positiving accessors.
-- **Files ≤ ~400 lines.** C++20 core, strict TypeScript.
+- **C++ files ≤ 400 lines** (gated by `lint.sh`); keep TS files about the same
+  size (review, not lint). C++20 core, strict TypeScript.
