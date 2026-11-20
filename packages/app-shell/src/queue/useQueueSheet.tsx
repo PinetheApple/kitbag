@@ -52,6 +52,7 @@ export function useQueueSheet(
         bottomInset={bottomInset}
         onDismiss={close}
         onLeftSetlist={leftSetlist}
+        notice={notice}
       />
       <NoticeSnackbar
         notice={notice}

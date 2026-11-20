@@ -12,9 +12,7 @@ import {
   stemPlayer,
   textRoles,
   textStyle,
-  type AddedToSetlist,
   type Notice,
-  type QueuePresses,
   type SegmentOption,
 } from '@kitbag/core-design';
 import { KB_MAX_TRACKS } from '@kitbag/core-native';
@@ -30,41 +28,24 @@ import { Text, View } from 'react-native';
 import { AdvanceCountIn } from './AdvanceCountIn.tsx';
 import { useArrivalFollow, useRouteAcquire } from './advanceFollow.ts';
 import { detailTabLabel } from '../logic/detailView.ts';
-import { CLICK_SECTION, type ClickSection } from '../logic/clickView.ts';
 import { hasUnsavedRetime } from '../logic/retimeView.ts';
-import { ClickSheet } from './ClickSheet.tsx';
 import { DetailPane } from './DetailPane.tsx';
 import { ExportCancelledSnackbar, ExportNotice } from './ExportNotice.tsx';
-import { ExportSheet } from './ExportSheet.tsx';
 import { LoopUndoSnackbar } from './LoopUndoSnackbar.tsx';
-import { PlayerMenu } from './PlayerMenu.tsx';
-import {
-  SetlistSheet,
-  useCarriedSkipNotice,
-  useQueueActions,
-} from './queueActions.tsx';
+import { PlayerSheets } from './PlayerSheets.tsx';
+import { useCarriedSkipNotice, useQueueActions } from './queueActions.tsx';
 import { LeaveDialog, ResetDialog, RetimeBar } from './RetimeBar.tsx';
 import { RetimeBody } from './RetimeMode.tsx';
 import { StemAppBar } from './StemAppBar.tsx';
 import { Scrubber } from './Scrubber.tsx';
 import { SongFactChips } from './SongFactChips.tsx';
 import { SpeedKeyControls } from './SpeedKeyControls.tsx';
-import { SpeedKeySheet } from './SpeedKeySheet.tsx';
 import { StemList } from './StemList.tsx';
-import { StemMeterSheet } from './StemMeterSheet.tsx';
 import { WAVEFORM_BARS } from './StemRowView.tsx';
 import { StemTransport } from './StemTransport.tsx';
-import { TempoSheet } from './TempoSheet.tsx';
 import { UpNextRow } from './UpNextRow.tsx';
-import { QueueSheet, type QueueSheetProps } from './QueueSheet.tsx';
 import { usePlayerRoutes, useStemPresses } from './playerRoutes.ts';
-import {
-  clickSectionOf,
-  TEMPO_SHEET,
-  usePlayerSheet,
-  type OpenSheet,
-} from './usePlayerSheet.ts';
-import type { PlayOrderRoutes } from './usePlayOrderNav.ts';
+import { usePlayerSheet } from './usePlayerSheet.ts';
 import { useMixerFrame, type MixerFrameValues } from './useMixerFrame.ts';
 
 export interface StemPlayerScreenProps {
@@ -327,93 +308,6 @@ function useRetimeAsk() {
   return { retiming, shown, askReset, askLeave, closeAsk };
 }
 
-interface PlayerSheetsProps {
-  readonly routes: PlayOrderRoutes;
-  readonly queue: QueuePresses;
-  readonly onAddToSetlist: () => void;
-  readonly onAddedToSetlist: (added: AddedToSetlist) => void;
-  readonly onLeftSetlist: QueueSheetProps['onLeftSetlist'];
-  readonly sheet: OpenSheet | null;
-  readonly bottomInset: number;
-  readonly playhead: MixerFrameValues['songSec'];
-  readonly onMeter: () => void;
-  readonly onExport: () => void;
-  readonly onTempo: () => void;
-  readonly onClick: (section: ClickSection) => void;
-  readonly onClose: () => void;
-}
-
-function OpenClickSheet({
-  sheet,
-  bottomInset,
-  onClose,
-}: Pick<PlayerSheetsProps, 'sheet' | 'bottomInset' | 'onClose'>) {
-  const section = clickSectionOf(sheet);
-  return (
-    <ClickSheet
-      visible={section !== null}
-      section={section ?? CLICK_SECTION.grouping}
-      bottomInset={bottomInset}
-      onClose={onClose}
-    />
-  );
-}
-
-function PlayerSheets(props: PlayerSheetsProps) {
-  const { sheet, bottomInset, onClose } = props;
-  return (
-    <>
-      <PlayerMenu
-        visible={sheet === 'menu'}
-        bottomInset={bottomInset}
-        onClose={onClose}
-        onMeter={props.onMeter}
-        onExport={props.onExport}
-        onTempo={props.onTempo}
-        onClick={props.onClick}
-        queue={props.queue}
-        onAddToSetlist={props.onAddToSetlist}
-      />
-      <QueueSheet
-        {...props.routes}
-        playsInPlace={false}
-        visible={sheet === 'upNext'}
-        bottomInset={bottomInset}
-        onDismiss={onClose}
-        onLeftSetlist={props.onLeftSetlist}
-      />
-      <SetlistSheet
-        visible={sheet === 'setlists'}
-        bottomInset={bottomInset}
-        onDismiss={onClose}
-        onAdded={props.onAddedToSetlist}
-      />
-      <StemMeterSheet
-        visible={sheet === 'meter'}
-        bottomInset={bottomInset}
-        playhead={props.playhead}
-        onClose={onClose}
-      />
-      <TempoSheet
-        visible={sheet === TEMPO_SHEET}
-        bottomInset={bottomInset}
-        onClose={onClose}
-      />
-      <OpenClickSheet {...props} />
-      <ExportSheet
-        visible={sheet === 'export'}
-        bottomInset={bottomInset}
-        onClose={onClose}
-      />
-      <SpeedKeySheet
-        visible={sheet === 'speedKey'}
-        bottomInset={bottomInset}
-        onClose={onClose}
-      />
-    </>
-  );
-}
-
 export function PlayerScreen({
   setId,
   focused,
@@ -478,6 +372,7 @@ export function PlayerScreen({
       </View>
       <PlayerSheets
         routes={routes}
+        notice={notice}
         queue={queue.presses}
         onAddToSetlist={sheets.openSetlists}
         onAddedToSetlist={queue.added}

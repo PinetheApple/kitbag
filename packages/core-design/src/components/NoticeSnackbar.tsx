@@ -1,15 +1,16 @@
 import { Snackbar } from './Snackbar.tsx';
 import type { Notice } from './useNotice.ts';
 
-export interface NoticeSnackbarProps {
-  readonly notice: Notice;
-  readonly bottom: number;
-}
+type NoticePlace =
+  | { readonly bottom: number; readonly inline?: never }
+  | { readonly inline: true; readonly bottom?: never };
 
-export function NoticeSnackbar({ notice, bottom }: NoticeSnackbarProps) {
+export type NoticeSnackbarProps = NoticePlace & { readonly notice: Notice };
+
+export function NoticeSnackbar({ notice, ...place }: NoticeSnackbarProps) {
   const { shown, hide } = notice;
   if (shown === null) return null;
-  const common = { message: shown.message, bottom, onTimeout: hide };
+  const common = { ...place, message: shown.message, onTimeout: hide };
   if (shown.action === undefined)
     return <Snackbar key={shown.at} {...common} />;
   return (
