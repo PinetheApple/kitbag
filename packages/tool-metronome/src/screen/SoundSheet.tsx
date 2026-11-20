@@ -10,16 +10,15 @@ import {
   useMetronome,
   withoutSound,
   type PerAccentSounds,
-} from '@kitbag/core-state';
-import { useCallback, useState } from 'react';
-
-import {
   SOUND_OPTIONS,
   SOUND_ROLE,
   SOUND_ROLE_OPTIONS,
+  soundPickerLabel,
   soundsWith,
   type SoundRole,
-} from '../logic/soundChoice.ts';
+} from '@kitbag/core-state';
+import { useCallback, useState } from 'react';
+
 import { CustomSoundSheets, useCustomSoundMenu } from './CustomSoundSheets.tsx';
 import { CustomSounds, useImportHint } from './CustomSounds.tsx';
 import { useHoldEngine } from './useHoldEngine.ts';
@@ -97,7 +96,7 @@ export function SoundPickerSheet({
           onSelect={setRole}
         />
         <PickerGrid
-          accessibilityLabel={`${role} beat sound`}
+          accessibilityLabel={soundPickerLabel(role)}
           options={SOUND_OPTIONS}
           selected={String(sounds[role])}
           onSelect={pickOption}

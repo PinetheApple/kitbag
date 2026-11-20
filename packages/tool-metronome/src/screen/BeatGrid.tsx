@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
+import type { LedRowLayout } from '@kitbag/core-state';
 
-import type { LedRowLayout } from '../logic/ledLayout.ts';
 import { useBeatDotStyles } from './beatDotStyles.ts';
 
 export interface Edge {
