@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useStore } from 'zustand';
 
 import { libraryStore } from '../library/store.ts';
@@ -14,6 +14,31 @@ import { playOrderStore, type PlayOrderStore } from './store.ts';
 
 export function usePlayOrder<T>(selector: (state: PlayOrderStore) => T): T {
   return useStore(playOrderStore, selector);
+}
+
+const QUEUE_READ_FAILED = '[kitbag] play queue read failed';
+const QUEUE_ADD_FAILED = '[kitbag] play queue add failed';
+
+export function useQueueSong(readQueue: boolean) {
+  const enqueue = usePlayOrder((s) => s.enqueue);
+  const refresh = usePlayOrder((s) => s.refresh);
+  useEffect(() => {
+    if (!readQueue) return;
+    refresh().catch((error: unknown) => {
+      console.warn(QUEUE_READ_FAILED, error);
+    });
+  }, [readQueue, refresh]);
+  return useCallback(
+    (stemSetId: number) =>
+      enqueue(stemSetId).then(
+        () => true,
+        (error: unknown) => {
+          console.warn(QUEUE_ADD_FAILED, error);
+          return false;
+        },
+      ),
+    [enqueue],
+  );
 }
 
 export function useIsQueued(stemSetId: number | null): boolean {

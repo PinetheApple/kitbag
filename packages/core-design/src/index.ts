@@ -66,6 +66,7 @@ export * from './components/Sheet.tsx';
 export * from './components/useAfterSheetClosed.ts';
 export * from './components/Snackbar.tsx';
 export * from './components/useNotice.ts';
+export * from './components/useQueueNotices.ts';
 export * from './components/Notice.tsx';
 export * from './components/SetlistPickerSheet.tsx';
 export * from './components/SheetHost.tsx';

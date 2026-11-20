@@ -376,6 +376,7 @@ export function LibraryScreen({
       <LibrarySheets
         menu={menu}
         bottomInset={insets.bottom}
+        stemRows={view === 'stems'}
         onOpenSetlist={onOpenSetlist}
       />
     </View>

@@ -10,12 +10,14 @@ import {
   space,
   TextField,
   useNotice,
+  useQueueNotices,
   type AddedToSetlist,
 } from '@kitbag/core-design';
 import {
   cleanName,
   REPLACE_LABELS,
   useIsQueued,
+  useQueueSong,
   useSetlistPicker,
   useSongLibrary,
   type AnalysisFailure,
@@ -38,7 +40,6 @@ import {
   replaceSheetTitle,
 } from '../logic/viewText.ts';
 import { useRowFailure, useRowFiles } from './rowFailureHooks.ts';
-import { useStemRowQueue } from './stemRowQueue.ts';
 
 const useStyles = createThemedStyles(() => ({
   stack: { gap: space.controlGap },
@@ -341,12 +342,17 @@ function SetlistsSheet({ menu, bottomInset, onAdded }: SetlistsSheetProps) {
 }
 
 interface LibrarySheetsProps extends SheetProps {
+  readonly stemRows: boolean;
   readonly onOpenSetlist: (setlistId: number) => void;
 }
 
-export function LibrarySheets({ onOpenSetlist, ...props }: LibrarySheetsProps) {
+export function LibrarySheets({
+  stemRows,
+  onOpenSetlist,
+  ...props
+}: LibrarySheetsProps) {
   const notice = useNotice();
-  const queue = useStemRowQueue(notice, onOpenSetlist);
+  const queue = useQueueNotices(notice, useQueueSong(stemRows), onOpenSetlist);
   return (
     <>
       <ActionsSheet {...props} onPlayNext={queue.playNext} />

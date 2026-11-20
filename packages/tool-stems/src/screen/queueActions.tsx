@@ -1,15 +1,13 @@
 import {
-  addedToSetlistNotice,
-  QUEUE_TEXT,
   SetlistPickerSheet,
-  type AddedToSetlist,
+  useQueueNotices,
   type Notice,
   type SetlistPickerSheetProps,
 } from '@kitbag/core-design';
 import {
   SKIPPED_STEM_SONG,
   useLibrary,
-  usePlayOrder,
+  useQueueSong,
   useSetlistPicker,
   useStemPlayer,
 } from '@kitbag/core-state';
@@ -43,26 +41,15 @@ export function useQueueActions(
   closeSheet: () => void,
   onOpenSetlist: (setlistId: number) => void,
 ) {
-  const enqueue = usePlayOrder((s) => s.enqueue);
-  const refresh = usePlayOrder((s) => s.refresh);
   const setId = useStemPlayer((s) => s.setId);
-  useEffect(() => {
-    refresh().catch((error: unknown) => {
-      console.warn('[kitbag] play queue read failed', error);
-    });
-  }, [refresh]);
+  const { playNext: queueNext, added } = useQueueNotices(
+    notice,
+    useQueueSong(true),
+    onOpenSetlist,
+  );
   const playNext = useCallback(() => {
     closeSheet();
-    if (setId === null) return;
-    void enqueue(setId).then(() => {
-      notice.show({ message: QUEUE_TEXT.addedToUpNext });
-    });
-  }, [closeSheet, setId, enqueue, notice]);
-  const added = useCallback(
-    (to: AddedToSetlist) => {
-      notice.show(addedToSetlistNotice(to, onOpenSetlist));
-    },
-    [notice, onOpenSetlist],
-  );
+    if (setId !== null) queueNext(setId);
+  }, [closeSheet, setId, queueNext]);
   return { playNext, added };
 }

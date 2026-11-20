@@ -21,8 +21,10 @@ const shown = vi.hoisted(
 );
 
 const queue = vi.hoisted(() => ({
-  enqueue: vi.fn<(stemSetId: number) => Promise<void>>(() => Promise.resolve()),
-  refresh: vi.fn(() => Promise.resolve()),
+  queueSong: vi.fn<(stemSetId: number) => Promise<boolean>>(() =>
+    Promise.resolve(true),
+  ),
+  reads: [] as boolean[],
 }));
 
 vi.mock('react-native', () => ({ View: 'View', TextInput: 'TextInput' }));
@@ -54,7 +56,10 @@ vi.mock('@kitbag/core-state', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   useSongLibrary: (select: (state: unknown) => unknown) =>
     select({ codes: {}, replacePrompt: null }),
-  usePlayOrder: (select: (state: unknown) => unknown) => select(queue),
+  useQueueSong: (readQueue: boolean) => {
+    queue.reads.push(readQueue);
+    return queue.queueSong;
+  },
   useIsQueued: (stemSetId: number | null) =>
     stemSetId !== null && shown.queue.includes(stemSetId),
   useSetlistPicker: () => ({
@@ -95,6 +100,7 @@ function openActions(
       createElement(LibrarySheets, {
         menu,
         bottomInset: 0,
+        stemRows: false,
         onOpenSetlist: vi.fn(),
       }),
     );
@@ -184,14 +190,20 @@ function Harness({
   useEffect(() => {
     open(row);
   }, [open, row]);
-  return createElement(LibrarySheets, { menu, bottomInset: 0, onOpenSetlist });
+  return createElement(LibrarySheets, {
+    menu,
+    bottomInset: 0,
+    stemRows: true,
+    onOpenSetlist,
+  });
 }
 
 function openStemRow(files: unknown, queued: number[] = []): Library {
   shown.failure = null;
   shown.files = files;
   shown.queue = queued;
-  queue.enqueue.mockClear();
+  queue.queueSong.mockClear();
+  queue.reads.length = 0;
   const onOpenSetlist = vi.fn();
   let tree: ReactTestRenderer | undefined;
   act(() => {
@@ -235,6 +247,21 @@ describe('the actions sheet of a stem song', () => {
     ]);
   });
 
+  it('reads the play queue on the Stem songs list only', () => {
+    openStemRow('present');
+    expect(new Set(queue.reads)).toEqual(new Set([true]));
+    queue.reads.length = 0;
+    openActions(null, 'present');
+    expect(new Set(queue.reads)).toEqual(new Set([false]));
+  });
+
+  it('does not say a song was queued when queueing failed', async () => {
+    const { tree } = openStemRow('present');
+    queue.queueSong.mockResolvedValueOnce(false);
+    await press(tree, 'Play next');
+    expect(snack(tree)).toBeUndefined();
+  });
+
   it('offers only Rename while its card is away', () => {
     const { tree } = openStemRow('unavailable');
     expect(sheet(tree).buttons).toEqual(['Rename']);
@@ -249,7 +276,7 @@ describe('the actions sheet of a stem song', () => {
   it('queues the song, closes the sheet and says so', async () => {
     const { tree } = openStemRow('present');
     await press(tree, 'Play next');
-    expect(queue.enqueue).toHaveBeenCalledWith(NIGHT_BUS);
+    expect(queue.queueSong).toHaveBeenCalledWith(NIGHT_BUS);
     expect(tree.root.findAllByType('Sheet' as never)).toHaveLength(0);
     expect(snack(tree)?.message).toBe('Added to Up next');
   });

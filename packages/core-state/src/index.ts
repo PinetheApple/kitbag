@@ -242,6 +242,7 @@ export {
 export {
   useIsQueued,
   usePlayOrder,
+  useQueueSong,
   useStage,
   useUpNext,
   type Stage,
