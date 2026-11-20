@@ -468,8 +468,8 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       "supportedAudioMimeTypes" to SupportedAudio.MIME_TYPES,
       "unsupportedAudioExtensions" to SupportedAudio.UNSUPPORTED_EXTENSIONS,
       "exportMaxBaseNameBytes" to ExportFiles.MAX_BASE_NAME_BYTES,
-      "databaseCopyUnsettled" to LibraryErrors.DATABASE_UNSETTLED,
-    ) + StemBundleBridge.CONSTANTS + LibraryErrors.EXPORT_CONSTANTS + DataFolderBridge.CONSTANTS
+    ) + StemBundleBridge.CONSTANTS + LibraryErrors.EXPORT_CONSTANTS +
+      LibraryErrors.DATABASE_COPY_CONSTANTS + DataFolderBridge.CONSTANTS
 
   companion object {
     private const val TAG = "KitbagLibrary"

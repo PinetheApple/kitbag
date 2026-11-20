@@ -29,7 +29,9 @@ function session(
     durationSeconds: 1500,
     avgBpm: 112.5,
     setlistId: null,
+    setlistName: null,
     songUuids: [],
+    log: null,
     ...overrides,
   };
 }
@@ -58,6 +60,8 @@ describe('practice.insert', () => {
         avgBpm: 112.5,
         setlistUuid: friday.uuid,
         songsPlayed: JSON.stringify(['b-song', 'a-song']),
+        setlistName: null,
+        log: null,
       },
     ]);
     await database.close();

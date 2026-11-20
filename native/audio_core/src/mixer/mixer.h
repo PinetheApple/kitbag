@@ -23,8 +23,8 @@
 
 namespace kitbag {
 
-/// Lock-free stem mixer (SPEC.md §4.1). Sources and transport plans are built
-/// off-thread and swapped in by RtPublisher; scalars cross the command ring.
+/// Lock-free stem mixer (SPEC.md §4.1). Sources and plans are built off-thread
+/// and swapped in by RtPublisher; scalars cross the command ring.
 class Mixer {
  public:
   static constexpr int kMaxTracks = 16;
@@ -71,8 +71,7 @@ class Mixer {
       bool engine_running
   );
 
-  /// Gain, mute and solo cross the command ring and are applied at the top of the
-  /// next block; the getters read the callback-published mirror.
+  /// Applied at the top of the next block; the getters read the mirror.
   void SetGain(int track, float gain);
   void SetMute(int track, bool muted);
   void SetSolo(int track, bool soloed);
@@ -158,6 +157,9 @@ class Mixer {
   uint64_t position() const {
     return read_frame_.load(std::memory_order_relaxed);
   }
+  uint32_t end_count() const {
+    return end_count_.load(std::memory_order_relaxed);
+  }
 
   /// RT-safe: allocates nothing, takes no lock, frees nothing.
   void Process(float* output, uint32_t frame_count, uint64_t block_start_frame);
@@ -241,6 +243,7 @@ class Mixer {
   void MixTrack(Track& tr, float* output, uint32_t frame_count, bool any_solo);
   void MixAllTracks(float* output, uint32_t frame_count, bool any_solo);
   void AdvanceTransport(uint32_t frame_count);
+  void EndRun();
 
   using EngageState = MixerEngageState;
   bool ReserveUndoableCommand();
@@ -271,11 +274,7 @@ class Mixer {
   RetireDrainedBuses(const bool* used, FrameClock clock, bool engine_running);
   void FreeUnusedBuses(FrameClock clock, bool engine_running);
 
-  struct Bank {
-    std::unique_ptr<KeyBusSlot> slots[kKeyBusCount];
-    uint64_t generation = 0;
-    int64_t lag = 0;
-  };
+  using Bank = KeyBusBank<kKeyBusCount>;
   bool PrimeNow(FrameClock clock, bool engine_running);
   bool PrimeAwaitingEngage() const;
   TransportPlan ReprimePlan() const;
@@ -335,10 +334,10 @@ class Mixer {
   std::atomic<uint64_t> longest_frames_{0};
   // Sized once at construction and never reallocated.
   std::vector<float> scratch_;
-  // Written only by the callback (command drain + block advance); the getters
-  // read it. Single writer, so the Stop/Seek rewind can never be overwritten.
+  // Callback-written only, so a Stop/Seek rewind can never be overwritten.
   std::atomic<uint64_t> read_frame_{0};
   std::atomic<bool> playing_{false};
+  std::atomic<uint32_t> end_count_{0};
   std::optional<uint64_t> pending_play_frame_;
   std::atomic<bool> any_solo_{false};
   std::atomic<float> master_gain_{1.0f};
@@ -354,6 +353,7 @@ class Mixer {
   SongClock song_clock_;
   bool opens_on_jump_ = false;
   bool continues_run_ = false;
+  bool landed_on_end_ = false;
   RtPublisher<TransportPlan> plans_;
   uint64_t app_epoch_ = 0;
   LoopLayout app_layout_;
