@@ -277,9 +277,9 @@ export {
 } from './library/snapshot.ts';
 export {
   activeSetlistOf,
-  adjacentEntry,
   SONG_STEP,
   stagePositionOf,
+  steppedEntry,
   type StagePosition,
   type SongStep,
 } from './library/setlistPosition.ts';
@@ -288,6 +288,7 @@ export {
   advanceOf,
   entriesAfter,
   onStageOf,
+  setlistWraps,
   UP_NEXT_SOURCE,
   upNext,
   type Advance,
@@ -313,6 +314,8 @@ export {
   useUpNext,
   useCanGoBack,
   useUpNextCount,
+  useRepeatAllHintSeen,
+  useRepeatMode,
   type QueueSong,
   type QueueSongs,
   type SetlistSpot,
@@ -320,9 +323,19 @@ export {
 } from './playOrder/usePlayOrder.ts';
 export {
   playingKind,
+  useShownLoopHeld,
+  useShownSong,
   useShownSongId,
   useShownStemSetId,
 } from './playOrder/nowPlaying.ts';
+export {
+  cycleRepeat,
+  REPEAT,
+  repeatStore,
+  seeAllHint,
+  type RepeatMode,
+} from './playOrder/repeat.ts';
+export { startRepeatWrap } from './playOrder/repeatWrap.ts';
 export { songShown, stemShown } from './playOrder/shown.ts';
 export { bindLibraryRemovals } from './playOrder/libraryRemovals.ts';
 export {

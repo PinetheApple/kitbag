@@ -27,6 +27,7 @@ import {
   type SetlistCursor,
   type UpNext,
 } from './order.ts';
+import { notePlayedQueued, repeatStore, restartedAt } from './repeat.ts';
 import { getPlayOrder } from './runtime.ts';
 
 export interface PlayOrderState {
@@ -65,6 +66,7 @@ export interface PlayOrderDeps {
   readonly queue: () => PlayQueueRepository;
   readonly stage: () => OnStage;
   readonly cursor: () => SetlistCursor | null;
+  readonly restarted?: () => boolean;
   readonly refreshStage: () => Promise<void>;
   readonly playSetlistEntry: (
     itemId: number,
@@ -112,6 +114,12 @@ const defaultDeps: PlayOrderDeps = {
   queue: () => getPlayOrder().queue,
   stage: stageNow,
   cursor: () => cursorOf(stageNow(), libraryStore.getState().loaded),
+  restarted: () =>
+    restartedAt(
+      repeatStore.getState(),
+      stageNow().setlistId,
+      libraryStore.getState().loaded,
+    ),
   refreshStage: () => libraryStore.getState().refresh(),
   playSetlistEntry: (itemId, setlistId) =>
     libraryStore.getState().openStemEntry(itemId, setlistId),
@@ -162,7 +170,10 @@ function queueActions(
       edit(deps.queue().move(song, position)),
     removeQueued: (song: QueuedSong) => edit(deps.queue().remove(song)),
     clearQueue: () => edit(deps.queue().clear()),
-    playQueued: (song: QueuedSong) => edit(deps.queue().takeThrough(song)),
+    playQueued: (song: QueuedSong) => {
+      notePlayedQueued(song);
+      return edit(deps.queue().takeThrough(song));
+    },
   };
 }
 
@@ -290,6 +301,7 @@ function orderActions(deps: PlayOrderDeps, get: Get, edits: QueueEdits) {
         queue: get().queue,
         stage: deps.stage(),
         cursor: deps.cursor(),
+        restarted: deps.restarted?.() ?? false,
       }),
     advance: async () => (await skipToNext()).advance,
     skipToNext,

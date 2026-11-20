@@ -40,6 +40,7 @@ export interface PlayOrder {
   readonly queue: readonly PlayQueueEntry[];
   readonly stage: OnStage;
   readonly cursor: SetlistCursor | null;
+  readonly restarted?: boolean;
 }
 
 export type PlayerKind = QueuedSong['kind'];
@@ -94,8 +95,9 @@ export function cursorOf(
 export function entriesAfter(
   stage: OnStage,
   cursor: SetlistCursor | null,
+  restarted = false,
 ): readonly SetlistEntry[] {
-  const next = nextSetlistEntry(stage, cursor);
+  const next = nextSetlistEntry(stage, restarted ? null : cursor);
   if (next === undefined) return [];
   return stage.entries
     .slice(stage.entries.indexOf(next))
@@ -121,15 +123,21 @@ function nextSetlistEntry(
     .find((entry) => !isSkipped(stage, entry));
 }
 
+export function setlistWraps({ setlistId, entries }: OnStage): boolean {
+  const last = entries.at(-1);
+  return setlistId !== null && last !== undefined && !isPresetEntry(last);
+}
+
 export function upNext({
   queue,
   stage,
   cursor,
+  restarted = false,
 }: PlayOrder): UpNext | undefined {
   const [queued] = queue;
   if (queued !== undefined)
     return { source: UP_NEXT_SOURCE.queue, song: queuedSongOf(queued) };
-  const entry = nextSetlistEntry(stage, cursor);
+  const entry = nextSetlistEntry(stage, restarted ? null : cursor);
   return entry === undefined
     ? undefined
     : { source: UP_NEXT_SOURCE.setlist, entry };

@@ -131,6 +131,8 @@ async function followingPlayOrder() {
         restart: () => {
           player.seek(0);
         },
+        replay: player.togglePlay,
+        loopHeld: () => false,
         advanceTo: player.advanceTo,
         takeOver: (id) => player.takeOver(id, 0),
         handOver: player.handOver,

@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   clearQueueBody,
+  repeatedText,
   setlistRowSubtitle,
   upNextText,
 } from './upNextText.ts';
@@ -112,5 +113,23 @@ describe('up next sheet text', () => {
       'The 3 queued songs leave the queue. Friday gig carries on after this song.',
     );
     expect(clearQueueBody(1, '')).toBe('The 1 queued song leaves the queue.');
+  });
+});
+
+describe('up next row under Repeat one', () => {
+  it('names the song on now as the one to play again', () => {
+    expect(repeatedText({ kind: 'stems', id: 9 }, library, false)).toEqual({
+      title: 'Night Bus',
+      source: 'Plays again when this song ends',
+      metronome: false,
+    });
+  });
+
+  it('says it waits for the A-B loop to be cleared', () => {
+    expect(repeatedText({ kind: 'song', id: 9 }, library, true)).toEqual({
+      title: 'Hum',
+      source: 'After the A-B loop is cleared',
+      metronome: false,
+    });
   });
 });

@@ -38,6 +38,7 @@ import {
   type BackFrom,
 } from './previous.ts';
 import { SKIP, type SkippedSong } from './queuedSongText.ts';
+import { REPEAT, repeatStore, type RepeatMode } from './repeat.ts';
 import { playOrderStore, type SkipResult, type Undo } from './store.ts';
 
 export interface SetlistPlace {
@@ -79,6 +80,8 @@ export interface AdvancingPlayer {
   readonly onPrevious: (listener: PreviousListener) => () => void;
   readonly playedSeconds: () => number;
   readonly restart: () => void;
+  readonly replay: () => void;
+  readonly loopHeld: () => boolean;
   readonly advanceTo?: (id: number) => Promise<AdvanceOutcome>;
   readonly playNow?: (id: number) => Promise<AdvanceOutcome>;
   readonly takeOver: (id: number) => Promise<AdvanceOutcome>;
@@ -102,6 +105,7 @@ export interface AutoAdvanceDeps {
   readonly commitOpen: (entry: PresetSetlistEntry) => Promise<boolean>;
   readonly arrivals: StoreApi<ArrivalState>;
   readonly back: BackDeps;
+  readonly repeat?: () => RepeatMode;
 }
 
 export interface BackDeps {
@@ -126,6 +130,10 @@ const stemSongs = (bars: number): AdvancingPlayer => ({
   restart: () => {
     stemPlayerStore.getState().seek(0);
   },
+  replay: () => {
+    stemPlayerStore.getState().togglePlay();
+  },
+  loopHeld: () => stemPlayerStore.getState().loop.kind === 'on',
   advanceTo: (id) => stemPlayerStore.getState().advanceTo(id),
   playNow: (id) => stemPlayerStore.getState().playNow(id),
   takeOver: (id) => stemPlayerStore.getState().takeOver(id, bars),
@@ -148,6 +156,10 @@ const singleSongs = (bars: number): AdvancingPlayer => ({
   restart: () => {
     songPlayerStore.getState().seek(0);
   },
+  replay: () => {
+    songPlayerStore.getState().togglePlay();
+  },
+  loopHeld: () => songPlayerStore.getState().loop.kind === 'on',
   takeOver: (id) => songPlayerStore.getState().takeOver(id, bars),
   handOver: () => {
     songPlayerStore.getState().handOver();
@@ -188,6 +200,7 @@ export const autoAdvanceDeps = (bars: WaveformBars): AutoAdvanceDeps => ({
     settle: settleBack,
     forget: forgetSong,
   },
+  repeat: () => repeatStore.getState().mode,
 });
 
 type Arrive = (arrival: ArrivalEvent) => void;
@@ -297,12 +310,20 @@ async function play(
     : { played: PLAYED.settled, by: song.kind };
 }
 
+function repeatSong(player: AdvancingPlayer) {
+  if (player.stillEnded() && !player.loopHeld()) player.replay();
+}
+
 async function advance(
   deps: AutoAdvanceDeps,
   arrive: Arrive,
   ended: PlayerKind,
   cause: AdvanceCause,
 ) {
+  if (cause === ADVANCE_CAUSE.ended && deps.repeat?.() === REPEAT.one) {
+    repeatSong(deps.players[ended]);
+    return;
+  }
   let skipped: SkippedSong | null = null;
   let from = ended;
   for (let left = deps.candidates(); left > 0; left--) {

@@ -21,6 +21,13 @@ export const QUEUE_TEXT = {
   nothingQueuedReason:
     'Use Play next or Add to queue on a song. When this song ends, playback stops.',
   playbackStops: 'Playback stops when this song ends',
+  playsAgain: 'Plays again when this song ends',
+  nothingQueuedPlaysAgainReason:
+    'Use Play next or Add to queue on a song. When this song ends, it plays again.',
+  repeatOff: 'Repeat off',
+  repeatAll: 'Repeat all',
+  repeatOne: 'Repeat one',
+  afterLoopCleared: 'After the A-B loop is cleared',
   previous: 'Previous',
   remove: 'Remove',
   metronomeBadge: 'METRONOME',
@@ -31,6 +38,15 @@ export const QUEUE_TEXT = {
 
 export function nextFromLabel(setlistName: string): string {
   return `Next from: ${setlistName}`;
+}
+
+const REPEAT_ALL_QUEUE =
+  'Repeat all: each queued song goes back to the end of the queue after it plays';
+
+export function repeatAllHint(wrappingSetlistName: string | null): string {
+  return wrappingSetlistName === null
+    ? `${REPEAT_ALL_QUEUE}.`
+    : `${REPEAT_ALL_QUEUE}, and ${wrappingSetlistName} starts again from song 1 after its last song.`;
 }
 
 export function upNextCountLabel(count: number): string {

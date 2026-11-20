@@ -15,6 +15,8 @@ export const iconGlyphs = {
   practice: 'timer-outline',
   reset: 'restore',
   repeat: 'repeat',
+  repeatOff: 'repeat-off',
+  repeatOne: 'repeat-once',
   skipBack: 'rewind-10',
   skipForward: 'fast-forward-10',
   setlist: 'format-list-bulleted',
