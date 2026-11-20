@@ -1,11 +1,9 @@
-import { FACT_SEPARATOR as SEPARATOR } from '@kitbag/core-design';
+import { FACT_SEPARATOR } from '@kitbag/core-design';
 import {
   formatClockSeconds,
   type StemDeckServerTrust,
   type StemDeckSong,
 } from '@kitbag/core-state';
-
-export { SEPARATOR };
 
 export function plural(count: number, one: string, many: string): string {
   return `${String(count)} ${count === 1 ? one : many}`;
@@ -24,7 +22,7 @@ export function songFacts(song: StemDeckSong): string {
     stemCount(song.lanes.length),
   ]
     .filter((fact): fact is string => fact !== null)
-    .join(SEPARATOR);
+    .join(FACT_SEPARATOR);
 }
 
 export function unavailableText(count: number): string {
@@ -44,11 +42,11 @@ export function selectedText(count: number): string {
 }
 
 export function listSubtitle(address: string, songs: number): string {
-  return `${address}${SEPARATOR}${plural(songs, 'song', 'songs')}`;
+  return `${address}${FACT_SEPARATOR}${plural(songs, 'song', 'songs')}`;
 }
 
 export function setlistLabel(name: string, songs: number): string {
-  return `${name}${SEPARATOR}${String(songs)}`;
+  return `${name}${FACT_SEPARATOR}${String(songs)}`;
 }
 
 function dayStart(ms: number): number {
@@ -88,5 +86,5 @@ export function recentSubtitle(
   now: number,
   locale?: string,
 ): string {
-  return `${TRUST_WORDS[trust]}${SEPARATOR}last used ${lastUsedText(usedAt, now, locale)}`;
+  return `${TRUST_WORDS[trust]}${FACT_SEPARATOR}last used ${lastUsedText(usedAt, now, locale)}`;
 }

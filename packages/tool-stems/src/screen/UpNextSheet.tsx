@@ -4,6 +4,7 @@ import {
   createThemedStyles,
   DragListRow,
   EmptyState,
+  FACT_SEPARATOR,
   Icon,
   minTouchTargetDp,
   opacity,
@@ -32,7 +33,6 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { SEPARATOR } from '../stemDeck/logic/songFacts.ts';
 import { clearQueueBody, setlistRowSubtitle } from '../logic/upNextText.ts';
 import { UP_NEXT } from './UpNextRow.tsx';
 import {
@@ -68,7 +68,7 @@ function NowPlaying() {
   const facts = setId === null ? '' : stemFacts(setId, stems);
   const subtitle = ['Playing', facts]
     .filter((part) => part !== '')
-    .join(SEPARATOR);
+    .join(FACT_SEPARATOR);
   return (
     <View
       accessible
