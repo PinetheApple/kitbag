@@ -18,6 +18,7 @@ import {
   BARS,
   fakeRuntime,
   opened,
+  RATE,
   record,
   SONG_DETAILS,
   stem,
@@ -27,6 +28,7 @@ const OTHER_SONG_ID = 8;
 const SONG_SPEED = 0.9;
 const SLOWER_THAN_RETIME = 0.6;
 const AUDIO_BLOCK_MS = 10;
+const SONG_FRAMES = 10 * RATE;
 
 type Song = Awaited<ReturnType<typeof opened>>;
 
@@ -358,6 +360,37 @@ describe('a single song displacing a stem song in retime', () => {
   });
 });
 
+describe('an advance from a song in retime', () => {
+  const NEXT_SPEED = 0.8;
+
+  it('restores the speed before the next song opens at its own', async () => {
+    const song = await songAt();
+    song.store.getState().acquireSong(7, BARS);
+    await settle();
+    song.store.getState().beginRetime(0);
+    await settle();
+    expect(song.engine.rate).toBe(RETIME_PLAYBACK_RATE);
+    song.store.getState().cancelRetime();
+    song.records.readStemSet.mockResolvedValueOnce(
+      record([stem(1)], { id: OTHER_SONG_ID, speed: NEXT_SPEED }),
+    );
+    song.endSong(SONG_FRAMES);
+    await expect(song.store.getState().advanceTo(OTHER_SONG_ID)).resolves.toBe(
+      'playing',
+    );
+    await settle();
+    expect(ratesSet(song)).toEqual([
+      KB_MIXER_UNITY_RATE,
+      RETIME_PLAYBACK_RATE,
+      SONG_SPEED,
+      KB_MIXER_UNITY_RATE,
+      NEXT_SPEED,
+    ]);
+    expect(song.engine.rate).toBe(NEXT_SPEED);
+    expect(song.store.getState().speed).toBe(NEXT_SPEED);
+  });
+});
+
 describe('a refused restore and the next song', () => {
   it('does not carry the first song’s speed into the next', async () => {
     silenceWarnings();
@@ -440,6 +473,7 @@ describe('a speed step queued for a song that is no longer open', () => {
     speed.enter(() => undefined);
     openNext();
     await vi.advanceTimersByTimeAsync(0);
+    expect(commands.mixerRate).not.toHaveBeenCalled();
     expect(commands.mixerSetRate).not.toHaveBeenCalled();
   });
 });

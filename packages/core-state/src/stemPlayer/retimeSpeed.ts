@@ -68,6 +68,7 @@ export function retimeSpeed(
   };
   const slowDown = (mine: number, opened: number, onPlaying: OnPlaying) => {
     return async () => {
+      if (session() !== opened) return;
       const current = ratesFor(opened);
       const previous = await speedBefore(current);
       if (mine !== generation || session() !== opened) return;
