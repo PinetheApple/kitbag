@@ -46,8 +46,8 @@ class CardPoster<N>(private val surface: CardSurface<N>, private val warn: (Thro
 
   private fun postDetached(notification: N) {
     if (!promoted) promote(notification)
-    surface.detach()
     surface.notify(notification)
+    surface.detach()
   }
 
   private fun promote(notification: N): Throwable? =

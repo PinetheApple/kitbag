@@ -13,6 +13,7 @@ class CardPosterTest {
     var promotions = 0
     var refusal: Throwable? = null
     var afterRemove: (() -> Unit)? = null
+    val calls = mutableListOf<String>()
 
     override fun promote(notification: String): Throwable? {
       refusal?.let { return it }
@@ -23,10 +24,12 @@ class CardPosterTest {
     }
 
     override fun detach() {
+      calls += DETACH
       foreground = false
     }
 
     override fun notify(notification: String) {
+      calls += NOTIFY
       shown = notification
     }
 
@@ -49,6 +52,15 @@ class CardPosterTest {
     poster.post(PAUSED, false, fences.song, card)
     assertFalse(surface.foreground)
     assertEquals(PAUSED, surface.shown)
+  }
+
+  @Test
+  fun `a paused card is shown before it is detached`() {
+    val card = fences.song.issue()
+    poster.post(PLAYING, true, fences.song, card)
+    surface.calls.clear()
+    poster.post(PAUSED, false, fences.song, card)
+    assertEquals(listOf(NOTIFY, DETACH), surface.calls)
   }
 
   @Test
@@ -189,5 +201,7 @@ class CardPosterTest {
     const val PAUSED = "paused"
     const val LATE = "late"
     const val REFUSED = "refused"
+    const val NOTIFY = "notify"
+    const val DETACH = "detach"
   }
 }
