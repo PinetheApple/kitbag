@@ -26,7 +26,8 @@ paywalls, ever.
   grid and meter; a song player with a click on the song's bars, an A-B loop
   and count-in, a mini-player that keeps the song playing on Home and Songs, and
   a media notification shared with the metronome.
-  <!-- WAIT #555: single-song speed -->
+  Speed runs from 50% to 100%, is saved per song and shows on the mini-player
+  (#555); the click at a slower speed still needs a device check.
   Background playback with lock-screen and headset control is in place (#515)
   but has no device check yet (#237).
 - **Stem songs** — import StemDeck bundles from a zip, a folder or a StemDeck
@@ -47,8 +48,6 @@ feature issues.
 ## What it looks like
 
 Screenshots from the emulator at SM-M156B size, dark theme then light.
-
-<!-- WAIT #555: retake song-player-dark.png and song-player-light.png with the speed control -->
 
 <table>
   <tr>

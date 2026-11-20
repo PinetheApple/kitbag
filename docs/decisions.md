@@ -1064,7 +1064,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   stopped with its settings intact. A row tap opens the player paused.
   **[user]**
   **Resolved 2026-11-20 (#546):** Count-in is live.
-  <!-- WAIT #555: resolution note for the disabled 1.0× key once single-song speed merges -->
+  **Resolved 2026-11-20 (#555):** the speed key is live; single-song speed is built.
 
 - **2026-11-07 · Song-grid downbeats at the ABI (§4, §4.2, #300)** — `kb_metronome_set_grid`
   carries the downbeat indices as an array copied during the call, and §4 now states the

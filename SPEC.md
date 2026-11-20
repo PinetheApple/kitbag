@@ -1626,7 +1626,7 @@ as a base to build on.
 
 The schema is the durable part and survives the stack change. The Flutter
 build's tables were `Setlists`, `Songs`, `PracticeSessions`, `Tunings`,
-`LibrarySongs`, `StemSets`, `Stems` (schema v6). The React Native schema is at v27
+`LibrarySongs`, `StemSets`, `Stems` (schema v6). The React Native schema is at v28
 (`packages/core-db/src/migrate.ts`); §11.1 sets which versions it upgrades.
 
 ### 11.1 Persistence layer
@@ -2461,7 +2461,9 @@ need a phone check, tracked in #516 and the open feature issues.
   media notification shared with the metronome, whose Stop ends the song
   (#515). Background playback with lock-screen and headset control is in place
   (#515) but not yet checked on a device (#237).
-  <!-- WAIT #555: single-song speed -->
+  Speed from 50% to 100%, saved per song and restored on open (#555); the click
+  on the beat and the notification bar at a slower speed still need a device
+  check.
 - **3 is built:** the stem player (#182) with background playback and a media
   notification (#186), StemDeck import from a zip or folder (#169) and from a
   server (#404), sections and synced lyrics (#305), speed and key (#331,

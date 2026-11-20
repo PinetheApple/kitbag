@@ -18,7 +18,7 @@ Tuner
 Songs and stems
 - Import songs; Kitbag finds the tempo, beat grid and meter in the background.
 - Play a song with a click locked to its bars, an A-B loop and a count-in.
-WAIT #555: single-song speed
+- Slow a song down to half speed; each song keeps its own speed.
 - Play a song from its separate stems, with volume, mute and solo for each.
 - Change a stem song's speed and key.
 - See song sections and follow synced lyrics.
