@@ -6,7 +6,9 @@ import {
   Sheet,
   type MeterGridState,
 } from '@kitbag/core-design';
+import { KB_MIXER_UNITY_RATE } from '@kitbag/core-native';
 import {
+  speedPercentText,
   useSongLibrary,
   useSongPlayer,
   type StemPlayerStatus,
@@ -21,7 +23,11 @@ import {
   TEMPO_CORRECTION_COPY,
   tempoCorrectionValue,
 } from '../logic/tempoCorrectionText.ts';
-import { PLAYER_MENU_TEXT, REANALYZE_LABEL } from '../logic/viewText.ts';
+import {
+  PLAYER_MENU_TEXT,
+  REANALYZE_LABEL,
+  SONG_SPEED_TEXT,
+} from '../logic/viewText.ts';
 import { useSongFailure } from './rowFailureHooks.ts';
 
 interface SongPlayerMenuProps {
@@ -114,6 +120,22 @@ function CountInRow({ onPress }: RowProps) {
   );
 }
 
+function ResetSpeedRow({ onPress }: RowProps) {
+  const resetSpeed = useSongPlayer((s) => s.resetSpeed);
+  const reset = useCallback(() => {
+    onPress();
+    void resetSpeed();
+  }, [onPress, resetSpeed]);
+  return (
+    <MenuRow
+      icon="reset"
+      label={SONG_SPEED_TEXT.reset}
+      value={speedPercentText(KB_MIXER_UNITY_RATE)}
+      onPress={reset}
+    />
+  );
+}
+
 export function SongPlayerMenu({
   songId,
   visible,
@@ -156,6 +178,7 @@ export function SongPlayerMenu({
       bottomInset={bottomInset}
       onDismiss={onDismiss}
     >
+      <ResetSpeedRow onPress={onDismiss} />
       {reanalyzable ? (
         <MenuRow
           icon="analyzing"

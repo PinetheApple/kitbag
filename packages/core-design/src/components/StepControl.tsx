@@ -54,7 +54,7 @@ export interface StepControlProps {
   readonly suffix?: string | undefined;
   readonly accessibilityValue?: string;
   readonly onStep: (delta: StepDelta) => void;
-  readonly onValuePress?: () => void;
+  readonly onValuePress?: (() => void) | undefined;
   readonly variant?: StepControlVariant;
   readonly accented?: boolean;
   readonly repeatOnHold?: boolean;

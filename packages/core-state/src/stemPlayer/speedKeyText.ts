@@ -1,12 +1,10 @@
-import { countLabel } from '@kitbag/core-design';
-import {
-  MINUS,
-  speedPercent,
-  UNSHIFTED_KEY,
-  type SongFacts,
-  type StemRow,
-} from '@kitbag/core-state';
 import { KB_MIXER_UNITY_RATE } from '@kitbag/core-native';
+
+import { MINUS } from '../text.ts';
+import type { SongFacts } from './facts.ts';
+import { UNSHIFTED_KEY } from './mix.ts';
+import { SPEED_PRESETS, speedPercent } from './speedKey.ts';
+import type { StemRow } from './store.ts';
 
 const NEVER_TRANSPOSED = 'Drums and the click are never transposed.';
 const NOT_TRANSPOSED = 'Drums and the click are not transposed.';
@@ -28,8 +26,24 @@ export const speedKeyCopy = {
 
 export type StemKeyRow = Pick<StemRow, 'name' | 'transposable' | 'key'>;
 
-export function speedText(speed: number): string {
+export interface SpeedPresetText {
+  readonly value: number;
+  readonly label: string;
+  readonly accessibilityLabel: string;
+  readonly selected: boolean;
+}
+
+export function speedPercentText(speed: number): string {
   return `${String(speedPercent(speed))}%`;
+}
+
+export function speedPresetTexts(current: number): readonly SpeedPresetText[] {
+  return SPEED_PRESETS.map((value) => ({
+    value,
+    label: speedPercentText(value),
+    accessibilityLabel: `${speedKeyCopy.speed} ${speedPercentText(value)}`,
+    selected: speedPercent(value) === speedPercent(current),
+  }));
 }
 
 export function keyText(key: number): string {
@@ -37,14 +51,8 @@ export function keyText(key: number): string {
   return `${key > 0 ? '+' : MINUS}${String(Math.abs(key))} st`;
 }
 
-export function spokenKey(key: number): string {
-  const steps = countLabel(Math.abs(key), 'semitone', 'semitones');
-  if (key === UNSHIFTED_KEY) return 'as recorded';
-  return key > 0 ? `up ${steps}` : `down ${steps}`;
-}
-
 export function resetValue(): string {
-  return `${speedText(KB_MIXER_UNITY_RATE)}, ${keyText(UNSHIFTED_KEY)}`;
+  return `${speedPercentText(KB_MIXER_UNITY_RATE)}, ${keyText(UNSHIFTED_KEY)}`;
 }
 
 export function speedHint(recorded: SongFacts, playing: SongFacts): string {
@@ -79,16 +87,4 @@ export function stemKeyStatus(row: StemKeyRow, songKey: number): string {
   return isSetApart(row, songKey)
     ? speedKeyCopy.setApart
     : speedKeyCopy.follows;
-}
-
-export function perStemSummary(
-  rows: readonly StemKeyRow[],
-  songKey: number,
-): string {
-  const apart = rows.filter((row) => isSetApart(row, songKey));
-  const [only] = apart;
-  if (only === undefined) return speedKeyCopy.allFollow;
-  const who =
-    apart.length === 1 ? only.name : countLabel(apart.length, 'stem', 'stems');
-  return `${who} ${speedKeyCopy.setApart}`;
 }

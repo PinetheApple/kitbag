@@ -540,6 +540,19 @@ export {
   steppedSpeed,
 } from './stemPlayer/speedKey.ts';
 export {
+  isSetApart,
+  keyHint,
+  keyText,
+  resetValue,
+  speedHint,
+  speedKeyCopy,
+  speedPercentText,
+  speedPresetTexts,
+  stemKeyStatus,
+  type SpeedPresetText,
+  type StemKeyRow,
+} from './stemPlayer/speedKeyText.ts';
+export {
   countedStart,
   type CountedStart,
   type CountedStartRequest,

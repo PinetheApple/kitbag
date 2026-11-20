@@ -1,49 +1,42 @@
 import {
   createThemedStyles,
-  minTouchTargetDp,
   Icon,
-  PresetButton,
+  SHEET_STEPPER_GAPS,
   Sheet,
+  SheetHint,
   size,
-  space,
+  SpeedGroup,
   stemPlayer,
+  StepperRow,
   textRoles,
   textStyle,
   useTextScaled,
 } from '@kitbag/core-design';
-import { SPEED_PRESETS, speedPercent, useStemPlayer } from '@kitbag/core-state';
-import { useCallback, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-
 import {
+  isUnitySpeed,
   keyHint,
-  perStemSummary,
   speedHint,
   speedKeyCopy,
-  speedText,
-} from '../logic/speedKeyView.ts';
-import { SongKeyStepper, SpeedStepper } from './SpeedKeyDock.tsx';
+  speedPercentText,
+  speedPresetTexts,
+  useStemPlayer,
+} from '@kitbag/core-state';
+import { useCallback, useMemo, useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
+
+import { perStemSummary } from '../logic/stemKeyText.ts';
+import { SongKeyStepper, usePlayerSpeedStep } from './SpeedKeyDock.tsx';
 import { StemKeyRows } from './StemKeyRows.tsx';
 
 export const PER_STEM_STACKED_ID = 'per-stem-stacked';
 
-const ROW_GAPS = { top: space.sectionGap, bottom: space.sectionGap };
-
 const useStyles = createThemedStyles((theme) => ({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: stemPlayer.menuRowGap,
-    minHeight: minTouchTargetDp,
-  },
   label: {
     ...textStyle(textRoles.menuRow),
     color: theme.color.text,
     flexGrow: 1,
     flexShrink: 1,
   },
-  presets: { flexDirection: 'row', gap: space.controlGap },
-  hint: { ...textStyle(textRoles.hint), color: theme.color.text3 },
   toggle: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -62,53 +55,40 @@ const useStyles = createThemedStyles((theme) => ({
   valueBelow: { ...textStyle(textRoles.menuValue), color: theme.color.text2 },
 }));
 
-function SpeedPreset({ speed }: { readonly speed: number }) {
-  const current = useStemPlayer((s) => s.speed);
+function PlayerSpeedGroup() {
+  const { speed, step } = usePlayerSpeedStep();
   const setSpeed = useStemPlayer((s) => s.setSpeed);
-  const pick = useCallback(() => {
-    void setSpeed(speed);
-  }, [setSpeed, speed]);
+  const hint = useStemPlayer((s) => speedHint(s.recordedFacts, s.facts));
+  const presets = useMemo(() => speedPresetTexts(speed), [speed]);
+  const pick = useCallback(
+    (picked: number) => {
+      void setSpeed(picked);
+    },
+    [setSpeed],
+  );
   return (
-    <PresetButton
-      label={speedText(speed)}
-      accessibilityLabel={`Speed ${speedText(speed)}`}
-      selected={speedPercent(current) === speedPercent(speed)}
-      onPress={pick}
+    <SpeedGroup
+      label={speedKeyCopy.speed}
+      value={speedPercentText(speed)}
+      accented={!isUnitySpeed(speed)}
+      presets={presets}
+      hint={hint}
+      onStep={step}
+      onPick={pick}
     />
   );
 }
 
-function SpeedGroup() {
-  const styles = useStyles();
-  const hint = useStemPlayer((s) => speedHint(s.recordedFacts, s.facts));
-  return (
-    <>
-      <View style={styles.row}>
-        <Text style={styles.label}>{speedKeyCopy.speed}</Text>
-        <SpeedStepper gaps={ROW_GAPS} />
-      </View>
-      <View style={styles.presets}>
-        {SPEED_PRESETS.map((speed) => (
-          <SpeedPreset key={speed} speed={speed} />
-        ))}
-      </View>
-      <Text style={styles.hint}>{hint}</Text>
-    </>
-  );
-}
-
 function KeyGroup() {
-  const styles = useStyles();
   const hint = useStemPlayer((s) =>
     keyHint(s.recordedFacts, s.facts, s.songKey),
   );
   return (
     <>
-      <View style={styles.row}>
-        <Text style={styles.label}>{speedKeyCopy.key}</Text>
-        <SongKeyStepper gaps={ROW_GAPS} />
-      </View>
-      <Text style={styles.hint}>{hint}</Text>
+      <StepperRow label={speedKeyCopy.key}>
+        <SongKeyStepper gaps={SHEET_STEPPER_GAPS} />
+      </StepperRow>
+      <SheetHint>{hint}</SheetHint>
     </>
   );
 }
@@ -171,7 +151,7 @@ export function SpeedKeySheet({
       bottomInset={bottomInset}
       onDismiss={onClose}
     >
-      <SpeedGroup />
+      <PlayerSpeedGroup />
       <KeyGroup />
       <PerStemKeys />
     </Sheet>

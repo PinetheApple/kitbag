@@ -7,12 +7,11 @@ import {
   textRoles,
   Waveform,
 } from '@kitbag/core-design';
-import { useStemPlayer } from '@kitbag/core-state';
+import { isSetApart, keyText, useStemPlayer } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
-import { isSetApart, keyText } from '../logic/speedKeyView.ts';
 import { stemNameWidth } from '../logic/stemName.ts';
 import { GainFader } from './GainFader.tsx';
 import { LevelChip } from './LevelChip.tsx';

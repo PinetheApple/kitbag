@@ -28,6 +28,8 @@ vi.mock('@kitbag/core-state', () => ({
       stems: NAMES.map((name) => ({ name, loaded: true, muted: false })),
       masterGain: 1,
     }),
+  isSetApart: () => false,
+  keyText: String,
 }));
 
 vi.mock('./stemStyles.ts', () => ({

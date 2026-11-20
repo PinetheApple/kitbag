@@ -35,6 +35,7 @@ export function songRecord(change: Partial<SongRecord> = {}): SongRecord {
     downbeatIndices: [0, 4],
     analysisStatus: 'done',
     tempoCorrection: TEMPO_CORRECTION.none,
+    speed: 1,
     meterBeatsPerBar: null,
     barOneSeconds: null,
     ...change,
@@ -114,6 +115,7 @@ export function fakeSongRuntime(song: SongRecord = songRecord()) {
   const commands = { ...fake.commands, ...metronomeSetters, mixerTrackFrames };
   const records = {
     readSong: vi.fn(() => Promise.resolve<SongRecord | undefined>(song)),
+    saveSongSpeed: vi.fn(() => Promise.resolve()),
     ...presetShelf(),
   };
   const library = {

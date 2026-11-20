@@ -11,7 +11,6 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { transportActions } from '../stemPlayer/actions.ts';
 import { clickActions, followNewGrid } from '../stemPlayer/clickActions.ts';
-import { snapToBeat } from '../stemPlayer/loop.ts';
 import { loopActions } from '../stemPlayer/loopActions.ts';
 import { UNITY_GAIN, UNSHIFTED_KEY } from '../stemPlayer/mix.ts';
 import {
@@ -35,8 +34,10 @@ import {
   type SongLibraryState,
 } from '../songLibrary/store.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
+import { playheadBeatSeconds } from './playheadBeat.ts';
 import { songCard } from './songCard.ts';
 import { countingNow, songCount } from './songCount.ts';
+import { songSpeed } from './songSpeed.ts';
 import { songWaveform } from './songWaveform.ts';
 import {
   linkedPreset,
@@ -163,6 +164,7 @@ export function createSongPlayerStore(
       start: count,
       card: mixer.card,
     });
+    const speed = songSpeed(context, count.rateSet);
     mixer.onSongStopped(card.stopped);
 
     const waveform = songWaveform({ set, runtimeOf, live });
@@ -208,6 +210,8 @@ export function createSongPlayerStore(
       const engineRate = await mixer.startEngine(opened);
       if (engineRate === null) return;
       if (!(await mixer.clearSessionLeftovers(opened))) return;
+      if (!(await speed.opening(opened, record.speed, mixer.applyOpeningRate)))
+        return;
       const master = await commands.mixerMasterGain();
       if (!live(opened)) return;
       // The stem player's master level has no control on this screen.
@@ -359,14 +363,7 @@ export function createSongPlayerStore(
       tempoCorrectionSettled: (songId) => {
         if (get().songId === songId) heldCorrection = null;
       },
-      playheadBeatSeconds: () => {
-        const { beats, engineRate } = get();
-        const playhead = framesToSeconds(
-          runtimeOf().engine.position(),
-          engineRate,
-        );
-        return beats.length === 0 ? null : snapToBeat(playhead, beats);
-      },
+      playheadBeatSeconds: () => playheadBeatSeconds(get(), runtimeOf()),
       dismissMeterNotice: () => {
         set({ meterNotice: null });
       },
@@ -386,6 +383,7 @@ export function createSongPlayerStore(
       }),
       ...clickSettings.actions,
       saveForSong: presets.saveForSong,
+      ...speed.actions,
     };
   });
 }

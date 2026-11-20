@@ -422,6 +422,7 @@ describe('readSong', () => {
       downbeatIndices: [0, 300],
       analysisStatus: 'done',
       tempoCorrection: TEMPO_CORRECTION.none,
+      speed: 1,
       meterBeatsPerBar: null,
       barOneSeconds: null,
     });
