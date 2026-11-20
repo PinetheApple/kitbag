@@ -71,9 +71,9 @@ class MetronomeControlsTest {
 
   @Test
   fun `between the hand over and its hide, pause, stop and tempo steps queue nothing`() {
-    val card = fences.metronome.keep()
+    val card = fences.showMetronome()
     val pressed = mutableListOf<TransportState?>()
-    fences.handOverMetronome {
+    fences.hideMetronome {
       for (action in listOf(PAUSE, STOP, TEMPO_UP, TEMPO_DOWN)) pressed += press(card, action)
     }
     assertEquals(listOf(null, null, null, null), pressed)
@@ -82,7 +82,7 @@ class MetronomeControlsTest {
 
   @Test
   fun `a pause that beat the hand over queues before anything the app sends after it`() {
-    val card = fences.metronome.keep()
+    val card = fences.showMetronome()
     val inBody = CountDownLatch(1)
     val proceed = CountDownLatch(1)
     engine.onExecute = {
@@ -92,7 +92,7 @@ class MetronomeControlsTest {
     val pausing = Thread { press(card, PAUSE) }.apply { start() }
     assertTrue(inBody.await(TIMEOUT_SECONDS, TimeUnit.SECONDS))
     val handingOver = Thread {
-      fences.handOverMetronome {}
+      fences.hideMetronome {}
       engine.calls += APP_CLICK_START
     }.apply { start() }
     awaitBlockedOrDone(handingOver)
