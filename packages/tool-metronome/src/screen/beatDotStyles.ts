@@ -97,16 +97,6 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
       bottom: 0,
       left: 0,
     },
-    square: {
-      borderRadius: metronome.countSquareRadius,
-      borderWidth: metronome.countSquareBorder,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    squareNumber: {
-      ...textStyle(textRoles.countSquare),
-      includeFontPadding: false,
-    },
     legend: {
       flexDirection: 'row',
       justifyContent: 'center',

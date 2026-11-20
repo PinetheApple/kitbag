@@ -2,13 +2,22 @@ import { createElement, type ComponentType } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const nav = vi.hoisted(() => ({ focused: false, navigate: vi.fn() }));
+const nav = vi.hoisted(() => ({
+  focused: false,
+  navigate: vi.fn(),
+  topSetParams: vi.fn(),
+  ownSetParams: vi.fn(),
+}));
 const screens = vi.hoisted(() => ({
-  props: [] as { readonly focused?: boolean }[],
+  props: [] as {
+    readonly focused?: boolean;
+    readonly onOpenStemSet?: (stemSetId: number) => void;
+  }[],
 }));
 
 vi.mock('expo-router', () => ({
-  useRouter: () => ({ navigate: nav.navigate }),
+  useRouter: () => ({ navigate: nav.navigate, setParams: nav.topSetParams }),
+  useNavigation: () => ({ setParams: nav.ownSetParams }),
   useIsFocused: () => nav.focused,
   useLocalSearchParams: () => ({ id: '4' }),
 }));
@@ -22,7 +31,7 @@ vi.mock('@/home/ToolGate', () => ({
   gated: (_id: string, route: ComponentType) => route,
 }));
 
-function captureScreen(props: { readonly focused?: boolean }) {
+function captureScreen(props: (typeof screens.props)[number]) {
   screens.props.push(props);
   return null;
 }
@@ -51,7 +60,7 @@ function routes() {
 }
 
 beforeEach(() => {
-  nav.navigate.mockClear();
+  vi.clearAllMocks();
   screens.props = [];
 });
 
@@ -60,6 +69,15 @@ describe.each(Object.entries(ROUTES))('the %s player route', (_name, route) => {
     nav.focused = focused;
     renderToStaticMarkup(createElement(route));
     expect(screens.props.at(-1)?.focused).toBe(focused);
+  });
+});
+
+describe('the stem player following the next song', () => {
+  it('changes its own route, never the route on top of it', () => {
+    renderToStaticMarkup(createElement(ROUTES.stems));
+    screens.props.at(-1)?.onOpenStemSet?.(9);
+    expect(nav.ownSetParams).toHaveBeenCalledWith({ id: '9' });
+    expect(nav.topSetParams).not.toHaveBeenCalled();
   });
 });
 

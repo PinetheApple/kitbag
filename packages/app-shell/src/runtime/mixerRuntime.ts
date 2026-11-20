@@ -93,6 +93,7 @@ const commands: StemPlayerCommands = {
   },
   onSongStopped: (handler) => getKitbagCommands().onSongStopped(handler),
   onSongTransport: (handler) => getKitbagCommands().onSongTransport(handler),
+  onSongEnded: (handler) => getKitbagCommands().onSongEnded(handler),
 };
 
 export const mixerRuntime: MixerRuntime = {

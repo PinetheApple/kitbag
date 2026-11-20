@@ -8,6 +8,8 @@ import { formatClockSeconds } from '../text.ts';
 const FACT_SEPARATOR = ' · ';
 
 export const SKIPPED_STEM_SONG = 'Skipped a stem song that was deleted';
+export const SKIPPED_UNOPENED_STEM_SONG =
+  'Skipped a stem song that would not open';
 export const STEMS_BADGE = 'STEMS';
 export const UNKNOWN_STEM_SONG = 'Stem song';
 

@@ -257,11 +257,3 @@ export function cycleCellBar(
   const bar = page * CYCLE_STRIP_MAX_CELLS + cell;
   return bar < cycle ? bar : -1;
 }
-
-export type CountSquare = 'done' | 'now' | 'upcoming';
-
-export function countSquare(beat: number, currentBeat: number): CountSquare {
-  'worklet';
-  if (beat < currentBeat) return 'done';
-  return beat === currentBeat ? 'now' : 'upcoming';
-}
