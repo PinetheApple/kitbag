@@ -7,6 +7,7 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import Animated, {
+  useAnimatedReaction,
   useAnimatedRef,
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -135,6 +136,13 @@ export function WheelPicker({
     liveIndex.value = index;
     scroll.current?.scrollTo({ y: index * PITCH, animated: true });
   }, [index, liveIndex, scroll]);
+
+  useAnimatedReaction(
+    () => live.value,
+    (now, previous) => {
+      if (now && previous === false) liveIndex.value = index;
+    },
+  );
 
   const handleScroll = useAnimatedScrollHandler({
     onScroll: (event) => {

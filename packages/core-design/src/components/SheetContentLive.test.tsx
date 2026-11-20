@@ -20,6 +20,10 @@ const { LiveText } = await import('./LiveText.tsx');
 const { WheelPicker } = await import('./WheelPicker.tsx');
 const { useHandleDrag } = await import('./DragListRow.tsx');
 const { useSheetContentLive } = await import('./sheetContentLive.ts');
+const { useDragGroup } = await import('./DragListRow.tsx');
+const { LinearProgress } = await import('./LinearProgress.tsx');
+const { NO_DRAG } = await import('../dragReorder.ts');
+const { anim } = await import('./sheetExitState.test-helper.ts');
 
 const SHOWN = '0:01';
 const LATER = '0:02';
@@ -27,6 +31,9 @@ const VALUES = [1, 2, 3, 4];
 const FAR_DOWN = 1_000_000;
 const DRAGGED = 40;
 const DRAGGED_FURTHER = 80;
+const TRACK_WIDTH = 200;
+const EARLY_MS = 100;
+const LATER_MS = 300;
 const noop = () => undefined;
 
 interface Updating<T> {
@@ -70,21 +77,74 @@ function chosenValues(tree: ReactTestRenderer): unknown[] {
     .map((node) => node.props.children as unknown);
 }
 
+interface DragSeen {
+  drag?: ReturnType<typeof useHandleDrag>;
+  group?: ReturnType<typeof useDragGroup>;
+}
+
 interface DragProbeProps {
-  readonly seen: { drag?: ReturnType<typeof useHandleDrag> };
+  readonly seen: DragSeen;
 }
 
 function DragProbe({ seen }: DragProbeProps) {
-  seen.drag = useHandleDrag({ index: 0, count: VALUES.length, onMove: noop });
+  const group = useDragGroup(VALUES);
+  seen.group = group;
+  seen.drag = useHandleDrag({
+    index: 0,
+    count: VALUES.length,
+    onMove: noop,
+    group,
+  });
   return null;
 }
 
-function dragBy(seen: DragProbeProps['seen'], translationY: number) {
+type PanStage = 'begin' | 'start' | 'update' | 'finalize';
+
+function panStage(seen: DragSeen, stage: PanStage, translationY = 0) {
   const pan = seen.drag?.pan as unknown as {
-    pan: { update?: (event: { translationY: number }) => void };
+    pan: Partial<Record<PanStage, (event: { translationY: number }) => void>>;
   };
   act(() => {
-    pan.pan.update?.({ translationY });
+    pan.pan[stage]?.({ translationY });
+  });
+}
+
+function dragBy(seen: DragSeen, translationY: number) {
+  panStage(seen, 'update', translationY);
+}
+
+function bandOffset(tree: ReactTestRenderer): number {
+  const band = tree.root.find(
+    (node) =>
+      node.type === ('Animated.View' as never) &&
+      Array.isArray(node.props.style) &&
+      node.parent?.props.onLayout !== undefined,
+  );
+  const sweep = (band.props.style as unknown[]).at(-1) as Updating<{
+    transform: [{ translateX: number }];
+  }>;
+  return sweep.updater().transform[0].translateX;
+}
+
+function layOutBand(tree: ReactTestRenderer) {
+  const track = tree.root.find(
+    (node) =>
+      node.type === ('View' as never) &&
+      node.props.onLayout !== undefined &&
+      node.findAll((child) => child.type === ('Animated.View' as never))
+        .length > 0,
+  );
+  const onLayout = track.props.onLayout as (event: {
+    nativeEvent: { layout: { width: number } };
+  }) => void;
+  act(() => {
+    onLayout({ nativeEvent: { layout: { width: TRACK_WIDTH } } });
+  });
+}
+
+function frameAt(timestamp: number) {
+  act(() => {
+    for (const callback of anim.frameCallbacks) callback({ timestamp });
   });
 }
 
@@ -132,6 +192,68 @@ it('stops a row drag from moving the row while its sheet leaves', () => {
   rerender(tree, inSheet(content, false));
   dragBy(seen, DRAGGED_FURTHER);
   expect(seen.drag?.offset.value).toBe(DRAGGED);
+});
+
+it('resyncs a wheel to its selection when its sheet reopens mid-exit', () => {
+  const content = h(WheelPicker, {
+    values: VALUES,
+    selected: VALUES[0] ?? 0,
+    onSelect: noop,
+    accessibilityLabel: 'Beats',
+  });
+  const tree = mount(inSheet(content, true));
+  runReactions();
+  scrollTo(tree, FAR_DOWN);
+  rerender(tree, inSheet(content, false));
+  runReactions();
+  rerender(tree, inSheet(content, true));
+  runReactions();
+  expect(chosenValues(tree)).toEqual([String(VALUES[0])]);
+});
+
+it('drops a lifted row when its sheet reopens mid-exit', () => {
+  const seen: DragSeen = {};
+  const content = h(DragProbe, { seen });
+  const tree = mount(inSheet(content, true));
+  runReactions();
+  panStage(seen, 'begin');
+  panStage(seen, 'start');
+  dragBy(seen, DRAGGED);
+  rerender(tree, inSheet(content, false));
+  runReactions();
+  panStage(seen, 'finalize');
+  rerender(tree, inSheet(content, true));
+  runReactions();
+  expect(seen.drag?.offset.value).toBe(0);
+  expect(seen.group?.from.value).toBe(NO_DRAG);
+});
+
+it('does not lift a row whose drag starts while its sheet leaves', () => {
+  const seen: DragSeen = {};
+  const content = h(DragProbe, { seen });
+  const tree = mount(inSheet(content, true));
+  rerender(tree, inSheet(content, false));
+  panStage(seen, 'begin');
+  panStage(seen, 'start');
+  expect(seen.group?.from.value).toBe(NO_DRAG);
+  expect(seen.group?.target.value).toBe(NO_DRAG);
+});
+
+it("stops a progress band's sweep while its sheet leaves", () => {
+  const content = h(LinearProgress, {
+    percent: null,
+    accessibilityLabel: 'Preparing',
+  });
+  const tree = mount(inSheet(content, true));
+  layOutBand(tree);
+  frameAt(EARLY_MS);
+  const early = bandOffset(tree);
+  frameAt(LATER_MS);
+  const later = bandOffset(tree);
+  expect(later).not.toBe(early);
+  rerender(tree, inSheet(content, false));
+  frameAt(EARLY_MS);
+  expect(bandOffset(tree)).toBe(later);
 });
 
 it('keeps content outside any sheet live', () => {

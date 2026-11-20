@@ -10,6 +10,7 @@ import { asPercent } from '../percent.ts';
 import { radius } from '../roles.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { useReduceMotion } from '../useReduceMotion.ts';
+import { useSheetContentLive } from './sheetContentLive.ts';
 
 const PERCENT = 100;
 
@@ -41,7 +42,9 @@ function SweepingBand() {
   const styles = useStyles();
   const phase = useSharedValue(0);
   const trackWidth = useSharedValue(0);
+  const live = useSheetContentLive();
   useFrameCallback(({ timestamp }) => {
+    if (!live.value) return;
     phase.value = (timestamp % linearProgress.cycleMs) / linearProgress.cycleMs;
   });
   const handleLayout = useCallback(

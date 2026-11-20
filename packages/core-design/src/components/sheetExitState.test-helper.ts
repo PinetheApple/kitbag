@@ -8,6 +8,7 @@ export const anim = {
   exits: [] as ((finished: boolean) => void)[],
   motion: FULL as string,
   reactions: [] as (() => void)[],
+  frameCallbacks: [] as ((frame: { timestamp: number }) => void)[],
 };
 export const focusReaderOn = vi.fn();
 export const keyboard = { height: { value: 0 } };

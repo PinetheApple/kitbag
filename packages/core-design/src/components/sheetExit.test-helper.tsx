@@ -102,11 +102,16 @@ vi.mock('react-native-reanimated', async () => {
     handle.updater = updater;
     return handle;
   }
-  function useAnimatedReaction<T>(prepare: () => T, react: (now: T) => void) {
+  function useAnimatedReaction<T>(
+    prepare: () => T,
+    react: (now: T, previous: T | null) => void,
+  ) {
     const [handle] = useState(() => {
-      const created = { prepare, react };
+      const created = { prepare, react, previous: null as T | null };
       anim.reactions.push(() => {
-        created.react(created.prepare());
+        const now = created.prepare();
+        created.react(now, created.previous);
+        created.previous = now;
       });
       return created;
     });
@@ -128,6 +133,13 @@ vi.mock('react-native-reanimated', async () => {
     useAnimatedReaction,
     useAnimatedRef: () => Object.assign(noRef, { current: null }),
     useAnimatedScrollHandler: <T,>(handlers: T) => handlers,
+    useFrameCallback: (callback: (frame: { timestamp: number }) => void) => {
+      const [registered] = useState(() => {
+        anim.frameCallbacks.push(callback);
+        return true;
+      });
+      return registered;
+    },
     useAnimatedStyle,
     useSharedValue,
     withSpring: (to: number) => to,
@@ -182,6 +194,7 @@ vi.mock('./IconGlyph.tsx', () => ({ InlineIcon: 'InlineIcon' }));
 vi.mock('./hardwareBack', () => ({ onHardwareBack: () => () => undefined }));
 vi.mock('../readerFocus', () => ({ focusReaderOn }));
 vi.mock('../useReduceMotion.ts', () => ({
+  useReduceMotion: () => anim.motion === REDUCED,
   useReduceMotionMode: () => anim.motion,
 }));
 vi.mock('../ThemeProvider.tsx', async () => {
@@ -322,6 +335,7 @@ beforeEach(() => {
   anim.running.clear();
   anim.exits.length = 0;
   anim.reactions.length = 0;
+  anim.frameCallbacks.length = 0;
   dismissKeyboard.mockClear();
   anim.motion = FULL;
   focusReaderOn.mockClear();

@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   type SharedValue,
@@ -79,14 +80,23 @@ export function useHandleDrag(reorder: DragReorder) {
   useLayoutEffect(() => {
     offset.value = 0;
   }, [index, offset]);
+  useAnimatedReaction(
+    () => live.value,
+    (now, previous) => {
+      if (!now || previous !== false) return;
+      if (group !== undefined && moved.value) return;
+      offset.value = 0;
+      if (group !== undefined) group.from.value = NO_DRAG;
+    },
+  );
   const pan = Gesture.Pan()
     .hitSlop(HANDLE_HIT_SLOP)
     .onBegin(() => {
-      moved.value = false;
+      if (live.value) moved.value = false;
       if (onDragActive !== undefined) scheduleOnRN(onDragActive, true);
     })
     .onStart(() => {
-      if (group === undefined) return;
+      if (group === undefined || !live.value) return;
       group.from.value = index;
       group.target.value = index;
       group.pitch.value = pitch.value;
