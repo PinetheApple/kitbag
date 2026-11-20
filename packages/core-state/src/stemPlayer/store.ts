@@ -392,11 +392,7 @@ export function createStemPlayerStore(
       loadWaveforms(context, () => live(opened), record, bars);
     };
 
-    const beginSession = (
-      setId: number,
-      opened: number,
-      advancedTo: number | null = null,
-    ) => {
+    const showLoading = (setId: number, advancedTo: number | null = null) => {
       set({
         ...closedState,
         exportState: exportAfterLeaving(get().exportState),
@@ -404,7 +400,6 @@ export function createStemPlayerStore(
         setId,
         advancedTo,
       });
-      return opened;
     };
 
     const loadSession = async (opened: number, setId: number, bars: number) => {
@@ -421,12 +416,15 @@ export function createStemPlayerStore(
       ...closedState,
       exportState: NO_EXPORT,
       open: async (setId, bars) => {
-        await loadSession(beginSession(setId, mixer.begin()), setId, bars);
+        const opened = mixer.begin();
+        showLoading(setId);
+        await loadSession(opened, setId, bars);
       },
       // Across an Activity relaunch the new screen can acquire before the old
       // one unmounts, so a release only closes the session it acquired.
       acquireSong: (setId, bars) => {
-        const acquired = beginSession(setId, mixer.begin());
+        const acquired = mixer.begin();
+        showLoading(setId);
         void loadSession(acquired, setId, bars);
         return mixer.hold(acquired);
       },
@@ -434,7 +432,11 @@ export function createStemPlayerStore(
         advanceSong(
           {
             ends,
-            begin: (id) => beginSession(id, mixer.advance(), id),
+            begin: (id) => {
+              const opened = mixer.advance();
+              showLoading(id, id);
+              return opened;
+            },
             load: (opened, id) => loadSession(opened, id, waveformBars),
             live,
             ready: () => get().status === 'ready',

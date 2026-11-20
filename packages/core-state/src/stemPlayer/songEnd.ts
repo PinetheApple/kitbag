@@ -16,8 +16,8 @@ type EndSlice = Pick<
   'status' | 'durationFrames' | 'engineRate' | 'retime'
 >;
 
-// The end count lags the mixer by up to a card tick; by then a press may have
-// restarted the song or another song may have opened.
+// By the time the end report arrives a press may have restarted the song or
+// another song may have opened.
 export function endedOnLastFrame(
   song: EndSlice,
   engine: StemPlayerEngine,

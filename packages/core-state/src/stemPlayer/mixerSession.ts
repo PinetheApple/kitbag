@@ -150,7 +150,7 @@ export function mixerSession({
 
   // An advance keeps the card up: a hidden card ends the foreground service,
   // and Android 12+ refuses to restart one from behind a locked screen.
-  const start = (keepCard: boolean) => {
+  const start = ({ keepCard }: { readonly keepCard: boolean }) => {
     if (isOpen()) teardown({ keepCard });
     releaseEngine ??= acquireEngineHold(runtimeOf().commands);
     claim.claim(close);
@@ -197,10 +197,10 @@ export function mixerSession({
       live: () => holds(opened),
     }),
     begin: () => {
-      held = start(false);
+      held = start({ keepCard: false });
       return held;
     },
-    advance: () => start(true),
+    advance: () => start({ keepCard: true }),
     startEngine: async (opened: number): Promise<number | null> => {
       const { commands, engine, sharedMetronome } = runtimeOf();
       if (sharedMetronome.active()) sharedMetronome.release();
