@@ -1210,3 +1210,19 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   bar, so the playing players stop taking 4–7 s per accessibility read. Skia stays §13.8's
   target; it is not added now because this run takes no new dependency, and react-native-svg
   is already one. **[coordinator, 2026-11-20]**
+- **2026-11-20 · Song queue (#574, SPEC §7.9, D17)** — Owner decisions on the
+  queue mockup, all recommendations taken: (1) one queue shared by single songs
+  and stem songs; (2) a Queue key on the mini-player, a Queue icon on the stem
+  player and a Queue icon with a count on the Stem songs list; (3) "Next from:
+  <setlist>" only for a setlist started in this listening session, ended by
+  starting a song from a list and replaced by starting another setlist, queued
+  songs kept either way, "Clear queue" for queued songs and "Leave setlist" for
+  the setlist part, and playback stopping at the end with no autoplay; (4)
+  Repeat as a labelled chip cycling Off, Repeat all, Repeat one, where Repeat
+  all loops the queue and the setlist and an active A-B loop wins over Repeat
+  one; (5) Previous and Next beside the Up next row, Previous restarting a stem
+  song past 3 s and always going back an entry on the Metronome. Rationale: the
+  owner's review found the queue hard to find, addable only at the front,
+  stopping when the user left the player, and showing a setlist nobody started
+  in this session. The mockup binds as `design/kitbag-queue.html`.
+  **[owner, 2026-11-20]**
