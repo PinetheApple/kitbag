@@ -277,4 +277,19 @@ class SongTransportTest {
       ).map { it.appAction },
     )
   }
+
+  @Test
+  fun `a seek the app made publishes its position, not the engine's earlier read`() {
+    val read = at(28.0)
+    val playback = transport.playback(transport.seekedInApp(read, 0L), SongOrder.UP_NEXT, now = 1_000L)
+    assertEquals(0L, playback.positionMillis)
+    assertEquals(PlaybackStateCompat.STATE_PLAYING, playback.state)
+  }
+
+  @Test
+  fun `a seek the app made past the end publishes the song's end`() {
+    val pastEnd = transport.seekedInApp(at(28.0), song.durationFrames + 1L)
+    val playback = transport.playback(pastEnd, SongOrder.ALONE, now = 0L)
+    assertEquals(transport.durationMillis, playback.positionMillis)
+  }
 }

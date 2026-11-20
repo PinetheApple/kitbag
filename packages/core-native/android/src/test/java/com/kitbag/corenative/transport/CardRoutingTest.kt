@@ -299,4 +299,16 @@ class CardRoutingTest {
     assertEquals(CardEffect.OrderSong(SongOrder.LAST), routing.on(CardEvent.SongOrdered(SongOrder.LAST)))
     assertSongShowing()
   }
+
+  @Test
+  fun `a seek the app made is published on the song card`() {
+    showSong()
+    assertEquals(CardEffect.PublishSongSeek(0L), routing.on(CardEvent.SongSeekedInApp(0L)))
+  }
+
+  @Test
+  fun `a seek the app made leaves a metronome-only card alone`() {
+    showMetronome()
+    assertEquals(CardEffect.None, routing.on(CardEvent.SongSeekedInApp(0L)))
+  }
 }

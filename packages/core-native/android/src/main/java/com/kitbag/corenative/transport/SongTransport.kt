@@ -183,6 +183,8 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
       SongCommand.Next, SongCommand.Previous -> progress
     }
 
+  fun seekedInApp(progress: SongProgress, frame: Long): SongProgress = applied(progress, seek(frame))
+
   fun seekTo(positionMillis: Long): SongCommand =
     seek((positionMillis * sampleRate / MILLIS_PER_SECOND).roundToLong())
 

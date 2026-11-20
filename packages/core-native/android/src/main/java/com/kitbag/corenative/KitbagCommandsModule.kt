@@ -398,6 +398,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   override fun mixerSeek(frame: Double) {
     nativeMixerSeek(frame)
+    PlaybackService.seekedSong(reactApplicationContext, frame.toLong())
   }
 
   override fun mixerSetLoop(startFrame: Double, endFrame: Double, promise: Promise) {

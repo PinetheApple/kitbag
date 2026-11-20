@@ -86,6 +86,11 @@ internal class SongCard(
     settle(controls.seek(cardNumber, songTransport, ::progress, positionMillis, requests()))
   }
 
+  fun seekedInApp(positionFrames: Long) {
+    val songTransport = transport ?: return
+    refresh(songTransport.seekedInApp(progress(), positionFrames))
+  }
+
   private fun requests(): ((SongCommand) -> Unit)? {
     val emit = appRequests() ?: return null
     val shownIn = session
