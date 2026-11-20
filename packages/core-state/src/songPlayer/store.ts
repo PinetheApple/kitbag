@@ -36,6 +36,7 @@ import {
 } from '../songLibrary/store.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 import { songCard } from './songCard.ts';
+import { countingNow, songCount } from './songCount.ts';
 import {
   linkedPreset,
   readyState,
@@ -128,6 +129,7 @@ export function createSongPlayerStore(
       mixerClick: songClick,
       isOpen: () => get().songId !== null,
       teardownTracks,
+      counting: countingNow(get, runtimeOf),
       resetState: () => {
         set(closedState);
       },
@@ -151,7 +153,9 @@ export function createSongPlayerStore(
     };
     const context = { set, get, runtimeOf, session: mixer.current };
     const presets = songPresetActions({ ...context, live });
-    const card = songCard({ ...context, close: mixer.close });
+    const count = songCount(context, mixer, api);
+    const { afterSeek } = count;
+    const card = songCard({ ...context, close: mixer.close, start: count });
     mixer.onSongStopped(card.stopped);
 
     const showWaveform = (opened: number, path: string | null) => {
@@ -250,7 +254,7 @@ export function createSongPlayerStore(
         detected: grid.detected,
         ...(regrid ? shownGrid(grid) : {}),
       });
-      if (regrid) void followNewGrid(context);
+      if (regrid) void followNewGrid(context, count);
     };
 
     const endAsGone = () => {
@@ -278,7 +282,7 @@ export function createSongPlayerStore(
         ...(regrid ? shownGrid(grid) : {}),
       });
       if (ready) showWaveform(opened, record.waveformPath);
-      if (regrid) void followNewGrid(context);
+      if (regrid) void followNewGrid(context, count);
     };
 
     const refreshFacts = async (opened: number, songId: number) => {
@@ -376,9 +380,10 @@ export function createSongPlayerStore(
       dismissMeterNotice: () => {
         set({ meterNotice: null });
       },
-      ...transportActions(get, runtimeOf, scrubSeek, undefined, card.start),
+      ...transportActions(get, runtimeOf, scrubSeek, afterSeek, card.start),
       ...loopActions(context),
       ...clickActions(context, mixer.pendingClick, {
+        ...count,
         clickStarting: clickEngine.clickStarting,
       }),
       ...clickSettings.actions,
