@@ -19,7 +19,9 @@ const SESSION = {
   durationSeconds: 60,
   avgBpm: 100,
   setlistId: null,
+  setlistName: null,
   songUuids: [],
+  log: null,
 };
 
 describe('readPracticeStats', () => {

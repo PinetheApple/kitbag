@@ -14,6 +14,7 @@ import { FALLBACK_BEATS_PER_BAR } from '../stemPlayer/barMeter.ts';
 import type { ClickSlice } from '../stemPlayer/clickActions.ts';
 import type { LoopSlice } from '../stemPlayer/loopActions.ts';
 import type { DetectedMeter } from '../stemPlayer/meterOverride.ts';
+import { CLOSED_CLICK_SETTINGS, type SongClickSettings } from './songClick.ts';
 import type { SongGrid } from './songGrid.ts';
 
 export interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
@@ -26,6 +27,7 @@ export interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
   readonly meterOverride: MeterOverride;
   readonly detected: DetectedMeter;
   readonly meterNotice: DetectedMeter | null;
+  readonly clickSettings: SongClickSettings;
 }
 
 export const closedState: SongPlayerState = {
@@ -48,6 +50,7 @@ export const closedState: SongPlayerState = {
   loop: { kind: 'off' },
   loopFailure: null,
   click: false,
+  clickSettings: CLOSED_CLICK_SETTINGS,
 };
 
 type SongFacts = Pick<

@@ -26,6 +26,8 @@ class DocumentPicker(
 
   private var pending: Pending? = null
 
+  private val settledCopy = SettledCopy(File(context.cacheDir, SettledCopy.WORK_DIR), SqliteRecovery)
+
   fun pickDocument(promise: Promise) {
     val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
       addCategory(Intent.CATEGORY_OPENABLE)
@@ -68,10 +70,6 @@ class DocumentPicker(
       BackupSave.dialogExtras(fileName).forEach { (key, value) -> putExtra(key, value) }
     }
     val source = context.getDatabasePath(databaseName)
-    BackupSave.unsettledJournal(source)?.let {
-      promise.reject(LibraryErrors.DATABASE_UNSETTLED, DatabaseUnsettledException(it))
-      return
-    }
     startPick(intent, REQUEST_SAVE_DATABASE, promise, source = source)
   }
 
@@ -167,10 +165,9 @@ class DocumentPicker(
   private fun copy(saved: Boolean, uri: Uri?, source: File?, promise: Promise) {
     io.execute {
       try {
-        promise.resolve(BackupSave.copyFile(saved, uri?.toString(), checkNotNull(source), ::openForWrite, ::discard))
+        promise.resolve(BackupSave.copyFile(saved, uri?.toString(), checkNotNull(source), settledCopy, ::openForWrite, ::discard))
       } catch (e: Exception) {
-        val code = if (e is DatabaseUnsettledException) LibraryErrors.DATABASE_UNSETTLED else LibraryErrors.SAVE_FAILED
-        rejectLogged(promise, code, "Could not save the database copy", e)
+        rejectLogged(promise, LibraryErrors.databaseCopyCode(e), "Could not save the database copy", e)
       }
     }
   }

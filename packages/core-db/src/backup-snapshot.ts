@@ -147,6 +147,8 @@ function practiceRecord(
     avgBpm: row.avgBpm,
     setlistUuid: setlistUuid(row.setlistId),
     songsPlayed: row.songsPlayed,
+    setlistName: row.setlistName,
+    log: row.log,
   };
 }
 
