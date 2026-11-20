@@ -4,12 +4,14 @@ import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { display } from '../testing/reactNativeHosts.ts';
-import { PER_STEM_STACKED_ID } from './SpeedKeySheet.tsx';
+import { PlayerMenu } from './PlayerMenu.tsx';
+import { PER_STEM_STACKED_ID, SpeedKeySheet } from './SpeedKeySheet.tsx';
 import { STACKED_ID } from './StemKeyRows.tsx';
 import {
   flush,
   mountPlayer,
   withTestId,
+  RETIME,
   retiming,
   SONG_DETAILS,
   unmountTracked,
@@ -139,6 +141,29 @@ describe('the speed and key sheet', () => {
     expect(p.has('+1 st')).toBe(true);
     await p.press('Set bass back to the song key');
     expect(p.has('all follow the song')).toBe(true);
+  });
+});
+
+const shownSheet = (
+  p: Player,
+  type: typeof SpeedKeySheet | typeof PlayerMenu,
+) => p.renderer.root.findByType(type).props.visible as boolean;
+
+describe('the speed and key sheet among the player sheets', () => {
+  it('gives way when the player menu opens', async () => {
+    const p = await openSheet(await open());
+    expect(shownSheet(p, SpeedKeySheet)).toBe(true);
+    await p.press(MENU);
+    expect(shownSheet(p, SpeedKeySheet)).toBe(false);
+    expect(shownSheet(p, PlayerMenu)).toBe(true);
+  });
+
+  it('closes through its exit when a retime starts', async () => {
+    const p = await openSheet(await open());
+    await p.press('Lyrics');
+    await p.press(RETIME);
+    expect(p.store.getState().retime.kind).toBe('recording');
+    expect(shownSheet(p, SpeedKeySheet)).toBe(false);
   });
 });
 
