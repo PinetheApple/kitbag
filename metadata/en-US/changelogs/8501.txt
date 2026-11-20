@@ -1,0 +1,1 @@
+• Deleting a song that is still on an SD card now removes it from the card too, so it doesn't come back later.
