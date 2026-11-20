@@ -36,6 +36,7 @@ import {
 } from '../songLibrary/store.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 import { songCard } from './songCard.ts';
+import { clickSettingsOf, songPresetActions } from './songPreset.ts';
 import type { SongPlayerActions } from './actions.ts';
 import {
   songClickActions,
@@ -144,6 +145,7 @@ export function createSongPlayerStore(
       };
     };
     const context = { set, get, runtimeOf, session: mixer.current };
+    const presets = songPresetActions({ ...context, metronome, live });
     const card = songCard({ ...context, close: mixer.close });
     mixer.onSongStopped(card.stopped);
 
@@ -184,7 +186,10 @@ export function createSongPlayerStore(
     const load = async (opened: number, songId: number) => {
       const runtime = runtimeOf();
       const { commands } = runtime;
-      const record = await runtime.records.readSong(songId);
+      const [record, preset] = await Promise.all([
+        runtime.records.readSong(songId),
+        runtime.records.forLibrarySong(songId),
+      ]);
       if (!live(opened)) return;
       if (record === undefined) {
         set({ status: 'missing' });
@@ -226,9 +231,12 @@ export function createSongPlayerStore(
         detected: grid.detected,
         meterOverride: meterOverrideOf(record),
       });
+      if (preset !== undefined)
+        set({ clickSettings: clickSettingsOf(preset, get()) });
       if (decoded > 0)
         correctStoredLength(record, framesToSeconds(decoded, engineRate));
       showWaveform(opened, record.waveformPath);
+      if (preset !== undefined) await get().toggleClick();
     };
 
     const isOpenAndReady = (songId: number) => {
@@ -375,6 +383,7 @@ export function createSongPlayerStore(
         clickStarting: clickEngine.clickStarting,
       }),
       ...clickSettings.actions,
+      saveForSong: presets.saveForSong,
     };
   });
 }

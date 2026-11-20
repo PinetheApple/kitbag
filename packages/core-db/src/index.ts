@@ -15,6 +15,7 @@ export {
   type SetlistRepository,
   type SongPresetRepository,
 } from './client';
+export type { LinkedPresetValues } from './song-preset-repository';
 export type {
   PlayQueueEntry,
   PlayQueueRepository,

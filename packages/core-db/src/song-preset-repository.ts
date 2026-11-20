@@ -45,6 +45,15 @@ function presetById(db: Database, id: number) {
   return db.select().from(songPresets).where(eq(songPresets.id, id));
 }
 
+function linkedPreset(db: Database, songId: number) {
+  return db
+    .select()
+    .from(songPresets)
+    .where(eq(songPresets.librarySongId, songId))
+    .orderBy(asc(songPresets.id))
+    .limit(1);
+}
+
 async function searchPresets(db: Database, query: string) {
   return db
     .select()
@@ -102,6 +111,25 @@ async function updatePreset(
     .where(eq(songPresets.id, id));
 }
 
+export type LinkedPresetValues = Omit<NewSongPreset, 'id' | 'librarySongId'>;
+
+// No unique index on library_song_id (no schema change), so one preset per song
+// holds by reading then writing inside the repository's own BEGIN/COMMIT.
+async function saveLinkedPreset(
+  db: Database,
+  songId: number,
+  values: LinkedPresetValues,
+): Promise<SongPreset> {
+  const [linked] = await linkedPreset(db, songId);
+  if (linked === undefined)
+    return insertPreset(db, { ...values, librarySongId: songId });
+  await updatePreset(db, linked.id, values);
+  return found(
+    await presetById(db, linked.id),
+    `Song preset ${String(linked.id)}`,
+  );
+}
+
 async function deletePreset(db: Database, id: number) {
   await db.delete(setlistItems).where(eq(setlistItems.songPresetId, id));
   await db.delete(songPresets).where(eq(songPresets.id, id));
@@ -120,5 +148,9 @@ export function createSongPresetRepository({ db, transactor }: DatabaseHandle) {
     duplicate: (id: number, name: string) =>
       serial(() => duplicatePreset(db, id, name)),
     delete: (id: number) => transaction(() => deletePreset(db, id)),
+    forLibrarySong: (songId: number) =>
+      serial(async () => (await linkedPreset(db, songId)).at(0)),
+    saveForLibrarySong: (songId: number, values: LinkedPresetValues) =>
+      transaction(() => saveLinkedPreset(db, songId, values)),
   };
 }

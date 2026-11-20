@@ -1,6 +1,8 @@
 import {
   TEMPO_CORRECTION,
   type LibraryRow,
+  type LinkedPresetValues,
+  type SongPreset,
   type SongRecord,
 } from '@kitbag/core-db';
 import { vi, type Mock } from 'vitest';
@@ -73,6 +75,30 @@ export function fakeMetronome() {
   return { store, commands };
 }
 
+export function presetShelf() {
+  const saved = new Map<number, SongPreset>();
+  const forLibrarySong = vi.fn((songId: number) =>
+    Promise.resolve(saved.get(songId)),
+  );
+  const saveForLibrarySong = vi.fn(
+    (songId: number, values: LinkedPresetValues) => {
+      const preset = {
+        id: saved.get(songId)?.id ?? saved.size + 1,
+        uuid: `preset-${String(songId)}`,
+        notes: null,
+        phaseNudge: 0,
+        source: null,
+        lengthSeconds: null,
+        librarySongId: songId,
+        ...values,
+      } as SongPreset;
+      saved.set(songId, preset);
+      return Promise.resolve(preset);
+    },
+  );
+  return { forLibrarySong, saveForLibrarySong };
+}
+
 export function fakeSongRuntime(song: SongRecord = songRecord()) {
   const fake = fakeRuntime(record([]));
   const metronomeSetters = {
@@ -88,6 +114,7 @@ export function fakeSongRuntime(song: SongRecord = songRecord()) {
   const commands = { ...fake.commands, ...metronomeSetters, mixerTrackFrames };
   const records = {
     readSong: vi.fn(() => Promise.resolve<SongRecord | undefined>(song)),
+    ...presetShelf(),
   };
   const library = {
     correctDuration: vi.fn(() => Promise.resolve()),
