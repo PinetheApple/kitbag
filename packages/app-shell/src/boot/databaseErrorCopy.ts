@@ -59,8 +59,9 @@ export const DATABASE_ERROR_TEXT = {
   stillFailing: 'Still couldn’t open it. Nothing has been changed.',
   copySaved: 'Copy saved.',
   copyFailed: 'Couldn’t save the copy. Try another place.',
-  copyUnsettled:
-    'Couldn’t save a complete copy right now. Close Kitbag, open it again, then try again.',
+  copyNoSpace:
+    'There isn’t enough free space to make a complete copy. Free up some space, then try again.',
+  copyUnreadable: 'Your data couldn’t be read, so no copy was saved.',
   relaunchFailed:
     'Your data opened, but Kitbag couldn’t restart. Close Kitbag and open it again.',
 } as const;
