@@ -163,8 +163,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   the quarter-referenced reading satisfies. A product survey
   (`docs/archive/metronome-bpm-denominator-research.md`) found no standalone metronome
   ships this bare — the well-regarded ones pair it with an explicit beat-unit /
-  click-unit control so compound meters can click the dotted-note pulse (Dorico's
-  Beat Unit, Pro Tools' Click field, Tempo, Soundbrenner). **User decided against
+  click-unit control so compound meters can click the dotted-note pulse. **User decided against
   that control: six eighth-note clicks in 6/8 is the wanted behaviour.** So bar
   length stays `numerator × beat unit`, the ABI gains no click-unit parameter, and
   §17.1 gains no entry. Cost accepted: a user wanting the 6/8 dotted-quarter pulse
@@ -398,8 +397,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   the Songs app bar. Rows sort by title and show title, length · BPM · key, and status
   badges; the analyzing badge reads `ANALYZING`. **[user]** A failed song's reason moves to
   its actions sheet. The Songs + opens the file picker directly, and a picked
-  `.stemdeck.zip` still imports as a stem song with a notice. The empty state drops "or
-  Moises export": only StemDeck bundles import. Not built: the mockup's filter icon, whose
+  `.stemdeck.zip` still imports as a stem song with a notice. The empty state names
+  only StemDeck bundles, the one format that imports. Not built: the mockup's filter icon, whose
   action it does not define, and the row menu's Add to setlist. **[recorded]**
   **Resolved 2026-11-20 (#549):** Add to setlist is built for stem songs; single songs and
   the filter icon are still not built.
