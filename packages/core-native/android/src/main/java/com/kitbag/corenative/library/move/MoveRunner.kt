@@ -6,10 +6,8 @@ import com.kitbag.corenative.library.DataFolderLocation
 import com.kitbag.corenative.library.DurableFiles
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.RootState
-import com.kitbag.corenative.library.SystemDiskSync
 import com.kitbag.corenative.library.UnreadableStateException
 import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -60,13 +58,26 @@ class MoveRunner(
       return MoveOutcome.Failed(MoveFailure.SOURCE_UNAVAILABLE)
     }
     val files = MovePlan.scan(sourceState.root).map { MoveEntry(it.path, it.size, it.modified) }
-    val state = synchronized(cancelOrSwitchLock) {
+    return drive(beginNew(MoveState(source, target, MovePhase.PREFLIGHT, files)))
+  }
+
+  fun returnCard(card: DataFolderLocation.Card): MoveOutcome {
+    val target = folder.location()
+    require(card != target) { "The card is the data folder" }
+    finishLeftovers()
+    val cardRoot = mountedRoot(card) ?: return MoveOutcome.Failed(MoveFailure.SOURCE_UNAVAILABLE)
+    val away = folder.awayOn(card.volumeUuid) ?: throw UnreadableStateException(AwayManifest.FILE_NAME)
+    if (away.isEmpty()) return MoveOutcome.NoMove
+    val files = CardReturn.plan(cardRoot, away)
+    return drive(beginNew(MoveState(card, target, MovePhase.PREFLIGHT, files, kind = MoveKind.CARD_RETURN)))
+  }
+
+  private fun beginNew(state: MoveState): MoveState =
+    synchronized(cancelOrSwitchLock) {
       journal.load()?.takeIf { !running.get() && it.phase >= MovePhase.SWITCHED }?.let(::parkIfSourceGone)
       check(journal.load() == null) { "A move is already in progress" }
-      begin(save(MoveState(source, target, MovePhase.PREFLIGHT, files)))
+      begin(save(state))
     }
-    return drive(state)
-  }
 
   fun resume(): MoveOutcome {
     val state = synchronized(cancelOrSwitchLock) { journal.load()?.copy(failure = null)?.let(::begin) }
@@ -147,7 +158,8 @@ class MoveRunner(
   private fun preflight(state: MoveState): MoveState {
     val targetRoot = mountedRoot(state.target) ?: refuse(MoveFailure.TARGET_UNAVAILABLE)
     if (state.files.any { File(targetRoot, it.path).exists() }) refuse(MoveFailure.TARGET_OCCUPIED)
-    if (!canWrite(targetRoot)) refuse(MoveFailure.TARGET_NOT_WRITABLE)
+    if (state.kind == MoveKind.CARD_RETURN) CardReturn.stagingRoot(targetRoot).deleteRecursively()
+    if (!MoveFiles.canWrite(targetRoot)) refuse(MoveFailure.TARGET_NOT_WRITABLE)
     if (availableBytes(targetRoot) < state.totalBytes + FREE_SPACE_MARGIN_BYTES) refuse(MoveFailure.NO_SPACE)
     return save(state.copy(phase = MovePhase.COPYING))
   }
@@ -157,31 +169,17 @@ class MoveRunner(
     throw Stop(MoveOutcome.Failed(failure))
   }
 
-  private fun canWrite(targetRoot: File): Boolean {
-    val probe = File(targetRoot, PROBE_FILE_NAME)
-    return try {
-      if (!targetRoot.isDirectory && !targetRoot.mkdirs()) return false
-      FileOutputStream(probe).use { output ->
-        output.write(PROBE_BYTES)
-        SystemDiskSync.file(output)
-      }
-      probe.readBytes().contentEquals(PROBE_BYTES)
-    } catch (e: IOException) {
-      false
-    } finally {
-      probe.delete()
-    }
-  }
-
   private fun copying(state: MoveState): MoveState {
     val (sourceRoot, targetRoot) = roots(state)
+    val copyRoot = copyRoot(state, targetRoot)
     var next = state
     for (entry in state.files.filterNot { it.copied }) {
       val source = File(sourceRoot, entry.path)
       next = if (source.isFile) {
-        val sha256 = DurableFiles.copyAndHash(source, File(targetRoot, entry.path), cancelRequested::get)
+        val sha256 = DurableFiles.copyAndHash(source, File(copyRoot, entry.path), cancelRequested::get)
         save(next.withEntry(entry.copy(sha256 = sha256)))
       } else {
+        if (mountedRoot(state.source) == null) throw Stop(MoveOutcome.Failed(MoveFailure.SOURCE_UNAVAILABLE))
         save(next.copy(files = next.files - entry))
       }
       emit(next, entry.path)
@@ -190,7 +188,7 @@ class MoveRunner(
   }
 
   private fun verifying(state: MoveState): MoveState {
-    val targetRoot = roots(state).second
+    val targetRoot = copyRoot(state, roots(state).second)
     var next = state
     for (entry in state.files.filterNot { it.verified }) {
       if (!copyMatches(targetRoot, entry)) {
@@ -210,13 +208,14 @@ class MoveRunner(
   }
 
   private fun catchUp(state: MoveState): MoveState {
+    if (state.kind == MoveKind.CARD_RETURN) return folder.switching { switchTo(state) }
     if (switched(state)) return save(state.copy(phase = MovePhase.SWITCHED))
     val (sourceRoot, targetRoot) = roots(state)
     return folder.switching {
       val scanned = MovePlan.scan(sourceRoot)
       val scannedPaths = scanned.mapTo(HashSet()) { it.path }
       val known = state.files.associateBy { it.path }
-      state.files.filter { it.path !in scannedPaths }.forEach { deleteCopy(targetRoot, it.path) }
+      state.files.filter { it.path !in scannedPaths }.forEach { MoveFiles.deleteCopy(targetRoot, it.path) }
       var next = save(state.copy(files = state.files.filter { it.path in scannedPaths }))
       for (file in scanned.filterNot { known[it.path]?.isCopyOf(it) == true }) {
         if (file.path !in known && File(targetRoot, file.path).exists()) {
@@ -241,23 +240,45 @@ class MoveRunner(
     val sha256 = DurableFiles.copyAndHash(File(sourceRoot, file.path), target, cancelRequested::get)
     val copied = MoveEntry(file.path, file.size, file.modified, sha256)
     if (copyMatches(targetRoot, copied)) return copied.copy(verified = true)
-    deleteCopy(targetRoot, file.path)
+    MoveFiles.deleteCopy(targetRoot, file.path)
     return copied
   }
 
   private fun switchTo(state: MoveState): MoveState =
     synchronized(cancelOrSwitchLock) {
       if (cancelRequested.get()) throw InterruptedIOException()
-      folder.select(state.target)
-      listOf(state.source, state.target).filterIsInstance<DataFolderLocation.Card>()
-        .forEach { folder.forgetAway(it.volumeUuid) }
+      if (state.kind == MoveKind.CARD_RETURN) {
+        placeReturned(save(state.copy(placing = true)))
+      } else {
+        folder.select(state.target)
+        listOf(state.source, state.target).filterIsInstance<DataFolderLocation.Card>()
+          .forEach { folder.forgetAway(it.volumeUuid) }
+      }
       save(state.copy(phase = MovePhase.SWITCHED))
     }
 
+  private fun placeReturned(state: MoveState) {
+    val card = state.source as DataFolderLocation.Card
+    val targetRoot = mountedRoot(state.target) ?: throw Stop(MoveOutcome.Failed(MoveFailure.TARGET_UNAVAILABLE))
+    for (entry in state.files) {
+      CardReturn.place(targetRoot, entry.path)
+      emit(state, entry.path)
+    }
+    folder.forgetAway(card.volumeUuid, state.files.map { it.path })
+  }
+
   private fun switched(state: MoveState) = folder.storedLocation() == state.target
 
-  private fun maybeSwitched(state: MoveState): Boolean =
-    folder.storedLocation().let { stored -> stored == null || stored == state.target }
+  private fun maybeSwitched(state: MoveState): Boolean {
+    if (state.kind == MoveKind.CARD_RETURN) return state.switched
+    return folder.storedLocation().let { stored -> stored == null || stored == state.target }
+  }
+
+  private fun copyRoot(state: MoveState, targetRoot: File): File =
+    if (state.kind == MoveKind.CARD_RETURN) CardReturn.stagingRoot(targetRoot) else targetRoot
+
+  private fun copyPath(state: MoveState, path: String): String =
+    if (state.kind == MoveKind.CARD_RETURN) CardReturn.stagedPath(path) else path
 
   @Synchronized
   fun finishLeftovers(): Boolean {
@@ -280,21 +301,21 @@ class MoveRunner(
 
   private fun deleted(root: File, relativePath: String): Boolean =
     try {
-      deleteCopy(root, relativePath)
+      MoveFiles.deleteCopy(root, relativePath)
       true
     } catch (e: IOException) {
       false
     }
 
-  private fun parkCopies(card: DataFolderLocation.Card, state: MoveState) {
-    leftovers.record(card.volumeUuid, state.files.map { it.path })
+  private fun parkCopies(card: DataFolderLocation.Card, paths: List<String>) {
+    leftovers.record(card.volumeUuid, paths)
     journal.clear()
   }
 
   private fun parkIfSourceGone(state: MoveState): Boolean {
     val card = state.source as? DataFolderLocation.Card ?: return false
     if (mountedRoot(card) != null) return false
-    parkCopies(card, state)
+    parkCopies(card, state.files.map { it.path })
     return true
   }
 
@@ -302,7 +323,7 @@ class MoveRunner(
     if (parkIfSourceGone(state)) throw Stop(MoveOutcome.CleanupDeferred)
     val sourceRoot = mountedRoot(state.source) ?: throw Stop(MoveOutcome.Failed(MoveFailure.SOURCE_UNAVAILABLE))
     if (!gate.released(sourceRoot)) throw Stop(MoveOutcome.AwaitingRelease)
-    state.files.forEach { deleteCopy(sourceRoot, it.path) }
+    state.files.forEach { MoveFiles.deleteCopy(sourceRoot, it.path) }
     return save(state.copy(phase = MovePhase.DONE))
   }
 
@@ -313,29 +334,15 @@ class MoveRunner(
       val targetRoot = mountedRoot(state.target)
       val card = state.target as? DataFolderLocation.Card
       if (targetRoot == null && card != null) {
-        parkCopies(card, state)
+        parkCopies(card, state.files.map { copyPath(state, it.path) })
         return true
       }
       targetRoot ?: return false
-      state.files.forEach { deleteCopy(targetRoot, it.path) }
+      val copyRoot = copyRoot(state, targetRoot)
+      state.files.forEach { MoveFiles.deleteCopy(copyRoot, it.path) }
     }
     journal.clear()
     return true
-  }
-
-  private fun deleteCopy(root: File, relativePath: String) {
-    val file = LibraryPaths.resolve(root, relativePath)
-    DurableFiles.partOf(file).delete()
-    if (file.exists() && !file.delete()) throw IOException("Could not delete $relativePath")
-    pruneEmptyParents(root.canonicalFile, file.parentFile)
-  }
-
-  private fun pruneEmptyParents(root: File, from: File?) {
-    var dir = from
-    while (dir != null && dir != root && dir.parentFile != root && dir.list()?.isEmpty() == true) {
-      dir.delete()
-      dir = dir.parentFile
-    }
   }
 
   private fun roots(state: MoveState): Pair<File, File> {
@@ -362,7 +369,5 @@ class MoveRunner(
 
   companion object {
     const val FREE_SPACE_MARGIN_BYTES = 128L * 1024 * 1024
-    private const val PROBE_FILE_NAME = ".move-probe"
-    private val PROBE_BYTES = "kitbag".toByteArray()
   }
 }

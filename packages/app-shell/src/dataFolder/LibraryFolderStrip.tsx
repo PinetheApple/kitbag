@@ -14,8 +14,11 @@ import {
   type IconName,
 } from '@kitbag/core-design';
 import {
+  offeredCards,
+  returnSourceMissing,
   useDataFolder,
   useSongLibrary,
+  type DataFolderStore,
   type LibraryView,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, type ReactNode } from 'react';
@@ -26,11 +29,13 @@ import {
   type PressableStateCallbackType,
 } from 'react-native';
 
-import { PERCENT } from '../settings/dataFolderText.ts';
+import { MOVE, PERCENT } from '../settings/dataFolderText.ts';
 import { libraryStrip } from './libraryStrip.ts';
 import { unavailableCount } from './libraryStripCount.ts';
 
 const FIX = 'Fix';
+
+const firstOffered = (state: DataFolderStore) => offeredCards(state)[0] ?? null;
 
 const useStyles = createThemedStyles((theme) => ({
   strip: {
@@ -101,20 +106,58 @@ export interface LibraryFolderStripProps {
   readonly view: LibraryView;
   readonly onOpenDataFolder: () => void;
   readonly onFix: () => void;
+  readonly onOfferReturn: (volumeUuid: string) => void;
+}
+
+function StripButton({
+  label,
+  title,
+  onPress,
+}: {
+  readonly label: string;
+  readonly title: string;
+  readonly onPress: () => void;
+}) {
+  const styles = useStyles();
+  return (
+    <View style={styles.fix}>
+      <Button
+        variant="tonal"
+        size="small"
+        label={label}
+        accessibilityLabel={`${label}: ${title}`}
+        onPress={onPress}
+      />
+    </View>
+  );
 }
 
 export function LibraryFolderStrip({
   view,
   onOpenDataFolder,
   onFix,
+  onOfferReturn,
 }: LibraryFolderStripProps) {
   const styles = useStyles();
   const move = useDataFolder((s) => s.move);
   const volumes = useDataFolder((s) => s.volumes);
+  const offered = useDataFolder(firstOffered);
+  const sourceMissing = useDataFolder(returnSourceMissing);
   const unavailable = useSongLibrary((s) =>
     unavailableCount(s.rows, s.rowFiles, view),
   );
-  const strip = libraryStrip({ move, volumes, unavailable, view });
+  const strip = libraryStrip({
+    move,
+    volumes,
+    unavailable,
+    view,
+    offered,
+    sourceMissing,
+  });
+  const returnedCard = strip.kind === 'returned' ? strip.volumeUuid : null;
+  const offerReturn = useCallback(() => {
+    if (returnedCard !== null) onOfferReturn(returnedCard);
+  }, [onOfferReturn, returnedCard]);
   const pressable = useCallback(
     ({ pressed }: PressableStateCallbackType) => [
       styles.strip,
@@ -123,28 +166,26 @@ export function LibraryFolderStrip({
     [styles],
   );
   if (strip.kind === 'none') return null;
-  if (strip.kind === 'missing')
+  if (strip.kind === 'missing' || strip.kind === 'returned') {
+    const missing = strip.kind === 'missing';
     return (
       <View accessibilityLiveRegion="polite" style={styles.strip}>
         <StripBody
           icon="sdCard"
-          bad
+          bad={missing}
           title={strip.title}
           detail={strip.detail}
           trailing={
-            <View style={styles.fix}>
-              <Button
-                variant="tonal"
-                size="small"
-                label={FIX}
-                accessibilityLabel={`${FIX}: ${strip.title}`}
-                onPress={onFix}
-              />
-            </View>
+            <StripButton
+              label={missing ? FIX : MOVE}
+              title={strip.title}
+              onPress={missing ? onFix : offerReturn}
+            />
           }
         />
       </View>
     );
+  }
   return (
     <Pressable
       accessibilityRole="button"
