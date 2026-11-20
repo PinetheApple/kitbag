@@ -22,6 +22,7 @@ import com.kitbag.corenative.library.AnalysisTarget
 import com.kitbag.corenative.library.BackupShare
 import com.kitbag.corenative.library.ClickSoundFiles
 import com.kitbag.corenative.library.DataFolder
+import com.kitbag.corenative.library.DatabaseCopies
 import com.kitbag.corenative.library.DocumentPicker
 import com.kitbag.corenative.library.ExportFiles
 import com.kitbag.corenative.library.FileShare
@@ -60,6 +61,8 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     ::rejectLogged,
   )
   private val volumes = VolumeWatcher(reactContext, ::onVolumesChanged)
+  private val databaseCopies =
+    DatabaseCopies(reactContext::getDatabasePath) { message, cause -> Log.w(TAG, message, cause) }
 
   private val listener: (AnalysisResult) -> Unit = ::emitAnalysis
 
@@ -410,6 +413,14 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       }
     }
   }
+
+  override fun databaseFreeBytes(databaseName: String): Double = databaseCopies.freeBytes(databaseName)
+
+  override fun removeDatabaseCopy(databaseName: String, fileName: String): Boolean =
+    databaseCopies.remove(databaseName, fileName)
+
+  override fun replaceDatabaseCopy(databaseName: String, partName: String, fileName: String): Boolean =
+    databaseCopies.replace(databaseName, partName, fileName)
 
   override fun storageReport(databaseName: String, promise: Promise) {
     io.execute {
