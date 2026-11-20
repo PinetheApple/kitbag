@@ -19,7 +19,7 @@ import { StemNameEditor } from './StemNameEditor.tsx';
 import { StemToggle } from './StemToggle.tsx';
 import { useStemStyles } from './stemStyles.ts';
 
-export const WAVEFORM_BARS = 26;
+export const WAVEFORM_BARS = stemPlayer.waveBars;
 
 const useStyles = createThemedStyles(() => ({
   open: {

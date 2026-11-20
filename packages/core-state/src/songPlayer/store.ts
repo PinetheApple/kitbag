@@ -24,6 +24,11 @@ import {
   type MixerClick,
 } from '../stemPlayer/mixerClick.ts';
 import { ATTACHABLE, mixerSession } from '../stemPlayer/mixerSession.ts';
+import {
+  endedOnLastFrame,
+  songEnds,
+  startSong,
+} from '../stemPlayer/songEnd.ts';
 import { SCRUB_SEEK_DELAY_MS } from '../stemPlayer/store.ts';
 import { framesToSeconds, secondsToFrames } from '../stemPlayer/time.ts';
 import {
@@ -128,16 +133,22 @@ export function createSongPlayerStore(
       },
       teardownTracks,
       counting,
+      followsPlayOrder: true,
       resetState: () => {
         set(closedState);
       },
     });
     const { live, scrubSeek } = mixer;
+    const ends = songEnds(
+      () => endedOnLastFrame(get(), runtimeOf().engine, counting()),
+      mixer.current,
+    );
+    mixer.onSongEnded(ends.reported);
 
     mixer.onLastRelease({ keepsSong: () => get().status === 'ready' });
     const context = { set, get, runtimeOf, session: mixer.current };
     const presets = songPresetActions({ ...context, live });
-    const count = songCount(context, mixer, api, clickEngine);
+    const count = songCount(context, mixer, api, clickEngine, ends.pressedNext);
     const gridFollowers = { gridReplaced: count.gridReplaced };
     const card = songCard({
       ...context,
@@ -147,7 +158,10 @@ export function createSongPlayerStore(
       card: mixer.card,
     });
     const speed = songSpeed(context, count.rateSet);
-    mixer.onSongStopped(card.stopped);
+    mixer.onSongStopped(() => {
+      ends.stopped();
+      card.stopped();
+    });
 
     const waveform = songWaveform({ set, runtimeOf, live });
 
@@ -299,6 +313,24 @@ export function createSongPlayerStore(
       followLibrary(state.rows);
     });
 
+    const begin = (songId: number, bars: number) => {
+      const opened = mixer.begin();
+      detectedGrid = NO_GRID;
+      heldCorrection = null;
+      waveform.reset(bars);
+      set({
+        ...closedState,
+        ...clickSettings.seeded(closedState),
+        status: 'loading',
+        songId,
+      });
+      loading = load(opened, songId).catch((error: unknown) => {
+        console.warn('[kitbag] song failed to open', error);
+        if (live(opened)) set({ status: 'failed' });
+      });
+      return opened;
+    };
+
     return {
       ...closedState,
       open: (songId, bars) => {
@@ -308,21 +340,34 @@ export function createSongPlayerStore(
           const hold = mixer.hold(opened);
           return { hold, loaded: reread(opened, songId) };
         }
-        const opened = mixer.begin();
-        detectedGrid = NO_GRID;
-        heldCorrection = null;
-        waveform.reset(bars);
-        set({
-          ...closedState,
-          ...clickSettings.seeded(closedState),
-          status: 'loading',
-          songId,
-        });
-        loading = load(opened, songId).catch((error: unknown) => {
-          console.warn('[kitbag] song failed to open', error);
-          if (live(opened)) set({ status: 'failed' });
-        });
+        const opened = begin(songId, bars);
         return { hold: mixer.hold(opened), loaded: loading };
+      },
+      takeOver: (songId, bars) =>
+        startSong(
+          {
+            ends,
+            begin: (id) => begin(id, bars),
+            load: () => loading,
+            live,
+            ready: () => get().status === 'ready',
+            play: () => {
+              get().togglePlay();
+            },
+          },
+          songId,
+        ),
+      handOver: mixer.handOver,
+      onSongEnd: ends.subscribe,
+      songStillEnded: ends.stands,
+      stopAdvancing: () => {
+        if (!ends.gaveUp()) return;
+        if (mixer.hasHolders()) runtimeOf().commands.songTransportHide();
+        else mixer.close();
+      },
+      handToMetronome: () => {
+        runtimeOf().sharedMetronome.showStopped();
+        mixer.close();
       },
       close: mixer.close,
       onCardStop: mixer.onCardStop,

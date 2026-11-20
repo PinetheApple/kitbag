@@ -1,12 +1,14 @@
+import { playerWaveBars } from '@kitbag/core-design';
 import { KB_COUNT_IN_OFF } from '@kitbag/core-native';
 import {
+  autoAdvanceDeps,
   configureStemPlayer,
   endSessionOnCardStop,
   metronomeStore,
   songCountIn,
   startAutoAdvance,
   startCardOrder,
-  stopStemSongOnMetronomeLoad,
+  stopSongsForMetronome,
 } from '@kitbag/core-state';
 
 import { getDatabase } from './database.ts';
@@ -39,7 +41,7 @@ configureStemPlayer({
   },
 });
 
-startAutoAdvance();
+startAutoAdvance(autoAdvanceDeps(playerWaveBars));
 startCardOrder();
 endSessionOnCardStop();
-stopStemSongOnMetronomeLoad();
+stopSongsForMetronome();

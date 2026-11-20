@@ -12,6 +12,10 @@ import {
   useNotice,
   useQueueNotices,
   type AddedToSetlist,
+  type QueueAction,
+  type QueuePresses,
+  useQueueKeys,
+  useQueuePresses,
 } from '@kitbag/core-design';
 import {
   cleanName,
@@ -23,6 +27,7 @@ import {
   useSongLibrary,
   type AnalysisFailure,
   type LibraryRow,
+  type QueuedSong,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { View, type TextInput } from 'react-native';
@@ -98,61 +103,75 @@ function sheetNotice(
 }
 
 interface QueueButtonsProps {
-  readonly stemSetId: number;
-  readonly onPlayNext: () => void;
+  readonly song: LibraryRow;
+  readonly presses: QueuePresses;
   readonly onAddToSetlist: () => void;
 }
 
-function QueueButtons({
-  stemSetId,
-  onPlayNext,
-  onAddToSetlist,
-}: QueueButtonsProps) {
-  const queued = useIsQueued(stemSetId);
+function QueueButtons({ song, presses, onAddToSetlist }: QueueButtonsProps) {
+  const keys = useQueueKeys(presses, useIsQueued(song));
   return (
     <>
       <Button
-        label={queued ? QUEUE_TEXT.inUpNext : QUEUE_TEXT.playNext}
-        icon={queued ? 'inUpNext' : 'playNext'}
+        label={QUEUE_TEXT.playNext}
+        icon="playNext"
         iconSize="sheetButton"
         align="start"
         variant="tonal"
-        disabled={queued}
-        disabledLook="faded"
-        onPress={onPlayNext}
+        onPress={keys.playNext}
       />
       <Button
-        label={QUEUE_TEXT.addToSetlist}
-        icon="addToSetlist"
+        label={keys.addLabel}
+        icon="addToQueue"
         iconSize="sheetButton"
         align="start"
         variant="tonal"
-        onPress={onAddToSetlist}
+        onPress={keys.addToQueue}
       />
+      {song.kind === 'stems' ? (
+        <Button
+          label={QUEUE_TEXT.addToSetlist}
+          icon="addToSetlist"
+          iconSize="sheetButton"
+          align="start"
+          variant="tonal"
+          onPress={onAddToSetlist}
+        />
+      ) : null}
     </>
   );
 }
 
 interface ActionsSheetProps extends SheetProps {
-  readonly onPlayNext: (stemSetId: number) => void;
+  readonly onPlayNext: QueueAction<QueuedSong>;
+  readonly onAddToQueue: QueueAction<QueuedSong>;
 }
 
-function ActionsSheet({ menu, bottomInset, onPlayNext }: ActionsSheetProps) {
+function ActionsSheet({
+  menu,
+  bottomInset,
+  onPlayNext,
+  onAddToQueue,
+}: ActionsSheetProps) {
   const styles = useStyles();
   const reanalyze = useSongLibrary((s) => s.reanalyze);
   const { target, close, openRename, openDelete, openSetlists } = menu;
   const failure = useRowFailure(target);
   const away = useRowFiles(target) === 'unavailable';
   const failureNotice = sheetNotice(failure, away);
-  const stemSetId = target?.kind === 'stems' && !away ? target.id : null;
   const retry = useCallback(() => {
     close();
     if (target?.kind === 'song') void reanalyze(target.id);
   }, [close, reanalyze, target]);
-  const playNext = useCallback(() => {
-    close();
-    if (stemSetId !== null) onPlayNext(stemSetId);
-  }, [close, onPlayNext, stemSetId]);
+  const row = useMemo(
+    () => (target === null ? null : { song: target, title: target.title }),
+    [target],
+  );
+  const actions = useMemo(
+    () => ({ playNext: onPlayNext, addToQueue: onAddToQueue }),
+    [onPlayNext, onAddToQueue],
+  );
+  const presses = useQueuePresses<QueuedSong>(actions, row, close);
   const title = target?.title ?? '';
   return (
     <Sheet
@@ -166,10 +185,10 @@ function ActionsSheet({ menu, bottomInset, onPlayNext }: ActionsSheetProps) {
         <SheetHint>{failureNotice.text}</SheetHint>
       )}
       <View style={styles.stack}>
-        {stemSetId === null ? null : (
+        {target === null || away ? null : (
           <QueueButtons
-            stemSetId={stemSetId}
-            onPlayNext={playNext}
+            song={target}
+            presses={presses}
             onAddToSetlist={openSetlists}
           />
         )}
@@ -347,22 +366,21 @@ function SetlistsSheet({ menu, bottomInset, onAdded }: SetlistsSheetProps) {
 }
 
 interface LibrarySheetsProps extends SheetProps {
-  readonly stemRows: boolean;
   readonly onOpenSetlist: (setlistId: number) => void;
 }
 
-export function LibrarySheets({
-  stemRows,
-  onOpenSetlist,
-  ...props
-}: LibrarySheetsProps) {
+export function LibrarySheets({ onOpenSetlist, ...props }: LibrarySheetsProps) {
   const notice = useNotice();
-  useQueueRefresh(stemRows);
+  useQueueRefresh();
   const queueSong = useQueueSong();
   const queue = useQueueNotices(notice, queueSong, onOpenSetlist);
   return (
     <>
-      <ActionsSheet {...props} onPlayNext={queue.playNext} />
+      <ActionsSheet
+        {...props}
+        onPlayNext={queue.playNext}
+        onAddToQueue={queue.addToQueue}
+      />
       <RenameSheet {...props} />
       <DeleteSheet {...props} />
       <SetlistsSheet {...props} onAdded={queue.added} />

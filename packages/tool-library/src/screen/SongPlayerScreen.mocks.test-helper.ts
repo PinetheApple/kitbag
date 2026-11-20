@@ -203,7 +203,10 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
       },
     };
   };
+  const { createStore } = await import('zustand/vanilla');
   return {
+    ARRIVAL: { arriving: 'arriving' },
+    arrivalStore: createStore(() => ({ arrival: null })),
     GRID_METERS: [3, 4],
     isGridMeter: (meter: number) => [3, 4].includes(meter),
     NO_METER_OVERRIDE: { meterBeatsPerBar: null, barOneSeconds: null },

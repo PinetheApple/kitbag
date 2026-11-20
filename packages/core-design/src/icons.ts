@@ -91,7 +91,7 @@ export const iconGlyphs = {
   tempoCorrection: 'arrow-expand-horizontal',
   delete: 'trash-can-outline',
   playNext: 'playlist-play',
-  inUpNext: 'playlist-check',
+  addToQueue: 'format-list-group-plus',
   addToSetlist: 'playlist-plus',
   clearQueue: 'playlist-remove',
 } as const satisfies Record<string, VectorGlyph>;

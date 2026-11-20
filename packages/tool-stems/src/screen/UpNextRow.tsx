@@ -11,8 +11,8 @@ import {
 } from '@kitbag/core-design';
 import {
   usePlayOrder,
+  useLibrarySongs,
   useStage,
-  useStemSongs,
   useUpNext,
 } from '@kitbag/core-state';
 import { Pressable, Text, View } from 'react-native';
@@ -49,13 +49,13 @@ export function UpNextRow({ onOpenSheet, onNext }: UpNextRowProps) {
   const next = useUpNext();
   const queueLength = usePlayOrder((s) => s.queue.length);
   const { stage, name } = useStage();
-  const stems = useStemSongs();
+  const library = useLibrarySongs();
   if (next === undefined) return null;
   const text = upNextText(next, {
     queueLength,
     stage,
     setlistName: name,
-    stems,
+    library,
   });
   return (
     <View style={styles.row}>

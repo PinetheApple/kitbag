@@ -54,6 +54,7 @@ import { SongMeter } from './SongMeter.tsx';
 import { SongPlayerMenu } from './SongPlayerMenu.tsx';
 import { SongTempoCorrection } from './SongTempoCorrection.tsx';
 import { SongTransport } from './SongTransport.tsx';
+import { useFollowQueueArrivals } from './useFollowQueueArrivals.ts';
 import { useLeaveOnStop } from './useLeaveOnStop.ts';
 import { useLoopHandles } from './useLoopHandles.ts';
 import { NotReady } from './NotReady.tsx';
@@ -66,6 +67,8 @@ export interface SongPlayerScreenProps {
   readonly focused: boolean;
   readonly insets: { readonly top: number; readonly bottom: number };
   readonly onBack: () => void;
+  readonly onOpenStemSet: (stemSetId: number) => void;
+  readonly onOpenSong: (songId: number) => void;
   readonly usePlayhead: UsePlayhead;
 }
 
@@ -309,6 +312,8 @@ export function SongPlayerScreen({
   focused,
   insets,
   onBack,
+  onOpenStemSet,
+  onOpenSong,
   usePlayhead,
 }: SongPlayerScreenProps) {
   const styles = useStyles();
@@ -318,7 +323,12 @@ export function SongPlayerScreen({
     [open, songId],
   );
   useFocusedMixerHold(focused, acquire);
-  const leave = useLeaveOnStop(focused, onBack);
+  const follow = useMemo(
+    () => ({ songId, onOpenStemSet, onOpenSong }),
+    [songId, onOpenStemSet, onOpenSong],
+  );
+  const { leave, markLeft } = useLeaveOnStop(focused, onBack, songId);
+  useFollowQueueArrivals(focused, follow, markLeft);
   const [menuOpen, setMenuOpen] = useState(false);
   const openMenu = useCallback(() => {
     setMenuOpen(true);

@@ -14,8 +14,9 @@ export type AdvanceOutcome =
 
 type EndSlice = Pick<
   StemPlayerState,
-  'status' | 'durationFrames' | 'engineRate' | 'retime'
->;
+  'status' | 'durationFrames' | 'engineRate'
+> &
+  Partial<Pick<StemPlayerState, 'retime'>>;
 
 // By the time the end report arrives a press may have restarted the song or
 // another song may have opened.
@@ -24,7 +25,8 @@ export function endedOnLastFrame(
   engine: StemPlayerEngine,
   counting: boolean,
 ): boolean {
-  if (song.status !== 'ready' || song.retime.kind === 'recording') return false;
+  if (song.status !== 'ready' || song.retime?.kind === 'recording')
+    return false;
   if (counting || engine.playing()) return false;
   return (
     engine.position() >= restartFromFrame(song.durationFrames, song.engineRate)
@@ -100,20 +102,19 @@ export type SongEnds = ReturnType<typeof songEnds>;
 
 export interface AdvanceSteps {
   readonly ends: SongEnds;
-  readonly begin: (setId: number) => number;
-  readonly load: (opened: number, setId: number) => Promise<void>;
+  readonly begin: (id: number) => number;
+  readonly load: (opened: number, id: number) => Promise<void>;
   readonly live: (opened: number) => boolean;
   readonly ready: () => boolean;
   readonly play: () => void;
 }
 
-export async function advanceSong(
+export async function startSong(
   steps: AdvanceSteps,
-  setId: number,
+  id: number,
 ): Promise<AdvanceOutcome> {
-  if (!steps.ends.stands()) return ADVANCE_OUTCOME.displaced;
-  const opened = steps.begin(setId);
-  await steps.load(opened, setId);
+  const opened = steps.begin(id);
+  await steps.load(opened, id);
   if (!steps.live(opened)) return ADVANCE_OUTCOME.displaced;
   if (!steps.ready()) {
     steps.ends.unopened(opened);
@@ -123,4 +124,12 @@ export async function advanceSong(
   if (steps.ends.stoppedSince(opened)) return ADVANCE_OUTCOME.stopped;
   steps.play();
   return ADVANCE_OUTCOME.playing;
+}
+
+export function advanceSong(
+  steps: AdvanceSteps,
+  id: number,
+): Promise<AdvanceOutcome> {
+  if (!steps.ends.stands()) return Promise.resolve(ADVANCE_OUTCOME.displaced);
+  return startSong(steps, id);
 }

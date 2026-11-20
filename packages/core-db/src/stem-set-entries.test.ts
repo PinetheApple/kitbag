@@ -36,8 +36,8 @@ async function seed(repos: Repositories) {
   await repos.setlists.addStemSet(gig.id, old);
   await repos.setlists.addStemSet(gig.id, kept);
   await repos.setlists.addStemSet(gig.id, old);
-  await repos.playQueue.add(kept);
-  await repos.playQueue.add(old);
+  await repos.playQueue.add({ kind: 'stems', id: kept });
+  await repos.playQueue.add({ kind: 'stems', id: old });
   const entries = async () => ({
     setlist: (await repos.setlists.items(gig.id)).map((item) => item.stemSetId),
     queue: (await repos.playQueue.list()).map((entry) => entry.stemSetId),

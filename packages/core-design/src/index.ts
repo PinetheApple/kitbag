@@ -73,6 +73,7 @@ export * from './components/useAfterSheetClosed.ts';
 export * from './components/Snackbar.tsx';
 export * from './components/useNotice.ts';
 export * from './components/useQueueNotices.ts';
+export * from './components/useQueuePresses.ts';
 export * from './components/NoticeSnackbar.tsx';
 export * from './components/SetlistPickerSheet.tsx';
 export * from './components/SwipeDeleteRow.tsx';

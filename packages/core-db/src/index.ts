@@ -16,9 +16,13 @@ export {
   type SongPresetRepository,
 } from './client';
 export type { LinkedPresetValues } from './song-preset-repository';
-export type {
-  PlayQueueEntry,
-  PlayQueueRepository,
+export {
+  queueColumnsOf,
+  queuedSongOf,
+  sameQueuedSong,
+  type PlayQueueEntry,
+  type PlayQueueRepository,
+  type QueuedSong,
 } from './play-queue-repository';
 export type { Preferences } from './preferences';
 export { COUNT_IN_PREFERENCE_KEYS } from './count-in-preferences';

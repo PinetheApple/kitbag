@@ -27,7 +27,7 @@ const gig: OnStage = {
 };
 const alone: OnStage = { setlistId: null, entries: [], skipped: [] };
 const queued: PlayQueueEntry[] = [
-  { id: 1, stemSetId: QUEUED_SET_ID, position: 0 },
+  { id: 1, stemSetId: QUEUED_SET_ID, songId: null, position: 0 },
 ];
 const at = (itemId: number): PlayOrder => ({
   queue: [],

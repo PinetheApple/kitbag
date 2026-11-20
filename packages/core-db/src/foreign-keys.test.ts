@@ -107,9 +107,20 @@ describe('foreign keys on the app connection', () => {
     );
     const gig = await database.setlists.create('Gig');
     await database.setlists.addStemSet(gig.id, 7);
-    await database.playQueue.add(7);
+    await database.playQueue.add({ kind: 'stems', id: 7 });
     await connection.execute('DELETE FROM stem_sets WHERE id = 7');
     expect(await database.setlists.items(gig.id)).toEqual([]);
+    expect(await database.playQueue.list()).toEqual([]);
+    await database.close();
+  });
+
+  it('cascade a song delete into its queue entry', async () => {
+    const { database, connection } = openAppDatabase();
+    await connection.execute(
+      "INSERT INTO songs (id, title, artist, file_path, duration, format, created_at, uuid) VALUES (5, 'Hum', '', 's/h.mp3', 1, 'mp3', 0, 'h')",
+    );
+    await database.playQueue.add({ kind: 'song', id: 5 });
+    await connection.execute('DELETE FROM songs WHERE id = 5');
     expect(await database.playQueue.list()).toEqual([]);
     await database.close();
   });

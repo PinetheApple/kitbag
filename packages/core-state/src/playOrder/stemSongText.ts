@@ -3,7 +3,6 @@ import type { LibraryStemSetRow } from '@kitbag/core-db';
 import { isPresetEntry, type SetlistEntry } from '../library/snapshot.ts';
 
 import { bpmFact, shortKeyName } from '../stemPlayer/facts.ts';
-import { UP_NEXT_SOURCE, type UpNext } from './order.ts';
 import { formatClockSeconds } from '../text.ts';
 
 const FACT_SEPARATOR = ' · ';
@@ -26,19 +25,15 @@ export function entryName(entry: SetlistEntry, stems: StemSongs): string {
     : stemSongTitle(entry.stemSetId, stems);
 }
 
-export function upNextTitle(next: UpNext, stems: StemSongs): string {
-  return next.source === UP_NEXT_SOURCE.queue
-    ? stemSongTitle(next.stemSetId, stems)
-    : entryName(next.entry, stems);
-}
-
-function lengthOf(row: LibraryStemSetRow): string | null {
+export function songLengthFact(
+  row: Pick<LibraryStemSetRow, 'durationSec'>,
+): string | null {
   return row.durationSec > 0
     ? formatClockSeconds(Math.round(row.durationSec))
     : null;
 }
 
-function joined(parts: readonly (string | null)[]): string {
+export function joinedFacts(parts: readonly (string | null)[]): string {
   return parts
     .filter((part) => part !== null && part !== '')
     .join(FACT_SEPARATOR);
@@ -50,15 +45,19 @@ export function stemFacts(stemSetId: number, stems: StemSongs): string {
 }
 
 export function stemSongFacts(row: LibraryStemSetRow): string {
-  return joined([
-    lengthOf(row),
+  return joinedFacts([
+    songLengthFact(row),
     shortKeyName(row.key, row.scale),
     bpmFact(row.bpm)?.text ?? null,
   ]);
 }
 
 export function stemSongListFacts(row: LibraryStemSetRow): string {
-  return joined([row.artist, lengthOf(row), shortKeyName(row.key, row.scale)]);
+  return joinedFacts([
+    row.artist,
+    songLengthFact(row),
+    shortKeyName(row.key, row.scale),
+  ]);
 }
 
 export function stemSongsById(

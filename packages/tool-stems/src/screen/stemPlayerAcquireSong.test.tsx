@@ -63,7 +63,10 @@ vi.mock('./usePlayOrderNav.ts', () => ({
 }));
 vi.mock('./queueActions.tsx', () => ({
   SetlistSheet: () => nothing(),
-  useQueueActions: () => ({ playNext: nothing, added: nothing }),
+  useQueueActions: () => ({
+    presses: { playNext: nothing, addToQueue: nothing },
+    added: nothing,
+  }),
   useCarriedSkipNotice: () => nothing(),
 }));
 
@@ -85,6 +88,7 @@ describe('the stem player screen', () => {
         insets: INSETS,
         onBack: nothing,
         onOpenStemSet: nothing,
+        onOpenSong: nothing,
         onOpenMetronome: nothing,
         onOpenSetlist: nothing,
       }),

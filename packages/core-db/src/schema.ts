@@ -142,14 +142,25 @@ export const setlistItems = sqliteTable(
   ],
 );
 
-export const playQueue = sqliteTable('play_queue', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  stemSetId: integer('stem_set_id')
-    .notNull()
-    .unique()
-    .references(() => stemSets.id, { onDelete: 'cascade' }),
-  position: integer('position').notNull(),
-});
+export const playQueue = sqliteTable(
+  'play_queue',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    stemSetId: integer('stem_set_id')
+      .unique()
+      .references(() => stemSets.id, { onDelete: 'cascade' }),
+    songId: integer('song_id')
+      .unique()
+      .references(() => songs.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+  },
+  () => [
+    check(
+      'play_queue_one_song',
+      sql`(stem_set_id IS NULL) <> (song_id IS NULL)`,
+    ),
+  ],
+);
 
 export const tunings = sqliteTable('tunings', {
   id: integer('id').primaryKey({ autoIncrement: true }),

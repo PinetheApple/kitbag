@@ -2,26 +2,6 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { CLICK_RATE } from './click-rate';
 import {
-  MIGRATE_V7_TO_V8,
-  MIGRATE_V8_TO_V9,
-  MIGRATE_V9_TO_V10,
-  MIGRATE_V10_TO_V11,
-  MIGRATE_V11_TO_V12,
-  MIGRATE_V12_TO_V13,
-  MIGRATE_V13_TO_V14,
-  MIGRATE_V14_TO_V15,
-  MIGRATE_V15_TO_V16,
-  MIGRATE_V16_TO_V17,
-  MIGRATE_V17_TO_V18,
-  MIGRATE_V18_TO_V19,
-  MIGRATE_V19_TO_V20,
-  MIGRATE_V20_TO_V21,
-  MIGRATE_V21_TO_V22,
-  MIGRATE_V22_TO_V23,
-  MIGRATE_V23_TO_V24,
-  MIGRATE_V24_TO_V25,
-  MIGRATE_V25_TO_V26,
-  MIGRATE_V26_TO_V27,
   V7_SCHEMA_VERSION,
   V8_SCHEMA_VERSION,
   V9_SCHEMA_VERSION,
@@ -43,7 +23,33 @@ import {
   V25_SCHEMA_VERSION,
   V26_SCHEMA_VERSION,
   V27_SCHEMA_VERSION,
+  V28_SCHEMA_VERSION,
 } from './migrate';
+import {
+  MIGRATE_V14_TO_V15,
+  MIGRATE_V15_TO_V16,
+  MIGRATE_V16_TO_V17,
+} from './migrate-stems';
+import {
+  MIGRATE_V7_TO_V8,
+  MIGRATE_V8_TO_V9,
+  MIGRATE_V9_TO_V10,
+  MIGRATE_V10_TO_V11,
+  MIGRATE_V11_TO_V12,
+  MIGRATE_V12_TO_V13,
+  MIGRATE_V13_TO_V14,
+  MIGRATE_V17_TO_V18,
+  MIGRATE_V18_TO_V19,
+  MIGRATE_V19_TO_V20,
+  MIGRATE_V20_TO_V21,
+  MIGRATE_V21_TO_V22,
+  MIGRATE_V22_TO_V23,
+  MIGRATE_V23_TO_V24,
+  MIGRATE_V24_TO_V25,
+  MIGRATE_V25_TO_V26,
+  MIGRATE_V26_TO_V27,
+  MIGRATE_V27_TO_V28,
+} from './migrate-steps';
 
 const V7_DDL: readonly string[] = [
   `CREATE TABLE setlists (
@@ -375,5 +381,12 @@ export function buildV27Fixture(): DatabaseSync {
   const db = buildV26Fixture();
   applyInTransaction(db, MIGRATE_V26_TO_V27);
   db.exec(`PRAGMA user_version = ${String(V27_SCHEMA_VERSION)}`);
+  return db;
+}
+
+export function buildV28Fixture(): DatabaseSync {
+  const db = buildV27Fixture();
+  applyInTransaction(db, MIGRATE_V27_TO_V28);
+  db.exec(`PRAGMA user_version = ${String(V28_SCHEMA_VERSION)}`);
   return db;
 }

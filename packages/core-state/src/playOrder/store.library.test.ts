@@ -15,6 +15,7 @@ import {
   UP_NEXT_SOURCE,
 } from './order.ts';
 import { createPlayOrderStore, stageMarkOf } from './store.ts';
+import { stems } from './store.test-helper.ts';
 
 const EDITED_BPM = 150;
 
@@ -88,21 +89,21 @@ describe('the setlist Up next plays from', () => {
       context.gig,
     );
     expect(library.getState().session).toBeNull();
-    await order.getState().enqueue(context.a);
+    await order.getState().enqueue(stems(context.a));
     expect(laterFromSetlist(library)).toEqual([]);
     expect(order.getState().upNext()).toEqual({
       source: UP_NEXT_SOURCE.queue,
-      stemSetId: context.a,
+      song: stems(context.a),
     });
     expect(await order.getState().skipToNext()).toMatchObject({
-      advance: { kind: ADVANCE.play, stemSetId: context.a },
+      advance: { kind: ADVANCE.stems, stemSetId: context.a },
     });
     expect(order.getState().upNext()).toBeUndefined();
   });
 
   it('ends when a song starts from a list, keeping the queued songs', async () => {
     const { library, order, a, b } = await setup();
-    await order.getState().enqueue(b);
+    await order.getState().enqueue(stems(b));
     expect(laterFromSetlist(library)).toMatchObject([{ stemSetId: a }, {}]);
     library.getState().endSetlistSession();
     expect(laterFromSetlist(library)).toEqual([]);
@@ -111,7 +112,7 @@ describe('the setlist Up next plays from', () => {
 
   it('ends on Stop without a notice, keeping the queued songs and the pin', async () => {
     const { library, order, b, gig } = await setup();
-    await order.getState().enqueue(b);
+    await order.getState().enqueue(stems(b));
     library.getState().endListeningSession();
     expect(laterFromSetlist(library)).toEqual([]);
     expect(order.getState().queue).toMatchObject([{ stemSetId: b }]);
@@ -224,7 +225,7 @@ describe('play order on the library stage', () => {
   it('puts the stem entry it advances to on stage in the library', async () => {
     const { library, order, gig, a, first } = await setup();
     expect(await order.getState().advance()).toMatchObject({
-      kind: ADVANCE.play,
+      kind: ADVANCE.stems,
       stemSetId: a,
     });
     expect(library.getState().loaded).toEqual({
@@ -263,8 +264,8 @@ describe('play order on the library stage', () => {
     const { order, handle, a, b } = await setup();
     await deleteStemSet(handle.db, a);
     expect(await order.getState().skipToNext()).toMatchObject({
-      advance: { kind: ADVANCE.play, stemSetId: b },
-      skipped: true,
+      advance: { kind: ADVANCE.stems, stemSetId: b },
+      skipped: 'stems',
     });
   });
 
@@ -272,7 +273,7 @@ describe('play order on the library stage', () => {
     const { order, a } = await setup();
     expect(await order.getState().skipToNext()).toMatchObject({
       advance: { stemSetId: a },
-      skipped: false,
+      skipped: null,
     });
   });
 

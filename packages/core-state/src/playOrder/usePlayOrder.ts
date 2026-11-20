@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { queuedSongOf, sameQueuedSong, type QueuedSong } from '@kitbag/core-db';
+import { useEffect, useMemo } from 'react';
 import { useStore } from 'zustand';
 
 import { libraryStore } from '../library/store.ts';
@@ -19,34 +20,47 @@ export function usePlayOrder<T>(selector: (state: PlayOrderStore) => T): T {
 const QUEUE_READ_FAILED = '[kitbag] play queue read failed';
 const QUEUE_ADD_FAILED = '[kitbag] play queue add failed';
 
-export function useQueueRefresh(enabled: boolean) {
+export function useQueueRefresh() {
   const refresh = usePlayOrder((s) => s.refresh);
   useEffect(() => {
-    if (!enabled) return;
     refresh().catch((error: unknown) => {
       console.warn(QUEUE_READ_FAILED, error);
     });
-  }, [enabled, refresh]);
+  }, [refresh]);
 }
 
-export function useQueueSong() {
-  const enqueue = usePlayOrder((s) => s.enqueue);
-  return useCallback(
-    (stemSetId: number) =>
-      enqueue(stemSetId).then(
-        () => true,
-        (error: unknown) => {
-          console.warn(QUEUE_ADD_FAILED, error);
-          return false;
-        },
-      ),
-    [enqueue],
+export type QueueSong = (song: QueuedSong) => Promise<boolean>;
+
+export interface QueueSongs {
+  readonly playNext: QueueSong;
+  readonly addToQueue: QueueSong;
+}
+
+function reported(queue: (song: QueuedSong) => Promise<void>): QueueSong {
+  return (song) =>
+    queue(song).then(
+      () => true,
+      (error: unknown) => {
+        console.warn(QUEUE_ADD_FAILED, error);
+        return false;
+      },
+    );
+}
+
+export function useQueueSong(): QueueSongs {
+  const playNext = usePlayOrder((s) => s.playNext);
+  const addToQueue = usePlayOrder((s) => s.addToQueue);
+  return useMemo(
+    () => ({ playNext: reported(playNext), addToQueue: reported(addToQueue) }),
+    [playNext, addToQueue],
   );
 }
 
-export function useIsQueued(stemSetId: number | null): boolean {
+export function useIsQueued(song: QueuedSong | null): boolean {
   return usePlayOrder((s) =>
-    s.queue.some((entry) => entry.stemSetId === stemSetId),
+    s.queue.some(
+      (entry) => song !== null && sameQueuedSong(queuedSongOf(entry), song),
+    ),
   );
 }
 

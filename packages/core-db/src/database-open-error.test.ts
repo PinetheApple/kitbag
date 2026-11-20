@@ -10,11 +10,11 @@ import {
 } from './database-open-error.test-helper';
 import {
   migrate,
-  MIGRATE_V24_TO_V25,
   SCHEMA_VERSION,
   V24_SCHEMA_VERSION,
   type MigrationDriver,
 } from './migrate';
+import { MIGRATE_V24_TO_V25 } from './migrate-steps';
 import { buildV24Fixture, pragma, rows } from './migrate-fixtures.test-helper';
 import {
   SQLITE_CONSTRAINT_NOTNULL,

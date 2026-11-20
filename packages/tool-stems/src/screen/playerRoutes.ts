@@ -5,12 +5,18 @@ import { usePlayOrderNav, type PlayOrderRoutes } from './usePlayOrderNav.ts';
 
 export function usePlayerRoutes(
   onOpenStemSet: (stemSetId: number) => void,
+  onOpenSong: (songId: number) => void,
   onOpenMetronome: () => void,
 ) {
   const notice = useNotice();
   const routes = useMemo<PlayOrderRoutes>(
-    () => ({ onOpenStemSet, onOpenMetronome, onNotice: notice.showMessage }),
-    [onOpenStemSet, onOpenMetronome, notice.showMessage],
+    () => ({
+      onOpenStemSet,
+      onOpenSong,
+      onOpenMetronome,
+      onNotice: notice.showMessage,
+    }),
+    [onOpenStemSet, onOpenSong, onOpenMetronome, notice.showMessage],
   );
   const nav = usePlayOrderNav(routes);
   const skip = useCallback(() => {

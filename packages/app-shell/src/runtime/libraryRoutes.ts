@@ -29,6 +29,13 @@ export function useLibraryRoutes() {
       openSong: (id: number) => {
         router.navigate(`/library/${String(id)}`);
       },
+      // A player the queue hands over from must not stay under the next one: Back would reopen its song.
+      replaceSong: (id: number) => {
+        router.replace(`/library/${String(id)}`);
+      },
+      replaceStemSet: (id: number) => {
+        router.replace(`/stems/${String(id)}`);
+      },
       openPreset: (id: number) => {
         router.push(`/presets/${String(id)}`);
       },

@@ -10,6 +10,8 @@ import {
   stemPlayer,
   textRoles,
   textStyle,
+  useQueueKeys,
+  type QueuePresses,
 } from '@kitbag/core-design';
 import {
   exportBlock,
@@ -132,21 +134,28 @@ function ResetSpeedKeyRow({ onDone }: { readonly onDone: () => void }) {
 }
 
 interface QueueRowsProps {
-  readonly onPlayNext: () => void;
+  readonly queue: QueuePresses;
   readonly onAddToSetlist: () => void;
 }
 
-function QueueRows({ onPlayNext, onAddToSetlist }: QueueRowsProps) {
+function QueueRows({ queue, onAddToSetlist }: QueueRowsProps) {
   const styles = useStyles();
   const setId = useStemPlayer((s) => s.setId);
-  const queued = useIsQueued(setId);
+  const queued = useIsQueued(
+    setId === null ? null : { kind: 'stems', id: setId },
+  );
+  const keys = useQueueKeys(queue, queued);
   return (
     <View style={styles.divided}>
       <MenuRow
-        icon={queued ? 'inUpNext' : 'playNext'}
-        label={queued ? QUEUE_TEXT.inUpNext : QUEUE_TEXT.playNext}
-        disabled={queued}
-        onPress={onPlayNext}
+        icon="playNext"
+        label={QUEUE_TEXT.playNext}
+        onPress={keys.playNext}
+      />
+      <MenuRow
+        icon="addToQueue"
+        label={keys.addLabel}
+        onPress={keys.addToQueue}
       />
       <MenuRow
         icon="addToSetlist"
@@ -175,7 +184,7 @@ export function PlayerMenu({
   onMeter,
   onTempo,
   onClick,
-  onPlayNext,
+  queue,
   onAddToSetlist,
 }: PlayerMenuProps) {
   const styles = useStyles();
@@ -192,7 +201,7 @@ export function PlayerMenu({
       bottomInset={bottomInset}
       onDismiss={onClose}
     >
-      <QueueRows onPlayNext={onPlayNext} onAddToSetlist={onAddToSetlist} />
+      <QueueRows queue={queue} onAddToSetlist={onAddToSetlist} />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Reset mix: every level to 0 dB, nothing muted or soloed"

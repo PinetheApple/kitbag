@@ -6,6 +6,7 @@ import {
   UP_NEXT_SOURCE,
   upNextTitle,
   type OnStage,
+  type LibrarySongs,
   type SetlistEntry,
   type StemSongs,
   type UpNext,
@@ -18,7 +19,7 @@ export interface UpNextContext {
   readonly queueLength: number;
   readonly stage: OnStage;
   readonly setlistName: string;
-  readonly stems: StemSongs;
+  readonly library: LibrarySongs;
 }
 
 export interface UpNextText {
@@ -45,7 +46,7 @@ function setlistSource(entry: SetlistEntry, context: UpNextContext): string {
 }
 
 export function upNextText(next: UpNext, context: UpNextContext): UpNextText {
-  const title = upNextTitle(next, context.stems);
+  const title = upNextTitle(next, context.library);
   if (next.source === UP_NEXT_SOURCE.queue)
     return {
       title,

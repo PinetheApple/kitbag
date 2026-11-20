@@ -74,7 +74,7 @@ const playingNow = (
   change: Partial<Pick<PlayingEvent, 'place' | 'skipped'>> = {},
 ): PlayingEvent => ({
   kind: ARRIVAL.playing,
-  stemSetId,
+  song: { kind: 'stems', id: stemSetId },
   place: null,
   skipped: null,
   ...change,
@@ -87,7 +87,7 @@ async function advanced(
 ) {
   p.endSong(at(SONG_SECONDS));
   p.records.readStemSet.mockResolvedValueOnce(song);
-  arrive({ kind: ARRIVAL.arriving, stemSetId: song.id });
+  arrive({ kind: ARRIVAL.arriving, song: { kind: 'stems', id: song.id } });
   await act(async () => {
     await p.store.getState().advanceTo(song.id);
   });
@@ -144,7 +144,7 @@ describe('the player after an auto-advance', () => {
 
   it('follows as soon as the next song is picked', async () => {
     const p = await mountTracked();
-    arrive({ kind: ARRIVAL.arriving, stemSetId: NIGHT_BUS });
+    arrive({ kind: ARRIVAL.arriving, song: { kind: 'stems', id: NIGHT_BUS } });
     expect(p.routes.onOpenStemSet).toHaveBeenCalledWith(NIGHT_BUS);
   });
 
@@ -200,7 +200,7 @@ describe('the player after an auto-advance', () => {
 
   it('says it skipped a song that would not open', async () => {
     const p = await mountTracked();
-    await advanced(p, { skipped: SKIP.unopened });
+    await advanced(p, { skipped: { reason: SKIP.unopened, kind: 'stems' } });
     expect(p.has(SKIPPED_UNOPENED_STEM_SONG)).toBe(true);
   });
 
@@ -208,17 +208,21 @@ describe('the player after an auto-advance', () => {
     const p = await mountTracked();
     p.endSong(at(SONG_SECONDS));
     p.records.readStemSet.mockResolvedValueOnce(undefined);
-    arrive({ kind: ARRIVAL.arriving, stemSetId: NIGHT_BUS });
+    arrive({ kind: ARRIVAL.arriving, song: { kind: 'stems', id: NIGHT_BUS } });
     await act(async () => {
       await p.store.getState().advanceTo(NIGHT_BUS);
     });
     const harbour = { ...nightBus, id: HARBOUR, title: 'Harbour' };
     p.records.readStemSet.mockResolvedValueOnce(harbour);
-    arrive({ kind: ARRIVAL.arriving, stemSetId: HARBOUR });
+    arrive({ kind: ARRIVAL.arriving, song: { kind: 'stems', id: HARBOUR } });
     await act(async () => {
       await p.store.getState().advanceTo(HARBOUR);
     });
-    arrive(playingNow(HARBOUR, { skipped: SKIP.unopened }));
+    arrive(
+      playingNow(HARBOUR, {
+        skipped: { reason: SKIP.unopened, kind: 'stems' },
+      }),
+    );
     await flush();
     expect(p.texts().some((text) => text.startsWith('Playing'))).toBe(false);
     expect(p.has(SKIPPED_UNOPENED_STEM_SONG)).toBe(true);

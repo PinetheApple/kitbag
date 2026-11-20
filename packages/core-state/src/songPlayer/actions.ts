@@ -20,6 +20,12 @@ export type SongPlayerActions = Pick<
   | 'moveLoopEdge'
   | 'toggleClick'
   | 'setSpeed'
+  | 'onSongEnd'
+  | 'songStillEnded'
+  | 'stopAdvancing'
+  | 'handToMetronome'
+  | 'handOver'
+  | 'takeOver'
 > &
   SongClickActions & {
     readonly open: (songId: number, waveformBars: number) => SongSession;

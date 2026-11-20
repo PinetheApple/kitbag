@@ -34,4 +34,5 @@ export {
 } from '@kitbag/core-db/src/tempo-correction';
 export * from './dataFolder/movingRow.ts';
 export * from './songLibrary/rowKey.ts';
-export { stemSongTitle, upNextTitle } from './playOrder/stemSongText.ts';
+export { stemSongTitle } from './playOrder/stemSongText.ts';
+export { upNextTitle } from './playOrder/queuedSongText.ts';

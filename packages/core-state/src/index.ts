@@ -292,12 +292,14 @@ export {
   upNext,
   type Advance,
   type OnStage,
+  type PlayerKind,
   type PlayOrder,
   type UpNext,
 } from './playOrder/order.ts';
 export {
   createPlayOrderStore,
   playOrderStore,
+  QUEUE_FRONT,
   type PlayOrderStore,
   type SkipResult,
 } from './playOrder/store.ts';
@@ -308,26 +310,29 @@ export {
   useQueueSong,
   useStage,
   useUpNext,
+  type QueueSong,
+  type QueueSongs,
   type Stage,
 } from './playOrder/usePlayOrder.ts';
-export { bindStemSetRemovals } from './playOrder/stemSetRemovals.ts';
+export { bindLibraryRemovals } from './playOrder/libraryRemovals.ts';
 export {
   ARRIVAL,
   arrivalStore,
-  SKIP,
+  autoAdvanceDeps,
+  handOverQueued,
   startAutoAdvance,
   type Arrival,
   type ArrivalEvent,
   type ArrivalState,
   type SetlistPlace,
-  type Skip,
+  type WaveformBars,
 } from './playOrder/autoAdvance.ts';
 export { startCardOrder } from './playOrder/cardOrder.ts';
 export {
   endSessionOnCardStop,
   stopSongAndSession,
 } from './playOrder/listeningSession.ts';
-export { stopStemSongOnMetronomeLoad } from './playOrder/metronomeTakeover.ts';
+export { stopSongsForMetronome } from './playOrder/metronomeTakeover.ts';
 export {
   entryName,
   SKIPPED_STEM_SONG,
@@ -335,14 +340,28 @@ export {
   STEMS_BADGE,
   stemSongTitle,
   UNKNOWN_STEM_SONG,
-  upNextTitle,
   type StemSongs,
   stemFacts,
   stemSongFacts,
   stemSongListFacts,
   stemSongsById,
 } from './playOrder/stemSongText.ts';
+export {
+  queuedSongFacts,
+  queuedSongTitle,
+  SKIP,
+  SKIPPED_SONG,
+  SKIPPED_UNOPENED_SONG,
+  skippedText,
+  UNKNOWN_SONG,
+  upNextTitle,
+  type LibrarySongs,
+  type SingleSongs,
+  type Skip,
+  type SkippedSong,
+} from './playOrder/queuedSongText.ts';
 export { useStemSongs } from './playOrder/useStemSongs.ts';
+export { useLibrarySongs } from './playOrder/useLibrarySongs.ts';
 export {
   configurePlayOrder,
   type PlayOrderRepositories,
@@ -358,6 +377,7 @@ export {
   toBlob,
 } from './library/presetMapping.ts';
 export type { Setlist, SetlistItem, SongPreset } from '@kitbag/core-db';
+export { queuedSongOf, sameQueuedSong, type QueuedSong } from '@kitbag/core-db';
 export { useSongLibrary } from './songLibrary/useSongLibrary.ts';
 export {
   createSongLibraryStore,

@@ -21,9 +21,12 @@ import {
   entriesAfter,
   entryName,
   isPresetEntry,
+  queuedSongFacts,
+  queuedSongOf,
+  queuedSongTitle,
   STEMS_BADGE,
   stemFacts,
-  stemSongTitle,
+  useLibrarySongs,
   usePlayOrder,
   useStage,
   useStemPlayer,
@@ -31,6 +34,7 @@ import {
   useStemSongs,
   type LeftSetlist,
   type PlayOrderStore,
+  type QueuedSong,
   type SetlistEntry,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
@@ -40,6 +44,7 @@ import { clearQueueBody, setlistRowSubtitle } from '../logic/upNextText.ts';
 import { UP_NEXT } from './UpNextRow.tsx';
 import {
   useLeaveAfterClose,
+  leaveForQueued,
   leaveOf,
   usePlayOrderNav,
   type PlayOrderRoutes,
@@ -93,36 +98,36 @@ interface QueuedRowProps {
   readonly entry: PlayQueueEntry;
   readonly index: number;
   readonly count: number;
-  readonly onPlay: (stemSetId: number) => void;
+  readonly onPlay: (song: QueuedSong) => void;
 }
 
 function QueuedRow({ entry, index, count, onPlay }: QueuedRowProps) {
   const styles = useStyles();
-  const stems = useStemSongs();
+  const library = useLibrarySongs();
   const moveQueued = usePlayOrder((s) => s.moveQueued);
   const removeQueued = usePlayOrder((s) => s.removeQueued);
-  const { stemSetId } = entry;
-  const title = stemSongTitle(stemSetId, stems);
+  const song = useMemo(() => queuedSongOf(entry), [entry]);
+  const title = queuedSongTitle(song, library);
   const onMove = useCallback(
     (_from: number, to: number) => {
-      void moveQueued(stemSetId, to);
+      void moveQueued(song, to);
     },
-    [moveQueued, stemSetId],
+    [moveQueued, song],
   );
   const reorder = useMemo(
     () => ({ index, count, onMove }),
     [index, count, onMove],
   );
   const play = useCallback(() => {
-    onPlay(stemSetId);
-  }, [onPlay, stemSetId]);
+    onPlay(song);
+  }, [onPlay, song]);
   const remove = useCallback(() => {
-    void removeQueued(stemSetId);
-  }, [removeQueued, stemSetId]);
+    void removeQueued(song);
+  }, [removeQueued, song]);
   return (
     <DragListRow
       title={title}
-      subtitle={stemFacts(stemSetId, stems)}
+      subtitle={queuedSongFacts(song, library)}
       reorder={reorder}
       trailing={
         <Pressable
@@ -181,7 +186,7 @@ function SetlistRow({ entry, setlistName, onOpen }: SetlistRowProps) {
 }
 
 interface UpNextListProps {
-  readonly onPlay: (stemSetId: number) => void;
+  readonly onPlay: (song: QueuedSong) => void;
   readonly onOpen: (entry: SetlistEntry) => void;
   readonly onDone: () => void;
   readonly onLeave: () => void;
@@ -215,7 +220,7 @@ function UpNextList({ onPlay, onOpen, onDone, onLeave }: UpNextListProps) {
         <EmptyState
           icon="playNext"
           title="Nothing queued"
-          reason="Use Play next on a stem song to queue it here. When this song ends, playback stops."
+          reason="Use Play next or Add to queue on a song. When this song ends, playback stops."
           actionLabel="Done"
           onAction={onDone}
         />
@@ -229,7 +234,7 @@ function UpNextList({ onPlay, onOpen, onDone, onLeave }: UpNextListProps) {
           <View style={styles.list}>
             {queue.map((entry, index) => (
               <QueuedRow
-                key={entry.stemSetId}
+                key={entry.id}
                 entry={entry}
                 index={index}
                 count={queue.length}
@@ -314,9 +319,9 @@ function useUpNextSheet(props: UpNextSheetProps) {
     });
   }, [leaveSetlist, onLeftSetlist]);
   const play = useCallback(
-    (stemSetId: number) => {
-      exit.leaveFor({ kind: 'stem', stemSetId });
-      void playQueued(stemSetId);
+    (song: QueuedSong) => {
+      exit.leaveFor(leaveForQueued(song));
+      void playQueued(song);
       onDismiss();
     },
     [playQueued, exit, onDismiss],

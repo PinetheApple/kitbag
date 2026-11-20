@@ -9,7 +9,13 @@ import {
   type AdvanceOutcome,
 } from '../stemPlayer/songEnd.ts';
 import { startAutoAdvance, type ArrivalState } from './autoAdvance.ts';
-import { closeDatabases, queuedIds, setup } from './store.test-helper.ts';
+import { restingPlayer } from './autoAdvance.test-helper.ts';
+import {
+  closeDatabases,
+  queuedIds,
+  setup,
+  stems,
+} from './store.test-helper.ts';
 
 afterEach(closeDatabases);
 
@@ -32,19 +38,23 @@ async function heldLoad() {
       }),
   );
   startAutoAdvance({
-    onSongEnd: (listener) => {
-      leave = listener;
-      return () => undefined;
+    players: {
+      stems: {
+        ...restingPlayer(),
+        onSongEnd: (listener) => {
+          leave = listener;
+          return () => undefined;
+        },
+        advanceTo,
+        stillEnded: () => standing,
+      },
+      song: restingPlayer(),
     },
-    advanceTo,
     peekNext: () => order.getState().peekNext(),
     commitNext: (next, stands) => order.getState().commitNext(next, stands),
     placeOf: () => null,
     candidates: () => order.getState().queue.length + SETLIST_CANDIDATES,
-    stillEnded: () => standing,
-    stopAdvancing: vi.fn(),
     commitOpen: (entry, stands) => order.getState().commitOpen(entry, stands),
-    handToMetronome: vi.fn(),
     arrivals: createStore<ArrivalState>(() => ({ arrival: null })),
   });
   const loading = async (cause: AdvanceCause) => {
@@ -68,7 +78,7 @@ describe.each(CAUSES)(
   (cause) => {
     it('leaves a queued song queued', async () => {
       const h = await heldLoad();
-      await h.order.getState().enqueue(h.c);
+      await h.order.getState().enqueue(stems(h.c));
       await h.loading(cause);
       h.anotherSongOpens();
       await h.loaded(ADVANCE_OUTCOME.displaced);
@@ -87,10 +97,11 @@ describe.each(CAUSES)(
 
     it('keeps the queue a song played from Up next left', async () => {
       const h = await heldLoad();
-      for (const id of [h.a, h.b, h.c]) await h.order.getState().enqueue(id);
+      for (const id of [h.a, h.b, h.c])
+        await h.order.getState().enqueue(stems(id));
       await h.loading(cause);
       h.anotherSongOpens();
-      await h.order.getState().playQueued(h.c);
+      await h.order.getState().playQueued(stems(h.c));
       await h.loaded(ADVANCE_OUTCOME.displaced);
       expect(queuedIds(h.order)).toEqual([]);
     });
@@ -109,7 +120,7 @@ describe.each(CAUSES)(
 
     it('moves on past a song that will not open', async () => {
       const h = await heldLoad();
-      await h.order.getState().enqueue(h.c);
+      await h.order.getState().enqueue(stems(h.c));
       await h.loading(cause);
       await h.loaded(ADVANCE_OUTCOME.unplayable);
       expect(queuedIds(h.order)).toEqual([]);

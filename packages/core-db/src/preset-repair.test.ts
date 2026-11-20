@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 
-import { V11_BASELINE } from './migrate';
+import { V11_BASELINE } from './migrate-steps';
 import { REPAIR_PRESETS } from './preset-repair';
 import { presetViolation } from './preset-rules';
 

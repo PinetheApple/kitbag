@@ -1,5 +1,5 @@
 import {
-  bindStemSetRemovals,
+  bindLibraryRemovals,
   configureLibrary,
   configurePlayOrder,
   libraryStore,
@@ -24,4 +24,4 @@ configurePlayOrder({
   },
 });
 
-bindStemSetRemovals(songLibraryStore, libraryStore, playOrderStore);
+bindLibraryRemovals(songLibraryStore, libraryStore, playOrderStore);

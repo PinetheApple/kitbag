@@ -30,6 +30,7 @@ import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
 import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
 import { mixerSession, type MixerHold } from './mixerSession.ts';
 import { mixSaver } from './mixSaver.ts';
+import { stemSongAdvance } from './stemSongAdvance.ts';
 import { stemSongHolds } from './stemSongHolds.ts';
 import {
   showCountOnSongCard,
@@ -40,7 +41,6 @@ import { retimeActions, retimeAnchor } from './retimeActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
 import { sortedSections } from './sections.ts';
 import {
-  advanceSong,
   endedOnLastFrame,
   songEnds,
   type AdvanceListener,
@@ -143,6 +143,11 @@ export interface StemPlayerActions {
   readonly open: (setId: number, waveformBars: number) => Promise<void>;
   readonly acquireSong: (setId: number, waveformBars: number) => MixerHold;
   readonly advanceTo: (setId: number) => Promise<AdvanceOutcome>;
+  readonly takeOver: (
+    setId: number,
+    waveformBars: number,
+  ) => Promise<AdvanceOutcome>;
+  readonly handOver: () => void;
   readonly onSongEnd: (listener: AdvanceListener) => () => void;
   readonly songStillEnded: () => boolean;
   readonly stopAdvancing: () => void;
@@ -413,6 +418,17 @@ export function createStemPlayerStore(
       }
     };
 
+    const advancing = stemSongAdvance({
+      mixer,
+      ends,
+      get,
+      set,
+      runtimeOf,
+      showLoading,
+      loadSession,
+      lastBars: () => waveformBars,
+    });
+
     return {
       ...closedState,
       exportState: NO_EXPORT,
@@ -428,32 +444,10 @@ export function createStemPlayerStore(
         void loadSession(acquired, setId, bars);
         return mixer.hold(acquired);
       },
-      advanceTo: (setId) =>
-        advanceSong(
-          {
-            ends,
-            begin: (id) => {
-              const opened = mixer.advance();
-              showLoading(id, id);
-              return opened;
-            },
-            load: (opened, id) => loadSession(opened, id, waveformBars),
-            live,
-            ready: () => get().status === 'ready',
-            play: () => {
-              get().togglePlay();
-              set({ advanceCountEnd: get().countEndFrame });
-            },
-          },
-          setId,
-        ),
+      ...advancing,
       onSongEnd: ends.subscribe,
       songStillEnded: ends.stands,
       stopAdvancing: holds.gaveUp,
-      handToMetronome: () => {
-        runtimeOf().sharedMetronome.showStopped();
-        mixer.close();
-      },
       close: mixer.close,
       onCardStop: mixer.onCardStop,
       ...mixActions(set, get, runtimeOf, saver),

@@ -6,6 +6,7 @@ import {
   space,
   type LoopHandles,
 } from '@kitbag/core-design';
+import { ARRIVAL, arrivalStore, type QueuedSong } from '@kitbag/core-state';
 import { act } from 'react';
 import type { ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -691,5 +692,84 @@ describe('the song click chips', () => {
       .findAllByType('Sheet' as never)
       .map((sheet) => sheet.props.title as string);
     expect(titles).toEqual(['Click for this song']);
+  });
+});
+
+describe('a song the queue hands over to', () => {
+  const HANDED_TO = 9;
+  let serial = 0;
+  const arriving = (song: QueuedSong) => {
+    serial++;
+    act(() => {
+      arrivalStore.setState({
+        arrival: { kind: ARRIVAL.arriving, song, serial },
+      });
+    });
+  };
+  const routes = () => ({
+    onBack: vi.fn(),
+    onOpenStemSet: vi.fn(),
+    onOpenSong: vi.fn(),
+  });
+
+  it('puts the stem player in place of this one, without going back', () => {
+    const own = routes();
+    const tree = mount(true, own);
+    arriving({ kind: 'stems', id: HANDED_TO });
+    display.song = CLOSED_SONG;
+    display.status = 'idle';
+    act(() => {
+      tree.update(screen(true, own));
+    });
+    expect(own.onOpenStemSet).toHaveBeenCalledExactlyOnceWith(HANDED_TO);
+    expect(own.onBack).not.toHaveBeenCalled();
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  it('moves this player onto the next single song, without going back', () => {
+    const own = routes();
+    const tree = mount(true, own);
+    arriving({ kind: 'song', id: HANDED_TO });
+    display.song = CLOSED_SONG;
+    display.status = 'idle';
+    act(() => {
+      tree.update(screen(true, own));
+    });
+    expect(own.onOpenSong).toHaveBeenCalledExactlyOnceWith(HANDED_TO);
+    expect(own.onOpenStemSet).not.toHaveBeenCalled();
+    expect(own.onBack).not.toHaveBeenCalled();
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  it('still goes back when the song it moved onto stops', () => {
+    const own = routes();
+    const tree = mount(true, own);
+    arriving({ kind: 'song', id: HANDED_TO });
+    act(() => {
+      tree.update(screen(true, { ...own, songId: HANDED_TO }));
+    });
+    display.song = CLOSED_SONG;
+    display.status = 'idle';
+    act(() => {
+      tree.update(screen(true, { ...own, songId: HANDED_TO }));
+    });
+    expect(own.onBack).toHaveBeenCalledOnce();
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  it('follows nothing while another screen covers it', () => {
+    const own = routes();
+    const tree = mount(false, own);
+    arriving({ kind: 'stems', id: HANDED_TO });
+    expect(own.onOpenStemSet).not.toHaveBeenCalled();
+    act(() => {
+      tree.unmount();
+    });
   });
 });

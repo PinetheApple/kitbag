@@ -10,30 +10,39 @@ import {
 } from '../stemPlayer/songEnd.ts';
 import {
   ARRIVAL,
-  SKIP,
   startAutoAdvance,
   type Arrival,
   type ArrivalState,
   type AutoAdvanceDeps,
 } from './autoAdvance.ts';
+import { restingPlayer } from './autoAdvance.test-helper.ts';
 import { ADVANCE, type Advance } from './order.ts';
+import { SKIP } from './queuedSongText.ts';
 import type { SkipResult, Undo } from './store.ts';
 
 const NIGHT_BUS = 21;
 const TIN_ROOF = 22;
+const HUM = 41;
 const ITEM = 31;
 const PLACE = { number: 3, of: 5 };
 
-const play = (stemSetId: number, setlistItemId: number | null = ITEM) => ({
-  advance: { kind: ADVANCE.play, stemSetId, setlistItemId },
-  skipped: false,
+const play = (
+  stemSetId: number,
+  setlistItemId: number | null = ITEM,
+): SkipResult => ({
+  advance: { kind: ADVANCE.stems, stemSetId, setlistItemId },
+  skipped: null,
+});
+const single = (songId: number): SkipResult => ({
+  advance: { kind: ADVANCE.song, songId },
+  skipped: null,
 });
 const BALLAD_COUNT = {} as never;
 const metronomeNext: SkipResult = {
   advance: { kind: ADVANCE.open, entry: BALLAD_COUNT },
-  skipped: false,
+  skipped: null,
 };
-const end: SkipResult = { advance: { kind: ADVANCE.end }, skipped: false };
+const end: SkipResult = { advance: { kind: ADVANCE.end }, skipped: null };
 
 function harness(
   steps: readonly SkipResult[],
@@ -50,7 +59,7 @@ function harness(
   const commitNext = vi.fn<AutoAdvanceDeps['commitNext']>(() =>
     Promise.resolve(undo),
   );
-  const advanceTo = vi.fn<AutoAdvanceDeps['advanceTo']>();
+  const advanceTo = vi.fn<(id: number) => Promise<AdvanceOutcome>>();
   for (const outcome of outcomes) advanceTo.mockResolvedValueOnce(outcome);
   advanceTo.mockResolvedValue(ADVANCE_OUTCOME.playing);
   const arrivals = createStore<ArrivalState>(() => ({ arrival: null }));
@@ -63,23 +72,28 @@ function harness(
     Promise.resolve(true),
   );
   const handToMetronome = vi.fn();
-  const stop = startAutoAdvance({
-    onSongEnd: (listener) => {
+  const stems = {
+    ...restingPlayer(),
+    onSongEnd: (listener: AdvanceListener) => {
       leave = listener;
       return unsubscribe;
     },
     advanceTo,
+    stillEnded,
+    stopAdvancing,
+    handToMetronome,
+  };
+  const single = restingPlayer();
+  const stop = startAutoAdvance({
+    players: { stems, song: single },
     peekNext,
     commitNext,
     placeOf: (advance: Advance) =>
-      advance.kind === ADVANCE.play && advance.setlistItemId !== null
+      advance.kind === ADVANCE.stems && advance.setlistItemId !== null
         ? PLACE
         : null,
     candidates: () => candidates,
-    stillEnded,
-    stopAdvancing,
     commitOpen,
-    handToMetronome,
     arrivals,
   });
   const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -92,6 +106,8 @@ function harness(
     await settle();
   };
   return {
+    stems,
+    single,
     songEnds,
     peekNext,
     commitNext,
@@ -119,7 +135,7 @@ describe('auto-advance at the end of a stem song', () => {
     expect(h.advanceTo).toHaveBeenCalledWith(NIGHT_BUS);
     expect(h.arrivals.getState().arrival).toMatchObject({
       kind: ARRIVAL.playing,
-      stemSetId: NIGHT_BUS,
+      song: { kind: 'stems', id: NIGHT_BUS },
       place: PLACE,
       skipped: null,
     });
@@ -133,7 +149,7 @@ describe('auto-advance at the end of a stem song', () => {
       ARRIVAL.arriving,
       ARRIVAL.playing,
     ]);
-    expect(h.seen[0]).toMatchObject({ stemSetId: NIGHT_BUS });
+    expect(h.seen[0]).toMatchObject({ song: { kind: 'stems', id: NIGHT_BUS } });
   });
 
   it('commits the step it looked at before following it', async () => {
@@ -202,7 +218,7 @@ describe('auto-advance at the end of a stem song', () => {
     const h = harness([play(NIGHT_BUS, null)]);
     await h.songEnds();
     expect(h.arrivals.getState().arrival).toMatchObject({
-      stemSetId: NIGHT_BUS,
+      song: { kind: 'stems', id: NIGHT_BUS },
       place: null,
     });
   });
@@ -225,11 +241,11 @@ describe('auto-advance at the end of a stem song', () => {
   });
 
   it('says it skipped a deleted song on the way', async () => {
-    const h = harness([{ ...play(NIGHT_BUS), skipped: true }]);
+    const h = harness([{ ...play(NIGHT_BUS), skipped: 'stems' }]);
     await h.songEnds();
     expect(h.arrivals.getState().arrival).toMatchObject({
-      stemSetId: NIGHT_BUS,
-      skipped: SKIP.deleted,
+      song: { kind: 'stems', id: NIGHT_BUS },
+      skipped: { reason: SKIP.deleted, kind: 'stems' },
     });
   });
 
@@ -241,8 +257,8 @@ describe('auto-advance at the end of a stem song', () => {
     await h.songEnds();
     expect(h.advanceTo.mock.calls).toEqual([[NIGHT_BUS], [TIN_ROOF]]);
     expect(h.arrivals.getState().arrival).toMatchObject({
-      stemSetId: TIN_ROOF,
-      skipped: SKIP.unopened,
+      song: { kind: 'stems', id: TIN_ROOF },
+      skipped: { reason: SKIP.unopened, kind: 'stems' },
     });
   });
 
@@ -253,16 +269,20 @@ describe('auto-advance at the end of a stem song', () => {
     );
     await h.songEnds();
     expect(h.seen).toEqual([
-      expect.objectContaining({ kind: ARRIVAL.arriving, stemSetId: NIGHT_BUS }),
+      expect.objectContaining({
+        kind: ARRIVAL.arriving,
+        song: { kind: 'stems', id: NIGHT_BUS },
+      }),
     ]);
     expect(h.stopAdvancing).toHaveBeenCalledTimes(1);
   });
 
   it('says it skipped a deleted song when nothing after it plays', async () => {
-    const h = harness([{ ...end, skipped: true }]);
+    const h = harness([{ ...end, skipped: 'song' }]);
     await h.songEnds();
     expect(h.arrivals.getState().arrival).toMatchObject({
       kind: ARRIVAL.gaveUp,
+      skipped: { reason: SKIP.deleted, kind: 'song' },
     });
   });
 
@@ -324,7 +344,7 @@ describe('Next from the song card', () => {
     );
     expect(h.arrivals.getState().arrival).toMatchObject({
       kind: ARRIVAL.playing,
-      stemSetId: NIGHT_BUS,
+      song: { kind: 'stems', id: NIGHT_BUS },
       place: PLACE,
     });
   });
@@ -405,5 +425,99 @@ describe('Next from the song card', () => {
     await h.pressNext();
     await h.pressNext();
     expect(h.advanceTo.mock.calls).toEqual([[NIGHT_BUS], [TIN_ROOF]]);
+  });
+});
+
+describe('a queue that mixes single songs and stem songs', () => {
+  const fromSingle = async (
+    h: ReturnType<typeof harness>,
+    cause: AdvanceCause,
+  ) => {
+    const [listener] = vi.mocked(h.single.onSongEnd).mock.calls[0] ?? [];
+    listener?.(cause);
+    await h.settle();
+  };
+  const singleEnds = (h: ReturnType<typeof harness>) =>
+    fromSingle(h, ADVANCE_CAUSE.ended);
+  const singleNext = (h: ReturnType<typeof harness>) =>
+    fromSingle(h, ADVANCE_CAUSE.next);
+
+  it('hands a stem song over to a single song, then back to a stem song', async () => {
+    const h = harness([single(HUM), play(TIN_ROOF, null)]);
+    await h.songEnds();
+    expect(h.stems.handOver).toHaveBeenCalledTimes(1);
+    expect(h.single.takeOver).toHaveBeenCalledExactlyOnceWith(HUM);
+    expect(
+      vi.mocked(h.stems.handOver).mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      vi.mocked(h.single.takeOver).mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(h.arrivals.getState().arrival).toMatchObject({
+      kind: ARRIVAL.playing,
+      song: { kind: 'song', id: HUM },
+    });
+    await singleEnds(h);
+    expect(h.commitNext).toHaveBeenLastCalledWith(
+      play(TIN_ROOF, null).advance,
+      h.single.stillEnded,
+    );
+    expect(h.single.handOver).toHaveBeenCalledTimes(1);
+    expect(h.stems.takeOver).toHaveBeenCalledExactlyOnceWith(TIN_ROOF);
+    expect(h.advanceTo).not.toHaveBeenCalled();
+    expect(h.arrivals.getState().arrival).toMatchObject({
+      kind: ARRIVAL.playing,
+      song: { kind: 'stems', id: TIN_ROOF },
+    });
+  });
+
+  it('hands nothing over once the stem song no longer stands', async () => {
+    const stillEnded = vi
+      .fn(() => false)
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(true);
+    const h = harness([single(HUM)], [], 1, stillEnded);
+    await h.songEnds();
+    expect(h.stems.handOver).not.toHaveBeenCalled();
+    expect(h.single.takeOver).not.toHaveBeenCalled();
+    expect(h.undo).toHaveBeenCalledTimes(1);
+  });
+
+  it('goes on from the single song player when the single song will not open', async () => {
+    const h = harness([single(HUM), play(NIGHT_BUS, null)]);
+    vi.mocked(h.single.takeOver).mockResolvedValueOnce(
+      ADVANCE_OUTCOME.unplayable,
+    );
+    await h.songEnds();
+    expect(h.single.handOver).toHaveBeenCalledTimes(1);
+    expect(h.stems.takeOver).toHaveBeenCalledExactlyOnceWith(NIGHT_BUS);
+    expect(h.arrivals.getState().arrival).toMatchObject({
+      song: { kind: 'stems', id: NIGHT_BUS },
+      skipped: { reason: SKIP.unopened, kind: 'song' },
+    });
+  });
+
+  it('lets the single song player give up when nothing after it opens', async () => {
+    const h = harness([single(HUM)]);
+    vi.mocked(h.single.takeOver).mockResolvedValueOnce(
+      ADVANCE_OUTCOME.unplayable,
+    );
+    await h.songEnds();
+    expect(h.single.stopAdvancing).toHaveBeenCalledTimes(1);
+    expect(h.stopAdvancing).not.toHaveBeenCalled();
+  });
+
+  it('ignores a stale card press while the other player is still loading', async () => {
+    const h = harness([single(HUM), play(TIN_ROOF, null)]);
+    const loading = Promise.withResolvers<AdvanceOutcome>();
+    vi.mocked(h.single.takeOver).mockReturnValueOnce(loading.promise);
+    h.leave(ADVANCE_CAUSE.ended);
+    await h.settle();
+    h.leave(ADVANCE_CAUSE.next);
+    await singleNext(h);
+    loading.resolve(ADVANCE_OUTCOME.playing);
+    await h.settle();
+    expect(h.peekNext).toHaveBeenCalledOnce();
+    expect(h.single.takeOver).toHaveBeenCalledOnce();
+    expect(h.stems.takeOver).not.toHaveBeenCalled();
   });
 });

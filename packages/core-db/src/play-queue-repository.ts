@@ -3,8 +3,41 @@ import { asc, eq, inArray } from 'drizzle-orm';
 import { placeAt } from './ordering';
 import { found, type Database, type DatabaseHandle } from './repository';
 import { playQueue } from './schema';
+import type {
+  LibrarySongRow,
+  LibraryStemSetRow,
+} from './song-library-repository';
 
 export type PlayQueueEntry = typeof playQueue.$inferSelect;
+
+export type QueuedSong =
+  Pick<LibrarySongRow, 'kind' | 'id'> | Pick<LibraryStemSetRow, 'kind' | 'id'>;
+
+export function queuedSongOf({
+  songId,
+  stemSetId,
+}: Pick<PlayQueueEntry, 'songId' | 'stemSetId'>): QueuedSong {
+  if (songId !== null) return { kind: 'song', id: songId };
+  if (stemSetId !== null) return { kind: 'stems', id: stemSetId };
+  throw new Error('Play queue entry holds no song');
+}
+
+export function sameQueuedSong(a: QueuedSong, b: QueuedSong): boolean {
+  return a.kind === b.kind && a.id === b.id;
+}
+
+const holds = (song: QueuedSong) => (entry: PlayQueueEntry) =>
+  sameQueuedSong(queuedSongOf(entry), song);
+
+const keyOf = (song: QueuedSong) =>
+  song.kind === 'song'
+    ? eq(playQueue.songId, song.id)
+    : eq(playQueue.stemSetId, song.id);
+
+export const queueColumnsOf = (song: QueuedSong) =>
+  song.kind === 'song'
+    ? { songId: song.id, stemSetId: null }
+    : { songId: null, stemSetId: song.id };
 
 async function orderedEntries(db: Database): Promise<PlayQueueEntry[]> {
   return db
@@ -33,41 +66,41 @@ async function place(
   return { ...entry, position: placed.position };
 }
 
-async function queuedEntry(db: Database, stemSetId: number) {
-  const [entry] = await db
-    .select()
-    .from(playQueue)
-    .where(eq(playQueue.stemSetId, stemSetId));
+async function queuedEntry(db: Database, song: QueuedSong) {
+  const [entry] = await db.select().from(playQueue).where(keyOf(song));
   return entry;
 }
 
 async function addEntry(
   db: Database,
-  stemSetId: number,
+  song: QueuedSong,
   position: number | undefined,
 ): Promise<PlayQueueEntry> {
-  const existing = await queuedEntry(db, stemSetId);
+  const existing = await queuedEntry(db, song);
   if (existing !== undefined) return existing;
   const entry = found(
-    await db.insert(playQueue).values({ stemSetId, position: 0 }).returning(),
+    await db
+      .insert(playQueue)
+      .values({ ...queueColumnsOf(song), position: 0 })
+      .returning(),
     'Play queue insert',
   );
   return place(db, entry, position);
 }
 
-async function moveEntry(db: Database, stemSetId: number, position: number) {
-  const entry = await queuedEntry(db, stemSetId);
+async function moveEntry(db: Database, song: QueuedSong, position: number) {
+  const entry = await queuedEntry(db, song);
   if (entry !== undefined) await place(db, entry, position);
 }
 
-async function removeEntry(db: Database, stemSetId: number) {
-  await db.delete(playQueue).where(eq(playQueue.stemSetId, stemSetId));
+async function removeEntry(db: Database, song: QueuedSong) {
+  await db.delete(playQueue).where(keyOf(song));
   await renumber(db, await orderedEntries(db));
 }
 
-async function takeThroughEntry(db: Database, stemSetId: number) {
+async function takeThroughEntry(db: Database, song: QueuedSong) {
   const entries = await orderedEntries(db);
-  const through = entries.findIndex((entry) => entry.stemSetId === stemSetId);
+  const through = entries.findIndex(holds(song));
   if (through < 0) return;
   const taken = entries.slice(0, through + 1).map((entry) => entry.id);
   await db.delete(playQueue).where(inArray(playQueue.id, taken));
@@ -78,14 +111,13 @@ export function createPlayQueueRepository({ db, transactor }: DatabaseHandle) {
   const { serial, transaction } = transactor;
   return {
     list: () => serial(() => orderedEntries(db)),
-    add: (stemSetId: number, position?: number) =>
-      transaction(() => addEntry(db, stemSetId, position)),
-    move: (stemSetId: number, position: number) =>
-      transaction(() => moveEntry(db, stemSetId, position)),
-    remove: (stemSetId: number) =>
-      transaction(() => removeEntry(db, stemSetId)),
-    takeThrough: (stemSetId: number) =>
-      transaction(() => takeThroughEntry(db, stemSetId)),
+    add: (song: QueuedSong, position?: number) =>
+      transaction(() => addEntry(db, song, position)),
+    move: (song: QueuedSong, position: number) =>
+      transaction(() => moveEntry(db, song, position)),
+    remove: (song: QueuedSong) => transaction(() => removeEntry(db, song)),
+    takeThrough: (song: QueuedSong) =>
+      transaction(() => takeThroughEntry(db, song)),
     clear: () =>
       serial(async () => {
         await db.delete(playQueue);

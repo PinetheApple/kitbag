@@ -2,13 +2,22 @@ import { createPlayQueueRepository } from '@kitbag/core-db/src/play-queue-reposi
 import { createSetlistRepository } from '@kitbag/core-db/src/setlist-repository';
 import { createSongPresetRepository } from '@kitbag/core-db/src/song-preset-repository';
 import { openTestDatabase } from '@kitbag/core-db/src/sqlite.test-helper';
-import { insertStemSet } from '@kitbag/core-db/src/stem-entries.test-helper';
+import {
+  insertSong,
+  insertStemSet,
+} from '@kitbag/core-db/src/stem-entries.test-helper';
+import type { QueuedSong } from '@kitbag/core-db';
+
+import { queuedSongOf } from '@kitbag/core-db';
 
 import { takeSnapshot } from '../library/snapshot.ts';
 import { cursorOf } from './order.ts';
 import { createPlayOrderStore } from './store.ts';
 
 const handles: ReturnType<typeof openTestDatabase>[] = [];
+
+export const stems = (id: number): QueuedSong => ({ kind: 'stems', id });
+export const song = (id: number): QueuedSong => ({ kind: 'song', id });
 
 export function closeDatabases() {
   for (const { connection } of handles.splice(0)) connection.close();
@@ -43,8 +52,8 @@ export async function setup(
   const repository = createPlayQueueRepository(handle);
   const queue = {
     ...repository,
-    takeThrough: async (stemSetId: number) => {
-      await repository.takeThrough(stemSetId);
+    takeThrough: async (song: QueuedSong) => {
+      await repository.takeThrough(song);
       await afterWrite();
     },
   };
@@ -57,6 +66,7 @@ export async function setup(
     await insertStemSet(handle.db, 'B'),
     await insertStemSet(handle.db, 'C'),
   ];
+  const single = await insertSong(handle.db, 'Single');
   const warmUp = await library.presets.create({
     name: 'Warm-up',
     bpm: 120,
@@ -120,6 +130,7 @@ export async function setup(
     a,
     b,
     c,
+    single,
     first,
     click,
     last,
@@ -128,5 +139,10 @@ export async function setup(
   };
 }
 
-export const queuedIds = (order: Awaited<ReturnType<typeof setup>>['order']) =>
+type Order = Awaited<ReturnType<typeof setup>>['order'];
+
+export const queuedIds = (order: Order) =>
   order.getState().queue.map((entry) => entry.stemSetId);
+
+export const queuedSongs = (order: Order) =>
+  order.getState().queue.map(queuedSongOf);

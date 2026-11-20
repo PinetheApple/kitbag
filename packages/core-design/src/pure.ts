@@ -25,6 +25,7 @@ export * from './meterText.ts';
 export * from './components/useAfterSheetClosed.ts';
 export * from './components/useNotice.ts';
 export * from './components/useQueueNotices.ts';
+export * from './components/useQueuePresses.ts';
 export * from './separator.ts';
 export * from './queueText.ts';
 export * from './setlistPickText.ts';

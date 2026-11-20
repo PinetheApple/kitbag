@@ -1,6 +1,7 @@
 import {
   ENTRY_KIND,
   UP_NEXT_SOURCE,
+  type LibrarySongRow,
   type LibraryStemSetRow,
   type SetlistEntry,
 } from '@kitbag/core-state';
@@ -31,6 +32,8 @@ const nightBus = {
   scale: 'major',
 } as LibraryStemSetRow;
 const stems = new Map([[9, nightBus]]);
+const hum = { kind: 'song', id: 9, title: 'Hum' } as LibrarySongRow;
+const library = { stems, songs: new Map([[9, hum]]) };
 const second = stem(2, 9);
 const ballad = click(3);
 const entries = [stem(1, 3), second, ballad, stem(4, 5), stem(5, 6)];
@@ -38,12 +41,15 @@ const context = {
   queueLength: 3,
   stage: { setlistId: 7, entries, skipped: [] },
   setlistName: 'Friday gig',
-  stems,
+  library,
 };
 
 describe('up next row', () => {
   it('names a queued song and how many follow it', () => {
-    const next = { source: UP_NEXT_SOURCE.queue, stemSetId: 9 } as const;
+    const next = {
+      source: UP_NEXT_SOURCE.queue,
+      song: { kind: 'stems', id: 9 },
+    } as const;
     expect(upNextText(next, context)).toEqual({
       title: 'Night Bus',
       source: 'Queued · 2 more after it',
@@ -52,6 +58,18 @@ describe('up next row', () => {
     expect(upNextText(next, { ...context, queueLength: 1 }).source).toBe(
       'Queued',
     );
+  });
+
+  it('names a queued single song by its own title', () => {
+    const next = {
+      source: UP_NEXT_SOURCE.queue,
+      song: { kind: 'song', id: 9 },
+    } as const;
+    expect(upNextText(next, { ...context, queueLength: 1 })).toEqual({
+      title: 'Hum',
+      source: 'Queued',
+      metronome: false,
+    });
   });
 
   it('places a setlist song in its set', () => {

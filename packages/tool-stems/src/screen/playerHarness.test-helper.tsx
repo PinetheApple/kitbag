@@ -151,12 +151,14 @@ export const STEMS = [stem(1), stem(2)];
 
 export interface PlayerRoutes {
   readonly onOpenStemSet: (stemSetId: number) => void;
+  readonly onOpenSong: (songId: number) => void;
   readonly onOpenMetronome: () => void;
   readonly onOpenSetlist: (setlistId: number) => void;
 }
 
 const NO_ROUTES: PlayerRoutes = {
   onOpenStemSet: noBack,
+  onOpenSong: noBack,
   onOpenMetronome: noBack,
   onOpenSetlist: noBack,
 };
@@ -243,6 +245,7 @@ export async function mountPlayer(
   const onBack = vi.fn();
   const routes = {
     onOpenStemSet: vi.fn(),
+    onOpenSong: vi.fn(),
     onOpenMetronome: vi.fn(),
     onOpenSetlist: vi.fn(),
   };
