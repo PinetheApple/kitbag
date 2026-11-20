@@ -158,6 +158,14 @@ export type DataFolderVolume = Readonly<{
   inUse: boolean;
   freeBytes: Double;
   totalBytes: Double;
+  /** Files of songs left on this card when the folder moved off it; 0 while it is unmounted. */
+  awayFiles: Int32;
+  awayBytes: Double;
+  /** awayBytes plus the free space a move keeps in reserve. */
+  awayRequiredBytes: Double;
+  /** Counted from the away list, so they hold while the card is out. */
+  awaySongs: Int32;
+  awayStemSongs: Int32;
 }>;
 
 export type DataFolderVolumes = Readonly<{
@@ -181,6 +189,8 @@ export type MoveStatus = Readonly<{
   switched: boolean;
   paused: boolean;
   awaitingRelease: boolean;
+  /** The source is a returned card, not the data folder. */
+  cardReturn: boolean;
   error: string | null;
 }>;
 
@@ -326,6 +336,8 @@ export interface Spec extends TurboModule {
   listVolumes(): Promise<DataFolderVolumes>;
   /** Null moves to internal storage. Resolves once the move is handed to its service. */
   startMove(volumeUuid: string | null): Promise<void>;
+  /** Resolves once the move is handed to its service. */
+  startCardReturn(volumeUuid: string): Promise<void>;
   cancelMove(): Promise<void>;
   resumeMove(): Promise<void>;
   /** Discards a paused move's copies; refused while a move runs. */
@@ -337,6 +349,16 @@ export interface Spec extends TurboModule {
   releaseOldCopies(): void;
   readonly onMoveProgress: EventEmitter<MoveStatus>;
   readonly onMoveFinished: EventEmitter<MoveFinished>;
+  /** Free bytes on the database's volume; negative when they cannot be measured. */
+  databaseFreeBytes(databaseName: string): Double;
+  /** False when refused or failed. */
+  removeDatabaseCopy(databaseName: string, fileName: string): boolean;
+  /** Syncs partName and renames it over fileName; false when refused or failed. */
+  replaceDatabaseCopy(
+    databaseName: string,
+    partName: string,
+    fileName: string,
+  ): boolean;
 }
 
 export function getKitbagLibrary(): Spec {

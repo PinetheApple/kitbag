@@ -7,7 +7,7 @@ import { insertStemSet } from '@kitbag/core-db/src/stem-entries.test-helper';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { takeSnapshot } from '../library/snapshot.ts';
-import { ADVANCE } from './order.ts';
+import { ADVANCE, cursorOf } from './order.ts';
 import { createPlayOrderStore } from './store.ts';
 
 const handles: ReturnType<typeof openTestDatabase>[] = [];
@@ -45,12 +45,24 @@ async function setup() {
   const last = await library.setlists.addStemSet(gig.id, b);
   const setlist = async () => (await takeSnapshot(library)).entries[gig.id];
   let entries = (await setlist()) ?? [];
-  const order = createPlayOrderStore({
-    queue: () => queue,
-    stage: () => ({ setlistId: gig.id, entries }),
-  });
   const reload = async () => {
     entries = (await setlist()) ?? [];
+  };
+  let onStage: number | null = null;
+  const stage = () => ({ setlistId: gig.id, entries });
+  const order = createPlayOrderStore({
+    queue: () => queue,
+    stage,
+    cursor: () =>
+      cursorOf(stage(), { presetId: 0, itemId: onStage, setlistId: gig.id }),
+    refreshStage: reload,
+    playSetlistEntry: (itemId) => {
+      onStage = itemId;
+      return Promise.resolve();
+    },
+  });
+  const putOnStage = (itemId: number) => {
+    onStage = itemId;
   };
   await order.getState().refresh();
   return {
@@ -66,6 +78,7 @@ async function setup() {
     click,
     last,
     reload,
+    putOnStage,
   };
 }
 
@@ -89,12 +102,12 @@ describe('play order', () => {
   });
 
   it('stops at a metronome entry and stays stopped until it is opened', async () => {
-    const { order, first, click, b } = await setup();
-    order.getState().playSetlistEntry(first.id);
+    const { order, first, click, b, putOnStage } = await setup();
+    putOnStage(first.id);
     const stop = await order.getState().advance();
     expect(stop).toMatchObject({ kind: ADVANCE.open });
     expect(await order.getState().advance()).toEqual(stop);
-    order.getState().playSetlistEntry(click.id);
+    putOnStage(click.id);
     expect(await order.getState().advance()).toMatchObject({
       kind: ADVANCE.play,
       stemSetId: b,
@@ -113,8 +126,8 @@ describe('play order', () => {
   });
 
   it('ends after the last entry', async () => {
-    const { order, last } = await setup();
-    order.getState().playSetlistEntry(last.id);
+    const { order, last, putOnStage } = await setup();
+    putOnStage(last.id);
     expect(await order.getState().advance()).toEqual({ kind: ADVANCE.end });
   });
 
@@ -145,10 +158,10 @@ describe('play order', () => {
   });
 
   it('plays a song the setlist repeats at each of its places', async () => {
-    const { order, library, gig, a, last, reload } = await setup();
+    const { order, library, gig, a, last, reload, putOnStage } = await setup();
     const again = await library.setlists.addStemSet(gig.id, a);
     await reload();
-    order.getState().playSetlistEntry(last.id);
+    putOnStage(last.id);
     expect(await order.getState().advance()).toEqual({
       kind: ADVANCE.play,
       stemSetId: a,

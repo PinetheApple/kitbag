@@ -5,7 +5,12 @@ import {
   EditValue,
   rowLabel,
 } from '@kitbag/core-design';
-import { useDataFolder } from '@kitbag/core-state';
+import {
+  returnedCards,
+  useDataFolder,
+  type DataFolderStore,
+} from '@kitbag/core-state';
+import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 
 import {
@@ -14,6 +19,10 @@ import {
   rowValueLabel,
   type RowValue,
 } from './dataFolderText.ts';
+import { returnedRowValue, STILL_ON_CARD } from './returnedCardText.ts';
+
+const firstReturned = (state: DataFolderStore) =>
+  returnedCards(state)[0] ?? null;
 
 const useStyles = createThemedStyles((theme) => ({
   highlighted: {
@@ -60,6 +69,32 @@ export function DataFolderRow({ onOpen }: { readonly onOpen: () => void }) {
         onPress={onOpen}
       >
         {value === null ? null : <RowValueText value={value} />}
+      </EditRow>
+    </View>
+  );
+}
+
+export function ReturnedCardRow({
+  onOffer,
+}: {
+  readonly onOffer: (volumeUuid: string) => void;
+}) {
+  const styles = useStyles();
+  const card = useDataFolder(firstReturned);
+  const volumeUuid = card?.volumeUuid ?? null;
+  const offer = useCallback(() => {
+    if (volumeUuid !== null) onOffer(volumeUuid);
+  }, [onOffer, volumeUuid]);
+  if (card === null) return null;
+  const value = returnedRowValue(card);
+  return (
+    <View style={styles.highlighted}>
+      <EditRow
+        label={STILL_ON_CARD}
+        accessibilityLabel={rowLabel(STILL_ON_CARD, rowValueLabel(value))}
+        onPress={offer}
+      >
+        <RowValueText value={value} />
       </EditRow>
     </View>
   );

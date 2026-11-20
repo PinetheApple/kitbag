@@ -1,131 +1,21 @@
-import type {
-  DataFolderVolumes,
-  MoveFinished,
-  MoveListeners,
-  MoveStatus,
-} from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 
-import { songRow, stemsRow } from '../storage/fixtures.test-helper.ts';
 import { DATA_FOLDER_CODES as CODES } from './codes.test-helper.ts';
-import type { PlayerTracks } from './release.ts';
-import type { DataFolderNative } from './runtime.ts';
+import { folderUnavailable, pausedMove } from './store.ts';
 import {
-  createDataFolderStore,
-  folderUnavailable,
-  pausedMove,
-} from './store.ts';
-
-const CARD = '1234-ABCD';
-const SONG = 4;
-const SET = 9;
-
-const VOLUMES: DataFolderVolumes = {
-  currentVolumeUuid: null,
-  currentAvailable: true,
-  requiredBytes: 1_000,
-  volumes: [],
-};
-
-function status(fields: Partial<MoveStatus> = {}): MoveStatus {
-  return {
-    phase: 'COPYING',
-    sourceVolumeUuid: null,
-    targetVolumeUuid: CARD,
-    doneBytes: 540,
-    totalBytes: 2_400,
-    doneFiles: 24,
-    totalFiles: 54,
-    path: null,
-    running: true,
-    switched: false,
-    paused: false,
-    awaitingRelease: false,
-    error: null,
-    ...fields,
-  };
-}
-
-const SWITCHED = status({ phase: 'CLEANING', switched: true });
-
-function rejection(code: string) {
-  return Object.assign(new Error('refused'), { code });
-}
-
-function setup({
-  move = null,
-  tracks = { song: null, stems: null },
-}: { move?: MoveStatus | null; tracks?: PlayerTracks } = {}) {
-  let listeners: MoveListeners | null = null;
-  let playersChanged: () => void = () => undefined;
-  let folderChanged: () => void = () => undefined;
-  const players = { current: tracks };
-  const native = {
-    codes: vi.fn(() => CODES),
-    listVolumes: vi.fn(() => Promise.resolve(VOLUMES)),
-    startMove: vi.fn(() => Promise.resolve()),
-    cancelMove: vi.fn(() => Promise.resolve()),
-    resumeMove: vi.fn(() => Promise.resolve()),
-    undoMove: vi.fn(() => Promise.resolve()),
-    moveStatus: vi.fn(() => Promise.resolve(move)),
-    switchToInternalStorage: vi.fn(() => Promise.resolve()),
-    releaseOldCopies: vi.fn(),
-    watchMove: vi.fn((next: MoveListeners) => {
-      listeners = next;
-      return () => undefined;
-    }),
-    watchDataFolder: vi.fn((listener: () => void) => {
-      folderChanged = listener;
-      return () => undefined;
-    }),
-  } satisfies DataFolderNative;
-  const storedFiles = vi.fn(() =>
-    Promise.resolve([
-      { row: songRow(), audioPaths: ['songs/a/a.mp3'] },
-      { row: stemsRow(), audioPaths: ['stems/r/bass.flac'] },
-    ]),
-  );
-  const store = createDataFolderStore({
-    native: () => native,
-    storedFiles,
-    players: {
-      tracks: () => players.current,
-      subscribe: (listener) => {
-        playersChanged = listener;
-        return () => undefined;
-      },
-    },
-  });
-  const progress = (next: MoveStatus) => {
-    listeners?.progress(next);
-  };
-  const finish = async (finished: MoveFinished) => {
-    const reads = native.moveStatus.mock.calls.length;
-    listeners?.finished(finished);
-    await vi.waitFor(() => {
-      expect(native.moveStatus).toHaveBeenCalledTimes(reads + 1);
-    });
-  };
-  const setTracks = (next: PlayerTracks) => {
-    players.current = next;
-    playersChanged();
-  };
-  return {
-    store,
-    native,
-    storedFiles,
-    progress,
-    finish,
-    setTracks,
-    folderChanged: () => {
-      folderChanged();
-    },
-  };
-}
+  CARD,
+  SET,
+  SONG,
+  SWITCHED,
+  VOLUMES,
+  rejection,
+  setupStore,
+  status,
+} from './store.test-helper.ts';
 
 describe('dataFolderStore events', () => {
   it('loads codes, the move and the volumes on start', async () => {
-    const { store } = setup({ move: status() });
+    const { store } = setupStore({ move: status() });
     await store.getState().start();
     expect(store.getState()).toMatchObject({
       codes: CODES,
@@ -135,7 +25,7 @@ describe('dataFolderStore events', () => {
   });
 
   it('follows progress events', async () => {
-    const { store, progress } = setup();
+    const { store, progress } = setupStore();
     await store.getState().start();
     const later = status({ doneBytes: 1_200, doneFiles: 30 });
     progress(later);
@@ -143,7 +33,7 @@ describe('dataFolderStore events', () => {
   });
 
   it('keeps a failed move error and rereads the move once it finishes', async () => {
-    const { store, native, finish } = setup();
+    const { store, native, finish } = setupStore();
     await store.getState().start();
     const finished = {
       outcome: CODES.moveOutcomes.failed,
@@ -162,7 +52,7 @@ describe('dataFolderStore events', () => {
   });
 
   it('rereads the volumes when the data folder changes', async () => {
-    const { store, native, folderChanged } = setup();
+    const { store, native, folderChanged } = setupStore();
     await store.getState().start();
     native.listVolumes.mockResolvedValue({
       ...VOLUMES,
@@ -178,13 +68,13 @@ describe('dataFolderStore events', () => {
 describe('paused move', () => {
   it('offers a move the app was killed in', async () => {
     const killed = status({ running: false, paused: true });
-    const { store } = setup({ move: killed });
+    const { store } = setupStore({ move: killed });
     await store.getState().start();
     expect(pausedMove(store.getState())).toBe(killed);
   });
 
   it('offers nothing for a running move or none', async () => {
-    const { store, progress } = setup();
+    const { store, progress } = setupStore();
     await store.getState().start();
     expect(pausedMove(store.getState())).toBeNull();
     progress(status());
@@ -197,7 +87,7 @@ describe('paused move', () => {
       paused: true,
       error: CODES.moveErrors.hashMismatch,
     });
-    const { store } = setup({ move: mismatch });
+    const { store } = setupStore({ move: mismatch });
     await store.getState().start();
     expect(pausedMove(store.getState())).toBeNull();
   });
@@ -205,21 +95,21 @@ describe('paused move', () => {
 
 describe('releasing the old copies', () => {
   it('releases at once when no player was open at the switch', async () => {
-    const { store, native, progress } = setup();
+    const { store, native, progress } = setupStore();
     await store.getState().start();
     progress(SWITCHED);
     expect(native.releaseOldCopies).toHaveBeenCalledOnce();
   });
 
   it('never releases before the switch', async () => {
-    const { store, native, progress } = setup();
+    const { store, native, progress } = setupStore();
     await store.getState().start();
     progress(status({ phase: 'CATCH_UP' }));
     expect(native.releaseOldCopies).not.toHaveBeenCalled();
   });
 
   it('waits for both players to let go of what they held at the switch', async () => {
-    const { store, native, progress, setTracks } = setup({
+    const { store, native, progress, setTracks } = setupStore({
       tracks: { song: SONG, stems: SET },
     });
     await store.getState().start();
@@ -231,7 +121,7 @@ describe('releasing the old copies', () => {
   });
 
   it('waits for the stem player alone', async () => {
-    const { store, native, progress, setTracks } = setup({
+    const { store, native, progress, setTracks } = setupStore({
       tracks: { song: null, stems: SET },
     });
     await store.getState().start();
@@ -242,7 +132,7 @@ describe('releasing the old copies', () => {
   });
 
   it('releases once per switch however many events follow', async () => {
-    const { store, native, progress } = setup();
+    const { store, native, progress } = setupStore();
     await store.getState().start();
     progress(SWITCHED);
     progress(
@@ -263,13 +153,13 @@ describe('releasing the old copies', () => {
       running: false,
       awaitingRelease: true,
     });
-    const { store, native } = setup({ move: waiting });
+    const { store, native } = setupStore({ move: waiting });
     await store.getState().start();
     expect(native.releaseOldCopies).toHaveBeenCalledOnce();
   });
 
   it('releases again for a second move after the first one finished', async () => {
-    const { store, native, progress, finish } = setup();
+    const { store, native, progress, finish } = setupStore();
     await store.getState().start();
     progress(SWITCHED);
     native.moveStatus.mockResolvedValue(null);
@@ -282,18 +172,19 @@ describe('releasing the old copies', () => {
 });
 
 describe('requests', () => {
-  it('switches to internal storage with every stored audio path as away', async () => {
-    const { store, native } = setup();
+  it('switches to internal storage with every stored audio and waveform path as away', async () => {
+    const { store, native } = setupStore();
     await store.getState().start();
     await store.getState().switchToInternalStorage();
     expect(native.switchToInternalStorage).toHaveBeenCalledExactlyOnceWith([
+      'songs/a/a.kwav',
       'songs/a/a.mp3',
       'stems/r/bass.flac',
     ]);
   });
 
   it('keeps a refusal code to show', async () => {
-    const { store, native } = setup();
+    const { store, native } = setupStore();
     await store.getState().start();
     native.startMove.mockRejectedValue(
       rejection(CODES.moveErrors.targetOccupied),
@@ -305,7 +196,7 @@ describe('requests', () => {
   });
 
   it('names an unexplained failure as an i/o error', async () => {
-    const { store, native } = setup();
+    const { store, native } = setupStore();
     await store.getState().start();
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     native.undoMove.mockRejectedValue(new Error('bridge gone'));
@@ -316,7 +207,7 @@ describe('requests', () => {
 
 describe('pending request', () => {
   it('holds pending from the call until the move and volumes are reread', async () => {
-    const { store, native } = setup();
+    const { store, native } = setupStore();
     await store.getState().start();
     let handOff: () => void = () => undefined;
     native.startMove.mockReturnValue(
@@ -332,7 +223,7 @@ describe('pending request', () => {
   });
 
   it('clears pending after a refusal', async () => {
-    const { store, native } = setup();
+    const { store, native } = setupStore();
     await store.getState().start();
     native.cancelMove.mockRejectedValue(rejection(CODES.moveErrors.switched));
     await store.getState().cancelMove();
@@ -343,7 +234,7 @@ describe('pending request', () => {
   });
 
   it('ignores a second request while one is pending', async () => {
-    const { store, native } = setup();
+    const { store, native } = setupStore();
     await store.getState().start();
     const first = store.getState().resumeMove();
     await store.getState().undoMove();
@@ -355,7 +246,7 @@ describe('pending request', () => {
 
 describe('finishing clears a stale error', () => {
   it('drops an earlier refusal once a move finishes well', async () => {
-    const { store, native, finish } = setup();
+    const { store, native, finish } = setupStore();
     await store.getState().start();
     native.startMove.mockRejectedValue(
       rejection(CODES.moveErrors.foregroundRefused),
@@ -367,7 +258,7 @@ describe('finishing clears a stale error', () => {
   });
 
   it('keeps the error of a refused finish', async () => {
-    const { store, finish } = setup();
+    const { store, finish } = setupStore();
     await store.getState().start();
     await finish({
       outcome: CODES.moveOutcomes.refused,
@@ -380,20 +271,20 @@ describe('finishing clears a stale error', () => {
 
 describe('whether a request acted', () => {
   it('answers true when the call ran and was accepted', async () => {
-    const { store } = setup();
+    const { store } = setupStore();
     await store.getState().start();
     await expect(store.getState().undoMove()).resolves.toBe(true);
   });
 
   it('answers false when refused', async () => {
-    const { store, native } = setup();
+    const { store, native } = setupStore();
     await store.getState().start();
     native.undoMove.mockRejectedValue(rejection(CODES.moveErrors.running));
     await expect(store.getState().undoMove()).resolves.toBe(false);
   });
 
   it('answers false when dropped behind a pending request', async () => {
-    const { store } = setup();
+    const { store } = setupStore();
     await store.getState().start();
     const first = store.getState().resumeMove();
     await expect(store.getState().undoMove()).resolves.toBe(false);
@@ -403,7 +294,7 @@ describe('whether a request acted', () => {
 
 describe('a resume that finds the move already finished', () => {
   it('keeps no refusal once there is no move left', async () => {
-    const { store, native } = setup({
+    const { store, native } = setupStore({
       move: status({ running: false, paused: true }),
     });
     await store.getState().start();
@@ -414,7 +305,7 @@ describe('a resume that finds the move already finished', () => {
   });
 
   it('drops a refused finish for no move once the reread finds none', async () => {
-    const { store, native, finish } = setup();
+    const { store, native, finish } = setupStore();
     await store.getState().start();
     native.moveStatus.mockResolvedValue(null);
     await finish({
@@ -428,7 +319,7 @@ describe('a resume that finds the move already finished', () => {
   });
 
   it('keeps any other refusal', async () => {
-    const { store, native } = setup();
+    const { store, native } = setupStore();
     await store.getState().start();
     native.resumeMove.mockRejectedValue(rejection(CODES.moveErrors.running));
     await store.getState().resumeMove();

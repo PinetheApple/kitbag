@@ -63,13 +63,27 @@ function ActionButton({ action }: { readonly action: SheetAction }) {
   );
 }
 
+export function ActionStack({
+  actions,
+}: {
+  readonly actions: readonly SheetAction[];
+}) {
+  const styles = useStyles();
+  return (
+    <View style={styles.stack}>
+      {actions.map((action) => (
+        <ActionButton key={action.label} action={action} />
+      ))}
+    </View>
+  );
+}
+
 export function ActionsSheet(
   props: BaseSheetProps & {
     readonly actions: readonly SheetAction[];
     readonly hint?: string | undefined;
   },
 ) {
-  const styles = useStyles();
   return (
     <Sheet
       visible={props.visible}
@@ -78,11 +92,7 @@ export function ActionsSheet(
       bottomInset={props.bottomInset}
       onDismiss={props.onDismiss}
     >
-      <View style={styles.stack}>
-        {props.actions.map((action) => (
-          <ActionButton key={action.label} action={action} />
-        ))}
-      </View>
+      <ActionStack actions={props.actions} />
       {props.error == null ? null : <SheetHint>{props.error}</SheetHint>}
       {props.hint === undefined ? null : <SheetHint>{props.hint}</SheetHint>}
     </Sheet>

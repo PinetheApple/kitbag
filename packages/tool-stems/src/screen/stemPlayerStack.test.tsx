@@ -1,9 +1,14 @@
-import { RETIME_PLAYBACK_RATE, stemPlayerStore } from '@kitbag/core-state';
+import {
+  libraryStore,
+  RETIME_PLAYBACK_RATE,
+  stemPlayerStore,
+} from '@kitbag/core-state';
 import { record } from '@kitbag/core-state/src/stemPlayer/store.test-helper.ts';
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  at,
   flush,
   installFakeRuntime,
   mountPlayer,
@@ -20,6 +25,7 @@ const FIRST_TITLE = 'First song';
 const SECOND_TITLE = 'Second song';
 const OPENING = 'Opening the stems…';
 const HALF_GAIN = 0.5;
+const PLAYED_SEC = 30;
 const CLOSES = 5;
 const FIRST_RECORD = { title: FIRST_TITLE, lyrics: null };
 const SECOND_RECORD = record(STEMS, { title: SECOND_TITLE, lyrics: null });
@@ -224,6 +230,83 @@ describe('another route covering the player', () => {
     expect(player.store.getState().status).toBe('idle');
     expect(player.commands.mixerStop).toHaveBeenCalledOnce();
     expect(player.commands.engineRelease).toHaveBeenCalledOnce();
+  });
+});
+
+function loadMetronomeSong(): void {
+  act(() => {
+    libraryStore.setState((s) => ({ songLoads: s.songLoads + 1 }));
+  });
+}
+
+describe('a metronome song loaded over the player', () => {
+  it('lets go of the song while covered', async () => {
+    const player = await openFirst();
+    player.setFocused(false);
+    loadMetronomeSong();
+    expect(player.commands.engineRelease).toHaveBeenCalledOnce();
+    expect(player.store.getState().status).toBe('idle');
+  });
+
+  it('opens the song again on Back, stopped at the start with its mix and no loop', async () => {
+    const player = await openFirst(DETAILED_RECORD);
+    const { getState } = player.store;
+    getState().setGain(0, HALF_GAIN);
+    await getState().loopSection(0);
+    getState().togglePlay();
+    player.engine.position = at(PLAYED_SEC);
+    player.commands.mixerStop.mockImplementation(() => {
+      player.engine.position = 0;
+    });
+    player.commands.mixerSeek.mockImplementation((frame: number) => {
+      player.engine.position = frame;
+    });
+    player.setFocused(false);
+    loadMetronomeSong();
+    player.commands.mixerPlay.mockClear();
+    player.setFocused(true);
+    await act(flush);
+    expect(getState().status).toBe('ready');
+    expect(player.records.readStemSet).toHaveBeenCalledTimes(2);
+    expect(getState().playheadSeconds()).toBe(0);
+    expect(player.commands.mixerPlay).not.toHaveBeenCalled();
+    expect(getState().stems[0]?.volume).toBe(HALF_GAIN);
+    expect(player.commands.mixerSetGain).toHaveBeenCalledWith(0, HALF_GAIN);
+    expect(getState().loop).toEqual({ kind: 'off' });
+  });
+
+  it('takes the mixer back on Back, releasing a metronome started meanwhile', async () => {
+    const player = await openFirst();
+    player.setFocused(false);
+    loadMetronomeSong();
+    player.sharedMetronome.active.mockReturnValue(true);
+    player.setFocused(true);
+    await act(flush);
+    expect(player.sharedMetronome.release).toHaveBeenCalledOnce();
+    expect(player.store.getState().status).toBe('ready');
+    expect(player.records.readStemSet).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps its song when the blur and the load land in one render', async () => {
+    const player = await openFirst();
+    act(() => {
+      libraryStore.setState((s) => ({ songLoads: s.songLoads + 1 }));
+      player.setFocused(false);
+    });
+    await act(flush);
+    expect(player.commands.engineRelease).not.toHaveBeenCalled();
+    expect(player.store.getState().status).toBe('ready');
+    loadMetronomeSong();
+    expect(player.commands.engineRelease).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the song when the load happens while it is in front', async () => {
+    const player = await openFirst();
+    loadMetronomeSong();
+    player.setFocused(false);
+    await act(flush);
+    expect(player.commands.engineRelease).not.toHaveBeenCalled();
+    expect(player.store.getState().status).toBe('ready');
   });
 });
 

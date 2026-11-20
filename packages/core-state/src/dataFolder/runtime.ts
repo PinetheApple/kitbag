@@ -9,6 +9,7 @@ export interface DataFolderNative {
   readonly codes: () => DataFolderCodes;
   readonly listVolumes: () => Promise<DataFolderVolumes>;
   readonly startMove: (volumeUuid: string | null) => Promise<void>;
+  readonly startCardReturn: (volumeUuid: string) => Promise<void>;
   readonly cancelMove: () => Promise<void>;
   readonly resumeMove: () => Promise<void>;
   readonly undoMove: () => Promise<void>;

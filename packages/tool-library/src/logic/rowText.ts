@@ -11,6 +11,8 @@ import {
   type SongFact,
 } from '@kitbag/core-state';
 
+import { UNAVAILABLE_TEXT } from './notices.ts';
+
 export function formatLength(totalSeconds: number): string {
   return formatClockSeconds(Math.round(totalSeconds));
 }
@@ -71,6 +73,23 @@ const STATUS_BADGES: Readonly<Record<SongBadge, BadgeSpec>> = {
   },
 };
 
+export type RowPlace = 'here' | 'moving' | 'unavailable';
+
+const PLACE_BADGES: Readonly<Record<Exclude<RowPlace, 'here'>, BadgeSpec>> = {
+  moving: {
+    key: 'status',
+    label: 'MOVING',
+    spoken: 'Files moving, still plays',
+    tone: 'warning',
+  },
+  unavailable: {
+    key: 'status',
+    label: 'NO CARD',
+    spoken: `${UNAVAILABLE_TEXT.status}, can’t play`,
+    tone: 'danger',
+  },
+};
+
 const STATUS_NOTES: Readonly<Partial<Record<SongBadge, string>>> = {
   analyzing: 'analyzing…',
   failed: 'no beat grid',
@@ -82,15 +101,26 @@ export function songStatusBadge(badge: SongBadge): BadgeSpec {
   return STATUS_BADGES[badge];
 }
 
-export function rowBadges(row: LibraryRow, status: SongBadge): BadgeSpec[] {
+function statusBadges(row: LibraryRow, status: SongBadge): BadgeSpec[] {
   if (row.kind === 'song') return [STATUS_BADGES[status]];
+  return row.hasGrid ? [GRID_BADGE] : [];
+}
+
+export function rowBadges(
+  row: LibraryRow,
+  status: SongBadge,
+  place: RowPlace = 'here',
+): BadgeSpec[] {
+  const shown =
+    place === 'here' ? statusBadges(row, status) : [PLACE_BADGES[place]];
+  if (row.kind === 'song') return shown;
   const stems: BadgeSpec = {
     key: 'stems',
     label: `STEMS ×${String(row.stemCount)}`,
     spoken: countLabel(row.stemCount, 'stem', 'stems'),
     tone: 'accent',
   };
-  return row.hasGrid ? [stems, GRID_BADGE] : [stems];
+  return [stems, ...shown];
 }
 
 function rowFacts(row: LibraryRow): SongFact[] {
@@ -125,13 +155,14 @@ export function spokenRow(
   row: LibraryRow,
   status: SongBadge,
   failureStatus: string | null,
+  place: RowPlace = 'here',
 ): string {
   const parts: string[] = [row.title];
   if (row.artist !== null && row.artist !== '') parts.push(row.artist);
   if (row.durationSec > 0) parts.push(spokenLength(row.durationSec));
   if (row.kind === 'stems' || STATUS_NOTES[status] === undefined)
     parts.push(...rowFacts(row).map((fact) => fact.spoken));
-  parts.push(...rowBadges(row, status).map((badge) => badge.spoken));
+  parts.push(...rowBadges(row, status, place).map((badge) => badge.spoken));
   if (failureStatus !== null) parts.push(failureStatus);
   return parts.join(', ');
 }

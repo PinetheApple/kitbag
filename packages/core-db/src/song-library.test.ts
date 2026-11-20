@@ -13,6 +13,7 @@ import { createSongPresetRepository } from './song-preset-repository';
 import { openTestDatabase } from './sqlite.test-helper';
 import { TEMPO_CORRECTION } from './tempo-correction';
 import { memoryClickSoundFiles } from './click-sound-files.test-helper';
+import { unusedMigrationCopyFiles } from './migration-copy-files.test-helper';
 
 const open: ReturnType<typeof openTestDatabase>[] = [];
 
@@ -346,8 +347,16 @@ describe('song library repository', () => {
     const first = await library.insertSong(song('Everlong'));
     const second = await library.insertSong(song('Take Five'));
     expect(await library.listSongFiles()).toEqual([
-      { id: first, filePath: 'songs/uuid-Everlong/Everlong.mp3' },
-      { id: second, filePath: 'songs/uuid-Take Five/Take Five.mp3' },
+      {
+        id: first,
+        filePath: 'songs/uuid-Everlong/Everlong.mp3',
+        waveformPath: null,
+      },
+      {
+        id: second,
+        filePath: 'songs/uuid-Take Five/Take Five.mp3',
+        waveformPath: null,
+      },
     ]);
   });
 
@@ -356,8 +365,8 @@ describe('song library repository', () => {
     const redbone = await addStemSet(handle, 'Redbone', [320, 326.5]);
     await addStemSet(handle, 'Empty', []);
     expect(await library.listStemFiles()).toEqual([
-      { setId: redbone, filePath: 'stems/Redbone/0.flac' },
-      { setId: redbone, filePath: 'stems/Redbone/1.flac' },
+      { setId: redbone, filePath: 'stems/Redbone/0.flac', waveformPath: null },
+      { setId: redbone, filePath: 'stems/Redbone/1.flac', waveformPath: null },
     ]);
   });
 
@@ -372,6 +381,7 @@ describe('song library over the op-sqlite 17 connection', () => {
     const database = connectDatabase(
       fakeOpSqlite().connection,
       memoryClickSoundFiles().files,
+      unusedMigrationCopyFiles,
     );
     const id = await database.songLibrary.insertSong(song('Everlong'));
     expect(await database.songLibrary.claimUnfinishedAnalyses()).toEqual([
