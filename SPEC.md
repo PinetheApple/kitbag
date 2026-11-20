@@ -1260,7 +1260,7 @@ phone. That page defines the format; this spec does not copy it.
   (songs the user added, each once, played once unless Repeat all is on, in
   the user's order), then Next from: <setlist>. `play_queue` is keyed by
   `stem_set_id` alone (§11.2); its key must cover single songs too, a schema
-  change built in #570.
+  change built in #572.
 - **Entry points:** a Queue key on the mini-player (§6.3), a Queue icon on the
   stem player, and a Queue icon in the Stem songs app bar, badged with the
   count up next (no badge at 0). Each opens the same queue sheet, as does the
