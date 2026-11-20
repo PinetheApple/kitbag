@@ -143,6 +143,7 @@ export interface StemPlayerActions {
   readonly open: (setId: number, waveformBars: number) => Promise<void>;
   readonly acquireSong: (setId: number, waveformBars: number) => MixerHold;
   readonly advanceTo: (setId: number) => Promise<AdvanceOutcome>;
+  readonly playNow: (setId: number) => Promise<AdvanceOutcome>;
   readonly takeOver: (
     setId: number,
     waveformBars: number,

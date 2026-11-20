@@ -264,6 +264,12 @@ describe('the queue sheet in the player', () => {
     expect(queued).toEqual([]);
     expect(p.routes.onOpenStemSet).toHaveBeenCalledWith(TIN_ROOF);
     expect(sheetShownAtLeave).toBe(false);
+    await p.showSet(TIN_ROOF);
+    expect(p.store.getState().setId).toBe(TIN_ROOF);
+    expect(p.commands.mixerPlay).toHaveBeenCalledOnce();
+    expect(
+      (p.records.readStemSet.mock.calls as unknown[][]).map((call) => call[0]),
+    ).toEqual([SET_ID, TIN_ROOF]);
   });
 
   it('removes one queued song', async () => {

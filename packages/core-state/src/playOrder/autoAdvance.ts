@@ -62,6 +62,7 @@ export const arrivalStore = createStore<ArrivalState>(() => ({
 export interface AdvancingPlayer {
   readonly onSongEnd: (listener: AdvanceListener) => () => void;
   readonly advanceTo?: (id: number) => Promise<AdvanceOutcome>;
+  readonly playNow?: (id: number) => Promise<AdvanceOutcome>;
   readonly takeOver: (id: number) => Promise<AdvanceOutcome>;
   readonly handOver: () => void;
   readonly stillEnded: () => boolean;
@@ -98,6 +99,7 @@ export type WaveformBars = Readonly<Record<PlayerKind, number>>;
 const stemSongs = (bars: number): AdvancingPlayer => ({
   onSongEnd: (listener) => stemPlayerStore.getState().onSongEnd(listener),
   advanceTo: (id) => stemPlayerStore.getState().advanceTo(id),
+  playNow: (id) => stemPlayerStore.getState().playNow(id),
   takeOver: (id) => stemPlayerStore.getState().takeOver(id, bars),
   handOver: () => {
     stemPlayerStore.getState().handOver();
@@ -195,9 +197,17 @@ export function playQueuedNow(
 ): Promise<AdvanceOutcome> {
   const players = advancingPlayers(bars);
   const from = playingKind();
-  return from === null
-    ? players[song.kind].takeOver(song.id)
-    : handOver(players, from, song);
+  if (from === null) return players[song.kind].takeOver(song.id);
+  const playing = players[from];
+  if (song.kind === from && playing.playNow !== undefined)
+    return playing.playNow(song.id);
+  return handOver(players, from, song);
+}
+
+export function stopForMetronome(): void {
+  const from = playingKind();
+  if (from === 'stems') stemPlayerStore.getState().handToMetronome();
+  if (from === 'song') songPlayerStore.getState().handToMetronome();
 }
 
 function startNext(

@@ -15,6 +15,7 @@ import {
   entriesAfter,
   isPresetEntry,
   playQueuedNow,
+  stopForMetronome,
   queuedSongOf,
   useLibrary,
   usePlayOrder,
@@ -33,7 +34,7 @@ import { clearQueueBody } from '../logic/upNextText.ts';
 import { NowPlaying, QueuedRow, SetlistRow } from './QueueRows.tsx';
 import {
   leaveForQueued,
-  leaveOf,
+  TO_METRONOME,
   useLeaveAfterClose,
   type PlayOrderRoutes,
 } from './usePlayOrderNav.ts';
@@ -227,27 +228,32 @@ function useQueuePlay(props: QueueSheetProps) {
   const playQueued = usePlayOrder((s) => s.playQueued);
   const exit = useLeaveAfterClose(props, props.visible);
   const { onDismiss, playsInPlace } = props;
-  const play = useCallback(
-    (song: QueuedSong) => {
-      const taking = playQueued(song);
-      if (playsInPlace)
-        void taking.then(() => playQueuedNow(song, playerWaveBars));
-      else exit.leaveFor(leaveForQueued(song));
+  const startHere = useCallback(
+    (song: QueuedSong, committing: Promise<unknown>) => {
+      void committing.then(() => playQueuedNow(song, playerWaveBars));
+      if (!playsInPlace) exit.leaveFor(leaveForQueued(song));
       onDismiss();
     },
-    [playQueued, playsInPlace, exit, onDismiss],
+    [playsInPlace, exit, onDismiss],
+  );
+  const play = useCallback(
+    (song: QueuedSong) => {
+      startHere(song, playQueued(song));
+    },
+    [startHere, playQueued],
   );
   const open = useCallback(
     (entry: SetlistEntry) => {
-      const opening = openEntry(entry);
-      if (playsInPlace && !isPresetEntry(entry))
-        void opening.then(() =>
-          playQueuedNow(stemsOf(entry.stemSetId), playerWaveBars),
-        );
-      else exit.leaveFor(leaveOf(entry));
+      if (!isPresetEntry(entry)) {
+        startHere(stemsOf(entry.stemSetId), openEntry(entry));
+        return;
+      }
+      stopForMetronome();
+      void openEntry(entry);
+      exit.leaveFor(TO_METRONOME);
       onDismiss();
     },
-    [openEntry, playsInPlace, exit, onDismiss],
+    [startHere, openEntry, exit, onDismiss],
   );
   return { play, open, closed: exit.closed };
 }

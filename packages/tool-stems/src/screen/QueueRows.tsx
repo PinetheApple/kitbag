@@ -8,6 +8,7 @@ import {
   PlainListRow,
   PLAYING,
   QUEUE_TEXT,
+  queuedRowLabel,
   removeFromQueueLabel,
   setlistPlaceParts,
   RowText,
@@ -199,7 +200,7 @@ export function QueuedRow({ entry, index, count, onPlay }: QueuedRowProps) {
           <RemoveKey label={removeFromQueueLabel(title)} onPress={remove} />
         </View>
       }
-      accessibilityLabel={`${String(index + 1)}. ${title}, queued. Plays it now`}
+      accessibilityLabel={queuedRowLabel(index + 1, title)}
       onPress={play}
     />
   );

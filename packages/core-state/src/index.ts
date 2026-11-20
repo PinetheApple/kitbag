@@ -330,6 +330,7 @@ export {
   autoAdvanceDeps,
   handOverQueued,
   playQueuedNow,
+  stopForMetronome,
   startAutoAdvance,
   type Arrival,
   type ArrivalEvent,

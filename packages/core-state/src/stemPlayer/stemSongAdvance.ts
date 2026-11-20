@@ -28,7 +28,7 @@ interface StemSongAdvanceContext {
 
 type StemSongAdvance = Pick<
   StemPlayerActions,
-  'advanceTo' | 'takeOver' | 'handOver' | 'handToMetronome'
+  'advanceTo' | 'playNow' | 'takeOver' | 'handOver' | 'handToMetronome'
 >;
 
 export function stemSongAdvance({
@@ -55,16 +55,14 @@ export function stemSongAdvance({
       set({ advanceCountEnd: get().countEndFrame });
     },
   });
+  const advancing = steps((id) => {
+    const opened = mixer.advance();
+    showLoading(id, id);
+    return opened;
+  }, lastBars);
   return {
-    advanceTo: (setId) =>
-      advanceSong(
-        steps((id) => {
-          const opened = mixer.advance();
-          showLoading(id, id);
-          return opened;
-        }, lastBars),
-        setId,
-      ),
+    advanceTo: (setId) => advanceSong(advancing, setId),
+    playNow: (setId) => startSong(advancing, setId),
     takeOver: (setId, bars) =>
       startSong(
         steps(

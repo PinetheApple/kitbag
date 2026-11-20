@@ -37,6 +37,10 @@ export function queueKeyLabel(count: number): string {
     : `${QUEUE_TEXT.queue}, ${String(count)} up next`;
 }
 
+export function queuedRowLabel(position: number, title: string): string {
+  return `${String(position)}. ${title}, queued. Plays it now`;
+}
+
 export function removeFromQueueLabel(title: string): string {
   return `Remove ${title} from the queue`;
 }

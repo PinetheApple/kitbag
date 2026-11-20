@@ -3,6 +3,7 @@
 import { playerWaveBars, SheetHost, ThemeProvider } from '@kitbag/core-design';
 import {
   configurePlayOrder,
+  libraryStore,
   playOrderStore,
   songLibraryStore,
   songPlayerStore,
@@ -19,9 +20,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { flush, textsOf } from './playerHarness.test-helper.tsx';
 import {
+  BALLAD_ITEM,
+  BALLAD_PRESET,
   fakeQueue,
+  GIG,
   HUM,
   hum,
+  metronomeEntryOnStage,
   queued,
   setQueued,
   single,
@@ -36,6 +41,8 @@ const TIN_ROOF = 22;
 configurePlayOrder({ queue: fakeQueue() });
 
 let mounted: ReactTestRenderer | undefined;
+const libraryBefore = libraryStore.getState();
+const stemPlayerBefore = stemPlayerStore.getState();
 
 beforeEach(() => {
   songLibraryStore.setState({
@@ -49,6 +56,8 @@ afterEach(() => {
   });
   mounted = undefined;
   vi.restoreAllMocks();
+  libraryStore.setState(libraryBefore, true);
+  stemPlayerStore.setState(stemPlayerBefore, true);
 });
 
 async function openOnList(...songs: QueuedSong[]) {
@@ -130,5 +139,45 @@ describe('the queue sheet over a list, with nothing playing', () => {
     expect(sheet.has('Done')).toBe(true);
     expect(sheet.has('Play queue')).toBe(false);
     expect(sheet.texts().some((text) => text.endsWith('up next'))).toBe(false);
+  });
+});
+
+describe('the queue sheet over a list, while a stem song plays', () => {
+  beforeEach(() => {
+    stemPlayerStore.setState({
+      status: 'ready',
+      setId: NIGHT_BUS,
+      title: 'Night Bus',
+      advancedTo: null,
+    });
+  });
+
+  it('plays a tapped queued stem song in the same stem session', async () => {
+    const playNow = vi
+      .spyOn(stemPlayerStore.getState(), 'playNow')
+      .mockResolvedValue('playing');
+    const handOver = vi.spyOn(stemPlayerStore.getState(), 'handOver');
+    const takeOver = stemTakeOver();
+    const sheet = await openOnList(stems(TIN_ROOF));
+    expect(sheet.has('Now playing')).toBe(true);
+    await sheet.press('1. Tin Roof, queued. Plays it now');
+    expect(playNow).toHaveBeenCalledExactlyOnceWith(TIN_ROOF);
+    expect(handOver).not.toHaveBeenCalled();
+    expect(takeOver).not.toHaveBeenCalled();
+    expect(queued).toEqual([]);
+  });
+
+  it('stops the stem song before a metronome entry loads', async () => {
+    const { loadSong } = metronomeEntryOnStage();
+    const handToMetronome = vi
+      .spyOn(stemPlayerStore.getState(), 'handToMetronome')
+      .mockImplementation(() => undefined);
+    const sheet = await openOnList();
+    await sheet.press('Ballad, from Gig');
+    expect(loadSong).toHaveBeenCalledWith(BALLAD_PRESET, BALLAD_ITEM, GIG);
+    expect(handToMetronome).toHaveBeenCalledOnce();
+    const [stopped] = handToMetronome.mock.invocationCallOrder;
+    const [loaded] = loadSong.mock.invocationCallOrder;
+    expect(stopped).toBeLessThan(loaded ?? 0);
   });
 });

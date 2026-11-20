@@ -1,10 +1,5 @@
-import {
-  handOverQueued,
-  isPresetEntry,
-  type QueuedSong,
-  type SetlistEntry,
-} from '@kitbag/core-state';
-import { playerWaveBars, useAfterSheetClosed } from '@kitbag/core-design';
+import type { QueuedSong } from '@kitbag/core-state';
+import { useAfterSheetClosed } from '@kitbag/core-design';
 import { useCallback } from 'react';
 
 export interface PlayOrderRoutes {
@@ -13,6 +8,8 @@ export interface PlayOrderRoutes {
   readonly onOpenMetronome: () => void;
   readonly onNotice: (message: string) => void;
 }
+
+export const TO_METRONOME = { kind: 'metronome' } as const;
 
 export type Leave =
   | { readonly kind: 'stem'; readonly stemSetId: number }
@@ -25,21 +22,10 @@ export function leaveForQueued(song: QueuedSong): Leave {
     : { kind: 'stem', stemSetId: song.id };
 }
 
-function handOverToSong(routes: PlayOrderRoutes, songId: number): void {
-  void handOverQueued('stems', { kind: 'song', id: songId }, playerWaveBars);
-  routes.onOpenSong(songId);
-}
-
 export function followLeave(routes: PlayOrderRoutes, leave: Leave): void {
   if (leave.kind === 'stem') routes.onOpenStemSet(leave.stemSetId);
-  else if (leave.kind === 'song') handOverToSong(routes, leave.songId);
+  else if (leave.kind === 'song') routes.onOpenSong(leave.songId);
   else routes.onOpenMetronome();
-}
-
-export function leaveOf(entry: SetlistEntry): Leave {
-  return isPresetEntry(entry)
-    ? { kind: 'metronome' }
-    : { kind: 'stem', stemSetId: entry.stemSetId };
 }
 
 export function useLeaveAfterClose(routes: PlayOrderRoutes, visible: boolean) {
