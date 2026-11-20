@@ -110,6 +110,7 @@ function openActions(
         menu,
         bottomInset: 0,
         onOpenSetlist: vi.fn(),
+        onOpenQueue: null,
       }),
     );
   });
@@ -190,14 +191,17 @@ const nightBus = {
 interface Library {
   readonly tree: ReactTestRenderer;
   readonly onOpenSetlist: ReturnType<typeof vi.fn>;
+  readonly onOpenQueue: ReturnType<typeof vi.fn>;
 }
 
 function Harness({
   row,
   onOpenSetlist,
+  onOpenQueue,
 }: {
   readonly row: LibraryRow;
   readonly onOpenSetlist: (setlistId: number) => void;
+  readonly onOpenQueue: () => void;
 }) {
   const menu = useLibraryMenu();
   const { openActions: open } = menu;
@@ -208,6 +212,7 @@ function Harness({
     menu,
     bottomInset: 0,
     onOpenSetlist,
+    onOpenQueue,
   });
 }
 
@@ -225,12 +230,13 @@ function openRow(row: LibraryRow, files: unknown, queued: number[]): Library {
   queue.verbs.addToQueue.mockClear();
   queue.reads.length = 0;
   const onOpenSetlist = vi.fn();
+  const onOpenQueue = vi.fn();
   let tree: ReactTestRenderer | undefined;
   act(() => {
-    tree = create(createElement(Harness, { row, onOpenSetlist }));
+    tree = create(createElement(Harness, { row, onOpenSetlist, onOpenQueue }));
   });
   if (tree === undefined) throw new Error('not mounted');
-  return { tree, onOpenSetlist };
+  return { tree, onOpenSetlist, onOpenQueue };
 }
 
 function openStemRow(files: unknown, queued: number[] = []): Library {
@@ -307,6 +313,18 @@ describe('the actions sheet of a stem song', () => {
     expect(tree.root.findAllByType('Sheet' as never)).toHaveLength(0);
     expect(snack(tree)?.message).toBe('Night Bus plays next');
   });
+
+  it.each(['Play next', 'Add to queue'])(
+    'opens the queue from Open on the %s snackbar',
+    async (verb) => {
+      const { tree, onOpenQueue } = openStemRow('present');
+      await press(tree, verb);
+      const shownSnack = snack(tree);
+      expect(shownSnack?.action?.label).toBe('Open');
+      shownSnack?.action?.onPress();
+      expect(onOpenQueue).toHaveBeenCalledOnce();
+    },
+  );
 
   it('puts the song last on Add to queue and says so', async () => {
     const { tree } = openStemRow('present');

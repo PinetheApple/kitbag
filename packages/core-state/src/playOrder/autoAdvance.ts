@@ -22,6 +22,7 @@ import {
   type PlayAdvance,
   type PlayerKind,
 } from './order.ts';
+import { playingKind } from './nowPlaying.ts';
 import { SKIP, type SkippedSong } from './queuedSongText.ts';
 import { playOrderStore, type SkipResult, type Undo } from './store.ts';
 
@@ -186,6 +187,17 @@ export function handOverQueued(
   bars: WaveformBars,
 ): Promise<AdvanceOutcome> {
   return handOver(advancingPlayers(bars), from, song);
+}
+
+export function playQueuedNow(
+  song: QueuedSong,
+  bars: WaveformBars,
+): Promise<AdvanceOutcome> {
+  const players = advancingPlayers(bars);
+  const from = playingKind();
+  return from === null
+    ? players[song.kind].takeOver(song.id)
+    : handOver(players, from, song);
 }
 
 function startNext(

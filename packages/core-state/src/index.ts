@@ -308,18 +308,28 @@ export {
   usePlayOrder,
   useQueueRefresh,
   useQueueSong,
+  useSetlistSpot,
   useStage,
   useUpNext,
+  useUpNextCount,
   type QueueSong,
   type QueueSongs,
+  type SetlistSpot,
   type Stage,
 } from './playOrder/usePlayOrder.ts';
+export {
+  playingKind,
+  useShownSongId,
+  useShownStemSetId,
+} from './playOrder/nowPlaying.ts';
+export { songShown, stemShown } from './playOrder/shown.ts';
 export { bindLibraryRemovals } from './playOrder/libraryRemovals.ts';
 export {
   ARRIVAL,
   arrivalStore,
   autoAdvanceDeps,
   handOverQueued,
+  playQueuedNow,
   startAutoAdvance,
   type Arrival,
   type ArrivalEvent,

@@ -107,6 +107,10 @@ const useStyles = createThemedStyles((theme) => ({
   titleBesideAction: {
     flexShrink: 1,
   },
+  titleDetail: {
+    ...textStyle(textRoles.rowSubtitle),
+    color: theme.color.text2,
+  },
   scrollFrame: {
     flexShrink: 1,
     marginVertical: -SHEET_TOUCH_ROOM,
@@ -180,6 +184,7 @@ export interface SheetProps {
   readonly titleSize?: SheetTitleSize;
   readonly titleIcon?: IconName;
   readonly titleAction?: ReactNode;
+  readonly titleDetail?: string | undefined;
   readonly hint?: string;
   readonly dismissLabel: string;
   readonly bottomInset?: number;
@@ -199,6 +204,7 @@ export function Sheet({
   titleSize = 'default',
   titleIcon,
   titleAction,
+  titleDetail,
   hint,
   dismissLabel,
   bottomInset = 0,
@@ -335,6 +341,9 @@ export function Sheet({
                 >
                   {title}
                 </Text>
+                {titleDetail === undefined ? null : (
+                  <Text style={styles.titleDetail}>{titleDetail}</Text>
+                )}
                 {titleAction === undefined ? null : (
                   <View style={styles.titleAction}>{titleAction}</View>
                 )}

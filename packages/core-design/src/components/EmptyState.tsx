@@ -99,8 +99,8 @@ export interface EmptyStateProps {
   readonly icon: IconName;
   readonly title: string;
   readonly reason: string;
-  readonly actionLabel: string;
-  readonly onAction: () => void;
+  readonly actionLabel?: string;
+  readonly onAction?: () => void;
   readonly variant?: EmptyStateVariant;
   readonly actionIcon?: IconName;
   readonly option?: EmptyStateOption | null;
@@ -118,16 +118,18 @@ function ListEmptyState(props: EmptyStateProps) {
         {props.title}
       </Text>
       <Text style={styles.listReason}>{props.reason}</Text>
-      <Pressable
-        accessibilityRole="button"
-        style={styles.listButton}
-        onPress={props.onAction}
-      >
-        {props.actionIcon === undefined ? null : (
-          <Icon name={props.actionIcon} size="emptyButton" color="onAccent" />
-        )}
-        <Text style={styles.listButtonLabel}>{props.actionLabel}</Text>
-      </Pressable>
+      {props.actionLabel === undefined ? null : (
+        <Pressable
+          accessibilityRole="button"
+          style={styles.listButton}
+          onPress={props.onAction}
+        >
+          {props.actionIcon === undefined ? null : (
+            <Icon name={props.actionIcon} size="emptyButton" color="onAccent" />
+          )}
+          <Text style={styles.listButtonLabel}>{props.actionLabel}</Text>
+        </Pressable>
+      )}
       {option === null ? null : (
         <View style={styles.listOption}>
           <Icon name={option.icon} size="emptyOption" color="text2" />
@@ -140,6 +142,7 @@ function ListEmptyState(props: EmptyStateProps) {
 
 export function EmptyState(props: EmptyStateProps) {
   const styles = useStyles();
+  const { actionLabel, onAction } = props;
   if (props.variant === 'list') return <ListEmptyState {...props} />;
   return (
     <View style={styles.box}>
@@ -150,11 +153,9 @@ export function EmptyState(props: EmptyStateProps) {
         {props.title}
       </Text>
       <Text style={styles.reason}>{props.reason}</Text>
-      <Button
-        variant="primary"
-        label={props.actionLabel}
-        onPress={props.onAction}
-      />
+      {actionLabel === undefined || onAction === undefined ? null : (
+        <Button variant="primary" label={actionLabel} onPress={onAction} />
+      )}
     </View>
   );
 }

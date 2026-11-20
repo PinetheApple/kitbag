@@ -14,6 +14,7 @@ import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
 import { DockedMiniPlayer } from '@/miniPlayer/DockedMiniPlayer';
 import { useMiniPlayerDocked } from '@/miniPlayer/useMiniPlayerDocked';
+import { useQueueSheet } from '@/queue/useQueueSheet';
 import { ADD_STEM_SONGS, useLibraryRoutes } from '@/runtime/libraryRoutes';
 import { useStemDeckRoutes } from '@/runtime/stemDeckRoutes';
 
@@ -29,6 +30,7 @@ function StemSongsRoute() {
   const showImport = useStemDeck((s) => importCardShows(s.importView));
   const folder = useLibraryFolder('stems');
   const docked = useMiniPlayerDocked();
+  const queue = useQueueSheet(insets.bottom);
 
   useEffect(() => {
     markUsed(TOOL_ID.stems);
@@ -58,6 +60,7 @@ function StemSongsRoute() {
         onOpenStemSet={routes.openStemSet}
         onOpenSong={routes.openSong}
         onOpenSetlist={routes.openSetlist}
+        onOpenQueue={queue.open}
         onUnavailable={folder.showUnavailable}
         strip={folder.strip}
         onAdd={openAdd}
@@ -65,7 +68,14 @@ function StemSongsRoute() {
           ? { status: <ImportStatusCard onView={stemDeck.openImport} /> }
           : {})}
         {...(docked
-          ? { dock: <DockedMiniPlayer bottomInset={insets.bottom} /> }
+          ? {
+              dock: (
+                <DockedMiniPlayer
+                  bottomInset={insets.bottom}
+                  onOpenQueue={queue.open}
+                />
+              ),
+            }
           : {})}
       />
       <AddStemSongSheet
@@ -76,6 +86,7 @@ function StemSongsRoute() {
         onFromStemDeck={fromStemDeck}
       />
       {folder.sheet}
+      {queue.sheet}
     </>
   );
 }

@@ -6,6 +6,7 @@ import {
   EmptyState,
   FloatingActionButton,
   libraryList,
+  queueKeyLabel,
   SearchField,
   space,
   textRoles,
@@ -20,6 +21,7 @@ import {
   rowMatchIndex,
   useDataFolder,
   useSongLibrary,
+  useUpNextCount,
   type LibraryRow,
   type LibraryView,
 } from '@kitbag/core-state';
@@ -52,6 +54,7 @@ export interface LibraryScreenProps {
   readonly onOpenSong: (id: number) => void;
   readonly onOpenSetlists?: () => void;
   readonly onOpenSetlist: (setlistId: number) => void;
+  readonly onOpenQueue?: () => void;
   readonly dock?: ReactElement;
   readonly onAdd?: () => void;
   readonly status?: ReactElement;
@@ -290,6 +293,31 @@ function LibraryBody({
   );
 }
 
+function useBarActions(
+  view: LibraryView,
+  onOpenSetlists: (() => void) | undefined,
+  onOpenQueue: (() => void) | undefined,
+): readonly AppBarAction[] {
+  const upNextCount = useUpNextCount();
+  return useMemo(() => {
+    const actions: AppBarAction[] = [];
+    if (onOpenSetlists !== undefined)
+      actions.push({
+        icon: 'setlist',
+        label: 'Setlists',
+        onPress: onOpenSetlists,
+      });
+    if (view === 'stems' && onOpenQueue !== undefined)
+      actions.push({
+        icon: 'queue',
+        label: queueKeyLabel(upNextCount),
+        onPress: onOpenQueue,
+        badge: upNextCount === 0 ? undefined : String(upNextCount),
+      });
+    return actions;
+  }, [view, onOpenSetlists, onOpenQueue, upNextCount]);
+}
+
 function useEntry() {
   const refresh = useSongLibrary((s) => s.refresh);
   const setQuery = useSongLibrary((s) => s.setQuery);
@@ -307,6 +335,7 @@ export function LibraryScreen({
   onOpenSong,
   onOpenSetlists,
   onOpenSetlist,
+  onOpenQueue,
   dock,
   onAdd,
   status,
@@ -320,13 +349,7 @@ export function LibraryScreen({
   const text = VIEW_TEXT[view];
   const state = useViewState(view);
   const listed = state === 'list';
-  const actions: readonly AppBarAction[] = useMemo(
-    () =>
-      onOpenSetlists === undefined
-        ? []
-        : [{ icon: 'setlist', label: 'Setlists', onPress: onOpenSetlists }],
-    [onOpenSetlists],
-  );
+  const actions = useBarActions(view, onOpenSetlists, onOpenQueue);
   const frame = useMemo(
     () => [styles.screen, { paddingTop: insets.top }],
     [styles.screen, insets.top],
@@ -377,6 +400,7 @@ export function LibraryScreen({
         menu={menu}
         bottomInset={insets.bottom}
         onOpenSetlist={onOpenSetlist}
+        onOpenQueue={onOpenQueue ?? null}
       />
     </View>
   );

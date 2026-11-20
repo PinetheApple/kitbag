@@ -14,6 +14,10 @@ const pickers = vi.hoisted(() => ({
   importStemFolder: vi.fn(() => Promise.resolve()),
 }));
 const FAB_ROOM = list.fab + list.fabBottom;
+const bar = vi.hoisted(() => ({
+  actions: [] as Record<string, unknown>[],
+  upNextCount: 0,
+}));
 
 vi.mock('react-native', () => ({
   View: 'View',
@@ -23,7 +27,10 @@ vi.mock('react-native', () => ({
 
 vi.mock('@kitbag/core-design', async (original) => ({
   ...(await original<Record<string, unknown>>()),
-  AppBar: () => null,
+  AppBar: (props: { actions?: Record<string, unknown>[] }) => {
+    bar.actions = props.actions ?? [];
+    return null;
+  },
   FloatingActionButton: 'Fab',
   libraryList: new Proxy(list, {
     get: (values, key): unknown => Reflect.get(values, key) ?? 0,
@@ -50,6 +57,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
       setQuery: () => undefined,
       ...pickers,
     }),
+  useUpNextCount: () => bar.upNextCount,
   inView: () => true,
   filterRows: () => [],
   useDataFolder: (select: (state: { move: null; codes: null }) => unknown) =>
@@ -60,7 +68,10 @@ vi.mock('./LibraryRowView.tsx', () => ({ LibraryRowView: () => null }));
 
 vi.mock('./LibrarySheets.tsx', () => ({
   LibrarySheets: (props: Props) =>
-    createElement('Sheets', { bottomInset: props.bottomInset }),
+    createElement('Sheets', {
+      bottomInset: props.bottomInset,
+      onOpenQueue: props.onOpenQueue,
+    }),
   useLibraryMenu: () => ({ kind: 'none' }),
 }));
 
@@ -177,5 +188,43 @@ describe('the data folder strip', () => {
     );
     if (body === undefined) throw new Error('no list body');
     expect(siblings.indexOf(strip)).toBe(siblings.indexOf(body) - 1);
+  });
+});
+
+describe('the queue from the lists', () => {
+  const queueAction = () => bar.actions.find((a) => a.icon === 'queue');
+
+  beforeEach(() => {
+    bar.upNextCount = 0;
+  });
+
+  it('puts a Queue key in the Stem songs app bar, badged with the count up next', () => {
+    const onOpenQueue = vi.fn();
+    bar.upNextCount = 3;
+    mount(undefined, { view: 'stems', onOpenQueue });
+    expect(queueAction()).toMatchObject({
+      label: 'Queue, 3 up next',
+      badge: '3',
+    });
+    (queueAction()?.onPress as () => void)();
+    expect(onOpenQueue).toHaveBeenCalledOnce();
+  });
+
+  it('draws no badge with nothing up next', () => {
+    mount(undefined, { view: 'stems', onOpenQueue: vi.fn() });
+    expect(queueAction()).toMatchObject({ label: 'Queue' });
+    expect(queueAction()?.badge).toBeUndefined();
+  });
+
+  it('keeps the Songs app bar to its own keys', () => {
+    mount(undefined, { onOpenQueue: vi.fn() });
+    expect(queueAction()).toBeUndefined();
+  });
+
+  it('gives the sheets the queue for their snackbars on both lists', () => {
+    const onOpenQueue = vi.fn();
+    expect(
+      propOf(mount(undefined, { onOpenQueue }), 'Sheets', 'onOpenQueue'),
+    ).toBe(onOpenQueue);
   });
 });

@@ -52,11 +52,11 @@ describe('up next row', () => {
     } as const;
     expect(upNextText(next, context)).toEqual({
       title: 'Night Bus',
-      source: 'Queued · 2 more after it',
+      source: 'Next in queue · 2 more after it',
       metronome: false,
     });
     expect(upNextText(next, { ...context, queueLength: 1 }).source).toBe(
-      'Queued',
+      'Next in queue',
     );
   });
 
@@ -67,7 +67,7 @@ describe('up next row', () => {
     } as const;
     expect(upNextText(next, { ...context, queueLength: 1 })).toEqual({
       title: 'Hum',
-      source: 'Queued',
+      source: 'Next in queue',
       metronome: false,
     });
   });
@@ -103,8 +103,8 @@ describe('up next sheet text', () => {
 
   it('says what Clear does, with and without a setlist on stage', () => {
     expect(clearQueueBody(3, 'Friday gig')).toBe(
-      'The 3 queued songs leave Up next. Friday gig carries on after this song.',
+      'The 3 queued songs leave the queue. Friday gig carries on after this song.',
     );
-    expect(clearQueueBody(1, '')).toBe('The 1 queued song leaves Up next.');
+    expect(clearQueueBody(1, '')).toBe('The 1 queued song leaves the queue.');
   });
 });

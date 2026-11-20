@@ -1,30 +1,31 @@
-import { MiniPlayerBar, type MiniPlayerTile } from '@kitbag/core-design';
+import {
+  MiniPlayerBar,
+  queueKeyLabel,
+  type MiniPlayerTile,
+} from '@kitbag/core-design';
 import {
   loopEndFrames,
+  songShown,
+  stemShown,
   stemSongTitle,
   stopSongAndSession,
   upNextTitle,
-  useLibrary,
   useLibrarySongs,
+  useSetlistSpot,
+  useShownSongId,
+  useShownStemSetId,
   useSongPlayer,
-  useStage,
   useStemPlayer,
   useStemSongs,
   useUpNext,
+  useUpNextCount,
 } from '@kitbag/core-state';
 import { useCallback } from 'react';
 
 import {
   miniPlayerDetail,
   stemMiniPlayerDetail,
-  type SetlistSpot,
 } from '../logic/miniPlayerDetail.ts';
-import {
-  songShown,
-  stemShown,
-  useShownSongId,
-  useShownStemSetId,
-} from './nowPlaying.ts';
 import type { UsePlayhead } from './playhead.ts';
 
 export interface MiniPlayerProps {
@@ -32,6 +33,7 @@ export interface MiniPlayerProps {
   readonly bottomInset: number;
   readonly onOpenSong: (id: number) => void;
   readonly onOpenStemSet: (id: number) => void;
+  readonly onOpenQueue: () => void;
 }
 
 export function useMiniPlayerShown(): boolean {
@@ -51,12 +53,16 @@ interface ShownSong {
   readonly onOpen: () => void;
 }
 
-type BarProps = Pick<MiniPlayerProps, 'usePlayhead' | 'bottomInset'>;
+type BarProps = Pick<
+  MiniPlayerProps,
+  'usePlayhead' | 'bottomInset' | 'onOpenQueue'
+>;
 
 function LiveMiniPlayer({
   shown,
   usePlayhead,
   bottomInset,
+  onOpenQueue,
 }: BarProps & { readonly shown: ShownSong }) {
   const { title, engineRate, durationFrames, loopEnd } = shown;
   const { progress, playing } = usePlayhead(
@@ -64,6 +70,7 @@ function LiveMiniPlayer({
     durationFrames,
     loopEnd,
   );
+  const upNextCount = useUpNextCount();
   const stop = useCallback(() => {
     stopSongAndSession();
   }, []);
@@ -78,8 +85,10 @@ function LiveMiniPlayer({
       playLabel={`Play ${title}`}
       pauseLabel={`Pause ${title}`}
       closeLabel={`Stop ${title}`}
+      queueLabel={queueKeyLabel(upNextCount)}
       bottomInset={bottomInset}
       onOpen={shown.onOpen}
+      onQueue={onOpenQueue}
       onTogglePlay={shown.onTogglePlay}
       onClose={stop}
     />
@@ -114,18 +123,6 @@ function SongMiniPlayer({ songId, onOpenSong, ...bar }: SongProps) {
     onOpen,
   };
   return <LiveMiniPlayer shown={shown} {...bar} />;
-}
-
-function useSetlistSpot(setId: number): SetlistSpot | null {
-  const loaded = useLibrary((s) => s.loaded);
-  const { stage, cursor, name } = useStage();
-  if (cursor === null || loaded === null) return null;
-  if (loaded.presetId !== null || loaded.stemSetId !== setId) return null;
-  return {
-    setlistName: name,
-    number: cursor.index + 1,
-    of: stage.entries.length,
-  };
 }
 
 function useNextTitle(): string | null {

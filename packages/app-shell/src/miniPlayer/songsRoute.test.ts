@@ -7,6 +7,7 @@ import { NAV_BAR } from '../safeAreaInsets.test-helper.ts';
 const state = vi.hoisted(() => ({
   docked: false,
   props: undefined as Record<string, unknown> | undefined,
+  openQueue: () => undefined,
 }));
 
 vi.mock(
@@ -36,6 +37,9 @@ vi.mock('./useMiniPlayerDocked', () => ({
   useMiniPlayerDocked: () => state.docked,
 }));
 vi.mock('./DockedMiniPlayer', () => ({ DockedMiniPlayer: () => null }));
+vi.mock('@/queue/useQueueSheet', () => ({
+  useQueueSheet: () => ({ open: state.openQueue, sheet: null }),
+}));
 vi.mock('@/dataFolder/useLibraryFolder', () => ({
   useLibraryFolder: () => ({
     strip: null,
@@ -66,6 +70,11 @@ describe('the Songs route', () => {
     expect(isValidElement(dock)).toBe(true);
     expect((dock as { props: { bottomInset: number } }).props).toEqual({
       bottomInset: NAV_BAR,
+      onOpenQueue: state.openQueue,
     });
+  });
+
+  it('opens the queue sheet from the list', () => {
+    expect(render(false).onOpenQueue).toBe(state.openQueue);
   });
 });

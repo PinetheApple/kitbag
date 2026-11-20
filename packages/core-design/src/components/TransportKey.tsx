@@ -3,7 +3,6 @@ import { Pressable, Text, View } from 'react-native';
 import type { IconName } from '../icons.ts';
 import {
   iconSizes,
-  inset,
   opacity,
   radius,
   size,
@@ -15,6 +14,7 @@ import { createThemedStyles } from '../ThemeProvider.tsx';
 import { stemPlayer } from '../stemPlayerRoles.ts';
 import { hitSlopFor } from '../touchTarget.ts';
 import { InlineIcon } from './IconGlyph.tsx';
+import { KeyBadge } from './KeyBadge.tsx';
 
 export type TransportKeySize = 'standard' | 'dock' | 'large' | 'small';
 
@@ -100,21 +100,8 @@ const useStyles = createThemedStyles((theme) => ({
     height: size.transportKeySmall,
   },
   badge: {
-    position: 'absolute',
     top: -size.keyBadgeOffset,
     right: -size.keyBadgeOffset,
-    minWidth: size.keyBadge,
-    minHeight: size.keyBadge,
-    paddingHorizontal: inset.keyBadgeH,
-    borderRadius: radius.keyBadge,
-    backgroundColor: theme.accentTextFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeLabel: {
-    ...textStyle(textRoles.keyBadge),
-    color: theme.color.onAccent,
-    includeFontPadding: false,
   },
 }));
 
@@ -164,12 +151,7 @@ export function TransportKey({
         <InlineIcon name={icon} style={glyphStyle} />
       )}
       {badge === undefined ? null : (
-        <View
-          style={styles.badge}
-          importantForAccessibility="no-hide-descendants"
-        >
-          <Text style={styles.badgeLabel}>{badge}</Text>
-        </View>
+        <KeyBadge label={badge} style={styles.badge} />
       )}
     </Pressable>
   );

@@ -45,6 +45,9 @@ export function useLibraryRoutes() {
       toMetronome: () => {
         router.dismissTo('/metronome');
       },
+      openMetronome: () => {
+        router.navigate('/metronome');
+      },
     }),
     [router],
   );

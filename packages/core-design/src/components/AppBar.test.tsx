@@ -277,6 +277,26 @@ describe('AppBar', () => {
     expect(title).toBeLessThan(action ?? -1);
   });
 
+  it('badges an action with its count, and draws no badge without one', () => {
+    const queue = { icon: 'queue', label: 'Queue', onPress: noop } as const;
+    const counted = render(
+      <AppBar title="Stem songs" actions={[{ ...queue, badge: '3' }]} />,
+    );
+    const badgeIn = (markup: string) =>
+      dataNodes(markup).find(
+        (n) =>
+          n.a11y === 'no-hide-descendants' &&
+          n.style?.top === screenBar.badgeTop,
+      );
+    expect(badgeIn(counted)?.style).toMatchObject({
+      position: 'absolute',
+      right: screenBar.badgeEnd,
+    });
+    expect(counted).toContain('>3<');
+    const plain = render(<AppBar title="Stem songs" actions={[queue]} />);
+    expect(badgeIn(plain)).toBeUndefined();
+  });
+
   it('keeps caller nodes ahead of the actions', () => {
     const markup = render(
       <AppBar

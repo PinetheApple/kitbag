@@ -427,6 +427,8 @@ export const screenBar = {
   gap: 2,
   iconButton: 48,
   chipEnd: 8,
+  badgeTop: 6,
+  badgeEnd: 5,
 } as const;
 
 export function barChipRoom(chipHeight: number): number {

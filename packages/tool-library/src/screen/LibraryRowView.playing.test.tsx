@@ -48,17 +48,24 @@ vi.mock('@kitbag/core-design', async (original) => {
   };
 });
 
-vi.mock('@kitbag/core-state', async (original) => ({
-  ...(await original<Record<string, unknown>>()),
-  useSongLibrary: (select: (state: { codes: unknown }) => unknown) =>
-    select({ codes: {} }),
-  songBadge: () => 'grid',
-  analysisFailure: () => null,
-  rowFilesOf: () => null,
-  useLibrary: () => () => undefined,
-  useSongPlayer: (select: (state: unknown) => unknown) => select(now.song),
-  useStemPlayer: (select: (state: unknown) => unknown) => select(now.stem),
-}));
+vi.mock('@kitbag/core-state', async (original) => {
+  const pure = await original<typeof import('@kitbag/core-state')>();
+  return {
+    ...pure,
+    useShownSongId: () =>
+      pure.songShown(now.song as never) ? (now.song.songId ?? null) : null,
+    useShownStemSetId: () =>
+      pure.stemShown(now.stem as never) ? (now.stem.setId ?? null) : null,
+    useSongLibrary: (select: (state: { codes: unknown }) => unknown) =>
+      select({ codes: {} }),
+    songBadge: () => 'grid',
+    analysisFailure: () => null,
+    rowFilesOf: () => null,
+    useLibrary: () => () => undefined,
+    useSongPlayer: (select: (state: unknown) => unknown) => select(now.song),
+    useStemPlayer: (select: (state: unknown) => unknown) => select(now.stem),
+  };
+});
 
 const { LibraryRowView } = await import('./LibraryRowView.tsx');
 

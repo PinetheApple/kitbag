@@ -10,7 +10,36 @@ export const QUEUE_TEXT = {
   open: 'Open',
   leaveSetlist: 'Leave setlist',
   undo: 'Undo',
+  queue: 'Queue',
+  nowPlaying: 'Now playing',
+  nextInQueue: 'Next in queue',
+  clearQueue: 'Clear queue',
+  playQueue: 'Play queue',
+  done: 'Done',
+  closeQueue: 'Close the queue',
+  nothingQueued: 'Nothing queued',
+  nothingQueuedReason:
+    'Use Play next or Add to queue on a song. When this song ends, playback stops.',
+  remove: 'Remove',
 } as const;
+
+export function nextFromLabel(setlistName: string): string {
+  return `Next from: ${setlistName}`;
+}
+
+export function upNextCountLabel(count: number): string {
+  return `· ${String(count)} up next`;
+}
+
+export function queueKeyLabel(count: number): string {
+  return count === 0
+    ? QUEUE_TEXT.queue
+    : `${QUEUE_TEXT.queue}, ${String(count)} up next`;
+}
+
+export function removeFromQueueLabel(title: string): string {
+  return `Remove ${title} from the queue`;
+}
 
 export const PLAYING = 'Playing';
 

@@ -47,6 +47,7 @@ const { StyleSheet } = await import('react-native');
 const PROGRESS = 0.42;
 const handlers = {
   onOpen: vi.fn(),
+  onQueue: vi.fn(),
   onTogglePlay: vi.fn(),
   onClose: vi.fn(),
 };
@@ -66,6 +67,7 @@ function render(playing: number) {
         playLabel="Play Everlong"
         pauseLabel="Pause Everlong"
         closeLabel="Stop Everlong"
+        queueLabel="Queue, 2 up next"
         bottomInset={0}
         {...handlers}
       />
@@ -89,14 +91,14 @@ beforeEach(() => {
 describe('MiniPlayerBar', () => {
   it('gives every control at least the minimum touch target', () => {
     render(0);
-    expect(pressables).toHaveLength(3);
+    expect(pressables).toHaveLength(4);
     for (const props of pressables) {
       const style = flat(props.style);
       expect(style.minHeight ?? style.height).toBeGreaterThanOrEqual(
         minTouchTargetDp,
       );
     }
-    for (const label of ['Play Everlong', 'Stop Everlong'])
+    for (const label of ['Queue, 2 up next', 'Play Everlong', 'Stop Everlong'])
       expect(flat(pressable(label).style).width).toBeGreaterThanOrEqual(
         minTouchTargetDp,
       );
@@ -104,6 +106,7 @@ describe('MiniPlayerBar', () => {
 
   it.each([
     ['Open Everlong', 'onOpen'],
+    ['Queue, 2 up next', 'onQueue'],
     ['Play Everlong', 'onTogglePlay'],
     ['Stop Everlong', 'onClose'],
   ] as const)('routes %s to %s', (label, handler) => {

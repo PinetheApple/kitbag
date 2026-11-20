@@ -2,12 +2,8 @@ import { FACT_SEPARATOR, nextUpLabel, placeLabel } from '@kitbag/core-design';
 import {
   isUnitySpeed,
   speedPercentText,
-  type SetlistPlace,
+  type SetlistSpot,
 } from '@kitbag/core-state';
-
-export interface SetlistSpot extends SetlistPlace {
-  readonly setlistName: string;
-}
 
 export function miniPlayerDetail(
   artist: string | null,

@@ -19,6 +19,7 @@ import { isTextScaled } from '../textScale.ts';
 import { useTextIconScale } from '../useTextIconScale.ts';
 import { EllipsizedText } from './EllipsizedText.tsx';
 import { Icon } from './Icon.tsx';
+import { KeyBadge } from './KeyBadge.tsx';
 
 const SCALED_CHIP_EXTRA_MARGIN = space.controlGap - screenBar.gap;
 const SCALED_EDGE_EXTRA_MARGIN = space.screenInset - screenBar.h;
@@ -67,6 +68,10 @@ const useStyles = createThemedStyles((theme) => ({
     lineHeight: textRoles.appBarTitle.size * lineRatio.appBarTitle,
     color: theme.color.text,
   },
+  badge: {
+    top: screenBar.badgeTop,
+    right: screenBar.badgeEnd,
+  },
   wordmark: textStyle(textRoles.wordmark),
   subtitle: {
     ...textStyle(textRoles.appBarSubtitle),
@@ -81,6 +86,7 @@ export interface BarIconButtonProps {
   readonly color?: ColorToken;
   readonly size?: IconSize;
   readonly disabled?: boolean;
+  readonly badge?: string | undefined;
 }
 
 export function BarIconButton({
@@ -90,6 +96,7 @@ export function BarIconButton({
   color = 'text2',
   size = 'bar',
   disabled = false,
+  badge,
 }: BarIconButtonProps) {
   const styles = useStyles();
   const iconScale = useTextIconScale();
@@ -108,6 +115,9 @@ export function BarIconButton({
         color={disabled ? 'decor' : color}
         scale={iconScale}
       />
+      {badge === undefined ? null : (
+        <KeyBadge label={badge} style={styles.badge} />
+      )}
     </Pressable>
   );
 }
@@ -116,6 +126,7 @@ export interface AppBarAction {
   readonly icon: IconName;
   readonly label: string;
   readonly onPress: () => void;
+  readonly badge?: string | undefined;
 }
 
 export interface AppBarProps {
@@ -254,6 +265,7 @@ export function AppBar({
           key={action.label}
           icon={action.icon}
           label={action.label}
+          badge={action.badge}
           onPress={action.onPress}
         />
       ))}

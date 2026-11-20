@@ -1,4 +1,9 @@
-import { countLabel, FACT_SEPARATOR, placeLabel } from '@kitbag/core-design';
+import {
+  countLabel,
+  FACT_SEPARATOR,
+  placeLabel,
+  QUEUE_TEXT,
+} from '@kitbag/core-design';
 import {
   BPM_UNIT,
   isPresetEntry,
@@ -12,7 +17,6 @@ import {
   type UpNext,
 } from '@kitbag/core-state';
 
-export const QUEUED = 'Queued';
 const METRONOME = 'metronome';
 
 export interface UpNextContext {
@@ -30,10 +34,11 @@ export interface UpNextText {
 
 function queuedSource(queueLength: number): string {
   const rest = queueLength - 1;
-  if (rest <= 0) return QUEUED;
-  return [QUEUED, countLabel(rest, 'more after it', 'more after it')].join(
-    FACT_SEPARATOR,
-  );
+  if (rest <= 0) return QUEUE_TEXT.nextInQueue;
+  return [
+    QUEUE_TEXT.nextInQueue,
+    countLabel(rest, 'more after it', 'more after it'),
+  ].join(FACT_SEPARATOR);
 }
 
 function setlistSource(entry: SetlistEntry, context: UpNextContext): string {
@@ -80,7 +85,7 @@ export function clearQueueBody(queueLength: number, setlistName: string) {
     'queued song leaves',
     'queued songs leave',
   );
-  const leave = `The ${songs} Up next.`;
+  const leave = `The ${songs} the queue.`;
   return setlistName === ''
     ? leave
     : `${leave} ${setlistName} carries on after this song.`;

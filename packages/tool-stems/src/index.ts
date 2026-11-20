@@ -3,6 +3,7 @@ export {
   type StemPlayerScreenProps,
 } from './screen/StemPlayerScreen.tsx';
 export { useMixerFrame } from './screen/useMixerFrame.ts';
+export { QueueSheet, type QueueSheetProps } from './screen/QueueSheet.tsx';
 export {
   AddStemSongSheet,
   type AddStemSongSheetProps,

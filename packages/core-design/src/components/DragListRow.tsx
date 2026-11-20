@@ -14,7 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { inset, size, space, textRoles } from '../roles.ts';
+import { inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
@@ -26,6 +26,7 @@ import {
   type PlainListRowProps,
 } from './PlainListRow.tsx';
 import { useSheetContentLive } from './sheetContentLive.ts';
+import { SwipeDeleteRow } from './SwipeDeleteRow.tsx';
 
 const HANDLE_HIT_SLOP = { top: inset.rowV, bottom: inset.rowV };
 const DRAGGING_Z = 1;
@@ -175,24 +176,48 @@ function Handle({ reorder }: { readonly reorder: DragReorder }) {
   );
 }
 
+export interface DragRowSwipe {
+  readonly label: string;
+  readonly onRemove: () => Promise<boolean>;
+}
+
 export interface DragListRowProps extends PlainListRowProps {
   readonly reorder: DragReorder;
+  readonly swipe?: DragRowSwipe;
 }
 
 export function DragListRow(props: DragListRowProps) {
   const styles = useStyles();
   const row = usePlainRowStyles();
   const drag = useHandleDrag(props.reorder);
-  return (
-    <Animated.View
-      onLayout={drag.onLayout}
-      style={[row.row, props.active === true && row.active, drag.style]}
-    >
+  const rowStyle = [row.row, props.active === true && row.active];
+  const content = (
+    <>
       <GestureDetector gesture={drag.pan}>
         <Handle reorder={props.reorder} />
       </GestureDetector>
       <Text style={styles.index}>{props.reorder.index + 1}</Text>
       <RowPress {...props} />
+    </>
+  );
+  if (props.swipe === undefined)
+    return (
+      <Animated.View onLayout={drag.onLayout} style={[rowStyle, drag.style]}>
+        {content}
+      </Animated.View>
+    );
+  // The swipe clips its row, so the drag moves the wrapper rather than the row.
+  return (
+    <Animated.View onLayout={drag.onLayout} style={drag.style}>
+      <SwipeDeleteRow
+        side="left"
+        tone="tint"
+        radius={radius.row}
+        deleteLabel={props.swipe.label}
+        onDelete={props.swipe.onRemove}
+      >
+        <View style={rowStyle}>{content}</View>
+      </SwipeDeleteRow>
     </Animated.View>
   );
 }

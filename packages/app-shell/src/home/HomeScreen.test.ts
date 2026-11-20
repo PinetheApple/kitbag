@@ -12,6 +12,8 @@ import {
 const dock = vi.hoisted(() => ({
   docked: false,
   bottomInsets: [] as number[],
+  queueOpeners: [] as unknown[],
+  openQueue: () => undefined,
 }));
 
 const storeState = vi.hoisted(() => ({
@@ -83,10 +85,18 @@ vi.mock('../miniPlayer/useMiniPlayerDocked.ts', () => ({
 }));
 
 vi.mock('../miniPlayer/DockedMiniPlayer.tsx', () => ({
-  DockedMiniPlayer: (props: { readonly bottomInset: number }) => {
+  DockedMiniPlayer: (props: {
+    readonly bottomInset: number;
+    readonly onOpenQueue: unknown;
+  }) => {
     dock.bottomInsets.push(props.bottomInset);
+    dock.queueOpeners.push(props.onOpenQueue);
     return null;
   },
+}));
+
+vi.mock('../queue/useQueueSheet.tsx', () => ({
+  useQueueSheet: () => ({ open: dock.openQueue, sheet: null }),
 }));
 
 vi.mock('./ArrangeSheet.tsx', () => ({ ArrangeSheet: () => null }));
@@ -115,6 +125,10 @@ describe('HomeScreen with the mini-player docked', () => {
 
   it('hands the navigation bar inset to the mini-player', () => {
     expect(dock.bottomInsets).toEqual([NAV_BAR]);
+  });
+
+  it('opens the queue sheet from the mini-player', () => {
+    expect(dock.queueOpeners).toEqual([dock.openQueue]);
   });
 
   it('ends the scroll above the mini-player, not the navigation bar', () => {

@@ -62,7 +62,7 @@ export function UpNextRow({ onOpenSheet, onNext }: UpNextRowProps) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${UP_NEXT}: ${text.title}, ${text.source}`}
-        accessibilityHint="Opens Up next"
+        accessibilityHint="Opens the queue"
         style={styles.text}
         onPress={onOpenSheet}
       >
