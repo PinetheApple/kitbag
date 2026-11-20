@@ -41,6 +41,7 @@ import { focusReaderOn } from '../readerFocus';
 import { readerHiding } from '../readerHiding.ts';
 import { onHardwareBack } from './hardwareBack';
 import { InlineIcon } from './IconGlyph.tsx';
+import { SheetContentLiveContext } from './sheetContentLive.ts';
 import { useSheetPortal } from './SheetHost.tsx';
 import { useSheetCardStyle } from './useSheetCardStyle.ts';
 import { useSheetExit } from './useSheetExit.ts';
@@ -242,7 +243,7 @@ export function Sheet({
     [motion, focusTitle],
   );
   const dragY = useSharedValue(0);
-  const dragAllowed = useSharedValue(visible);
+  const open = useSharedValue(visible);
   const sheetHeight = useSharedValue(0);
   const scrimOpacity = useSharedValue(0);
 
@@ -254,26 +255,26 @@ export function Sheet({
   );
 
   useEffect(() => {
-    dragAllowed.value = visible;
-  }, [dragAllowed, visible]);
+    open.value = visible;
+  }, [open, visible]);
   // A leaving slot keeps the gesture it was shown with, so it gates on a shared value.
   const dragToDismiss = useMemo(
     () =>
       Gesture.Pan()
         .activeOffsetY(SHEET_DRAG_ACTIVATION_DP)
         .onUpdate((event) => {
-          if (!dragAllowed.value) return;
+          if (!open.value) return;
           dragY.value = Math.max(0, event.translationY);
         })
         .onEnd((event) => {
-          if (!dragAllowed.value) return;
+          if (!open.value) return;
           if (shouldDismissSheet(event.translationY, sheetHeight.value)) {
             scheduleOnRN(onDismiss);
             return;
           }
           dragY.value = withSpring(0, { reduceMotion: motion });
         }),
-    [dragAllowed, dragY, sheetHeight, onDismiss, motion],
+    [open, dragY, sheetHeight, onDismiss, motion],
   );
 
   const sheetStyle = useSheetCardStyle({ visible, bottomInset, dragY });
@@ -349,7 +350,9 @@ export function Sheet({
               keyboardShouldPersistTaps="handled"
               scrollIndicatorInsets={INDICATOR_INSETS}
             >
-              {children}
+              <SheetContentLiveContext.Provider value={open}>
+                {children}
+              </SheetContentLiveContext.Provider>
               {hint === undefined ? null : <SheetHint>{hint}</SheetHint>}
             </ScrollView>
             <View style={styles.titleGapFade} />

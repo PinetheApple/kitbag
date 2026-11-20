@@ -24,6 +24,7 @@ import {
   usePlainRowStyles,
   type PlainListRowProps,
 } from './PlainListRow.tsx';
+import { useSheetContentLive } from './sheetContentLive.ts';
 
 const HANDLE_HIT_SLOP = { top: inset.rowV, bottom: inset.rowV };
 const DRAGGING_Z = 1;
@@ -73,6 +74,7 @@ export function useHandleDrag(reorder: DragReorder) {
   const offset = useSharedValue(0);
   const pitch = useSharedValue(0);
   const moved = useSharedValue(false);
+  const live = useSheetContentLive();
   const { index, count, onMove, onDragActive, group } = reorder;
   useLayoutEffect(() => {
     offset.value = 0;
@@ -90,6 +92,7 @@ export function useHandleDrag(reorder: DragReorder) {
       group.pitch.value = pitch.value;
     })
     .onUpdate((event) => {
+      if (!live.value) return;
       offset.value = event.translationY;
       if (group === undefined) return;
       group.target.value = reorderTarget(
@@ -113,6 +116,7 @@ export function useHandleDrag(reorder: DragReorder) {
     })
     .onFinalize(() => {
       if (onDragActive !== undefined) scheduleOnRN(onDragActive, false);
+      if (!live.value) return;
       if (group !== undefined && moved.value) return;
       offset.value = 0;
       if (group !== undefined) group.from.value = NO_DRAG;

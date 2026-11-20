@@ -20,6 +20,7 @@ import { UNSCALED_TEXT } from '../styleConstants.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { steppedIndex, wheelIndex } from '../wheel.ts';
+import { useSheetContentLive } from './sheetContentLive.ts';
 
 const ITEMS_EACH_SIDE = 2;
 const PITCH = (wheelPicker.item + wheelPicker.selected) / 2;
@@ -127,6 +128,7 @@ export function WheelPicker({
   const index = Math.max(values.indexOf(selected), 0);
   const initialOffset = useRef({ x: 0, y: index * PITCH }).current;
   const liveIndex = useSharedValue(index);
+  const live = useSheetContentLive();
   const count = values.length;
 
   useEffect(() => {
@@ -136,6 +138,7 @@ export function WheelPicker({
 
   const handleScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
+      if (!live.value) return;
       const next = wheelIndex(event.contentOffset.y, PITCH, count);
       if (liveIndex.value !== next) liveIndex.value = next;
     },
