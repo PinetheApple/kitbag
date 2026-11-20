@@ -54,7 +54,7 @@ env:
 - assertVisible: 'Open'
 - extendedWaitUntil:
     visible: 'Play'
-    timeout: 30000
+    timeout: 60000
 - assertVisible: '${FIXTURE_STEMS_NO_GRID}'
 - assertVisible: 'Up next: New song, ${SETLIST} · 3 of 3 · metronome'
 - tapOn: 'Open'

@@ -18,6 +18,8 @@ readonly FIXTURE_SOUND_SECONDS=1
 readonly FIXTURE_STEMS=e2estems
 readonly FIXTURE_STEMS_NO_GRID=e2enogrid
 readonly FIXTURE_STEMS_SECONDS=8
+# Long enough to check it still plays after #382's flow auto-advances onto it.
+readonly FIXTURE_STEMS_NO_GRID_SECONDS=30
 readonly FIXTURE_BACKUP=e2estemsongs
 readonly DEVICE_DOWNLOADS=/sdcard/Download
 readonly DEFAULT_MAESTRO_HEAP=-Xmx1g
@@ -260,7 +262,7 @@ step "Pushing the fixture song, click sound, stem songs and backup"
 push_fixture make_click_song.py "$FIXTURE_SONG.wav" "$FIXTURE_SECONDS"
 push_fixture make_click_song.py "$FIXTURE_SOUND.wav" "$FIXTURE_SOUND_SECONDS"
 push_fixture make_stem_bundle.py "$FIXTURE_STEMS.zip" "$FIXTURE_STEMS_SECONDS"
-push_fixture make_stem_bundle.py "$FIXTURE_STEMS_NO_GRID.zip" "$FIXTURE_STEMS_SECONDS" --no-grid
+push_fixture make_stem_bundle.py "$FIXTURE_STEMS_NO_GRID.zip" "$FIXTURE_STEMS_NO_GRID_SECONDS" --no-grid
 push_file "e2e/fixtures/$FIXTURE_BACKUP.json"
 
 step "Waiting for MediaProvider to index the fixtures"
