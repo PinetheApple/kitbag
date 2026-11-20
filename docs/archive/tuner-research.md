@@ -9,75 +9,19 @@
 > rather than §3's median + EMA (`docs/decisions.md`, 2026-10-13), and
 > `tuner_verify` passes as a CI gate.
 >
-> §1, §2, §4 and §5 stay useful background; §3's recommendations are superseded.
-
-## 1. Commercial Tuner Approaches
-
-### gStrings
-
-- **Algorithm:** Proprietary multi-core optimized engine (rewritten v2.0). No public
-  source, but predates TarsosDSP; likely uses autocorrelation family.
-- **Window:** Unknown (proprietary).
-- **Octave errors:** Handled via instrument-specified detection ranges and
-  custom temperaments.
-- **String detection:** Built-in instrument profiles + custom tunings.
-  Auto-detects via nearest-MIDI-note lookup in instrument's string list.
-- **Visual feedback:** Analog needle + digital display simultaneously. OpenGL
-  graphics (v2.0 rewrite).
-- **Noise gate:** Unknown (proprietary). Includes room profiling and spectral
-  subtraction per reviews.
-
-### DaTuner (open-source Android)
-
-- **Algorithm:** YIN (de Cheveigné & Kawahara). Pure Java, no external libs.
-- **Window:** 8192 samples @ 44100 Hz (~186ms). Note: "may be too heavy for
-  older devices."
-- **Threshold:** 0.1 (YIN paper suggests 0.1-0.15 for less errors).
-- **Octave errors:** Octave-based thresholding — splits range into sub-octaves
-  and selects best estimate lag. Parabolic interpolation refines tau.
-- **String detection:** Pre-added tunings + custom tunings. Auto string
-  matching from instrument's string list.
-- **Key finding:** Window of 8192 gives ~15 complete cycles at 82Hz (guitar
-  low E), giving statistical confidence for bass response. Parabolic
-  interpolation pushes resolution below 1 cent.
-
-### Soundcorset
-
-- **Algorithm:** Unknown (proprietary). Likely YIN or MPM based on precision.
-- **Key features:** Chromatic + pitch fork modes. Gauge (dial) + chart (pitch
-  history over time) + volume meter simultaneously. AI Tutor for recorded
-  playback analysis.
-- **Notable:** Chart display of pitch changes over time is a UX differentiator.
-  Customizable A4 (415-466Hz). Supports all instruments.
-
-### An established tuner app
-
-- **Algorithm v7.1+:** Multi-stage pipeline:
-  1. Real-time FFT peak tracking
-  2. Harmonic series validation
-  3. Gradient-boosted decision tree (42,000 labeled recordings)
-- **"Harmonic Lock":** Cross-references detected harmonics to infer missing
-  fundamentals. If 3rd (247.2Hz) and 5th (412Hz) harmonics are present but
-  fundamental (82.4Hz) is weak, infers E2 rather than misreading as B2.
-- **Window:** ~40ms analysis window. **Weakness:** transient spikes from fast
-  picking patterns cause flickering.
-- **Latency:** 85-115ms (native), 90-120ms (mobile).
-- **Median error:** ±5 cents (moderate distortion), ±7 cents (extreme fuzz).
-- **Key finding:** ~40ms window is too short for sustained stability; longer
-  windows (150ms+) with adaptive decay improve "behavioral trust."
-
----
+> §2, §4 and §5 stay useful background; §3's recommendations are superseded.
+> §1, a survey of outside apps, was removed.
 
 ## 2. Pitch Detection Algorithms — Deep Dive
 
 ### YIN (de Cheveigné & Kawahara, 2002)
 
-| Parameter | TarsosDSP Default | aubio Default | DaTuner | Recommendation |
-|---|---|---|---|---|
-| Buffer/window | 2048 | 1024-4096 | 8192 | 2048 (low-end) to 8192 (bass) |
-| Hop size | 1536 (75%) | 256 (25%) | ~4096 (50%) | 50% overlap (half buffer) |
-| Threshold | 0.20 | 0.15 | 0.10 | 0.10-0.15 (lower = fewer false +ves) |
-| Sample rate | 44100 | 44100 | 44100 | 44100 or 48000 |
+| Parameter | TarsosDSP Default | aubio Default | Recommendation |
+|---|---|---|---|
+| Buffer/window | 2048 | 1024-4096 | 2048 (low-end) to 8192 (bass) |
+| Hop size | 1536 (75%) | 256 (25%) | 50% overlap (half buffer) |
+| Threshold | 0.20 | 0.15 | 0.10-0.15 (lower = fewer false +ves) |
+| Sample rate | 44100 | 44100 | 44100 or 48000 |
 
 **YIN pipeline (5 steps):**
 1. **Difference function** — sum of squared differences between signal and
@@ -121,7 +65,7 @@ peak** in the NSDF. This is the critical octave-error fix:
   locks onto the fundamental before reaching longer-period overtones
 - Threshold: 0.9 (90%). Below 0.5, detection is too uncertain to show
 
-**Metro Gnome's MPM settings (proven in production):**
+**An MPM configuration from published tuner engineering notes:**
 - Window: 8192 samples @ 44100 Hz (~186ms)
 - Zero-padded to 16384 before FFT (prevents circular aliasing)
 - Parabolic interpolation for sub-sample resolution
@@ -150,7 +94,7 @@ would improve chromatic mode robustness.
 
 ### Ensemble Approaches
 
-**Tuneo / react-native-tuner-engine approach:**
+**Three-detector ensemble (react-native-tuner-engine):**
 Three detectors in parallel — YIN, PYIN (probabilistic YIN), and cepstrum.
 They vote by agreement within 1 semitone. This eliminates octave errors by
 requiring cross-detector consensus. Cost: 3× compute.
@@ -183,7 +127,7 @@ requiring cross-detector consensus. Cost: 3× compute.
 | Reseed on note change | Yes | EMA resets instantly |
 | Hold duration (Dart) | 1750ms | Freeze last reading when confidence drops |
 
-### Recommended Improvements (Metro Gnome approach)
+### Recommended Improvements
 
 **1. Increase median filter to 5-tap**
 - 3-tap can be fooled by 2 consecutive bad frames
@@ -195,7 +139,7 @@ requiring cross-detector consensus. Cost: 3× compute.
 Current: single EMA on cents.
 Recommended:
 - Layer 1: 5-tap median on raw frequency (kills outliers)
-- Layer 2: Per-note EMA on cents with alpha 0.25 (Metro Gnome) instead of 0.4
+- Layer 2: Per-note EMA on cents with alpha 0.25 instead of 0.4
   - Reseed instantly on note change (already done ✓)
   - Alpha 0.25 provides more damping without perceptible lag
 - **Specific change:** `kCentsEmaAlpha` from 0.4 to 0.25 in
@@ -217,7 +161,7 @@ Recommended: asymmetric adaptive gate.
   - Slow when signal_env >= noise_env (transients don't inflate floor)
   - Ratio: fast = learn_coeff, slow = learn_coeff / 64
 - Margin: signal must exceed noise floor by 12dB to open gate
-- Learn time: 2000ms (Metro Gnome profiler)
+- Learn time: 2000ms
 - Attack: 5ms, Release: 100ms
 - **Specific change:** Replace `envelope_` (peak follower) with
   `rms_envelope_` + `noise_floor_` + `gate_open_` state machine
@@ -226,7 +170,7 @@ Recommended: asymmetric adaptive gate.
 Current: only `kHoldDuration` in Dart (1750ms freeze).
 Recommended: native-side lock acquisition.
 - **Lock thresholds:**
-  - Acquire: pitch within 18 cents for 320ms (Metro Gnome)
+  - Acquire: pitch within 18 cents for 320ms
   - Ride: hold through gaps up to 360ms
   - Re-lock: same note within 1500ms → instant re-lock
 - **Benefit:** Prevents needle flicker on transient noise without freezing the
@@ -256,7 +200,6 @@ Recommended: native-side lock acquisition.
 | Default hop | 1536 (75% overlap) |
 | Threshold (YIN) | 0.20 |
 | Critical API | `PitchProcessor(PitchEstimationAlgorithm, sampleRate, bufferSize, handler)` |
-| Used by | Chroma Tuner, GitaristErik/GuitarTuner, stringSync |
 
 **Key insight:** TarsosDSP's `FastYin` uses FFT-based difference function
 computation — 3× faster than naive YIN. The audio data is not modified in
@@ -412,7 +355,7 @@ Current Kitbag flow is correct:
 - Measure ambient RMS + detect steady tones (50/60Hz mains hum)
 - Set adaptive gate floor from profile
 - Implement spectral subtraction for persistent background tones
-- See Metro Gnome approach: frozen noise profile, spectral floor at 10%
+- Freeze the noise profile; spectral floor at 10%
 
 ### Priority 3: Adaptive Parameter Switching (medium impact, medium effort)
 
@@ -473,4 +416,3 @@ pitch_analyzer.h:
 7. aubio — Paul Brossier. https://aubio.org
 8. cycfi/q — Joel de Guzman. https://github.com/cycfi/q
 9. Android CDD §5.11 — Unprocessed Audio Source requirements.
-10. Metro Gnome tuner engineering analysis. https://metrognome.co.za/blog/how-accurate-is-your-tuner-app.html
