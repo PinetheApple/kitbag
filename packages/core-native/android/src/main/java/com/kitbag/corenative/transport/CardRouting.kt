@@ -6,6 +6,8 @@ enum class SessionButton(val song: SongAction?, val metronome: TransportAction?)
   STOP(SongAction.STOP, TransportAction.STOP),
   REWIND(SongAction.REWIND, null),
   FAST_FORWARD(SongAction.FORWARD, null),
+  PREVIOUS(SongAction.PREVIOUS, null),
+  NEXT(SongAction.NEXT, null),
 }
 
 sealed interface CardEvent {
@@ -24,6 +26,8 @@ sealed interface CardEvent {
   data object SongHidden : CardEvent
 
   data object SongStopped : CardEvent
+
+  data class SongOrdered(val order: SongOrder) : CardEvent
 
   data object StartUnrecognised : CardEvent
 
@@ -50,6 +54,8 @@ sealed interface CardEffect {
   data class SongControl(val action: SongAction) : CardEffect
 
   data class SeekSong(val positionMillis: Long) : CardEffect
+
+  data class OrderSong(val order: SongOrder) : CardEffect
 
   data object EndSong : CardEffect
 
@@ -82,6 +88,7 @@ class CardRouting {
       CardEvent.SongShown -> CardEffect.ShowSong
       is CardEvent.SongTapped -> song(event.action?.let(SongAction::named))
       CardEvent.SongHidden, CardEvent.SongStopped -> songEnded()
+      is CardEvent.SongOrdered -> CardEffect.OrderSong(event.order)
       CardEvent.StartUnrecognised -> CardEffect.None
       CardEvent.TaskRemoved -> stopPlayback()
       is CardEvent.SessionPressed -> song(event.button.song)
@@ -96,7 +103,7 @@ class CardRouting {
       CardEvent.MetronomeHidden, CardEvent.MetronomeStopped -> metronomeEnded(CardEffect.RemoveCard)
       CardEvent.SongShown -> songStarted()
       is CardEvent.SongTapped -> CardEffect.None
-      CardEvent.SongHidden, CardEvent.SongStopped -> CardEffect.None
+      CardEvent.SongHidden, CardEvent.SongStopped, is CardEvent.SongOrdered -> CardEffect.None
       CardEvent.StartUnrecognised -> CardEffect.None
       CardEvent.TaskRemoved -> stopPlayback()
       is CardEvent.SessionPressed -> metronome(event.button.metronome)

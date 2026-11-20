@@ -6,7 +6,9 @@ import com.kitbag.corenative.transport.TransportAction.STOP
 import com.kitbag.corenative.transport.TransportAction.TEMPO_DOWN
 import com.kitbag.corenative.transport.TransportAction.TEMPO_UP
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TransportModelTest {
@@ -44,8 +46,11 @@ class TransportModelTest {
   }
 
   @Test
-  fun `stopped shows play and no stop`() {
-    assertEquals(listOf(TEMPO_DOWN, PLAY, TEMPO_UP), model.view(state(Playback.STOPPED)).actions)
+  fun `a stopped-shown card offers Stop and Stop ends it`() {
+    val stopped = state(Playback.STOPPED)
+    assertEquals(listOf(TEMPO_DOWN, PLAY, TEMPO_UP, STOP), model.view(stopped).actions)
+    assertEquals(none, model.commandsFor(stopped, STOP))
+    assertTrue(model.endsCard(STOP, stopped))
   }
 
   @Test
@@ -87,6 +92,22 @@ class TransportModelTest {
     }
     assertEquals(-model.tempoStep(TEMPO_UP), model.tempoStep(TEMPO_DOWN))
     for (action in listOf(PLAY, PAUSE, STOP)) assertEquals(0, model.tempoStep(action))
+  }
+
+  @Test
+  fun `a card shown stopped ends only on stop`() {
+    val stopped = state(Playback.STOPPED)
+    assertTrue(model.endsCard(STOP, stopped))
+    assertTrue(model.endsCard(STOP, state(Playback.STOPPED, bpm = 90.0)))
+    for (action in listOf(TEMPO_DOWN, TEMPO_UP, PAUSE)) assertFalse(model.endsCard(action, stopped))
+    assertFalse(model.endsCard(PLAY, state(Playback.PLAYING)))
+  }
+
+  @Test
+  fun `playback crosses the wire as one lowercase name`() {
+    for (playback in Playback.entries) assertEquals(playback, Playback.wired(playback.wire))
+    assertEquals("stopped", Playback.STOPPED.wire)
+    assertEquals(Playback.PAUSED, Playback.wired(null))
   }
 
   @Test

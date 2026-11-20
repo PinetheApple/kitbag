@@ -148,6 +148,13 @@ describe('the player after an auto-advance', () => {
     expect(p.routes.onOpenStemSet).toHaveBeenCalledWith(NIGHT_BUS);
   });
 
+  it('follows a Next from the card onto a metronome song to the metronome', async () => {
+    const p = await mountTracked();
+    arrive({ kind: ARRIVAL.metronome });
+    expect(p.routes.onOpenMetronome).toHaveBeenCalledTimes(1);
+    expect(p.routes.onOpenStemSet).not.toHaveBeenCalled();
+  });
+
   it('keeps its hold through one advance after another', async () => {
     const p = await mountTracked();
     await advanced(p);

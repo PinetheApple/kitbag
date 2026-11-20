@@ -276,4 +276,27 @@ class CardRoutingTest {
   private companion object {
     const val SEEK_MILLIS = 42_000L
   }
+
+  @Test
+  fun `skip presses on the media session go to the song card`() {
+    showSong()
+    assertEquals(CardEffect.SongControl(SongAction.NEXT), press(SessionButton.NEXT))
+    assertEquals(CardEffect.SongControl(SongAction.PREVIOUS), press(SessionButton.PREVIOUS))
+  }
+
+  @Test
+  fun `skip presses do nothing on the metronome card`() {
+    showMetronome()
+    assertEquals(CardEffect.None, press(SessionButton.NEXT))
+    assertEquals(CardEffect.None, press(SessionButton.PREVIOUS))
+  }
+
+  @Test
+  fun `a new play order reaches the song card and leaves the metronome card alone`() {
+    showMetronome()
+    assertEquals(CardEffect.None, routing.on(CardEvent.SongOrdered(SongOrder.LAST)))
+    showSong()
+    assertEquals(CardEffect.OrderSong(SongOrder.LAST), routing.on(CardEvent.SongOrdered(SongOrder.LAST)))
+    assertSongShowing()
+  }
 }

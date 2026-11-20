@@ -157,7 +157,12 @@ export function createSongPlayerStore(
     const presets = songPresetActions({ ...context, live });
     const count = songCount(context, mixer, api, clickEngine);
     const gridFollowers = { gridReplaced: count.gridReplaced };
-    const card = songCard({ ...context, close: mixer.close, start: count });
+    const card = songCard({
+      ...context,
+      close: mixer.close,
+      start: count,
+      card: mixer.card,
+    });
     mixer.onSongStopped(card.stopped);
 
     const waveform = songWaveform({ set, runtimeOf, live });
@@ -368,6 +373,7 @@ export function createSongPlayerStore(
       ...transportActions(
         get,
         runtimeOf,
+        mixer.card,
         scrubSeek,
         count.afterSeek,
         card.start,

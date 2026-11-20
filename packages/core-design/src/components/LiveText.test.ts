@@ -5,6 +5,11 @@ import { expect, it, vi } from 'vitest';
 vi.mock('react-native-reanimated', () => ({
   default: { createAnimatedComponent: <T>(component: T) => component },
   useAnimatedProps: (factory: () => unknown) => factory(),
+  useAnimatedReaction: () => undefined,
+  useSharedValue: <T>(value: T) => ({ value }),
+}));
+vi.mock('./sheetContentLive.ts', () => ({
+  useSheetContentLive: () => ({ value: true }),
 }));
 vi.mock('../ThemeProvider.tsx', async () => {
   const { themes } = await import('../theme.ts');

@@ -4,6 +4,7 @@ import {
   metronomeStore,
   songCountIn,
   startAutoAdvance,
+  startCardOrder,
 } from '@kitbag/core-state';
 
 import { getDatabase } from './database.ts';
@@ -37,3 +38,4 @@ configureStemPlayer({
 });
 
 startAutoAdvance();
+startCardOrder();

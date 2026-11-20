@@ -3,11 +3,13 @@ import {
   arrivalStore,
   useStemPlayer,
   useStemSongs,
+  type Arrival,
   type MixerHold,
 } from '@kitbag/core-state';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { arrivalText } from '../logic/arrivalText.ts';
+import type { PlayOrderRoutes } from './usePlayOrderNav.ts';
 
 // A route change onto the song the store advanced to keeps the screen's hold:
 // re-acquiring would reload a song that is already open and playing.
@@ -31,22 +33,23 @@ export function useRouteAcquire(
   return acquire;
 }
 
-export function useArrivalFollow(
-  setId: number,
-  onOpenStemSet: (stemSetId: number) => void,
-  showMessage: (message: string) => void,
-) {
+function follow(arrival: Arrival, setId: number, routes: PlayOrderRoutes) {
+  if (arrival.kind === ARRIVAL.metronome) routes.onOpenMetronome();
+  else if (arrival.kind !== ARRIVAL.gaveUp && arrival.stemSetId !== setId)
+    routes.onOpenStemSet(arrival.stemSetId);
+}
+
+export function useArrivalFollow(setId: number, routes: PlayOrderRoutes) {
   const stems = useStemSongs();
   useEffect(
     () =>
       arrivalStore.subscribe(({ arrival }, previous) => {
         if (arrival === null || arrival.serial === previous.arrival?.serial)
           return;
-        if (arrival.kind !== ARRIVAL.gaveUp && arrival.stemSetId !== setId)
-          onOpenStemSet(arrival.stemSetId);
+        follow(arrival, setId, routes);
         const message = arrivalText(arrival, stems);
-        if (message !== null) showMessage(message);
+        if (message !== null) routes.onNotice(message);
       }),
-    [setId, onOpenStemSet, showMessage, stems],
+    [setId, routes, stems],
   );
 }

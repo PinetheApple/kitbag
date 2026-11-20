@@ -46,13 +46,14 @@ class SongTransportTest {
 
   @Test
   fun `card shows back, play or pause, forward and stop`() {
-    assertEquals(listOf(REWIND, PAUSE, FORWARD, STOP), transport.actions(at(5.0)))
-    assertEquals(listOf(REWIND, PLAY, FORWARD, STOP), transport.actions(at(5.0, playing = false)))
+    assertEquals(listOf(REWIND, PAUSE, FORWARD, STOP), transport.slots(at(5.0), SongOrder.ALONE).actions)
+    val paused = transport.slots(at(5.0, playing = false), SongOrder.ALONE)
+    assertEquals(listOf(REWIND, PLAY, FORWARD, STOP), paused.actions)
   }
 
   @Test
   fun `playing publishes position, speed one, the read time and a seekable action set`() {
-    val playback = transport.playback(at(61.5), now = 1_000L)
+    val playback = transport.playback(at(61.5), SongOrder.ALONE, now = 1_000L)
     assertEquals(PlaybackStateCompat.STATE_PLAYING, playback.state)
     assertEquals(61_500L, playback.positionMillis)
     assertEquals(1f, playback.speed)
@@ -68,7 +69,7 @@ class SongTransportTest {
 
   @Test
   fun `paused holds the position with speed zero`() {
-    val playback = transport.playback(at(30.0, playing = false), now = 1_000L)
+    val playback = transport.playback(at(30.0, playing = false), SongOrder.ALONE, now = 1_000L)
     assertEquals(PlaybackStateCompat.STATE_PAUSED, playback.state)
     assertEquals(30_000L, playback.positionMillis)
     assertEquals(0f, playback.speed)
@@ -77,12 +78,12 @@ class SongTransportTest {
 
   @Test
   fun `a published position extrapolates at speed one`() {
-    assertEquals(12_500L, transport.playback(at(10.0), now = 1_000L).positionAt(now = 3_500L))
+    assertEquals(12_500L, transport.playback(at(10.0), SongOrder.ALONE, now = 1_000L).positionAt(now = 3_500L))
   }
 
   @Test
   fun `steady playback is not republished, a loop wrap or seek is`() {
-    val published = transport.playback(at(10.0), now = 0L)
+    val published = transport.playback(at(10.0), SongOrder.ALONE, now = 0L)
     assertFalse(transport.stale(published, at(12.0), now = 2_000L))
     assertTrue(transport.stale(published, at(4.0), now = 2_000L))
     assertTrue(transport.stale(published, at(40.0), now = 2_000L))
@@ -90,13 +91,14 @@ class SongTransportTest {
 
   @Test
   fun `a pause or resume the app made is republished`() {
-    assertTrue(transport.stale(transport.playback(at(10.0), now = 0L), at(10.0, playing = false), now = 0L))
+    val published = transport.playback(at(10.0), SongOrder.ALONE, now = 0L)
+    assertTrue(transport.stale(published, at(10.0, playing = false), now = 0L))
     assertTrue(transport.stale(null, at(10.0), now = 0L))
   }
 
   @Test
   fun `playing slowed publishes the engine rate and the position in song time`() {
-    val playback = transport.playback(at(61.5, speed = practiceRate), now = 1_000L)
+    val playback = transport.playback(at(61.5, speed = practiceRate), SongOrder.ALONE, now = 1_000L)
     assertEquals(61_500L, playback.positionMillis)
     assertEquals(practiceRate, playback.speed)
     assertEquals(180_000L, transport.durationMillis)
@@ -104,20 +106,20 @@ class SongTransportTest {
 
   @Test
   fun `a slowed position advances at the engine rate`() {
-    val playback = transport.playback(at(10.0, speed = practiceRate), now = 1_000L)
+    val playback = transport.playback(at(10.0, speed = practiceRate), SongOrder.ALONE, now = 1_000L)
     assertEquals(12_000L, playback.positionAt(now = 3_500L))
   }
 
   @Test
   fun `slowed playback is not republished while the song keeps the rate's pace`() {
-    val published = transport.playback(at(10.0, speed = practiceRate), now = 0L)
+    val published = transport.playback(at(10.0, speed = practiceRate), SongOrder.ALONE, now = 0L)
     assertFalse(transport.stale(published, at(11.6, speed = practiceRate), now = 2_000L))
     assertTrue(transport.stale(published, at(12.0, speed = practiceRate), now = 2_000L))
   }
 
   @Test
   fun `a speed change while playing is republished at once`() {
-    val published = transport.playback(at(10.0), now = 0L)
+    val published = transport.playback(at(10.0), SongOrder.ALONE, now = 0L)
     assertTrue(transport.stale(published, at(10.0, speed = practiceRate), now = 0L))
   }
 
@@ -182,8 +184,8 @@ class SongTransportTest {
 
   @Test
   fun `a count-in shows pause and plays nothing on the system clock`() {
-    assertEquals(listOf(REWIND, PAUSE, FORWARD, STOP), transport.actions(counting(5.0)))
-    val playback = transport.playback(counting(5.0), now = 1_000L)
+    assertEquals(listOf(REWIND, PAUSE, FORWARD, STOP), transport.slots(counting(5.0), SongOrder.ALONE).actions)
+    val playback = transport.playback(counting(5.0), SongOrder.ALONE, now = 1_000L)
     assertEquals(PlaybackStateCompat.STATE_PLAYING, playback.state)
     assertEquals(0f, playback.speed)
   }
@@ -224,7 +226,7 @@ class SongTransportTest {
   @Test
   fun `without the count-in marker the engine keeps every action`() {
     for (progress in listOf(at(5.0), at(5.0, playing = false))) {
-      for (action in SongAction.entries) {
+      for (action in SongAction.entries - SongAction.NEXT) {
         assertEquals(
           SongRoute(null, transport.commandsFor(progress, action)),
           transport.route(progress, action, appListening = true),
@@ -264,8 +266,10 @@ class SongTransportTest {
   @Test
   fun `requests name their action for the app`() {
     assertEquals(
-      listOf("play", "pause", "stop", "seek"),
-      listOf(SongCommand.Play, SongCommand.Pause, SongCommand.Stop, SongCommand.Seek(1L)).map { it.appAction },
+      listOf("play", "pause", "stop", "seek", "next"),
+      listOf(SongCommand.Play, SongCommand.Pause, SongCommand.Stop, SongCommand.Seek(1L), SongCommand.Next).map {
+        it.appAction
+      },
     )
   }
 }

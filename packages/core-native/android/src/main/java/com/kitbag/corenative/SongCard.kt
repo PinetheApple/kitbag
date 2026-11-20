@@ -3,6 +3,7 @@ package com.kitbag.corenative
 import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -11,15 +12,19 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.core.app.NotificationCompat
 import androidx.media.app.NotificationCompat.MediaStyle
+import androidx.media.utils.MediaConstants
 import com.kitbag.corenative.transport.CardFence
 import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.SongAction
+import com.kitbag.corenative.transport.SongCardTag
 import com.kitbag.corenative.transport.SongCommand
 import com.kitbag.corenative.transport.SongControls
 import com.kitbag.corenative.transport.SongEndWatch
 import com.kitbag.corenative.transport.SongEngine
+import com.kitbag.corenative.transport.SongOrder
 import com.kitbag.corenative.transport.SongPlayback
 import com.kitbag.corenative.transport.SongProgress
+import com.kitbag.corenative.transport.SongSlots
 import com.kitbag.corenative.transport.SongTransport
 import com.kitbag.corenative.transport.mediaArtist
 import kotlin.math.roundToInt
@@ -31,7 +36,7 @@ internal class SongCard(
   private val launchIntent: PendingIntent?,
   private val actionIntent: (SongAction) -> PendingIntent,
   private val post: (notification: Notification, playing: Boolean, cardNumber: Int) -> Unit,
-  private val appRequests: () -> ((SongCommand) -> Unit)?,
+  private val appRequests: () -> ((SongCommand, Int) -> Unit)?,
   fence: CardFence,
   private val onEnded: () -> Unit,
   private val onStopped: () -> Unit,
@@ -39,6 +44,10 @@ internal class SongCard(
   private val controls = SongControls(MixerEngine, fence)
   private val ends = SongEndWatch(EngineTransport::engineEndCount)
   private var cardNumber = CardFence.NONE
+  private var session = CardFence.NONE
+  private var followsPlayOrder = false
+  private var order = SongOrder.ALONE
+  private var reservedNext: Boolean? = null
   private var countingIn = false
   private var song: Song? = null
   private var transport: SongTransport? = null
@@ -47,8 +56,11 @@ internal class SongCard(
   private val clock = Handler(Looper.getMainLooper())
   private val tick = Runnable { onTick() }
 
-  fun show(next: Song, cardNumber: Int, playing: Boolean, countingIn: Boolean) {
-    this.cardNumber = cardNumber
+  fun show(next: Song, card: SongCardTag, playing: Boolean, countingIn: Boolean) {
+    cardNumber = card.cardNumber
+    session = card.session
+    followsPlayOrder = card.followsPlayOrder
+    order = if (card.followsPlayOrder) card.order else SongOrder.ALONE
     song = next
     transport = SongTransport(next, EngineTransport.sampleRate())
     published = null
@@ -57,14 +69,27 @@ internal class SongCard(
     refresh(progress().shown(playing, countingIn))
   }
 
+  fun order(next: SongOrder) {
+    if (!followsPlayOrder || next == order) return
+    order = next
+    postedPlaying = null
+    refresh()
+  }
+
   fun handle(action: SongAction) {
     val songTransport = transport ?: return
-    settle(controls.press(cardNumber, songTransport, ::progress, action, appRequests()))
+    settle(controls.press(cardNumber, songTransport, ::progress, action, requests()))
   }
 
   fun seekTo(positionMillis: Long) {
     val songTransport = transport ?: return
-    settle(controls.seek(cardNumber, songTransport, ::progress, positionMillis, appRequests()))
+    settle(controls.seek(cardNumber, songTransport, ::progress, positionMillis, requests()))
+  }
+
+  private fun requests(): ((SongCommand) -> Unit)? {
+    val emit = appRequests() ?: return null
+    val shownIn = session
+    return { emit(it, shownIn) }
   }
 
   private fun settle(outcome: SongControls.Outcome) {
@@ -78,6 +103,8 @@ internal class SongCard(
   fun release() {
     clock.removeCallbacks(tick)
     transport = null
+    if (reservedNext == true) openSession().setExtras(Bundle.EMPTY)
+    reservedNext = null
   }
 
   private fun progress(): SongProgress {
@@ -97,13 +124,15 @@ internal class SongCard(
     val songTransport = transport ?: return
     val current = song ?: return
     val progress = known ?: progress()
-    val playback = songTransport.playback(progress, SystemClock.elapsedRealtime())
+    val playback = songTransport.playback(progress, order, SystemClock.elapsedRealtime())
+    val slots = songTransport.slots(progress, order)
     if (published == null) publishMetadata(current, songTransport.durationMillis)
-    publishPlayback(playback, songTransport.actions(progress))
+    reserveNext(slots.reserveNext)
+    publishPlayback(playback, slots.actions)
     val playing = progress.shownPlaying
     if (postedPlaying != playing) {
       postedPlaying = playing
-      post(notification(current, songTransport.actions(progress), playing), playing, cardNumber)
+      post(notification(current, slots, playing), playing, cardNumber)
     }
     clock.removeCallbacks(tick)
     clock.postDelayed(tick, TICK_MILLIS)
@@ -119,7 +148,14 @@ internal class SongCard(
     )
   }
 
-  // System media cards draw custom actions in the previous and next slots when those actions are absent.
+  private fun reserveNext(reserve: Boolean) {
+    if (reservedNext == reserve) return
+    reservedNext = reserve
+    openSession().setExtras(
+      Bundle().apply { putBoolean(MediaConstants.SESSION_EXTRAS_KEY_SLOT_RESERVATION_SKIP_TO_NEXT, reserve) },
+    )
+  }
+
   private fun publishPlayback(playback: SongPlayback, actions: List<SongAction>) {
     published = playback
     val builder = PlaybackStateCompat.Builder()
@@ -131,7 +167,7 @@ internal class SongCard(
     openSession().setPlaybackState(builder.build())
   }
 
-  private fun notification(current: Song, actions: List<SongAction>, playing: Boolean): Notification =
+  private fun notification(current: Song, slots: SongSlots, playing: Boolean): Notification =
     NotificationCompat.Builder(context, channelId)
       .setSmallIcon(R.drawable.kitbag_notification)
       .setContentTitle(current.title)
@@ -145,9 +181,9 @@ internal class SongCard(
       .setStyle(
         MediaStyle()
           .setMediaSession(openSession().sessionToken)
-          .setShowActionsInCompactView(*COMPACT_SLOTS),
+          .setShowActionsInCompactView(*slots.compact.toIntArray()),
       )
-      .apply { actions.forEach { addAction(icon(it), label(it), actionIntent(it)) } }
+      .apply { slots.actions.forEach { addAction(icon(it), label(it), actionIntent(it)) } }
       .build()
 
   private fun label(action: SongAction): String {
@@ -158,12 +194,13 @@ internal class SongCard(
       SongAction.STOP -> context.getString(R.string.kitbag_action_stop)
       SongAction.REWIND -> context.getString(R.string.kitbag_action_rewind, skipSeconds)
       SongAction.FORWARD -> context.getString(R.string.kitbag_action_forward, skipSeconds)
+      SongAction.PREVIOUS -> context.getString(R.string.kitbag_action_previous)
+      SongAction.NEXT -> context.getString(R.string.kitbag_action_next)
     }
   }
 
   private companion object {
     const val TICK_MILLIS = 500L
-    val COMPACT_SLOTS = intArrayOf(0, 1, 2)
     val CUSTOM_ACTIONS = setOf(SongAction.REWIND, SongAction.FORWARD, SongAction.STOP)
 
     fun icon(action: SongAction): Int =
@@ -173,6 +210,8 @@ internal class SongCard(
         SongAction.STOP -> R.drawable.kitbag_stop
         SongAction.REWIND -> R.drawable.kitbag_rewind_10
         SongAction.FORWARD -> R.drawable.kitbag_forward_10
+        SongAction.PREVIOUS -> R.drawable.kitbag_previous
+        SongAction.NEXT -> R.drawable.kitbag_next
       }
   }
 }
@@ -185,6 +224,7 @@ private object MixerEngine : SongEngine {
       SongCommand.Stop -> EngineTransport.mixerStop()
       SongCommand.StopCountIn -> EngineTransport.songStop()
       is SongCommand.Seek -> EngineTransport.mixerSeek(command.frame)
+      SongCommand.Next -> Unit
     }
   }
 

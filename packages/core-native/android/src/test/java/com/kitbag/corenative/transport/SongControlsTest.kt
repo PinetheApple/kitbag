@@ -1,6 +1,8 @@
 package com.kitbag.corenative.transport
 
+import com.kitbag.corenative.transport.SongAction.NEXT
 import com.kitbag.corenative.transport.SongAction.PLAY
+import com.kitbag.corenative.transport.SongAction.PREVIOUS
 import com.kitbag.corenative.transport.SongAction.STOP
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -92,6 +94,33 @@ class SongControlsTest {
     press(card, songA, PLAY, countingIn = true)
     assertEquals(listOf<SongCommand>(SongCommand.Play), requests)
     assertEquals(emptyList<SongCommand>(), engine.calls)
+  }
+
+  @Test
+  fun `a next on the shown card goes to the app and leaves the engine alone`() {
+    val card = fence.issue()
+    engine.playing = true
+    assertTrue(press(card, songA, NEXT) is SongControls.Outcome.Ran)
+    assertEquals(listOf<SongCommand>(SongCommand.Next), requests)
+    assertEquals(emptyList<SongCommand>(), engine.calls)
+  }
+
+  @Test
+  fun `a next or previous from a card the next song replaced is dropped`() {
+    val cardA = fence.issue()
+    fence.issue()
+    assertEquals(SongControls.Outcome.Dropped, press(cardA, songA, NEXT))
+    assertEquals(SongControls.Outcome.Dropped, press(cardA, songA, PREVIOUS))
+    assertEquals(emptyList<SongCommand>(), requests)
+    assertEquals(emptyList<SongCommand>(), engine.calls)
+  }
+
+  @Test
+  fun `a previous on the shown card restarts the song`() {
+    val card = fence.issue()
+    engine.head = 95 * 48_000L
+    press(card, songA, PREVIOUS)
+    assertEquals(listOf<SongCommand>(SongCommand.Seek(0L)), engine.calls)
   }
 
   @Test
