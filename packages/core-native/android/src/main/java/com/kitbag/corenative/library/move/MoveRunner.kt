@@ -6,8 +6,8 @@ import com.kitbag.corenative.library.DataFolderLocation
 import com.kitbag.corenative.library.DurableFiles
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.RootState
+import com.kitbag.corenative.library.SongAnalyzer
 import com.kitbag.corenative.library.UnreadableStateException
-import com.kitbag.corenative.library.Waveforms
 import java.io.File
 import java.io.IOException
 import java.io.InterruptedIOException
@@ -34,6 +34,7 @@ class MoveRunner(
   private val availableBytes: (File) -> Long,
   private val gate: ReleaseGate,
   private val listener: (MoveProgress) -> Unit = {},
+  private val isWaveformSidecar: (relativePath: String) -> Boolean = { SongAnalyzer.isWaveformSidecar(it) },
 ) {
   private class Stop(val outcome: MoveOutcome) : Exception()
 
@@ -159,11 +160,11 @@ class MoveRunner(
   private fun preflight(state: MoveState): MoveState {
     val targetRoot = mountedRoot(state.target) ?: refuse(MoveFailure.TARGET_UNAVAILABLE)
     val occupied = state.files.filter { File(targetRoot, it.path).exists() }
-    val superseded =
-      occupied.filter { state.kind == MoveKind.CARD_RETURN && it.path.endsWith(Waveforms.SIDECAR_EXTENSION) }
+    val cardReturn = state.kind == MoveKind.CARD_RETURN
+    val superseded = if (cardReturn) occupied.filter { isWaveformSidecar(it.path) } else emptyList()
     if (occupied.size > superseded.size) refuse(MoveFailure.TARGET_OCCUPIED)
     val planned = state.copy(files = state.files - superseded.toSet())
-    if (planned.kind == MoveKind.CARD_RETURN) CardReturn.stagingRoot(targetRoot).deleteRecursively()
+    if (cardReturn) CardReturn.stagingRoot(targetRoot).deleteRecursively()
     if (!MoveFiles.canWrite(targetRoot)) refuse(MoveFailure.TARGET_NOT_WRITABLE)
     if (availableBytes(targetRoot) < planned.totalBytes + FREE_SPACE_MARGIN_BYTES) refuse(MoveFailure.NO_SPACE)
     superseded.forEach { supersede(it.path) }
@@ -287,7 +288,7 @@ class MoveRunner(
   private fun copyPath(state: MoveState, path: String): String =
     if (state.kind == MoveKind.CARD_RETURN) CardReturn.stagedPath(path) else path
 
-  // Parked before it leaves the away list, so the card copy is never in neither.
+  // Parked before it leaves the away list, so the card copy is always in at least one of the two.
   @Synchronized
   fun supersede(relativePath: String) {
     for (volumeUuid in folder.awayHolders(relativePath)) {

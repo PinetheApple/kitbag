@@ -51,7 +51,9 @@ class MoveFixture(temp: File) {
     )
 
   fun runner(listener: (MoveProgress) -> Unit = {}) =
-    MoveRunner(folder, journal(), leftovers(), { freeBytes }, { released }, listener)
+    MoveRunner(folder, journal(), leftovers(), { freeBytes }, { released }, listener, ::isWaveformSidecar)
+
+  fun isWaveformSidecar(relativePath: String) = relativePath.endsWith(SIDECAR_EXTENSION)
 
   fun journal() = MoveJournal(journalFile) { message, _ -> warnings.add(message) }
 
@@ -102,7 +104,8 @@ class MoveFixture(temp: File) {
     const val CARD_UUID = "1234-ABCD"
     const val OTHER_CARD_UUID = "5678-EF01"
     const val SONG = "songs/a/a.mp3"
-    const val WAVEFORM = "songs/a/a.kwav"
+    const val SIDECAR_EXTENSION = ".kwav"
+    const val WAVEFORM = "songs/a/a$SIDECAR_EXTENSION"
     const val DRUMS = "stems/job1/drums.wav"
     const val BASS = "stems/job1/bass.wav"
     const val IMPORTED = "songs/b/b.mp3"

@@ -393,6 +393,13 @@ Java_com_kitbag_corenative_library_SongAnalyzer_nativeWaveformPath(JNIEnv* env, 
   return env->NewStringUTF(kitbag::SidecarPath(dirUtf.get(), songUtf.get()).c_str());
 }
 
+JNIEXPORT jboolean JNICALL
+Java_com_kitbag_corenative_library_SongAnalyzer_nativeIsWaveformSidecar(JNIEnv* env, jobject,
+                                                                       jstring path) {
+  const JniUtf pathUtf(env, path);
+  return pathUtf.get() != nullptr && kitbag::IsSidecarPath(pathUtf.get()) ? JNI_TRUE : JNI_FALSE;
+}
+
 }  // extern "C"
 
 #endif  // __ANDROID__

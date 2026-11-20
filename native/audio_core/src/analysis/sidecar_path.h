@@ -3,8 +3,11 @@
 
 #include <cstring>
 #include <string>
+#include <string_view>
 
 namespace kitbag {
+
+inline constexpr std::string_view kSidecarExtension = ".kwav";
 
 /// Builds the ".kwav" waveform-sidecar path for `song_path` inside `dir`.
 ///
@@ -26,8 +29,12 @@ inline std::string SidecarPath(const char* dir, const char* song_path) {
                               : static_cast<size_t>(dot - basename);
 
   out.append(basename, stem_len);
-  out += ".kwav";
+  out += kSidecarExtension;
   return out;
+}
+
+inline bool IsSidecarPath(std::string_view path) {
+  return path.ends_with(kSidecarExtension);
 }
 
 }  // namespace kitbag

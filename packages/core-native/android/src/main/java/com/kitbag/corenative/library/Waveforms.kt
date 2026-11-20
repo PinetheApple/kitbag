@@ -4,8 +4,6 @@ import java.io.File
 import java.io.IOException
 
 object Waveforms {
-  const val SIDECAR_EXTENSION = ".kwav"
-
   fun place(
     folder: DataFolder,
     waveformRelativeDir: String,
@@ -19,7 +17,11 @@ object Waveforms {
       val dir = LibraryPaths.resolve(root, waveformRelativeDir, allowBase = true)
       if (!dir.isDirectory && !dir.mkdirs()) throw IOException("Could not prepare the waveform directory")
       val waveform = File(dir, staged.name)
-      if (staged.isFile) DurableFiles.move(staged, waveform, rename) else waveform.delete()
+      if (!staged.isFile) {
+        waveform.delete()
+        return@importing null
+      }
+      DurableFiles.move(staged, waveform, rename)
       val relativePath = LibraryPaths.relativize(root, waveform)
       try {
         supersede(relativePath)

@@ -176,6 +176,22 @@ class CardReturnReanalysisTest {
   }
 
   @Test
+  fun `a waveform the core does not call a sidecar refuses as a clash`() {
+    reanalyse { }
+    val runner =
+      MoveRunner(fx.folder, fx.journal(), fx.leftovers(), { fx.freeBytes }, { true }, isWaveformSidecar = { false })
+    assertEquals(MoveOutcome.Failed(MoveFailure.TARGET_OCCUPIED), runner.returnCard(card))
+    assertNothingSuperseded()
+  }
+
+  @Test
+  fun `an analysis that placed no waveform keeps the card copy away`() {
+    val missing = File(temp, "$STAGING_DIR/${File(WAVEFORM).name}")
+    assertNull(Waveforms.place(fx.folder, WAVEFORM_DIR, missing, fx.runner()::supersede, { _, _ -> }))
+    assertNothingSuperseded()
+  }
+
+  @Test
   fun `a return refused for space supersedes nothing`() {
     reanalyse { }
     fx.freeBytes = 0
@@ -200,7 +216,9 @@ class CardReturnReanalysisTest {
         return fx.volumes.volumes
       }
     }
-    runner = MoveRunner(DataFolder(fx.filesDir, volumes) { _, _ -> }, fx.journal(), fx.leftovers(), { fx.freeBytes }, { true })
+    val folder = DataFolder(fx.filesDir, volumes) { _, _ -> }
+    runner =
+      MoveRunner(folder, fx.journal(), fx.leftovers(), { fx.freeBytes }, { true }, isWaveformSidecar = fx::isWaveformSidecar)
     runner.finishLeftovers()
     analysis?.join()
     assertLeftovers(mapOf(CARD_UUID to setOf(WAVEFORM)))
