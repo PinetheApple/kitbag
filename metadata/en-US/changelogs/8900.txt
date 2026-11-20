@@ -1,0 +1,1 @@
+• A stem song played from a setlist or Up next now has Next and Previous on its notification and lock screen. Next opens the next song (a metronome song opens stopped), and Previous restarts the song.
