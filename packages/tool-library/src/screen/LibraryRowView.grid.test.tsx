@@ -9,8 +9,16 @@ const GRID_ICON = 'icon:beatGrid';
 
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
-  const box = (props: Props) =>
-    h('div', { 'aria-label': props.accessibilityLabel }, props.children);
+  const box = (props: Props) => {
+    const flat = Object.assign({}, ...[props.style].flat()) as {
+      key?: string;
+    };
+    return h(
+      'div',
+      { 'aria-label': props.accessibilityLabel, 'data-style': flat.key },
+      props.children,
+    );
+  };
   return {
     View: box,
     Pressable: box,
@@ -27,7 +35,8 @@ vi.mock('@kitbag/core-design', async (original) => {
     EllipsizedText: (props: Props) => h('span', null, props.children),
     libraryList: new Proxy({}, { get: () => 0 }),
     Icon: (props: Props) => h('i', null, `icon:${String(props.name)}`),
-    createThemedStyles: () => () => new Proxy({}, { get: () => ({}) }),
+    createThemedStyles: () => () =>
+      new Proxy({}, { get: (_styles, key) => ({ key }) }),
     useTheme: () => ({ color: {}, feedback: {} }),
   };
 });
@@ -60,12 +69,14 @@ const STEM_ROW = {
   stemCount: 6,
 } as unknown as LibraryRow;
 
-function render(row: LibraryRow): string {
+const BADGES_BOX = 'data-style="badges"';
+
+function render(row: LibraryRow, moving = false): string {
   return renderToStaticMarkup(
     createElement(LibraryRowView, {
       row,
       selected: false,
-      moving: false,
+      moving,
       onActions: vi.fn(),
       onOpenStemSet: vi.fn(),
       onOpenSong: vi.fn(),
@@ -87,6 +98,17 @@ describe('a stem song row', () => {
     expect(markup).not.toContain(GRID_ICON);
     expect(markup).not.toContain('GRID');
     expect(markup).not.toContain('STEMS');
+  });
+
+  it('leaves out the empty badge column when the song has no grid', () => {
+    expect(render(STEM_ROW)).toContain(BADGES_BOX);
+    expect(render({ ...STEM_ROW, hasGrid: false })).not.toContain(BADGES_BOX);
+  });
+
+  it('shows its place and no grid icon while its files are moving', () => {
+    const markup = render(STEM_ROW, true);
+    expect(markup).toContain('MOVING');
+    expect(markup).not.toContain(GRID_ICON);
   });
 
   it('says whether the song has a grid, and no stem count', () => {

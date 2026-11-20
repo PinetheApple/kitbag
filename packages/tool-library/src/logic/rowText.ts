@@ -41,14 +41,6 @@ export interface BadgeSpec {
   readonly icon?: IconName;
 }
 
-const GRID_BADGE: BadgeSpec = {
-  key: 'status',
-  label: 'GRID',
-  icon: 'check',
-  spoken: 'Beat grid ready',
-  tone: 'success',
-};
-
 const STATUS_BADGES: Readonly<Record<SongBadge, BadgeSpec>> = {
   pending: {
     key: 'status',
@@ -63,7 +55,13 @@ const STATUS_BADGES: Readonly<Record<SongBadge, BadgeSpec>> = {
     spoken: 'Analyzing',
     tone: 'warning',
   },
-  grid: GRID_BADGE,
+  grid: {
+    key: 'status',
+    label: 'GRID',
+    icon: 'check',
+    spoken: 'Beat grid ready',
+    tone: 'success',
+  },
   noGrid: {
     key: 'status',
     label: 'NO GRID',
@@ -116,8 +114,12 @@ export function rowBadges(
   return row.kind === 'song' ? [STATUS_BADGES[status]] : [];
 }
 
+function stemsHere(row: LibraryRow, place: RowPlace): boolean {
+  return row.kind === 'stems' && place === 'here';
+}
+
 export function showsGridIcon(row: LibraryRow, place: RowPlace): boolean {
-  return row.kind === 'stems' && place === 'here' && row.hasGrid;
+  return stemsHere(row, place) && row.hasGrid;
 }
 
 function spokenStatus(
@@ -125,9 +127,9 @@ function spokenStatus(
   status: SongBadge,
   place: RowPlace,
 ): string[] {
-  if (row.kind === 'stems' && place === 'here')
-    return [STATUS_BADGES[status].spoken];
-  return rowBadges(row, status, place).map((badge) => badge.spoken);
+  if (!stemsHere(row, place))
+    return rowBadges(row, status, place).map((badge) => badge.spoken);
+  return [STATUS_BADGES[showsGridIcon(row, place) ? 'grid' : 'noGrid'].spoken];
 }
 
 function rowFacts(row: LibraryRow): SongFact[] {
