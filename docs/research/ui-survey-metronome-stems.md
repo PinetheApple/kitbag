@@ -6,40 +6,40 @@ Researched 2026-10-29. Tags: **verified** (vendor doc/guide describes it), **ven
 
 | App | Tempo / tap | Meter, subdivision, accents | Poly / trainer / mute / count-in | Primary vs tucked | Source |
 |---|---|---|---|---|---|
-| Metronome Beats (Stonekick) | Wheel, slider, long-press numeric entry; tap-tempo area. **verified** | "Beats per bar" and "clicks per beat" numbers under the tempo; tap a beat light to cycle accented, normal, muted. After play, a swipe swaps these for %-of-tempo buttons. **verified** | Mode icons at the top switch Standard / Advanced / Drums / Polyrhythm. Trainer and timer icons flank Play, and count-in is addable from either screen. **verified** | Sound presets live in Preferences, not on the main screen. Presets, setlists and songs sit in bottom tabs on small devices. Volume or visual-only is one icon. **verified** | [guide](https://stonekick.com/metronome_guide.html) |
-| Soundbrenner (app) | BPM display; changing the time signature does not change BPM. **verified** | Tap an accent marker to cycle Off / 1st / 2nd / 3rd, each with its own sound and visual. Subdivisions include triplets. **verified** | Practice sessions, history, streaks and calendar are documented. The manual does not mention polyrhythm, ramp or count-in. Listings claim count-in and a gradual-tempo feature under Plus. **vendor-claim** | Screen placement is not documented. **unverified** | [manual](https://www.soundbrenner.com/pages/manual-the-metronome-app), [compat](https://www.soundbrenner.com/compatibility) |
-| Pro Metronome (EUM Lab) | Not established. | Dynamic accent levels f / mf / p / mute. **vendor-claim** | Rhythm Trainer mutes a selected bar; Practice Mode programs automatic tempo changes; playlists. Subdivisions, polyrhythm and trainer are separate in-app purchases on iOS. **vendor-claim** (iOS listings, Android page 404'd) | Placement **unverified** | [App Store](https://apps.apple.com/tr/app/id477960671), [Cafe Bazaar](https://cafebazaar.ir/app/com.eumlab.android.prometronome?l=en) |
-| Tempo (Frozen Ape) | Not established. | Customizable accents, beats can be turned off. **vendor-claim** | Five iPhone modes: Basic, Preset, Setlist, Practice, Gig. Setlists can be driven from foot pedals. **vendor-claim** | The mode split is the clutter strategy. Layout otherwise **unverified** | [AirTurn](https://www.airturn.com/blogs/apps/tempo-metronome-with-setlists), [App Store](https://apps.apple.com/app/id304731501) |
-| TonalEnergy | Not established. | Meters, subdivision patterns, restores last accents on launch. **vendor-claim** | Count-in implied by a release note; random beat silencing praised by a user; preset groups. It is primarily a tuner. **vendor-claim** | Layout **unverified** | [App Store](https://apps.apple.com/us/app/tonalenergy-tuner-metronome/id497716362), [review](https://www.notreble.com/?p=22991) |
-| Google metronome | Sources conflict on slider vs +/- and on tap tempo; low-quality SEO pages only. | Conflicting on time signature. | None confirmed. | **unverified** | [AndroidAyuda](https://en.androidayuda.com/google-integrates-metronome-search-do-not-have-to-download-any-app/) |
+| App A | Wheel, slider, long-press numeric entry; tap-tempo area. **verified** | "Beats per bar" and "clicks per beat" numbers under the tempo; tap a beat light to cycle accented, normal, muted. After play, a swipe swaps these for %-of-tempo buttons. **verified** | Mode icons at the top switch Standard / Advanced / Drums / Polyrhythm. Trainer and timer icons flank Play, and count-in is addable from either screen. **verified** | Sound presets live in Preferences, not on the main screen. Presets, setlists and songs sit in bottom tabs on small devices. Volume or visual-only is one icon. **verified** | vendor guide |
+| App B | BPM display; changing the time signature does not change BPM. **verified** | Tap an accent marker to cycle Off / 1st / 2nd / 3rd, each with its own sound and visual. Subdivisions include triplets. **verified** | Practice sessions, history, streaks and calendar are documented. The manual does not mention polyrhythm, ramp or count-in. Listings claim count-in and a gradual-tempo feature under Plus. **vendor-claim** | Screen placement is not documented. **unverified** | vendor manual; compatibility page |
+| App C | Not established. | Dynamic accent levels f / mf / p / mute. **vendor-claim** | A rhythm trainer mutes a selected bar; a practice mode programs automatic tempo changes; playlists. Subdivisions, polyrhythm and trainer are separate in-app purchases on iOS. **vendor-claim** (iOS listings, Android page 404'd) | Placement **unverified** | store listings |
+| App D | Not established. | Customizable accents, beats can be turned off. **vendor-claim** | Five iPhone modes: Basic, Preset, Setlist, Practice, Gig. Setlists can be driven from foot pedals. **vendor-claim** | The mode split is the clutter strategy. Layout otherwise **unverified** | accessory vendor blog; store listing |
+| App E | Not established. | Meters, subdivision patterns, restores last accents on launch. **vendor-claim** | Count-in implied by a release note; random beat silencing praised by a user; preset groups. It is primarily a tuner. **vendor-claim** | Layout **unverified** | store listing; third-party review |
+| A search engine's metronome | Sources conflict on slider vs +/- and on tap tempo; low-quality SEO pages only. | Conflicting on time signature. | None confirmed. | **unverified** | news site |
 
-Not covered: the Soundbrenner Pulse/Core companion layout (no doc found). Its Play listing truncated.
+Not covered: app B's wearable companion layout (no doc found). Its Play listing truncated.
 
 ### Patterns that recur
-- Beat dots double as the accent editor: tap to cycle states (Metronome Beats: 3 states; Soundbrenner: 4). **verified**
-- Meter and subdivision are shown as plain numbers or markers next to the beats, not as a separate card with steppers. **verified** for Metronome Beats.
-- Polyrhythm is a mode (a switch of the whole lower area), not a toggle beside the stepper. **verified** for Metronome Beats; Tempo's Basic/Gig split is the same idea. **vendor-claim**
-- Trainer, timer and count-in are small icons flanking Play, each opening a sheet. **verified** for Metronome Beats.
-- Sound choice is in settings, not on the main screen. **verified** for Metronome Beats.
-- Presets and setlists are a tab or panel, not part of the transport. **verified** for Metronome Beats.
+- Beat dots double as the accent editor: tap to cycle states (app A: 3 states; app B: 4). **verified**
+- Meter and subdivision are shown as plain numbers or markers next to the beats, not as a separate card with steppers. **verified** for app A.
+- Polyrhythm is a mode (a switch of the whole lower area), not a toggle beside the stepper. **verified** for app A; app D's Basic/Gig split is the same idea. **vendor-claim**
+- Trainer, timer and count-in are small icons flanking Play, each opening a sheet. **verified** for app A.
+- Sound choice is in settings, not on the main screen. **verified** for app A.
+- Presets and setlists are a tab or panel, not part of the transport. **verified** for app A.
 
 ### What transfers to us (ranked)
-1. Make the beat dots the meter and accent surface. Meter becomes a small tap target (opens a picker) beside the dots. Cut the card's meter stepper. (Metronome Beats, Soundbrenner)
-2. Move subdivision to a single compact control that swaps with the dots or sits beside them. Do not give it a stepper and a separate card. (Metronome Beats)
-3. Make poly a mode, not a big toggle. It replaces the dot area when active. (Metronome Beats)
-4. Flank Play with Trainer and Timer icons. Ramp, Mute bars and Count-in become one "Practice" sheet. (Metronome Beats; Pro Metronome groups them as practice features)
-5. Move sound (Beep) to a settings sheet. (Metronome Beats)
-6. Setlist moves out of the transport into a tab or sheet, and the stopwatch is deleted. We already have a practice timer on top. (Metronome Beats)
+1. Make the beat dots the meter and accent surface. Meter becomes a small tap target (opens a picker) beside the dots. Cut the card's meter stepper. (apps A and B)
+2. Move subdivision to a single compact control that swaps with the dots or sits beside them. Do not give it a stepper and a separate card. (app A)
+3. Make poly a mode, not a big toggle. It replaces the dot area when active. (app A)
+4. Flank Play with Trainer and Timer icons. Ramp, Mute bars and Count-in become one "Practice" sheet. (app A; app C groups them as practice features)
+5. Move sound (Beep) to a settings sheet. (app A)
+6. Setlist moves out of the transport into a tab or sheet, and the stopwatch is deleted. We already have a practice timer on top. (app A)
 7. Keep the top section as is. No surveyed app contradicts a big numeral plus tap row.
 
 ### What to avoid
 - A chip row of equal-weight toggles. None of the verified apps does this; they use icons that open sheets.
 - Duplicate timers.
 - Putting rarely changed settings (sound) on the main screen.
-- Gating or hiding the tempo trainer deep in menus. Metronome Beats puts it next to Play.
+- Gating or hiding the tempo trainer deep in menus. App A puts it next to Play.
 
 ### Layout proposals (top to bottom)
-**A. Metronome Beats style**
+**A. App A style**
 1. Practice timer (reset) | BPM numeral (swipe) | tempo bar | −10/−5/TAP/+5/+10 (unchanged)
 2. Meter chip and subdivision chip on one line (each opens a picker)
 3. Beat dots, large, tap to cycle accent/normal/mute; poly replaces this area when on
@@ -52,7 +52,7 @@ Not covered: the Soundbrenner Pulse/Core companion layout (no doc found). Its Pl
 3. Transport: Setlist, Play, Practice button
 4. Practice sheet (bottom): Ramp, Mute bars, Count-in, Poly, Sound as rows
 
-**C. Mode switch (Tempo-style)**
+**C. Mode switch (app D style)**
 1. Unchanged top section
 2. Segmented control: Standard | Poly | Practice
 3. Mode body: dots and meter (Standard), poly editor (Poly), ramp/mute/count-in (Practice)
@@ -62,37 +62,37 @@ Not covered: the Soundbrenner Pulse/Core companion layout (no doc found). Its Pl
 
 | App | Stem rows | Metadata (BPM / key / chords) | Scrubber, loop, speed/pitch | Source |
 |---|---|---|---|---|
-| Moises | Mute is a single tap on the instrument icon at left; volume per stem. Solo not confirmed. **verified** (mute), **unverified** (solo, row anatomy) | Chord Grid shows chords, lyrics and sections synced to bars and beats. Library sorts by BPM and key. No persistent BPM/key readout described. **verified** | Waveform player view; section looping; speed and pitch changers; Smart Metronome click stays synced when speed changes; count-in up to 16 clicks (4 free). **verified** (vendor page) | [blog](https://www.moises.ai/blog/latest/moises-features/), [changelog](https://moises.ai/blog/latest/improvements-latest-releases) |
-| LALAL.AI | Per-stem fader, M and S (several solos allowed), one whole-mix waveform. Reset button at top. Player docks at the bottom. **verified** | Not covered. | Drag across the waveform to seek, with the time under the finger. Loop and speed not mentioned. **verified** | [LALAL blog](https://www.lalal.ai/blog/stem-mixer/amp/) |
-| Soundboost Studio (reference, not on our list) | Rows with name, fader, S, M, pan. Master volume at the bottom right. **verified** | Header carries detected tempo (tap opens BPM adjust) and detected key (opens pitch shift). **verified** | Bars along the top; drag on the waveform to select a loop that snaps to beats; Start Loop and Reset in the transport. **verified** | [wiki](https://soundboost.ai/wiki/stem-splitter/the-studio) |
-| Anytune | n/a | n/a | Tap A, then B; the markers jump to the playhead. Loop shift, half/double, loop once, and a step-up trainer (steps pitch or tempo across repeats). **vendor-claim** (App Store, older notes) | [App Store](https://apps.apple.com/us/app/-/id415365180) |
-| OnSong mixer widget | A fader per stem, main fader at left, swipe to scroll. Per-track mute/solo not described. Phone layout not described. **verified** | n/a | Play and scrubber across the top. | [docs](https://apps.onsongapp.com/docs/features/widgets/mixer) |
+| Stem app A | Mute is a single tap on the instrument icon at left; volume per stem. Solo not confirmed. **verified** (mute), **unverified** (solo, row anatomy) | A chord grid shows chords, lyrics and sections synced to bars and beats. Library sorts by BPM and key. No persistent BPM/key readout described. **verified** | Waveform player view; section looping; speed and pitch changers; its click stays synced when speed changes; count-in up to 16 clicks (4 free). **verified** (vendor page) | vendor blog; changelog |
+| Stem app B | Per-stem fader, M and S (several solos allowed), one whole-mix waveform. Reset button at top. Player docks at the bottom. **verified** | Not covered. | Drag across the waveform to seek, with the time under the finger. Loop and speed not mentioned. **verified** | vendor blog |
+| Stem app C (reference, not on our list) | Rows with name, fader, S, M, pan. Master volume at the bottom right. **verified** | Header carries detected tempo (tap opens BPM adjust) and detected key (opens pitch shift). **verified** | Bars along the top; drag on the waveform to select a loop that snaps to beats; Start Loop and Reset in the transport. **verified** | vendor wiki |
+| Practice app D | n/a | n/a | Tap A, then B; the markers jump to the playhead. Loop shift, half/double, loop once, and a step-up trainer (steps pitch or tempo across repeats). **vendor-claim** (App Store, older notes) | store listing |
+| Stem app E mixer widget | A fader per stem, main fader at left, swipe to scroll. Per-track mute/solo not described. Phone layout not described. **verified** | n/a | Play and scrubber across the top. | vendor docs |
 
-Not verified: Fadr, StemRoller, Logic Remote and GarageBand mobile, Spotify now-playing, iReal, Transcribe. Searches returned nothing usable, and I won't characterise them.
+Not verified: six other stem, DAW and practice apps, and Spotify now-playing. Searches returned nothing usable, and I won't characterise them.
 
 ### Patterns that recur
-- Header or title area carries tempo and key as tappable controls that open adjustment (BPM to speed, key to pitch). **verified** (Soundboost)
-- One master volume, at the end of the stem list. **verified** (Soundboost, OnSong)
-- Per-stem row: name or icon, fader, M, S. LALAL and Soundboost expose a fader per row; our hidden fader is the exception. **verified**
-- Loop is selected on the waveform or timeline, and a Reset restores everything. **verified** (Soundboost, LALAL reset)
-- Seek is by dragging the waveform. **verified** (LALAL)
+- Header or title area carries tempo and key as tappable controls that open adjustment (BPM to speed, key to pitch). **verified** (stem app C)
+- One master volume, at the end of the stem list. **verified** (stem apps C and E)
+- Per-stem row: name or icon, fader, M, S. Stem apps B and C expose a fader per row; our hidden fader is the exception. **verified**
+- Loop is selected on the waveform or timeline, and a Reset restores everything. **verified** (stem app C, stem app B reset)
+- Seek is by dragging the waveform. **verified** (stem app B)
 
 ### What transfers to us (ranked)
-1. Make the facts line tappable controls: BPM opens speed, key opens pitch. This puts the facts where they act, and speed/pitch get a home without new buttons. (Soundboost)
-2. Fill the empty gap by letting the 6 stem rows grow to use the height. Keep the master volume as the last row, not a separate card. (Soundboost, OnSong)
-3. Replace the Loop button with waveform-based loop selection, plus A/B markers on the scrubber. (Soundboost, Anytune)
-4. One mix waveform on the scrubber, as LALAL does, instead of or in addition to small per-stem waveforms. (LALAL)
-5. Single-tap mute on the stem icon. (Moises)
-6. Add a Reset that restores mutes, levels, loop, speed and pitch. (LALAL, Soundboost)
-7. Put Click and count-in into a settings sheet if the transport crowds. (Moises)
+1. Make the facts line tappable controls: BPM opens speed, key opens pitch. This puts the facts where they act, and speed/pitch get a home without new buttons. (stem app C)
+2. Fill the empty gap by letting the 6 stem rows grow to use the height. Keep the master volume as the last row, not a separate card. (stem apps C and E)
+3. Replace the Loop button with waveform-based loop selection, plus A/B markers on the scrubber. (stem app C, practice app D)
+4. One mix waveform on the scrubber, as stem app B does, instead of or in addition to small per-stem waveforms. (stem app B)
+5. Single-tap mute on the stem icon. (stem app A)
+6. Add a Reset that restores mutes, levels, loop, speed and pitch. (stem apps B and C)
+7. Put Click and count-in into a settings sheet if the transport crowds. (stem app A)
 
 ### What to avoid
 - A fixed-height card stack that leaves a gap. Let the stem list flex.
 - Another always-on control row for speed and pitch. Use the tappable facts line.
-- Dense per-stem rows with pan. LALAL's pan is desktop only. **verified**
+- Dense per-stem rows with pan. Stem app B's pan is desktop only. **verified**
 
 ### Layout proposals (top to bottom)
-**A. Soundboost-like**
+**A. Stem app C-like**
 1. Title; facts line as tappable chips (BPM, key, LUFS, steady)
 2. Mix waveform with loop region and elapsed/total
 3. Stem rows, 6, filling the remaining height: icon (tap = mute), name, level chip (tap expands fader), S
@@ -108,11 +108,11 @@ Not verified: Fadr, StemRoller, Logic Remote and GarageBand mobile, Spotify now-
 **C. Bottom dock**
 1. Title with facts chips
 2. Stem rows filling the height
-3. Docked bottom: scrubber with times, then transport (the LALAL-style dock)
+3. Docked bottom: scrubber with times, then transport (the stem app B-style dock)
 4. Reset and Click in an overflow sheet
 
 ## Open questions
-- Layout of Soundbrenner, Pro Metronome, Tempo, TonalEnergy and Google's metronome is unconfirmed. Settle it with screenshots from each Play listing or hands-on use.
-- Moises row anatomy and solo are unconfirmed. Settle it with a device pass.
-- Fadr, StemRoller, Logic Remote, GarageBand, Spotify, iReal and Transcribe were not researched successfully. Anytune's A-B detail rests on older notes.
-- Adjacent: Moises count-in limits (16 premium / 4 free) are plan-dependent and volatile.
+- Layout of apps B, C, D, E and the search engine's metronome is unconfirmed. Settle it with screenshots from each Play listing or hands-on use.
+- Stem app A row anatomy and solo are unconfirmed. Settle it with a device pass.
+- Six other stem, DAW and practice apps, and Spotify, were not researched successfully. Practice app D's A-B detail rests on older notes.
+- Adjacent: stem app A count-in limits (16 premium / 4 free) are plan-dependent and volatile.
