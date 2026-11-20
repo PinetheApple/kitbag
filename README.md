@@ -127,21 +127,18 @@ Screenshots from the emulator at SM-M156B size, dark theme then light.
     <th>Data folder</th>
     <th>Practice history</th>
     <th>Practice session</th>
-    <th>Database error</th>
   </tr>
   <tr>
     <td><img src="docs/images/settings-dark.png" width="140" alt="Settings, dark theme"></td>
     <td><img src="docs/images/settings-data-folder-dark.png" width="140" alt="Data folder sheet, dark theme"></td>
     <td><img src="docs/images/practice-history-dark.png" width="140" alt="Practice history, dark theme"></td>
     <td><img src="docs/images/practice-session-dark.png" width="140" alt="One practice session, dark theme"></td>
-    <td><img src="docs/images/database-error-dark.png" width="140" alt="Database error screen, dark theme"></td>
   </tr>
   <tr>
     <td><img src="docs/images/settings-light.png" width="140" alt="Settings, light theme"></td>
     <td><img src="docs/images/settings-data-folder-light.png" width="140" alt="Data folder sheet, light theme"></td>
     <td><img src="docs/images/practice-history-light.png" width="140" alt="Practice history, light theme"></td>
     <td><img src="docs/images/practice-session-light.png" width="140" alt="One practice session, light theme"></td>
-    <td><img src="docs/images/database-error-light.png" width="140" alt="Database error screen, light theme"></td>
   </tr>
 </table>
 
