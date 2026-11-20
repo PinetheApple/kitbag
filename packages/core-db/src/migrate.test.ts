@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it, vi } from 'vitest';
 
+import { throwsOpenError } from './database-open-error.test-helper';
 import { migrate, SCHEMA_VERSION, V7_SCHEMA_VERSION } from './migrate';
 import {
   buildV7Fixture,
@@ -122,11 +123,10 @@ describe('migrate', () => {
       const before = dump(db);
       const driver = nodeSqliteDriver(db);
       const exec = vi.spyOn(driver, 'exec');
-      expect(() => {
+      const error = throwsOpenError('legacy-version', () => {
         migrate(driver);
-      }).toThrow(
-        expect.objectContaining({ name: 'UnsupportedSchemaVersion', version }),
-      );
+      });
+      expect(error.fromVersion).toBe(version);
       expect(exec).not.toHaveBeenCalled();
       expect(dump(db)).toEqual(before);
     },

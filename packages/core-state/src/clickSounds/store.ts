@@ -207,9 +207,14 @@ export function createClickSoundStore(
       }
     };
 
-    const formatProblem = (doc: PickedDocument): ClickSoundProblem | null => {
+    const formatProblem = async (
+      doc: PickedDocument,
+    ): Promise<ClickSoundProblem | null> => {
       const codes = deps().constants();
-      const check = checkAudioFormat(doc, codes);
+      const headerFormat = await deps()
+        .sniffUnsupportedFormat(doc.uri)
+        .catch(() => '');
+      const check = checkAudioFormat(doc, codes, headerFormat);
       if (check.supported) return null;
       return {
         kind: 'format',
@@ -218,17 +223,26 @@ export function createClickSoundStore(
       };
     };
 
-    const prepareDocument = async (
+    const prepareDocument = (
       doc: PickedDocument,
       replacing: ClickSound | null,
     ): Promise<ClickSoundOutcome> => {
       const name = soundNameFromFile(doc.name);
+      return oneAtATime(() =>
+        replacing === null
+          ? add(doc.uri, name)
+          : replace(replacing.slot, doc.uri, name),
+      );
+    };
+
+    const checkAndPrepare = async (
+      doc: PickedDocument,
+      replacing: ClickSound | null,
+    ): Promise<ClickSoundOutcome | ClickSoundProblem> => {
       set({ preparing: doc.name });
       try {
-        return await oneAtATime(() =>
-          replacing === null
-            ? add(doc.uri, name)
-            : replace(replacing.slot, doc.uri, name),
+        return (
+          (await formatProblem(doc)) ?? (await prepareDocument(doc, replacing))
         );
       } finally {
         set({ preparing: null });
@@ -241,7 +255,7 @@ export function createClickSoundStore(
     ): Promise<ClickSound | null> => {
       let outcome: ClickSoundOutcome | ClickSoundProblem;
       try {
-        outcome = formatProblem(doc) ?? (await prepareDocument(doc, replacing));
+        outcome = await checkAndPrepare(doc, replacing);
       } catch (error) {
         warn(`importing click sound ${doc.name} failed`, error);
         outcome = { kind: 'failed' };

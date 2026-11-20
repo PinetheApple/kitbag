@@ -44,6 +44,9 @@ export function harness(database: BackupDatabase = openBackupDatabase()) {
     pickDocument: vi.fn<ClickSoundDeps['pickDocument']>(() =>
       Promise.resolve(PICKED),
     ),
+    sniffUnsupportedFormat: vi.fn<ClickSoundDeps['sniffUnsupportedFormat']>(
+      () => Promise.resolve(''),
+    ),
     constants: () => CODES,
     listFiles: vi.fn(() => Promise.resolve([...stored.keys()])),
     clearPartials: vi.fn(() => Promise.resolve()),

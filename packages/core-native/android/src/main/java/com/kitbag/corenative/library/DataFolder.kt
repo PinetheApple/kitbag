@@ -136,6 +136,14 @@ class DataFolder(
 
   fun resolve(relativePath: String): LibraryFile = rootState().resolve(relativePath)
 
+  // Every branch goes through LibraryPaths.resolve, so an escaping path throws on the card too.
+  fun readable(relativePath: String): File =
+    when (val found = resolve(relativePath)) {
+      is LibraryFile.Present -> found.file
+      is LibraryFile.Unavailable -> throw DataFolderUnavailableException(found.volumeUuid)
+      LibraryFile.Missing, LibraryFile.Unknown -> LibraryPaths.resolve(root(), relativePath)
+    }
+
   companion object {
     const val DIR_NAME = "library"
     const val STATE_FILE_NAME = "data-folder.json"

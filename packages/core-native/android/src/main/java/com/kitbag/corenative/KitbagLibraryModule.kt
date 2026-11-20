@@ -13,6 +13,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.kitbag.corenative.library.AnalysisEvents
+import com.kitbag.corenative.library.AudioHeader
 import com.kitbag.corenative.library.AudioMetadata
 import com.kitbag.corenative.library.AnalysisFailure
 import com.kitbag.corenative.library.AnalysisResult
@@ -115,6 +116,9 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
 
   override fun saveBackup(fileName: String, contents: String, promise: Promise) =
     picker.saveBackup(fileName, contents, promise)
+
+  override fun saveDatabaseCopy(databaseName: String, fileName: String, promise: Promise) =
+    picker.saveDatabaseCopy(databaseName, fileName, promise)
 
   override fun shareExport(path: String, promise: Promise) {
     val file = ExportFiles.resolve(reactApplicationContext.cacheDir, path)
@@ -220,6 +224,15 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     val input = reactApplicationContext.contentResolver.openInputStream(source)
       ?: throw IOException("Could not open $source")
     input.use { from -> file.outputStream().use { to -> from.copyTo(to) } }
+  }
+
+  override fun sniffUnsupportedFormat(uri: String, promise: Promise) {
+    io.execute {
+      val format = AudioHeader.sniff {
+        reactApplicationContext.contentResolver.openInputStream(Uri.parse(uri))
+      }
+      promise.resolve(format.orEmpty())
+    }
   }
 
   override fun importAudio(uri: String, relativeDir: String, promise: Promise) {
@@ -391,7 +404,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun readWaveform(relativePath: String, buckets: Double, promise: Promise) {
     io.execute {
       try {
-        val envelope = NativeWaveform.envelope(LibraryPaths.resolve(libraryRoot(), relativePath), buckets.toInt())
+        val envelope = NativeWaveform.envelope(dataFolder().readable(relativePath), buckets.toInt())
           ?: throw IOException("Unreadable waveform sidecar")
         promise.resolve(Arguments.createArray().apply { envelope.forEach { pushDouble(it.toDouble()) } })
       } catch (e: Exception) {
@@ -446,7 +459,8 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       "supportedAudioMimeTypes" to SupportedAudio.MIME_TYPES,
       "unsupportedAudioExtensions" to SupportedAudio.UNSUPPORTED_EXTENSIONS,
       "exportMaxBaseNameBytes" to ExportFiles.MAX_BASE_NAME_BYTES,
-    ) + StemBundleBridge.CONSTANTS + LibraryErrors.EXPORT_CONSTANTS + DataFolderBridge.CONSTANTS
+    ) + StemBundleBridge.CONSTANTS + LibraryErrors.EXPORT_CONSTANTS +
+      LibraryErrors.DATABASE_COPY_CONSTANTS + DataFolderBridge.CONSTANTS
 
   companion object {
     private const val TAG = "KitbagLibrary"

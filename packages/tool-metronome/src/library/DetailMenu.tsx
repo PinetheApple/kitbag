@@ -1,4 +1,9 @@
-import { useLibrary, type SetlistEntry } from '@kitbag/core-state';
+import {
+  isPresetEntry,
+  useLibrary,
+  type PresetSetlistEntry,
+  type SetlistEntry,
+} from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 
 import {
@@ -43,13 +48,17 @@ interface DetailSheetsProps {
   readonly onEdit: (presetId: number) => void;
 }
 
+interface AddActionsProps extends Omit<DetailSheetsProps, 'entries'> {
+  readonly entries: readonly PresetSetlistEntry[];
+}
+
 function useAddActions({
   menu,
   setlistId,
   entries,
   onEdit,
-}: DetailSheetsProps): SheetAction[] {
-  const presets = useLibrary((s) => s.presets);
+}: AddActionsProps): SheetAction[] {
+  const songs = useLibrary((s) => s.metronomeSongs);
   const addToSetlist = useLibrary((s) => s.addToSetlist);
   const newSong = useLibrary((s) => s.newSongFromCurrent);
   const inSet = new Set(entries.map((e) => e.preset.id));
@@ -66,7 +75,7 @@ function useAddActions({
         },
       ),
   };
-  const existing = presets
+  const existing = songs
     .filter((p) => !inSet.has(p.id))
     .map((p) => ({
       label: p.name,
@@ -84,10 +93,13 @@ function useAddActions({
 }
 
 export function DetailSheets(props: DetailSheetsProps) {
-  const actions = useAddActions(props);
+  const metronomeEntries = props.entries.filter(isPresetEntry);
+  const actions = useAddActions({ ...props, entries: metronomeEntries });
   const saveCurrentInto = useLibrary((s) => s.saveCurrentInto);
   const loaded = useLibrary((s) => s.loaded);
-  const song = props.entries.find((e) => e.item.id === loaded?.itemId)?.preset;
+  const song = metronomeEntries.find(
+    (e) => e.item.id === loaded?.itemId,
+  )?.preset;
   const { menu } = props;
   const save = useCallback(async () => {
     if (song === undefined) return;

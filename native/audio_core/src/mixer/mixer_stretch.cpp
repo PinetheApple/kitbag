@@ -237,13 +237,16 @@ void Mixer::AdvanceStretch(uint32_t take, uint32_t frame_count) {
     );
   }
   read_frame_.store(static_cast<uint64_t>(audible), std::memory_order_relaxed);
+  // Set only by the block that carries the song onto its end, so an unload
+  // that pulls the end behind the head stops the next block uncounted.
+  landed_on_end_ = SongEndReached(out_clock_);
 }
 
 // Feeding runs past the end of the song so the pipeline drains; the transport
 // ends when the audible frame reaches it (SPEC.md §4.4).
 void Mixer::StretchBlock(float* output, uint32_t frame_count, bool any_solo) {
   if (SongEndReached(out_clock_)) {
-    playing_.store(false, std::memory_order_relaxed);
+    EndRun();
     return;
   }
   ApplyPendingRate();

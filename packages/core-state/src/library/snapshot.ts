@@ -1,10 +1,28 @@
 import type { Setlist, SetlistItem, SongPreset } from '@kitbag/core-db';
 
+import { metronomeSongsOf } from './metronomeSongs.ts';
 import type { LibraryRepositories } from './runtime.ts';
 
-export interface SetlistEntry {
+export const ENTRY_KIND = { preset: 'preset', stem: 'stem' } as const;
+
+export interface PresetSetlistEntry {
+  readonly kind: typeof ENTRY_KIND.preset;
   readonly item: SetlistItem;
   readonly preset: SongPreset;
+}
+
+export interface StemSetlistEntry {
+  readonly kind: typeof ENTRY_KIND.stem;
+  readonly item: SetlistItem;
+  readonly stemSetId: number;
+}
+
+export type SetlistEntry = PresetSetlistEntry | StemSetlistEntry;
+
+export function isPresetEntry(
+  entry: SetlistEntry,
+): entry is PresetSetlistEntry {
+  return entry.kind === ENTRY_KIND.preset;
 }
 
 export interface SetlistSummary {
@@ -17,6 +35,7 @@ export interface LibrarySnapshot {
   readonly setlists: readonly SetlistSummary[];
   readonly entries: Readonly<Record<number, readonly SetlistEntry[]>>;
   readonly presets: readonly SongPreset[];
+  readonly metronomeSongs: readonly SongPreset[];
   readonly standalone: readonly SongPreset[];
 }
 
@@ -26,9 +45,13 @@ async function entriesOf(
   byId: ReadonlyMap<number, SongPreset>,
 ): Promise<SetlistEntry[]> {
   const items = await repos.setlists.items(setlist.id);
-  return items.flatMap((item) => {
-    const preset = byId.get(item.songPresetId);
-    return preset === undefined ? [] : [{ item, preset }];
+  return items.flatMap((item): SetlistEntry[] => {
+    const { songPresetId, stemSetId } = item;
+    if (stemSetId !== null) return [{ kind: ENTRY_KIND.stem, item, stemSetId }];
+    const preset = songPresetId === null ? undefined : byId.get(songPresetId);
+    return preset === undefined
+      ? []
+      : [{ kind: ENTRY_KIND.preset, item, preset }];
   });
 }
 
@@ -36,7 +59,9 @@ function summarize(
   setlist: Setlist,
   entries: readonly SetlistEntry[],
 ): SetlistSummary {
-  const rampCount = entries.filter((e) => e.preset.rampEnabled).length;
+  const rampCount = entries.filter(
+    (e) => isPresetEntry(e) && e.preset.rampEnabled,
+  ).length;
   return { setlist, songCount: entries.length, rampCount };
 }
 
@@ -57,14 +82,18 @@ export async function takeSnapshot(
     entries[setlist.id] = await entriesOf(repos, setlist, byId);
   }
   const listed = new Set(
-    Object.values(entries).flatMap((list) => list.map((e) => e.preset.id)),
+    Object.values(entries).flatMap((list) =>
+      list.filter(isPresetEntry).map((e) => e.preset.id),
+    ),
   );
+  const metronomeSongs = metronomeSongsOf(presets);
   return {
     setlists: setlists
       .map((setlist) => summarize(setlist, entries[setlist.id] ?? []))
       .sort(activeFirst),
     entries,
     presets,
-    standalone: presets.filter((preset) => !listed.has(preset.id)),
+    metronomeSongs,
+    standalone: metronomeSongs.filter((preset) => !listed.has(preset.id)),
   };
 }

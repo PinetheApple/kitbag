@@ -5,6 +5,10 @@ import { meterOverrideOf, type MeterOverride } from './meter-override';
 import { found, type Database } from './repository';
 import { stems, stemSets } from './schema';
 import { packFloat32, packInt32, unpackFloat32, unpackInt32 } from './packing';
+import {
+  deleteStemSetEntries,
+  repointStemSetEntries,
+} from './stem-set-entries';
 import { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
 import { parseRetimedLyrics, type LyricLineTimes } from './stem-lyrics';
 import { applyKept, readKept } from './stem-replace-keep';
@@ -260,6 +264,7 @@ export async function deleteStemSet(
     .select({ filePath: stems.filePath, waveformPath: stems.waveformPath })
     .from(stems)
     .where(eq(stems.stemSetId, id));
+  await deleteStemSetEntries(db, id);
   await db.delete(stems).where(eq(stems.stemSetId, id));
   await db.delete(stemSets).where(eq(stemSets.id, id));
   return {
@@ -270,6 +275,13 @@ export async function deleteStemSet(
   };
 }
 
+async function releaseJobId(db: Database, id: number): Promise<void> {
+  await db
+    .update(stemSets)
+    .set({ stemdeckJobId: null })
+    .where(eq(stemSets.id, id));
+}
+
 export async function replaceStemBundle(
   db: Database,
   bundle: NewStemBundle,
@@ -278,8 +290,10 @@ export async function replaceStemBundle(
   const kept = await readKept(db, targetId, bundle);
   if (kept === undefined)
     return { id: await insertStemBundle(db, bundle), replaced: null };
-  const replaced = await deleteStemSet(db, targetId);
+  await releaseJobId(db, targetId);
   const id = await insertStemBundle(db, bundle);
+  await repointStemSetEntries(db, targetId, id);
+  const replaced = await deleteStemSet(db, targetId);
   await applyKept(db, id, kept);
   return { id, replaced };
 }

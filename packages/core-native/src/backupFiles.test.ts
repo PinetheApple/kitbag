@@ -4,6 +4,7 @@ const library = vi.hoisted(() => ({
   pickBackup: vi.fn(),
   shareBackup: vi.fn(),
   saveBackup: vi.fn(),
+  saveDatabaseCopy: vi.fn(),
 }));
 
 vi.mock('react-native', () => ({ Platform: { OS: 'android' } }));
@@ -12,8 +13,13 @@ vi.mock('./NativeKitbagLibrary', () => ({
   getKitbagLibrary: () => library,
 }));
 
-const { backupFilesAvailable, pickBackup, saveBackup, shareBackup } =
-  await import('./backupFiles.ts');
+const {
+  backupFilesAvailable,
+  pickBackup,
+  saveBackup,
+  saveDatabaseCopy,
+  shareBackup,
+} = await import('./backupFiles.ts');
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -61,4 +67,33 @@ it('reports a cancelled save dialog as not saved', async () => {
   library.saveBackup.mockResolvedValue(false);
 
   await expect(saveBackup('kitbag_export.json', '{}')).resolves.toBe(false);
+});
+
+it('saves a copy of the named database under the suggested file name', async () => {
+  library.saveDatabaseCopy.mockResolvedValue(true);
+
+  await expect(
+    saveDatabaseCopy('kitbag', 'Kitbag data 2026-11-19.db'),
+  ).resolves.toBe(true);
+  expect(library.saveDatabaseCopy).toHaveBeenCalledExactlyOnceWith(
+    'kitbag',
+    'Kitbag data 2026-11-19.db',
+  );
+});
+
+it('reports a cancelled database copy as not saved', async () => {
+  library.saveDatabaseCopy.mockResolvedValue(false);
+
+  await expect(
+    saveDatabaseCopy('kitbag', 'Kitbag data 2026-11-19.db'),
+  ).resolves.toBe(false);
+});
+
+it('passes a failed database copy on as a rejection', async () => {
+  const failure = new Error('Could not save the backup');
+  library.saveDatabaseCopy.mockRejectedValue(failure);
+
+  await expect(
+    saveDatabaseCopy('kitbag', 'Kitbag data 2026-11-19.db'),
+  ).rejects.toBe(failure);
 });

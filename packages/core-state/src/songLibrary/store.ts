@@ -248,7 +248,11 @@ function importActions(
         set({ notice: { kind: 'copyFailed', name: doc.name } });
         return;
       }
-      const check = checkAudioFormat(doc, codes);
+      const headerFormat = await deps
+        .files()
+        .sniffUnsupportedFormat(doc.uri)
+        .catch(() => '');
+      const check = checkAudioFormat(doc, codes, headerFormat);
       if (!check.supported) {
         set({
           notice: {
@@ -343,31 +347,39 @@ function analysisActions(
       enqueue(files, song, false);
     await get().refresh();
   };
+  const startAnalysis = async () => {
+    const files = deps.files();
+    const stopResults = files.onAnalysis((result) => {
+      void receiveAnalysis(result);
+    });
+    const stopWatchingPlayer = deps.openSong().onChange(() => {
+      void queue.resume();
+    });
+    const stopWatchingFolder = files.onDataFolderChanged(() => {
+      void refreshAvailability();
+    });
+    for (const result of await files.pendingAnalyses())
+      await storeResult(result);
+    await analyzeUnfinished();
+    await refreshAvailability();
+    await queue.resume();
+    await sweepOrphanedStemFolders(deps, get, imports);
+    return () => {
+      stopResults();
+      stopWatchingPlayer();
+      stopWatchingFolder();
+    };
+  };
   return {
     receiveAnalysis,
     analyzeUnfinished,
     start: async () => {
-      const files = deps.files();
-      const stopResults = files.onAnalysis((result) => {
-        void receiveAnalysis(result);
-      });
-      const stopWatchingPlayer = deps.openSong().onChange(() => {
-        void queue.resume();
-      });
-      const stopWatchingFolder = files.onDataFolderChanged(() => {
-        void refreshAvailability();
-      });
-      for (const result of await files.pendingAnalyses())
-        await storeResult(result);
-      await analyzeUnfinished();
-      await refreshAvailability();
-      await queue.resume();
-      await sweepOrphanedStemFolders(deps, get, imports);
-      return () => {
-        stopResults();
-        stopWatchingPlayer();
-        stopWatchingFolder();
-      };
+      try {
+        return await startAnalysis();
+      } catch (error) {
+        await get().refresh();
+        throw error;
+      }
     },
     reanalyze: async (songId: number) => {
       await requeueAndRefresh(deps, get, songId);

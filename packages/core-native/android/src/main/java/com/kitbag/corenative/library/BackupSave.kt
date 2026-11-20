@@ -1,6 +1,7 @@
 package com.kitbag.corenative.library
 
 import android.content.Intent
+import java.io.File
 import java.io.IOException
 import java.io.OutputStream
 
@@ -16,12 +17,29 @@ object BackupSave {
     contents: String,
     open: (String, String) -> OutputStream?,
     discard: (String) -> Unit,
+  ): Boolean = deliver(saved, pickedUri, open, discard) { BackupFiles.write(it, contents) }
+
+  fun copyFile(
+    saved: Boolean,
+    pickedUri: String?,
+    source: File,
+    settled: SettledCopy,
+    open: (String, String) -> OutputStream?,
+    discard: (String) -> Unit,
+  ): Boolean = deliver(saved, pickedUri, open, discard) { out -> settled.read(source) { it.copyTo(out) } }
+
+  private fun deliver(
+    saved: Boolean,
+    pickedUri: String?,
+    open: (String, String) -> OutputStream?,
+    discard: (String) -> Unit,
+    write: (OutputStream) -> Unit,
   ): Boolean {
     if (!saved) return false
     val uri = pickedUri ?: throw IOException("The save dialog returned no document")
     try {
       val out = open(uri, WRITE_MODE) ?: throw IOException("Could not open the chosen document")
-      out.use { BackupFiles.write(it, contents) }
+      out.use(write)
     } catch (e: Exception) {
       runCatching { discard(uri) }.exceptionOrNull()?.let(e::addSuppressed)
       throw e

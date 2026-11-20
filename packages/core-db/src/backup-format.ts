@@ -88,12 +88,18 @@ export interface SongPresetRecord {
   librarySongUuid: string | null;
 }
 
+export type SetlistItemRecord = { preset: string } | { stemSong: string };
+
 export interface SetlistRecord {
   uuid: string;
   name: string;
   active: boolean;
   presetUuids: string[];
+  items?: SetlistItemRecord[];
 }
+
+export const itemPresets = (items: readonly SetlistItemRecord[]) =>
+  items.flatMap((item) => ('preset' in item ? [item.preset] : []));
 
 export interface TuningRecord {
   uuid: string;
@@ -110,6 +116,8 @@ export interface PracticeSessionRecord {
   avgBpm: number;
   setlistUuid: string | null;
   songsPlayed: string | null;
+  setlistName: string | null;
+  log: string | null;
 }
 
 // The value stays the stored text: only the app knows which values are valid,

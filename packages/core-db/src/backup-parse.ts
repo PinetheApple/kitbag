@@ -2,6 +2,7 @@ import {
   BACKUP_FORMAT,
   BACKUP_VERSION,
   CATEGORIES,
+  itemPresets,
   PREFERENCE_KEYS,
   reject,
   recordKey,
@@ -15,6 +16,7 @@ import {
   type PracticeSessionRecord,
   type PreferenceCategory,
   type PreferenceRecord,
+  type SetlistItemRecord,
   type SetlistRecord,
   type SongPresetRecord,
   type TuningRecord,
@@ -159,17 +161,40 @@ function readSongPreset(value: unknown, path: string): SongPresetRecord {
   };
 }
 
+function readSetlistItem(value: unknown, path: string): SetlistItemRecord {
+  const r = reader(value, path);
+  const { preset, stemSong } = asObject(value, path);
+  if ((preset === undefined) === (stemSong === undefined))
+    invalidField(path, 'expected one of preset or stemSong');
+  return preset === undefined
+    ? { stemSong: r.string('stemSong') }
+    : { preset: r.uuid('preset') };
+}
+
+function readSetlistItems(value: unknown, path: string, presetUuids: string[]) {
+  const listed = asObject(value, path).items;
+  if (listed === undefined) return {};
+  const items = asArray(listed, `${path}.items`).map((item, index) =>
+    readSetlistItem(item, `${path}.items[${String(index)}]`),
+  );
+  if (JSON.stringify(itemPresets(items)) !== JSON.stringify(presetUuids))
+    invalidField(`${path}.items`, 'preset entries differ from presetUuids');
+  return { items };
+}
+
 function readSetlist(value: unknown, path: string): SetlistRecord {
   const r = reader(value, path);
+  const presetUuids = r
+    .array('presetUuids')
+    .map((uuid, index) =>
+      reader({ uuid }, `${path}.presetUuids[${String(index)}]`).uuid('uuid'),
+    );
   return {
     uuid: r.uuid('uuid'),
     name: r.string('name'),
     active: r.boolean('active'),
-    presetUuids: r
-      .array('presetUuids')
-      .map((uuid, index) =>
-        reader({ uuid }, `${path}.presetUuids[${String(index)}]`).uuid('uuid'),
-      ),
+    presetUuids,
+    ...readSetlistItems(value, path, presetUuids),
   };
 }
 
@@ -201,6 +226,8 @@ function readPracticeSession(
     avgBpm: r.number('avgBpm'),
     setlistUuid: r.nullableUuid('setlistUuid'),
     songsPlayed: r.nullableString('songsPlayed'),
+    setlistName: r.optionalNullableString('setlistName'),
+    log: r.optionalNullableString('log'),
   };
 }
 

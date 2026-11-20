@@ -19,7 +19,7 @@ import {
 } from '@kitbag/core-design';
 import {
   activeSetView,
-  adjacentEntry,
+  adjacentPresetEntry,
   SONG_STEP,
   useLibrary,
   type ActiveSet,
@@ -264,8 +264,12 @@ function StageBar({ context, bottomInset, onBack }: StageBarProps) {
   const { song, set, entries, loadedItemId } = context;
   const stepSong = useLibrary((s) => s.stepSong);
   const [listOpen, setListOpen] = useState(false);
-  const previous = adjacentEntry(entries, loadedItemId, SONG_STEP.previous);
-  const next = adjacentEntry(entries, loadedItemId, SONG_STEP.next);
+  const previous = adjacentPresetEntry(
+    entries,
+    loadedItemId,
+    SONG_STEP.previous,
+  );
+  const next = adjacentPresetEntry(entries, loadedItemId, SONG_STEP.next);
   const handlePrevious = useCallback(() => {
     void stepSong(SONG_STEP.previous);
   }, [stepSong]);

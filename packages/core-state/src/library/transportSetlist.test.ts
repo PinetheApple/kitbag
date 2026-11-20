@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ActiveSet } from './activeSet.ts';
-import type { SetlistEntry, SetlistSummary } from './snapshot.ts';
+import {
+  ENTRY_KIND,
+  type SetlistEntry,
+  type SetlistSummary,
+} from './snapshot.ts';
 import type { LoadedSong } from './store.ts';
 import { transportSetlistOf } from './transportSetlist.ts';
 
@@ -12,6 +16,7 @@ const titles = ['Intro', 'Blackbird', 'Encore'];
 const entries: SetlistEntry[] = titles.map(
   (name, index) =>
     ({
+      kind: ENTRY_KIND.preset,
       item: { id: 100 + index },
       preset: { id: 200 + index, name },
     }) as unknown as SetlistEntry,
@@ -63,6 +68,21 @@ describe('transportSetlistOf', () => {
     const removed = { ...loadedAt(1), itemId: 999 };
     expect(transportSetlistOf(subtitleOf, library(removed))).toEqual({
       subtitle: 'Wedding set|none',
+    });
+  });
+
+  it('names the loaded song when a stem song sits before it', () => {
+    const stem = {
+      kind: ENTRY_KIND.stem,
+      item: { id: 99 },
+      stemSetId: 5,
+    } as unknown as SetlistEntry;
+    const state = {
+      ...library(loadedAt(1)),
+      entries: { [SETLIST_ID]: [stem, ...entries] },
+    };
+    expect(transportSetlistOf(subtitleOf, state)).toEqual({
+      subtitle: 'Wedding set|Blackbird',
     });
   });
 

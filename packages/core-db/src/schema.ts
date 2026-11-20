@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  check,
   customType,
   integer,
   real,
@@ -117,14 +118,35 @@ export const songPresets = sqliteTable('song_presets', {
   uuid: text('uuid').notNull(),
 });
 
-export const setlistItems = sqliteTable('setlist_items', {
+export const setlistItems = sqliteTable(
+  'setlist_items',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    setlistId: integer('setlist_id')
+      .notNull()
+      .references(() => setlists.id, { onDelete: 'cascade' }),
+    songPresetId: integer('song_preset_id').references(() => songPresets.id, {
+      onDelete: 'cascade',
+    }),
+    position: integer('position').notNull(),
+    stemSetId: integer('stem_set_id').references(() => stemSets.id, {
+      onDelete: 'cascade',
+    }),
+  },
+  () => [
+    check(
+      'setlist_items_one_entry',
+      sql`(song_preset_id IS NULL) <> (stem_set_id IS NULL)`,
+    ),
+  ],
+);
+
+export const playQueue = sqliteTable('play_queue', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  setlistId: integer('setlist_id')
+  stemSetId: integer('stem_set_id')
     .notNull()
-    .references(() => setlists.id, { onDelete: 'cascade' }),
-  songPresetId: integer('song_preset_id')
-    .notNull()
-    .references(() => songPresets.id, { onDelete: 'cascade' }),
+    .unique()
+    .references(() => stemSets.id, { onDelete: 'cascade' }),
   position: integer('position').notNull(),
 });
 
@@ -148,6 +170,8 @@ export const practiceSessions = sqliteTable('practice_sessions', {
   }),
   songsPlayed: text('songs_played'),
   uuid: text('uuid').notNull(),
+  log: text('log'),
+  setlistName: text('setlist_name'),
 });
 
 export const stemSets = sqliteTable(

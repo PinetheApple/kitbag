@@ -18,6 +18,8 @@ import {
   MIGRATE_V20_TO_V21,
   MIGRATE_V21_TO_V22,
   MIGRATE_V22_TO_V23,
+  MIGRATE_V23_TO_V24,
+  MIGRATE_V24_TO_V25,
   V7_SCHEMA_VERSION,
   V8_SCHEMA_VERSION,
   V9_SCHEMA_VERSION,
@@ -35,6 +37,8 @@ import {
   V21_SCHEMA_VERSION,
   V22_SCHEMA_VERSION,
   V23_SCHEMA_VERSION,
+  V24_SCHEMA_VERSION,
+  V25_SCHEMA_VERSION,
 } from './migrate';
 
 const V7_DDL: readonly string[] = [
@@ -335,5 +339,19 @@ export function buildV23Fixture(): DatabaseSync {
   const db = buildV22Fixture();
   applyInTransaction(db, MIGRATE_V22_TO_V23);
   db.exec(`PRAGMA user_version = ${String(V23_SCHEMA_VERSION)}`);
+  return db;
+}
+
+export function buildV24Fixture(): DatabaseSync {
+  const db = buildV23Fixture();
+  applyInTransaction(db, MIGRATE_V23_TO_V24);
+  db.exec(`PRAGMA user_version = ${String(V24_SCHEMA_VERSION)}`);
+  return db;
+}
+
+export function buildV25Fixture(): DatabaseSync {
+  const db = buildV24Fixture();
+  applyInTransaction(db, MIGRATE_V24_TO_V25);
+  db.exec(`PRAGMA user_version = ${String(V25_SCHEMA_VERSION)}`);
   return db;
 }
