@@ -244,10 +244,12 @@ export {
 } from './playOrder/usePlayOrder.ts';
 export { bindStemSetRemovals } from './playOrder/stemSetRemovals.ts';
 export {
+  ARRIVAL,
   arrivalStore,
   SKIP,
   startAutoAdvance,
   type Arrival,
+  type ArrivalEvent,
   type ArrivalState,
   type SetlistPlace,
   type Skip,

@@ -15,13 +15,23 @@ export interface SetlistPlace {
   readonly of: number;
 }
 
-export interface Arrival {
-  readonly serial: number;
-  readonly stemSetId: number | null;
-  readonly place: SetlistPlace | null;
-  readonly skipped: Skip | null;
-  readonly played: boolean;
-}
+export const ARRIVAL = {
+  arriving: 'arriving',
+  playing: 'playing',
+  gaveUp: 'gaveUp',
+} as const;
+
+export type ArrivalEvent =
+  | { readonly kind: typeof ARRIVAL.arriving; readonly stemSetId: number }
+  | {
+      readonly kind: typeof ARRIVAL.playing;
+      readonly stemSetId: number;
+      readonly place: SetlistPlace | null;
+      readonly skipped: Skip | null;
+    }
+  | { readonly kind: typeof ARRIVAL.gaveUp; readonly skipped: Skip };
+
+export type Arrival = ArrivalEvent & { readonly serial: number };
 
 export interface ArrivalState {
   readonly arrival: Arrival | null;
@@ -72,7 +82,7 @@ const defaultDeps: AutoAdvanceDeps = {
 
 export function startAutoAdvance(deps: AutoAdvanceDeps = defaultDeps) {
   let serial = 0;
-  const arrive = (arrival: Omit<Arrival, 'serial'>) => {
+  const arrive = (arrival: ArrivalEvent) => {
     serial++;
     deps.arrivals.setState({ arrival: { ...arrival, serial } });
   };
@@ -88,18 +98,17 @@ export function startAutoAdvance(deps: AutoAdvanceDeps = defaultDeps) {
       await deps.commitNext(next);
       const { stemSetId } = next;
       const place = deps.placeOf(next);
-      arrive({ stemSetId, place, skipped, played: false });
+      arrive({ kind: ARRIVAL.arriving, stemSetId });
       const outcome = await deps.advanceTo(stemSetId);
       if (outcome === ADVANCE_OUTCOME.displaced) return;
       if (outcome === ADVANCE_OUTCOME.playing) {
-        arrive({ stemSetId, place, skipped, played: true });
+        arrive({ kind: ARRIVAL.playing, stemSetId, place, skipped });
         return;
       }
       skipped = SKIP.unopened;
     }
     deps.stopAdvancing();
-    if (skipped === SKIP.deleted)
-      arrive({ stemSetId: null, place: null, skipped, played: false });
+    if (skipped === SKIP.deleted) arrive({ kind: ARRIVAL.gaveUp, skipped });
   };
   return deps.onSongEnd(() => {
     advance().catch((error: unknown) => {

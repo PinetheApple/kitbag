@@ -3,6 +3,7 @@ import { createStore } from 'zustand/vanilla';
 
 import { ADVANCE_OUTCOME, type AdvanceOutcome } from '../stemPlayer/songEnd.ts';
 import {
+  ARRIVAL,
   SKIP,
   startAutoAdvance,
   type Arrival,
@@ -90,10 +91,10 @@ describe('auto-advance at the end of a stem song', () => {
     await h.songEnds();
     expect(h.advanceTo).toHaveBeenCalledWith(NIGHT_BUS);
     expect(h.arrivals.getState().arrival).toMatchObject({
+      kind: ARRIVAL.playing,
       stemSetId: NIGHT_BUS,
       place: PLACE,
       skipped: null,
-      played: true,
     });
     expect(h.stopAdvancing).not.toHaveBeenCalled();
   });
@@ -101,7 +102,10 @@ describe('auto-advance at the end of a stem song', () => {
   it('names the song to follow before it plays', async () => {
     const h = harness([play(NIGHT_BUS)]);
     await h.songEnds();
-    expect(h.seen.map((arrival) => arrival.played)).toEqual([false, true]);
+    expect(h.seen.map((arrival) => arrival.kind)).toEqual([
+      ARRIVAL.arriving,
+      ARRIVAL.playing,
+    ]);
     expect(h.seen[0]).toMatchObject({ stemSetId: NIGHT_BUS });
   });
 
@@ -186,7 +190,7 @@ describe('auto-advance at the end of a stem song', () => {
     );
     await h.songEnds();
     expect(h.seen).toEqual([
-      expect.objectContaining({ stemSetId: NIGHT_BUS, played: false }),
+      expect.objectContaining({ kind: ARRIVAL.arriving, stemSetId: NIGHT_BUS }),
     ]);
     expect(h.stopAdvancing).toHaveBeenCalledTimes(1);
   });
@@ -195,9 +199,8 @@ describe('auto-advance at the end of a stem song', () => {
     const h = harness([{ ...end, skipped: true }]);
     await h.songEnds();
     expect(h.arrivals.getState().arrival).toMatchObject({
-      stemSetId: null,
+      kind: ARRIVAL.gaveUp,
       skipped: SKIP.deleted,
-      played: false,
     });
   });
 
