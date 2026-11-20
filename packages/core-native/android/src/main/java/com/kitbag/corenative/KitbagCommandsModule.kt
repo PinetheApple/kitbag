@@ -32,6 +32,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private val mixdown = MixdownExport(reactContext.cacheDir)
   private val transportListener: (TransportChange) -> Unit = ::emitTransport
   private val songStoppedListener: () -> Unit = ::emitOnSongStopped
+  private val songEndedListener: () -> Unit = ::emitOnSongEnded
   private val songRequestListener: (SongCommand) -> Unit = ::emitSongRequest
   private val outputRoutes =
     OutputRouteWatcher(reactContext, ::outputDeviceId, ::emitOutputRoute)
@@ -43,6 +44,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     }
     PlaybackService.listener = transportListener
     PlaybackService.songStoppedListener = songStoppedListener
+    PlaybackService.songEndedListener = songEndedListener
     PlaybackService.songRequestListener = songRequestListener
     outputRoutes.start()
   }
@@ -52,6 +54,9 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     if (PlaybackService.listener === transportListener) PlaybackService.listener = null
     if (PlaybackService.songStoppedListener === songStoppedListener) {
       PlaybackService.songStoppedListener = null
+    }
+    if (PlaybackService.songEndedListener === songEndedListener) {
+      PlaybackService.songEndedListener = null
     }
     if (PlaybackService.songRequestListener === songRequestListener) {
       PlaybackService.songRequestListener = null
