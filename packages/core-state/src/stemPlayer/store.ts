@@ -26,7 +26,6 @@ import type { LoopEdge, LoopSeconds } from './loop.ts';
 import { sectionLoopActions } from './loopActions.ts';
 import { overrideDownbeats } from './meterOverride.ts';
 import { songLyrics, type RetimeTap, type SongLyrics } from './lyrics.ts';
-import { UNITY_GAIN } from './mix.ts';
 import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
 import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
 import { mixerSession, type MixerHold } from './mixerSession.ts';
@@ -47,7 +46,12 @@ import {
   type AdvanceOutcome,
 } from './songEnd.ts';
 import { countPending, songStart } from './songStart.ts';
-import { loadTracks, loadWaveforms, rowsOf } from './stemTracks.ts';
+import {
+  loadTracks,
+  loadWaveforms,
+  rowsOf,
+  unloadTracks,
+} from './stemTracks.ts';
 import { clampedSpeed, wholeKey } from './speedKey.ts';
 import { speedKeySession } from './speedKeyActions.ts';
 import { songGrid, tempoActions } from './tempoActions.ts';
@@ -231,13 +235,7 @@ export function createStemPlayerStore(
   );
 
   const teardownTracks = () => {
-    const { commands } = runtimeOf();
-    for (let track = 0; track < requestedTracks; track++) {
-      commands.mixerSetSolo(track, false);
-      commands.mixerSetMute(track, false);
-      commands.mixerSetGain(track, UNITY_GAIN);
-      commands.mixerUnloadTrack(track);
-    }
+    unloadTracks(runtimeOf().commands, requestedTracks);
     requestedTracks = 0;
   };
 
@@ -292,6 +290,7 @@ export function createStemPlayerStore(
     mixer.onSongStopped(() => {
       card.stopped();
       start.songStopped();
+      ends.stopped();
     });
     mixer.onSongTransport(
       songTransportRequests({
