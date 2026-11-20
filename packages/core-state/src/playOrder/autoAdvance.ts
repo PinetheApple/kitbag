@@ -29,7 +29,7 @@ export type ArrivalEvent =
       readonly place: SetlistPlace | null;
       readonly skipped: Skip | null;
     }
-  | { readonly kind: typeof ARRIVAL.gaveUp; readonly skipped: Skip };
+  | { readonly kind: typeof ARRIVAL.gaveUp };
 
 export type Arrival = ArrivalEvent & { readonly serial: number };
 
@@ -108,7 +108,7 @@ export function startAutoAdvance(deps: AutoAdvanceDeps = defaultDeps) {
       skipped = SKIP.unopened;
     }
     deps.stopAdvancing();
-    if (skipped === SKIP.deleted) arrive({ kind: ARRIVAL.gaveUp, skipped });
+    if (skipped === SKIP.deleted) arrive({ kind: ARRIVAL.gaveUp });
   };
   return deps.onSongEnd(() => {
     advance().catch((error: unknown) => {

@@ -19,8 +19,7 @@ const SKIPPED: Readonly<Record<Skip, string>> = {
 
 export function arrivalText(arrival: Arrival, stems: StemSongs): string | null {
   if (arrival.kind === ARRIVAL.arriving) return null;
-  if (arrival.kind === ARRIVAL.gaveUp)
-    return arrival.skipped === SKIP.deleted ? SKIPPED_STEM_SONG : null;
+  if (arrival.kind === ARRIVAL.gaveUp) return SKIPPED_STEM_SONG;
   const { skipped, stemSetId, place } = arrival;
   if (skipped !== null) return SKIPPED[skipped];
   const playing = `${PLAYING} ${stemSongTitle(stemSetId, stems)}`;

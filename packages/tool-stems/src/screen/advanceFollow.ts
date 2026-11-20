@@ -20,13 +20,13 @@ export function useRouteAcquire(
   useLayoutEffect(() => {
     routeId.current = setId;
   }, [setId]);
-  const acquireRouteSong = () => () => acquireSong(routeId.current);
+  const newRouteAcquirer = () => () => acquireSong(routeId.current);
   const [route, setRoute] = useState(() => ({
     setId,
-    acquire: acquireRouteSong(),
+    acquire: newRouteAcquirer(),
   }));
   if (route.setId === setId) return route.acquire;
-  const acquire = setId === advancedTo ? route.acquire : acquireRouteSong();
+  const acquire = setId === advancedTo ? route.acquire : newRouteAcquirer();
   setRoute({ setId, acquire });
   return acquire;
 }

@@ -200,7 +200,6 @@ describe('auto-advance at the end of a stem song', () => {
     await h.songEnds();
     expect(h.arrivals.getState().arrival).toMatchObject({
       kind: ARRIVAL.gaveUp,
-      skipped: SKIP.deleted,
     });
   });
 

@@ -36,21 +36,9 @@ describe('what the player says after an advance', () => {
   });
 
   it('says it skipped a deleted song when nothing plays', () => {
-    expect(
-      arrivalText(
-        { kind: ARRIVAL.gaveUp, serial: SERIAL, skipped: SKIP.deleted },
-        stems,
-      ),
-    ).toBe(SKIPPED_STEM_SONG);
-  });
-
-  it('says nothing when it gave up after a song that would not open', () => {
-    expect(
-      arrivalText(
-        { kind: ARRIVAL.gaveUp, serial: SERIAL, skipped: SKIP.unopened },
-        stems,
-      ),
-    ).toBeNull();
+    expect(arrivalText({ kind: ARRIVAL.gaveUp, serial: SERIAL }, stems)).toBe(
+      SKIPPED_STEM_SONG,
+    );
   });
 
   it('says it skipped an unopened song once a later one plays', () => {
