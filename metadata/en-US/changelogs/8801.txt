@@ -1,0 +1,1 @@
+• Fixed: the song and stem players were slow to read with accessibility tools while a song played.
