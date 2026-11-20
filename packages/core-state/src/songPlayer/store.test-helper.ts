@@ -3,14 +3,18 @@ import {
   type LibraryRow,
   type SongRecord,
 } from '@kitbag/core-db';
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
 import { createStore } from 'zustand/vanilla';
 
+import type { MetronomeCommands } from '../metronome/commands.ts';
+import { createMetronomeStore, DEFAULT_BPM } from '../metronome/store.ts';
 import { songRow } from '../storage/fixtures.test-helper.ts';
 import type { MixerClaim } from '../stemPlayer/mixerClaim.ts';
+import { createMixerClick } from '../stemPlayer/mixerClick.ts';
 import { fakeRuntime, RATE, record } from '../stemPlayer/store.test-helper.ts';
 import { secondsToFrames } from '../stemPlayer/time.ts';
 import type { SongPlayerRuntime } from './runtime.ts';
+import type { SongClickMetronome } from './songClick.ts';
 import { createSongPlayerStore, type SongLibraryRows } from './store.ts';
 
 export const SONG_ID = 3;
@@ -36,6 +40,40 @@ export function songRecord(change: Partial<SongRecord> = {}): SongRecord {
   };
 }
 
+export function lastAccentPerBeat(
+  setAccent: Mock<(beat: number, accent: number) => void>,
+) {
+  const last = new Map<number, number>();
+  for (const [beat, accent] of setAccent.mock.calls) last.set(beat, accent);
+  return [...last.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([, accent]) => accent);
+}
+
+export function fakeMetronomeCommands() {
+  return new Proxy(
+    {},
+    {
+      get: (target: Record<string, unknown>, key: string) =>
+        (target[key] ??= vi.fn()),
+    },
+  ) as unknown as {
+    [K in keyof MetronomeCommands]: Mock<MetronomeCommands[K]>;
+  };
+}
+
+export function fakeMetronome() {
+  const commands = fakeMetronomeCommands();
+  const store = createMetronomeStore(
+    commands,
+    () => 0,
+    () => DEFAULT_BPM,
+    Date.now,
+    createMixerClick(),
+  );
+  return { store, commands };
+}
+
 export function fakeSongRuntime(song: SongRecord = songRecord()) {
   const fake = fakeRuntime(record([]));
   const metronomeSetters = {
@@ -43,7 +81,7 @@ export function fakeSongRuntime(song: SongRecord = songRecord()) {
     setBeats: vi.fn(),
     setSubdivision: vi.fn(),
     setSounds: vi.fn(),
-    setAccent: vi.fn(),
+    setAccent: vi.fn<(beat: number, accent: number) => void>(),
   };
   const mixerTrackFrames = vi.fn(() =>
     Promise.resolve(secondsToFrames(song.durationSec, RATE)),
@@ -64,6 +102,8 @@ export function fakeSongRuntime(song: SongRecord = songRecord()) {
     engine: fake.runtime.engine,
     sharedMetronome: fake.sharedMetronome,
   };
+  const standalone = fakeMetronome();
+  const metronome: SongClickMetronome = standalone;
   return {
     ...fake,
     runtime,
@@ -72,6 +112,8 @@ export function fakeSongRuntime(song: SongRecord = songRecord()) {
     library,
     readWaveform,
     metronomeSetters,
+    standalone,
+    metronome,
   };
 }
 
@@ -84,6 +126,7 @@ export function songStore(
 ) {
   return createSongPlayerStore(() => fake.runtime, {
     scrubSeekDelayMs: SEEK_MS,
+    metronome: fake.metronome,
     ...(mixerClaim === undefined ? {} : { mixerClaim }),
     ...(library === undefined ? {} : { library }),
   });
