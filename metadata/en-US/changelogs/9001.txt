@@ -1,0 +1,1 @@
+• Fixed Stop on the notification or lock screen being ignored while a stem setlist was opening its next song.
