@@ -35,6 +35,8 @@ export interface PlayOrderActions {
   upNext: () => UpNext | undefined;
   advance: () => Promise<Advance>;
   skipToNext: () => Promise<SkipResult>;
+  peekNext: () => Promise<SkipResult>;
+  commitNext: (next: Advance) => Promise<void>;
 }
 
 export type PlayOrderStore = PlayOrderState & PlayOrderActions;
@@ -86,15 +88,23 @@ function queueActions(deps: PlayOrderDeps, set: SetState, get: Get) {
 }
 
 function orderActions(deps: PlayOrderDeps, get: Get) {
-  const advance = async () => {
+  const peekNext = async (): Promise<SkipResult> => {
+    const expected = get().upNext();
     await Promise.all([get().refresh(), deps.refreshStage()]);
     const next = advanceOf(get().upNext());
-    if (next.kind !== ADVANCE.play) return next;
+    return { advance: next, skipped: advanceSkipped(expected, next) };
+  };
+  const commitNext = async (next: Advance) => {
+    if (next.kind !== ADVANCE.play) return;
     const { setlistId } = deps.stage();
     if (next.setlistItemId === null) await get().playQueued(next.stemSetId);
     else if (setlistId !== null)
       await deps.playSetlistEntry(next.setlistItemId, setlistId);
-    return next;
+  };
+  const skipToNext = async () => {
+    const step = await peekNext();
+    await commitNext(step.advance);
+    return step;
   };
   return {
     upNext: () =>
@@ -103,12 +113,10 @@ function orderActions(deps: PlayOrderDeps, get: Get) {
         stage: deps.stage(),
         cursor: deps.cursor(),
       }),
-    advance,
-    skipToNext: async () => {
-      const expected = get().upNext();
-      const next = await advance();
-      return { advance: next, skipped: advanceSkipped(expected, next) };
-    },
+    advance: async () => (await skipToNext()).advance,
+    skipToNext,
+    peekNext,
+    commitNext,
   };
 }
 

@@ -34,7 +34,8 @@ export const arrivalStore = createStore<ArrivalState>(() => ({
 export interface AutoAdvanceDeps {
   readonly onSongEnd: (listener: () => void) => () => void;
   readonly advanceTo: (stemSetId: number) => Promise<AdvanceOutcome>;
-  readonly skipToNext: () => Promise<SkipResult>;
+  readonly peekNext: () => Promise<SkipResult>;
+  readonly commitNext: (next: Advance) => Promise<void>;
   readonly placeOf: (advance: Advance) => SetlistPlace | null;
   readonly candidates: () => number;
   readonly stillEnded: () => boolean;
@@ -51,7 +52,8 @@ function onStageNow() {
 const defaultDeps: AutoAdvanceDeps = {
   onSongEnd: (listener) => stemPlayerStore.getState().onSongEnd(listener),
   advanceTo: (stemSetId) => stemPlayerStore.getState().advanceTo(stemSetId),
-  skipToNext: () => playOrderStore.getState().skipToNext(),
+  peekNext: () => playOrderStore.getState().peekNext(),
+  commitNext: (next) => playOrderStore.getState().commitNext(next),
   placeOf: (advance) => {
     if (advance.kind !== ADVANCE.play || advance.setlistItemId === null)
       return null;
@@ -78,10 +80,12 @@ export function startAutoAdvance(deps: AutoAdvanceDeps = defaultDeps) {
     let skipped: Skip | null = null;
     for (let left = deps.candidates(); left > 0; left--) {
       if (!deps.stillEnded()) return;
-      const step = await deps.skipToNext();
+      const step = await deps.peekNext();
+      if (!deps.stillEnded()) return;
       if (step.skipped) skipped = SKIP.deleted;
       const next = step.advance;
       if (next.kind !== ADVANCE.play) break;
+      await deps.commitNext(next);
       const { stemSetId } = next;
       const place = deps.placeOf(next);
       arrive({ stemSetId, place, skipped, played: false });
@@ -94,7 +98,7 @@ export function startAutoAdvance(deps: AutoAdvanceDeps = defaultDeps) {
       skipped = SKIP.unopened;
     }
     deps.stopAdvancing();
-    if (skipped !== null)
+    if (skipped === SKIP.deleted)
       arrive({ stemSetId: null, place: null, skipped, played: false });
   };
   return deps.onSongEnd(() => {
