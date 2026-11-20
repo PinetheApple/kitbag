@@ -7,8 +7,8 @@ import {
   FACT_SEPARATOR,
   Icon,
   minTouchTargetDp,
-  opacity,
   PlainListRow,
+  QUEUE_TEXT,
   RowText,
   usePlainRowStyles,
   SectionHeader,
@@ -26,7 +26,9 @@ import {
   usePlayOrder,
   useStage,
   useStemPlayer,
+  useLibrary,
   useStemSongs,
+  type LeftSetlist,
   type PlayOrderStore,
   type SetlistEntry,
 } from '@kitbag/core-state';
@@ -47,7 +49,7 @@ type PlayQueueEntry = PlayOrderStore['queue'][number];
 
 const useStyles = createThemedStyles(() => ({
   list: { gap: space.controlGap },
-  upcoming: { opacity: opacity.upcoming },
+  trailing: { flexDirection: 'row', alignItems: 'center' },
   remove: {
     width: minTouchTargetDp,
     height: minTouchTargetDp,
@@ -147,20 +149,34 @@ interface SetlistRowProps {
 function SetlistRow({ entry, setlistName, onOpen }: SetlistRowProps) {
   const styles = useStyles();
   const stems = useStemSongs();
+  const skipSetlistEntry = useLibrary((s) => s.skipSetlistEntry);
   const open = useCallback(() => {
     onOpen(entry);
   }, [onOpen, entry]);
+  const skip = useCallback(() => {
+    skipSetlistEntry(entry.item.id);
+  }, [skipSetlistEntry, entry]);
   const title = entryName(entry, stems);
   return (
-    <View style={styles.upcoming}>
-      <PlainListRow
-        title={title}
-        subtitle={setlistRowSubtitle(entry, setlistName, stems)}
-        trailing={isPresetEntry(entry) ? undefined : <StemsBadge />}
-        accessibilityLabel={`${title}, from ${setlistName}`}
-        onPress={open}
-      />
-    </View>
+    <PlainListRow
+      title={title}
+      subtitle={setlistRowSubtitle(entry, setlistName, stems)}
+      trailing={
+        <View style={styles.trailing}>
+          {isPresetEntry(entry) ? null : <StemsBadge />}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Skip ${title} this time`}
+            style={styles.remove}
+            onPress={skip}
+          >
+            <Icon name="close" size="transportSmall" color="text2" />
+          </Pressable>
+        </View>
+      }
+      accessibilityLabel={`${title}, from ${setlistName}`}
+      onPress={open}
+    />
   );
 }
 
@@ -263,6 +279,7 @@ export interface UpNextSheetProps extends PlayOrderRoutes {
   readonly visible: boolean;
   readonly bottomInset: number;
   readonly onDismiss: () => void;
+  readonly onLeftSetlist: (left: LeftSetlist, setlistName: string) => void;
 }
 
 function useUpNextSheet(props: UpNextSheetProps) {
@@ -294,8 +311,16 @@ export function UpNextSheet(props: UpNextSheetProps) {
   const { visible, bottomInset, onDismiss } = props;
   const [confirming, setConfirming] = useState(false);
   const queued = usePlayOrder((s) => s.queue.length > 0);
-  const { stage, cursor } = useStage();
-  const empty = !queued && entriesAfter(stage, cursor).length === 0;
+  const { stage, cursor, name } = useStage();
+  const fromSetlist = entriesAfter(stage, cursor).length > 0;
+  const empty = !queued && !fromSetlist;
+  const leaveSetlist = useLibrary((s) => s.leaveSetlist);
+  const { onLeftSetlist } = props;
+  const leave = useCallback(() => {
+    void leaveSetlist().then((left) => {
+      if (left !== null) onLeftSetlist(left, name);
+    });
+  }, [leaveSetlist, onLeftSetlist, name]);
   const sheet = useUpNextSheet(props);
   const shown: Shown = !visible ? null : confirming ? 'confirm' : 'list';
   const askClear = useCallback(() => {
@@ -330,6 +355,14 @@ export function UpNextSheet(props: UpNextSheetProps) {
                 icon="clearQueue"
                 label="Clear queue"
                 onPress={askClear}
+              />
+            ) : null}
+            {fromSetlist ? (
+              <Button
+                fill
+                variant="ghost"
+                label={QUEUE_TEXT.leaveSetlist}
+                onPress={leave}
               />
             ) : null}
             <Button fill variant="tonal" label="Done" onPress={dismiss} />

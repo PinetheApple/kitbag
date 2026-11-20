@@ -1,18 +1,27 @@
 import { createPlayQueueRepository } from '@kitbag/core-db/src/play-queue-repository';
 import { deleteStemSet } from '@kitbag/core-db/src/stem-bundle-repository';
 import { insertStemSet } from '@kitbag/core-db/src/stem-entries.test-helper';
+import type { StoreApi } from 'zustand/vanilla';
 import { describe, expect, it } from 'vitest';
 
-import { SONG_STEP } from '../library/setlistPosition.ts';
+import { activeSetlistOf, SONG_STEP } from '../library/setlistPosition.ts';
+import { createLibraryStore, type LibraryStore } from '../library/store.ts';
 import { setup as librarySetup } from '../library/store.test-helper.ts';
-import { ADVANCE, cursorOf, onStageOf } from './order.ts';
+import {
+  ADVANCE,
+  cursorOf,
+  entriesAfter,
+  onStageOf,
+  UP_NEXT_SOURCE,
+} from './order.ts';
 import { createPlayOrderStore, stageMarkOf } from './store.ts';
 
-async function setup() {
-  const { library, repos, handle } = librarySetup();
-  const queue = createPlayQueueRepository(handle);
+function orderOn(
+  library: StoreApi<LibraryStore>,
+  queue: ReturnType<typeof createPlayQueueRepository>,
+) {
   const stage = () => onStageOf(library.getState());
-  const order = createPlayOrderStore({
+  return createPlayOrderStore({
     queue: () => queue,
     stage,
     cursor: () => cursorOf(stage(), library.getState().loaded),
@@ -23,6 +32,12 @@ async function setup() {
       library.getState().loadSong(presetId, itemId, setlistId),
     markStage: stageMarkOf(library),
   });
+}
+
+async function setup() {
+  const { library, repos, handle, metronome } = librarySetup();
+  const queue = createPlayQueueRepository(handle);
+  const order = orderOn(library, queue);
   const gig = await library.getState().createSetlist('Gig');
   const warmUp = await library.getState().newSongFromCurrent('Warm-up', gig);
   const a = await insertStemSet(handle.db, 'A');
@@ -33,8 +48,101 @@ async function setup() {
   const [click] = library.getState().entries[gig] ?? [];
   if (click === undefined) throw new Error('missing warm-up entry');
   await library.getState().loadSong(warmUp, click.item.id, gig);
-  return { library, order, handle, gig, a, b, first, second };
+  return {
+    library,
+    order,
+    handle,
+    repos,
+    metronome,
+    queue,
+    gig,
+    a,
+    b,
+    first,
+    second,
+  };
 }
+
+async function relaunched(context: Awaited<ReturnType<typeof setup>>) {
+  const library = createLibraryStore({
+    repos: () => context.repos,
+    metronome: () => context.metronome.getState(),
+    now: Date.now,
+  });
+  await library.getState().refresh();
+  return { library, order: orderOn(library, context.queue) };
+}
+
+function laterFromSetlist(library: StoreApi<LibraryStore>) {
+  const stage = onStageOf(library.getState());
+  return entriesAfter(stage, cursorOf(stage, library.getState().loaded));
+}
+
+describe('the setlist Up next plays from', () => {
+  it('is not a setlist pinned in an earlier session, so Next plays only the queue', async () => {
+    const context = await setup();
+    const { library, order } = await relaunched(context);
+    expect(activeSetlistOf(library.getState().setlists)?.setlist.id).toBe(
+      context.gig,
+    );
+    await order.getState().enqueue(context.a);
+    library.getState().endSetlistSession();
+    expect(laterFromSetlist(library)).toEqual([]);
+    expect(order.getState().upNext()).toEqual({
+      source: UP_NEXT_SOURCE.queue,
+      stemSetId: context.a,
+    });
+    expect(await order.getState().skipToNext()).toMatchObject({
+      advance: { kind: ADVANCE.play, stemSetId: context.a },
+    });
+    expect(order.getState().upNext()).toBeUndefined();
+  });
+
+  it('ends when a song starts from a list, keeping the queued songs', async () => {
+    const { library, order, a, b } = await setup();
+    await order.getState().enqueue(b);
+    expect(laterFromSetlist(library)).toMatchObject([{ stemSetId: a }, {}]);
+    library.getState().endSetlistSession();
+    expect(laterFromSetlist(library)).toEqual([]);
+    expect(order.getState().queue).toMatchObject([{ stemSetId: b }]);
+  });
+
+  it('is the setlist started last, replacing the one before it', async () => {
+    const { library, repos, handle, gig, first } = await setup();
+    const encore = await library.getState().createSetlist('Encore');
+    const c = await insertStemSet(handle.db, 'C');
+    const d = await insertStemSet(handle.db, 'D');
+    const opener = await repos.setlists.addStemSet(encore, c);
+    await repos.setlists.addStemSet(encore, d);
+    await library.getState().refresh();
+    await library.getState().openStemEntry(opener.id, encore);
+    expect(laterFromSetlist(library)).toMatchObject([{ stemSetId: d }]);
+    await library.getState().openStemEntry(first.id, gig);
+    expect(onStageOf(library.getState()).setlistId).toBe(gig);
+  });
+
+  it('skips an entry removed from Up next this time, without editing the setlist', async () => {
+    const { library, order, gig, b, first } = await setup();
+    library.getState().skipSetlistEntry(first.id);
+    expect(order.getState().upNext()).toMatchObject({
+      entry: { stemSetId: b },
+    });
+    expect(library.getState().entries[gig]).toHaveLength(3);
+  });
+
+  it('is left and unpinned by Leave setlist, and Undo puts both back', async () => {
+    const { library, order, gig, a } = await setup();
+    const left = await library.getState().leaveSetlist();
+    expect(order.getState().upNext()).toBeUndefined();
+    expect(activeSetlistOf(library.getState().setlists)).toBeUndefined();
+    if (left === null) throw new Error('nothing was left');
+    await library.getState().rejoinSetlist(left);
+    expect(activeSetlistOf(library.getState().setlists)?.setlist.id).toBe(gig);
+    expect(order.getState().upNext()).toMatchObject({
+      entry: { stemSetId: a },
+    });
+  });
+});
 
 describe('play order on the library stage', () => {
   it('reads the entry on stage from the library, not a copy of its own', async () => {
@@ -146,18 +254,7 @@ describe('play order after removals around the entry on stage', () => {
   async function fiveStemSongs() {
     const { library, repos, handle } = librarySetup();
     const queue = createPlayQueueRepository(handle);
-    const stage = () => onStageOf(library.getState());
-    const order = createPlayOrderStore({
-      queue: () => queue,
-      stage,
-      cursor: () => cursorOf(stage(), library.getState().loaded),
-      refreshStage: () => library.getState().refresh(),
-      playSetlistEntry: (itemId, setlistId) =>
-        library.getState().openStemEntry(itemId, setlistId),
-      loadPreset: (presetId, itemId, setlistId) =>
-        library.getState().loadSong(presetId, itemId, setlistId),
-      markStage: stageMarkOf(library),
-    });
+    const order = orderOn(library, queue);
     const gig = await library.getState().createSetlist('Gig');
     const ids: Record<string, { stemSetId: number; itemId: number }> = {};
     for (const name of ['A', 'B', 'C', 'D', 'E']) {

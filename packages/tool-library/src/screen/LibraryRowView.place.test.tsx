@@ -5,7 +5,10 @@ import { act, createElement } from 'react';
 import { create, type ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const library = vi.hoisted(() => ({ files: null as RowFiles | null }));
+const library = vi.hoisted(() => ({
+  files: null as RowFiles | null,
+  endSetlistSession: vi.fn(),
+}));
 
 vi.mock('react-native', () => ({
   View: 'View',
@@ -41,6 +44,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
   songBadge: () => 'grid',
   analysisFailure: () => null,
   rowFilesOf: () => library.files,
+  useLibrary: (select: (state: typeof library) => unknown) => select(library),
 }));
 
 const { LibraryRowView } = await import('./LibraryRowView.tsx');
@@ -109,6 +113,7 @@ describe('a row on a missing SD card', () => {
 
   it('never opens the player and shows why instead', () => {
     pressRow(mount());
+    expect(library.endSetlistSession).not.toHaveBeenCalled();
     expect(handlers.onOpenSong).not.toHaveBeenCalled();
     expect(handlers.onUnavailable).toHaveBeenCalledWith(ROW);
   });
@@ -135,5 +140,10 @@ describe('a row at home', () => {
     pressRow(mount());
     expect(handlers.onOpenSong).toHaveBeenCalledWith(ROW.id);
     expect(handlers.onUnavailable).not.toHaveBeenCalled();
+  });
+
+  it('ends the setlist started this session, as the song starts from a list', () => {
+    pressRow(mount());
+    expect(library.endSetlistSession).toHaveBeenCalledOnce();
   });
 });

@@ -1,10 +1,6 @@
 import type { PlayQueueEntry } from '@kitbag/core-db';
 
-import {
-  activeSetlistOf,
-  adjacentEntry,
-  SONG_STEP,
-} from '../library/setlistPosition.ts';
+import { adjacentEntry, SONG_STEP } from '../library/setlistPosition.ts';
 import {
   isPresetEntry,
   type PresetSetlistEntry,
@@ -24,7 +20,10 @@ export type UpNext =
 export interface OnStage {
   readonly setlistId: number | null;
   readonly entries: readonly SetlistEntry[];
+  readonly skipped: readonly number[];
 }
+
+const NO_STAGE: OnStage = { setlistId: null, entries: [], skipped: [] };
 
 export interface SetlistCursor {
   readonly setlistId: number;
@@ -56,12 +55,14 @@ export function cursorAt(stage: OnStage, itemId: number): SetlistCursor | null {
 }
 
 export function onStageOf(
-  state: Pick<LibraryState, 'setlists' | 'entries'>,
+  state: Pick<LibraryState, 'setlists' | 'entries' | 'session'>,
 ): OnStage {
-  const active = activeSetlistOf(state.setlists);
-  if (active === undefined) return { setlistId: null, entries: [] };
-  const setlistId = active.setlist.id;
-  return { setlistId, entries: state.entries[setlistId] ?? [] };
+  const { session } = state;
+  if (session === null) return NO_STAGE;
+  const { setlistId, skipped } = session;
+  if (!state.setlists.some((summary) => summary.setlist.id === setlistId))
+    return NO_STAGE;
+  return { setlistId, entries: state.entries[setlistId] ?? [], skipped };
 }
 
 export function cursorOf(
@@ -83,15 +84,23 @@ export function entriesAfter(
 ): readonly SetlistEntry[] {
   const next = nextSetlistEntry(stage, cursor);
   if (next === undefined) return [];
-  return stage.entries.slice(stage.entries.indexOf(next));
+  return stage.entries
+    .slice(stage.entries.indexOf(next))
+    .filter((entry) => !stage.skipped.includes(entry.item.id));
 }
 
 function nextSetlistEntry(
-  { setlistId, entries }: OnStage,
+  { setlistId, entries, skipped }: OnStage,
   cursor: SetlistCursor | null,
 ): SetlistEntry | undefined {
-  if (setlistId === null || cursor?.setlistId !== setlistId) return entries[0];
-  return adjacentEntry(entries, cursor, SONG_STEP.next);
+  const after =
+    setlistId === null || cursor?.setlistId !== setlistId
+      ? entries[0]
+      : adjacentEntry(entries, cursor, SONG_STEP.next);
+  if (after === undefined) return undefined;
+  return entries
+    .slice(entries.indexOf(after))
+    .find((entry) => !skipped.includes(entry.item.id));
 }
 
 export function upNext({

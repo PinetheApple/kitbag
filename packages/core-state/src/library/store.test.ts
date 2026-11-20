@@ -323,7 +323,9 @@ describe('library store', () => {
       new Error('disk full'),
     );
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    await expect(library.getState().leaveSetlist()).resolves.toBeUndefined();
+    await expect(library.getState().leaveSetlist()).resolves.toMatchObject({
+      setlistId: gig,
+    });
     expect(activeId(library)).toBe(gig);
     expect(warn).toHaveBeenCalled();
   });
@@ -414,7 +416,11 @@ describe('library store', () => {
     await remove('C', 'A');
     await move(2, 0);
     const state = library.getState();
-    const stage = { setlistId: gig, entries: state.entries[gig] ?? [] };
+    const stage = {
+      setlistId: gig,
+      entries: state.entries[gig] ?? [],
+      skipped: [],
+    };
     const cursor = cursorOf(stage, state.loaded);
     const named = upNext({ queue: [], stage, cursor });
     if (named?.source !== UP_NEXT_SOURCE.setlist) throw new Error('no entry');

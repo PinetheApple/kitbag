@@ -57,6 +57,18 @@ export interface LoadedStem {
 
 export type LoadedSong = LoadedPreset | LoadedStem;
 
+export interface SetlistSession {
+  readonly setlistId: number;
+  readonly skipped: readonly number[];
+}
+
+export interface LeftSetlist {
+  readonly setlistId: number;
+  readonly session: SetlistSession | null;
+  readonly loaded: LoadedSong | null;
+  readonly played: readonly number[];
+}
+
 export interface SongStepResult {
   readonly entry: SetlistEntry | undefined;
   readonly skipped: boolean;
@@ -80,6 +92,7 @@ export interface LibraryState extends LibrarySnapshot {
   readonly loaded: LoadedSong | null;
   readonly discarded: DiscardedChanges | null;
   readonly played: readonly number[];
+  readonly session: SetlistSession | null;
   readonly results: SearchResults | null;
   readonly presetOverlay: PresetOverlay | null;
   readonly carriedSkip: boolean;
@@ -117,7 +130,10 @@ export interface LibraryActions {
   openStemEntry: (itemId: number, setlistId: number) => Promise<boolean>;
   stepSong: (step: SongStep) => Promise<SongStepResult>;
   carrySkip: (carried: boolean) => void;
-  leaveSetlist: () => Promise<void>;
+  leaveSetlist: () => Promise<LeftSetlist | null>;
+  rejoinSetlist: (left: LeftSetlist) => Promise<void>;
+  endSetlistSession: () => void;
+  skipSetlistEntry: (itemId: number) => void;
   clearSong: () => void;
   setPresetOverlay: (overlay: PresetOverlay | null) => void;
 }
@@ -150,6 +166,7 @@ const EMPTY: LibraryState = {
   loaded: null,
   discarded: null,
   played: [],
+  session: null,
   results: null,
   presetOverlay: null,
   carriedSkip: false,
@@ -330,13 +347,19 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       // The song is already open; a failed pin only loses the on-stage marker.
     }
   };
-  const leave = () =>
-    inOrder(async () => {
+  const startSession = (setlistId: number) => {
+    if (get().session?.setlistId === setlistId) return;
+    set({ session: { setlistId, skipped: [] } });
+  };
+  const leave = () => {
+    set({ session: null });
+    return inOrder(async () => {
       if (activeSetlistOf(get().setlists) === undefined) return;
       await deps.repos().setlists.selectActive(null);
       set({ played: [] });
       await get().refresh();
     });
+  };
   const leaveOrWarn = async () => {
     try {
       await leave();
@@ -365,6 +388,7 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       loaded: { presetId: preset.id, itemId, setlistId, ...at },
       songLoads: get().songLoads + 1,
     });
+    startSession(setlistId);
     await pinQuietly(setlistId, itemId);
   };
   const noteDiscard = () => {
@@ -389,6 +413,7 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       noteDiscard();
       const { stemSetId } = entry;
       set({ loaded: { presetId: null, stemSetId, itemId, setlistId, index } });
+      startSession(setlistId);
       await pinQuietly(setlistId, itemId);
       return true;
     },
@@ -410,10 +435,36 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
     carrySkip: (carried: boolean) => {
       set({ carriedSkip: carried });
     },
-    leaveSetlist: async () => {
+    leaveSetlist: async (): Promise<LeftSetlist | null> => {
+      const { session, loaded, played, setlists } = get();
+      const setlistId =
+        session?.setlistId ?? activeSetlistOf(setlists)?.setlist.id;
       noteDiscard();
       set({ loaded: null });
       await leaveOrWarn();
+      return setlistId === undefined
+        ? null
+        : { setlistId, session, loaded, played };
+    },
+    rejoinSetlist: async ({
+      setlistId,
+      session,
+      loaded,
+      played,
+    }: LeftSetlist) => {
+      set({ session, loaded, played });
+      await inOrder(async () => {
+        await deps.repos().setlists.selectActive(setlistId);
+        await get().refresh();
+      });
+    },
+    endSetlistSession: () => {
+      set({ session: null });
+    },
+    skipSetlistEntry: (itemId: number) => {
+      const { session } = get();
+      if (session === null || session.skipped.includes(itemId)) return;
+      set({ session: { ...session, skipped: [...session.skipped, itemId] } });
     },
     setPresetOverlay: (presetOverlay: PresetOverlay | null) => {
       set({ presetOverlay });

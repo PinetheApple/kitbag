@@ -36,7 +36,7 @@ const ballad = click(3);
 const entries = [stem(1, 3), second, ballad, stem(4, 5), stem(5, 6)];
 const context = {
   queueLength: 3,
-  stage: { setlistId: 7, entries },
+  stage: { setlistId: 7, entries, skipped: [] },
   setlistName: 'Friday gig',
   stems,
 };
