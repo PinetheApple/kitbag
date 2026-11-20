@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-deprecated */
 import { act, createElement, type ReactNode } from 'react';
 import { create, type ReactTestRenderer } from 'react-test-renderer';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { entry, summary } from '../logic/fixtures.test-helper.ts';
 
@@ -52,6 +52,7 @@ vi.mock('./UnsavedChanges.tsx', () => ({
 vi.mock('./useStepSong.ts', () => ({ useStepSong: () => vi.fn() }));
 
 const { MetronomeAppBar } = await import('./MetronomeAppBar.tsx');
+const { REPEAT, repeatStore } = await import('@kitbag/core-state');
 
 function stepKeys() {
   let tree: ReactTestRenderer | undefined;
@@ -106,5 +107,21 @@ describe('the stage bar keys', () => {
     stage.entries = [entry(4, 'A'), entry(REMOVED_ITEM, 'B')];
     stage.index = 1;
     expect(stepButtons()).toEqual({ previous: false, next: true });
+  });
+});
+
+describe('the stage bar keys under Repeat all', () => {
+  afterEach(() => {
+    repeatStore.setState({ mode: REPEAT.off });
+  });
+
+  it('keeps Previous on the first song and Next on the last', () => {
+    repeatStore.setState({ mode: REPEAT.all });
+    stage.entries = [entry(REMOVED_ITEM, 'A'), entry(4, 'B')];
+    stage.index = 0;
+    expect(stepButtons()).toEqual({ previous: false, next: false });
+    stage.entries = [entry(4, 'A'), entry(REMOVED_ITEM, 'B')];
+    stage.index = 1;
+    expect(stepButtons()).toEqual({ previous: false, next: false });
   });
 });

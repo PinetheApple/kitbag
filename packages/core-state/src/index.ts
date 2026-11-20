@@ -277,9 +277,9 @@ export {
 } from './library/snapshot.ts';
 export {
   activeSetlistOf,
-  adjacentEntry,
   SONG_STEP,
   stagePositionOf,
+  steppedEntry,
   type StagePosition,
   type SongStep,
 } from './library/setlistPosition.ts';
@@ -288,6 +288,7 @@ export {
   advanceOf,
   entriesAfter,
   onStageOf,
+  setlistWraps,
   UP_NEXT_SOURCE,
   upNext,
   type Advance,
@@ -313,6 +314,9 @@ export {
   useUpNext,
   useCanGoBack,
   useUpNextCount,
+  useRepeatAllHintSeen,
+  useRepeatMode,
+  useUpcoming,
   type QueueSong,
   type QueueSongs,
   type SetlistSpot,
@@ -320,9 +324,19 @@ export {
 } from './playOrder/usePlayOrder.ts';
 export {
   playingKind,
+  useShownLoopHeld,
+  useShownSong,
   useShownSongId,
   useShownStemSetId,
 } from './playOrder/nowPlaying.ts';
+export {
+  configureRepeatAllHintPersistence,
+  cycleRepeat,
+  markRepeatAllHintSeen,
+  REPEAT,
+  repeatStore,
+  type RepeatMode,
+} from './playOrder/repeat.ts';
 export { songShown, stemShown } from './playOrder/shown.ts';
 export { bindLibraryRemovals } from './playOrder/libraryRemovals.ts';
 export {
@@ -331,6 +345,7 @@ export {
   autoAdvanceDeps,
   handOverQueued,
   playQueuedNow,
+  playQueuedSongNow,
   stopForMetronome,
   startAutoAdvance,
   type Arrival,
@@ -522,6 +537,7 @@ export {
   configureSwipeHintPersistence,
   createSwipeHintStore,
   getSwipeHintStore,
+  type SeenFlagPersistence,
   type SwipeHintPersistence,
   type SwipeHintStore,
 } from './firstUse/store.ts';

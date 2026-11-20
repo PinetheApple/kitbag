@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { adjacentEntry, SONG_STEP } from './setlistPosition.ts';
+import { adjacentEntry, SONG_STEP, steppedEntry } from './setlistPosition.ts';
 import { ENTRY_KIND, type SetlistEntry } from './snapshot.ts';
 
 const entry = (itemId: number) =>
@@ -69,5 +69,28 @@ describe('adjacentEntry', () => {
     const beyond = { itemId: 99, index: 5 };
     expect(adjacentEntry(entries, beyond, SONG_STEP.previous)).toBe(entries[2]);
     expect(adjacentEntry(entries, beyond, SONG_STEP.next)).toBeUndefined();
+  });
+});
+
+describe('steppedEntry', () => {
+  it('wraps past either end when asked to', () => {
+    expect(steppedEntry(entries, { itemId: 12 }, SONG_STEP.next, true)).toBe(
+      entries[0],
+    );
+    expect(
+      steppedEntry(entries, { itemId: 10 }, SONG_STEP.previous, true),
+    ).toBe(entries.at(-1));
+  });
+
+  it('stops at the ends otherwise', () => {
+    expect(
+      steppedEntry(entries, { itemId: 12 }, SONG_STEP.next, false),
+    ).toBeUndefined();
+  });
+
+  it('has nothing before song 1 with no song from the set on stage', () => {
+    expect(
+      steppedEntry(entries, null, SONG_STEP.previous, true),
+    ).toBeUndefined();
   });
 });

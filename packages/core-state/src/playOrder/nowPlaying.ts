@@ -37,6 +37,12 @@ export function shownSong(): QueuedSong | null {
   );
 }
 
+export function useShownLoopHeld(): boolean {
+  const stems = useStemPlayer((s) => stemShown(s) && s.loop.kind === 'on');
+  const single = useSongPlayer((s) => songShown(s) && s.loop.kind === 'on');
+  return stems || single;
+}
+
 export function useShownSong(): QueuedSong | null {
   return shownSongOf(useShownStemSetId(), useShownSongId());
 }

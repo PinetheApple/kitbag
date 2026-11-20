@@ -9,6 +9,8 @@ export function restingPlayer(): AdvancingPlayer {
     onPrevious: vi.fn(() => () => undefined),
     playedSeconds: vi.fn(() => 0),
     restart: vi.fn(),
+    replay: vi.fn(),
+    loopHeld: vi.fn(() => false),
     takeOver: vi.fn(() => Promise.resolve(ADVANCE_OUTCOME.playing)),
     handOver: vi.fn(),
     stillEnded: vi.fn(() => true),

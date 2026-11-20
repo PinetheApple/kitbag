@@ -22,6 +22,7 @@ vi.mock('@/runtime/tunerRuntime', () => ({}));
 vi.mock('@/runtime/lastToolRuntime', () => ({}));
 vi.mock('@/runtime/homeLayoutRuntime', () => ({}));
 vi.mock('@/runtime/swipeHintRuntime', () => ({}));
+vi.mock('@/runtime/repeatHintRuntime', () => ({}));
 vi.mock('@/runtime/countInRuntime', () => ({}));
 vi.mock('@/runtime/standaloneMetronomeRuntime', () => ({}));
 vi.mock('@/runtime/clickSoundRuntime', () => ({}));

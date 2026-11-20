@@ -362,6 +362,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   key, GRID ✓ and STEMS ×N on a wrapping line under the title. Each stem row shows its
   level as a dB chip; tapping it or the row opens that row's fader, one row at a time,
   and the fader moves only on a drag **[user]**.
+  **Superseded 2026-11-20 (#576):** the GRID ✓ and STEMS ×N on library stem rows, by
+  the one grid icon entry.
 
 - **2026-10-29 · The engine renders in slices of at most `kMaxBlockFrames` and sizes
   read-ahead from the device callback (§4.4, #137)** — Each read-ahead ring holds twice
@@ -1240,3 +1242,11 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   before it and does not wrap. Rationale: the owner's decisions left these
   three undefined; each follows the no-autoplay rule and keeps one meaning per
   term. **[recorded]**
+
+- **2026-11-20 · One grid icon on Stem songs rows (§7, §12, #576)** — A Stem songs row
+  drops its STEMS ×N and GRID pills for one small grid icon with no text, shown only
+  when the song has a beat grid and its files are in place. The stem count is no longer
+  shown on the row. TalkBack reads "Beat grid ready" or "No beat grid found" in the
+  row's label and no longer reads the stem count. Rationale: the two stacked pills
+  took a column on every row and looked heavy. `design/kitbag-library.html` variant B
+  draws the icon. **[owner, 2026-11-20]**
