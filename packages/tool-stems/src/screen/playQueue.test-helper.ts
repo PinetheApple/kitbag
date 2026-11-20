@@ -102,7 +102,13 @@ export function metronomeEntryOnStage() {
         {
           kind: ENTRY_KIND.preset,
           item: { id: BALLAD_ITEM },
-          preset: { id: BALLAD_PRESET, name: 'Ballad', bpm: 72 },
+          preset: {
+            id: BALLAD_PRESET,
+            name: 'Ballad',
+            bpm: 72,
+            beatsPerBar: 4,
+            denominator: 4,
+          },
         },
       ] as never,
     },

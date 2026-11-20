@@ -3,6 +3,7 @@ import {
   FACT_SEPARATOR,
   placeLabel,
   QUEUE_TEXT,
+  signatureLabel,
 } from '@kitbag/core-design';
 import {
   BPM_UNIT,
@@ -11,6 +12,7 @@ import {
   UP_NEXT_SOURCE,
   upNextTitle,
   type OnStage,
+  type PresetSetlistEntry,
   type LibrarySongs,
   type SetlistEntry,
   type StemSongs,
@@ -66,17 +68,23 @@ export function upNextText(next: UpNext, context: UpNextContext): UpNextText {
   };
 }
 
+function metronomeFacts(preset: PresetSetlistEntry['preset']): string[] {
+  return [
+    QUEUE_TEXT.metronomeSong,
+    `${String(Math.round(preset.bpm))} ${BPM_UNIT}`,
+    signatureLabel(preset.beatsPerBar, preset.denominator),
+  ];
+}
+
 export function setlistRowSubtitle(
   entry: SetlistEntry,
   setlistName: string,
   stems: StemSongs,
 ): string {
-  const facts = isPresetEntry(entry)
-    ? [METRONOME, `${String(Math.round(entry.preset.bpm))} ${BPM_UNIT}`]
-    : [stemFacts(entry.stemSetId, stems)];
-  return [setlistName, ...facts]
-    .filter((part) => part !== '')
-    .join(FACT_SEPARATOR);
+  const parts = isPresetEntry(entry)
+    ? metronomeFacts(entry.preset)
+    : [setlistName, stemFacts(entry.stemSetId, stems)];
+  return parts.filter((part) => part !== '').join(FACT_SEPARATOR);
 }
 
 export function clearQueueBody(queueLength: number, setlistName: string) {

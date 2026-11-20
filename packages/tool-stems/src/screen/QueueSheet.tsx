@@ -31,7 +31,12 @@ import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
 import { clearQueueBody } from '../logic/upNextText.ts';
-import { NowPlaying, QueuedRow, SetlistRow } from './QueueRows.tsx';
+import {
+  MetronomeHint,
+  NowPlaying,
+  QueuedRow,
+  SetlistRow,
+} from './QueueRows.tsx';
 import {
   leaveForQueued,
   TO_METRONOME,
@@ -123,6 +128,7 @@ function SetlistSection({
           ))}
         </View>
       )}
+      {later.some(isPresetEntry) ? <MetronomeHint /> : null}
     </>
   );
 }

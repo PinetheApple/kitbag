@@ -21,6 +21,10 @@ export const QUEUE_TEXT = {
   nothingQueuedReason:
     'Use Play next or Add to queue on a song. When this song ends, playback stops.',
   remove: 'Remove',
+  metronomeBadge: 'METRONOME',
+  metronomeSong: 'Metronome song',
+  metronomeHint:
+    'Playback stops before a metronome song. Open loads it on the Metronome, stopped; nothing clicks until you press Play there.',
 } as const;
 
 export function nextFromLabel(setlistName: string): string {

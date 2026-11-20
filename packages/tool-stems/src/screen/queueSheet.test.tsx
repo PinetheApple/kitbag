@@ -8,6 +8,7 @@ import {
   queueSheet,
   screenBar,
   SheetHost,
+  QUEUE_TEXT,
   ThemeProvider,
 } from '@kitbag/core-design';
 import {
@@ -249,5 +250,20 @@ describe('the queue sheet against its value table', () => {
     );
     expect(stack).toHaveLength(1);
     expect(queueSheet.badgeGap).toBe(4);
+  });
+});
+
+describe('a metronome song in the setlist part of the queue', () => {
+  it('carries a METRONOME badge, its own facts and the hint', async () => {
+    metronomeEntryOnStage();
+    const sheet = await openOnList();
+    expect(sheet.has('METRONOME')).toBe(true);
+    expect(sheet.has('Metronome song · 72 BPM · 4/4')).toBe(true);
+    expect(sheet.has(QUEUE_TEXT.metronomeHint)).toBe(true);
+  });
+
+  it('shows no hint when no metronome song is left', async () => {
+    const sheet = await openOnList(stems(NIGHT_BUS));
+    expect(sheet.has(QUEUE_TEXT.metronomeHint)).toBe(false);
   });
 });

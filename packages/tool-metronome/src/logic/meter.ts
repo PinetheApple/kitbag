@@ -1,3 +1,5 @@
+import { signatureLabel } from '@kitbag/core-design';
+
 export const MIN_BEATS = 1;
 
 export interface Meter {
@@ -34,7 +36,7 @@ export function commonMeters(
 }
 
 export function meterLabel(meter: Meter): string {
-  return `${String(meter.beats)}/${String(meter.denominator)}`;
+  return signatureLabel(meter.beats, meter.denominator);
 }
 
 export function spokenMeter(meter: Meter): string {

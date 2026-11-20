@@ -15,6 +15,9 @@ import {
   setlistPlaceParts,
   RowText,
   SectionHeader,
+  space,
+  textRoles,
+  textStyle,
   usePlainRowStyles,
 } from '@kitbag/core-design';
 import {
@@ -40,7 +43,7 @@ import {
   type SetlistSpot,
 } from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { setlistRowSubtitle } from '../logic/upNextText.ts';
 
@@ -49,10 +52,16 @@ type PlayQueueEntry = PlayOrderStore['queue'][number];
 const NOW_BADGE = 'NOW';
 const QUEUE_HANDLE: DragHandleLook = { size: 'queueHandle', color: 'text3' };
 
-const useStyles = createThemedStyles(() => ({
+const useStyles = createThemedStyles((theme) => ({
   trailing: { flexDirection: 'row', alignItems: 'center' },
   badges: { gap: queueSheet.badgeGap },
   badgeSlot: { alignSelf: 'flex-end' },
+  hint: { flexDirection: 'row', alignItems: 'flex-start', gap: space.chipGap },
+  hintText: {
+    flex: 1,
+    ...textStyle(textRoles.rowSubtitle),
+    color: theme.color.text2,
+  },
   iconTarget: {
     width: minTouchTargetDp,
     height: minTouchTargetDp,
@@ -63,6 +72,22 @@ const useStyles = createThemedStyles(() => ({
 
 function StemsBadge() {
   return <Badge label={STEMS_BADGE} />;
+}
+
+function MetronomeBadge() {
+  return (
+    <Badge tone="strong" icon="metronome" label={QUEUE_TEXT.metronomeBadge} />
+  );
+}
+
+export function MetronomeHint() {
+  const styles = useStyles();
+  return (
+    <View style={styles.hint}>
+      <Icon name="info" size="action" color="text2" />
+      <Text style={styles.hintText}>{QUEUE_TEXT.metronomeHint}</Text>
+    </View>
+  );
 }
 
 function nowPlayingSubtitle(facts: string, spot: SetlistSpot | null): string {
@@ -242,7 +267,7 @@ export function SetlistRow({ entry, setlistName, onOpen }: SetlistRowProps) {
       subtitle={setlistRowSubtitle(entry, setlistName, stems)}
       trailing={
         <View style={styles.trailing}>
-          {isPresetEntry(entry) ? null : <StemsBadge />}
+          {isPresetEntry(entry) ? <MetronomeBadge /> : <StemsBadge />}
           <RemoveKey label={`Skip ${title} this time`} onPress={skip} />
         </View>
       }
