@@ -116,16 +116,6 @@ class CardPosterTest {
   }
 
   @Test
-  fun `a metronome shown again after a hide keeps its fresh card through finish`() {
-    poster.post(PAUSED, false, fences.metronome, fences.metronome.keep())
-    fences.metronome.withdraw()
-    val fresh = fences.metronome.keep()
-    poster.finish()
-    poster.post(PLAYING, true, fences.metronome, fresh)
-    assertEquals(PLAYING, surface.shown)
-  }
-
-  @Test
   fun `a playing post after a refused promotion tries the foreground again`() {
     val card = fences.song.issue()
     surface.refusal = IllegalStateException(REFUSED)
@@ -174,13 +164,24 @@ class CardPosterTest {
 
   @Test
   fun `a stale paused metronome post does not cover the song that took over`() {
-    val metronome = fences.metronome.keep()
+    val metronome = fences.showMetronome()
     poster.post(PAUSED, false, fences.metronome, metronome)
-    fences.handOverMetronome {}
+    fences.hideMetronome {}
     poster.post(PLAYING, true, fences.song, fences.song.issue())
     poster.post(LATE, false, fences.metronome, metronome)
     assertEquals(PLAYING, surface.shown)
     assertTrue(surface.foreground)
+  }
+
+  @Test
+  fun `a hide for an older metronome card landing after a newer show leaves the newer card posting`() {
+    val older = fences.showMetronome()
+    poster.post(PAUSED, false, fences.metronome, older)
+    fences.hideMetronome {}
+    val newer = fences.showMetronome()
+    poster.finish()
+    poster.post(PLAYING, true, fences.metronome, newer)
+    assertEquals(PLAYING, surface.shown)
   }
 
   private companion object {

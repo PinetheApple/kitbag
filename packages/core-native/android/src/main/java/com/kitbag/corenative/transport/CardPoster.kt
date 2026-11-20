@@ -16,10 +16,10 @@ class CardPoster<N>(private val surface: CardSurface<N>, private val warn: (Thro
 
   // A service started for the foreground must promote even for a withdrawn card, or Android stops the app.
   fun post(notification: N, playing: Boolean, fence: CardFence, cardNumber: Int) {
-    val live = fence.run(cardNumber) { true } == true
+    val live = fence.holds(cardNumber)
     when {
-      !live -> if (!promoted && promote(notification, playing)) surface.remove()
-      playing -> if (!promote(notification, playing)) surface.notify(notification)
+      !live -> satisfyForegroundStart(notification)
+      playing -> postPlaying(notification)
       else -> postDetached(notification)
     }
     if (live) posted[fence] = cardNumber
@@ -34,15 +34,22 @@ class CardPoster<N>(private val surface: CardSurface<N>, private val warn: (Thro
     surface.remove()
   }
 
+  private fun satisfyForegroundStart(notification: N) {
+    if (!promoted && promote(notification) == null) surface.remove()
+  }
+
+  private fun postPlaying(notification: N) {
+    val refusal = promote(notification) ?: return
+    warn(refusal)
+    surface.notify(notification)
+  }
+
   private fun postDetached(notification: N) {
-    if (!promoted) promote(notification, playing = false)
+    if (!promoted) promote(notification)
     surface.detach()
     surface.notify(notification)
   }
 
-  private fun promote(notification: N, playing: Boolean): Boolean {
-    val refusal = surface.promote(notification)
-    if (refusal == null) promoted = true else if (playing) warn(refusal)
-    return refusal == null
-  }
+  private fun promote(notification: N): Throwable? =
+    surface.promote(notification).also { if (it == null) promoted = true }
 }

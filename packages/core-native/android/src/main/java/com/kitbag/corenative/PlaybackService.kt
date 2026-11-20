@@ -393,19 +393,20 @@ class PlaybackService : Service() {
         .putExtra(EXTRA_PRACTICE_PLAYED_MS, practicePlayedMs)
         .putExtra(EXTRA_PRACTICE_STRETCH_STARTED_AT, practiceStretchStartedAt)
         .putExtra(EXTRA_CARD_NUMBER, cardNumber)
-        .putExtra(EXTRA_METRONOME_CARD, fences.metronome.keep())
+        .putExtra(EXTRA_METRONOME_CARD, fences.showMetronome())
       state.subtitle?.let { intent.putExtra(EXTRA_SUBTITLE, it) }
       start(context, intent)
     }
 
     // Sent while a show's start is still pending too: it queues behind that show, so no card is left stuck.
-    fun hide(context: Context) {
-      fences.metronome.withdraw()
-      if (!running && !startRequested) return
-      context.startService(Intent(context, PlaybackService::class.java).setAction(ACTION_HIDE))
-    }
+    fun hide(context: Context) =
+      fences.hideMetronome {
+        if (running || startRequested) {
+          context.startService(Intent(context, PlaybackService::class.java).setAction(ACTION_HIDE))
+        }
+      }
 
-    fun handOver(context: Context) = fences.handOverMetronome { hide(context) }
+    fun handOver(context: Context) = hide(context)
 
     fun showSong(context: Context, song: Song, playing: Boolean, countingIn: Boolean) {
       val intent = Intent(context, PlaybackService::class.java)

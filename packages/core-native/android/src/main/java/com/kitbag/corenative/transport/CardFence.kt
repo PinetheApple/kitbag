@@ -22,8 +22,10 @@ class CardFence {
   }
 
   @Synchronized
-  fun <T> run(cardNumber: Int, body: () -> T): T? =
-    if (cardNumber != NONE && cardNumber == live) body() else null
+  fun holds(cardNumber: Int): Boolean = cardNumber != NONE && cardNumber == live
+
+  @Synchronized
+  fun <T> run(cardNumber: Int, body: () -> T): T? = if (holds(cardNumber)) body() else null
 
   companion object {
     const val NONE = 0
@@ -33,9 +35,15 @@ class CardFence {
 class CardFences {
   val song = CardFence()
   val metronome = CardFence()
+  private var metronomeShown = CardFence.NONE
 
-  fun handOverMetronome(hide: () -> Unit) {
-    metronome.withdraw()
+  @Synchronized
+  fun showMetronome(): Int = metronome.keep().also { metronomeShown = it }
+
+  // Withdraws only the card this hide was sent for, never a card shown after it.
+  fun hideMetronome(hide: () -> Unit) {
+    val shown = synchronized(this) { metronomeShown }
+    metronome.run(shown) { metronome.withdraw() }
     hide()
   }
 }
