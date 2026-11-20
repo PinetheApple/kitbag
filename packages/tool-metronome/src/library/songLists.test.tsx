@@ -105,7 +105,8 @@ describe('song-linked presets on metronome screens', () => {
         onEdit: ignore,
       }),
     );
-    expect(seen.actions.slice(1).map((action) => action.label)).toEqual([
+    expect(seen.actions.map((action) => action.label)).toEqual([
+      'New song from the metronome',
       unlinked.name,
     ]);
   });

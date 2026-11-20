@@ -36,7 +36,7 @@ describe('song-linked presets in metronome song lists', () => {
     ]);
   });
 
-  it('offers only unlinked presets in the Add song sheet', async () => {
+  it('exposes only unlinked presets as metronomeSongs', async () => {
     const { library } = await linkedAndUnlinked();
     expect(library.getState().metronomeSongs.map((p) => p.name)).toEqual([
       UNLINKED,
