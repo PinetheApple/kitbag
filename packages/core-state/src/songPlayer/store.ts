@@ -37,6 +37,7 @@ import {
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 import { songCard } from './songCard.ts';
 import { countingNow, songCount } from './songCount.ts';
+import { songSpeed } from './songSpeed.ts';
 import { songWaveform } from './songWaveform.ts';
 import {
   linkedPreset,
@@ -158,6 +159,7 @@ export function createSongPlayerStore(
     const count = songCount(context, mixer, api, clickEngine);
     const gridFollowers = { gridReplaced: count.gridReplaced };
     const card = songCard({ ...context, close: mixer.close, start: count });
+    const speed = songSpeed(context, count.rateSet);
     mixer.onSongStopped(card.stopped);
 
     const waveform = songWaveform({ set, runtimeOf, live });
@@ -203,6 +205,8 @@ export function createSongPlayerStore(
       const engineRate = await mixer.startEngine(opened);
       if (engineRate === null) return;
       if (!(await mixer.clearSessionLeftovers(opened))) return;
+      if (!(await speed.opening(opened, record.speed, mixer.applyOpeningRate)))
+        return;
       const master = await commands.mixerMasterGain();
       if (!live(opened)) return;
       // The stem player's master level has no control on this screen.
@@ -380,6 +384,7 @@ export function createSongPlayerStore(
       }),
       ...clickSettings.actions,
       saveForSong: presets.saveForSong,
+      ...speed.actions,
     };
   });
 }

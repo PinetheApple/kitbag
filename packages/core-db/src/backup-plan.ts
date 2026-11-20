@@ -287,6 +287,7 @@ function fillMissingOverrideFromDevice(
     return {
       ...meterOverrideOf({ ...NO_METER_OVERRIDE, ...local }),
       tempoCorrection: local?.tempoCorrection ?? null,
+      ...(local?.speed === undefined ? {} : { speed: local.speed }),
       ...song,
     };
   });

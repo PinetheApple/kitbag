@@ -50,6 +50,7 @@ export interface LibrarySongRecord extends Partial<MeterOverride> {
   waveformPath: string | null;
   analysisVersion?: number | null;
   tempoCorrection?: TempoCorrection | null;
+  speed?: number;
 }
 
 export interface SongPresetRecord {

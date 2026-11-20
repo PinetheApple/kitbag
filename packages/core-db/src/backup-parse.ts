@@ -42,6 +42,7 @@ import {
   RAMP_UNITS,
 } from './preset-rules';
 import { meterOverrideViolation, type GridMeter } from './meter-override';
+import { isSongSpeed } from './song-speed';
 import { isTempoCorrection, storedTempoCorrection } from './tempo-correction';
 import { INSTRUMENTS, tuningViolation } from './tuning-rules';
 
@@ -59,6 +60,14 @@ function readTempoCorrection(r: Reader) {
   };
 }
 
+function readSongSpeed(r: Reader, path: string) {
+  const { speed } = r.presentNullableNumber('speed');
+  if (speed === undefined) return {};
+  if (speed === null || !isSongSpeed(speed))
+    invalidField(`${path}.speed`, 'expected a speed above 0');
+  return { speed };
+}
+
 function readSongGrid(r: Reader, path: string) {
   const fields = {
     ...r.presentNullableCount('analysisVersion'),
@@ -70,6 +79,7 @@ function readSongGrid(r: Reader, path: string) {
   return {
     ...(fields as typeof fields & { meterBeatsPerBar?: GridMeter | null }),
     ...readTempoCorrection(r),
+    ...readSongSpeed(r, path),
   };
 }
 
