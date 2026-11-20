@@ -90,6 +90,7 @@ export function songEnds(ended: () => boolean, session: () => number) {
     },
     stopped: () => {
       stoppedIn = session();
+      if (current()) from = null;
     },
     stoppedSince: (opened: number) => stoppedIn === opened,
   };
