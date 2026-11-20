@@ -13,7 +13,6 @@ class CardPosterTest {
     var promotions = 0
     var refusal: Throwable? = null
     var afterRemove: (() -> Unit)? = null
-    val calls = mutableListOf<String>()
 
     override fun promote(notification: String): Throwable? {
       refusal?.let { return it }
@@ -23,13 +22,7 @@ class CardPosterTest {
       return null
     }
 
-    override fun detach() {
-      calls += DETACH
-      foreground = false
-    }
-
     override fun notify(notification: String) {
-      calls += NOTIFY
       shown = notification
     }
 
@@ -46,39 +39,42 @@ class CardPosterTest {
   private val fences = CardFences()
 
   @Test
-  fun `a paused card is detached from the foreground and stays shown`() {
+  fun `a paused card stays in the foreground and stays shown`() {
     val card = fences.song.issue()
     poster.post(PLAYING, true, fences.song, card)
     poster.post(PAUSED, false, fences.song, card)
-    assertFalse(surface.foreground)
+    assertTrue(surface.foreground)
+    assertEquals(2, surface.promotions)
     assertEquals(PAUSED, surface.shown)
   }
 
   @Test
-  fun `a paused card is shown before it is detached`() {
-    val card = fences.song.issue()
-    poster.post(PLAYING, true, fences.song, card)
-    surface.calls.clear()
-    poster.post(PAUSED, false, fences.song, card)
-    assertEquals(listOf(NOTIFY, DETACH), surface.calls)
-  }
-
-  @Test
-  fun `a fresh service's first paused post still promotes, then detaches`() {
+  fun `a fresh service's first paused post promotes and stays in the foreground`() {
     poster.post(PAUSED, false, fences.song, fences.song.issue())
     assertEquals(1, surface.promotions)
-    assertFalse(surface.foreground)
+    assertTrue(surface.foreground)
     assertEquals(PAUSED, surface.shown)
   }
 
   @Test
-  fun `playing after paused promotes the card again`() {
+  fun `playing after paused keeps the card in the foreground`() {
     val card = fences.song.issue()
     poster.post(PAUSED, false, fences.song, card)
     poster.post(PLAYING, true, fences.song, card)
     assertTrue(surface.foreground)
     assertEquals(2, surface.promotions)
     assertEquals(PLAYING, surface.shown)
+  }
+
+  @Test
+  fun `a stale playing post does not overwrite the paused card`() {
+    val older = fences.song.issue()
+    poster.post(PLAYING, true, fences.song, older)
+    val current = fences.song.issue()
+    poster.post(PAUSED, false, fences.song, current)
+    poster.post(LATE, true, fences.song, older)
+    assertEquals(PAUSED, surface.shown)
+    assertTrue(surface.foreground)
   }
 
   @Test
@@ -109,7 +105,7 @@ class CardPosterTest {
   }
 
   @Test
-  fun `a service destroyed with a paused card detached leaves nothing shown`() {
+  fun `finish takes a paused card out of the foreground and leaves nothing shown`() {
     val card = fences.song.issue()
     poster.post(PLAYING, true, fences.song, card)
     poster.post(PAUSED, false, fences.song, card)
@@ -165,12 +161,12 @@ class CardPosterTest {
   }
 
   @Test
-  fun `the metronome card is promoted while playing and detached while paused`() {
+  fun `the metronome card stays in the foreground while playing and while paused`() {
     val card = fences.metronome.keep()
     poster.post(PLAYING, true, fences.metronome, card)
     assertTrue(surface.foreground)
     poster.post(PAUSED, false, fences.metronome, card)
-    assertFalse(surface.foreground)
+    assertTrue(surface.foreground)
     assertEquals(PAUSED, surface.shown)
   }
 
@@ -201,7 +197,5 @@ class CardPosterTest {
     const val PAUSED = "paused"
     const val LATE = "late"
     const val REFUSED = "refused"
-    const val NOTIFY = "notify"
-    const val DETACH = "detach"
   }
 }

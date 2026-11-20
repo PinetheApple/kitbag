@@ -27,8 +27,6 @@ internal class ServiceCardSurface(private val service: Service, private val noti
       if (refusedInBackground(e)) e else throw e
     }
 
-  override fun detach() = ServiceCompat.stopForeground(service, ServiceCompat.STOP_FOREGROUND_DETACH)
-
   override fun notify(notification: Notification) = manager.notify(notificationId, notification)
 
   override fun remove() {
