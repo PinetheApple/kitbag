@@ -35,15 +35,11 @@ class CardFence {
 class CardFences {
   val song = CardFence()
   val metronome = CardFence()
-  private var metronomeShown = CardFence.NONE
 
-  @Synchronized
-  fun showMetronome(): Int = metronome.keep().also { metronomeShown = it }
+  fun showMetronome(): Int = metronome.keep()
 
-  // Withdraws only the card this hide was sent for, never a card shown after it.
   fun hideMetronome(hide: () -> Unit) {
-    val shown = synchronized(this) { metronomeShown }
-    metronome.run(shown) { metronome.withdraw() }
+    metronome.withdraw()
     hide()
   }
 }

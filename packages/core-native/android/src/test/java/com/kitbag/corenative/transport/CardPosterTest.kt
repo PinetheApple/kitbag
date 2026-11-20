@@ -192,6 +192,27 @@ class CardPosterTest {
     assertEquals(PLAYING, surface.shown)
   }
 
+  @Test
+  fun `a stale metronome post after a refused song promotion leaves the song card shown`() {
+    val stale = fences.showMetronome()
+    fences.hideMetronome {}
+    surface.refusal = IllegalStateException(REFUSED)
+    poster.post(PLAYING, true, fences.song, fences.song.issue())
+    surface.refusal = null
+    poster.post(LATE, false, fences.metronome, stale)
+    assertEquals(PLAYING, surface.shown)
+  }
+
+  @Test
+  fun `a foreground start still queued after finish promotes again`() {
+    val card = fences.song.issue()
+    poster.post(PLAYING, true, fences.song, card)
+    poster.finish()
+    poster.post(LATE, true, fences.song, card)
+    assertEquals(2, surface.promotions)
+    assertNull(surface.shown)
+  }
+
   private companion object {
     const val PLAYING = "playing"
     const val PAUSED = "paused"

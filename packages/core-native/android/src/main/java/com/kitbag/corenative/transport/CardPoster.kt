@@ -31,7 +31,7 @@ class CardPoster<N>(private val surface: CardSurface<N>, private val warn: (Thro
   }
 
   private fun satisfyForegroundStart(notification: N) {
-    if (!promoted && promote(notification) == null) surface.remove()
+    if (!promoted && posted.isEmpty() && promote(notification) == null) surface.remove()
   }
 
   private fun promote(notification: N): Throwable? =
