@@ -1,5 +1,6 @@
 import {
   SKIP,
+  SKIPPED_STEM_SONG,
   SKIPPED_UNOPENED_STEM_SONG,
   type Arrival,
 } from '@kitbag/core-state';
@@ -28,12 +29,27 @@ describe('what the player says after an advance', () => {
     expect(arrivalText(arrival({ played: false }), stems)).toBeNull();
   });
 
-  it('says only that it skipped when nothing plays', () => {
+  it('says it skipped a deleted song when nothing plays', () => {
+    expect(
+      arrivalText(
+        arrival({ stemSetId: null, skipped: SKIP.deleted, played: false }),
+        stems,
+      ),
+    ).toBe(SKIPPED_STEM_SONG);
+  });
+
+  it('says nothing when it gave up after a song that would not open', () => {
     expect(
       arrivalText(
         arrival({ stemSetId: null, skipped: SKIP.unopened, played: false }),
         stems,
       ),
-    ).toBe(SKIPPED_UNOPENED_STEM_SONG);
+    ).toBeNull();
+  });
+
+  it('says it skipped an unopened song once a later one plays', () => {
+    expect(arrivalText(arrival({ skipped: SKIP.unopened }), stems)).toBe(
+      SKIPPED_UNOPENED_STEM_SONG,
+    );
   });
 });
