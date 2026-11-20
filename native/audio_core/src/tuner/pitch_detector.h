@@ -1,8 +1,8 @@
 #ifndef KITBAG_TUNER_PITCH_DETECTOR_H
 #define KITBAG_TUNER_PITCH_DETECTOR_H
 
-// One-frame pitch by the McLeod pitch method (McLeod & Wyvill 2005; see
-// docs/tuner-research.md §2), refined at a multiple of the period.
+// One-frame pitch by the McLeod pitch method (McLeod & Wyvill, "A Smarter Way
+// to Find Pitch", ICMC 2005), refined at a multiple of the period.
 #include <vector>
 
 namespace kitbag {
