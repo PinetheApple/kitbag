@@ -7,7 +7,7 @@ import {
   type RowFiles,
 } from '@kitbag/core-state';
 
-function useRowFiles(row: LibraryRow | null): RowFiles | null {
+export function useRowFiles(row: LibraryRow | null): RowFiles | null {
   return useSongLibrary((s) =>
     row === null ? null : rowFilesOf(s.rowFiles, row),
   );

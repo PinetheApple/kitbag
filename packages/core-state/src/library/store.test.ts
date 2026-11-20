@@ -1,11 +1,18 @@
+import { deleteStemSet } from '@kitbag/core-db/src/stem-bundle-repository';
 import { insertStemSet } from '@kitbag/core-db/src/stem-entries.test-helper';
 import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 
-import { SONG_STEP } from './setlistPosition.ts';
+import {
+  adjacentEntry,
+  SONG_STEP,
+  stagePositionOf,
+  type SongStep,
+} from './setlistPosition.ts';
 import type { createLibraryStore } from './store.ts';
 import { isPresetEntry } from './snapshot.ts';
 import { setup } from './store.test-helper.ts';
+import { cursorOf, UP_NEXT_SOURCE, upNext } from '../playOrder/order.ts';
 
 async function songsIn(
   library: ReturnType<typeof createLibraryStore>,
@@ -123,6 +130,7 @@ describe('library store', () => {
       presetId: song,
       itemId: entry.item.id,
       setlistId: gig,
+      index: 0,
     });
   });
 
@@ -173,15 +181,73 @@ describe('library store', () => {
     expect(library.getState().played).toHaveLength(3);
   });
 
-  it('steps over a stem song, which the metronome cannot load', async () => {
+  it('steps onto a stem song and puts it on stage without loading the metronome', async () => {
+    const { library, repos, handle, gig, metronome } = await onStage();
+    const stem = await insertStemSet(handle.db, 'Redbone');
+    const item = await repos.setlists.addStemSet(gig, stem, 1);
+    await library.getState().refresh();
+    const bpm = metronome.getState().bpm;
+    const step = await library.getState().stepSong(SONG_STEP.next);
+    expect(step).toMatchObject({ entry: { stemSetId: stem }, skipped: false });
+    expect(library.getState().loaded).toEqual({
+      presetId: null,
+      stemSetId: stem,
+      itemId: item.id,
+      setlistId: gig,
+      index: 1,
+    });
+    expect(metronome.getState().bpm).toBe(bpm);
+    expect(library.getState().played).toContain(item.id);
+    await library.getState().stepSong(SONG_STEP.next);
+    expect(loadedName(library)).toBe('Two');
+    await library.getState().stepSong(SONG_STEP.previous);
+    await library.getState().stepSong(SONG_STEP.previous);
+    expect(loadedName(library)).toBe('One');
+  });
+
+  it('adds a stem song at the end of a setlist, as often as asked', async () => {
+    const { library, handle, gig } = await onStage();
+    const stem = await insertStemSet(handle.db, 'Redbone');
+    await library.getState().addStemToSetlist(gig, stem);
+    await library.getState().addStemToSetlist(gig, stem);
+    const entries = library.getState().entries[gig] ?? [];
+    expect(
+      entries.map((e) => (isPresetEntry(e) ? e.preset.name : e.stemSetId)),
+    ).toEqual(['One', 'Two', 'Three', stem, stem]);
+  });
+
+  it('moves a stem entry past metronome entries, as one order', async () => {
     const { library, repos, handle, gig } = await onStage();
     const stem = await insertStemSet(handle.db, 'Redbone');
     await repos.setlists.addStemSet(gig, stem, 1);
     await library.getState().refresh();
-    await library.getState().stepSong(SONG_STEP.next);
+    await library.getState().reorder(gig, 1, 3);
+    const order = (library.getState().entries[gig] ?? []).map((e) =>
+      isPresetEntry(e) ? e.preset.name : e.stemSetId,
+    );
+    expect(order).toEqual(['One', 'Two', 'Three', stem]);
+  });
+
+  it('does not call a stem song reordered since the setlist was read skipped', async () => {
+    const { library, repos, handle, gig } = await onStage();
+    const stem = await insertStemSet(handle.db, 'Redbone');
+    const item = await repos.setlists.addStemSet(gig, stem, 1);
+    await library.getState().refresh();
+    await repos.setlists.move(item.id, 3);
+    const step = await library.getState().stepSong(SONG_STEP.next);
+    expect(step.skipped).toBe(false);
     expect(loadedName(library)).toBe('Two');
-    await library.getState().stepSong(SONG_STEP.previous);
-    expect(loadedName(library)).toBe('One');
+  });
+
+  it('skips a stem song deleted since the setlist was read, and says so', async () => {
+    const { library, repos, handle, gig } = await onStage();
+    const stem = await insertStemSet(handle.db, 'Redbone');
+    await repos.setlists.addStemSet(gig, stem, 1);
+    await library.getState().refresh();
+    await deleteStemSet(handle.db, stem);
+    const step = await library.getState().stepSong(SONG_STEP.next);
+    expect(step.skipped).toBe(true);
+    expect(loadedName(library)).toBe('Two');
   });
 
   it('clears the active setlist when a song is loaded from outside it', async () => {
@@ -278,17 +344,123 @@ describe('library store', () => {
     expect(library.getState().loaded?.itemId).toBe(items[2]);
   });
 
-  it('starts from song 1 when the loaded song is removed from the set', async () => {
-    const { library, gig, first } = await onStage();
+  it('steps from the position of the loaded song once it is removed from the set', async () => {
+    const { library, gig } = await onStage();
+    const [one, two, three] = library.getState().entries[gig] ?? [];
     await library.getState().stepSong(SONG_STEP.next);
-    const loaded = library.getState().loaded?.itemId;
-    if (loaded === undefined || loaded === null) throw new Error('not loaded');
-    await library.getState().removeFromSet(loaded);
+    await library.getState().removeFromSet(two?.item.id ?? 0);
+    await library.getState().stepSong(SONG_STEP.next);
+    expect(library.getState().loaded?.itemId).toBe(three?.item.id);
+    await library.getState().removeFromSet(three?.item.id ?? 0);
     await library.getState().stepSong(SONG_STEP.previous);
-    expect(library.getState().loaded?.itemId).toBe(loaded);
-    await library.getState().stepSong(SONG_STEP.next);
-    expect(library.getState().loaded?.itemId).toBe(first.item.id);
+    expect(library.getState().loaded?.itemId).toBe(one?.item.id);
     expect(activeId(library)).toBe(gig);
+  });
+
+  async function fiveOnStage() {
+    const { library } = setup();
+    const s = library.getState();
+    const gig = await s.createSetlist('Gig');
+    for (const name of ['A', 'B', 'C', 'D', 'E'])
+      await s.newSongFromCurrent(name, gig);
+    const entries = (library.getState().entries[gig] ?? []).filter(
+      isPresetEntry,
+    );
+    const item = (name: string) => {
+      const found = entries.find((e) => e.preset.name === name);
+      if (found === undefined) throw new Error(`missing ${name}`);
+      return found;
+    };
+    const c = item('C');
+    await s.loadSong(c.preset.id, c.item.id, gig);
+    const remove = async (...names: string[]) => {
+      for (const name of names)
+        await library.getState().removeFromSet(item(name).item.id);
+    };
+    const nameOf = (step: SongStep) => {
+      const state = library.getState();
+      const target = adjacentEntry(
+        state.entries[gig] ?? [],
+        stagePositionOf(state.loaded, gig),
+        step,
+      );
+      return target !== undefined && isPresetEntry(target)
+        ? target.preset.name
+        : undefined;
+    };
+    const around = () => [nameOf(SONG_STEP.previous), nameOf(SONG_STEP.next)];
+    const move = (from: number, to: number) =>
+      library.getState().reorder(gig, from, to);
+    return { remove, around, move, library, gig };
+  }
+
+  it('keeps the removed song’s place when an earlier song goes too', async () => {
+    const { remove, around } = await fiveOnStage();
+    await remove('C');
+    expect(around()).toEqual(['B', 'D']);
+    await remove('A');
+    expect(around()).toEqual(['B', 'D']);
+  });
+
+  it('keeps the removed song’s place by count when the set is reordered after', async () => {
+    const { remove, around, move } = await fiveOnStage();
+    await remove('C');
+    await move(3, 0);
+    expect(around()).toEqual(['A', 'B']);
+  });
+
+  it('loads on Next the song Up next names after a removal and a reorder', async () => {
+    const { remove, move, library, gig } = await fiveOnStage();
+    await remove('C', 'A');
+    await move(2, 0);
+    const state = library.getState();
+    const stage = { setlistId: gig, entries: state.entries[gig] ?? [] };
+    const cursor = cursorOf(stage, state.loaded);
+    const named = upNext({ queue: [], stage, cursor });
+    if (named?.source !== UP_NEXT_SOURCE.setlist) throw new Error('no entry');
+    await library.getState().stepSong(SONG_STEP.next);
+    expect(library.getState().loaded?.itemId).toBe(named.entry.item.id);
+  });
+
+  it('keeps the removed song’s place when a later song goes too', async () => {
+    const { remove, around } = await fiveOnStage();
+    await remove('C', 'D');
+    expect(around()).toEqual(['B', 'E']);
+  });
+
+  it('has no Previous once every song before the removed one is gone', async () => {
+    const { remove, around } = await fiveOnStage();
+    await remove('C', 'A', 'B');
+    expect(around()).toEqual([undefined, 'D']);
+  });
+
+  it('steps back to the song still before it after the removed one is last', async () => {
+    const { remove, around } = await fiveOnStage();
+    await remove('D', 'E', 'C', 'B');
+    expect(around()).toEqual(['A', undefined]);
+  });
+
+  it('counts every metronome song load, a reload of the same one too', async () => {
+    const { library, gig } = await onStage();
+    const [one] = library.getState().entries[gig] ?? [];
+    if (one === undefined || !isPresetEntry(one)) throw new Error('no song');
+    const before = library.getState().songLoads;
+    await library.getState().loadSong(one.preset.id, one.item.id, gig);
+    await library.getState().loadSong(one.preset.id, one.item.id, gig);
+    await library.getState().refresh();
+    await library.getState().removeFromSet(one.item.id);
+    expect(library.getState().songLoads).toBe(before + 2);
+  });
+
+  it('loads nothing on Next when the last song on stage is removed', async () => {
+    const { library, gig } = await onStage();
+    const [, , three] = library.getState().entries[gig] ?? [];
+    await library.getState().stepSong(SONG_STEP.next);
+    await library.getState().stepSong(SONG_STEP.next);
+    await library.getState().removeFromSet(three?.item.id ?? 0);
+    const step = await library.getState().stepSong(SONG_STEP.next);
+    expect(step.entry).toBeUndefined();
+    expect(library.getState().loaded?.itemId).toBe(three?.item.id);
   });
 
   it('with the set active and no song loaded, Next loads song 1 and Previous does nothing', async () => {
@@ -401,6 +573,7 @@ describe('library store', () => {
       presetId: id,
       itemId: entry.item.id,
       setlistId: gig,
+      index: 0,
     });
   });
 

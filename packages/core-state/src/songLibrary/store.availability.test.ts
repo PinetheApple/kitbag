@@ -2,6 +2,7 @@ import type { LibraryAvailability } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
 import { rowFilesOf } from './availability.ts';
+import { rowKey } from './rowKey.ts';
 import { analysisFailure } from './logic.ts';
 import {
   CODES,
@@ -35,6 +36,11 @@ describe('library file availability', () => {
   it('reads every row as present once started', async () => {
     const { store, row } = await startedWithOneSong();
     expect(rowFilesOf(store.getState().rowFiles, row)).toBe('present');
+  });
+
+  it('keeps each row’s audio paths for matching a move’s files', async () => {
+    const { store, row } = await startedWithOneSong();
+    expect(store.getState().rowPaths.get(rowKey(row))).toEqual([SONG_PATH]);
   });
 
   it('refreshes when the data folder volume changes', async () => {

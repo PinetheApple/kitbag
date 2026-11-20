@@ -7,6 +7,7 @@ import {
   guarded,
   type SheetAction,
 } from './sheets.tsx';
+import { CHANGE_NOT_SAVED, REMOVE_FROM_SET } from './setlistCopy.ts';
 
 export interface SongTarget {
   readonly preset: SongPreset;
@@ -66,14 +67,10 @@ function useSongCommands({ menu, setlistId, onEdit }: SongMenuProps) {
   const { target, close } = menu;
   const run = (work: (song: SongTarget) => Promise<unknown>) => async () => {
     if (target === null) return;
-    await guarded(
-      menu.setError,
-      'Could not save this change. Try again.',
-      async () => {
-        await work(target);
-        close();
-      },
-    );
+    await guarded(menu.setError, CHANGE_NOT_SAVED, async () => {
+      await work(target);
+      close();
+    });
   };
   return {
     edit: () => {
@@ -109,7 +106,7 @@ function songActions(cmd: SongCommands, menu: SongMenu, inSet: boolean) {
       },
     },
   ];
-  if (inSet) actions.push({ label: 'Remove from set', onPress: cmd.remove });
+  if (inSet) actions.push({ label: REMOVE_FROM_SET, onPress: cmd.remove });
   actions.push({
     label: 'Delete song',
     variant: 'destructive',
@@ -120,8 +117,7 @@ function songActions(cmd: SongCommands, menu: SongMenu, inSet: boolean) {
   return actions;
 }
 
-const IN_SET_HINT =
-  'Remove from set keeps the song in All songs. Delete song removes it from every setlist.';
+const IN_SET_HINT = `${REMOVE_FROM_SET} keeps the song in All songs. Delete song removes it from every setlist.`;
 
 function useDestinations(props: SongMenuProps, cmd: SongCommands) {
   const setlists = useLibrary((s) => s.setlists);

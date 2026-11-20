@@ -13,6 +13,7 @@ import {
   type RestoreState,
 } from '@kitbag/core-state';
 
+import { STEM_SONG_NOUNS } from '../nouns.ts';
 import { formatBytes } from './bytes.ts';
 import { SEPARATOR } from './separator.ts';
 
@@ -67,7 +68,7 @@ const NOUNS: Readonly<Record<Category, readonly [string, string]>> = {
   countInSettings: ['count-in setting', 'count-in settings'],
   metronomeSettings: ['metronome setup', 'metronome setups'],
   clickSounds: ['click sound', 'click sounds'],
-  stemSongs: ['stem song', 'stem songs'],
+  stemSongs: STEM_SONG_NOUNS,
 };
 
 const MONTHS = [

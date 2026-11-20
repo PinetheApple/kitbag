@@ -11,9 +11,12 @@ import {
   textRoles,
   textStyle,
   TRANSPARENT,
+  useAfterSheetClosed,
 } from '@kitbag/core-design';
 import {
+  STEMS_BADGE,
   useLibrary,
+  useStemSongs,
   type ActiveSet,
   type SetlistEntry,
 } from '@kitbag/core-state';
@@ -23,11 +26,13 @@ import { Pressable, Text, View } from 'react-native';
 import {
   songListHint,
   songListRows,
+  STEM_SONG_HINT,
   type SongListRow,
 } from '../logic/songList.ts';
 import { type ErrorSetter } from '../library/sheets.tsx';
 import { nowRowA11yLabel } from '../logic/setlistChip.ts';
 import { useSheetStyles } from './sheetStyles.ts';
+import { useOpenStemPlayer } from './useOpenStemPlayer.ts';
 import {
   NowRowActions,
   UnsavedDot,
@@ -108,7 +113,10 @@ function SongRow({
   const handlePress = useCallback(() => {
     onPick(row);
   }, [onPick, row]);
-  const spoken = `${row.number}. ${row.name}, ${row.bpm} BPM`;
+  const spoken =
+    row.bpm === null
+      ? `${row.number}. ${row.name}, stem song`
+      : `${row.number}. ${row.name}, ${row.bpm} BPM`;
   return (
     <Pressable
       accessibilityRole="button"
@@ -135,6 +143,10 @@ function SongRow({
           <View>
             <Badge tone="accent" variant="filled" label="NOW" />
           </View>
+        ) : row.bpm === null ? (
+          <View>
+            <Badge label={STEMS_BADGE} />
+          </View>
         ) : (
           <Text style={styles.bpm}>{row.bpm}</Text>
         )}
@@ -153,6 +165,31 @@ export interface SetlistSongsSheetProps {
   readonly set: ActiveSet;
   readonly bottomInset: number;
   readonly onDismiss: () => void;
+  readonly onOpenStemSet?: ((stemSetId: number) => void) | undefined;
+}
+
+function useStemPick(
+  setlistId: number,
+  onOpenStemSet: SetlistSongsSheetProps['onOpenStemSet'],
+  visible: boolean,
+) {
+  const openStemEntry = useLibrary((s) => s.openStemEntry);
+  const openStemPlayer = useOpenStemPlayer(onOpenStemSet);
+  const { after, closed } = useAfterSheetClosed(visible);
+  const pick = useCallback(
+    (row: SongListRow) => {
+      const { stemSetId } = row;
+      if (stemSetId === null) return;
+      const opening = openStemEntry(row.itemId, setlistId);
+      after(() => {
+        void opening.then((opened) => {
+          if (opened) openStemPlayer(stemSetId);
+        });
+      });
+    },
+    [openStemEntry, setlistId, after, openStemPlayer],
+  );
+  return { pick, closed };
 }
 
 export function SetlistSongsSheet({
@@ -160,23 +197,28 @@ export function SetlistSongsSheet({
   set,
   bottomInset,
   onDismiss,
+  onOpenStemSet,
 }: SetlistSongsSheetProps) {
   const sheetStyles = useSheetStyles();
   const entries = useLibrary((s) => s.entries[set.id] ?? NO_ENTRIES);
   const loadedItemId = useLibrary((s) => s.loaded?.itemId ?? null);
   const loadSong = useLibrary((s) => s.loadSong);
   const leaveSetlist = useLibrary((s) => s.leaveSetlist);
+  const stems = useStemSongs();
+  const stemPick = useStemPick(set.id, onOpenStemSet, visible);
   const [saveError, setSaveError] = useState<string | null>(null);
   const rows = useMemo(
-    () => songListRows(entries, loadedItemId),
-    [entries, loadedItemId],
+    () => songListRows(entries, loadedItemId, stems),
+    [entries, loadedItemId, stems],
   );
+  const hasStems = rows.some((row) => row.stemSetId !== null);
   const handlePick = useCallback(
     (row: SongListRow) => {
       onDismiss();
-      void loadSong(row.presetId, row.itemId, set.id);
+      if (row.presetId === null) stemPick.pick(row);
+      else void loadSong(row.presetId, row.itemId, set.id);
     },
-    [onDismiss, loadSong, set.id],
+    [onDismiss, loadSong, set.id, stemPick],
   );
   const handleLeave = useCallback(() => {
     onDismiss();
@@ -190,6 +232,7 @@ export function SetlistSongsSheet({
       dismissLabel="Close song list"
       bottomInset={bottomInset}
       onDismiss={onDismiss}
+      onClosed={stemPick.closed}
     >
       <Text style={sheetStyles.songHint}>{songListHint(set)}</Text>
       <View>
@@ -212,6 +255,7 @@ export function SetlistSongsSheet({
           ),
         )}
       </View>
+      {hasStems ? <SheetHint>{STEM_SONG_HINT}</SheetHint> : null}
       {saveError === null ? null : <SheetHint>{saveError}</SheetHint>}
       <Button
         variant="ghost"

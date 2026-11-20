@@ -12,6 +12,7 @@ import { createSongLibraryRepository } from './song-library-repository';
 import type { NewStemBundle, StoredLyrics } from './stem-bundle-repository';
 import { openTestDatabase } from './sqlite.test-helper';
 import { memoryClickSoundFiles } from './click-sound-files.test-helper';
+import { unusedMigrationCopyFiles } from './migration-copy-files.test-helper';
 
 const open: ReturnType<typeof openTestDatabase>[] = [];
 
@@ -494,6 +495,7 @@ describe('StemDeck bundles over the op-sqlite 17 connection', () => {
     const database = connectDatabase(
       fakeOpSqlite().connection,
       memoryClickSoundFiles().files,
+      unusedMigrationCopyFiles,
     );
     const first = await database.songLibrary.insertStemBundle(FULL);
     const { id, replaced } = await database.songLibrary.replaceStemBundle(

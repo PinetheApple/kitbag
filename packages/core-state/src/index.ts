@@ -191,8 +191,11 @@ export {
   loadedPresetOf,
   type DiscardedChanges,
   type LibraryStore,
+  type LoadedPreset,
   type LoadedSong,
+  type LoadedStem,
   type PresetEdit,
+  type SongStepResult,
   type SearchResults,
 } from './library/store.ts';
 export {
@@ -209,16 +212,21 @@ export {
 } from './library/snapshot.ts';
 export {
   activeSetlistOf,
-  adjacentPresetEntry,
+  adjacentEntry,
   SONG_STEP,
+  stagePositionOf,
+  type StagePosition,
   type SongStep,
 } from './library/setlistPosition.ts';
 export {
   ADVANCE,
   advanceOf,
+  entriesAfter,
+  onStageOf,
   UP_NEXT_SOURCE,
   upNext,
   type Advance,
+  type OnStage,
   type PlayOrder,
   type UpNext,
 } from './playOrder/order.ts';
@@ -226,7 +234,28 @@ export {
   createPlayOrderStore,
   playOrderStore,
   type PlayOrderStore,
+  type SkipResult,
 } from './playOrder/store.ts';
+export {
+  usePlayOrder,
+  useStage,
+  useUpNext,
+  type Stage,
+} from './playOrder/usePlayOrder.ts';
+export { bindStemSetRemovals } from './playOrder/stemSetRemovals.ts';
+export {
+  entryName,
+  SKIPPED_STEM_SONG,
+  STEMS_BADGE,
+  stemSongTitle,
+  UNKNOWN_STEM_SONG,
+  type StemSongs,
+  stemFacts,
+  stemSongFacts,
+  stemSongListFacts,
+  stemSongsById,
+} from './playOrder/stemSongText.ts';
+export { useStemSongs } from './playOrder/useStemSongs.ts';
 export {
   configurePlayOrder,
   type PlayOrderRepositories,
@@ -271,6 +300,7 @@ export {
 } from './songLibrary/logic.ts';
 export { playerSongBadge } from './songLibrary/badge.ts';
 export { rowFilesOf } from './songLibrary/availability.ts';
+export { rowKey } from './songLibrary/rowKey.ts';
 export {
   errorCode,
   type BundleAddOutcome,
@@ -293,6 +323,11 @@ export {
 export type { PlayerTracks } from './dataFolder/release.ts';
 export { useDataFolder } from './dataFolder/useDataFolder.ts';
 export { moveSettled } from './dataFolder/outcomes.ts';
+export {
+  movingRowKey,
+  rowMatchIndex,
+  type RowMatchIndex,
+} from './dataFolder/movingRow.ts';
 export { useStemDeck } from './stemDeck/useStemDeck.ts';
 export {
   createStemDeckStore,

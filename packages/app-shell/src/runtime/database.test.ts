@@ -1,4 +1,8 @@
-import { DatabaseOpenError } from '@kitbag/core-db';
+import {
+  DATABASE_NAME,
+  DatabaseOpenError,
+  type MigrationCopyFiles,
+} from '@kitbag/core-db';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { storedPreference } from './storedPreference.ts';
@@ -10,14 +14,20 @@ vi.mock('@kitbag/core-db', async (original) => ({
   openDatabase: core.openDatabase,
 }));
 
-vi.mock('@kitbag/core-native', () => ({
+const native = vi.hoisted(() => ({
+  databaseFreeBytes: vi.fn(),
   deleteClickSound: vi.fn(),
   readClickSound: vi.fn(),
+  removeDatabaseCopy: vi.fn(),
+  replaceDatabaseCopy: vi.fn(),
   writeClickSound: vi.fn(),
 }));
 
+vi.mock('@kitbag/core-native', () => native);
+
 const REFUSED = new DatabaseOpenError('newer-version', { fromVersion: 99 });
 const ACCESSES = 10;
+const MIGRATION_FREE_BYTES = 4096;
 const PREFERENCE_KEYS = ['theme', 'haptics', 'last_tool', 'home', 'count_in'];
 const OPENED = { preferences: { get: () => 'stored' } };
 
@@ -97,6 +107,31 @@ describe('a database that fails to open', () => {
     expect(status.ok).toBe(false);
     expect(!status.ok && status.error.kind).toBe('open');
     expect(!status.ok && status.error.cause).toBe(cause);
+  });
+});
+
+describe('the migration copy files', () => {
+  it('act on the app database through native', async () => {
+    core.openDatabase.mockReturnValue(OPENED);
+    native.databaseFreeBytes.mockReturnValue(MIGRATION_FREE_BYTES);
+    const { databaseStatus } = await freshDatabase();
+    databaseStatus();
+    const files = core.openDatabase.mock.calls[0]?.[1] as MigrationCopyFiles;
+
+    expect(files.freeBytes()).toBe(MIGRATION_FREE_BYTES);
+    files.remove('kitbag.v24.bak');
+    files.replace('kitbag.v24.bak.part', 'kitbag.v24.bak');
+
+    expect(native.databaseFreeBytes).toHaveBeenCalledWith(DATABASE_NAME);
+    expect(native.removeDatabaseCopy).toHaveBeenCalledWith(
+      DATABASE_NAME,
+      'kitbag.v24.bak',
+    );
+    expect(native.replaceDatabaseCopy).toHaveBeenCalledWith(
+      DATABASE_NAME,
+      'kitbag.v24.bak.part',
+      'kitbag.v24.bak',
+    );
   });
 });
 

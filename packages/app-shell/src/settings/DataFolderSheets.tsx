@@ -1,21 +1,13 @@
-import {
-  Button,
-  createThemedStyles,
-  Sheet,
-  SheetHint,
-  space,
-  useTextScaled,
-  type IconName,
-} from '@kitbag/core-design';
+import { Sheet, SheetHint, type IconName } from '@kitbag/core-design';
 import type {
   DataFolderCodes,
   DataFolderVolumes,
   MoveStatus,
 } from '@kitbag/core-native';
 import type { ReactNode } from 'react';
-import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ChoiceButtons, type Choice } from './ChoiceButtons.tsx';
 import { ChooserBody, ConfirmBody, MovingBody } from './DataFolderBodies.tsx';
 import type {
   DataFolderAction,
@@ -68,43 +60,23 @@ const LABELS: Readonly<Record<DataFolderAction, string>> = {
   chooseAnother: CHOOSE_ANOTHER,
 };
 
-const useStyles = createThemedStyles(() => ({
-  row: { flexDirection: 'row', gap: space.controlGap },
-  stacked: { gap: space.controlGap },
-}));
-
 function actionLabel(id: DataFolderAction, sheet: DataFolderSheet): string {
   const retry = id === 'resume' && sheet.kind !== 'paused';
   return retry ? TRY_AGAIN : LABELS[id];
 }
 
-function Actions({
-  sheet,
-  actions,
-  handlers,
-}: {
-  readonly sheet: DataFolderSheet;
-  readonly actions: readonly SheetAction[];
-  readonly handlers: Readonly<Record<DataFolderAction, () => void>>;
-}) {
-  const styles = useStyles();
-  const stacked = useTextScaled();
-  if (actions.length === 0) return null;
-  const ordered = stacked ? [...actions].reverse() : actions;
-  return (
-    <View style={stacked ? styles.stacked : styles.row}>
-      {ordered.map((action) => (
-        <Button
-          key={action.id}
-          fill
-          variant={action.primary ? 'primary' : 'ghost'}
-          label={actionLabel(action.id, sheet)}
-          disabled={action.disabled}
-          onPress={handlers[action.id]}
-        />
-      ))}
-    </View>
-  );
+function sheetChoices(
+  sheet: DataFolderSheet,
+  actions: readonly SheetAction[],
+  handlers: Readonly<Record<DataFolderAction, () => void>>,
+): readonly Choice[] {
+  return actions.map((action) => ({
+    key: action.id,
+    label: actionLabel(action.id, sheet),
+    primary: action.primary,
+    disabled: action.disabled,
+    onPress: handlers[action.id],
+  }));
 }
 
 interface SheetFace {
@@ -256,7 +228,7 @@ export function DataFolderSheets({ model, media }: DataFolderSheetsProps) {
       onDismiss={model.close}
     >
       {face.body}
-      <Actions sheet={sheet} actions={actions} handlers={model.act} />
+      <ChoiceButtons choices={sheetChoices(sheet, actions, model.act)} />
     </Sheet>
   );
 }

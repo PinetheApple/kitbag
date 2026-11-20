@@ -155,6 +155,7 @@ export {
 } from './backup-format';
 export type { StaleSlots } from './backup-apply';
 export type { ApplyOptions, ApplyReport, BackupService } from './backup';
+export type { MigrationCopyFiles } from './migration-copy';
 export {
   freshClickSoundFileName,
   type ClickSoundFiles,
