@@ -10,6 +10,10 @@ export default defineConfig({
         find: /^react-native-svg$/,
         replacement: 'react-native-svg/lib/module/index.js',
       },
+      {
+        find: /^@react-native\/assets-registry\/registry$/,
+        replacement: 'react-native-web/asset-registry',
+      },
     ],
     extensions: [
       '.web.tsx',
