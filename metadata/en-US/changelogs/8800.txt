@@ -1,0 +1,2 @@
+• In the Stem songs list, a song's actions now include Play next and Add to setlist.
+• Fixed a Play pressed just as a stem song ended sometimes using up the next Up next song or moving the setlist on.
