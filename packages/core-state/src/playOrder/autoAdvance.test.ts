@@ -17,7 +17,7 @@ import {
   type AutoAdvanceDeps,
 } from './autoAdvance.ts';
 import { ADVANCE, type Advance } from './order.ts';
-import type { SkipResult } from './store.ts';
+import type { SkipResult, Undo } from './store.ts';
 
 const NIGHT_BUS = 21;
 const TIN_ROOF = 22;
@@ -46,8 +46,9 @@ function harness(
   const peekNext = vi.fn<AutoAdvanceDeps['peekNext']>();
   for (const step of steps) peekNext.mockResolvedValueOnce(step);
   peekNext.mockResolvedValue(end);
+  const undo = vi.fn(() => Promise.resolve());
   const commitNext = vi.fn<AutoAdvanceDeps['commitNext']>(() =>
-    Promise.resolve(true),
+    Promise.resolve(undo),
   );
   const advanceTo = vi.fn<AutoAdvanceDeps['advanceTo']>();
   for (const outcome of outcomes) advanceTo.mockResolvedValueOnce(outcome);
@@ -94,6 +95,7 @@ function harness(
     songEnds,
     peekNext,
     commitNext,
+    undo,
     advanceTo,
     arrivals,
     seen,
@@ -168,7 +170,7 @@ describe('auto-advance at the end of a stem song', () => {
 
   it('follows nothing once a press during the commit undid it', async () => {
     const h = harness([play(NIGHT_BUS)]);
-    h.commitNext.mockResolvedValueOnce(false);
+    h.commitNext.mockResolvedValueOnce(null);
     await h.songEnds();
     expect(h.advanceTo).not.toHaveBeenCalled();
     expect(h.stopAdvancing).not.toHaveBeenCalled();
@@ -285,6 +287,21 @@ describe('auto-advance at the end of a stem song', () => {
     expect(h.stopAdvancing).not.toHaveBeenCalled();
   });
 
+  it('undoes the commit once another song took the player', async () => {
+    const h = harness([play(NIGHT_BUS)], [ADVANCE_OUTCOME.displaced]);
+    await h.songEnds();
+    expect(h.undo).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the commit of a song that played or would not open', async () => {
+    const h = harness(
+      [play(NIGHT_BUS), play(TIN_ROOF)],
+      [ADVANCE_OUTCOME.unplayable],
+    );
+    await h.songEnds();
+    expect(h.undo).not.toHaveBeenCalled();
+  });
+
   it('stops listening when stopped', () => {
     const h = harness([]);
     h.stop();
@@ -350,10 +367,10 @@ describe('Next from the song card', () => {
 
   it('ignores a second Next while the first is still committing', async () => {
     const h = harness([play(NIGHT_BUS), play(TIN_ROOF)]);
-    let release: (kept: boolean) => void = () => undefined;
+    let release: (undo: Undo | null) => void = () => undefined;
     h.commitNext.mockImplementationOnce(
       () =>
-        new Promise<boolean>((resolve) => {
+        new Promise<Undo | null>((resolve) => {
           release = resolve;
         }),
     );
@@ -361,23 +378,23 @@ describe('Next from the song card', () => {
     await h.settle();
     await h.pressNext();
     expect(h.peekNext).toHaveBeenCalledTimes(1);
-    release(true);
+    release(h.undo);
     await h.settle();
     expect(h.advanceTo.mock.calls).toEqual([[NIGHT_BUS]]);
   });
 
   it('ignores the end of the song while a Next is still committing', async () => {
     const h = harness([play(NIGHT_BUS), play(TIN_ROOF)]);
-    let release: (kept: boolean) => void = () => undefined;
+    let release: (undo: Undo | null) => void = () => undefined;
     h.commitNext.mockImplementationOnce(
       () =>
-        new Promise<boolean>((resolve) => {
+        new Promise<Undo | null>((resolve) => {
           release = resolve;
         }),
     );
     await h.pressNext();
     await h.songEnds();
-    release(true);
+    release(h.undo);
     await h.settle();
     expect(h.peekNext).toHaveBeenCalledTimes(1);
     expect(h.advanceTo.mock.calls).toEqual([[NIGHT_BUS]]);

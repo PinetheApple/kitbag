@@ -1,3 +1,4 @@
+import { KB_MIXER_UNITY_RATE } from '@kitbag/core-native';
 import {
   ANALYSIS_STATUS,
   correctedBpm,
@@ -29,6 +30,7 @@ export interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
   readonly meterNotice: DetectedMeter | null;
   readonly clickSettings: SongClickSettings;
   readonly countEndFrame: number | null;
+  readonly speed: number;
 }
 
 export const closedState: SongPlayerState = {
@@ -53,6 +55,7 @@ export const closedState: SongPlayerState = {
   click: false,
   clickSettings: CLOSED_CLICK_SETTINGS,
   countEndFrame: null,
+  speed: KB_MIXER_UNITY_RATE,
 };
 
 type SongFacts = Pick<

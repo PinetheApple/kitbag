@@ -30,7 +30,8 @@ export const V23_SCHEMA_VERSION = V22_SCHEMA_VERSION + 1;
 export const V24_SCHEMA_VERSION = V23_SCHEMA_VERSION + 1;
 export const V25_SCHEMA_VERSION = V24_SCHEMA_VERSION + 1;
 export const V26_SCHEMA_VERSION = V25_SCHEMA_VERSION + 1;
-export const SCHEMA_VERSION = V26_SCHEMA_VERSION + 1;
+export const V27_SCHEMA_VERSION = V26_SCHEMA_VERSION + 1;
+export const SCHEMA_VERSION = V27_SCHEMA_VERSION + 1;
 
 export const OLDEST_UPGRADABLE_VERSION = V7_SCHEMA_VERSION;
 
@@ -377,6 +378,10 @@ export const MIGRATE_V26_TO_V27: readonly string[] = [
   'ALTER TABLE stem_sets ADD COLUMN pitch INTEGER NOT NULL DEFAULT 0 CHECK (pitch BETWEEN -6 AND 6)',
 ];
 
+export const MIGRATE_V27_TO_V28: readonly string[] = [
+  'ALTER TABLE songs ADD COLUMN speed REAL NOT NULL DEFAULT 1',
+];
+
 export const BASELINE: readonly string[] = [
   ...V11_BASELINE,
   ...MIGRATE_V11_TO_V12,
@@ -395,6 +400,7 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V24_TO_V25,
   ...MIGRATE_V25_TO_V26,
   ...MIGRATE_V26_TO_V27,
+  ...MIGRATE_V27_TO_V28,
 ];
 
 export const MIGRATE_V7_TO_V8: readonly string[] = [
@@ -453,7 +459,8 @@ const UPGRADES: readonly {
   { to: V24_SCHEMA_VERSION, steps: MIGRATE_V23_TO_V24 },
   { to: V25_SCHEMA_VERSION, steps: MIGRATE_V24_TO_V25 },
   { to: V26_SCHEMA_VERSION, steps: MIGRATE_V25_TO_V26 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V26_TO_V27 },
+  { to: V27_SCHEMA_VERSION, steps: MIGRATE_V26_TO_V27 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V27_TO_V28 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {

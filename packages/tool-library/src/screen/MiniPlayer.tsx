@@ -34,6 +34,7 @@ function LiveMiniPlayer({
   const title = useSongPlayer((s) => s.title);
   const artist = useSongPlayer((s) => s.artist);
   const click = useSongPlayer((s) => s.click);
+  const speed = useSongPlayer((s) => s.speed);
   const rate = useSongPlayer((s) => s.engineRate);
   const frames = useSongPlayer((s) => s.durationFrames);
   const loopEnd = useSongPlayer(loopEndFrames);
@@ -46,7 +47,7 @@ function LiveMiniPlayer({
   return (
     <MiniPlayerBar
       title={title}
-      detail={miniPlayerDetail(artist, click)}
+      detail={miniPlayerDetail(artist, click, speed)}
       progress={progress}
       playing={playing}
       openLabel={`Open ${title}`}

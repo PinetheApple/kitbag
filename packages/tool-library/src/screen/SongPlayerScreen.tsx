@@ -37,6 +37,7 @@ import {
   lockBadgeOf,
   lockText,
 } from '../logic/lockText.ts';
+import { playedBpm } from '../logic/playedBpm.ts';
 import type { BadgeSpec } from '../logic/rowText.ts';
 import { songTitle } from '../logic/songTitle.ts';
 import { REANALYZE_LABEL } from '../logic/viewText.ts';
@@ -106,7 +107,7 @@ function useLastOpenFacts(): BarFacts {
   const open = useSongPlayer((s) => s.songId !== null);
   const title = useSongPlayer((s) => s.title);
   const artist = useSongPlayer((s) => s.artist);
-  const bpm = useSongPlayer((s) => s.bpm);
+  const bpm = useSongPlayer((s) => playedBpm(s.bpm, s.speed));
   const status = useSongPlayer(barStatusOf);
   const [kept, setKept] = useState<BarFacts>({ title, artist, bpm, status });
   const changed =
@@ -183,7 +184,8 @@ function LockCard({ songId }: { readonly songId: number }) {
   const scaled = useTextScaled();
   const click = useSongPlayer((s) => s.click);
   const badge = useSongPlayer(lockBadgeOf);
-  const bpm = bpmFact(useSongPlayer((s) => s.bpm));
+  const speed = useSongPlayer((s) => s.speed);
+  const bpm = bpmFact(useSongPlayer((s) => playedBpm(s.bpm, s.speed)));
   const toggleClick = useSongPlayer((s) => s.toggleClick);
   const reanalyze = useSongLibrary((s) => s.reanalyze);
   const failure = useSongFailure(songId);
@@ -193,7 +195,13 @@ function LockCard({ songId }: { readonly songId: number }) {
   const onReanalyze = useCallback(() => {
     void reanalyze(songId);
   }, [reanalyze, songId]);
-  const text = lockText(badge, click, bpm?.text ?? null, failure);
+  const text = lockText({
+    badge,
+    click,
+    bpmText: bpm?.text ?? null,
+    failure,
+    speed,
+  });
   const row = (
     <View style={[styles.lock, scaled && styles.lockStacked]}>
       <View style={scaled ? styles.lockTextStacked : styles.lockText}>

@@ -7,7 +7,7 @@ import type { SongLibraryActions } from '../songLibrary/store.ts';
 import type { MixerRuntime } from '../stemPlayer/runtime.ts';
 
 export interface SongPlayerRuntime extends MixerRuntime {
-  readonly records: Pick<SongLibraryRepository, 'readSong'> &
+  readonly records: Pick<SongLibraryRepository, 'readSong' | 'saveSongSpeed'> &
     Pick<SongPresetRepository, 'forLibrarySong' | 'saveForLibrarySong'>;
   readonly library: Pick<SongLibraryActions, 'correctDuration'>;
 }

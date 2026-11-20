@@ -42,6 +42,7 @@ import {
   RAMP_UNITS,
 } from './preset-rules';
 import { meterOverrideViolation, type GridMeter } from './meter-override';
+import { readSongSpeed } from './song-speed';
 import { isTempoCorrection, storedTempoCorrection } from './tempo-correction';
 import { INSTRUMENTS, tuningViolation } from './tuning-rules';
 
@@ -70,6 +71,7 @@ function readSongGrid(r: Reader, path: string) {
   return {
     ...(fields as typeof fields & { meterBeatsPerBar?: GridMeter | null }),
     ...readTempoCorrection(r),
+    ...readSongSpeed(r, path),
   };
 }
 

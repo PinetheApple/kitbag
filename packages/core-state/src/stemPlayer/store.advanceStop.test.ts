@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AutoAdvanceDeps } from '../playOrder/autoAdvance.ts';
 import { startAutoAdvance } from '../playOrder/autoAdvance.ts';
 import { ADVANCE, type Advance } from '../playOrder/order.ts';
-import type { SkipResult } from '../playOrder/store.ts';
+import type { SkipResult, Undo } from '../playOrder/store.ts';
 import { ADVANCE_OUTCOME } from './songEnd.ts';
 import {
   at,
@@ -18,6 +18,7 @@ import {
 
 const NEXT_SET_ID = 8;
 const PAUSE = { action: 'pause', frame: null } as const;
+const KEPT: Undo = () => Promise.resolve();
 const NEXT = { action: 'next', frame: null } as const;
 const NEXT_STEP: SkipResult = {
   advance: { kind: ADVANCE.play, stemSetId: NEXT_SET_ID, setlistItemId: null },
@@ -114,7 +115,7 @@ async function followingPlayOrder() {
   song.engine.position = at(1);
   let peeked: (step: SkipResult) => void = () => undefined;
   const commitNext = vi.fn((_next: Advance, stands: () => boolean) =>
-    Promise.resolve(stands()),
+    Promise.resolve(stands() ? KEPT : null),
   );
   const player = song.store.getState();
   const deps: AutoAdvanceDeps = {

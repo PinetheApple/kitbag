@@ -4,31 +4,51 @@ import {
   barBadge,
   barStatusOf,
   lockText,
+  type LockTextInput,
   playerStatusBadge,
 } from './lockText.ts';
 
+const FULL = 1;
+const SLOWED = 0.9;
+
+const lockOf = (input: Partial<LockTextInput>) =>
+  lockText({
+    badge: 'grid',
+    click: false,
+    bpmText: null,
+    failure: null,
+    speed: FULL,
+    ...input,
+  });
+
 describe('lockText', () => {
   it('headlines the lock while the click runs', () => {
-    expect(lockText('grid', true, '158 BPM', null)).toEqual({
+    expect(lockOf({ click: true, bpmText: '158 BPM' })).toEqual({
       title: 'Metronome locked',
       detail: '158 BPM · phase auto · from beat grid',
       action: 'click',
     });
   });
 
+  it('names the speed in place of the phase while the song is slowed', () => {
+    expect(
+      lockOf({ click: true, bpmText: '142 BPM', speed: SLOWED }).detail,
+    ).toBe('142 BPM · 90% speed · from beat grid');
+  });
+
   it('reads click off, grid ready, while the click is off', () => {
-    expect(lockText('grid', false, '158 BPM', null)).toEqual({
+    expect(lockOf({ bpmText: '158 BPM' })).toEqual({
       title: 'Click off',
       detail: '158 BPM · grid ready',
       action: 'click',
     });
-    expect(lockText('grid', false, null, null).detail).toBe('grid ready');
+    expect(lockOf({}).detail).toBe('grid ready');
   });
 
   it.each(['pending', 'analyzing'] as const)(
     'says the beat is still being found while %s',
     (badge) => {
-      expect(lockText(badge, false, null, null)).toEqual({
+      expect(lockOf({ badge })).toEqual({
         title: 'Finding the beat',
         detail: 'The click is ready once analysis ends',
         action: 'none',
@@ -37,7 +57,7 @@ describe('lockText', () => {
   );
 
   it('names a failed analysis and offers Re-analyse', () => {
-    expect(lockText('failed', false, null, null)).toEqual({
+    expect(lockOf({ badge: 'failed' })).toEqual({
       title: 'No beat grid',
       detail: 'Analysis failed, so no click',
       action: 'reanalyze',
@@ -46,7 +66,10 @@ describe('lockText', () => {
 
   it('says a file that would not decode may be damaged and offers Re-analyse', () => {
     expect(
-      lockText('failed', false, null, { kind: 'damaged', keptGrid: false }),
+      lockOf({
+        badge: 'failed',
+        failure: { kind: 'damaged', keptGrid: false },
+      }),
     ).toEqual({
       title: 'No beat grid',
       detail: 'File may be damaged, so no click',
@@ -58,7 +81,7 @@ describe('lockText', () => {
     { kind: 'missingFile', keptGrid: false },
     { kind: 'unsupported', keptGrid: false, format: 'ogg', supported: ['WAV'] },
   ] as const)('offers no Re-analyse where it cannot help: $kind', (failure) => {
-    expect(lockText('failed', false, null, failure)).toEqual({
+    expect(lockOf({ badge: 'failed', failure })).toEqual({
       title: 'No beat grid',
       detail: 'Analysis failed, so no click',
       action: 'none',
@@ -66,7 +89,7 @@ describe('lockText', () => {
   });
 
   it('names an analysis that found no beat and offers Re-analyse', () => {
-    expect(lockText('noGrid', false, null, null)).toEqual({
+    expect(lockOf({ badge: 'noGrid' })).toEqual({
       title: 'No beat grid',
       detail: 'Analysis found no beat, so no click',
       action: 'reanalyze',

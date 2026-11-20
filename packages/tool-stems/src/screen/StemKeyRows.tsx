@@ -10,16 +10,17 @@ import {
   useTextScaled,
   type StepDelta,
 } from '@kitbag/core-design';
-import { steppedKey, useStemPlayer } from '@kitbag/core-state';
-import { useCallback, useMemo } from 'react';
-import { Pressable, Text, useWindowDimensions, View } from 'react-native';
-
 import {
   isSetApart,
   keyText,
-  spokenKey,
   stemKeyStatus,
-} from '../logic/speedKeyView.ts';
+  steppedKey,
+  useStemPlayer,
+} from '@kitbag/core-state';
+import { useCallback, useMemo } from 'react';
+import { Pressable, Text, useWindowDimensions, View } from 'react-native';
+
+import { spokenKey } from '../logic/stemKeyText.ts';
 import { stemNameWidth } from '../logic/stemName.ts';
 
 const STEPPER_GAPS = { top: 0, bottom: 0 };

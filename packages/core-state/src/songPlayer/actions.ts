@@ -19,6 +19,7 @@ export type SongPlayerActions = Pick<
   | 'markLoop'
   | 'moveLoopEdge'
   | 'toggleClick'
+  | 'setSpeed'
 > &
   SongClickActions & {
     readonly open: (songId: number, waveformBars: number) => SongSession;
@@ -35,4 +36,5 @@ export type SongPlayerActions = Pick<
     readonly playheadBeatSeconds: () => number | null;
     readonly dismissMeterNotice: () => void;
     readonly saveForSong: () => Promise<void>;
+    readonly resetSpeed: () => Promise<void>;
   };
