@@ -1,4 +1,8 @@
-import type { MoveStatus } from '@kitbag/core-native';
+import type {
+  DataFolderVolume,
+  DataFolderVolumes,
+  MoveStatus,
+} from '@kitbag/core-native';
 import type { DataFolderStore } from '@kitbag/core-state';
 
 export type DataFolderStep =
@@ -6,10 +10,13 @@ export type DataFolderStep =
   | { readonly kind: 'open' }
   | { readonly kind: 'confirm'; readonly target: string | null }
   | { readonly kind: 'starting'; readonly target: string | null }
+  | { readonly kind: 'returnOffer'; readonly volumeUuid: string }
+  | { readonly kind: 'returnStarting'; readonly volumeUuid: string }
   | { readonly kind: 'stopAsk' };
 
 export type DataFolderEvent =
   | { readonly kind: 'open' }
+  | { readonly kind: 'offerReturn'; readonly volumeUuid: string }
   | { readonly kind: 'choose'; readonly target: string | null }
   | { readonly kind: 'start' }
   | { readonly kind: 'progressed' }
@@ -29,17 +36,19 @@ export function nextDataFolderStep(
   event: DataFolderEvent,
 ): DataFolderStep {
   if (event.kind === 'open') return OPEN;
+  if (event.kind === 'offerReturn')
+    return { kind: 'returnOffer', volumeUuid: event.volumeUuid };
   if (event.kind === 'close') return CLOSED;
   if (step.kind === 'closed') return CLOSED;
   switch (event.kind) {
     case 'choose':
       return { kind: 'confirm', target: event.target };
     case 'start':
-      return step.kind === 'confirm'
-        ? { kind: 'starting', target: step.target }
-        : step;
+      return startedFrom(step);
     case 'progressed':
-      return step.kind === 'starting' ? OPEN : step;
+      return step.kind === 'starting' || step.kind === 'returnStarting'
+        ? OPEN
+        : step;
     case 'back':
     case 'keepMoving':
     case 'requestSettled':
@@ -51,8 +60,17 @@ export function nextDataFolderStep(
   }
 }
 
+function startedFrom(step: DataFolderStep): DataFolderStep {
+  if (step.kind === 'confirm') return { kind: 'starting', target: step.target };
+  if (step.kind === 'returnOffer')
+    return { kind: 'returnStarting', volumeUuid: step.volumeUuid };
+  return step;
+}
+
 export type DataFolderAction =
   | 'move'
+  | 'returnMove'
+  | 'declineReturn'
   | 'backToChooser'
   | 'askStop'
   | 'stop'
@@ -77,6 +95,11 @@ export type DataFolderSheet =
       readonly target: string | null;
       readonly starting: boolean;
     }
+  | {
+      readonly kind: 'returnOffer';
+      readonly volume: DataFolderVolume;
+      readonly starting: boolean;
+    }
   | { readonly kind: 'moving'; readonly move: MoveStatus }
   | { readonly kind: 'stopAsk'; readonly move: MoveStatus }
   | { readonly kind: 'switched'; readonly move: MoveStatus }
@@ -87,9 +110,28 @@ export type DataFolderSheet =
       readonly move: MoveStatus;
       readonly error: string;
     }
-  | { readonly kind: 'failed'; readonly error: string };
+  | { readonly kind: 'failed'; readonly error: string }
+  | { readonly kind: 'returnFailed'; readonly error: string };
 
-type FlowState = Pick<DataFolderStore, 'move' | 'error'>;
+type FlowState = Pick<DataFolderStore, 'move' | 'error'> & {
+  readonly volumes?: DataFolderVolumes | null;
+  readonly returning?: boolean;
+};
+
+const isReturnStep = (step: DataFolderStep) =>
+  step.kind === 'returnOffer' || step.kind === 'returnStarting';
+
+function returnOfferSheet(
+  volumes: DataFolderVolumes | null | undefined,
+  step: Extract<DataFolderStep, { volumeUuid: string }>,
+): DataFolderSheet {
+  const volume = volumes?.volumes.find(
+    ({ volumeUuid }) => volumeUuid === step.volumeUuid,
+  );
+  return volume === undefined
+    ? { kind: 'none' }
+    : { kind: 'returnOffer', volume, starting: step.kind === 'returnStarting' };
+}
 
 function moveSheet(
   move: MoveStatus,
@@ -112,12 +154,17 @@ function moveSheet(
 }
 
 export function dataFolderSheet(
-  { move, error }: FlowState,
+  { move, error, volumes, returning = false }: FlowState,
   step: DataFolderStep,
 ): DataFolderSheet {
   if (step.kind === 'closed') return { kind: 'none' };
   if (move !== null) return moveSheet(move, error, step);
-  if (error !== null) return { kind: 'failed', error };
+  if (error !== null)
+    return returning || isReturnStep(step)
+      ? { kind: 'returnFailed', error }
+      : { kind: 'failed', error };
+  if (step.kind === 'returnOffer' || step.kind === 'returnStarting')
+    return returnOfferSheet(volumes, step);
   if (step.kind === 'confirm' || step.kind === 'starting') {
     return {
       kind: 'confirm',
@@ -139,6 +186,11 @@ const ACTIONS: Readonly<
     ['backToChooser', false],
     ['move', true],
   ],
+  returnOffer: [
+    ['declineReturn', false],
+    ['returnMove', true],
+  ],
+  returnFailed: [['ok', true]],
   moving: [['askStop', false]],
   stopAsk: [
     ['stop', false],
@@ -167,7 +219,9 @@ export function sheetActions(
   sheet: DataFolderSheet,
   pending: boolean,
 ): readonly SheetAction[] {
-  const starting = sheet.kind === 'confirm' && sheet.starting;
+  const starting =
+    (sheet.kind === 'confirm' || sheet.kind === 'returnOffer') &&
+    sheet.starting;
   return ACTIONS[sheet.kind].map(([id, primary]) => ({
     id,
     primary,

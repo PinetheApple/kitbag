@@ -1,5 +1,5 @@
 import { Sheet } from '@kitbag/core-design';
-import { useMetronome } from '@kitbag/core-state';
+import { useMetronome, type SoundRole } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
@@ -9,7 +9,6 @@ import {
   type PracticeField,
   type PracticeValues,
 } from '../logic/practiceEntry.ts';
-import type { SoundRole } from '../logic/soundChoice.ts';
 import { NumberEntrySheet } from './NumberEntrySheet.tsx';
 import { PracticeRamp } from './PracticeRamp.tsx';
 import {

@@ -35,6 +35,10 @@ export function startMove(volumeUuid: string | null): Promise<void> {
   return getKitbagLibrary().startMove(volumeUuid);
 }
 
+export function startCardReturn(volumeUuid: string): Promise<void> {
+  return getKitbagLibrary().startCardReturn(volumeUuid);
+}
+
 export function cancelMove(): Promise<void> {
   return getKitbagLibrary().cancelMove();
 }

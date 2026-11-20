@@ -5,6 +5,7 @@ import type { MoveFinished, MoveStatus } from './NativeKitbagLibrary';
 const library = vi.hoisted(() => ({
   getConstants: vi.fn(),
   startMove: vi.fn(),
+  startCardReturn: vi.fn(),
   useInternalStorage: vi.fn(),
   releaseOldCopies: vi.fn(),
   onMoveProgress: vi.fn(),
@@ -18,6 +19,7 @@ vi.mock('./NativeKitbagLibrary', () => ({
 const {
   dataFolderCodes,
   releaseOldCopies,
+  startCardReturn,
   startMove,
   switchToInternalStorage,
   watchMove,
@@ -32,6 +34,12 @@ it('hands the target volume to native, null meaning internal storage', async () 
   await startMove(null);
   await startMove('1234-ABCD');
   expect(library.startMove.mock.calls).toEqual([[null], ['1234-ABCD']]);
+});
+
+it('hands the returned card to native', async () => {
+  library.startCardReturn.mockResolvedValue(undefined);
+  await startCardReturn('1234-ABCD');
+  expect(library.startCardReturn).toHaveBeenCalledExactlyOnceWith('1234-ABCD');
 });
 
 it('passes the away paths and the release through unchanged', async () => {
