@@ -1716,6 +1716,7 @@ One migration note that is not obvious from the table:
 | `kitbag-stems.html` | **Variant C only** ("Bottom dock"; #137). Supersedes `kitbag-ui.html` §04's Stem player. Variants A and B are rejected alternatives; `docs/decisions.md` (2026-10-30, #137) lists what is deliberately not built. |
 | `kitbag-stems-sections.html` | **Option C only** ("Chosen (owner, 2026-11-01)"; #139). Extends `kitbag-stems.html` variant C with the Mix \| Lyrics switch, section cards, lane notches and tint, stage lyrics and retime mode. Options A and B are rejected alternatives, kept in `docs/research/mockups/stems-sections-lyrics.html`. Retime's 0.75× subtitle is built (#299); its speed stepper is not (#328). Recorded in `docs/decisions.md`, 2026-11-01. |
 | `kitbag-song-player.html` | **The single-song player** (owner-approved 2026-11-07; #297). Supersedes `kitbag-ui.html` §04's Player. Draws the base player, the mini-player on Home and Songs, the Metronome's click-off snackbar, the click sheet, the 1.0× key before speed, the no-grid states and the A-B loop. Recorded in `docs/decisions.md`, 2026-11-07. |
+| `kitbag-practice-history.html` | **Practice history** (owner-approved 2026-11-07; #286). Draws the session list with Day, Week and Month grouping and its graph, swipe and menu delete with Undo, the Settings doorway and swipe-direction row, the optional Home tile, and the session timeline with Repeat. The ⋮ menu is built as the app's bottom sheet, not the pop-up drawn. Recorded in `docs/decisions.md`: picks 2026-11-02, mockup approved 2026-11-07. |
 | `kitbag-home-arrange.html` | **Option B only** ("Chosen (owner, 2026-10-31)"; #113). Supersedes the "long-press any tile for edit mode" bullet in `kitbag-ui.html` §04 Home and §12.4's customizable-layout bullet as to *how* editing works: Edit, or a long-press on a tile, opens the Arrange sheet. Options A and C are rejected alternatives, kept as reference in `docs/research/mockups/113/`. Recorded in `docs/decisions.md`, 2026-10-31. |
 
 ### 12.1 Principles (kitbag-ui §01)
@@ -1911,10 +1912,10 @@ the supersession: ≤7 primary choices.)
   the Settings row reads "N on". `kitbag-settings.html`'s sizes, Get and SOON rows are
   not built (§9.3). Off removes a tool everywhere and is separate from Home's Hide;
   `docs/decisions.md` has the ruling.
-- **Practice is a readout, not a doorway.** Sessions, total time, average tempo,
-  no chevron — the viewer is later work, so the row promises nothing behind it.
-  The numbers are already computed; average tempo is the one addition, and it is
-  the stat a musician reads.
+- **Practice opens the history** (#286). The row shows sessions, total time and
+  average tempo, with a chevron to the practice history
+  (`kitbag-practice-history.html`). Appearance adds the swipe-to-delete
+  direction, which applies to that list only.
 - **Data folder** (**D11**). The row names the volume in use and its free space
   ("Internal storage · 41.2 GB free"). Song audio, stems and waveforms resolve
   against it, and every stored path is relative to it (§11.2). The database and
@@ -2046,9 +2047,6 @@ decisions they carry are the reason the files read as they now do:
   "All songs" row) but not the screen behind it.
 - **GetSongBPM key row** (D7) — a Settings row that takes a personal key. Small,
   but undesigned, and it needs the attribution copy.
-- **Practice log viewer** — deferred by decision 2026-07-17. The summary sheet is
-  designed; the history is not. Settings shows the stats and stops. The build's
-  existing modal stays as-is until the viewer gets its own pass.
 
 **Open:** wordmark/logo pass · swipe sensitivity confirmation on device.
 (Landscape is **deferred past v1** — D13.)

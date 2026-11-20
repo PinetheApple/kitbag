@@ -1,4 +1,8 @@
-import type { NewSongPreset, SongPreset } from '@kitbag/core-db';
+import type {
+  NewSongPreset,
+  SongPreset,
+  StretchSettingsFields,
+} from '@kitbag/core-db';
 import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 
 import {
@@ -96,7 +100,10 @@ export function rampUnitOf(value: number): KB_RAMP_UNIT {
   return isRampUnit(value) ? value : KB_RAMP_UNIT.KB_RAMP_BARS;
 }
 
-function rampOf(preset: SongPreset, current: RampConfig): RampConfig {
+function rampOf(
+  preset: StretchSettingsFields,
+  current: RampConfig,
+): RampConfig {
   return {
     enabled: preset.rampEnabled,
     startBpm: preset.rampStartBpm ?? preset.bpm,
@@ -113,7 +120,7 @@ interface SongSettings extends MetronomeSettingsInput {
 }
 
 function songSettingsOf(
-  preset: SongPreset,
+  preset: StretchSettingsFields,
   current: MetronomeConfig,
 ): SongSettings {
   const ramp = rampOf(preset, current.ramp);
@@ -180,7 +187,7 @@ export function isLoadedSongUnsaved(
 }
 
 export function applyPreset(
-  preset: SongPreset,
+  preset: StretchSettingsFields,
   metronome: () => MetronomeStore,
 ): void {
   const store = metronome();

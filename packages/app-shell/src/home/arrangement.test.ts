@@ -23,7 +23,11 @@ describe('homeArrangement', () => {
       TOOL_ID.tuner,
       TOOL_ID.library,
       TOOL_ID.stems,
+      TOOL_ID.practiceHistory,
     ]);
+    expect(visibleIds(homeArrangement(undefined))).not.toContain(
+      TOOL_ID.practiceHistory,
+    );
   });
 
   it('never offers a row tool as a tile', () => {
@@ -40,6 +44,7 @@ describe('homeArrangement', () => {
       { toolId: TOOL_ID.stems, size: '2x1', hidden: false },
       { toolId: TOOL_ID.metronome, size: '1x1', hidden: false },
       { toolId: TOOL_ID.library, size: '1x1', hidden: false },
+      { toolId: TOOL_ID.practiceHistory, size: '1x1', hidden: true },
       { toolId: TOOL_ID.tuner, size: '1x1', hidden: true },
     ]);
   });
@@ -94,6 +99,7 @@ describe('arrange accessibility actions', () => {
       TOOL_ID.metronome,
       TOOL_ID.library,
       TOOL_ID.stems,
+      TOOL_ID.practiceHistory,
     ]);
     expect(
       applyArrangeAction(down, TOOL_ID.metronome, ARRANGE_ACTION.moveUp),
