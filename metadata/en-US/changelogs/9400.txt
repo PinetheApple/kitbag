@@ -1,0 +1,1 @@
+• Previous sits beside Next in both players and on the Metronome's setlist bar; it restarts the song after 3 seconds, otherwise goes back a song.
