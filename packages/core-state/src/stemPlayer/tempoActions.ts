@@ -6,7 +6,7 @@ import {
 } from '@kitbag/core-db';
 
 import { warn } from '../songLibrary/storeSupport.ts';
-import { songFacts } from './facts.ts';
+import { songFacts, type PlaybackShift } from './facts.ts';
 import { detectedMeter, overrideDownbeats } from './meterOverride.ts';
 import type {
   ActionContext,
@@ -19,16 +19,27 @@ type GridState = Pick<
   StemPlayerState,
   | 'tempoMode'
   | 'facts'
+  | 'recordedFacts'
   | 'beats'
   | 'downbeatIndices'
   | 'detectedMeter'
   | 'detectedBarOneSeconds'
 >;
 
+export function gridFacts(
+  record: StemSetRecord,
+  mode: TempoMode | null,
+  shift: PlaybackShift,
+): Pick<GridState, 'facts' | 'recordedFacts'> {
+  const source = { ...record, bpm: gridBpm(record, mode) };
+  return { facts: songFacts(source, shift), recordedFacts: songFacts(source) };
+}
+
 export function songGrid(
   record: StemSetRecord,
   mode: TempoMode | null,
   override: MeterOverride,
+  shift: PlaybackShift,
 ): { readonly marked: readonly number[]; readonly state: GridState } {
   const grid = effectiveGrid(record, mode);
   const detected = detectedMeter(grid);
@@ -36,7 +47,7 @@ export function songGrid(
     marked: grid.downbeatIndices,
     state: {
       tempoMode: mode,
-      facts: songFacts({ ...record, bpm: gridBpm(record, mode) }),
+      ...gridFacts(record, mode, shift),
       beats: grid.beats,
       downbeatIndices: overrideDownbeats(grid, override),
       detectedMeter: detected.meter,

@@ -1,7 +1,5 @@
 import {
   meterOverrideOf,
-  NO_CLICK,
-  NO_METER_OVERRIDE,
   type BundleTempo,
   type ClickRate,
   type MeterOverride,
@@ -15,6 +13,7 @@ import { mixActions, transportActions } from './actions.ts';
 import { sameNumbers } from './bars.ts';
 import { clickActions, followNewGrid, releaseClick } from './clickActions.ts';
 import { clickShapeActions } from './clickShape.ts';
+import { closedState } from './closedState.ts';
 import {
   exportActions,
   exportAfterLeaving,
@@ -22,17 +21,11 @@ import {
   type ExportActions,
   type ExportSlice,
 } from './exportActions.ts';
-import { NO_SONG_FACTS, type SongFacts } from './facts.ts';
+import type { SongFacts } from './facts.ts';
 import type { LoopEdge, LoopSeconds } from './loop.ts';
 import { sectionLoopActions } from './loopActions.ts';
-import { FALLBACK_BEATS_PER_BAR } from './barMeter.ts';
 import { overrideDownbeats } from './meterOverride.ts';
-import {
-  NO_LYRICS,
-  songLyrics,
-  type RetimeTap,
-  type SongLyrics,
-} from './lyrics.ts';
+import { songLyrics, type RetimeTap, type SongLyrics } from './lyrics.ts';
 import { UNITY_GAIN } from './mix.ts';
 import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
 import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
@@ -53,10 +46,12 @@ import {
   type AdvanceOutcome,
 } from './songEnd.ts';
 import { countPending, songStart } from './songStart.ts';
+import { loadTracks, loadWaveforms, rowsOf } from './stemTracks.ts';
+import { clampedSpeed, wholeKey } from './speedKey.ts';
+import { speedKeySession } from './speedKeyActions.ts';
 import { songGrid, tempoActions } from './tempoActions.ts';
 import { longestSeconds, tempoModeOf } from './tempoGrid.ts';
 import { framesToSeconds, secondsToFrames } from './time.ts';
-import { loadTracks, loadWaveforms, rowsOf } from './tracks.ts';
 
 const MIX_SAVE_DELAY_MS = 600;
 export const SCRUB_SEEK_DELAY_MS = 120;
@@ -64,6 +59,9 @@ export const SCRUB_SEEK_DELAY_MS = 120;
 export interface StemRow {
   readonly id: number;
   readonly name: string;
+  readonly role: string;
+  readonly transposable: boolean;
+  readonly key: number;
   readonly volume: number;
   readonly muted: boolean;
   readonly soloed: boolean;
@@ -104,6 +102,9 @@ export interface StemPlayerState {
   readonly title: string;
   readonly artist: string | null;
   readonly facts: SongFacts;
+  readonly recordedFacts: SongFacts;
+  readonly speed: number;
+  readonly songKey: number;
   readonly stems: readonly StemRow[];
   readonly overLimit: number;
   readonly masterGain: number;
@@ -145,6 +146,10 @@ export interface StemPlayerActions {
   readonly solo: (index: number, additive: boolean) => void;
   readonly setMasterGain: (gain: number) => void;
   readonly resetMix: () => void;
+  readonly setSpeed: (speed: number) => Promise<void>;
+  readonly setSongKey: (key: number) => Promise<void>;
+  readonly setStemKey: (index: number, key: number) => Promise<void>;
+  readonly resetSpeedKey: () => Promise<void>;
   readonly togglePlay: () => void;
   readonly scrub: (frame: number) => void;
   readonly cancelScrub: () => void;
@@ -203,39 +208,6 @@ export interface StemPlayerOptions extends Partial<StemPlayerTiming> {
   readonly mixerClaim?: MixerClaim;
   readonly mixerClick?: MixerClick;
 }
-
-const closedState: StemPlayerState = {
-  status: 'idle',
-  setId: null,
-  title: '',
-  artist: null,
-  facts: NO_SONG_FACTS,
-  stems: [],
-  overLimit: 0,
-  masterGain: UNITY_GAIN,
-  engineRate: 0,
-  durationFrames: 0,
-  beats: [],
-  downbeatIndices: [],
-  meterOverride: NO_METER_OVERRIDE,
-  detectedMeter: FALLBACK_BEATS_PER_BAR,
-  detectedBarOneSeconds: 0,
-  tempo: null,
-  tempoMode: null,
-  loop: { kind: 'off' },
-  loopFailure: null,
-  undoableLoop: null,
-  click: false,
-  ...NO_CLICK,
-  countEndFrame: null,
-  countBeatsPerBar: FALLBACK_BEATS_PER_BAR,
-  advancedTo: null,
-  advanceCountEnd: null,
-  sections: [],
-  lyrics: NO_LYRICS,
-  retime: { kind: 'off' },
-  retimeFailure: null,
-};
 
 export function createStemPlayerStore(
   runtimeOf: () => StemPlayerRuntime = getStemPlayer,
@@ -324,6 +296,7 @@ export function createStemPlayerStore(
         },
       }),
     );
+    const speedKey = speedKeySession(context, start.rateSet, () => openRecord);
     const clickShape = clickShapeActions(context);
     const clicks = clickActions(context, mixer.pendingClick, {
       recountWithClickOff: start.recountWithClickOff,
@@ -341,7 +314,12 @@ export function createStemPlayerStore(
     };
     const applyGrid = (mode: TempoMode) => {
       if (openRecord === null) return;
-      const { marked, state } = songGrid(openRecord, mode, get().meterOverride);
+      const { marked, state } = songGrid(
+        openRecord,
+        mode,
+        get().meterOverride,
+        speedKey.shift(),
+      );
       markedDownbeatIndices = marked;
       set(state);
       void followNewGrid(context, followers);
@@ -363,6 +341,14 @@ export function createStemPlayerStore(
       const engineRate = await mixer.startEngine(opened);
       if (engineRate === null) return;
       if (!(await mixer.clearSessionLeftovers(opened))) return;
+      const speed = await mixer.applyOpeningRate(
+        opened,
+        clampedSpeed(record.speed),
+      );
+      if (speed === null) return;
+      speedKey.persisted.speed = record.speed;
+      start.rateSet(speed);
+      const songKey = wholeKey(record.pitch);
       const rows = rowsOf(record);
       requestedTracks = rows.length;
       const stems = await loadTracks(runtime, record, rows, () => live(opened));
@@ -370,7 +356,10 @@ export function createStemPlayerStore(
       if (!live(opened)) return;
       openRecord = record;
       const override = meterOverrideOf(record);
-      const grid = songGrid(record, tempoModeOf(record), override);
+      const grid = songGrid(record, tempoModeOf(record), override, {
+        speed,
+        key: songKey,
+      });
       markedDownbeatIndices = grid.marked;
       set({
         status: 'ready',
@@ -378,6 +367,8 @@ export function createStemPlayerStore(
         artist: record.artist,
         ...grid.state,
         meterOverride: override,
+        speed,
+        songKey,
         tempo: record.tempo,
         stems,
         overLimit: record.stems.length - rows.length,
@@ -460,7 +451,8 @@ export function createStemPlayerStore(
       ...clickShape.actions,
       ...renameActions(context),
       ...tempoActions(context, applyGrid),
-      ...retimeActions(context, claim.defer, start),
+      ...retimeActions(context, claim.defer, start, speedKey.rates),
+      ...speedKey.actions,
       meterOverrideChanged: (setId, override) => {
         const { status, setId: openSet, beats, downbeatIndices } = get();
         if (status !== 'ready' || openSet !== setId) return;

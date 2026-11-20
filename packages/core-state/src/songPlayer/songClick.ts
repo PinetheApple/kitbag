@@ -70,7 +70,7 @@ interface SongClickContext {
 
 type SongMeter = Pick<SongClickSlice, 'meterOverride' | 'detected'>;
 
-function songMeter({ meterOverride, detected }: SongMeter): number {
+export function songMeter({ meterOverride, detected }: SongMeter): number {
   return meterOverride.meterBeatsPerBar ?? detected.meter;
 }
 

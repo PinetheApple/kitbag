@@ -73,6 +73,7 @@ export type StemPlayerRecords = Pick<
   | 'saveStemSetMeterOverride'
   | 'saveStemSetClick'
   | 'saveStemSetChosenTempoMode'
+  | 'saveStemSetSpeedKey'
 >;
 
 // The metronome tool's transport, running or paused behind its notification;

@@ -169,6 +169,20 @@ export function mixerSession({
     return ++session;
   };
 
+  const applyOpeningRate = async (
+    opened: number,
+    rate: number,
+  ): Promise<number | null> => {
+    if (rate === KB_MIXER_UNITY_RATE) return rate;
+    const result = await runtimeOf()
+      .commands.mixerSetRate(rate)
+      .catch(() => KB_RESULT.KB_ERROR_INTERNAL);
+    if (!live(opened)) return null;
+    if (result === KB_RESULT.KB_OK) return rate;
+    console.warn('[kitbag] stored speed refused, playing at unity', result);
+    return KB_MIXER_UNITY_RATE;
+  };
+
   return {
     scrubSeek,
     onScrubSeek: (listener: (frame: number) => void) => {
@@ -214,6 +228,7 @@ export function mixerSession({
       return engineRate;
     },
     clearSessionLeftovers,
+    applyOpeningRate,
     awaitReset,
   };
 }
