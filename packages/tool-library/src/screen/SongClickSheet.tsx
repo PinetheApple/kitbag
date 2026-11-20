@@ -76,7 +76,6 @@ function CountInGroup({ headerRef }: Pick<GroupHeaderProps, 'headerRef'>) {
         selected={String(bars)}
         onSelect={select}
       />
-      <SheetHint>{SONG_CLICK_TEXT.countInNote}</SheetHint>
     </>
   );
 }

@@ -13,6 +13,7 @@ import {
 } from '@kitbag/core-state';
 import { useCallback } from 'react';
 
+import { countInOptionLabel } from '../logic/clickChipText.ts';
 import { lockBadgeOf } from '../logic/lockText.ts';
 import { canReanalyze } from '../logic/notices.ts';
 import { METER_FAILED, meterGridState } from '../logic/songMeterText.ts';
@@ -31,9 +32,8 @@ interface SongPlayerMenuProps {
   readonly onBack: () => void;
   readonly onMeter: () => void;
   readonly onTempoCorrection: () => void;
+  readonly onCountIn: () => void;
 }
-
-const doNothing = () => undefined;
 const UNPLAYABLE: ReadonlySet<StemPlayerStatus> = new Set([
   'failed',
   'missing',
@@ -94,6 +94,22 @@ function TempoCorrectionRow({ onPress }: RowProps) {
   );
 }
 
+function CountInRow({ onPress }: RowProps) {
+  const bars = useSongPlayer((s) => s.clickSettings.countInBars);
+  const state = useGridRowState();
+  const disabled = state !== 'ready';
+  return (
+    <MenuRow
+      icon="countIn"
+      label={PLAYER_MENU_TEXT.countIn}
+      detail={disabled ? gridRowReason(state) : undefined}
+      value={disabled ? undefined : countInOptionLabel(bars)}
+      disabled={disabled}
+      onPress={onPress}
+    />
+  );
+}
+
 export function SongPlayerMenu({
   songId,
   visible,
@@ -102,6 +118,7 @@ export function SongPlayerMenu({
   onBack,
   onMeter,
   onTempoCorrection,
+  onCountIn,
 }: SongPlayerMenuProps) {
   const close = useSongPlayer((s) => s.close);
   const reanalyze = useSongLibrary((s) => s.reanalyze);
@@ -123,6 +140,10 @@ export function SongPlayerMenu({
     onDismiss();
     onTempoCorrection();
   }, [onDismiss, onTempoCorrection]);
+  const openCountIn = useCallback(() => {
+    onDismiss();
+    onCountIn();
+  }, [onDismiss, onCountIn]);
   return (
     <Sheet
       visible={visible}
@@ -141,14 +162,7 @@ export function SongPlayerMenu({
       ) : null}
       <SongMeterRow onPress={openMeter} />
       <TempoCorrectionRow onPress={openTempoCorrection} />
-      <MenuRow
-        icon="countIn"
-        label={PLAYER_MENU_TEXT.countIn}
-        value={PLAYER_MENU_TEXT.countInValue}
-        detail={PLAYER_MENU_TEXT.countInDetail}
-        disabled
-        onPress={doNothing}
-      />
+      <CountInRow onPress={openCountIn} />
       <MenuRow
         icon="stop"
         label={PLAYER_MENU_TEXT.stop}

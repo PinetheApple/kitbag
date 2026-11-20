@@ -189,18 +189,16 @@ describe('the song click chips', () => {
     }
   });
 
-  it('keeps the chips live with a grid, Count-in alone muted', () => {
-    const live = chips(mount());
-    expect(live.map((c) => c.props.disabled as boolean)).toEqual([
-      false,
-      false,
-      false,
-    ]);
-    expect(live.map((c) => c.props.muted as boolean)).toEqual([
-      true,
-      false,
-      false,
-    ]);
+  it('keeps every chip live and unmuted with a grid', () => {
+    for (const c of chips(mount())) {
+      expect(c.props.disabled).toBe(false);
+      expect(c.props.muted).toBe(false);
+    }
+  });
+
+  it("reads the song's count-in on its chip", () => {
+    givenSong({ countInBars: 2 });
+    expect(chip(mount(), 'Count-in: 2 bars').props.active).toBe(true);
   });
 
   it('shows the unsaved dot only while the song click is dirty', () => {
@@ -262,16 +260,20 @@ describe('the Click for this song sheet', () => {
     expect(song.cycleClickAccent).toHaveBeenCalledWith(2);
   });
 
-  it("shows the song's count-in with every length muted", () => {
+  it("shows the song's count-in and changes it live", () => {
     givenSong({ countInBars: 1 });
     const tree = opened();
     const countIn = select(tree, 'SegmentedControl', SONG_CLICK_TEXT.countIn);
     expect(countIn.props.selected).toBe('1');
     expect(
-      (countIn.props.options as { disabled: boolean }[]).every(
-        (o) => o.disabled,
+      (countIn.props.options as { disabled?: boolean }[]).some(
+        (o) => o.disabled === true,
       ),
-    ).toBe(true);
+    ).toBe(false);
+    act(() => {
+      (countIn.props.onSelect as (v: string) => void)('2');
+    });
+    expect(song.setClickCountIn).toHaveBeenCalledWith(2);
   });
 
   it("saves the song's click from Save for this song", () => {

@@ -22,7 +22,6 @@ export const SONG_CLICK_TEXT = {
   title: 'Click for this song',
   dismiss: 'Close click for this song',
   countIn: 'Count-in',
-  countInNote: 'Arrives with count-in for songs.',
   sound: 'Sound',
   soundRole: 'Beat level',
   accents: 'Accents',
@@ -42,7 +41,6 @@ export function countInOptionLabel(bars: KbCountInBars): string {
 export const COUNT_IN_OPTIONS = KB_COUNT_IN_BARS.map((bars) => ({
   value: String(bars),
   label: countInOptionLabel(bars),
-  disabled: true,
 }));
 
 export function accentedBeats(accents: readonly KB_ACCENT[]): number[] {
@@ -74,19 +72,32 @@ function accentChip(accents: readonly KB_ACCENT[]): ClickChip {
   };
 }
 
+type ChipSettings = Pick<
+  SongPlayerStore['clickSettings'],
+  'countInBars' | 'sounds' | 'accents'
+>;
+
+function countInChip(bars: KbCountInBars): ClickChip {
+  const off = bars === KB_COUNT_IN_OFF;
+  const label = off
+    ? SONG_CLICK_TEXT.countIn
+    : `${SONG_CLICK_TEXT.countIn}: ${countInOptionLabel(bars)}`;
+  return {
+    group: CLICK_GROUP.countIn,
+    label,
+    spoken: `${off ? `${label} off` : label}, change the count-in`,
+    active: !off,
+    muted: false,
+  };
+}
+
 function songChips(
-  settings: Pick<SongPlayerStore['clickSettings'], 'sounds' | 'accents'>,
+  settings: ChipSettings,
   custom: readonly CustomSoundView[],
 ): readonly ClickChip[] {
   const sound = `Click: ${soundLabel(settings.sounds.normal, custom)}`;
   return [
-    {
-      group: CLICK_GROUP.countIn,
-      label: SONG_CLICK_TEXT.countIn,
-      spoken: `${SONG_CLICK_TEXT.countIn}. ${SONG_CLICK_TEXT.countInNote}`,
-      active: false,
-      muted: true,
-    },
+    countInChip(settings.countInBars),
     {
       group: CLICK_GROUP.sound,
       label: sound,
@@ -99,7 +110,7 @@ function songChips(
 }
 
 export function clickChips(
-  settings: Pick<SongPlayerStore['clickSettings'], 'sounds' | 'accents'>,
+  settings: ChipSettings,
   custom: readonly CustomSoundView[],
   hasGrid: boolean,
 ): readonly ClickChip[] {

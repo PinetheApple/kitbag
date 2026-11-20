@@ -43,6 +43,7 @@ import { frameAtTap } from '../logic/waveSeek.ts';
 import type { UsePlayhead } from './playhead.ts';
 import { SongClickChips } from './SongClickChips.tsx';
 import { SongClickSheet, useSongClickSheet } from './SongClickSheet.tsx';
+import { CLICK_GROUP, type ClickGroup } from '../logic/clickChipText.ts';
 import { SongMeter } from './SongMeter.tsx';
 import { SongPlayerMenu } from './SongPlayerMenu.tsx';
 import { SongTempoCorrection } from './SongTempoCorrection.tsx';
@@ -226,6 +227,9 @@ interface BodyProps {
   readonly onCloseMeter: () => void;
   readonly onCloseTempo: () => void;
   readonly usePlayhead: UsePlayhead;
+  readonly clickGroup: ClickGroup | null;
+  readonly onOpenClick: (group: ClickGroup) => void;
+  readonly onCloseClick: () => void;
 }
 
 function Body({
@@ -237,6 +241,9 @@ function Body({
   onCloseMeter,
   onCloseTempo,
   usePlayhead,
+  clickGroup,
+  onOpenClick,
+  onCloseClick,
 }: BodyProps) {
   const styles = useStyles();
   const status = useSongPlayer((s) => s.status);
@@ -246,7 +253,6 @@ function Body({
   const playhead = usePlayhead(rate, frames, loopEnd);
   const scrub = useLoopScrub(useSongPlayer);
   const handles = useLoopHandles();
-  const clickSheet = useSongClickSheet();
   if (status !== 'ready')
     return (
       <View style={styles.bodyContent}>
@@ -264,12 +270,12 @@ function Body({
           <ScrubRow frame={playhead} {...scrub} loopHandles={handles} />
         </Card>
         <LockCard songId={songId} />
-        <SongClickChips onOpen={clickSheet.open} />
+        <SongClickChips onOpen={onOpenClick} />
       </ScrollView>
       <SongClickSheet
-        group={clickSheet.group}
+        group={clickGroup}
         bottomInset={bottom}
-        onDismiss={clickSheet.close}
+        onDismiss={onCloseClick}
       />
       <SongMeter
         songId={songId}
@@ -325,6 +331,11 @@ export function SongPlayerScreen({
   const closeTempo = useCallback(() => {
     setTempoOpen(false);
   }, []);
+  const clickSheet = useSongClickSheet();
+  const { open: openClick } = clickSheet;
+  const openCountIn = useCallback(() => {
+    openClick(CLICK_GROUP.countIn);
+  }, [openClick]);
   const padding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
   return (
     <View style={[styles.screen, padding]}>
@@ -338,6 +349,9 @@ export function SongPlayerScreen({
         onCloseMeter={closeMeter}
         onCloseTempo={closeTempo}
         usePlayhead={usePlayhead}
+        clickGroup={clickSheet.group}
+        onOpenClick={clickSheet.open}
+        onCloseClick={clickSheet.close}
       />
       <SongPlayerMenu
         songId={songId}
@@ -347,6 +361,7 @@ export function SongPlayerScreen({
         onBack={leave}
         onMeter={openMeter}
         onTempoCorrection={openTempo}
+        onCountIn={openCountIn}
       />
     </View>
   );
