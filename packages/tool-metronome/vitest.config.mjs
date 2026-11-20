@@ -23,6 +23,7 @@ export default defineConfig({
       'src/screen/CustomSounds.test.tsx',
       'src/screen/CustomSoundSheets.test.tsx',
       'src/screen/SoundSheets.test.tsx',
+      'src/library/songLists.test.tsx',
     ],
     alias: {
       '@kitbag/core-native': stub('../core-native/src/pure.ts'),

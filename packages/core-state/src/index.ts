@@ -273,6 +273,7 @@ export {
 } from './songLibrary/logic.ts';
 export { playerSongBadge } from './songLibrary/badge.ts';
 export { rowFilesOf } from './songLibrary/availability.ts';
+export { rowKey } from './songLibrary/rowKey.ts';
 export {
   errorCode,
   type BundleAddOutcome,
@@ -295,6 +296,11 @@ export {
 export type { PlayerTracks } from './dataFolder/release.ts';
 export { useDataFolder } from './dataFolder/useDataFolder.ts';
 export { moveSettled } from './dataFolder/outcomes.ts';
+export {
+  movingRowKey,
+  rowMatchIndex,
+  type RowMatchIndex,
+} from './dataFolder/movingRow.ts';
 export { useStemDeck } from './stemDeck/useStemDeck.ts';
 export {
   createStemDeckStore,

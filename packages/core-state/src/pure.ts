@@ -25,3 +25,5 @@ export {
   TEMPO_CORRECTIONS,
   type TempoCorrection,
 } from '@kitbag/core-db/src/tempo-correction';
+export * from './dataFolder/movingRow.ts';
+export * from './songLibrary/rowKey.ts';
