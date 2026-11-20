@@ -4,6 +4,7 @@ import type { StemPlayerState } from './store.ts';
 
 export const ADVANCE_OUTCOME = {
   playing: 'playing',
+  stopped: 'stopped',
   unplayable: 'unplayable',
   displaced: 'displaced',
 } as const;
@@ -50,6 +51,7 @@ interface EndedIn {
 export function songEnds(ended: () => boolean, session: () => number) {
   const listeners = new Set<AdvanceListener>();
   let from: EndedIn | null = null;
+  let stoppedIn: number | null = null;
   const current = () => from !== null && from.session === session();
   const leave = (left: EndedIn, cause: AdvanceCause) => {
     from = left;
@@ -86,6 +88,11 @@ export function songEnds(ended: () => boolean, session: () => number) {
     advanced: () => {
       from = null;
     },
+    stopped: () => {
+      stoppedIn = session();
+      if (current()) from = null;
+    },
+    stoppedSince: (opened: number) => stoppedIn === opened,
   };
 }
 
@@ -113,6 +120,7 @@ export async function advanceSong(
     return ADVANCE_OUTCOME.unplayable;
   }
   steps.ends.advanced();
+  if (steps.ends.stoppedSince(opened)) return ADVANCE_OUTCOME.stopped;
   steps.play();
   return ADVANCE_OUTCOME.playing;
 }

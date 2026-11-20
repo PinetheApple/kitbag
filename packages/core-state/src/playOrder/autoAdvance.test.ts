@@ -177,6 +177,18 @@ describe('auto-advance at the end of a stem song', () => {
     expect(h.seen).toEqual([]);
   });
 
+  it('keeps the committed step and tries no other when the next song opens stopped', async () => {
+    const h = harness(
+      [play(NIGHT_BUS), play(TIN_ROOF)],
+      [ADVANCE_OUTCOME.stopped],
+    );
+    await h.songEnds();
+    expect(h.commitNext).toHaveBeenCalledTimes(1);
+    expect(h.advanceTo).toHaveBeenCalledExactlyOnceWith(NIGHT_BUS);
+    expect(h.stopAdvancing).not.toHaveBeenCalled();
+    expect(h.seen.map((arrival) => arrival.kind)).toEqual([ARRIVAL.arriving]);
+  });
+
   it('touches neither the queue nor the setlist once the end no longer stands', async () => {
     const h = harness([play(NIGHT_BUS)], [], 1, () => false);
     await h.songEnds();
