@@ -10,7 +10,6 @@ import type { MetronomeCommands } from '../metronome/commands.ts';
 import { createMetronomeStore, DEFAULT_BPM } from '../metronome/store.ts';
 import { songRow } from '../storage/fixtures.test-helper.ts';
 import type { MixerClaim } from '../stemPlayer/mixerClaim.ts';
-import { createMixerClick } from '../stemPlayer/mixerClick.ts';
 import { fakeRuntime, RATE, record } from '../stemPlayer/store.test-helper.ts';
 import { secondsToFrames } from '../stemPlayer/time.ts';
 import type { SongPlayerRuntime } from './runtime.ts';
@@ -69,7 +68,7 @@ export function fakeMetronome() {
     () => 0,
     () => DEFAULT_BPM,
     Date.now,
-    createMixerClick(),
+    { active: () => false, release: () => undefined },
   );
   return { store, commands };
 }
