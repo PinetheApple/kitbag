@@ -10,6 +10,8 @@ import {
   SheetHost,
   QUEUE_TEXT,
   ThemeProvider,
+  useLeftSetlistNotice,
+  useNotice,
 } from '@kitbag/core-design';
 import {
   configurePlayOrder,
@@ -18,6 +20,7 @@ import {
   songLibraryStore,
   songPlayerStore,
   stemPlayerStore,
+  useLibrary,
   type QueuedSong,
 } from '@kitbag/core-state';
 import { act } from 'react';
@@ -44,7 +47,7 @@ import {
   stemRow,
   stems,
 } from './playQueue.test-helper.ts';
-import { QueueSheet } from './QueueSheet.tsx';
+import { QueueSheet, type QueueSheetProps } from './QueueSheet.tsx';
 
 const NIGHT_BUS = 21;
 const TIN_ROOF = 22;
@@ -71,6 +74,15 @@ afterEach(() => {
   stemPlayerStore.setState(stemPlayerBefore, true);
 });
 
+type SheetUnderTestProps = Omit<QueueSheetProps, 'notice' | 'onLeftSetlist'>;
+
+function SheetUnderTest(props: SheetUnderTestProps) {
+  const notice = useNotice();
+  const rejoinSetlist = useLibrary((s) => s.rejoinSetlist);
+  const leftSetlist = useLeftSetlistNotice(notice, rejoinSetlist);
+  return <QueueSheet {...props} notice={notice} onLeftSetlist={leftSetlist} />;
+}
+
 async function openOnList(...songs: QueuedSong[]) {
   setQueued(songs);
   await playOrderStore.getState().refresh();
@@ -84,13 +96,12 @@ async function openOnList(...songs: QueuedSong[]) {
   const renderer = create(
     <ThemeProvider mode="dark">
       <SheetHost topInset={0}>
-        <QueueSheet
+        <SheetUnderTest
           {...routes}
           playsInPlace
           visible
           bottomInset={0}
           onDismiss={onDismiss}
-          onLeftSetlist={vi.fn()}
         />
       </SheetHost>
     </ThemeProvider>,
@@ -265,5 +276,42 @@ describe('a metronome song in the setlist part of the queue', () => {
   it('shows no hint when no metronome song is left', async () => {
     const sheet = await openOnList(stems(NIGHT_BUS));
     expect(sheet.has(QUEUE_TEXT.metronomeHint)).toBe(false);
+  });
+});
+
+function inSheetLayer(node: ReactTestInstance): boolean {
+  for (let up: ReactTestInstance | null = node; up !== null; up = up.parent)
+    if (typeof up.type === 'string' && up.props.pointerEvents === 'auto')
+      return true;
+  return false;
+}
+
+describe('leaving the setlist with the queue sheet open', () => {
+  it('shows Undo in the sheet layer, over the open sheet', async () => {
+    metronomeEntryOnStage();
+    const leaveSetlist = vi.fn(() => {
+      libraryStore.setState({ session: null });
+      return Promise.resolve({
+        setlistId: GIG,
+        setlistName: 'Gig',
+        restores: {
+          session: { setlistId: GIG, skipped: [] },
+          loaded: null,
+          played: [],
+          discarded: null,
+        },
+        leftAs: { session: null, loaded: null },
+      });
+    });
+    libraryStore.setState({ leaveSetlist });
+    const sheet = await openOnList();
+    await sheet.press(QUEUE_TEXT.leaveSetlist);
+    const undo = sheet.renderer.root.findAll(
+      (node) =>
+        typeof node.type === 'string' &&
+        node.props.accessibilityLabel === QUEUE_TEXT.undo,
+    );
+    expect(sheet.has('Left Gig')).toBe(true);
+    expect(undo.some(inSheetLayer)).toBe(true);
   });
 });

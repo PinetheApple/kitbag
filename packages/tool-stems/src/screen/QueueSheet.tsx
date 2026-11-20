@@ -2,6 +2,7 @@ import {
   Button,
   createThemedStyles,
   EmptyState,
+  NoticeSnackbar,
   nextFromLabel,
   playerWaveBars,
   QUEUE_TEXT,
@@ -11,6 +12,7 @@ import {
   SheetHint,
   space,
   upNextCountLabel,
+  type Notice,
 } from '@kitbag/core-design';
 import {
   entriesAfter,
@@ -234,6 +236,7 @@ export interface QueueSheetProps extends PlayOrderRoutes {
   readonly playsInPlace: boolean;
   readonly onDismiss: () => void;
   readonly onLeftSetlist: (left: LeftSetlist) => void;
+  readonly notice: Notice;
 }
 
 const stemsOf = (stemSetId: number): QueuedSong => ({
@@ -346,6 +349,7 @@ export function QueueSheet(props: QueueSheetProps) {
         onDismiss={dismiss}
         onClosed={closed}
         pinnedBelowBar
+        notice={<NoticeSnackbar inline notice={props.notice} />}
         footer={
           <Footer
             canPlay={idle && actions.queued}
