@@ -8,6 +8,7 @@ import com.kitbag.corenative.library.PortableVolume
 import com.kitbag.corenative.library.VolumeProvider
 import com.kitbag.corenative.library.Waveforms
 import com.kitbag.corenative.library.move.MoveFixture.Companion.CARD_UUID
+import com.kitbag.corenative.library.move.MoveFixture.Companion.SONG
 import com.kitbag.corenative.library.move.MoveFixture.Companion.WAVEFORM
 import java.io.File
 import java.io.IOException
@@ -15,6 +16,7 @@ import java.nio.file.Files
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -71,6 +73,13 @@ class CardReturnReanalysisTest {
     assertTrue(fx.runner().finishLeftovers())
     assertReturnedWithNewestWaveform()
     assertLeftovers(emptyMap())
+  }
+
+  private fun assertNothingSuperseded() {
+    assertEquals(mapOf(CARD_UUID to away.keys), awayList())
+    assertLeftovers(emptyMap())
+    assertEquals(fx.hashes(away), fx.visibleFiles(fx.cardRoot))
+    assertNull(fx.runner().pending())
   }
 
   private fun awayList() = AwayManifest(File(fx.filesDir, AwayManifest.FILE_NAME), { _, _ -> }).load()
@@ -149,14 +158,29 @@ class CardReturnReanalysisTest {
   }
 
   @Test
-  fun `an away path whose card copy is gone is forgotten by the return`() {
+  fun `a path both parked and away is cleared by leftover clean-up alone`() {
     fx.write(fx.internalRoot, WAVEFORM, NEW_PEAKS.toByteArray())
     fx.leftovers().record(CARD_UUID, listOf(WAVEFORM))
-    assertEquals(MoveOutcome.Done, fx.runner().returnCard(card))
-    assertReturnedWithNewestWaveform()
+    assertTrue(fx.runner().finishLeftovers())
+    assertFalse(File(fx.cardRoot, WAVEFORM).exists())
+    assertEquals(away.keys - WAVEFORM, fx.folder.awayOn(CARD_UUID))
     assertLeftovers(emptyMap())
-    assertEquals(emptySet<String>(), fx.folder.awayOn(CARD_UUID))
-    assertEquals(MoveOutcome.NoMove, fx.runner().returnCard(card))
+  }
+
+  @Test
+  fun `a song-audio clash refuses without superseding the re-analysed waveform`() {
+    reanalyse { }
+    fx.write(fx.internalRoot, SONG, "clash".toByteArray())
+    assertEquals(MoveOutcome.Failed(MoveFailure.TARGET_OCCUPIED), fx.runner().returnCard(card))
+    assertNothingSuperseded()
+  }
+
+  @Test
+  fun `a return refused for space supersedes nothing`() {
+    reanalyse { }
+    fx.freeBytes = 0
+    assertEquals(MoveOutcome.Failed(MoveFailure.NO_SPACE), fx.runner().returnCard(card))
+    assertNothingSuperseded()
   }
 
   @Test(timeout = LOCK_TEST_TIMEOUT_MILLIS)

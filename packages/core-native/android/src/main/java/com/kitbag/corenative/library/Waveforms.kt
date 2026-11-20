@@ -4,6 +4,8 @@ import java.io.File
 import java.io.IOException
 
 object Waveforms {
+  const val SIDECAR_EXTENSION = ".kwav"
+
   fun place(
     folder: DataFolder,
     waveformRelativeDir: String,
