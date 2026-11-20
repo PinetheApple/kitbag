@@ -116,6 +116,8 @@ export interface PracticeSessionRecord {
   avgBpm: number;
   setlistUuid: string | null;
   songsPlayed: string | null;
+  setlistName: string | null;
+  log: string | null;
 }
 
 // The value stays the stored text: only the app knows which values are valid,

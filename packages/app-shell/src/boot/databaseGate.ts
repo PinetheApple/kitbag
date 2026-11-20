@@ -27,20 +27,22 @@ export async function reopenDatabase(): Promise<DatabaseOpenError | undefined> {
   return undefined;
 }
 
-function isUnsettled(error: unknown): boolean {
-  const code = errorCode(error);
-  if (code === null) return false;
+function copyFailureNotices(): ReadonlyMap<string, string> {
   try {
-    return code === getKitbagLibrary().getConstants().databaseCopyUnsettled;
+    const constants = getKitbagLibrary().getConstants();
+    return new Map([
+      [constants.databaseCopyNoSpace, DATABASE_ERROR_TEXT.copyNoSpace],
+      [constants.databaseCopyUnreadable, DATABASE_ERROR_TEXT.copyUnreadable],
+    ]);
   } catch {
-    return false;
+    return new Map();
   }
 }
 
 function copyFailureNotice(error: unknown): string {
-  return isUnsettled(error)
-    ? DATABASE_ERROR_TEXT.copyUnsettled
-    : DATABASE_ERROR_TEXT.copyFailed;
+  const code = errorCode(error);
+  const notice = code === null ? undefined : copyFailureNotices().get(code);
+  return notice ?? DATABASE_ERROR_TEXT.copyFailed;
 }
 
 export async function saveDatabaseCopyNotice(

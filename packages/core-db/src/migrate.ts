@@ -28,7 +28,8 @@ export const V21_SCHEMA_VERSION = V20_SCHEMA_VERSION + 1;
 export const V22_SCHEMA_VERSION = V21_SCHEMA_VERSION + 1;
 export const V23_SCHEMA_VERSION = V22_SCHEMA_VERSION + 1;
 export const V24_SCHEMA_VERSION = V23_SCHEMA_VERSION + 1;
-export const SCHEMA_VERSION = V24_SCHEMA_VERSION + 1;
+export const V25_SCHEMA_VERSION = V24_SCHEMA_VERSION + 1;
+export const SCHEMA_VERSION = V25_SCHEMA_VERSION + 1;
 
 const OLDEST_UPGRADABLE_VERSION = V7_SCHEMA_VERSION;
 
@@ -361,6 +362,15 @@ export const MIGRATE_V24_TO_V25: readonly string[] = [
 )`,
 ];
 
+export const MIGRATE_V25_TO_V26: readonly string[] = [
+  'ALTER TABLE practice_sessions ADD COLUMN log TEXT',
+  'ALTER TABLE practice_sessions ADD COLUMN setlist_name TEXT',
+  `UPDATE practice_sessions SET setlist_name =
+   (SELECT name FROM setlists WHERE setlists.id = practice_sessions.setlist_id)
+   WHERE setlist_id IS NOT NULL`,
+  'CREATE INDEX practice_sessions_start_time ON practice_sessions (start_time)',
+];
+
 export const BASELINE: readonly string[] = [
   ...V11_BASELINE,
   ...MIGRATE_V11_TO_V12,
@@ -377,6 +387,7 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V22_TO_V23,
   ...MIGRATE_V23_TO_V24,
   ...MIGRATE_V24_TO_V25,
+  ...MIGRATE_V25_TO_V26,
 ];
 
 export const MIGRATE_V7_TO_V8: readonly string[] = [
@@ -433,7 +444,8 @@ const UPGRADES: readonly {
   { to: V22_SCHEMA_VERSION, steps: MIGRATE_V21_TO_V22 },
   { to: V23_SCHEMA_VERSION, steps: MIGRATE_V22_TO_V23 },
   { to: V24_SCHEMA_VERSION, steps: MIGRATE_V23_TO_V24 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V24_TO_V25 },
+  { to: V25_SCHEMA_VERSION, steps: MIGRATE_V24_TO_V25 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V25_TO_V26 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {

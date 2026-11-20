@@ -75,8 +75,10 @@ export {
 } from './metronome/runtime.ts';
 export {
   PRACTICE_TEMPO_SAMPLE_MS,
+  type PracticeRecording,
   type PracticeSetlist,
   type PracticeSong,
+  type PracticeStemSong,
   type PracticeStretch,
   type PracticeSummary,
 } from './practice/session.ts';

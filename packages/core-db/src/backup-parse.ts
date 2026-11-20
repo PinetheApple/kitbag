@@ -226,6 +226,8 @@ function readPracticeSession(
     avgBpm: r.number('avgBpm'),
     setlistUuid: r.nullableUuid('setlistUuid'),
     songsPlayed: r.nullableString('songsPlayed'),
+    setlistName: r.optionalNullableString('setlistName'),
+    log: r.optionalNullableString('log'),
   };
 }
 
