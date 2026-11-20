@@ -1,7 +1,7 @@
 import { KB_MAX_TRACKS, KB_RESULT } from '@kitbag/core-native';
 import type { StemSetRecord } from '@kitbag/core-db';
 
-import { UNSHIFTED_KEY } from './mix.ts';
+import { UNITY_GAIN, UNSHIFTED_KEY } from './mix.ts';
 import type { StemPlayerRuntime } from './runtime.ts';
 import { transposable, wholeKey } from './speedKey.ts';
 import type { ActionContext, StemRow } from './store.ts';
@@ -22,6 +22,18 @@ export function rowsOf(record: StemSetRecord): StemRow[] {
     envelope: null,
     extent: longest > 0 ? stem.durationSec / longest : 1,
   }));
+}
+
+export function unloadTracks(
+  commands: StemPlayerRuntime['commands'],
+  count: number,
+): void {
+  for (let track = 0; track < count; track++) {
+    commands.mixerSetSolo(track, false);
+    commands.mixerSetMute(track, false);
+    commands.mixerSetGain(track, UNITY_GAIN);
+    commands.mixerUnloadTrack(track);
+  }
 }
 
 // Unload resets a track's key, so only a shifted stem needs one sent.
