@@ -26,6 +26,7 @@ import org.junit.Test
 class AwayDeleteTest {
   private lateinit var temp: File
   private lateinit var fx: MoveFixture
+  private var awayChanges = 0
   private val card = DataFolderLocation.Card(CARD_UUID)
   private val allAway = mapOf(CARD_UUID to setOf(SONG, WAVEFORM, DRUMS, BASS))
 
@@ -45,7 +46,8 @@ class AwayDeleteTest {
     temp.deleteRecursively()
   }
 
-  private fun deletes() = LibraryDeletes(fx.folder, fx.leftovers()) { message, _ -> fx.warnings.add(message) }
+  private fun deletes() =
+    LibraryDeletes(fx.folder, fx.leftovers(), onAwayChanged = { awayChanges++ }) { message, _ -> fx.warnings.add(message) }
 
   private fun mountCard(mounted: Boolean) {
     fx.volumes.volumes = listOf(fx.card(mounted))
@@ -68,6 +70,15 @@ class AwayDeleteTest {
     assertEquals(mapOf(CARD_UUID to setOf(DRUMS, BASS)), awayList())
     assertEquals(emptyMap<String, Set<String>>(), fx.leftovers().load())
     assertEquals(LibraryFile.Missing, fx.folder.resolve(SONG))
+  }
+
+  @Test
+  fun `deleting an away song reports the away list changed, with its card mounted or out`() {
+    deletes().stemFolder(STEM_FOLDER)
+    assertEquals(1, awayChanges)
+    mountCard(true)
+    deletes().songFolder(SONG_FOLDER)
+    assertEquals(2, awayChanges)
   }
 
   @Test
@@ -191,6 +202,7 @@ class AwayDeleteTest {
     deletes().songFolder(IMPORTED_FOLDER)
     assertFalse(File(fx.internalRoot, IMPORTED).exists())
     assertEquals(allAway, awayList())
+    assertEquals(0, awayChanges)
   }
 
   @Test

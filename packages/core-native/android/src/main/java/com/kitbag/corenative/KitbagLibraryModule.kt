@@ -65,6 +65,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private val deletes = LibraryDeletes(
     DataFolder.get(reactContext),
     DataFolderMoves.get(reactContext).leftovers,
+    onAwayChanged = ::emitOnDataFolderChanged,
   ) { message, cause -> Log.w(TAG, message, cause) }
   private val volumes = VolumeWatcher(reactContext, ::onVolumesChanged)
   private val databaseCopies =

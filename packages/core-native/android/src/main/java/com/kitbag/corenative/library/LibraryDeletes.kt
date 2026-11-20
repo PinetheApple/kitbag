@@ -6,6 +6,7 @@ import java.io.IOException
 class LibraryDeletes(
   private val dataFolder: DataFolder,
   private val leftovers: AwayManifest,
+  private val onAwayChanged: () -> Unit,
   private val warn: (message: String, cause: Exception) -> Unit,
 ) {
   fun file(relativePath: String) = delete({ LibraryPaths.resolve(it, relativePath) }, Removal.FILE)
@@ -20,10 +21,14 @@ class LibraryDeletes(
       val inDataFolder = target(root)
       val away = dataFolder.awayUnder(LibraryPaths.relativize(root, inDataFolder), removal.folderMatch)
       removal.removeOrThrow(inDataFolder)
-      for (entry in away) {
-        dataFolder.forgetAway(entry.volumeUuid, entry.paths)
-        val removedFromCard = entry.mountedRoot?.let { removeFromCard(removal, target(it)) } ?: false
-        if (!removedFromCard) park(entry)
+      try {
+        for (entry in away) {
+          dataFolder.forgetAway(entry.volumeUuid, entry.paths)
+          val removedFromCard = entry.mountedRoot?.let { removeFromCard(removal, target(it)) } ?: false
+          if (!removedFromCard) park(entry)
+        }
+      } finally {
+        if (away.isNotEmpty()) onAwayChanged()
       }
     }
 
