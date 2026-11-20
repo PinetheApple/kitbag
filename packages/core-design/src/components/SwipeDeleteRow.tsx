@@ -142,7 +142,7 @@ export function SwipeDeleteRow({
         <View style={styles.panel}>
           <Icon
             name="delete"
-            size="action"
+            size={tone === 'tint' ? 'swipeRemove' : 'action'}
             color={tone === 'tint' ? tintInk(theme) : 'bg'}
           />
           <Text style={[styles.label, tone === 'tint' && styles.labelTint]}>

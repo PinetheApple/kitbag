@@ -67,7 +67,7 @@ function QueuedSection({
             variant="ghost"
             size="target"
             icon="clearQueue"
-            iconSize="caret"
+            iconSize="action"
             label={QUEUE_TEXT.clearQueue}
             onPress={onClear}
           />
@@ -105,7 +105,7 @@ function SetlistSection({
             variant="ghost"
             size="target"
             icon="close"
-            iconSize="caret"
+            iconSize="action"
             label={QUEUE_TEXT.leaveSetlist}
             onPress={onLeave}
           />
@@ -310,6 +310,14 @@ export function QueueSheet(props: QueueSheetProps) {
         bottomInset={bottomInset}
         onDismiss={dismiss}
         onClosed={actions.closed}
+        pinnedBelowBar
+        footer={
+          <Footer
+            canPlay={idle && actions.queued}
+            onDone={dismiss}
+            onPlayQueue={actions.playQueue}
+          />
+        }
       >
         <NowPlaying />
         <QueueList
@@ -317,11 +325,6 @@ export function QueueSheet(props: QueueSheetProps) {
           onOpen={actions.open}
           onClear={askClear}
           onLeave={actions.leave}
-        />
-        <Footer
-          canPlay={idle && actions.queued}
-          onDone={dismiss}
-          onPlayQueue={actions.playQueue}
         />
       </Sheet>
       <ClearQueueSheet

@@ -2,12 +2,14 @@ import {
   Badge,
   createThemedStyles,
   DragListRow,
+  type DragHandleLook,
   FACT_SEPARATOR,
   Icon,
   minTouchTargetDp,
   PlainListRow,
   PLAYING,
   QUEUE_TEXT,
+  queueSheet,
   queuedRowLabel,
   removeFromQueueLabel,
   setlistPlaceParts,
@@ -45,9 +47,12 @@ import { setlistRowSubtitle } from '../logic/upNextText.ts';
 type PlayQueueEntry = PlayOrderStore['queue'][number];
 
 const NOW_BADGE = 'NOW';
+const QUEUE_HANDLE: DragHandleLook = { size: 'queueHandle', color: 'text3' };
 
 const useStyles = createThemedStyles(() => ({
   trailing: { flexDirection: 'row', alignItems: 'center' },
+  badges: { gap: queueSheet.badgeGap },
+  badgeSlot: { alignSelf: 'flex-end' },
   iconTarget: {
     width: minTouchTargetDp,
     height: minTouchTargetDp,
@@ -72,6 +77,7 @@ interface NowPlayingRowProps {
 }
 
 function NowPlayingRow({ title, subtitle, stems }: NowPlayingRowProps) {
+  const styles = useStyles();
   const row = usePlainRowStyles();
   return (
     <View
@@ -81,9 +87,15 @@ function NowPlayingRow({ title, subtitle, stems }: NowPlayingRowProps) {
     >
       <View style={row.press}>
         <RowText title={title} subtitle={subtitle} />
-        <View>
-          {stems ? <StemsBadge /> : null}
-          <Badge tone="accent" variant="filled" label={NOW_BADGE} />
+        <View style={styles.badges}>
+          {stems ? (
+            <View style={styles.badgeSlot}>
+              <StemsBadge />
+            </View>
+          ) : null}
+          <View style={styles.badgeSlot}>
+            <Badge tone="accent" variant="filled" label={NOW_BADGE} />
+          </View>
         </View>
       </View>
     </View>
@@ -194,6 +206,7 @@ export function QueuedRow({ entry, index, count, onPlay }: QueuedRowProps) {
       subtitle={queuedSongFacts(song, library)}
       reorder={reorder}
       swipe={swipe}
+      handle={QUEUE_HANDLE}
       trailing={
         <View style={styles.trailing}>
           {song.kind === 'stems' ? <StemsBadge /> : null}

@@ -1,6 +1,15 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
-import { playerWaveBars, SheetHost, ThemeProvider } from '@kitbag/core-design';
+import {
+  Button,
+  DragListRow,
+  iconSizes,
+  playerWaveBars,
+  queueSheet,
+  screenBar,
+  SheetHost,
+  ThemeProvider,
+} from '@kitbag/core-design';
 import {
   configurePlayOrder,
   libraryStore,
@@ -11,6 +20,7 @@ import {
   type QueuedSong,
 } from '@kitbag/core-state';
 import { act } from 'react';
+import { ScrollView, StyleSheet } from 'react-native';
 import {
   create,
   type ReactTestInstance,
@@ -100,7 +110,14 @@ async function openOnList(...songs: QueuedSong[]) {
     await flush();
   };
   const has = (text: string) => textsOf(renderer).includes(text);
-  return { routes, onDismiss, press, has, texts: () => textsOf(renderer) };
+  return {
+    renderer,
+    routes,
+    onDismiss,
+    press,
+    has,
+    texts: () => textsOf(renderer),
+  };
 }
 
 const stemTakeOver = () =>
@@ -179,5 +196,58 @@ describe('the queue sheet over a list, while a stem song plays', () => {
     const [stopped] = handToMetronome.mock.invocationCallOrder;
     const [loaded] = loadSong.mock.invocationCallOrder;
     expect(stopped).toBeLessThan(loaded ?? 0);
+  });
+});
+
+describe('the queue sheet against its value table', () => {
+  const flat = (node: ReactTestInstance) =>
+    StyleSheet.flatten(node.props.style as never) as Record<string, unknown>;
+
+  it('pins its top under the app bar and keeps the footer out of the scroll', async () => {
+    const sheet = await openOnList(stems(NIGHT_BUS));
+    const pinned = sheet.renderer.root.findAll(
+      (node) => flat(node).marginTop === screenBar.height,
+    );
+    expect(pinned.length).toBeGreaterThan(0);
+    const [scroll] = sheet.renderer.root.findAllByType(ScrollView);
+    const done = sheet.renderer.root.findAll(
+      (node) => node.type === Button && node.props.label === 'Done',
+    );
+    expect(done).toHaveLength(1);
+    expect(scroll?.findAll((node) => node === done[0])).toHaveLength(0);
+  });
+
+  it('draws the handle, the section keys and the swipe as the table says', async () => {
+    const sheet = await openOnList(stems(NIGHT_BUS));
+    const [row] = sheet.renderer.root.findAllByType(DragListRow);
+    expect(row?.props.handle).toEqual({ size: 'queueHandle', color: 'text3' });
+    expect(iconSizes.queueHandle).toBe(20);
+    const clear = sheet.renderer.root.find(
+      (node) => node.type === Button && node.props.label === 'Clear queue',
+    );
+    expect(iconSizes[clear.props.iconSize as keyof typeof iconSizes]).toBe(16);
+    const trash = sheet.renderer.root.find(
+      (node) =>
+        typeof node.type !== 'string' &&
+        node.props.name === 'delete' &&
+        node.props.size !== undefined,
+    );
+    expect(iconSizes[trash.props.size as keyof typeof iconSizes]).toBe(20);
+  });
+
+  it('stacks the Now playing badges in a column 4 dp apart', async () => {
+    stemPlayerStore.setState({
+      status: 'ready',
+      setId: NIGHT_BUS,
+      title: 'Night Bus',
+      advancedTo: null,
+    });
+    const sheet = await openOnList();
+    const stack = sheet.renderer.root.findAll(
+      (node) =>
+        typeof node.type === 'string' && flat(node).gap === queueSheet.badgeGap,
+    );
+    expect(stack).toHaveLength(1);
+    expect(queueSheet.badgeGap).toBe(4);
   });
 });

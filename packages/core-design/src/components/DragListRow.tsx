@@ -14,10 +14,17 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { inset, radius, size, space, textRoles } from '../roles.ts';
+import {
+  inset,
+  radius,
+  size,
+  space,
+  textRoles,
+  type IconSize,
+} from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
-import { minTouchTargetDp } from '../tokens.ts';
+import { minTouchTargetDp, type ColorToken } from '../tokens.ts';
 import { dropTarget, NO_DRAG, reorderTarget } from '../dragReorder.ts';
 import { Icon } from './Icon.tsx';
 import {
@@ -30,6 +37,13 @@ import { SwipeDeleteRow } from './SwipeDeleteRow.tsx';
 
 const HANDLE_HIT_SLOP = { top: inset.rowV, bottom: inset.rowV };
 const DRAGGING_Z = 1;
+
+export interface DragHandleLook {
+  readonly size: IconSize;
+  readonly color: ColorToken;
+}
+
+const LIST_HANDLE: DragHandleLook = { size: 'control', color: 'decor' };
 
 const useStyles = createThemedStyles((theme) => ({
   handle: {
@@ -156,7 +170,12 @@ function useHandleActions(reorder: DragReorder) {
   );
 }
 
-function Handle({ reorder }: { readonly reorder: DragReorder }) {
+interface HandleProps {
+  readonly reorder: DragReorder;
+  readonly look: DragHandleLook;
+}
+
+function Handle({ reorder, look }: HandleProps) {
   const styles = useStyles();
   const onAction = useHandleActions(reorder);
   return (
@@ -171,7 +190,7 @@ function Handle({ reorder }: { readonly reorder: DragReorder }) {
       onAccessibilityAction={onAction}
       style={styles.handle}
     >
-      <Icon name="dragHandle" size="control" color="decor" />
+      <Icon name="dragHandle" size={look.size} color={look.color} />
     </View>
   );
 }
@@ -184,6 +203,7 @@ export interface DragRowSwipe {
 export interface DragListRowProps extends PlainListRowProps {
   readonly reorder: DragReorder;
   readonly swipe?: DragRowSwipe;
+  readonly handle?: DragHandleLook;
 }
 
 export function DragListRow(props: DragListRowProps) {
@@ -194,7 +214,7 @@ export function DragListRow(props: DragListRowProps) {
   const content = (
     <>
       <GestureDetector gesture={drag.pan}>
-        <Handle reorder={props.reorder} />
+        <Handle reorder={props.reorder} look={props.handle ?? LIST_HANDLE} />
       </GestureDetector>
       <Text style={styles.index}>{props.reorder.index + 1}</Text>
       <RowPress {...props} />

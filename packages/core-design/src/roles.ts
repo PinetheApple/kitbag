@@ -257,6 +257,8 @@ export const iconSizes = {
   emptyMark: 36,
   checkMark: 11,
   sectionLoop: 20,
+  queueHandle: 20,
+  swipeRemove: 20,
   lyricsChip: 18,
   lyricsEmpty: 32,
   retimePad: 40,

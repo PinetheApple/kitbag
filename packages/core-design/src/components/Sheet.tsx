@@ -27,7 +27,14 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import type { IconName } from '../icons.ts';
-import { layout, opacity, size, space, textRoles } from '../roles.ts';
+import {
+  layout,
+  opacity,
+  screenBar,
+  size,
+  space,
+  textRoles,
+} from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { withAlpha } from '../theme.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
@@ -66,6 +73,7 @@ const useStyles = createThemedStyles((theme) => ({
     maxWidth: layout.maxContentWidth,
     alignSelf: 'center',
   },
+  grow: { flexGrow: 1 },
   sheet: {
     flexShrink: 1,
     backgroundColor: theme.color.surface1,
@@ -195,6 +203,8 @@ export interface SheetProps {
   readonly dim?: boolean;
   readonly scrollEnabled?: boolean;
   readonly notice?: ReactNode;
+  readonly pinnedBelowBar?: boolean;
+  readonly footer?: ReactNode;
   readonly children: ReactNode;
 }
 
@@ -215,6 +225,8 @@ export function Sheet({
   dim = false,
   scrollEnabled = true,
   notice,
+  pinnedBelowBar = false,
+  footer,
   children,
 }: SheetProps) {
   const styles = useStyles();
@@ -291,8 +303,12 @@ export function Sheet({
 
   const { topInset } = useSheetPortal();
   const slotStyle = useMemo(
-    () => [styles.sheetSlot, { marginTop: topInset }],
-    [styles.sheetSlot, topInset],
+    () => [
+      styles.sheetSlot,
+      pinnedBelowBar && styles.grow,
+      { marginTop: topInset + (pinnedBelowBar ? screenBar.height : 0) },
+    ],
+    [styles.sheetSlot, styles.grow, topInset, pinnedBelowBar],
   );
 
   useEffect(() => {
@@ -322,7 +338,7 @@ export function Sheet({
           <Animated.View style={noticeStyle}>{notice}</Animated.View>
         )}
         <Animated.View
-          style={[styles.sheet, sheetStyle]}
+          style={[styles.sheet, pinnedBelowBar && styles.grow, sheetStyle]}
           onLayout={handleLayout}
         >
           <GestureDetector gesture={dragToDismiss}>
@@ -350,7 +366,7 @@ export function Sheet({
               </View>
             </View>
           </GestureDetector>
-          <View style={styles.scrollFrame}>
+          <View style={[styles.scrollFrame, pinnedBelowBar && styles.grow]}>
             <ScrollView
               style={styles.scroll}
               contentContainerStyle={styles.content}
@@ -366,6 +382,7 @@ export function Sheet({
             </ScrollView>
             <View style={styles.titleGapFade} />
           </View>
+          {footer}
         </Animated.View>
       </Animated.View>
     </View>
