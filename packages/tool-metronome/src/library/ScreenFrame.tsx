@@ -25,8 +25,7 @@ function LibraryUnavailable() {
       icon="warning"
       title="Your songs could not be opened"
       reason="The song library failed to load. The metronome still works."
-      actionLabel="Try again"
-      onAction={retry}
+      action={{ label: 'Try again', onPress: retry }}
     />
   );
 }

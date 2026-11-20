@@ -16,7 +16,8 @@ import type { FeedbackTone } from '../theme.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { InlineIcon } from './IconGlyph.tsx';
 
-export type BadgeTone = 'default' | 'accent' | 'success' | 'warning' | 'danger';
+export type BadgeTone =
+  'default' | 'accent' | 'strong' | 'success' | 'warning' | 'danger';
 
 export type BadgeVariant = 'default' | 'list' | 'filled';
 
@@ -33,7 +34,9 @@ export type BadgeProps = BadgeBaseProps &
   );
 
 function feedbackTone(tone: BadgeTone): FeedbackTone | null {
-  return tone === 'default' || tone === 'accent' ? null : tone;
+  return tone === 'default' || tone === 'accent' || tone === 'strong'
+    ? null
+    : tone;
 }
 
 const useStyles = createThemedStyles((theme) => ({
@@ -55,6 +58,8 @@ const useStyles = createThemedStyles((theme) => ({
   defaultLabel: { color: theme.color.text2 },
   accentBox: { borderColor: theme.color.accentDim },
   accentLabel: { color: theme.color[theme.accentInk] },
+  strongBox: { borderColor: theme.color.decor },
+  strongLabel: { color: theme.color.text },
   successBox: { borderColor: theme.feedback.success.badgeBorder },
   successLabel: { color: theme.feedback.success.ink },
   warningBox: { borderColor: theme.feedback.warning.badgeBorder },
@@ -122,7 +127,10 @@ export function Badge({
       ]}
     >
       {icon === undefined ? null : (
-        <InlineIcon name={icon} style={[labelStyle, list && styles.listIcon]} />
+        <InlineIcon
+          name={icon}
+          style={[labelStyle, (list || tone === 'strong') && styles.listIcon]}
+        />
       )}
       <Text style={labelStyle}>{label}</Text>
     </View>

@@ -94,6 +94,8 @@ export const iconGlyphs = {
   addToQueue: 'format-list-group-plus',
   addToSetlist: 'playlist-plus',
   clearQueue: 'playlist-remove',
+  queue: 'playlist-play',
+  info: 'information-outline',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;

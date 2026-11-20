@@ -353,7 +353,7 @@ describe('Next from the song card', () => {
     const stillEnded = vi.fn(() => true);
     const h = harness([metronomeNext], [], 1, stillEnded);
     await h.pressNext();
-    expect(h.commitOpen).toHaveBeenCalledWith(BALLAD_COUNT, stillEnded);
+    expect(h.commitOpen).toHaveBeenCalledWith(BALLAD_COUNT);
     expect(h.peekNext.mock.invocationCallOrder[0]).toBeLessThan(
       h.commitOpen.mock.invocationCallOrder[0] ?? 0,
     );
@@ -369,7 +369,7 @@ describe('Next from the song card', () => {
     });
   });
 
-  it('keeps the stem song when a press during the load undid the commit', async () => {
+  it('keeps the stem song when the metronome song does not load', async () => {
     const h = harness([metronomeNext]);
     h.commitOpen.mockResolvedValueOnce(false);
     await h.pressNext();
@@ -425,6 +425,56 @@ describe('Next from the song card', () => {
     await h.pressNext();
     await h.pressNext();
     expect(h.advanceTo.mock.calls).toEqual([[NIGHT_BUS], [TIN_ROOF]]);
+  });
+});
+
+describe('Next from the player', () => {
+  const pressInApp = async (h: ReturnType<typeof harness>) => {
+    h.leave(ADVANCE_CAUSE.nextInApp);
+    await h.settle();
+  };
+
+  it('plays the next song like the card, marked as pressed in the app', async () => {
+    const h = harness([play(NIGHT_BUS)]);
+    await pressInApp(h);
+    expect(h.advanceTo).toHaveBeenCalledWith(NIGHT_BUS);
+    expect(h.arrivals.getState().arrival).toMatchObject({
+      kind: ARRIVAL.playing,
+      inApp: true,
+    });
+  });
+
+  it('leaves the arrival of the card and of a song end unmarked', async () => {
+    const card = harness([play(NIGHT_BUS)]);
+    await card.pressNext();
+    expect(card.arrivals.getState().arrival).toMatchObject({ inApp: false });
+    const ended = harness([play(NIGHT_BUS)]);
+    await ended.songEnds();
+    expect(ended.arrivals.getState().arrival).toMatchObject({ inApp: false });
+  });
+
+  it('opens a metronome song stopped, as the card does', async () => {
+    const h = harness([metronomeNext]);
+    await pressInApp(h);
+    expect(h.commitOpen).toHaveBeenCalledOnce();
+    expect(h.handToMetronome).toHaveBeenCalledOnce();
+  });
+
+  it('drops a second press while the first is still committing', async () => {
+    const h = harness([play(NIGHT_BUS), play(TIN_ROOF)]);
+    let release: (undo: Undo | null) => void = () => undefined;
+    h.commitNext.mockImplementationOnce(
+      () =>
+        new Promise<Undo | null>((resolve) => {
+          release = resolve;
+        }),
+    );
+    await pressInApp(h);
+    await pressInApp(h);
+    expect(h.peekNext).toHaveBeenCalledTimes(1);
+    release(h.undo);
+    await h.settle();
+    expect(h.advanceTo.mock.calls).toEqual([[NIGHT_BUS]]);
   });
 });
 

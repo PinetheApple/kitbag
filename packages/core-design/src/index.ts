@@ -14,6 +14,7 @@ export * from './toolGrid.ts';
 export * from './countLabel.ts';
 export * from './separator.ts';
 export * from './queueText.ts';
+export * from './queueRoles.ts';
 export * from './setlistPickText.ts';
 export * from './rowLabel.ts';
 export * from './tunerVisuals.ts';

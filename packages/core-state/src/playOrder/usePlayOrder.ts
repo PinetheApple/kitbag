@@ -3,8 +3,10 @@ import { useEffect, useMemo } from 'react';
 import { useStore } from 'zustand';
 
 import { libraryStore } from '../library/store.ts';
+import type { SetlistPlace } from './autoAdvance.ts';
 import {
   cursorOf,
+  entriesAfter,
   onStageOf,
   upNext,
   type OnStage,
@@ -91,4 +93,26 @@ export function useUpNext(): UpNext | undefined {
     () => upNext({ queue, stage, cursor }),
     [queue, stage, cursor],
   );
+}
+
+export function useUpNextCount(): number {
+  const queueLength = usePlayOrder((s) => s.queue.length);
+  const { stage, cursor } = useStage();
+  return queueLength + entriesAfter(stage, cursor).length;
+}
+
+export interface SetlistSpot extends SetlistPlace {
+  readonly setlistName: string;
+}
+
+export function useSetlistSpot(setId: number): SetlistSpot | null {
+  const loaded = useStore(libraryStore, (s) => s.loaded);
+  const { stage, cursor, name } = useStage();
+  if (cursor === null || loaded === null) return null;
+  if (loaded.presetId !== null || loaded.stemSetId !== setId) return null;
+  return {
+    setlistName: name,
+    number: cursor.index + 1,
+    of: stage.entries.length,
+  };
 }

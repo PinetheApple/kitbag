@@ -1,4 +1,10 @@
-import { countLabel, FACT_SEPARATOR, placeLabel } from '@kitbag/core-design';
+import {
+  countLabel,
+  FACT_SEPARATOR,
+  placeLabel,
+  QUEUE_TEXT,
+  signatureLabel,
+} from '@kitbag/core-design';
 import {
   BPM_UNIT,
   isPresetEntry,
@@ -6,13 +12,13 @@ import {
   UP_NEXT_SOURCE,
   upNextTitle,
   type OnStage,
+  type PresetSetlistEntry,
   type LibrarySongs,
   type SetlistEntry,
   type StemSongs,
   type UpNext,
 } from '@kitbag/core-state';
 
-export const QUEUED = 'Queued';
 const METRONOME = 'metronome';
 
 export interface UpNextContext {
@@ -30,10 +36,11 @@ export interface UpNextText {
 
 function queuedSource(queueLength: number): string {
   const rest = queueLength - 1;
-  if (rest <= 0) return QUEUED;
-  return [QUEUED, countLabel(rest, 'more after it', 'more after it')].join(
-    FACT_SEPARATOR,
-  );
+  if (rest <= 0) return QUEUE_TEXT.nextInQueue;
+  return [
+    QUEUE_TEXT.nextInQueue,
+    countLabel(rest, 'more after it', 'more after it'),
+  ].join(FACT_SEPARATOR);
 }
 
 function setlistSource(entry: SetlistEntry, context: UpNextContext): string {
@@ -61,17 +68,23 @@ export function upNextText(next: UpNext, context: UpNextContext): UpNextText {
   };
 }
 
+function metronomeFacts(preset: PresetSetlistEntry['preset']): string[] {
+  return [
+    QUEUE_TEXT.metronomeSong,
+    `${String(Math.round(preset.bpm))} ${BPM_UNIT}`,
+    signatureLabel(preset.beatsPerBar, preset.denominator),
+  ];
+}
+
 export function setlistRowSubtitle(
   entry: SetlistEntry,
   setlistName: string,
   stems: StemSongs,
 ): string {
-  const facts = isPresetEntry(entry)
-    ? [METRONOME, `${String(Math.round(entry.preset.bpm))} ${BPM_UNIT}`]
-    : [stemFacts(entry.stemSetId, stems)];
-  return [setlistName, ...facts]
-    .filter((part) => part !== '')
-    .join(FACT_SEPARATOR);
+  const parts = isPresetEntry(entry)
+    ? metronomeFacts(entry.preset)
+    : [setlistName, stemFacts(entry.stemSetId, stems)];
+  return parts.filter((part) => part !== '').join(FACT_SEPARATOR);
 }
 
 export function clearQueueBody(queueLength: number, setlistName: string) {
@@ -80,7 +93,7 @@ export function clearQueueBody(queueLength: number, setlistName: string) {
     'queued song leaves',
     'queued songs leave',
   );
-  const leave = `The ${songs} Up next.`;
+  const leave = `The ${songs} the queue.`;
   return setlistName === ''
     ? leave
     : `${leave} ${setlistName} carries on after this song.`;

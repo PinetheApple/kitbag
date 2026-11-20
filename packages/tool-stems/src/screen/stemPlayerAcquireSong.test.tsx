@@ -57,7 +57,7 @@ vi.mock('./SongFactChips.tsx', () => ({ SongFactChips: () => nothing() }));
 vi.mock('./StemList.tsx', () => ({ StemList: () => nothing() }));
 vi.mock('./StemTransport.tsx', () => ({ StemTransport: () => nothing() }));
 vi.mock('./StemRowView.tsx', () => ({ WAVEFORM_BARS: spies.bars }));
-vi.mock('./UpNextSheet.tsx', () => ({ UpNextSheet: () => nothing() }));
+vi.mock('./QueueSheet.tsx', () => ({ QueueSheet: () => nothing() }));
 vi.mock('./usePlayOrderNav.ts', () => ({
   usePlayOrderNav: () => ({ skip: nothing }),
 }));

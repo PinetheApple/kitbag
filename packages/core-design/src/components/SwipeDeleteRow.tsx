@@ -1,4 +1,4 @@
-import { useCallback, type ReactNode } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import { Text, View, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -16,9 +16,16 @@ import {
 } from '../swipeDelete.ts';
 import { swipeDelete, swipeDeleteText } from '../swipeDeleteRoles.ts';
 import { TRANSPARENT } from '../styleConstants.ts';
+import { mixHex, type Theme } from '../theme.ts';
+import type { ColorToken } from '../tokens.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { Icon } from './Icon.tsx';
+
+export type SwipeDeleteTone = 'solid' | 'tint';
+
+const tintInk = (theme: Theme): ColorToken =>
+  theme.mode === 'light' ? 'redInk' : 'red';
 
 const VERTICAL_FAIL: [number, number] = [
   -swipeDelete.swipeStartDp,
@@ -50,12 +57,25 @@ const useStyles = createThemedStyles((theme) => ({
     ...textStyle(swipeDeleteText.label),
     color: theme.color.bg,
   },
+  underTint: {
+    backgroundColor: mixHex(
+      theme.color.red,
+      theme.color.surface1,
+      swipeDelete.tintMix,
+    ),
+  },
+  labelTint: {
+    ...textStyle(swipeDeleteText.tintLabel),
+    color: theme.color[tintInk(theme)],
+  },
 }));
 
 export interface SwipeDeleteRowProps {
   readonly side: SwipeSide;
   readonly deleteLabel: string;
   readonly onDelete: () => Promise<boolean>;
+  readonly tone?: SwipeDeleteTone;
+  readonly radius?: number;
   readonly children: ReactNode;
 }
 
@@ -63,6 +83,8 @@ export function SwipeDeleteRow({
   side,
   deleteLabel,
   onDelete,
+  tone = 'solid',
+  radius = 0,
   children,
 }: SwipeDeleteRowProps) {
   const styles = useStyles();
@@ -70,6 +92,7 @@ export function SwipeDeleteRow({
   const offset = useSharedValue(0);
   const width = useSharedValue(0);
   const moving = theme.color.surface1;
+  const rounded = useMemo(() => ({ borderRadius: radius }), [radius]);
   const onLayout = useCallback(
     (event: LayoutChangeEvent) => {
       width.value = event.nativeEvent.layout.width;
@@ -105,19 +128,26 @@ export function SwipeDeleteRow({
     opacity: offset.value === 0 ? 0 : 1,
   }));
   return (
-    <View style={styles.wrap} onLayout={onLayout}>
+    <View style={[styles.wrap, rounded]} onLayout={onLayout}>
       <Animated.View
         importantForAccessibility="no-hide-descendants"
         accessibilityElementsHidden
         style={[
           styles.under,
           side === 'left' ? styles.underLeft : styles.underRight,
+          tone === 'tint' && styles.underTint,
           underStyle,
         ]}
       >
         <View style={styles.panel}>
-          <Icon name="delete" size="action" color="bg" />
-          <Text style={styles.label}>{deleteLabel}</Text>
+          <Icon
+            name="delete"
+            size={tone === 'tint' ? 'swipeRemove' : 'action'}
+            color={tone === 'tint' ? tintInk(theme) : 'bg'}
+          />
+          <Text style={[styles.label, tone === 'tint' && styles.labelTint]}>
+            {deleteLabel}
+          </Text>
         </View>
       </Animated.View>
       <GestureDetector gesture={pan}>

@@ -36,6 +36,7 @@ vi.mock('@kitbag/core-design', async (original) => ({
 
 vi.mock('@kitbag/core-state', async (original) => ({
   ...(await original<Record<string, unknown>>()),
+  useUpNextCount: () => 0,
   useSongLibrary: (select: (state: unknown) => unknown) =>
     select({
       failed: false,

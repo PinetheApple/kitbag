@@ -17,6 +17,8 @@ const players = vi.hoisted(() => ({
   stage: {},
   next: undefined as
     { source: string; song: { kind: string; id: number } } | undefined,
+  spot: null as { setlistName: string; number: number; of: number } | null,
+  upNextCount: 0,
   togglePlay: vi.fn(),
   stopSongAndSession: vi.fn(),
 }));
@@ -28,22 +30,38 @@ vi.mock('@kitbag/core-design', async (original) => ({
   MiniPlayerBar: 'MiniPlayerBar',
 }));
 
-vi.mock('@kitbag/core-state', async (original) => ({
-  ...(await original<Record<string, unknown>>()),
-  loopEndFrames: () => null,
-  stopSongAndSession: players.stopSongAndSession,
-  useSongPlayer: (select: (state: unknown) => unknown) => select(players.song),
-  useStemPlayer: (select: (state: unknown) => unknown) => select(players.stem),
-  useLibrary: (select: (state: unknown) => unknown) => select(players.library),
-  useStage: () => players.stage,
-  useUpNext: () => players.next,
-  useStemSongs: () =>
-    new Map([[QUEUED_ID, { id: QUEUED_ID, title: 'King of Kings' }]]),
-  useLibrarySongs: () => ({
-    stems: new Map([[QUEUED_ID, { id: QUEUED_ID, title: 'King of Kings' }]]),
-    songs: new Map(),
-  }),
-}));
+vi.mock('@kitbag/core-state', async (original) => {
+  const actual = await original<typeof import('@kitbag/core-state')>();
+  return {
+    ...actual,
+    useShownSongId: () =>
+      actual.songShown(players.song as never)
+        ? (players.song as { songId: number }).songId
+        : null,
+    useShownStemSetId: () =>
+      actual.stemShown(players.stem as never)
+        ? (players.stem as { setId: number }).setId
+        : null,
+    useSetlistSpot: () => players.spot,
+    useUpNextCount: () => players.upNextCount,
+    loopEndFrames: () => null,
+    stopSongAndSession: players.stopSongAndSession,
+    useSongPlayer: (select: (state: unknown) => unknown) =>
+      select(players.song),
+    useStemPlayer: (select: (state: unknown) => unknown) =>
+      select(players.stem),
+    useLibrary: (select: (state: unknown) => unknown) =>
+      select(players.library),
+    useStage: () => players.stage,
+    useUpNext: () => players.next,
+    useStemSongs: () =>
+      new Map([[QUEUED_ID, { id: QUEUED_ID, title: 'King of Kings' }]]),
+    useLibrarySongs: () => ({
+      stems: new Map([[QUEUED_ID, { id: QUEUED_ID, title: 'King of Kings' }]]),
+      songs: new Map(),
+    }),
+  };
+});
 
 const { MiniPlayer, useMiniPlayerShown } = await import('./MiniPlayer.tsx');
 
@@ -55,7 +73,14 @@ const frame = { progress: { value: 0.4 }, playing: { value: 1 } };
 const usePlayhead = vi.fn(() => frame as never);
 const onOpenSong = vi.fn();
 const onOpenStemSet = vi.fn();
-const props = { usePlayhead, onOpenSong, onOpenStemSet, bottomInset: 0 };
+const onOpenQueue = vi.fn();
+const props = {
+  usePlayhead,
+  onOpenSong,
+  onOpenStemSet,
+  onOpenQueue,
+  bottomInset: 0,
+};
 const closed = { status: 'idle', songId: null, setId: null };
 const noStage = {
   stage: { setlistId: null, entries: [] },
@@ -107,6 +132,7 @@ function fromGig(entries: number) {
     cursor: { setlistId: GIG_ID, itemId: ITEM_ID, index: 1 },
     name: 'Sunday worship',
   };
+  players.spot = { setlistName: 'Sunday worship', number: 2, of: entries };
 }
 
 function mount(): ReactTestRenderer {
@@ -131,6 +157,8 @@ beforeEach(() => {
   players.library = { loaded: null };
   players.stage = noStage;
   players.next = undefined;
+  players.spot = null;
+  players.upNextCount = 0;
   givenSong();
 });
 
@@ -182,6 +210,15 @@ describe('the mini-player', () => {
       tree.update(createElement(MiniPlayer, props));
     });
     expect(tree.toJSON()).toBeNull();
+  });
+
+  it('opens the queue from its Queue key, named with the count up next', () => {
+    players.upNextCount = 3;
+    const shown = bar(mount());
+    expect(shown.queueLabel).toBe('Queue, 3 up next');
+    (shown.onQueue as () => void)();
+    expect(onOpenQueue).toHaveBeenCalledOnce();
+    expect(onOpenSong).not.toHaveBeenCalled();
   });
 
   it('opens the player on a tap', () => {

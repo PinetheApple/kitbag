@@ -51,9 +51,11 @@ export function CameraExplainerScreen({
           icon="qrScan"
           title="Scan the code in StemDeck"
           reason={blocked ? BLOCKED_REASON : REASON}
-          actionLabel={blocked ? 'Open settings' : 'Allow camera'}
+          action={{
+            label: blocked ? 'Open settings' : 'Allow camera',
+            onPress: allow,
+          }}
           option={null}
-          onAction={allow}
         />
         <Button
           variant="ghost"

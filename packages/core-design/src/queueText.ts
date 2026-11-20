@@ -10,12 +10,59 @@ export const QUEUE_TEXT = {
   open: 'Open',
   leaveSetlist: 'Leave setlist',
   undo: 'Undo',
+  queue: 'Queue',
+  nowPlaying: 'Now playing',
+  nextInQueue: 'Next in queue',
+  clearQueue: 'Clear queue',
+  playQueue: 'Play queue',
+  done: 'Done',
+  closeQueue: 'Close the queue',
+  nothingQueued: 'Nothing queued',
+  nothingQueuedReason:
+    'Use Play next or Add to queue on a song. When this song ends, playback stops.',
+  remove: 'Remove',
+  metronomeBadge: 'METRONOME',
+  metronomeSong: 'Metronome song',
+  metronomeHint:
+    'Playback stops before a metronome song. Open loads it on the Metronome, stopped; nothing clicks until you press Play there.',
 } as const;
+
+export function nextFromLabel(setlistName: string): string {
+  return `Next from: ${setlistName}`;
+}
+
+export function upNextCountLabel(count: number): string {
+  return `· ${String(count)} up next`;
+}
+
+export function queueKeyLabel(count: number): string {
+  return count === 0
+    ? QUEUE_TEXT.queue
+    : `${QUEUE_TEXT.queue}, ${String(count)} up next`;
+}
+
+export function queuedRowLabel(position: number, title: string): string {
+  return `${String(position)}. ${title}, queued. Plays it now`;
+}
+
+export function removeFromQueueLabel(title: string): string {
+  return `Remove ${title} from the queue`;
+}
 
 export const PLAYING = 'Playing';
 
 export function placeLabel(number: number, of: number): string {
   return `${String(number)} of ${String(of)}`;
+}
+
+export interface SetlistPlaceText {
+  readonly setlistName: string;
+  readonly number: number;
+  readonly of: number;
+}
+
+export function setlistPlaceParts(spot: SetlistPlaceText): string[] {
+  return [spot.setlistName, placeLabel(spot.number, spot.of)];
 }
 
 export function nextUpLabel(title: string): string {

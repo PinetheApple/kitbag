@@ -56,7 +56,7 @@ import { WAVEFORM_BARS } from './StemRowView.tsx';
 import { StemTransport } from './StemTransport.tsx';
 import { TempoSheet } from './TempoSheet.tsx';
 import { UpNextRow } from './UpNextRow.tsx';
-import { UpNextSheet, type UpNextSheetProps } from './UpNextSheet.tsx';
+import { QueueSheet, type QueueSheetProps } from './QueueSheet.tsx';
 import { usePlayerRoutes } from './playerRoutes.ts';
 import {
   clickSectionOf,
@@ -224,8 +224,7 @@ function NotReady({
         icon="stems"
         title="These stems would not open"
         reason="The song could not be read or the audio engine did not start. Go back and open it again."
-        actionLabel="Back to songs"
-        onAction={onBack}
+        action={{ label: 'Back to songs', onPress: onBack }}
       />
     );
   if (status === 'missing')
@@ -234,8 +233,7 @@ function NotReady({
         icon="stems"
         title="This stem song is gone"
         reason="It was deleted from the library. Pick another song there."
-        actionLabel="Back to songs"
-        onAction={onBack}
+        action={{ label: 'Back to songs', onPress: onBack }}
       />
     );
   return (
@@ -333,7 +331,7 @@ interface PlayerSheetsProps {
   readonly queue: QueuePresses;
   readonly onAddToSetlist: () => void;
   readonly onAddedToSetlist: (added: AddedToSetlist) => void;
-  readonly onLeftSetlist: UpNextSheetProps['onLeftSetlist'];
+  readonly onLeftSetlist: QueueSheetProps['onLeftSetlist'];
   readonly sheet: OpenSheet | null;
   readonly bottomInset: number;
   readonly playhead: MixerFrameValues['songSec'];
@@ -375,8 +373,9 @@ function PlayerSheets(props: PlayerSheetsProps) {
         queue={props.queue}
         onAddToSetlist={props.onAddToSetlist}
       />
-      <UpNextSheet
+      <QueueSheet
         {...props.routes}
+        playsInPlace={false}
         visible={sheet === 'upNext'}
         bottomInset={bottomInset}
         onDismiss={onClose}
@@ -461,7 +460,11 @@ export function PlayerScreen({
         {retiming ? (
           <RetimeBar onAskReset={askReset} onAskLeave={askLeave} />
         ) : (
-          <StemAppBar onBack={onBack} onMenu={ready ? sheets.openMenu : null} />
+          <StemAppBar
+            onBack={onBack}
+            onQueue={ready ? sheets.openUpNext : null}
+            onMenu={ready ? sheets.openMenu : null}
+          />
         )}
         <Body
           bottom={insets.bottom}

@@ -64,8 +64,7 @@ export function SearchResultsList(props: SearchResultsListProps) {
         icon="search"
         title="No matches"
         reason={`No setlist or song contains “${props.query}”.`}
-        actionLabel="Clear search"
-        onAction={props.onClear}
+        action={{ label: 'Clear search', onPress: props.onClear }}
       />
     );
   }

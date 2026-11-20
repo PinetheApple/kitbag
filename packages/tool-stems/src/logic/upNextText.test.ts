@@ -19,7 +19,13 @@ const click = (itemId: number) =>
   ({
     kind: ENTRY_KIND.preset,
     item: { id: itemId },
-    preset: { id: itemId, name: 'Ballad count', bpm: 72 },
+    preset: {
+      id: itemId,
+      name: 'Ballad count',
+      bpm: 72,
+      beatsPerBar: 6,
+      denominator: 8,
+    },
   }) as unknown as SetlistEntry;
 const nightBus = {
   kind: 'stems',
@@ -52,11 +58,11 @@ describe('up next row', () => {
     } as const;
     expect(upNextText(next, context)).toEqual({
       title: 'Night Bus',
-      source: 'Queued · 2 more after it',
+      source: 'Next in queue · 2 more after it',
       metronome: false,
     });
     expect(upNextText(next, { ...context, queueLength: 1 }).source).toBe(
-      'Queued',
+      'Next in queue',
     );
   });
 
@@ -67,7 +73,7 @@ describe('up next row', () => {
     } as const;
     expect(upNextText(next, { ...context, queueLength: 1 })).toEqual({
       title: 'Hum',
-      source: 'Queued',
+      source: 'Next in queue',
       metronome: false,
     });
   });
@@ -92,9 +98,9 @@ describe('up next row', () => {
 });
 
 describe('up next sheet text', () => {
-  it('reads a setlist row by kind', () => {
+  it('reads a setlist row by kind, a metronome song by its own facts', () => {
     expect(setlistRowSubtitle(ballad, 'Friday gig', stems)).toBe(
-      'Friday gig · metronome · 72 BPM',
+      'Metronome song · 72 BPM · 6/8',
     );
     expect(setlistRowSubtitle(second, 'Friday gig', stems)).toBe(
       'Friday gig · 3:52 · A maj · 104 BPM',
@@ -103,8 +109,8 @@ describe('up next sheet text', () => {
 
   it('says what Clear does, with and without a setlist on stage', () => {
     expect(clearQueueBody(3, 'Friday gig')).toBe(
-      'The 3 queued songs leave Up next. Friday gig carries on after this song.',
+      'The 3 queued songs leave the queue. Friday gig carries on after this song.',
     );
-    expect(clearQueueBody(1, '')).toBe('The 1 queued song leaves Up next.');
+    expect(clearQueueBody(1, '')).toBe('The 1 queued song leaves the queue.');
   });
 });

@@ -28,8 +28,12 @@ export interface MeterChoice {
   readonly barOneSeconds: number | null;
 }
 
+export function signatureLabel(beats: number, denominator: number): string {
+  return `${String(beats)}/${String(denominator)}`;
+}
+
 export function meterLabel(beatsPerBar: number): string {
-  return `${String(beatsPerBar)}/${String(QUARTER_NOTE)}`;
+  return signatureLabel(beatsPerBar, QUARTER_NOTE);
 }
 
 function pad(value: number): string {

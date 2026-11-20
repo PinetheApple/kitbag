@@ -28,6 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MovePausedBanner } from '../dataFolder/MovePausedBanner.tsx';
 import { DockedMiniPlayer } from '../miniPlayer/DockedMiniPlayer.tsx';
 import { useMiniPlayerDocked } from '../miniPlayer/useMiniPlayerDocked.ts';
+import { useQueueSheet } from '../queue/useQueueSheet.tsx';
 import { useSettingsRoutes } from '../settings/settingsRoutes.ts';
 import { ArrangeSheet } from './ArrangeSheet.tsx';
 import { MoreToolsRow } from './MoreToolsRow.tsx';
@@ -142,6 +143,7 @@ export function HomeScreen() {
   );
   const liveText = useLiveText(usePracticeTileText(practiceShown));
   const docked = useMiniPlayerDocked();
+  const queue = useQueueSheet(insets.bottom);
   const movePaused = useDataFolder((s) => pausedMove(s) !== null);
   const [arranging, setArranging] = useState(false);
   const openArrange = useCallback(() => {
@@ -252,7 +254,13 @@ export function HomeScreen() {
           onDone={closeArrange}
         />
       </ScrollView>
-      {docked ? <DockedMiniPlayer bottomInset={insets.bottom} /> : null}
+      {docked ? (
+        <DockedMiniPlayer
+          bottomInset={insets.bottom}
+          onOpenQueue={queue.open}
+        />
+      ) : null}
+      {queue.sheet}
     </View>
   );
 }

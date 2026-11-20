@@ -95,12 +95,16 @@ export interface EmptyStateOption {
   readonly text: string;
 }
 
+export interface EmptyStateAction {
+  readonly label: string;
+  readonly onPress: () => void;
+}
+
 export interface EmptyStateProps {
   readonly icon: IconName;
   readonly title: string;
   readonly reason: string;
-  readonly actionLabel: string;
-  readonly onAction: () => void;
+  readonly action?: EmptyStateAction;
   readonly variant?: EmptyStateVariant;
   readonly actionIcon?: IconName;
   readonly option?: EmptyStateOption | null;
@@ -109,6 +113,7 @@ export interface EmptyStateProps {
 function ListEmptyState(props: EmptyStateProps) {
   const styles = useStyles();
   const option = props.option ?? null;
+  const { action } = props;
   return (
     <View style={styles.listBox}>
       <View style={styles.listMark}>
@@ -118,16 +123,18 @@ function ListEmptyState(props: EmptyStateProps) {
         {props.title}
       </Text>
       <Text style={styles.listReason}>{props.reason}</Text>
-      <Pressable
-        accessibilityRole="button"
-        style={styles.listButton}
-        onPress={props.onAction}
-      >
-        {props.actionIcon === undefined ? null : (
-          <Icon name={props.actionIcon} size="emptyButton" color="onAccent" />
-        )}
-        <Text style={styles.listButtonLabel}>{props.actionLabel}</Text>
-      </Pressable>
+      {action === undefined ? null : (
+        <Pressable
+          accessibilityRole="button"
+          style={styles.listButton}
+          onPress={action.onPress}
+        >
+          {props.actionIcon === undefined ? null : (
+            <Icon name={props.actionIcon} size="emptyButton" color="onAccent" />
+          )}
+          <Text style={styles.listButtonLabel}>{action.label}</Text>
+        </Pressable>
+      )}
       {option === null ? null : (
         <View style={styles.listOption}>
           <Icon name={option.icon} size="emptyOption" color="text2" />
@@ -140,6 +147,7 @@ function ListEmptyState(props: EmptyStateProps) {
 
 export function EmptyState(props: EmptyStateProps) {
   const styles = useStyles();
+  const { action } = props;
   if (props.variant === 'list') return <ListEmptyState {...props} />;
   return (
     <View style={styles.box}>
@@ -150,11 +158,13 @@ export function EmptyState(props: EmptyStateProps) {
         {props.title}
       </Text>
       <Text style={styles.reason}>{props.reason}</Text>
-      <Button
-        variant="primary"
-        label={props.actionLabel}
-        onPress={props.onAction}
-      />
+      {action === undefined ? null : (
+        <Button
+          variant="primary"
+          label={action.label}
+          onPress={action.onPress}
+        />
+      )}
     </View>
   );
 }

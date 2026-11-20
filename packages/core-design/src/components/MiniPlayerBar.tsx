@@ -99,8 +99,10 @@ export interface MiniPlayerBarProps {
   readonly playLabel: string;
   readonly pauseLabel: string;
   readonly closeLabel: string;
+  readonly queueLabel: string;
   readonly bottomInset: number;
   readonly onOpen: () => void;
+  readonly onQueue: () => void;
   readonly onTogglePlay: () => void;
   readonly onClose: () => void;
 }
@@ -145,8 +147,10 @@ export function MiniPlayerBar({
   playLabel,
   pauseLabel,
   closeLabel,
+  queueLabel,
   bottomInset,
   onOpen,
+  onQueue,
   onTogglePlay,
   onClose,
 }: MiniPlayerBarProps) {
@@ -177,6 +181,14 @@ export function MiniPlayerBar({
             <EllipsizedText style={styles.title}>{title}</EllipsizedText>
             <EllipsizedText style={styles.detail}>{detail}</EllipsizedText>
           </View>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={queueLabel}
+          style={styles.button}
+          onPress={onQueue}
+        >
+          <Icon name="queue" size="bar" color="text" />
         </Pressable>
         <PlayToggle
           playing={playing}

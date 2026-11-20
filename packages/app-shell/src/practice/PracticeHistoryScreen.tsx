@@ -100,9 +100,8 @@ export function PracticeHistoryScreen({
           title="Practice history could not be opened"
           reason="The saved sessions failed to load. The metronome still records new ones."
           actionIcon="reset"
-          actionLabel="Try again"
+          action={{ label: 'Try again', onPress: retry }}
           option={null}
-          onAction={retry}
         />
       ) : empty ? (
         <EmptyState
@@ -111,9 +110,8 @@ export function PracticeHistoryScreen({
           title="No sessions yet"
           reason="Play the metronome, tap End on the practice pill, then Save. The session shows up here."
           actionIcon="metronome"
-          actionLabel="Open metronome"
+          action={{ label: 'Open metronome', onPress: onOpenMetronome }}
           option={null}
-          onAction={onOpenMetronome}
         />
       ) : (
         <ScrollView

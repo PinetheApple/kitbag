@@ -47,6 +47,8 @@ vi.mock('@kitbag/core-state', async (original) => ({
   rowFilesOf: () => library.files,
   useLibrary: (select: (state: typeof library) => unknown) => select(library),
   useSongPlayer: () => null,
+  useShownSongId: () => null,
+  useShownStemSetId: () => library.player.setId,
   useStemPlayer: (select: (state: typeof library.player) => unknown) =>
     select(library.player),
 }));

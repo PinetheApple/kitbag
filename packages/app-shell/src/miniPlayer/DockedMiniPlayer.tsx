@@ -3,11 +3,15 @@ import { useMixerFrame } from '@kitbag/tool-stems';
 
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
+export interface DockedMiniPlayerProps {
+  readonly bottomInset: number;
+  readonly onOpenQueue: () => void;
+}
+
 export function DockedMiniPlayer({
   bottomInset,
-}: {
-  readonly bottomInset: number;
-}) {
+  onOpenQueue,
+}: DockedMiniPlayerProps) {
   const routes = useLibraryRoutes();
   return (
     <MiniPlayer
@@ -15,6 +19,7 @@ export function DockedMiniPlayer({
       bottomInset={bottomInset}
       onOpenSong={routes.openSong}
       onOpenStemSet={routes.openStemSet}
+      onOpenQueue={onOpenQueue}
     />
   );
 }

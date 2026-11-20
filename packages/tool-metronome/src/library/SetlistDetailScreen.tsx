@@ -224,8 +224,7 @@ function EmptySet({ onAdd }: { readonly onAdd: () => void }) {
       icon="song"
       title="No songs in this set"
       reason="Add a metronome song or a stem song, or save what the metronome is playing now."
-      actionLabel="Add song"
-      onAction={onAdd}
+      action={{ label: 'Add song', onPress: onAdd }}
     />
   );
 }
@@ -332,8 +331,7 @@ function MissingSet(props: SetlistDetailScreenProps) {
         icon="songs"
         title="Setlist not found"
         reason="This setlist may have been deleted from another screen."
-        actionLabel="Go back"
-        onAction={props.onBack}
+        action={{ label: 'Go back', onPress: props.onBack }}
       />
     </ScreenFrame>
   );

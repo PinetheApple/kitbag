@@ -367,13 +367,18 @@ function SetlistsSheet({ menu, bottomInset, onAdded }: SetlistsSheetProps) {
 
 interface LibrarySheetsProps extends SheetProps {
   readonly onOpenSetlist: (setlistId: number) => void;
+  readonly onOpenQueue: (() => void) | null;
 }
 
-export function LibrarySheets({ onOpenSetlist, ...props }: LibrarySheetsProps) {
+export function LibrarySheets({
+  onOpenSetlist,
+  onOpenQueue,
+  ...props
+}: LibrarySheetsProps) {
   const notice = useNotice();
   useQueueRefresh();
   const queueSong = useQueueSong();
-  const queue = useQueueNotices(notice, queueSong, onOpenSetlist);
+  const queue = useQueueNotices(notice, queueSong, onOpenSetlist, onOpenQueue);
   return (
     <>
       <ActionsSheet

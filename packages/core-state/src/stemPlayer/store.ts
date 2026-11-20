@@ -41,6 +41,7 @@ import { retimeActions, retimeAnchor } from './retimeActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
 import { sortedSections } from './sections.ts';
 import {
+  ADVANCE_CAUSE,
   endedOnLastFrame,
   songEnds,
   type AdvanceListener,
@@ -143,11 +144,13 @@ export interface StemPlayerActions {
   readonly open: (setId: number, waveformBars: number) => Promise<void>;
   readonly acquireSong: (setId: number, waveformBars: number) => MixerHold;
   readonly advanceTo: (setId: number) => Promise<AdvanceOutcome>;
+  readonly playNow: (setId: number) => Promise<AdvanceOutcome>;
   readonly takeOver: (
     setId: number,
     waveformBars: number,
   ) => Promise<AdvanceOutcome>;
   readonly handOver: () => void;
+  readonly pressNext: () => void;
   readonly onSongEnd: (listener: AdvanceListener) => () => void;
   readonly songStillEnded: () => boolean;
   readonly stopAdvancing: () => void;
@@ -445,6 +448,9 @@ export function createStemPlayerStore(
         return mixer.hold(acquired);
       },
       ...advancing,
+      pressNext: () => {
+        ends.pressedNext(mixer.current(), ADVANCE_CAUSE.nextInApp);
+      },
       onSongEnd: ends.subscribe,
       songStillEnded: ends.stands,
       stopAdvancing: holds.gaveUp,

@@ -167,8 +167,7 @@ export function PresetEditorScreen(props: PresetEditorScreenProps) {
         icon="song"
         title="Song not found"
         reason="This song may have been deleted from another screen."
-        actionLabel="Go back"
-        onAction={props.onBack}
+        action={{ label: 'Go back', onPress: props.onBack }}
       />
     </ScreenFrame>
   );

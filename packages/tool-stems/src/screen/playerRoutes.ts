@@ -1,7 +1,8 @@
 import { useNotice } from '@kitbag/core-design';
-import { useCallback, useMemo } from 'react';
+import { useStemPlayer } from '@kitbag/core-state';
+import { useMemo } from 'react';
 
-import { usePlayOrderNav, type PlayOrderRoutes } from './usePlayOrderNav.ts';
+import type { PlayOrderRoutes } from './usePlayOrderNav.ts';
 
 export function usePlayerRoutes(
   onOpenStemSet: (stemSetId: number) => void,
@@ -9,6 +10,7 @@ export function usePlayerRoutes(
   onOpenMetronome: () => void,
 ) {
   const notice = useNotice();
+  const skip = useStemPlayer((s) => s.pressNext);
   const routes = useMemo<PlayOrderRoutes>(
     () => ({
       onOpenStemSet,
@@ -18,9 +20,5 @@ export function usePlayerRoutes(
     }),
     [onOpenStemSet, onOpenSong, onOpenMetronome, notice.showMessage],
   );
-  const nav = usePlayOrderNav(routes);
-  const skip = useCallback(() => {
-    void nav.skip();
-  }, [nav]);
   return { notice, routes, skip };
 }

@@ -1,13 +1,13 @@
-import { FACT_SEPARATOR, nextUpLabel, placeLabel } from '@kitbag/core-design';
+import {
+  FACT_SEPARATOR,
+  nextUpLabel,
+  setlistPlaceParts,
+} from '@kitbag/core-design';
 import {
   isUnitySpeed,
   speedPercentText,
-  type SetlistPlace,
+  type SetlistSpot,
 } from '@kitbag/core-state';
-
-export interface SetlistSpot extends SetlistPlace {
-  readonly setlistName: string;
-}
 
 export function miniPlayerDetail(
   artist: string | null,
@@ -22,8 +22,7 @@ export function miniPlayerDetail(
 }
 
 function whereFrom(spot: SetlistSpot | null, next: string | null): string[] {
-  if (spot !== null)
-    return [spot.setlistName, placeLabel(spot.number, spot.of)];
+  if (spot !== null) return setlistPlaceParts(spot);
   return next === null ? [] : [nextUpLabel(next)];
 }
 

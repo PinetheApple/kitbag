@@ -257,6 +257,8 @@ export const iconSizes = {
   emptyMark: 36,
   checkMark: 11,
   sectionLoop: 20,
+  queueHandle: 20,
+  swipeRemove: 20,
   lyricsChip: 18,
   lyricsEmpty: 32,
   retimePad: 40,
@@ -427,6 +429,8 @@ export const screenBar = {
   gap: 2,
   iconButton: 48,
   chipEnd: 8,
+  badgeTop: 6,
+  badgeEnd: 5,
 } as const;
 
 export function barChipRoom(chipHeight: number): number {
