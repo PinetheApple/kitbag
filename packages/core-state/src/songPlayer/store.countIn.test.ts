@@ -1,36 +1,37 @@
 import { GRID_METER, NO_METER_OVERRIDE } from '@kitbag/core-db';
-import { KB_COUNT_IN_OFF, KB_SOUND_NAMES } from '@kitbag/core-native';
+import { KB_COUNT_IN_OFF } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { songRow } from '../storage/fixtures.test-helper.ts';
-import { COUNT_IN_DRAIN_MARGIN_SECONDS } from '../stemPlayer/countedStart.ts';
 import { createMixerClick } from '../stemPlayer/mixerClick.ts';
 import { at } from '../stemPlayer/store.test-helper.ts';
+import {
+  BAR_BEATS,
+  BEAT,
+  countEnd,
+  counts,
+  ONE_BAR,
+  SEEK_IN_BAR_TWO,
+  songWithCountIn,
+  type Song,
+} from './countIn.test-helper.ts';
 import { createSongPlayerStore } from './store.ts';
 import {
   BARS,
   fakeSongRuntime,
   opened,
-  openedSong,
   SONG_ID,
   songRecord,
 } from './store.test-helper.ts';
 
-const ONE_BAR = 1;
 const TWO_BARS = 2;
-const BAR_BEATS = 4;
-const BEAT = 0.5;
 const MID_SONG = at(1.2);
 const SONG_END = at(10);
 const LATE_DOWNBEAT = 2;
 const INTRO_BEATS = 16;
 const INTRO_PAUSE = 3;
-const SEEK_IN_BAR_TWO = 2.2;
+const INTRO_SEEK = 1;
 const BAR_TWO = 2;
-const SONG_SOUNDS = {
-  normal: KB_SOUND_NAMES.length - 1,
-  accent: KB_SOUND_NAMES.length - 2,
-} as const;
 const introSong = () =>
   songRecord({
     durationSec: 12,
@@ -40,21 +41,6 @@ const introSong = () =>
     ),
     downbeatIndices: [INTRO_BEATS, INTRO_BEATS + BAR_BEATS],
   });
-const countEnd = (bars: number) =>
-  at(COUNT_IN_DRAIN_MARGIN_SECONDS) + bars * BAR_BEATS * at(BEAT);
-
-type Song = Awaited<ReturnType<typeof openedSong>>;
-
-async function songWithCountIn(
-  bars: number = ONE_BAR,
-  { click = true, record = songRecord() } = {},
-): Promise<Song> {
-  const song = await openedSong(record);
-  song.store.getState().setClickCountIn(bars);
-  if (click) await song.store.getState().toggleClick();
-  vi.clearAllMocks();
-  return song;
-}
 
 async function counting(): Promise<Song> {
   const song = await songWithCountIn();
@@ -62,8 +48,6 @@ async function counting(): Promise<Song> {
   await vi.runAllTimersAsync();
   return song;
 }
-
-const counts = ({ commands }: Song) => commands.songCountIn.mock.calls;
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -117,6 +101,24 @@ describe('play from the start with a count-in', () => {
     song.store.getState().togglePlay();
     expect(counts(song)).toHaveLength(1);
     expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+  });
+
+  it('counts in again when play restarts a song that played to its end', async () => {
+    const song = await counting();
+    song.engine.now = countEnd(ONE_BAR);
+    await vi.runAllTimersAsync();
+    song.engine.position = SONG_END;
+    song.store.getState().togglePlay();
+    expect(counts(song)).toHaveLength(2);
+  });
+
+  it('counts in again after the song is closed and opened again', async () => {
+    const song = await counting();
+    song.store.getState().close();
+    await song.store.getState().open(SONG_ID, BARS).loaded;
+    song.store.getState().setClickCountIn(ONE_BAR);
+    song.store.getState().togglePlay();
+    expect(counts(song)).toHaveLength(2);
   });
 
   it('plays at once when the count-in is off', async () => {
@@ -209,65 +211,21 @@ describe('a pause inside the intro', () => {
     expect(song.commands.mixerSeek).not.toHaveBeenCalled();
   });
 
+  it('counts in after a seek earlier in the intro', async () => {
+    const song = await pausedInIntro();
+    song.store.getState().seek(at(INTRO_SEEK));
+    song.engine.position = at(INTRO_SEEK);
+    song.store.getState().togglePlay();
+    expect(counts(song)).toHaveLength(1);
+    expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+  });
+
   it('counts in after a seek back to the start', async () => {
     const song = await pausedInIntro();
     song.store.getState().seek(0);
     song.store.getState().togglePlay();
     expect(counts(song)).toHaveLength(1);
     expect(song.commands.mixerPlay).not.toHaveBeenCalled();
-  });
-});
-
-describe('a count with the click off', () => {
-  async function songSoundsSet(): Promise<Song> {
-    const song = await songWithCountIn(ONE_BAR, { click: false });
-    song.store
-      .getState()
-      .setClickSounds(SONG_SOUNDS.normal, SONG_SOUNDS.accent);
-    vi.clearAllMocks();
-    return song;
-  }
-
-  const setSounds = (song: Song) => song.standalone.commands.setSounds;
-  const standaloneSounds = (song: Song) => {
-    const { normal, accent } = song.standalone.store.getState().sounds;
-    return [normal, accent];
-  };
-
-  it("plays the song's sounds, set before the count is scheduled", async () => {
-    const song = await songSoundsSet();
-    song.store.getState().togglePlay();
-    expect(setSounds(song).mock.calls).toEqual([
-      [SONG_SOUNDS.normal, SONG_SOUNDS.accent],
-    ]);
-    const [soundsAt] = setSounds(song).mock.invocationCallOrder;
-    const [countAt] = song.commands.songCountIn.mock.invocationCallOrder;
-    expect(soundsAt).toBeLessThan(countAt ?? 0);
-  });
-
-  it("gives the standalone's sounds back once the count is over", async () => {
-    const song = await songSoundsSet();
-    song.store.getState().togglePlay();
-    song.engine.now = countEnd(ONE_BAR);
-    await vi.runAllTimersAsync();
-    expect(setSounds(song).mock.lastCall).toEqual(standaloneSounds(song));
-  });
-
-  it("gives the standalone's sounds back when a pause cancels the count", async () => {
-    const song = await songSoundsSet();
-    song.store.getState().togglePlay();
-    song.store.getState().togglePlay();
-    expect(setSounds(song).mock.lastCall).toEqual(standaloneSounds(song));
-  });
-
-  it("keeps the song's sounds when the click goes off mid-count", async () => {
-    const song = await songWithCountIn();
-    song.store.getState().togglePlay();
-    await song.store.getState().toggleClick();
-    expect(setSounds(song)).not.toHaveBeenCalled();
-    song.engine.now = countEnd(ONE_BAR);
-    await vi.runAllTimersAsync();
-    expect(setSounds(song).mock.lastCall).toEqual(standaloneSounds(song));
   });
 });
 

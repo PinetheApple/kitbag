@@ -91,13 +91,16 @@ export function songClickEngine(context: SongClickEngineContext) {
   const { get, metronome, counting } = context;
   const { commands } = metronome;
   const change = settingsChange(context);
-  let lent = false;
 
   const push = (sounds: PerAccentSounds, accents: readonly KB_ACCENT[]) => {
     commands.setSounds(sounds.normal, sounds.accent);
     accents.forEach((accent, beat) => {
       commands.setAccent(beat, accent);
     });
+  };
+
+  const owe = () => {
+    metronome.store.getState().owePattern();
   };
 
   const giveBack = () => {
@@ -121,24 +124,21 @@ export function songClickEngine(context: SongClickEngineContext) {
 
   return {
     clickStarting: () => {
-      lent = false;
       const { sounds, accents } = get().clickSettings;
       push(sounds, accents);
     },
     countArmed: () => {
-      if (get().click || lent) return;
-      lent = true;
+      if (get().click) return;
       const { sounds } = get().clickSettings;
       commands.setSounds(sounds.normal, sounds.accent);
+      owe();
     },
-    countOver: () => {
-      if (!lent) return;
-      lent = false;
+    countDropped: () => {
       if (!get().click) giveBack();
     },
     followSong: (state: SongClickSlice, previous: SongClickSlice) => {
       if (previous.click && !state.click) {
-        if (counting()) lent = true;
+        if (counting()) owe();
         else giveBack();
       }
       const meterChanged = songMeter(state) !== songMeter(previous);

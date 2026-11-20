@@ -10,18 +10,18 @@ interface SongCardContext extends MixerSessionContext<SongPlayerState> {
 }
 
 export function songCard(context: SongCardContext) {
-  const { set, get, runtimeOf, session, close, start: counted } = context;
+  const { set, get, runtimeOf, session, close, start } = context;
   let shownIn: number | null = null;
   const shown = () => shownIn === session();
-  const start: Pick<SongStart, 'play' | 'cancel'> = {
-    cancel: counted.cancel,
+  const shownStart: Pick<SongStart, 'play' | 'cancel'> = {
+    cancel: start.cancel,
     play: (head) => {
       shownIn = session();
-      counted.play(head);
+      start.play(head);
     },
   };
   return {
-    start,
+    start: shownStart,
     // A Stop from an earlier song's card can land after the next song opened.
     stopped: () => {
       if (!shown()) return;

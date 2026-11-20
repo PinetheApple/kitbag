@@ -1,4 +1,3 @@
-import { MS_PER_SECOND } from '@kitbag/core-db';
 import type { StoreApi } from 'zustand/vanilla';
 
 import { usableDownbeats } from '../stemPlayer/bars.ts';
@@ -17,7 +16,7 @@ import {
   songStart,
   type SongStart,
 } from '../stemPlayer/songStart.ts';
-import { framesToSeconds, secondsToFrames } from '../stemPlayer/time.ts';
+import { secondsToFrames } from '../stemPlayer/time.ts';
 import type { SongPlayerActions } from './actions.ts';
 import type { SongPlayerState } from './state.ts';
 
@@ -33,7 +32,7 @@ type SongPlayerStoreApi = Pick<
 
 export interface CountSounds {
   readonly countArmed: () => void;
-  readonly countOver: () => void;
+  readonly countDropped: () => void;
 }
 
 export function countingNow(
@@ -76,21 +75,12 @@ function showCountOutsideApp(
 
 function lendSoundsForCount(
   store: SongPlayerStoreApi,
-  runtimeOf: () => MixerRuntime,
   sounds: CountSounds,
 ): void {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  store.subscribe(({ countEndFrame, engineRate }, previous) => {
-    if (countEndFrame === previous.countEndFrame) return;
-    clearTimeout(timer);
-    if (countEndFrame === null) {
-      sounds.countOver();
+  store.subscribe(({ countEndFrame }, previous) => {
+    if (countEndFrame === previous.countEndFrame || countEndFrame === null)
       return;
-    }
     sounds.countArmed();
-    const left = countEndFrame - runtimeOf().engine.nowFrame();
-    const leftMs = framesToSeconds(left, engineRate) * MS_PER_SECOND;
-    timer = setTimeout(sounds.countOver, Math.max(0, Math.ceil(leftMs)));
   });
 }
 
@@ -122,8 +112,16 @@ export function songCount(
     },
     cancel: () => {
       const cancelled = start.cancel();
-      if (cancelled) playedIn = null;
-      return cancelled;
+      if (!cancelled) return false;
+      playedIn = null;
+      sounds.countDropped();
+      return true;
+    },
+    stop: () => {
+      const lent = !get().click;
+      const stopped = start.stop();
+      if (stopped && lent) sounds.countDropped();
+      return stopped;
     },
     afterSeek: (frame) => {
       const idle = !runtimeOf().engine.playing() && !start.counting();
@@ -132,6 +130,6 @@ export function songCount(
     },
   };
   showCountOutsideApp(mixer, store, runtimeOf, count);
-  lendSoundsForCount(store, runtimeOf, sounds);
+  lendSoundsForCount(store, sounds);
   return count;
 }

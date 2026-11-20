@@ -44,6 +44,8 @@ export function useSongClickSheet() {
   return { group, open, close };
 }
 
+export type SongClickSheetState = ReturnType<typeof useSongClickSheet>;
+
 interface GroupHeaderProps {
   readonly label: string;
   readonly headerRef: RefObject<View | null>;

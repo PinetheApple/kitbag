@@ -79,13 +79,14 @@ type ChipSettings = Pick<
 
 function countInChip(bars: KbCountInBars): ClickChip {
   const off = bars === KB_COUNT_IN_OFF;
-  const label = off
-    ? SONG_CLICK_TEXT.countIn
-    : `${SONG_CLICK_TEXT.countIn}: ${countInOptionLabel(bars)}`;
+  const on = `${SONG_CLICK_TEXT.countIn}: ${countInOptionLabel(bars)}`;
+  const [label, said] = off
+    ? [SONG_CLICK_TEXT.countIn, `${SONG_CLICK_TEXT.countIn} off`]
+    : [on, on];
   return {
     group: CLICK_GROUP.countIn,
     label,
-    spoken: `${off ? `${label} off` : label}, change the count-in`,
+    spoken: `${said}, change the count-in`,
     active: !off,
     muted: false,
   };

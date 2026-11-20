@@ -30,6 +30,7 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
+import { CLICK_GROUP } from '../logic/clickChipText.ts';
 import {
   barBadge,
   barStatusOf,
@@ -42,8 +43,11 @@ import { REANALYZE_LABEL } from '../logic/viewText.ts';
 import { frameAtTap } from '../logic/waveSeek.ts';
 import type { UsePlayhead } from './playhead.ts';
 import { SongClickChips } from './SongClickChips.tsx';
-import { SongClickSheet, useSongClickSheet } from './SongClickSheet.tsx';
-import { CLICK_GROUP, type ClickGroup } from '../logic/clickChipText.ts';
+import {
+  SongClickSheet,
+  useSongClickSheet,
+  type SongClickSheetState,
+} from './SongClickSheet.tsx';
 import { SongMeter } from './SongMeter.tsx';
 import { SongPlayerMenu } from './SongPlayerMenu.tsx';
 import { SongTempoCorrection } from './SongTempoCorrection.tsx';
@@ -227,9 +231,7 @@ interface BodyProps {
   readonly onCloseMeter: () => void;
   readonly onCloseTempo: () => void;
   readonly usePlayhead: UsePlayhead;
-  readonly clickGroup: ClickGroup | null;
-  readonly onOpenClick: (group: ClickGroup) => void;
-  readonly onCloseClick: () => void;
+  readonly clickSheet: SongClickSheetState;
 }
 
 function Body({
@@ -241,9 +243,7 @@ function Body({
   onCloseMeter,
   onCloseTempo,
   usePlayhead,
-  clickGroup,
-  onOpenClick,
-  onCloseClick,
+  clickSheet,
 }: BodyProps) {
   const styles = useStyles();
   const status = useSongPlayer((s) => s.status);
@@ -270,12 +270,12 @@ function Body({
           <ScrubRow frame={playhead} {...scrub} loopHandles={handles} />
         </Card>
         <LockCard songId={songId} />
-        <SongClickChips onOpen={onOpenClick} />
+        <SongClickChips onOpen={clickSheet.open} />
       </ScrollView>
       <SongClickSheet
-        group={clickGroup}
+        group={clickSheet.group}
         bottomInset={bottom}
-        onDismiss={onCloseClick}
+        onDismiss={clickSheet.close}
       />
       <SongMeter
         songId={songId}
@@ -349,9 +349,7 @@ export function SongPlayerScreen({
         onCloseMeter={closeMeter}
         onCloseTempo={closeTempo}
         usePlayhead={usePlayhead}
-        clickGroup={clickSheet.group}
-        onOpenClick={clickSheet.open}
-        onCloseClick={clickSheet.close}
+        clickSheet={clickSheet}
       />
       <SongPlayerMenu
         songId={songId}

@@ -127,6 +127,9 @@ export function createSongPlayerStore(
       claim,
       mixerClick: songClick,
       isOpen: () => get().songId !== null,
+      beforeTeardown: () => {
+        if (counting()) clickEngine.countDropped();
+      },
       teardownTracks,
       counting,
       resetState: () => {
@@ -154,7 +157,6 @@ export function createSongPlayerStore(
     const presets = songPresetActions({ ...context, live });
     const count = songCount(context, mixer, api, clickEngine);
     const gridFollowers = { gridReplaced: count.gridReplaced };
-    const { afterSeek } = count;
     const card = songCard({ ...context, close: mixer.close, start: count });
     mixer.onSongStopped(card.stopped);
 
@@ -363,7 +365,13 @@ export function createSongPlayerStore(
       dismissMeterNotice: () => {
         set({ meterNotice: null });
       },
-      ...transportActions(get, runtimeOf, scrubSeek, afterSeek, card.start),
+      ...transportActions(
+        get,
+        runtimeOf,
+        scrubSeek,
+        count.afterSeek,
+        card.start,
+      ),
       ...loopActions(context),
       ...clickActions(context, mixer.pendingClick, {
         recountWithClickOff: count.recountWithClickOff,
