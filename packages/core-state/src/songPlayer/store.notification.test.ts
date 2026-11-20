@@ -1,5 +1,5 @@
 import type { LibraryRow } from '@kitbag/core-db';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { songRow } from '../storage/fixtures.test-helper.ts';
 import {
@@ -66,6 +66,25 @@ describe('Stop on the notification of a song left playing', () => {
       click: true,
     });
     expect(next.hold.live()).toBe(true);
+  });
+});
+
+describe('the listening session on a card Stop', () => {
+  it('ends with a Stop on the card of the song playing', async () => {
+    const left = await leftPlaying();
+    const cardStops = vi.fn();
+    left.player.getState().onCardStop(cardStops);
+    left.stopSongFromNotification();
+    expect(cardStops).toHaveBeenCalledOnce();
+  });
+
+  it('carries on through a Stop from the card of a song since replaced', async () => {
+    const left = await leftPlaying();
+    const cardStops = vi.fn();
+    left.player.getState().onCardStop(cardStops);
+    await left.player.getState().open(OTHER_SONG, BARS).loaded;
+    left.stopSongFromNotification();
+    expect(cardStops).not.toHaveBeenCalled();
   });
 });
 

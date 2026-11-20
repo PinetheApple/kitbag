@@ -24,12 +24,12 @@ const defaultDeps: ListeningDeps = {
   },
 };
 
-export function stopListening(deps: ListeningDeps = defaultDeps) {
+export function stopSongAndSession(deps: ListeningDeps = defaultDeps) {
   deps.closePlayers();
   deps.endSession();
 }
 
-export function startListeningSession(deps: ListeningDeps = defaultDeps) {
+export function endSessionOnCardStop(deps: ListeningDeps = defaultDeps) {
   const stops = deps.cardStops.map((onCardStop) => onCardStop(deps.endSession));
   return () => {
     stops.forEach((stop) => {

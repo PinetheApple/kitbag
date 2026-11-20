@@ -23,8 +23,8 @@ import {
   mixerClick,
   type MixerClick,
 } from '../stemPlayer/mixerClick.ts';
-import { mixerSession } from '../stemPlayer/mixerSession.ts';
-import { ATTACHABLE, SCRUB_SEEK_DELAY_MS } from '../stemPlayer/store.ts';
+import { ATTACHABLE, mixerSession } from '../stemPlayer/mixerSession.ts';
+import { SCRUB_SEEK_DELAY_MS } from '../stemPlayer/store.ts';
 import { framesToSeconds, secondsToFrames } from '../stemPlayer/time.ts';
 import {
   songLibraryStore,
@@ -134,7 +134,7 @@ export function createSongPlayerStore(
     });
     const { live, scrubSeek } = mixer;
 
-    mixer.outlivesHolders(() => get().status === 'ready');
+    mixer.onLastRelease({ keepsSong: () => get().status === 'ready' });
     const context = { set, get, runtimeOf, session: mixer.current };
     const presets = songPresetActions({ ...context, live });
     const count = songCount(context, mixer, api, clickEngine);
@@ -142,6 +142,7 @@ export function createSongPlayerStore(
     const card = songCard({
       ...context,
       close: mixer.close,
+      cardStopped: mixer.cardStopped,
       start: count,
       card: mixer.card,
     });

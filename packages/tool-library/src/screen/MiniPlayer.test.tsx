@@ -17,7 +17,7 @@ const players = vi.hoisted(() => ({
   stage: {},
   next: undefined as { source: string; stemSetId: number } | undefined,
   togglePlay: vi.fn(),
-  stopListening: vi.fn(),
+  stopSongAndSession: vi.fn(),
 }));
 
 vi.mock('react-native', () => ({ View: 'View' }));
@@ -30,7 +30,7 @@ vi.mock('@kitbag/core-design', async (original) => ({
 vi.mock('@kitbag/core-state', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   loopEndFrames: () => null,
-  stopListening: players.stopListening,
+  stopSongAndSession: players.stopSongAndSession,
   useSongPlayer: (select: (state: unknown) => unknown) => select(players.song),
   useStemPlayer: (select: (state: unknown) => unknown) => select(players.stem),
   useLibrary: (select: (state: unknown) => unknown) => select(players.library),
@@ -82,6 +82,7 @@ function givenStemSong(change: Record<string, unknown> = {}) {
     artist: 'Charity Gayle',
     engineRate: 44_100,
     durationFrames: 441_000,
+    advancedTo: null,
     togglePlay: players.togglePlay,
     ...change,
   };
@@ -166,7 +167,7 @@ describe('the mini-player', () => {
 
   it('ends the listening session from its close key', () => {
     (bar(mount()).onClose as () => void)();
-    expect(players.stopListening).toHaveBeenCalledOnce();
+    expect(players.stopSongAndSession).toHaveBeenCalledOnce();
   });
 
   it('goes away when the session closes', () => {
@@ -224,7 +225,18 @@ describe('the mini-player for a stem song', () => {
   it('ends the listening session from its close key', () => {
     givenStemSong();
     (bar(mount()).onClose as () => void)();
-    expect(players.stopListening).toHaveBeenCalledOnce();
+    expect(players.stopSongAndSession).toHaveBeenCalledOnce();
+  });
+
+  it('stays up, named for the arriving song, while an advance loads it', () => {
+    givenStemSong({
+      status: 'loading',
+      setId: QUEUED_ID,
+      advancedTo: QUEUED_ID,
+      title: '',
+      artist: null,
+    });
+    expect(bar(mount()).title).toBe('King of Kings');
   });
 
   it('draws nothing while the stem song is still opening', () => {
@@ -264,5 +276,10 @@ describe('whether a screen docks the mini-player', () => {
   ])('a %s stem song: %s', (status, expected) => {
     givenStemSong({ status });
     expect(shown()).toBe(expected);
+  });
+
+  it('a stem song an advance is loading: true', () => {
+    givenStemSong({ status: 'loading', advancedTo: SET_ID });
+    expect(shown()).toBe(true);
   });
 });

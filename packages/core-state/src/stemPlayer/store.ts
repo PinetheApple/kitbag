@@ -30,6 +30,7 @@ import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
 import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
 import { mixerSession, type MixerHold } from './mixerSession.ts';
 import { mixSaver } from './mixSaver.ts';
+import { stemSongHolds } from './stemSongHolds.ts';
 import {
   showCountOnSongCard,
   songTransportRequests,
@@ -96,11 +97,6 @@ export type RetimeState =
 
 export type StemPlayerStatus =
   'idle' | 'loading' | 'ready' | 'missing' | 'failed';
-
-export const ATTACHABLE: ReadonlySet<StemPlayerStatus> = new Set([
-  'loading',
-  'ready',
-]);
 
 export type LoopFailure = 'tooShort' | 'pastEnd' | 'engine';
 
@@ -293,23 +289,11 @@ export function createStemPlayerStore(
       mixer.current,
     );
     mixer.onSongEnded(ends.reported);
-    mixer.onSongStopped(() => {
+    const holds = stemSongHolds({ mixer, get, ends, runtimeOf, start });
+    holds.onCardStop(() => {
       card.stopped();
       start.songStopped();
-      ends.stopped();
-      if (!mixer.held()) mixer.close();
     });
-    // A card Stop under a holding screen still ends the song when the screen goes.
-    mixer.outlivesHolders(
-      () =>
-        get().status === 'ready' &&
-        (!ends.stoppedSince(mixer.current()) ||
-          runtimeOf().engine.playing() ||
-          start.counting()),
-      () => {
-        get().leaveRetime();
-      },
-    );
     mixer.onSongTransport(
       songTransportRequests({
         get,
@@ -437,11 +421,8 @@ export function createStemPlayerStore(
         showLoading(setId);
         await loadSession(opened, setId, bars);
       },
-      // Across an Activity relaunch the new screen can acquire before the old
-      // one unmounts, so a release only closes the session it acquired.
       acquireSong: (setId, bars) => {
-        const { setId: open, status } = get();
-        if (open === setId && ATTACHABLE.has(status)) return mixer.holdAgain();
+        if (holds.joins(setId)) return mixer.holdAgain();
         const acquired = mixer.begin();
         showLoading(setId);
         void loadSession(acquired, setId, bars);
@@ -468,9 +449,7 @@ export function createStemPlayerStore(
         ),
       onSongEnd: ends.subscribe,
       songStillEnded: ends.stands,
-      stopAdvancing: () => {
-        if (ends.gaveUp()) runtimeOf().commands.songTransportHide();
-      },
+      stopAdvancing: holds.gaveUp,
       handToMetronome: () => {
         runtimeOf().sharedMetronome.showStopped();
         mixer.close();

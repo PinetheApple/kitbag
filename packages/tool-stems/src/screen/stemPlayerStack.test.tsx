@@ -2,10 +2,19 @@ import {
   libraryStore,
   RETIME_PLAYBACK_RATE,
   stemPlayerStore,
+  stopStemSongOnMetronomeLoad,
 } from '@kitbag/core-state';
 import { record } from '@kitbag/core-state/src/stemPlayer/store.test-helper.ts';
 import { act } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 import {
   at,
@@ -91,6 +100,16 @@ async function uncover(player: Player, order: BackOrder): Promise<void> {
   if (order === 'refocus before release') closeSurface();
   await act(flush);
 }
+
+let stopTakeover: () => void = () => undefined;
+
+beforeAll(() => {
+  stopTakeover = stopStemSongOnMetronomeLoad();
+});
+
+afterAll(() => {
+  stopTakeover();
+});
 
 afterEach(() => {
   closeSurface();
@@ -289,26 +308,18 @@ describe('a metronome song loaded over the player', () => {
     expect(player.records.readStemSet).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps its song when the blur and the load land in one render', async () => {
+  it.each([
+    ['while it is in front', false],
+    ['as it blurs', true],
+  ])('stops the song when the load lands %s', async (_, blurring) => {
     const player = await openFirst();
     act(() => {
       libraryStore.setState((s) => ({ songLoads: s.songLoads + 1 }));
-      player.setFocused(false);
+      if (blurring) player.setFocused(false);
     });
     await act(flush);
-    expect(player.commands.engineRelease).not.toHaveBeenCalled();
-    expect(player.store.getState().status).toBe('ready');
-    loadMetronomeSong();
     expect(player.commands.engineRelease).toHaveBeenCalledOnce();
-  });
-
-  it('keeps the song when the load happens while it is in front', async () => {
-    const player = await openFirst();
-    loadMetronomeSong();
-    player.setFocused(false);
-    await act(flush);
-    expect(player.commands.engineRelease).not.toHaveBeenCalled();
-    expect(player.store.getState().status).toBe('ready');
+    expect(player.store.getState().status).toBe('idle');
   });
 });
 

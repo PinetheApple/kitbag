@@ -1,18 +1,15 @@
 import { MiniPlayerBar, type MiniPlayerTile } from '@kitbag/core-design';
 import {
-  entryName,
   loopEndFrames,
   stemSongTitle,
-  stopListening,
-  UP_NEXT_SOURCE,
+  stopSongAndSession,
+  upNextTitle,
   useLibrary,
   useSongPlayer,
   useStage,
   useStemPlayer,
   useStemSongs,
   useUpNext,
-  type SongPlayerStore,
-  type StemPlayerStore,
 } from '@kitbag/core-state';
 import { useCallback } from 'react';
 
@@ -21,6 +18,12 @@ import {
   stemMiniPlayerDetail,
   type SetlistSpot,
 } from '../logic/miniPlayerDetail.ts';
+import {
+  songShown,
+  stemShown,
+  useShownSongId,
+  useShownStemSetId,
+} from './nowPlaying.ts';
 import type { UsePlayhead } from './playhead.ts';
 
 export interface MiniPlayerProps {
@@ -29,9 +32,6 @@ export interface MiniPlayerProps {
   readonly onOpenSong: (id: number) => void;
   readonly onOpenStemSet: (id: number) => void;
 }
-
-const songShown = (s: SongPlayerStore) => s.status === 'ready';
-const stemShown = (s: StemPlayerStore) => s.status === 'ready';
 
 export function useMiniPlayerShown(): boolean {
   const song = useSongPlayer(songShown);
@@ -64,7 +64,7 @@ function LiveMiniPlayer({
     loopEnd,
   );
   const stop = useCallback(() => {
-    stopListening();
+    stopSongAndSession();
   }, []);
   return (
     <MiniPlayerBar
@@ -118,8 +118,8 @@ function SongMiniPlayer({ songId, onOpenSong, ...bar }: SongProps) {
 function useSetlistSpot(setId: number): SetlistSpot | null {
   const loaded = useLibrary((s) => s.loaded);
   const { stage, cursor, name } = useStage();
-  if (cursor === null || loaded?.presetId !== null) return null;
-  if (loaded.stemSetId !== setId) return null;
+  if (cursor === null || loaded === null) return null;
+  if (loaded.presetId !== null || loaded.stemSetId !== setId) return null;
   return {
     setlistName: name,
     number: cursor.index + 1,
@@ -130,10 +130,14 @@ function useSetlistSpot(setId: number): SetlistSpot | null {
 function useNextTitle(): string | null {
   const next = useUpNext();
   const stems = useStemSongs();
-  if (next === undefined) return null;
-  return next.source === UP_NEXT_SOURCE.queue
-    ? stemSongTitle(next.stemSetId, stems)
-    : entryName(next.entry, stems);
+  return next === undefined ? null : upNextTitle(next, stems);
+}
+
+function useStemTitle(setId: number): string {
+  const title = useStemPlayer((s) => s.title);
+  const loading = useStemPlayer((s) => s.status === 'loading');
+  const stems = useStemSongs();
+  return loading ? stemSongTitle(setId, stems) : title;
 }
 
 interface StemProps extends BarProps {
@@ -142,7 +146,7 @@ interface StemProps extends BarProps {
 }
 
 function StemMiniPlayer({ setId, onOpenStemSet, ...bar }: StemProps) {
-  const title = useStemPlayer((s) => s.title);
+  const title = useStemTitle(setId);
   const artist = useStemPlayer((s) => s.artist);
   const engineRate = useStemPlayer((s) => s.engineRate);
   const durationFrames = useStemPlayer((s) => s.durationFrames);
@@ -171,8 +175,8 @@ export function MiniPlayer({
   onOpenStemSet,
   ...bar
 }: MiniPlayerProps) {
-  const songId = useSongPlayer((s) => (songShown(s) ? s.songId : null));
-  const setId = useStemPlayer((s) => (stemShown(s) ? s.setId : null));
+  const songId = useShownSongId();
+  const setId = useShownStemSetId();
   if (songId !== null)
     return <SongMiniPlayer songId={songId} onOpenSong={onOpenSong} {...bar} />;
   if (setId === null) return null;

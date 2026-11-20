@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  startListeningSession,
-  stopListening,
+  endSessionOnCardStop,
+  stopSongAndSession,
   type ListeningDeps,
 } from './listeningSession.ts';
 
@@ -28,22 +28,22 @@ function deps() {
 describe('the listening session', () => {
   it('ends with Stop on the mini-player, closing whichever song plays', () => {
     const wiring = deps();
-    stopListening(wiring);
+    stopSongAndSession(wiring);
     expect(wiring.closePlayers).toHaveBeenCalledOnce();
     expect(wiring.endSession).toHaveBeenCalledOnce();
   });
 
   it.each([0, 1])('ends with Stop on either song card (%i)', (index) => {
     const wiring = deps();
-    startListeningSession(wiring);
+    endSessionOnCardStop(wiring);
     wiring.pressStop(index);
     expect(wiring.endSession).toHaveBeenCalledOnce();
     expect(wiring.closePlayers).not.toHaveBeenCalled();
   });
 
-  it('stops listening to the cards once stopped', () => {
+  it('lets go of the cards once unsubscribed', () => {
     const wiring = deps();
-    startListeningSession(wiring)();
+    endSessionOnCardStop(wiring)();
     expect(wiring.listening()).toBe(0);
   });
 });
