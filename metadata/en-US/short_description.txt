@@ -1,1 +1,1 @@
-A metronome, tuner and stem player for practising musicians.
+A metronome, tuner, and song and stem player for practising musicians.
