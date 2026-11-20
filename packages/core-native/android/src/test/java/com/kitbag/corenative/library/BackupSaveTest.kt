@@ -9,7 +9,6 @@ import java.io.RandomAccessFile
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -101,8 +100,18 @@ class BackupSaveTest {
       writeBytes(bytes)
     }
 
-  private fun copy(saved: Boolean = true, source: File = database(), opener: (String, String) -> OutputStream? = open) =
-    BackupSave.copyFile(saved, PICKED, source, opener, discard)
+  private fun copy(
+    saved: Boolean = true,
+    source: File = database(),
+    opener: (String, String) -> OutputStream? = open,
+    recovery: DatabaseRecovery = DatabaseRecovery {
+      it.writeBytes(DATABASE_BYTES)
+      File(it.path + "-journal").delete()
+    },
+  ): Boolean {
+    val settled = SettledCopy(File(source.parentFile, SettledCopy.WORK_DIR), recovery)
+    return BackupSave.copyFile(saved, PICKED, source, settled, opener, discard)
+  }
 
   @Test
   fun `copies the database file byte for byte`() {
@@ -151,27 +160,26 @@ class BackupSaveTest {
   }
 
   @Test
-  fun `a database with a hot journal is not copied and the created document is deleted`() {
-    val source = database()
+  fun `a database with a hot journal is saved as its recovered copy, not the torn file`() {
+    val source = database(TORN_BYTES)
     File(source.path + "-journal").apply { deleteOnExit() }.writeBytes(DATABASE_BYTES)
 
-    assertThrows(DatabaseUnsettledException::class.java) { copy(source = source) }
+    assertTrue(copy(source = source))
 
-    assertTrue(opened.isEmpty())
-    assertEquals(listOf(PICKED), discarded)
+    assertArrayEquals(DATABASE_BYTES, written.toByteArray())
+    assertTrue(discarded.isEmpty())
   }
 
   @Test
-  fun `only a journal or write-ahead log with bytes in it marks the database unsettled`() {
+  fun `a hot journal whose copy cannot be recovered fails as unreadable and deletes the created document`() {
     val source = database()
-    assertNull(BackupSave.unsettledJournal(source))
+    File(source.path + "-journal").apply { deleteOnExit() }.writeBytes(DATABASE_BYTES)
 
-    val wal = File(source.path + "-wal").apply { deleteOnExit() }
-    wal.writeBytes(ByteArray(0))
-    assertNull(BackupSave.unsettledJournal(source))
+    assertThrows(DatabaseCopyUnreadableException::class.java) {
+      copy(source = source, recovery = { throw IllegalStateException("file is not a database") })
+    }
 
-    wal.writeBytes(DATABASE_BYTES)
-    assertEquals(wal, BackupSave.unsettledJournal(source))
+    assertEquals(listOf(PICKED), discarded)
   }
 
   private fun providerStream(file: File, mode: String): OutputStream {
@@ -191,5 +199,6 @@ class BackupSaveTest {
     const val TRUNCATE = 't'
     const val LARGE_DATABASE_BYTES = 200 * 1024
     val DATABASE_BYTES = "SQLite format 3\u0000".toByteArray(Charsets.US_ASCII) + byteArrayOf(0, 1, 2, -1)
+    val TORN_BYTES = "SQLite format 3\u0000".toByteArray(Charsets.US_ASCII) + byteArrayOf(9, 9, 9)
   }
 }

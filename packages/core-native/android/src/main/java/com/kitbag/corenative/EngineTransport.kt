@@ -29,6 +29,8 @@ internal object EngineTransport {
 
   fun mixerPlaying(): Boolean = nativeMixerPlaying()
 
+  fun engineEndCount(): Long = nativeEndCount()
+
   fun sampleRate(): Double = nativeSampleRate()
 
   private external fun nativeStart()
@@ -43,5 +45,6 @@ internal object EngineTransport {
   private external fun nativeMixerSeek(frame: Double)
   private external fun nativeMixerPosition(): Double
   private external fun nativeMixerPlaying(): Boolean
+  private external fun nativeEndCount(): Long
   private external fun nativeSampleRate(): Double
 }

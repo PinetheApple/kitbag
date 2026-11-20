@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DATABASE_ERROR_TEXT } from './databaseErrorCopy.ts';
 
-const UNSETTLED_CODE = 'database-copy-unsettled';
+const NO_SPACE_CODE = 'database-copy-no-space';
+const UNREADABLE_CODE = 'database-copy-unreadable';
 
 const mocks = vi.hoisted(() => ({
   databaseStatus: vi.fn(),
@@ -41,7 +42,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.restoreAllMocks();
   mocks.getKitbagLibrary.mockReturnValue({
-    getConstants: () => ({ databaseCopyUnsettled: UNSETTLED_CODE }),
+    getConstants: () => ({
+      databaseCopyNoSpace: NO_SPACE_CODE,
+      databaseCopyUnreadable: UNREADABLE_CODE,
+    }),
   });
 });
 
@@ -117,25 +121,32 @@ describe('saveDatabaseCopyNotice', () => {
     );
   });
 
-  it('asks for a restart, not another place, when the database is mid-transaction', async () => {
+  it.each([
+    [NO_SPACE_CODE, DATABASE_ERROR_TEXT.copyNoSpace],
+    [UNREADABLE_CODE, DATABASE_ERROR_TEXT.copyUnreadable],
+  ])('says why no copy could be made for %s', async (code, notice) => {
     quietly();
     mocks.saveDatabaseCopy.mockRejectedValue(
-      Object.assign(new Error('unfinished transaction'), {
-        code: UNSETTLED_CODE,
-      }),
+      Object.assign(new Error('no copy'), { code }),
     );
 
-    await expect(saveDatabaseCopyNotice(TODAY)).resolves.toBe(
-      DATABASE_ERROR_TEXT.copyUnsettled,
-    );
+    await expect(saveDatabaseCopyNotice(TODAY)).resolves.toBe(notice);
+  });
+
+  it('never asks the user to restart Kitbag to save a copy', () => {
+    const notices = [
+      DATABASE_ERROR_TEXT.copyFailed,
+      DATABASE_ERROR_TEXT.copyNoSpace,
+      DATABASE_ERROR_TEXT.copyUnreadable,
+    ];
+
+    for (const notice of notices) expect(notice).not.toMatch(/open it again/i);
   });
 
   it('falls back to the generic notice when the native module cannot be read', async () => {
     quietly();
     mocks.saveDatabaseCopy.mockRejectedValue(
-      Object.assign(new Error('unfinished transaction'), {
-        code: UNSETTLED_CODE,
-      }),
+      Object.assign(new Error('no copy'), { code: NO_SPACE_CODE }),
     );
     mocks.getKitbagLibrary.mockImplementation(() => {
       throw new Error('KitbagLibrary is not registered');

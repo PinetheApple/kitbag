@@ -3,7 +3,6 @@ import {
   meterOverrideOf,
   type LibraryRow,
   type LibrarySongRow,
-  type MeterOverride,
   type SongRecord,
   type TempoCorrection,
 } from '@kitbag/core-db';
@@ -28,7 +27,6 @@ import {
 import { mixerSession, type MixerHold } from '../stemPlayer/mixerSession.ts';
 import {
   SCRUB_SEEK_DELAY_MS,
-  type StemPlayerActions,
   type StemPlayerStatus,
 } from '../stemPlayer/store.ts';
 import { framesToSeconds, secondsToFrames } from '../stemPlayer/time.ts';
@@ -38,6 +36,13 @@ import {
 } from '../songLibrary/store.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 import { songCard } from './songCard.ts';
+import type { SongPlayerActions } from './actions.ts';
+import {
+  songClickActions,
+  songClickEngine,
+  standaloneMetronome,
+  type SongClickMetronome,
+} from './songClick.ts';
 import {
   NO_GRID,
   overrideDisagrees,
@@ -59,37 +64,6 @@ const ATTACHABLE: ReadonlySet<StemPlayerStatus> = new Set(['loading', 'ready']);
 // Sub-frame rounding from a rate change must never rewrite the stored length.
 export const STORED_LENGTH_TOLERANCE_SEC = 0.01;
 
-interface SongSession {
-  readonly hold: MixerHold;
-  readonly loaded: Promise<void>;
-}
-
-type SongPlayerActions = Pick<
-  StemPlayerActions,
-  | 'togglePlay'
-  | 'scrub'
-  | 'cancelScrub'
-  | 'seek'
-  | 'skip'
-  | 'markLoop'
-  | 'moveLoopEdge'
-  | 'toggleClick'
-> & {
-  readonly open: (songId: number, waveformBars: number) => SongSession;
-  readonly close: () => void;
-  readonly meterOverrideChanged: (
-    songId: number,
-    override: MeterOverride,
-  ) => void;
-  readonly tempoCorrectionChanged: (
-    songId: number,
-    correction: TempoCorrection,
-  ) => void;
-  readonly tempoCorrectionSettled: (songId: number) => void;
-  readonly playheadBeatSeconds: () => number | null;
-  readonly dismissMeterNotice: () => void;
-};
-
 export type SongPlayerStore = SongPlayerState & SongPlayerActions;
 
 export type SongLibraryRows = Pick<
@@ -102,6 +76,7 @@ interface SongPlayerOptions {
   readonly mixerClaim?: MixerClaim;
   readonly library?: SongLibraryRows;
   readonly mixerClick?: MixerClick;
+  readonly metronome?: SongClickMetronome;
 }
 
 export function createSongPlayerStore(
@@ -113,6 +88,7 @@ export function createSongPlayerStore(
     mixerClaim: claim = createMixerClaim(),
     library,
     mixerClick: songClick = createMixerClick(),
+    metronome = standaloneMetronome,
   } = options;
   let trackRequested = false;
   let masterToRestore: number | null = null;
@@ -133,7 +109,10 @@ export function createSongPlayerStore(
     masterToRestore = null;
   };
 
-  return createStore<SongPlayerStore>((set, get) => {
+  return createStore<SongPlayerStore>((set, get, api) => {
+    const clickEngine = songClickEngine({ set, get, metronome });
+    const clickSettings = songClickActions({ set, get, metronome });
+    api.subscribe(clickEngine.followSong);
     const mixer = mixerSession({
       set,
       get,
@@ -347,7 +326,12 @@ export function createSongPlayerStore(
         waveformBars = bars;
         shownWaveform = null;
         latestWaveform = null;
-        set({ ...closedState, status: 'loading', songId });
+        set({
+          ...closedState,
+          ...clickSettings.seeded(closedState),
+          status: 'loading',
+          songId,
+        });
         loading = load(opened, songId).catch((error: unknown) => {
           console.warn('[kitbag] song failed to open', error);
           if (live(opened)) set({ status: 'failed' });
@@ -387,7 +371,10 @@ export function createSongPlayerStore(
       },
       ...transportActions(get, runtimeOf, scrubSeek, undefined, card.start),
       ...loopActions(context),
-      ...clickActions(context, mixer.pendingClick),
+      ...clickActions(context, mixer.pendingClick, {
+        clickStarting: clickEngine.clickStarting,
+      }),
+      ...clickSettings.actions,
     };
   });
 }

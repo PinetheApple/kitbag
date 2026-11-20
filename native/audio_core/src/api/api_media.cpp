@@ -127,6 +127,10 @@ int32_t kb_mixer_is_playing(const kb_engine* engine) {
                            : (ToEngine(engine)->mixer().is_playing() ? 1 : 0);
 }
 
+uint32_t kb_mixer_end_count(const kb_engine* engine) {
+  return engine == nullptr ? 0 : ToEngine(engine)->mixer().end_count();
+}
+
 void kb_mixer_seek(kb_engine* engine, int64_t frame) {
   if (engine == nullptr) return;
   kitbag::Engine* e = ToEngine(engine);

@@ -37,6 +37,13 @@ struct KeyBusSlot {
   std::unique_ptr<KeyBus> bus;
 };
 
+template <int kSlots>
+struct KeyBusBank {
+  std::unique_ptr<KeyBusSlot> slots[kSlots];
+  uint64_t generation = 0;
+  int64_t lag = 0;
+};
+
 }  // namespace kitbag
 
 #endif  // KITBAG_MIXER_KEY_BUS_H
