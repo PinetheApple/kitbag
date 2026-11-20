@@ -23,6 +23,23 @@ vi.mock('react-native-reanimated', async () => {
   };
 });
 
+function markup(bars: number): string {
+  return renderToStaticMarkup(
+    <ThemeProvider mode="dark">
+      <Waveform
+        envelope={[1, 0.5]}
+        bars={bars}
+        height={10}
+        progress={{ value: 0.5 } as never}
+      />
+    </ThemeProvider>,
+  );
+}
+
+function elementCount(html: string): number {
+  return html.match(/<[a-z]/g)?.length ?? 0;
+}
+
 function mountedShift(progress: number) {
   animated.length = 0;
   renderToStaticMarkup(
@@ -53,4 +70,8 @@ it('draws the played share of the lane from the first frame', () => {
     { translateX: '75%' },
   ]);
   expect(mountedShift(1)).toEqual([{ translateX: '0%' }, { translateX: '0%' }]);
+});
+
+it('draws each layer as one shape however many bars it has', () => {
+  expect(elementCount(markup(64))).toBe(elementCount(markup(2)));
 });
