@@ -7,6 +7,7 @@ import {
   pragma,
   rows,
   V24_SONG_COLUMNS,
+  V28_SONG_COLUMNS,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -24,7 +25,11 @@ describe('migrate v23 to v24', () => {
     );
     migrate(nodeSqliteDriver(db));
     expect(rows(db, 'SELECT * FROM songs ORDER BY id')).toEqual(
-      before.map((row) => ({ ...row, ...V24_SONG_COLUMNS })),
+      before.map((row) => ({
+        ...row,
+        ...V24_SONG_COLUMNS,
+        ...V28_SONG_COLUMNS,
+      })),
     );
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
   });

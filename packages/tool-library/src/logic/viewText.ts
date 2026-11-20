@@ -5,10 +5,11 @@ export const REANALYZE_LABEL = 'Re-analyse';
 export const BACK_TO_SONGS = 'Back to songs';
 export const TRY_AGAIN_LABEL = 'Try again';
 export const LOOP_KEY_TEXT = 'A|B';
-export const SPEED_KEY_TEXT = '1.0×';
-export const SPEED_KEY_LABEL = `Speed ${SPEED_KEY_TEXT}, not built yet`;
-export const SPEED_NOTE =
-  "Speed isn't built yet. It arrives with the stem player's.";
+export const SONG_SPEED_TEXT = {
+  title: 'Speed for this song',
+  close: 'Close speed for this song',
+  reset: 'Reset speed',
+} as const;
 
 export const REPLACE_SHEET_TEXT = {
   dismiss: 'Keep the current song',

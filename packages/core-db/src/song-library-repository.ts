@@ -39,6 +39,7 @@ import { findStemSetMatches, type StemSetIdentity } from './stem-set-match';
 import { renameStem, renameStemSet } from './stem-rename';
 import { saveStemSetSpeedKey, type StemSetSpeedKey } from './stem-speed-key';
 import { saveChosenTempoMode } from './stem-tempo';
+import { saveSongSpeed } from './song-speed';
 import { saveTempoCorrection } from './song-tempo-correction';
 import { tempoCorrectionOf, type TempoCorrection } from './tempo-correction';
 import type { TempoMode } from './tempo-mode';
@@ -96,6 +97,7 @@ export interface SongRecord extends MeterOverride {
   readonly downbeatIndices: readonly number[];
   readonly analysisStatus: AnalysisStatus;
   readonly tempoCorrection: TempoCorrection;
+  readonly speed: number;
 }
 
 export interface SongFiles {
@@ -370,6 +372,7 @@ async function readSong(
       row.downbeatIndices === null ? [] : unpackInt32(row.downbeatIndices),
     analysisStatus: row.analysisStatus,
     tempoCorrection: tempoCorrectionOf(row.tempoCorrection),
+    speed: row.speed,
     ...meterOverrideOf(row),
   };
 }
@@ -421,6 +424,8 @@ export function createSongLibraryRepository({
       serial(() => saveMeterOverride(db, songs, id, patch)),
     saveSongTempoCorrection: (id: number, correction: TempoCorrection) =>
       serial(() => saveTempoCorrection(db, id, correction)),
+    saveSongSpeed: (id: number, speed: number) =>
+      serial(() => saveSongSpeed(db, id, speed)),
     saveStemSetMeterOverride: (id: number, patch: MeterOverridePatch) =>
       serial(() => saveMeterOverride(db, stemSets, id, patch)),
     saveStemSetClick: (id: number, patch: StemSetClickPatch) =>

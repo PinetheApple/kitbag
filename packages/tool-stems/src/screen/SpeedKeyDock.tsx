@@ -1,12 +1,16 @@
 import {
   createThemedStyles,
   size,
+  SpeedStepper,
   StepControl,
   type NeighbourGaps,
   type StepDelta,
 } from '@kitbag/core-design';
 import {
   isUnitySpeed,
+  keyText,
+  speedKeyCopy,
+  speedPercentText,
   steppedKey,
   steppedSpeed,
   UNSHIFTED_KEY,
@@ -15,12 +19,7 @@ import {
 import { useCallback } from 'react';
 import { View } from 'react-native';
 
-import {
-  keyText,
-  speedKeyCopy,
-  speedText,
-  spokenKey,
-} from '../logic/speedKeyView.ts';
+import { spokenKey } from '../logic/stemKeyText.ts';
 
 const useStyles = createThemedStyles(() => ({
   line: {
@@ -36,10 +35,7 @@ interface StepperProps {
   readonly onOpen?: () => void;
 }
 
-const opener = (onOpen: (() => void) | undefined) =>
-  onOpen === undefined ? {} : { onValuePress: onOpen };
-
-export function SpeedStepper({ gaps, onOpen }: StepperProps) {
+export function usePlayerSpeedStep() {
   const speed = useStemPlayer((s) => s.speed);
   const setSpeed = useStemPlayer((s) => s.setSpeed);
   const step = useCallback(
@@ -48,15 +44,19 @@ export function SpeedStepper({ gaps, onOpen }: StepperProps) {
     },
     [setSpeed, speed],
   );
+  return { speed, step };
+}
+
+function PlayerSpeedStepper({ gaps, onOpen }: StepperProps) {
+  const { speed, step } = usePlayerSpeedStep();
   return (
-    <StepControl
-      variant="inlineLarge"
+    <SpeedStepper
       label={speedKeyCopy.speed}
-      value={speedText(speed)}
+      value={speedPercentText(speed)}
       accented={!isUnitySpeed(speed)}
-      neighbourGapDp={gaps}
+      gaps={gaps}
       onStep={step}
-      {...opener(onOpen)}
+      onOpen={onOpen}
     />
   );
 }
@@ -79,7 +79,7 @@ export function SongKeyStepper({ gaps, onOpen }: StepperProps) {
       accented={songKey !== UNSHIFTED_KEY}
       neighbourGapDp={gaps}
       onStep={step}
-      {...opener(onOpen)}
+      onValuePress={onOpen}
     />
   );
 }
@@ -91,7 +91,7 @@ export function SpeedKeyDock({
   const styles = useStyles();
   return (
     <View style={styles.line}>
-      <SpeedStepper gaps={gaps} onOpen={onOpen} />
+      <PlayerSpeedStepper gaps={gaps} onOpen={onOpen} />
       <SongKeyStepper gaps={gaps} onOpen={onOpen} />
     </View>
   );
