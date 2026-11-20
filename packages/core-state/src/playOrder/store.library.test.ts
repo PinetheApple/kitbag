@@ -70,7 +70,7 @@ describe('play order on the library stage', () => {
     const { loaded, played, discarded } = library.getState();
     const step = await order.getState().peekNext();
     const stood = await order.getState().commitNext(step.advance, () => false);
-    expect(stood).toBe(false);
+    expect(stood).toBeNull();
     expect(library.getState()).toMatchObject({ loaded, played, discarded });
   });
 
