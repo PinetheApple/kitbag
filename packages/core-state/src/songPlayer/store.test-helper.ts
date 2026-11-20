@@ -68,7 +68,7 @@ export function fakeMetronome() {
     () => 0,
     () => DEFAULT_BPM,
     Date.now,
-    { release: () => undefined },
+    { active: () => false, release: () => undefined },
   );
   return { store, commands };
 }
