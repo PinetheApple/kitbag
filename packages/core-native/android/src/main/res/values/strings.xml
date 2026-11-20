@@ -8,4 +8,6 @@
   <string name="kitbag_action_tempo_up">Tempo up</string>
   <string name="kitbag_action_rewind">Back %1$d seconds</string>
   <string name="kitbag_action_forward">Forward %1$d seconds</string>
+  <string name="kitbag_action_previous">Previous</string>
+  <string name="kitbag_action_next">Next</string>
 </resources>

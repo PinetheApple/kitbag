@@ -4,7 +4,11 @@ import { soloAfter, UNITY_GAIN } from './mix.ts';
 import type { MixSaver } from './mixSaver.ts';
 import type { MixerRuntime, StemPlayerRuntime } from './runtime.ts';
 import type { SongStart } from './songStart.ts';
-import { restartFromFrame, songTransportShown } from './songTransport.ts';
+import {
+  restartFromFrame,
+  songTransportShown,
+  type SongCardTag,
+} from './songTransport.ts';
 import type {
   Get,
   SetState,
@@ -112,6 +116,7 @@ export function plainStart(
 export function transportActions(
   get: () => TransportSlice,
   runtimeOf: () => MixerRuntime,
+  card: () => SongCardTag,
   scrubSeek: Debounced<[number]>,
   afterSeek?: (frame: number) => void,
   start: Pick<SongStart, 'play' | 'cancel'> = plainStart(runtimeOf),
@@ -141,7 +146,7 @@ export function transportActions(
         seek(head);
       }
       start.play(head);
-      commands.songTransportShow(songTransportShown(get()));
+      commands.songTransportShow(songTransportShown(get(), card()));
     },
     scrub: (frame) => {
       scrubSeek(frame);

@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
 
-import { ADVANCE_OUTCOME, type AdvanceOutcome } from '../stemPlayer/songEnd.ts';
+import {
+  ADVANCE_CAUSE,
+  ADVANCE_OUTCOME,
+  type AdvanceCause,
+  type AdvanceListener,
+  type AdvanceOutcome,
+} from '../stemPlayer/songEnd.ts';
 import {
   ARRIVAL,
   SKIP,
@@ -22,8 +28,9 @@ const play = (stemSetId: number, setlistItemId: number | null = ITEM) => ({
   advance: { kind: ADVANCE.play, stemSetId, setlistItemId },
   skipped: false,
 });
+const BALLAD_COUNT = {} as never;
 const metronomeNext: SkipResult = {
-  advance: { kind: ADVANCE.open, entry: {} as never },
+  advance: { kind: ADVANCE.open, entry: BALLAD_COUNT },
   skipped: false,
 };
 const end: SkipResult = { advance: { kind: ADVANCE.end }, skipped: false };
@@ -34,7 +41,7 @@ function harness(
   candidates = steps.length,
   stillEnded: () => boolean = () => true,
 ) {
-  let ended: () => void = () => undefined;
+  let leave: AdvanceListener = () => undefined;
   const unsubscribe = vi.fn();
   const peekNext = vi.fn<AutoAdvanceDeps['peekNext']>();
   for (const step of steps) peekNext.mockResolvedValueOnce(step);
@@ -51,9 +58,13 @@ function harness(
     if (arrival !== null) seen.push(arrival);
   });
   const stopAdvancing = vi.fn();
+  const openEntry = vi.fn<AutoAdvanceDeps['openEntry']>(() =>
+    Promise.resolve(),
+  );
+  const handToMetronome = vi.fn();
   const stop = startAutoAdvance({
     onSongEnd: (listener) => {
-      ended = listener;
+      leave = listener;
       return unsubscribe;
     },
     advanceTo,
@@ -66,11 +77,18 @@ function harness(
     candidates: () => candidates,
     stillEnded,
     stopAdvancing,
+    openEntry,
+    handToMetronome,
     arrivals,
   });
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
   const songEnds = async () => {
-    ended();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    leave(ADVANCE_CAUSE.ended);
+    await settle();
+  };
+  const pressNext = async () => {
+    leave(ADVANCE_CAUSE.next);
+    await settle();
   };
   return {
     songEnds,
@@ -82,6 +100,13 @@ function harness(
     stop,
     unsubscribe,
     stopAdvancing,
+    openEntry,
+    handToMetronome,
+    leave: (cause: AdvanceCause) => {
+      leave(cause);
+    },
+    settle,
+    pressNext,
   };
 }
 
@@ -173,6 +198,8 @@ describe('auto-advance at the end of a stem song', () => {
     await h.songEnds();
     expect(h.advanceTo).not.toHaveBeenCalled();
     expect(h.commitNext).not.toHaveBeenCalled();
+    expect(h.openEntry).not.toHaveBeenCalled();
+    expect(h.handToMetronome).not.toHaveBeenCalled();
     expect(h.arrivals.getState().arrival).toBeNull();
   });
 
@@ -250,5 +277,95 @@ describe('auto-advance at the end of a stem song', () => {
     const h = harness([]);
     h.stop();
     expect(h.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Next from the song card', () => {
+  it('takes the same look, commit and load as the end of a song', async () => {
+    const stillEnded = vi.fn(() => true);
+    const h = harness([play(NIGHT_BUS)], [], 1, stillEnded);
+    await h.pressNext();
+    expect(h.commitNext).toHaveBeenCalledWith(
+      play(NIGHT_BUS).advance,
+      stillEnded,
+    );
+    expect(h.advanceTo).toHaveBeenCalledWith(NIGHT_BUS);
+    expect(h.peekNext.mock.invocationCallOrder[0]).toBeLessThan(
+      h.commitNext.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(h.arrivals.getState().arrival).toMatchObject({
+      kind: ARRIVAL.playing,
+      stemSetId: NIGHT_BUS,
+      place: PLACE,
+    });
+  });
+
+  it('opens a metronome song stopped and hands the card to the metronome', async () => {
+    const h = harness([metronomeNext]);
+    await h.pressNext();
+    expect(h.openEntry).toHaveBeenCalledWith(BALLAD_COUNT);
+    expect(h.handToMetronome).toHaveBeenCalledTimes(1);
+    expect(h.handToMetronome.mock.invocationCallOrder[0]).toBeGreaterThan(
+      h.openEntry.mock.invocationCallOrder[0] ?? Infinity,
+    );
+    expect(h.advanceTo).not.toHaveBeenCalled();
+    expect(h.stopAdvancing).not.toHaveBeenCalled();
+    expect(h.arrivals.getState().arrival).toMatchObject({
+      kind: ARRIVAL.metronome,
+    });
+  });
+
+  it('keeps the stem song when another took the player while the metronome song loaded', async () => {
+    let standing = true;
+    const h = harness([metronomeNext], [], 1, () => standing);
+    h.openEntry.mockImplementationOnce(() => {
+      standing = false;
+      return Promise.resolve();
+    });
+    await h.pressNext();
+    expect(h.handToMetronome).not.toHaveBeenCalled();
+    expect(h.arrivals.getState().arrival).toBeNull();
+  });
+
+  it('ignores a second Next while the first is still committing', async () => {
+    const h = harness([play(NIGHT_BUS), play(TIN_ROOF)]);
+    let release: (kept: boolean) => void = () => undefined;
+    h.commitNext.mockImplementationOnce(
+      () =>
+        new Promise<boolean>((resolve) => {
+          release = resolve;
+        }),
+    );
+    h.leave(ADVANCE_CAUSE.next);
+    await h.settle();
+    await h.pressNext();
+    expect(h.peekNext).toHaveBeenCalledTimes(1);
+    release(true);
+    await h.settle();
+    expect(h.advanceTo.mock.calls).toEqual([[NIGHT_BUS]]);
+  });
+
+  it('ignores the end of the song while a Next is still committing', async () => {
+    const h = harness([play(NIGHT_BUS), play(TIN_ROOF)]);
+    let release: (kept: boolean) => void = () => undefined;
+    h.commitNext.mockImplementationOnce(
+      () =>
+        new Promise<boolean>((resolve) => {
+          release = resolve;
+        }),
+    );
+    await h.pressNext();
+    await h.songEnds();
+    release(true);
+    await h.settle();
+    expect(h.peekNext).toHaveBeenCalledTimes(1);
+    expect(h.advanceTo.mock.calls).toEqual([[NIGHT_BUS]]);
+  });
+
+  it('takes a later Next once the first has landed', async () => {
+    const h = harness([play(NIGHT_BUS), play(TIN_ROOF)]);
+    await h.pressNext();
+    await h.pressNext();
+    expect(h.advanceTo.mock.calls).toEqual([[NIGHT_BUS], [TIN_ROOF]]);
   });
 });

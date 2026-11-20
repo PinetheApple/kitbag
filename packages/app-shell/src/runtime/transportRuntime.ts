@@ -16,6 +16,7 @@ import {
   replayOnApp,
   shownAfterNativeChange,
   shownAfterReplay,
+  stoppedShown,
   storePatchFor,
   transportActive,
   type Replay,
@@ -57,14 +58,18 @@ function handOverCard() {
   getKitbagCommands().transportHandOver();
 }
 
+function transportSource() {
+  return {
+    ...metronomeStore.getState(),
+    setlist: transportSetlistOf(transportSubtitle, libraryStore.getState()),
+  };
+}
+
 // Reads the latest state: a nested setState can hand later listeners an older snapshot.
 function syncFromApp() {
   if (syncHeld) return;
   const step = notificationStepAfterAppChange(
-    {
-      ...metronomeStore.getState(),
-      setlist: transportSetlistOf(transportSubtitle, libraryStore.getState()),
-    },
+    transportSource(),
     shown,
     Date.now(),
   );
@@ -150,5 +155,9 @@ export const metronomeTransport = {
       metronomeStore.getState().stop();
     });
     handedOver = true;
+  },
+  showStopped: () => {
+    if (transportActive(metronomeStore.getState().running, shown)) return;
+    sendCard(stoppedShown(transportSource(), Date.now()));
   },
 };

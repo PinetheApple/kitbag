@@ -2,6 +2,7 @@ import type { PlayQueueEntry, PlayQueueRepository } from '@kitbag/core-db';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { libraryStore, type LibraryStore } from '../library/store.ts';
+import { isPresetEntry, type SetlistEntry } from '../library/snapshot.ts';
 import {
   ADVANCE,
   advanceOf,
@@ -37,6 +38,7 @@ export interface PlayOrderActions {
   skipToNext: () => Promise<SkipResult>;
   peekNext: () => Promise<SkipResult>;
   commitNext: (next: Advance, stands?: () => boolean) => Promise<boolean>;
+  openEntry: (entry: SetlistEntry) => Promise<void>;
 }
 
 export type PlayOrderStore = PlayOrderState & PlayOrderActions;
@@ -47,6 +49,11 @@ export interface PlayOrderDeps {
   readonly cursor: () => SetlistCursor | null;
   readonly refreshStage: () => Promise<void>;
   readonly playSetlistEntry: (
+    itemId: number,
+    setlistId: number,
+  ) => Promise<unknown>;
+  readonly loadPreset: (
+    presetId: number,
     itemId: number,
     setlistId: number,
   ) => Promise<unknown>;
@@ -88,6 +95,8 @@ const defaultDeps: PlayOrderDeps = {
   refreshStage: () => libraryStore.getState().refresh(),
   playSetlistEntry: (itemId, setlistId) =>
     libraryStore.getState().openStemEntry(itemId, setlistId),
+  loadPreset: (presetId, itemId, setlistId) =>
+    libraryStore.getState().loadSong(presetId, itemId, setlistId),
   markStage: stageMarkOf(libraryStore),
 };
 
@@ -215,6 +224,13 @@ function orderActions(deps: PlayOrderDeps, get: Get, edits: QueueEdits) {
     const commit = commitOf(deps, get, edits, next);
     return commit === null || kept(commit, stands);
   };
+  const openEntry = async (entry: SetlistEntry) => {
+    const { setlistId } = deps.stage();
+    if (setlistId === null) return;
+    if (isPresetEntry(entry))
+      await deps.loadPreset(entry.preset.id, entry.item.id, setlistId);
+    else await deps.playSetlistEntry(entry.item.id, setlistId);
+  };
   const skipToNext = async () => {
     const step = await peekNext();
     await commitNext(step.advance);
@@ -231,6 +247,7 @@ function orderActions(deps: PlayOrderDeps, get: Get, edits: QueueEdits) {
     skipToNext,
     peekNext,
     commitNext,
+    openEntry,
   };
 }
 

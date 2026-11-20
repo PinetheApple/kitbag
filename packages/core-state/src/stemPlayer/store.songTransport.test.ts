@@ -69,11 +69,15 @@ const NEXT_CARD = {
   restartFromFrame: NEXT_FRAMES - END_SLACK_SECONDS * RATE,
 };
 
+const OPENED_SESSION = 1;
+
 describe('the song notification', () => {
   it('shows the song, its length and the skip step when play starts', async () => {
     const { commands, store } = await opened([stem(1)]);
     store.getState().togglePlay();
     expect(commands.songTransportShow).toHaveBeenCalledWith({
+      session: OPENED_SESSION,
+      inPlayOrder: true,
       playing: true,
       countingIn: false,
       title: 'Song',

@@ -28,6 +28,7 @@ export type TransportSetlist = Readonly<{
 
 export type TransportShowState = Readonly<{
   playing: boolean;
+  stopped: boolean;
   bpm: Double;
   rampRunning: boolean;
   beatsPerBar: Int32;
@@ -48,13 +49,22 @@ export type SongTransportShowState = Readonly<{
   durationFrames: Double;
   restartFromFrame: Double;
   skipSeconds: Double;
+  session: Int32;
+  inPlayOrder: boolean;
 }>;
 
-/** A song-notification action while the card is marked countingIn, for JS to apply.
- *  The mark is set by songTransportShow and dropped once the mixer reads playing. */
+/** What the play order holds around the song; only a card shown inPlayOrder uses it. */
+export type SongTransportOrder = Readonly<{
+  previous: boolean;
+  next: boolean;
+}>;
+
+/** A song-notification action for JS to apply: Next always, the rest while the card is
+ *  marked countingIn. `session` is the one the card was shown with. */
 export type SongTransportRequest = Readonly<{
-  action: 'play' | 'pause' | 'stop' | 'seek';
+  action: 'play' | 'pause' | 'stop' | 'seek' | 'next';
   frame: Double | null;
+  session: Int32;
 }>;
 
 export type OutputRoute = Readonly<{
@@ -199,6 +209,7 @@ export interface Spec extends TurboModule {
   transportHide(): void;
   transportHandOver(): void;
   songTransportShow(state: SongTransportShowState): void;
+  songTransportOrder(order: SongTransportOrder): void;
   songTransportHide(): void;
   setKeepScreenOn(on: boolean): void;
   setAppNightMode(mode: string): void;

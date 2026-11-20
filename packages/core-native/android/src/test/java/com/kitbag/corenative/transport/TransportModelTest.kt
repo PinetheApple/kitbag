@@ -6,7 +6,9 @@ import com.kitbag.corenative.transport.TransportAction.STOP
 import com.kitbag.corenative.transport.TransportAction.TEMPO_DOWN
 import com.kitbag.corenative.transport.TransportAction.TEMPO_UP
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TransportModelTest {
@@ -87,6 +89,22 @@ class TransportModelTest {
     }
     assertEquals(-model.tempoStep(TEMPO_UP), model.tempoStep(TEMPO_DOWN))
     for (action in listOf(PLAY, PAUSE, STOP)) assertEquals(0, model.tempoStep(action))
+  }
+
+  @Test
+  fun `a card shown stopped ends only on stop`() {
+    val stopped = state(Playback.STOPPED)
+    assertTrue(model.endsCard(STOP, stopped))
+    assertTrue(model.endsCard(STOP, state(Playback.STOPPED, bpm = 90.0)))
+    for (action in listOf(TEMPO_DOWN, TEMPO_UP, PAUSE)) assertFalse(model.endsCard(action, stopped))
+    assertFalse(model.endsCard(PLAY, state(Playback.PLAYING)))
+  }
+
+  @Test
+  fun `the show flags read as one playback`() {
+    assertEquals(Playback.PLAYING, playbackOf(playing = true, stopped = false))
+    assertEquals(Playback.STOPPED, playbackOf(playing = false, stopped = true))
+    assertEquals(Playback.PAUSED, playbackOf(playing = false, stopped = false))
   }
 
   @Test

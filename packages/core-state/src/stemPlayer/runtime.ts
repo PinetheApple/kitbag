@@ -41,6 +41,7 @@ export type StemPlayerCommands = Pick<
   | 'metronomeStart'
   | 'metronomeStop'
   | 'songTransportShow'
+  | 'songTransportOrder'
   | 'songTransportHide'
 > & {
   readonly onSongStopped: (handler: () => void) => {
@@ -81,6 +82,7 @@ export type StemPlayerRecords = Pick<
 export interface SharedMetronome {
   readonly active: () => boolean;
   readonly release: () => void;
+  readonly showStopped: () => void;
 }
 
 export interface MixerRuntime {

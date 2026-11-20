@@ -59,7 +59,12 @@ function showCountOutsideApp(
 ): void {
   mixer.onScrubSeek(start.afterSeek);
   mixer.onClickReleased(start.endCountNow);
-  const card = showCountOnSongCard(store, runtimeOf, start.counting);
+  const card = showCountOnSongCard(
+    store,
+    runtimeOf,
+    start.counting,
+    mixer.card,
+  );
   mixer.onSongTransport(
     songTransportRequests({
       get: store.getState,

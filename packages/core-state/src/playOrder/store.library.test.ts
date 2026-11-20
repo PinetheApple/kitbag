@@ -19,6 +19,8 @@ async function setup() {
     refreshStage: () => library.getState().refresh(),
     playSetlistEntry: (itemId, setlistId) =>
       library.getState().openStemEntry(itemId, setlistId),
+    loadPreset: (presetId, itemId, setlistId) =>
+      library.getState().loadSong(presetId, itemId, setlistId),
     markStage: stageMarkOf(library),
   });
   const gig = await library.getState().createSetlist('Gig');
@@ -152,6 +154,8 @@ describe('play order after removals around the entry on stage', () => {
       refreshStage: () => library.getState().refresh(),
       playSetlistEntry: (itemId, setlistId) =>
         library.getState().openStemEntry(itemId, setlistId),
+      loadPreset: (presetId, itemId, setlistId) =>
+        library.getState().loadSong(presetId, itemId, setlistId),
       markStage: stageMarkOf(library),
     });
     const gig = await library.getState().createSetlist('Gig');

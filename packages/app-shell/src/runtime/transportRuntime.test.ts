@@ -543,4 +543,47 @@ describe('transportRuntime', () => {
     expect(native.cardCalls).toEqual(cardsBefore);
     expect(native.metronomeStop).toHaveBeenCalledTimes(stops);
   });
+
+  it('a stem card handing over shows the metronome card stopped, with the loaded tempo', async () => {
+    const { metronomeTransport } = await import('./transportRuntime');
+    metronomeStore.getState().stop();
+    metronomeStore.setState({ running: false, bpm: 84 });
+    const shows = calls(native.transportShow);
+    metronomeTransport.showStopped();
+    expect(native.transportShow).toHaveBeenCalledTimes(shows + 1);
+    expect(lastCard()).toMatchObject({
+      playing: false,
+      stopped: true,
+      bpm: 84,
+    });
+    expect(native.metronomeStart).not.toHaveBeenCalled();
+    expect(metronomeTransport.active()).toBe(true);
+  });
+
+  it('a stopped card stays up through its tempo keys and goes with its Stop', async () => {
+    const { metronomeTransport } = await import('./transportRuntime');
+    metronomeStore.getState().stop();
+    metronomeStore.setState({ running: false, bpm: 84 });
+    metronomeTransport.showStopped();
+    const card = lastCard()?.cardNumber ?? 0;
+    const stopped = { ...notification, playback: 'stopped', cardNumber: card };
+    native.emitTransport({
+      ...stopped,
+      action: 'tempo_up',
+      bpm: 85,
+      tempoStep: TEMPO_STEP,
+    });
+    expect(metronomeTransport.active()).toBe(true);
+    expect(metronomeStore.getState().bpm).toBe(85);
+    native.emitTransport({ ...stopped, action: 'stop', bpm: 85 });
+    expect(metronomeTransport.active()).toBe(false);
+  });
+
+  it('a hand-over leaves a running or paused metronome card as it is', async () => {
+    const { metronomeTransport } = await import('./transportRuntime');
+    playingOnACurrentCard(120);
+    const shows = calls(native.transportShow);
+    metronomeTransport.showStopped();
+    expect(native.transportShow).toHaveBeenCalledTimes(shows);
+  });
 });

@@ -12,6 +12,8 @@ data class Song(
   val skipSeconds: Double,
 )
 
+data class SongCardTag(val cardNumber: Int, val session: Int, val inPlayOrder: Boolean, val order: SongOrder)
+
 // SystemUI formats the artist into "%1$s by %2$s", so a null would read as "null".
 fun mediaArtist(artist: String?): String = if (artist.isNullOrBlank()) "" else artist
 
@@ -35,7 +37,9 @@ enum class SongAction {
   PLAY,
   PAUSE,
   FORWARD,
-  STOP;
+  STOP,
+  PREVIOUS,
+  NEXT;
 
   companion object {
     fun named(name: String): SongAction? = entries.find { it.name == name }
@@ -52,6 +56,8 @@ sealed interface SongCommand {
   data object StopCountIn : SongCommand
 
   data class Seek(val frame: Long) : SongCommand
+
+  data object Next : SongCommand
 }
 
 val SongCommand.appAction: String
@@ -61,12 +67,32 @@ val SongCommand.appAction: String
       SongCommand.Pause -> "pause"
       SongCommand.Stop, SongCommand.StopCountIn -> "stop"
       is SongCommand.Seek -> "seek"
+      SongCommand.Next -> "next"
     }
 
 data class SongRoute(val app: SongCommand?, val engine: List<SongCommand>)
 
 val SongCommand.endsSong: Boolean
   get() = this == SongCommand.Stop || this == SongCommand.StopCountIn
+
+enum class SongOrder {
+  ALONE,
+  UP_NEXT,
+  LAST;
+
+  companion object {
+    fun of(previous: Boolean, next: Boolean): SongOrder =
+      when {
+        next -> UP_NEXT
+        previous -> LAST
+        else -> ALONE
+      }
+
+    fun named(name: String?): SongOrder = entries.find { it.name == name } ?: ALONE
+  }
+}
+
+data class SongSlots(val actions: List<SongAction>, val compact: List<Int>, val reserveNext: Boolean)
 
 data class SongPlayback(
   val state: Int,
@@ -84,21 +110,29 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
 
   private val skipFrames: Long = (song.skipSeconds * sampleRate).roundToLong()
 
-  fun actions(progress: SongProgress): List<SongAction> =
-    listOf(
-      SongAction.REWIND,
-      if (progress.shownPlaying) SongAction.PAUSE else SongAction.PLAY,
-      SongAction.FORWARD,
-      SongAction.STOP,
-    )
+  // Without skip actions the system card puts the first custom actions in the Previous and Next slots.
+  fun slots(progress: SongProgress, order: SongOrder): SongSlots {
+    val playPause = if (progress.shownPlaying) SongAction.PAUSE else SongAction.PLAY
+    val skips = listOf(SongAction.REWIND, SongAction.FORWARD)
+    val actions =
+      when (order) {
+        SongOrder.ALONE -> listOf(SongAction.REWIND, playPause, SongAction.FORWARD, SongAction.STOP)
+        SongOrder.UP_NEXT -> listOf(SongAction.PREVIOUS, playPause, SongAction.NEXT) + skips
+        SongOrder.LAST -> listOf(SongAction.PREVIOUS, playPause) + skips
+      }
+    val compact =
+      if (order == SongOrder.ALONE) actions.indices.take(MAX_COMPACT_ACTIONS)
+      else actions.indices.filter { actions[it] in ORDER_KEYS }
+    return SongSlots(actions, compact, reserveNext = order == SongOrder.LAST)
+  }
 
-  fun playback(progress: SongProgress, now: Long): SongPlayback =
+  fun playback(progress: SongProgress, order: SongOrder, now: Long): SongPlayback =
     SongPlayback(
       state = if (progress.shownPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
       positionMillis = millis(progress.positionFrames.coerceIn(0L, song.durationFrames)),
       speed = if (progress.playing) progress.rate else 0f,
       updatedAt = now,
-      actions = SESSION_ACTIONS,
+      actions = SESSION_ACTIONS or skipActions(order),
     )
 
   // The system extrapolates a published position, so a loop wrap or an in-app seek shows only as drift.
@@ -116,10 +150,13 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
       SongAction.STOP -> listOf(SongCommand.Stop)
       SongAction.REWIND -> listOf(seek(progress.positionFrames - skipFrames))
       SongAction.FORWARD -> listOf(seek(progress.positionFrames + skipFrames))
+      SongAction.PREVIOUS -> listOf(seek(0L))
+      SongAction.NEXT -> emptyList()
     }
 
   // A count-in is the app's to cancel; Stop also ends the count and the card natively, as after the start.
   fun route(progress: SongProgress, action: SongAction, appListening: Boolean): SongRoute {
+    if (action == SongAction.NEXT) return SongRoute(if (appListening) SongCommand.Next else null, emptyList())
     if (progress.countingIn && action == SongAction.STOP) {
       return SongRoute(if (appListening) SongCommand.Stop else null, listOf(SongCommand.StopCountIn))
     }
@@ -139,6 +176,7 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
       SongCommand.Pause -> progress.copy(playing = false)
       SongCommand.Stop, SongCommand.StopCountIn -> SongProgress(playing = false, positionFrames = 0L)
       is SongCommand.Seek -> progress.copy(positionFrames = command.frame)
+      SongCommand.Next -> progress
     }
 
   fun seekTo(positionMillis: Long): SongCommand =
@@ -151,6 +189,8 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
       SongAction.STOP -> SongCommand.Stop
       SongAction.REWIND -> seek(progress.positionFrames - skipFrames)
       SongAction.FORWARD -> seek(progress.positionFrames + skipFrames)
+      SongAction.PREVIOUS -> seek(0L)
+      SongAction.NEXT -> SongCommand.Next
     }
 
   private fun play(progress: SongProgress): List<SongCommand> =
@@ -165,8 +205,18 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
   private fun millis(frames: Long): Long =
     if (sampleRate <= 0.0) 0L else (frames * MILLIS_PER_SECOND / sampleRate).roundToLong()
 
+  private fun skipActions(order: SongOrder): Long =
+    when (order) {
+      SongOrder.ALONE -> 0L
+      SongOrder.UP_NEXT -> SKIP_TO_PREVIOUS or PlaybackStateCompat.ACTION_SKIP_TO_NEXT
+      SongOrder.LAST -> SKIP_TO_PREVIOUS
+    }
+
   companion object {
     const val DRIFT_TOLERANCE_MILLIS = 300L
+    private const val MAX_COMPACT_ACTIONS = 3
+    private const val SKIP_TO_PREVIOUS = PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+    private val ORDER_KEYS = setOf(SongAction.PREVIOUS, SongAction.PLAY, SongAction.PAUSE, SongAction.NEXT)
     private const val MILLIS_PER_SECOND = 1000.0
     private const val SESSION_ACTIONS =
       PlaybackStateCompat.ACTION_PLAY or

@@ -16,14 +16,21 @@ export function restartFromFrame(
   return durationFrames - secondsToFrames(END_SLACK_SECONDS, engineRate);
 }
 
+export type SongCardTag = Pick<
+  SongTransportShowState,
+  'session' | 'inPlayOrder'
+>;
+
 export function songTransportShown(
   state: Pick<
     StemPlayerState,
     'title' | 'artist' | 'durationFrames' | 'engineRate'
   >,
+  card: SongCardTag,
   countingIn = false,
 ): SongTransportShowState {
   return {
+    ...card,
     playing: true,
     countingIn,
     title: state.title,

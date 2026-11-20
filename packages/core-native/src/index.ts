@@ -146,6 +146,7 @@ export { setTrackKey, type TrackKeyCommands } from './mixerKey.ts';
 export type {
   ConstantTempoFit,
   KitbagCommandsConstants,
+  SongTransportOrder,
   SongTransportRequest,
   SongTransportShowState,
   TransportEvent,

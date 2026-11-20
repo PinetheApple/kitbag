@@ -98,6 +98,10 @@ async function setup(
       putOnStage(itemId);
       return afterWrite();
     },
+    loadPreset: (_presetId, itemId) => {
+      onStage = itemId;
+      return Promise.resolve();
+    },
     markStage: () => {
       const at = onStage;
       let written = moves;
@@ -386,5 +390,17 @@ describe('a commit whose write fails', () => {
       DISK_FULL,
     );
     expect(await order.getState().peekNext()).toEqual(step);
+  });
+
+  it('opens a metronome entry by loading its preset onto the stage', async () => {
+    const { order, click, last, putOnStage, first } = await setup();
+    putOnStage(first.id);
+    const { advance } = await order.getState().peekNext();
+    expect(advance).toMatchObject({ entry: { item: { id: click.id } } });
+    if (advance.kind !== ADVANCE.open) return;
+    await order.getState().openEntry(advance.entry);
+    expect(order.getState().upNext()).toMatchObject({
+      entry: { item: { id: last.id } },
+    });
   });
 });

@@ -4,6 +4,13 @@ import kotlin.math.roundToInt
 
 enum class Playback { STOPPED, PLAYING, PAUSED }
 
+fun playbackOf(playing: Boolean, stopped: Boolean): Playback =
+  when {
+    playing -> Playback.PLAYING
+    stopped -> Playback.STOPPED
+    else -> Playback.PAUSED
+  }
+
 data class TransportState(
   val playback: Playback,
   val bpm: Double,
@@ -73,6 +80,10 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
         if (state.playback == Playback.STOPPED) emptyList() else listOf(TransportCommand.Stop)
       TransportAction.TEMPO_DOWN, TransportAction.TEMPO_UP -> stepTempo(state, tempoStep(action))
     }
+
+  // A card shown stopped stays up through its tempo keys; only Stop ends it.
+  fun endsCard(action: TransportAction, next: TransportState): Boolean =
+    action == TransportAction.STOP && next.playback == Playback.STOPPED
 
   fun tempoStep(action: TransportAction): Int =
     when (action) {

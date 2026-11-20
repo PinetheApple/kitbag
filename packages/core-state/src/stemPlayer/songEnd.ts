@@ -30,33 +30,55 @@ export function endedOnLastFrame(
   );
 }
 
+export const ADVANCE_CAUSE = { ended: 'ended', next: 'next' } as const;
+
+export type AdvanceCause = (typeof ADVANCE_CAUSE)[keyof typeof ADVANCE_CAUSE];
+
+export type AdvanceListener = (cause: AdvanceCause) => void;
+
 interface EndedIn {
   readonly session: number;
   readonly unopened: boolean;
+  readonly pressed: boolean;
 }
 
 export function songEnds(ended: () => boolean, session: () => number) {
-  const listeners = new Set<() => void>();
+  const listeners = new Set<AdvanceListener>();
   let from: EndedIn | null = null;
   const current = () => from !== null && from.session === session();
+  const leave = (left: EndedIn, cause: AdvanceCause) => {
+    from = left;
+    listeners.forEach((listener) => {
+      listener(cause);
+    });
+  };
   return {
     reported: () => {
       if (!ended()) return;
-      from = { session: session(), unopened: false };
-      listeners.forEach((listener) => {
-        listener();
-      });
+      leave(
+        { session: session(), unopened: false, pressed: false },
+        ADVANCE_CAUSE.ended,
+      );
     },
-    subscribe: (listener: () => void) => {
+    pressedNext: (pressedIn: number) => {
+      if (pressedIn !== session()) return;
+      leave(
+        { session: pressedIn, unopened: false, pressed: true },
+        ADVANCE_CAUSE.next,
+      );
+    },
+    subscribe: (listener: AdvanceListener) => {
       listeners.add(listener);
       return () => {
         listeners.delete(listener);
       };
     },
-    stands: () => current() && (from?.unopened === true || ended()),
+    stands: () =>
+      current() &&
+      (from?.unopened === true || from?.pressed === true || ended()),
     gaveUp: () => current() && from?.unopened === true,
     unopened: (opened: number) => {
-      from = { session: opened, unopened: true };
+      from = { session: opened, unopened: true, pressed: false };
     },
     advanced: () => {
       from = null;

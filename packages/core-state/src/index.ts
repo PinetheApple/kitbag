@@ -319,6 +319,7 @@ export {
   type SetlistPlace,
   type Skip,
 } from './playOrder/autoAdvance.ts';
+export { startCardOrder } from './playOrder/cardOrder.ts';
 export {
   entryName,
   SKIPPED_STEM_SONG,

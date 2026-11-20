@@ -1,16 +1,20 @@
 import { turnClickOff } from '../stemPlayer/clickActions.ts';
 import type { MixerSessionContext } from '../stemPlayer/mixerSession.ts';
 import type { SongStart } from '../stemPlayer/songStart.ts';
-import { songTransportShown } from '../stemPlayer/songTransport.ts';
+import {
+  songTransportShown,
+  type SongCardTag,
+} from '../stemPlayer/songTransport.ts';
 import type { SongPlayerState } from './state.ts';
 
 interface SongCardContext extends MixerSessionContext<SongPlayerState> {
   readonly close: () => void;
   readonly start: Pick<SongStart, 'play' | 'cancel'>;
+  readonly card: () => SongCardTag;
 }
 
 export function songCard(context: SongCardContext) {
-  const { set, get, runtimeOf, session, close, start } = context;
+  const { set, get, runtimeOf, session, close, start, card } = context;
   let shownIn: number | null = null;
   const shown = () => shownIn === session();
   const shownStart: Pick<SongStart, 'play' | 'cancel'> = {
@@ -35,7 +39,7 @@ export function songCard(context: SongCardContext) {
       if (!renamed || !shown()) return;
       const { commands, engine } = runtimeOf();
       commands.songTransportShow({
-        ...songTransportShown(get()),
+        ...songTransportShown(get(), card()),
         playing: engine.playing(),
       });
     },

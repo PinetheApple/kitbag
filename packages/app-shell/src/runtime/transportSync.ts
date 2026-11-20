@@ -12,6 +12,7 @@ export type TransportSource = Pick<
 
 export interface TransportShown {
   readonly playing: boolean;
+  readonly stopped: boolean;
   readonly bpm: number;
   readonly rampRunning: boolean;
   readonly beatsPerBar: number;
@@ -50,15 +51,29 @@ function shownFor(
     return {
       ...cardOf(state),
       playing: true,
+      stopped: false,
       practiceStretchStartedAt: state.practice.stretchStartedAt ?? now,
     };
   }
   return shown?.playing === false ? { ...shown, ...cardOf(state) } : undefined;
 }
 
+// Shown in place of a song card that handed over, so the lock screen keeps a card.
+export function stoppedShown(
+  state: TransportSource,
+  now: number,
+): TransportShown {
+  return {
+    ...cardOf(state),
+    playing: false,
+    stopped: true,
+    practiceStretchStartedAt: state.practice.stretchStartedAt ?? now,
+  };
+}
+
 function cardOf(
   state: TransportSource,
-): Omit<TransportShown, 'playing' | 'practiceStretchStartedAt'> {
+): Omit<TransportShown, 'playing' | 'stopped' | 'practiceStretchStartedAt'> {
   return {
     bpm: state.bpm,
     rampRunning: state.ramp.enabled,
@@ -126,14 +141,21 @@ export function shownAfterReplay(
   return shown;
 }
 
+// A card shown stopped stays up through its tempo keys; only its Stop ends it.
+function cardEnded(shown: TransportShown, event: TransportEvent): boolean {
+  if (event.playback !== 'stopped') return false;
+  return !shown.stopped || transportActionNamed(event.action) === 'stop';
+}
+
 export function shownAfterNativeChange(
   shown: TransportShown | undefined,
   event: TransportEvent,
 ): TransportShown | undefined {
-  if (shown === undefined || event.playback === 'stopped') return undefined;
+  if (shown === undefined || cardEnded(shown, event)) return undefined;
   const followed = {
     ...shown,
     playing: event.playback === 'playing',
+    stopped: event.playback === 'stopped',
     practicePlayedMs: event.practicePlayedMs,
     practiceStretchStartedAt: event.practiceStretchStartedAt,
   };

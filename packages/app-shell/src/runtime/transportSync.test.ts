@@ -8,6 +8,7 @@ import {
   replayOnApp,
   shownAfterNativeChange,
   shownAfterReplay,
+  stoppedShown,
   storePatchFor,
   transportActive,
   type TransportShown,
@@ -35,6 +36,7 @@ const state = (over: Partial<TransportSource> = {}): TransportSource => ({
 });
 const shown: TransportShown = {
   playing: true,
+  stopped: false,
   bpm: 120,
   rampRunning: false,
   beatsPerBar: 4,
@@ -244,6 +246,58 @@ describe('shownAfterNativeChange', () => {
     expect(
       shownAfterNativeChange(shown, event({ playback: 'stopped' })),
     ).toBeUndefined();
+  });
+
+  it('keeps a card shown stopped through its tempo keys', () => {
+    const stopped = stoppedShown(state({ running: false }), 9_000);
+    const stepped = event({
+      playback: 'stopped',
+      action: 'tempo_up',
+      bpm: 121,
+      tempoStep: TEMPO_STEP,
+    });
+    expect(shownAfterNativeChange(stopped, stepped)).toMatchObject({
+      playing: false,
+      stopped: true,
+      bpm: 121,
+    });
+  });
+
+  it('forgets a card shown stopped once its Stop is pressed', () => {
+    const stopped = stoppedShown(state({ running: false }), 9_000);
+    expect(
+      shownAfterNativeChange(
+        stopped,
+        event({ playback: 'stopped', action: 'stop' }),
+      ),
+    ).toBeUndefined();
+  });
+
+  it('shows a card shown stopped as playing once its Play starts the click', () => {
+    const stopped = stoppedShown(state({ running: false }), 9_000);
+    expect(shownAfterNativeChange(stopped, event())).toMatchObject({
+      playing: true,
+      stopped: false,
+    });
+  });
+});
+
+describe('stoppedShown', () => {
+  it('is the metronome card, stopped, with the tempo and setlist the app has', () => {
+    const setlist = setlistAt(3);
+    expect(stoppedShown(state({ running: false, setlist }), 9_000)).toEqual({
+      ...shown,
+      playing: false,
+      stopped: true,
+      setlist,
+    });
+  });
+
+  it('stays up while the app keeps the metronome stopped', () => {
+    const stopped = stoppedShown(state({ running: false }), 9_000);
+    expect(
+      notificationStepAfterAppChange(state({ running: false }), stopped, 9_000),
+    ).toEqual({ kind: 'none' });
   });
 });
 
