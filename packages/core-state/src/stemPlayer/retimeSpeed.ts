@@ -70,7 +70,7 @@ export function retimeSpeed(
     return async () => {
       const current = ratesFor(opened);
       const previous = await speedBefore(current);
-      if (mine !== generation) return;
+      if (mine !== generation || session() !== opened) return;
       if (previous <= RETIME_PLAYBACK_RATE) {
         onPlaying(previous);
         return;
@@ -100,6 +100,7 @@ export function retimeSpeed(
       const opened = session();
       let applied = false;
       queue(async () => {
+        if (session() !== opened) return;
         const current = ratesFor(opened);
         if (current.owed !== null) current.owed = rate;
         else await setRate(current, rate);

@@ -11,7 +11,7 @@ import {
   songStore,
 } from '../songPlayer/store.test-helper.ts';
 import { createMixerClaim } from './mixerClaim.ts';
-import { RETIME_PLAYBACK_RATE } from './retimeSpeed.ts';
+import { RETIME_PLAYBACK_RATE, retimeSpeed } from './retimeSpeed.ts';
 import { createStemPlayerStore } from './store.ts';
 import {
   at,
@@ -398,5 +398,48 @@ describe('what a slowed retime stores', () => {
       [1.25, 2.25, 3.75, 5.75],
     );
     expect(song.records.saveStemMix).not.toHaveBeenCalled();
+  });
+});
+
+describe('a speed step queued for a song that is no longer open', () => {
+  const FIRST_SESSION = 1;
+  const SECOND_SESSION = 2;
+  const OWED_RATE = 0.9;
+  const TAPPED_RATE = 1.1;
+
+  function guarded() {
+    let current = FIRST_SESSION;
+    const commands = {
+      mixerRate: vi.fn(() => Promise.resolve(OWED_RATE)),
+      mixerSetRate: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
+    };
+    const speed = retimeSpeed(
+      () => commands,
+      () => current,
+      () => undefined,
+    );
+    return {
+      commands,
+      speed,
+      openNext: () => {
+        current = SECOND_SESSION;
+      },
+    };
+  }
+
+  it('sets nothing and resolves false', async () => {
+    const { commands, speed, openNext } = guarded();
+    const applied = speed.set(TAPPED_RATE);
+    openNext();
+    await expect(applied).resolves.toBe(false);
+    expect(commands.mixerSetRate).not.toHaveBeenCalled();
+  });
+
+  it('does not slow the next song for a retime entered on the first', async () => {
+    const { commands, speed, openNext } = guarded();
+    speed.enter(() => undefined);
+    openNext();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(commands.mixerSetRate).not.toHaveBeenCalled();
   });
 });
