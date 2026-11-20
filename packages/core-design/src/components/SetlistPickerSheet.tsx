@@ -1,52 +1,37 @@
-import {
-  Button,
-  MenuRow,
-  Sheet,
-  SheetHint,
-  TextField,
-  useAfterSheetClosed,
-} from '@kitbag/core-design';
-import {
-  isPresetEntry,
-  useLibrary,
-  type SetlistSummary,
-} from '@kitbag/core-state';
 import { useCallback, useEffect, useState } from 'react';
 
-import { pickerSubtitle } from '../logic/upNextText.ts';
+import {
+  pickerSubtitle,
+  type AddedToSetlist,
+  type SetlistPick,
+} from '../setlistPickText.ts';
+import { Button } from './Button.tsx';
+import { MenuRow } from './MenuRow.tsx';
+import { Sheet, SheetHint } from './Sheet.tsx';
+import { TextField } from './TextField.tsx';
+import { useAfterSheetClosed } from './useAfterSheetClosed.ts';
 
 export const NO_SETLISTS_HINT =
   'You have no setlists yet. A new one starts with this song.';
 const ALREADY_IN_IT = 'Already in it';
 const ADD_FAILED = 'Could not add the song. Try again.';
 
-export interface AddedToSetlist {
-  readonly setlistId: number;
-  readonly name: string;
-}
-
 interface PickRowProps {
-  readonly summary: SetlistSummary;
-  readonly stemSetId: number;
-  readonly onPick: (summary: SetlistSummary) => void;
+  readonly pick: SetlistPick;
+  readonly onPick: (pick: SetlistPick) => void;
 }
 
-function PickRow({ summary, stemSetId, onPick }: PickRowProps) {
-  const entries = useLibrary((s) => s.entries[summary.setlist.id]);
-  const list = entries ?? [];
-  const holds = list.some(
-    (e) => !isPresetEntry(e) && e.stemSetId === stemSetId,
-  );
-  const pick = useCallback(() => {
-    onPick(summary);
-  }, [onPick, summary]);
+function PickRow({ pick, onPick }: PickRowProps) {
+  const press = useCallback(() => {
+    onPick(pick);
+  }, [onPick, pick]);
   return (
     <MenuRow
-      icon={summary.setlist.active ? 'practice' : 'setlist'}
-      label={summary.setlist.name}
-      detail={pickerSubtitle(summary, list)}
-      value={holds ? ALREADY_IN_IT : undefined}
-      onPress={pick}
+      icon={pick.onStage ? 'practice' : 'setlist'}
+      label={pick.name}
+      detail={pickerSubtitle(pick)}
+      value={pick.holds ? ALREADY_IN_IT : undefined}
+      onPress={press}
     />
   );
 }
@@ -83,8 +68,11 @@ function NameStep({ onCreate }: NameStepProps) {
 export interface SetlistPickerSheetProps {
   readonly visible: boolean;
   readonly songTitle: string;
-  readonly stemSetId: number;
+  readonly picks: readonly SetlistPick[];
   readonly bottomInset: number;
+  readonly onOpen: () => void;
+  readonly onAdd: (setlistId: number) => Promise<void>;
+  readonly onCreate: (name: string) => Promise<number>;
   readonly onDismiss: () => void;
   readonly onAdded: (added: AddedToSetlist) => void;
 }
@@ -93,15 +81,13 @@ function usePicker(
   props: SetlistPickerSheetProps,
   afterClose: (then: () => void) => void,
 ) {
-  const addStemToSetlist = useLibrary((s) => s.addStemToSetlist);
-  const createSetlist = useLibrary((s) => s.createSetlist);
   const [error, setError] = useState<string | null>(null);
-  const { stemSetId, onAdded, onDismiss } = props;
+  const { onAdd, onCreate, onAdded, onDismiss } = props;
   const addTo = useCallback(
     async (setlistId: number, name: string) => {
       setError(null);
       try {
-        await addStemToSetlist(setlistId, stemSetId);
+        await onAdd(setlistId);
       } catch {
         setError(ADD_FAILED);
         return;
@@ -111,40 +97,38 @@ function usePicker(
       });
       onDismiss();
     },
-    [addStemToSetlist, stemSetId, onDismiss, onAdded, afterClose],
+    [onAdd, onDismiss, onAdded, afterClose],
   );
   const pick = useCallback(
-    (summary: SetlistSummary) => {
-      void addTo(summary.setlist.id, summary.setlist.name);
+    (picked: SetlistPick) => {
+      void addTo(picked.id, picked.name);
     },
     [addTo],
   );
   const create = useCallback(
     (name: string) => {
-      void createSetlist(name).then(
+      void onCreate(name).then(
         (setlistId) => addTo(setlistId, name),
         () => {
           setError(ADD_FAILED);
         },
       );
     },
-    [createSetlist, addTo],
+    [onCreate, addTo],
   );
   return { error, setError, pick, create };
 }
 
 export function SetlistPickerSheet(props: SetlistPickerSheetProps) {
-  const setlists = useLibrary((s) => s.setlists);
-  const refresh = useLibrary((s) => s.refresh);
   const [naming, setNaming] = useState(false);
   const exit = useAfterSheetClosed(props.visible);
   const picker = usePicker(props, exit.after);
-  const { visible, onDismiss } = props;
+  const { visible, picks, onOpen, onDismiss } = props;
   useEffect(() => {
     if (!visible) return;
     setNaming(false);
     picker.setError(null);
-    void refresh();
+    onOpen();
     // A fresh read per opening, not per new callback identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
@@ -164,16 +148,11 @@ export function SetlistPickerSheet(props: SetlistPickerSheetProps) {
         <NameStep onCreate={picker.create} />
       ) : (
         <>
-          {setlists.map((summary) => (
-            <PickRow
-              key={summary.setlist.id}
-              summary={summary}
-              stemSetId={props.stemSetId}
-              onPick={picker.pick}
-            />
+          {picks.map((pick) => (
+            <PickRow key={pick.id} pick={pick} onPick={picker.pick} />
           ))}
           <MenuRow icon="add" label="New setlist" onPress={startNaming} />
-          {setlists.length === 0 ? (
+          {picks.length === 0 ? (
             <SheetHint>{NO_SETLISTS_HINT}</SheetHint>
           ) : null}
         </>

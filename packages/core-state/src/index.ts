@@ -93,6 +93,63 @@ export {
   type PracticeSessionState,
   type PracticeSessionStore,
 } from './practice/store.ts';
+export {
+  DEFAULT_HISTORY_GROUPING,
+  GRAPH_PERIODS,
+  groupSessions,
+  HISTORY_GROUPING,
+  HISTORY_GROUPINGS,
+  historyGraph,
+  isHistoryGrouping,
+  longestBar,
+  periodStart,
+  type GraphBar,
+  type HistoryGroup,
+  type HistoryGrouping,
+} from './practice/history.ts';
+export {
+  sessionTimeline,
+  TIMELINE_ENTRY,
+  type TimelineEntry,
+  type TimelinePause,
+  type TimelineStretch,
+  type TimelineTempoChange,
+} from './practice/timeline.ts';
+export {
+  REPEAT_PLAN,
+  repeatPlanOf,
+  SESSION_LOAD,
+  sessionLoadOf,
+  type RepeatPlan,
+  type SessionLoad,
+} from './practice/repeat.ts';
+export {
+  configureRepeatOverlay,
+  getRepeatOverlay,
+  type RepeatOverlay,
+  type RepeatPort,
+} from './practice/repeatOverlay.ts';
+export { startRepeatRuntime } from './practice/repeatRuntime.ts';
+export {
+  configureHistoryPrefsPersistence,
+  createHistoryPrefsStore,
+  DEFAULT_SWIPE_DIRECTION,
+  getHistoryPrefsStore,
+  isSwipeDirection,
+  SWIPE_DIRECTION,
+  type HistoryPrefs,
+  type HistoryPrefsPersistence,
+  type HistoryPrefsStore,
+  type SwipeDirection,
+} from './practice/historyPrefs.ts';
+export { useHistoryPrefs } from './practice/useHistoryPrefs.ts';
+export {
+  configurePracticeHistory,
+  getPracticeHistoryStore,
+  type PracticeHistoryRepository,
+  type PracticeHistoryStore,
+} from './practice/historyList.ts';
+export { usePracticeHistory } from './practice/usePracticeHistory.ts';
 export { useLastTool } from './lastTool/useLastTool.ts';
 export {
   configureLastToolPersistence,
@@ -187,9 +244,11 @@ export {
   type TunerRuntime,
 } from './tuner/runtime.ts';
 export { useLibrary } from './library/useLibrary.ts';
+export { setlistPicks, useSetlistPicker } from './library/setlistPicker.ts';
 export {
   createLibraryStore,
   libraryStore,
+  loadedBaselineOf,
   loadedPresetOf,
   type DiscardedChanges,
   type LibraryStore,
@@ -197,6 +256,7 @@ export {
   type LoadedSong,
   type LoadedStem,
   type PresetEdit,
+  type PresetOverlay,
   type SongStepResult,
   type SearchResults,
 } from './library/store.ts';
@@ -239,15 +299,30 @@ export {
   type SkipResult,
 } from './playOrder/store.ts';
 export {
+  useIsQueued,
   usePlayOrder,
+  useQueueRefresh,
+  useQueueSong,
   useStage,
   useUpNext,
   type Stage,
 } from './playOrder/usePlayOrder.ts';
 export { bindStemSetRemovals } from './playOrder/stemSetRemovals.ts';
 export {
+  ARRIVAL,
+  arrivalStore,
+  SKIP,
+  startAutoAdvance,
+  type Arrival,
+  type ArrivalEvent,
+  type ArrivalState,
+  type SetlistPlace,
+  type Skip,
+} from './playOrder/autoAdvance.ts';
+export {
   entryName,
   SKIPPED_STEM_SONG,
+  SKIPPED_UNOPENED_STEM_SONG,
   STEMS_BADGE,
   stemSongTitle,
   UNKNOWN_STEM_SONG,
@@ -454,6 +529,7 @@ export {
   secondsToFrames,
 } from './stemPlayer/time.ts';
 export { SKIP_SECONDS } from './stemPlayer/songTransport.ts';
+export { ADVANCE_OUTCOME, type AdvanceOutcome } from './stemPlayer/songEnd.ts';
 export { RETIME_PLAYBACK_RATE } from './stemPlayer/retimeSpeed.ts';
 export {
   isUnitySpeed,
@@ -546,8 +622,10 @@ export {
 } from './stemPlayer/facts.ts';
 export {
   clockParts,
+  clockTime,
   formatClockSeconds,
   MINUS,
+  pad,
   roundedSpeed,
   speedText,
   SECONDS_PER_MINUTE,

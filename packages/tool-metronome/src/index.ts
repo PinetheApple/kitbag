@@ -4,4 +4,10 @@ export { SetlistDetailScreen } from './library/SetlistDetailScreen.tsx';
 export { AllSongsScreen } from './library/AllSongsScreen.tsx';
 export { PresetEditorScreen } from './library/PresetEditorScreen.tsx';
 export { DiscardChangesSheet } from './library/sheets.tsx';
-export { transportSubtitle } from './pure.ts';
+export { useCustomSoundViews } from './screen/CustomSounds.tsx';
+export {
+  countInLabel,
+  polyRatioLabel,
+  subdivisionName,
+  transportSubtitle,
+} from './pure.ts';

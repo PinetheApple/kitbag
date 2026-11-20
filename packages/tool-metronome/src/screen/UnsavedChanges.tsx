@@ -19,7 +19,7 @@ import {
 } from '@kitbag/core-design';
 import {
   isLoadedSongUnsaved,
-  loadedPresetOf,
+  loadedBaselineOf,
   useLibrary,
   useMetronome,
 } from '@kitbag/core-state';
@@ -82,7 +82,7 @@ const useStyles = createThemedStyles((theme) => ({
 }));
 
 export function useLoadedSongUnsaved(): boolean {
-  const preset = useLibrary(loadedPresetOf);
+  const preset = useLibrary(loadedBaselineOf);
   return useMetronome(
     (live) => preset !== undefined && isLoadedSongUnsaved(preset, live),
   );

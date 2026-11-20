@@ -83,6 +83,7 @@ function mount(
         onBack: () => undefined,
         onOpenStemSet: () => undefined,
         onOpenSong: () => undefined,
+        onOpenSetlist: () => undefined,
         onUnavailable: () => undefined,
         ...(dock === undefined ? {} : { dock: dock as never }),
         ...extra,

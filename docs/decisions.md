@@ -1161,3 +1161,16 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   `set_grid`. (5) A count-in stays plain under any grouping or rate. Rationale:
   every group start keeps its click, no silent hole at x1/2, and a new grid
   never inherits another song's grouping. **[REC TAKEN, owner may overturn]**
+
+- **2026-11-02 · Practice history (#286, §12.5)** — Owner picks: a flat list,
+  newest first, with Day, Week and Month grouping and a graph that follows it;
+  session detail as a timeline in play order with Repeat this session, which
+  loads the setup and never starts playback; swipe to delete with Undo, its
+  direction a Settings choice for this list only, with ⋮ and long-press kept;
+  entry from Settings → Data → Practice and an optional Home tile. Repeat
+  applies each song's first stretch and the logged count-in, writes nothing to
+  the library, and plays a deleted setlist as free play; free play ends when a
+  song is loaded. **[owner, 2026-11-02]**
+- **2026-11-20 · Practice history menu (#286)** — The ⋮ and long-press menu is
+  the app's bottom actions sheet, not the pop-up the design draws, so every list
+  menu works the same way. **[REC TAKEN, owner may overturn]**

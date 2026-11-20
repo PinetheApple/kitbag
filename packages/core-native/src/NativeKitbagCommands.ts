@@ -207,6 +207,8 @@ export interface Spec extends TurboModule {
   /** A stop from the song notification or media session; during a count-in it follows
    *  that onSongTransport stop. mixerStop() does not fire it. */
   readonly onSongStopped: EventEmitter<void>;
+  /** The mixer played onto the song's last frame and stopped; read on the song card's tick, so it lags. */
+  readonly onSongEnded: EventEmitter<void>;
   readonly onSongTransport: EventEmitter<SongTransportRequest>;
   getOutputRoute(): Promise<OutputRoute>;
   readonly onOutputRoute: EventEmitter<OutputRoute>;

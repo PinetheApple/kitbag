@@ -89,6 +89,7 @@ export const iconGlyphs = {
   moveFolder: 'folder-move-outline',
   dataFolder: 'folder-outline',
   tempoCorrection: 'arrow-expand-horizontal',
+  delete: 'trash-can-outline',
   playNext: 'playlist-play',
   inUpNext: 'playlist-check',
   addToSetlist: 'playlist-plus',

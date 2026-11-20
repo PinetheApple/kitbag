@@ -51,6 +51,22 @@ describe('returned cards', () => {
     expect(returnedCards(store.getState())).toEqual([]);
   });
 
+  it('recounts an offered card when the data folder reports a change, without restarting', async () => {
+    const { store, native, folderChanged } = await started([
+      INTERNAL,
+      card({ awaySongs: 1, awayStemSongs: 1 }),
+    ]);
+    native.listVolumes.mockResolvedValue({
+      ...VOLUMES,
+      volumes: [INTERNAL, card({ awaySongs: 1, awayStemSongs: 0 })],
+    });
+    folderChanged();
+    await vi.waitFor(() => {
+      expect(returnedCards(store.getState())[0]?.awayStemSongs).toBe(0);
+    });
+    expect(native.watchDataFolder).toHaveBeenCalledOnce();
+  });
+
   it('lists none while a request is pending', async () => {
     const { store } = await started([INTERNAL, card()]);
     const resuming = store.getState().resumeMove();

@@ -3,13 +3,17 @@ import {
   countLabel,
   createThemedStyles,
   EmptyState,
+  NoticeSnackbar,
   PlayerDock,
   readerHiding,
   SegmentedControl,
+  snackbar,
   space,
   stemPlayer,
   textRoles,
   textStyle,
+  type AddedToSetlist,
+  type Notice,
   type SegmentOption,
 } from '@kitbag/core-design';
 import { KB_MAX_TRACKS } from '@kitbag/core-native';
@@ -22,6 +26,8 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { AdvanceCountIn } from './AdvanceCountIn.tsx';
+import { useArrivalFollow, useRouteAcquire } from './advanceFollow.ts';
 import { detailTabLabel } from '../logic/detailView.ts';
 import { CLICK_SECTION, type ClickSection } from '../logic/clickView.ts';
 import { hasUnsavedRetime } from '../logic/retimeView.ts';
@@ -31,7 +37,6 @@ import { ExportCancelledSnackbar, ExportNotice } from './ExportNotice.tsx';
 import { ExportSheet } from './ExportSheet.tsx';
 import { LoopUndoSnackbar } from './LoopUndoSnackbar.tsx';
 import { PlayerMenu } from './PlayerMenu.tsx';
-import { type AddedToSetlist } from './SetlistPickerSheet.tsx';
 import {
   SetlistSheet,
   useCarriedSkipNotice,
@@ -48,7 +53,6 @@ import { StemList } from './StemList.tsx';
 import { StemMeterSheet } from './StemMeterSheet.tsx';
 import { WAVEFORM_BARS } from './StemRowView.tsx';
 import { StemTransport } from './StemTransport.tsx';
-import { PlayerNoticeSnackbar, usePlayerNotice } from './PlayerNotice.tsx';
 import { TempoSheet } from './TempoSheet.tsx';
 import { UpNextRow } from './UpNextRow.tsx';
 import { UpNextSheet } from './UpNextSheet.tsx';
@@ -253,7 +257,7 @@ interface BodyProps {
   readonly onBack: () => void;
   readonly onOpenUpNext: () => void;
   readonly onNext: () => void;
-  readonly notice: ReturnType<typeof usePlayerNotice>;
+  readonly notice: Notice;
   readonly onSpeedKey: () => void;
 }
 
@@ -286,9 +290,10 @@ function Body({
         ) : (
           <PlayerContent frame={frame} picked={picked} onPick={setPicked} />
         )}
+        <AdvanceCountIn />
         <LoopUndoSnackbar />
         <ExportCancelledSnackbar />
-        <PlayerNoticeSnackbar notice={notice} />
+        <NoticeSnackbar notice={notice} bottom={snackbar.aboveDock} />
       </View>
       <Dock
         frame={frame}
@@ -420,16 +425,18 @@ export function PlayerScreen({
     onOpenMetronome,
   );
   useCarriedSkipNotice(notice.showMessage);
+  useArrivalFollow(setId, onOpenStemSet, notice.showMessage);
   const ready = useStemPlayer((s) => s.status === 'ready');
   const acquireSong = useStemPlayer((s) => s.acquireSong);
   const { retiming, shown, askReset, askLeave, closeAsk } = useRetimeAsk();
   const sheets = usePlayerSheet(retiming);
   const queue = useQueueActions(notice, sheets.closeSheet, onOpenSetlist);
   const frame = useStemFrame();
-  const acquire = useCallback(
-    () => acquireSong(setId, WAVEFORM_BARS),
-    [acquireSong, setId],
+  const acquireAt = useCallback(
+    (id: number) => acquireSong(id, WAVEFORM_BARS),
+    [acquireSong],
   );
+  const acquire = useRouteAcquire(setId, acquireAt);
   useFocusedMixerHold(focused, acquire);
   const padding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
   const dialogOpen = shown !== null;

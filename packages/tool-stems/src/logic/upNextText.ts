@@ -1,4 +1,4 @@
-import { countLabel } from '@kitbag/core-design';
+import { countLabel, FACT_SEPARATOR } from '@kitbag/core-design';
 import {
   BPM_UNIT,
   entryName,
@@ -8,12 +8,11 @@ import {
   UP_NEXT_SOURCE,
   type OnStage,
   type SetlistEntry,
-  type SetlistSummary,
   type StemSongs,
   type UpNext,
 } from '@kitbag/core-state';
 
-import { SEPARATOR } from '../stemDeck/logic/songFacts.ts';
+import { placeLabel } from './playOrderText.ts';
 
 export const QUEUED = 'Queued';
 const METRONOME = 'metronome';
@@ -35,16 +34,16 @@ function queuedSource(queueLength: number): string {
   const rest = queueLength - 1;
   if (rest <= 0) return QUEUED;
   return [QUEUED, countLabel(rest, 'more after it', 'more after it')].join(
-    SEPARATOR,
+    FACT_SEPARATOR,
   );
 }
 
 function setlistSource(entry: SetlistEntry, context: UpNextContext): string {
   const { entries } = context.stage;
-  const place = `${String(entries.indexOf(entry) + 1)} of ${String(entries.length)}`;
+  const place = placeLabel(entries.indexOf(entry) + 1, entries.length);
   const parts = [context.setlistName, place];
   return [...parts, ...(isPresetEntry(entry) ? [METRONOME] : [])].join(
-    SEPARATOR,
+    FACT_SEPARATOR,
   );
 }
 
@@ -71,19 +70,9 @@ export function setlistRowSubtitle(
   const facts = isPresetEntry(entry)
     ? [METRONOME, `${String(Math.round(entry.preset.bpm))} ${BPM_UNIT}`]
     : [stemFacts(entry.stemSetId, stems)];
-  return [setlistName, ...facts].filter((part) => part !== '').join(SEPARATOR);
-}
-
-export function pickerSubtitle(
-  summary: SetlistSummary,
-  entries: readonly SetlistEntry[],
-): string {
-  const stemCount = entries.filter((entry) => !isPresetEntry(entry)).length;
-  const parts = [countLabel(summary.songCount, 'song', 'songs')];
-  if (stemCount > 0)
-    parts.push(countLabel(stemCount, 'stem song', 'stem songs'));
-  if (summary.setlist.active) parts.push('on stage');
-  return parts.join(SEPARATOR);
+  return [setlistName, ...facts]
+    .filter((part) => part !== '')
+    .join(FACT_SEPARATOR);
 }
 
 export function clearQueueBody(queueLength: number, setlistName: string) {

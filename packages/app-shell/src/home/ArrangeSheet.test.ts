@@ -126,6 +126,7 @@ describe('ArrangeSheet accessibility wiring', () => {
       TOOL_ID.library,
       TOOL_ID.tuner,
       TOOL_ID.stems,
+      TOOL_ID.practiceHistory,
     ]);
   });
 

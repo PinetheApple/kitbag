@@ -286,6 +286,8 @@ class CardReturnTest {
     assertEquals(MoveOutcome.Failed(MoveFailure.TARGET_OCCUPIED), fx.runner().returnCard(card))
     assertEquals(mapOf(CARD_UUID to away.keys), awayList())
     assertNull(fx.runner().pending())
+    assertEquals(emptyMap<String, Set<String>>(), fx.leftovers().load())
+    assertEquals(fx.hashes(away)[SONG], fx.visibleFiles(fx.cardRoot)[SONG])
   }
 
   @Test

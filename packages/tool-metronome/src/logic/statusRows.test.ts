@@ -10,7 +10,6 @@ import {
   armedRows,
   armedSummary,
   countInBarText,
-  countSquare,
   CYCLE_STRIP_MAX_CELLS,
   cycleCellBar,
   cycleStripCells,
@@ -233,17 +232,6 @@ describe('mute cycle strip', () => {
     ]);
     expect(cells.map((cell) => cycleCellBar(cell, 17, cycle))).toEqual([
       16, 17, 18, 19, -1, -1, -1, -1,
-    ]);
-  });
-});
-
-describe('count-in squares', () => {
-  it('marks counted, current and upcoming beats', () => {
-    expect([0, 1, 2, 3].map((beat) => countSquare(beat, 2))).toEqual([
-      'done',
-      'done',
-      'now',
-      'upcoming',
     ]);
   });
 });

@@ -43,7 +43,7 @@ describe('disabled button', () => {
       onPress: press,
       variant: 'primary',
       disabled: true,
-      outlinedWhenDisabled: true,
+      disabledLook: 'outlined',
     }) as ReactElement<Props>;
     expect(faceStyle(element)).toMatchObject({
       borderColor: themes.dark.color.line,

@@ -1,7 +1,5 @@
 import {
   meterOverrideOf,
-  NO_CLICK,
-  NO_METER_OVERRIDE,
   type BundleTempo,
   type ClickRate,
   type MeterOverride,
@@ -9,13 +7,13 @@ import {
   type StoredSection,
   type TempoMode,
 } from '@kitbag/core-db';
-import { KB_MIXER_UNITY_RATE } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { mixActions, transportActions } from './actions.ts';
 import { sameNumbers } from './bars.ts';
 import { clickActions, followNewGrid, releaseClick } from './clickActions.ts';
 import { clickShapeActions } from './clickShape.ts';
+import { closedState } from './closedState.ts';
 import {
   exportActions,
   exportAfterLeaving,
@@ -23,18 +21,12 @@ import {
   type ExportActions,
   type ExportSlice,
 } from './exportActions.ts';
-import { NO_SONG_FACTS, type SongFacts } from './facts.ts';
+import type { SongFacts } from './facts.ts';
 import type { LoopEdge, LoopSeconds } from './loop.ts';
 import { sectionLoopActions } from './loopActions.ts';
-import { FALLBACK_BEATS_PER_BAR } from './barMeter.ts';
 import { overrideDownbeats } from './meterOverride.ts';
-import {
-  NO_LYRICS,
-  songLyrics,
-  type RetimeTap,
-  type SongLyrics,
-} from './lyrics.ts';
-import { UNITY_GAIN, UNSHIFTED_KEY } from './mix.ts';
+import { songLyrics, type RetimeTap, type SongLyrics } from './lyrics.ts';
+import { UNITY_GAIN } from './mix.ts';
 import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
 import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
 import { mixerSession, type MixerHold } from './mixerSession.ts';
@@ -47,8 +39,14 @@ import { renameActions } from './renameActions.ts';
 import { retimeActions, retimeAnchor } from './retimeActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
 import { sortedSections } from './sections.ts';
+import {
+  advanceSong,
+  endedOnLastFrame,
+  songEnds,
+  type AdvanceOutcome,
+} from './songEnd.ts';
 import { countPending, songStart } from './songStart.ts';
-import { loadTracks, rowsOf } from './stemTracks.ts';
+import { loadTracks, loadWaveforms, rowsOf } from './stemTracks.ts';
 import { clampedSpeed, wholeKey } from './speedKey.ts';
 import { speedKeySession } from './speedKeyActions.ts';
 import { songGrid, tempoActions } from './tempoActions.ts';
@@ -126,6 +124,9 @@ export interface StemPlayerState {
   readonly clickGrouping: readonly number[];
   readonly clickRate: ClickRate;
   readonly countEndFrame: number | null;
+  readonly countBeatsPerBar: number;
+  readonly advancedTo: number | null;
+  readonly advanceCountEnd: number | null;
   readonly sections: readonly StoredSection[];
   readonly lyrics: SongLyrics;
   readonly retime: RetimeState;
@@ -135,6 +136,10 @@ export interface StemPlayerState {
 export interface StemPlayerActions {
   readonly open: (setId: number, waveformBars: number) => Promise<void>;
   readonly acquireSong: (setId: number, waveformBars: number) => MixerHold;
+  readonly advanceTo: (setId: number) => Promise<AdvanceOutcome>;
+  readonly onSongEnd: (listener: () => void) => () => void;
+  readonly songStillEnded: () => boolean;
+  readonly stopAdvancing: () => void;
   readonly close: () => void;
   readonly setGain: (index: number, gain: number) => void;
   readonly toggleMute: (index: number) => void;
@@ -204,39 +209,6 @@ export interface StemPlayerOptions extends Partial<StemPlayerTiming> {
   readonly mixerClick?: MixerClick;
 }
 
-const closedState: StemPlayerState = {
-  status: 'idle',
-  setId: null,
-  title: '',
-  artist: null,
-  facts: NO_SONG_FACTS,
-  recordedFacts: NO_SONG_FACTS,
-  speed: KB_MIXER_UNITY_RATE,
-  songKey: UNSHIFTED_KEY,
-  stems: [],
-  overLimit: 0,
-  masterGain: UNITY_GAIN,
-  engineRate: 0,
-  durationFrames: 0,
-  beats: [],
-  downbeatIndices: [],
-  meterOverride: NO_METER_OVERRIDE,
-  detectedMeter: FALLBACK_BEATS_PER_BAR,
-  detectedBarOneSeconds: 0,
-  tempo: null,
-  tempoMode: null,
-  loop: { kind: 'off' },
-  loopFailure: null,
-  undoableLoop: null,
-  click: false,
-  ...NO_CLICK,
-  countEndFrame: null,
-  sections: [],
-  lyrics: NO_LYRICS,
-  retime: { kind: 'off' },
-  retimeFailure: null,
-};
-
 export function createStemPlayerStore(
   runtimeOf: () => StemPlayerRuntime = getStemPlayer,
   options: StemPlayerOptions = {},
@@ -250,6 +222,7 @@ export function createStemPlayerStore(
   let requestedTracks = 0;
   let markedDownbeatIndices: readonly number[] = [];
   let openRecord: StemSetRecord | null = null;
+  let waveformBars = 0;
   const saver = mixSaver(
     (mixes) => runtimeOf().records.saveStemMix(mixes),
     mixSaveDelayMs,
@@ -303,6 +276,11 @@ export function createStemPlayerStore(
     mixer.onScrubSeek(start.afterSeek);
     mixer.onClickReleased(start.endCountNow);
     const card = showCountOnSongCard(store, runtimeOf, start.counting);
+    const ends = songEnds(
+      () => endedOnLastFrame(get(), runtimeOf().engine, start.counting()),
+      mixer.current,
+    );
+    mixer.onSongEnded(ends.reported);
     mixer.onSongStopped(() => {
       card.stopped();
       start.songStopped();
@@ -351,30 +329,6 @@ export function createStemPlayerStore(
       anchorRetime(frame);
       start.afterSeek(frame);
     };
-    const loadWaveforms = (
-      opened: number,
-      record: StemSetRecord,
-      bars: number,
-    ) => {
-      get().stems.forEach((row, track) => {
-        const path = record.stems[track]?.waveformPath ?? null;
-        if (path === null) return;
-        runtimeOf()
-          .readWaveform(path, bars)
-          .then((envelope) => {
-            if (!live(opened)) return;
-            set((s) => ({
-              stems: s.stems.map((r) =>
-                r.id === row.id ? { ...r, envelope } : r,
-              ),
-            }));
-          })
-          .catch((error: unknown) => {
-            console.warn('[kitbag] stem waveform unreadable', error);
-          });
-      });
-    };
-
     const load = async (opened: number, setId: number, bars: number) => {
       const runtime = runtimeOf();
       const { commands } = runtime;
@@ -426,21 +380,21 @@ export function createStemPlayerStore(
         sections: sortedSections(record.sections),
         lyrics: songLyrics(record.lyrics, record.lyricsRetimed),
       });
-      loadWaveforms(opened, record, bars);
+      loadWaveforms(context, () => live(opened), record, bars);
     };
 
-    const beginSession = (setId: number) => {
-      const opened = mixer.begin();
+    const showLoading = (setId: number, advancedTo: number | null = null) => {
       set({
         ...closedState,
         exportState: exportAfterLeaving(get().exportState),
         status: 'loading',
         setId,
+        advancedTo,
       });
-      return opened;
     };
 
     const loadSession = async (opened: number, setId: number, bars: number) => {
+      waveformBars = bars;
       try {
         await load(opened, setId, bars);
       } catch (error: unknown) {
@@ -452,15 +406,42 @@ export function createStemPlayerStore(
     return {
       ...closedState,
       exportState: NO_EXPORT,
-      open: async (setId, waveformBars) => {
-        await loadSession(beginSession(setId), setId, waveformBars);
+      open: async (setId, bars) => {
+        const opened = mixer.begin();
+        showLoading(setId);
+        await loadSession(opened, setId, bars);
       },
       // Across an Activity relaunch the new screen can acquire before the old
       // one unmounts, so a release only closes the session it acquired.
-      acquireSong: (setId, waveformBars) => {
-        const acquired = beginSession(setId);
-        void loadSession(acquired, setId, waveformBars);
+      acquireSong: (setId, bars) => {
+        const acquired = mixer.begin();
+        showLoading(setId);
+        void loadSession(acquired, setId, bars);
         return mixer.hold(acquired);
+      },
+      advanceTo: (setId) =>
+        advanceSong(
+          {
+            ends,
+            begin: (id) => {
+              const opened = mixer.advance();
+              showLoading(id, id);
+              return opened;
+            },
+            load: (opened, id) => loadSession(opened, id, waveformBars),
+            live,
+            ready: () => get().status === 'ready',
+            play: () => {
+              get().togglePlay();
+              set({ advanceCountEnd: get().countEndFrame });
+            },
+          },
+          setId,
+        ),
+      onSongEnd: ends.subscribe,
+      songStillEnded: ends.stands,
+      stopAdvancing: () => {
+        if (ends.gaveUp()) runtimeOf().commands.songTransportHide();
       },
       close: mixer.close,
       ...mixActions(set, get, runtimeOf, saver),
