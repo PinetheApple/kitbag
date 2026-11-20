@@ -1,12 +1,11 @@
 import {
   handOverQueued,
   isPresetEntry,
-  usePlayOrder,
   type QueuedSong,
   type SetlistEntry,
 } from '@kitbag/core-state';
 import { playerWaveBars, useAfterSheetClosed } from '@kitbag/core-design';
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 
 export interface PlayOrderRoutes {
   readonly onOpenStemSet: (stemSetId: number) => void;
@@ -54,9 +53,4 @@ export function useLeaveAfterClose(routes: PlayOrderRoutes, visible: boolean) {
     [after, routes],
   );
   return { leaveFor, closed };
-}
-
-export function usePlayOrderNav() {
-  const openEntry = usePlayOrder((s) => s.openEntry);
-  return useMemo(() => ({ openEntry }), [openEntry]);
 }

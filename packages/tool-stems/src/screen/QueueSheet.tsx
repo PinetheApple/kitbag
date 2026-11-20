@@ -35,7 +35,6 @@ import {
   leaveForQueued,
   leaveOf,
   useLeaveAfterClose,
-  usePlayOrderNav,
   type PlayOrderRoutes,
 } from './usePlayOrderNav.ts';
 
@@ -224,7 +223,7 @@ const stemsOf = (stemSetId: number): QueuedSong => ({
 });
 
 function useQueuePlay(props: QueueSheetProps) {
-  const nav = usePlayOrderNav();
+  const openEntry = usePlayOrder((s) => s.openEntry);
   const playQueued = usePlayOrder((s) => s.playQueued);
   const exit = useLeaveAfterClose(props, props.visible);
   const { onDismiss, playsInPlace } = props;
@@ -240,7 +239,7 @@ function useQueuePlay(props: QueueSheetProps) {
   );
   const open = useCallback(
     (entry: SetlistEntry) => {
-      const opening = nav.openEntry(entry);
+      const opening = openEntry(entry);
       if (playsInPlace && !isPresetEntry(entry))
         void opening.then(() =>
           playQueuedNow(stemsOf(entry.stemSetId), playerWaveBars),
@@ -248,12 +247,12 @@ function useQueuePlay(props: QueueSheetProps) {
       else exit.leaveFor(leaveOf(entry));
       onDismiss();
     },
-    [nav, playsInPlace, exit, onDismiss],
+    [openEntry, playsInPlace, exit, onDismiss],
   );
   return { play, open, closed: exit.closed };
 }
 
-function useQueueSheet(props: QueueSheetProps) {
+function useQueueRowActions(props: QueueSheetProps) {
   const queue = usePlayOrder((s) => s.queue);
   const leaveSetlist = useLibrary((s) => s.leaveSetlist);
   const { play, open, closed } = useQueuePlay(props);
@@ -281,7 +280,7 @@ export function QueueSheet(props: QueueSheetProps) {
   const [confirming, setConfirming] = useState(false);
   const upNextCount = useUpNextCount();
   const idle = useNothingPlaying();
-  const sheet = useQueueSheet(props);
+  const actions = useQueueRowActions(props);
   const shown: Shown = !visible ? null : confirming ? 'confirm' : 'list';
   const askClear = useCallback(() => {
     setConfirming(true);
@@ -304,19 +303,19 @@ export function QueueSheet(props: QueueSheetProps) {
         dismissLabel={QUEUE_TEXT.closeQueue}
         bottomInset={bottomInset}
         onDismiss={dismiss}
-        onClosed={sheet.closed}
+        onClosed={actions.closed}
       >
         <NowPlaying />
         <QueueList
-          onPlay={sheet.play}
-          onOpen={sheet.open}
+          onPlay={actions.play}
+          onOpen={actions.open}
           onClear={askClear}
-          onLeave={sheet.leave}
+          onLeave={actions.leave}
         />
         <Footer
-          canPlay={idle && sheet.queued}
+          canPlay={idle && actions.queued}
           onDone={dismiss}
-          onPlayQueue={sheet.playQueue}
+          onPlayQueue={actions.playQueue}
         />
       </Sheet>
       <ClearQueueSheet

@@ -95,12 +95,16 @@ export interface EmptyStateOption {
   readonly text: string;
 }
 
+export interface EmptyStateAction {
+  readonly label: string;
+  readonly onPress: () => void;
+}
+
 export interface EmptyStateProps {
   readonly icon: IconName;
   readonly title: string;
   readonly reason: string;
-  readonly actionLabel?: string;
-  readonly onAction?: () => void;
+  readonly action?: EmptyStateAction;
   readonly variant?: EmptyStateVariant;
   readonly actionIcon?: IconName;
   readonly option?: EmptyStateOption | null;
@@ -109,6 +113,7 @@ export interface EmptyStateProps {
 function ListEmptyState(props: EmptyStateProps) {
   const styles = useStyles();
   const option = props.option ?? null;
+  const { action } = props;
   return (
     <View style={styles.listBox}>
       <View style={styles.listMark}>
@@ -118,16 +123,16 @@ function ListEmptyState(props: EmptyStateProps) {
         {props.title}
       </Text>
       <Text style={styles.listReason}>{props.reason}</Text>
-      {props.actionLabel === undefined ? null : (
+      {action === undefined ? null : (
         <Pressable
           accessibilityRole="button"
           style={styles.listButton}
-          onPress={props.onAction}
+          onPress={action.onPress}
         >
           {props.actionIcon === undefined ? null : (
             <Icon name={props.actionIcon} size="emptyButton" color="onAccent" />
           )}
-          <Text style={styles.listButtonLabel}>{props.actionLabel}</Text>
+          <Text style={styles.listButtonLabel}>{action.label}</Text>
         </Pressable>
       )}
       {option === null ? null : (
@@ -142,7 +147,7 @@ function ListEmptyState(props: EmptyStateProps) {
 
 export function EmptyState(props: EmptyStateProps) {
   const styles = useStyles();
-  const { actionLabel, onAction } = props;
+  const { action } = props;
   if (props.variant === 'list') return <ListEmptyState {...props} />;
   return (
     <View style={styles.box}>
@@ -153,8 +158,12 @@ export function EmptyState(props: EmptyStateProps) {
         {props.title}
       </Text>
       <Text style={styles.reason}>{props.reason}</Text>
-      {actionLabel === undefined || onAction === undefined ? null : (
-        <Button variant="primary" label={actionLabel} onPress={onAction} />
+      {action === undefined ? null : (
+        <Button
+          variant="primary"
+          label={action.label}
+          onPress={action.onPress}
+        />
       )}
     </View>
   );

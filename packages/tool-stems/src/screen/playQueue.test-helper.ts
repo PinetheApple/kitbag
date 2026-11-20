@@ -1,8 +1,27 @@
-import type {
-  LibraryStemSetRow,
-  PlayOrderRepositories,
-  QueuedSong,
+import {
+  ENTRY_KIND,
+  libraryStore,
+  metronomeStore,
+  type LibrarySongRow,
+  type LibraryStemSetRow,
+  type PlayOrderRepositories,
+  type QueuedSong,
 } from '@kitbag/core-state';
+import { vi } from 'vitest';
+
+export const GIG = 5;
+export const BALLAD_ITEM = 31;
+export const BALLAD_PRESET = 41;
+export const HUM = 23;
+
+export const hum = {
+  kind: 'song',
+  id: HUM,
+  title: 'Hum',
+  artist: '',
+  durationSec: 200,
+  bpm: 90,
+} as LibrarySongRow;
 
 export const stems = (id: number): QueuedSong => ({ kind: 'stems', id });
 export const single = (id: number): QueuedSong => ({ kind: 'song', id });
@@ -66,3 +85,30 @@ export const stemRow = (id: number, title: string): LibraryStemSetRow => ({
   hasGrid: true,
   createdAt: new Date(0),
 });
+
+export function metronomeEntryOnStage() {
+  const loadSong = vi.fn(() => Promise.resolve());
+  libraryStore.setState({
+    session: { setlistId: GIG, skipped: [] },
+    setlists: [
+      {
+        setlist: { id: GIG, name: 'Gig', active: true },
+        songCount: 1,
+        rampCount: 0,
+      },
+    ] as never,
+    entries: {
+      [GIG]: [
+        {
+          kind: ENTRY_KIND.preset,
+          item: { id: BALLAD_ITEM },
+          preset: { id: BALLAD_PRESET, name: 'Ballad', bpm: 72 },
+        },
+      ] as never,
+    },
+    refresh: () => Promise.resolve(),
+    loadSong,
+  });
+  const start = vi.spyOn(metronomeStore.getState(), 'start');
+  return { loadSong, start };
+}

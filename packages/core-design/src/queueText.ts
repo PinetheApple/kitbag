@@ -47,6 +47,16 @@ export function placeLabel(number: number, of: number): string {
   return `${String(number)} of ${String(of)}`;
 }
 
+export interface SetlistPlaceText {
+  readonly setlistName: string;
+  readonly number: number;
+  readonly of: number;
+}
+
+export function setlistPlaceParts(spot: SetlistPlaceText): string[] {
+  return [spot.setlistName, placeLabel(spot.number, spot.of)];
+}
+
 export function nextUpLabel(title: string): string {
   return `Next: ${title}`;
 }

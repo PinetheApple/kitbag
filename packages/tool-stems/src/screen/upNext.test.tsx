@@ -1,15 +1,12 @@
 import {
   autoAdvanceDeps,
   configurePlayOrder,
-  ENTRY_KIND,
   libraryStore,
-  metronomeStore,
   playOrderStore,
   SKIPPED_STEM_SONG,
   songLibraryStore,
   songPlayerStore,
   startAutoAdvance,
-  type LibrarySongRow,
   type QueuedSong,
 } from '@kitbag/core-state';
 import { playerWaveBars, Snackbar, SwipeDeleteRow } from '@kitbag/core-design';
@@ -17,7 +14,13 @@ import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  BALLAD_ITEM,
+  BALLAD_PRESET,
   fakeQueue,
+  GIG,
+  HUM,
+  hum,
+  metronomeEntryOnStage,
   queued,
   setQueued,
   single,
@@ -33,26 +36,13 @@ import {
 } from './playerHarness.test-helper.tsx';
 
 const NIGHT_BUS = 21;
-const GIG = 5;
-const BALLAD_ITEM = 31;
-const BALLAD_PRESET = 41;
 const TIN_ROOF = 22;
-const HUM = 23;
 const MENU = 'Player menu';
 const UP_NEXT_ROW = 'Up next: Night Bus, Next in queue · 1 more after it';
 const QUEUE_KEY = 'Queue, 2 up next';
 
 configurePlayOrder({ queue: fakeQueue() });
 startAutoAdvance(autoAdvanceDeps(playerWaveBars));
-
-const hum = {
-  kind: 'song',
-  id: HUM,
-  title: 'Hum',
-  artist: '',
-  durationSec: 200,
-  bpm: 90,
-} as LibrarySongRow;
 
 beforeEach(() => {
   setQueued([]);
@@ -71,33 +61,6 @@ afterEach(() => {
 
 const BALLAD_UP_NEXT = 'Up next: Ballad, Gig · 1 of 1 · metronome';
 const NIGHT_BUS_UP_NEXT = 'Up next: Night Bus, Next in queue';
-
-function metronomeEntryOnStage() {
-  const loadSong = vi.fn(() => Promise.resolve());
-  libraryStore.setState({
-    session: { setlistId: GIG, skipped: [] },
-    setlists: [
-      {
-        setlist: { id: GIG, name: 'Gig', active: true },
-        songCount: 1,
-        rampCount: 0,
-      },
-    ] as never,
-    entries: {
-      [GIG]: [
-        {
-          kind: ENTRY_KIND.preset,
-          item: { id: BALLAD_ITEM },
-          preset: { id: BALLAD_PRESET, name: 'Ballad', bpm: 72 },
-        },
-      ] as never,
-    },
-    refresh: () => Promise.resolve(),
-    loadSong,
-  });
-  const start = vi.spyOn(metronomeStore.getState(), 'start');
-  return { loadSong, start };
-}
 
 async function withQueue(...songs: (number | QueuedSong)[]) {
   setQueued(

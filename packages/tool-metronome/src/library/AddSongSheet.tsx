@@ -132,9 +132,8 @@ function StemTab({ setlistId, inSet, onError, onAddStemSongs }: StemTabProps) {
         icon="stems"
         title="No stem songs yet"
         reason="Bring stem songs from StemDeck or a folder on this phone, then add them here."
-        actionLabel="Add stem songs"
+        action={{ label: 'Add stem songs', onPress: onAddStemSongs }}
         actionIcon="add"
-        onAction={onAddStemSongs}
       />
     );
   return (

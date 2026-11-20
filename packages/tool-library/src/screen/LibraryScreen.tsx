@@ -170,9 +170,8 @@ function LibraryUnavailable() {
       title="Your songs could not be opened"
       reason="The song library failed to load. The metronome and tuner still work."
       actionIcon="reset"
-      actionLabel={TRY_AGAIN_LABEL}
+      action={{ label: TRY_AGAIN_LABEL, onPress: retry }}
       option={null}
-      onAction={retry}
     />
   );
 }
@@ -277,9 +276,8 @@ function LibraryBody({
         title={text.emptyTitle}
         reason={text.emptyReason}
         actionIcon="add"
-        actionLabel={text.emptyAction}
+        action={{ label: text.emptyAction, onPress: startImport }}
         option={text.emptyOption}
-        onAction={startImport}
       />
     );
   return (

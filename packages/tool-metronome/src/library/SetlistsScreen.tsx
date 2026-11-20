@@ -123,8 +123,7 @@ function SetlistList(
         icon="songs"
         title="Make a setlist"
         reason="A setlist is the running order for a gig. Songs stay in All songs either way."
-        actionLabel="Make a setlist"
-        onAction={props.menu.openCreate}
+        action={{ label: 'Make a setlist', onPress: props.menu.openCreate }}
       />
     );
   }

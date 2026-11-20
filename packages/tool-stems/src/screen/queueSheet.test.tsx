@@ -7,7 +7,6 @@ import {
   songLibraryStore,
   songPlayerStore,
   stemPlayerStore,
-  type LibrarySongRow,
   type QueuedSong,
 } from '@kitbag/core-state';
 import { act } from 'react';
@@ -21,6 +20,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flush, textsOf } from './playerHarness.test-helper.tsx';
 import {
   fakeQueue,
+  HUM,
+  hum,
   queued,
   setQueued,
   single,
@@ -31,18 +32,8 @@ import { QueueSheet } from './QueueSheet.tsx';
 
 const NIGHT_BUS = 21;
 const TIN_ROOF = 22;
-const HUM = 23;
 
 configurePlayOrder({ queue: fakeQueue() });
-
-const hum = {
-  kind: 'song',
-  id: HUM,
-  title: 'Hum',
-  artist: '',
-  durationSec: 200,
-  bpm: 90,
-} as LibrarySongRow;
 
 let mounted: ReactTestRenderer | undefined;
 

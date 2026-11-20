@@ -54,8 +54,7 @@ export function NotReady({
         icon="song"
         title={notPlayed.title}
         reason={notPlayed.reason}
-        actionLabel={BACK_TO_SONGS}
-        onAction={onBack}
+        action={{ label: BACK_TO_SONGS, onPress: onBack }}
       />
     );
   if (status === 'missing')
@@ -64,8 +63,7 @@ export function NotReady({
         icon="song"
         title="This song is gone"
         reason="It was deleted from the library. Pick another song there."
-        actionLabel={BACK_TO_SONGS}
-        onAction={onBack}
+        action={{ label: BACK_TO_SONGS, onPress: onBack }}
       />
     );
   if (status === 'idle') return null;

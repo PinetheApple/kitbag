@@ -224,8 +224,7 @@ function NotReady({
         icon="stems"
         title="These stems would not open"
         reason="The song could not be read or the audio engine did not start. Go back and open it again."
-        actionLabel="Back to songs"
-        onAction={onBack}
+        action={{ label: 'Back to songs', onPress: onBack }}
       />
     );
   if (status === 'missing')
@@ -234,8 +233,7 @@ function NotReady({
         icon="stems"
         title="This stem song is gone"
         reason="It was deleted from the library. Pick another song there."
-        actionLabel="Back to songs"
-        onAction={onBack}
+        action={{ label: 'Back to songs', onPress: onBack }}
       />
     );
   return (

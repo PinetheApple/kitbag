@@ -5,11 +5,11 @@ import {
   FACT_SEPARATOR,
   Icon,
   minTouchTargetDp,
-  placeLabel,
   PlainListRow,
   PLAYING,
   QUEUE_TEXT,
   removeFromQueueLabel,
+  setlistPlaceParts,
   RowText,
   SectionHeader,
   usePlainRowStyles,
@@ -60,10 +60,7 @@ function StemsBadge() {
 }
 
 function nowPlayingSubtitle(facts: string, spot: SetlistSpot | null): string {
-  const where =
-    spot === null
-      ? [facts]
-      : [spot.setlistName, placeLabel(spot.number, spot.of)];
+  const where = spot === null ? [facts] : setlistPlaceParts(spot);
   return [PLAYING, ...where].filter((part) => part !== '').join(FACT_SEPARATOR);
 }
 

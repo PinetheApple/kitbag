@@ -68,8 +68,7 @@ function NoStandalone({ onCreate }: { readonly onCreate: () => void }) {
       icon="song"
       title="Every song is in a setlist"
       reason="Songs you remove from a set, or save here, wait in this list."
-      actionLabel="New song from the metronome"
-      onAction={onCreate}
+      action={{ label: 'New song from the metronome', onPress: onCreate }}
     />
   );
 }
