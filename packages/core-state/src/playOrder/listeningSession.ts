@@ -6,6 +6,7 @@ import { stemPlayerStore } from '../stemPlayer/store.ts';
 import { shownSong } from './nowPlaying.ts';
 import { forgetHeard, hearSong } from './heard.ts';
 import { heardOf } from './previous.ts';
+import { endRepeatRound } from './repeat.ts';
 
 type CardStops = (listener: () => void) => () => void;
 
@@ -18,6 +19,7 @@ export interface ListeningDeps {
 export function endListeningSession(): void {
   libraryStore.getState().endListeningSession();
   forgetHeard();
+  endRepeatRound();
 }
 
 const defaultDeps: ListeningDeps = {

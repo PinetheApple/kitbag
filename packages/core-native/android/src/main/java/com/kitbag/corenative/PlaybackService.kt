@@ -98,6 +98,7 @@ class PlaybackService : Service() {
       ACTION_SONG -> CardEvent.SongTapped(intent.getStringExtra(EXTRA_ACTION))
       ACTION_SONG_HIDE -> CardEvent.SongHidden
       ACTION_SONG_ORDER -> CardEvent.SongOrdered(SongOrder.named(intent.getStringExtra(EXTRA_SONG_ORDER)))
+      ACTION_SONG_SEEKED -> CardEvent.SongSeekedInApp(intent.getLongExtra(EXTRA_POSITION_FRAMES, 0L))
       else -> CardEvent.StartUnrecognised
     }
 
@@ -111,6 +112,7 @@ class PlaybackService : Service() {
       is CardEffect.SongControl -> song?.handle(effect.action)
       is CardEffect.SeekSong -> song?.seekTo(effect.positionMillis)
       is CardEffect.OrderSong -> song?.order(effect.order)
+      is CardEffect.PublishSongSeek -> song?.seekedInApp(effect.positionFrames)
       CardEffect.EndSong -> endSong()
       CardEffect.ReturnToMetronome -> returnToMetronome()
       CardEffect.RemoveCard -> finish()
@@ -352,6 +354,7 @@ class PlaybackService : Service() {
     private const val ACTION_SONG_HIDE = "com.kitbag.corenative.SONG_HIDE"
     private const val ACTION_SONG = "com.kitbag.corenative.SONG"
     private const val ACTION_SONG_ORDER = "com.kitbag.corenative.SONG_ORDER"
+    private const val ACTION_SONG_SEEKED = "com.kitbag.corenative.SONG_SEEKED"
     private const val SONG_CHANNEL_ID = "kitbag_songs_card"
     private val RETIRED_CHANNEL_IDS = listOf("kitbag_metronome", "kitbag_songs")
     private const val EXTRA_TITLE = "title"
@@ -372,6 +375,7 @@ class PlaybackService : Service() {
     private const val EXTRA_SONG_SESSION = "songSession"
     private const val EXTRA_FOLLOWS_PLAY_ORDER = "followsPlayOrder"
     private const val EXTRA_SONG_ORDER = "songOrder"
+    private const val EXTRA_POSITION_FRAMES = "positionFrames"
     private const val EXTRA_PRACTICE_PLAYED_MS = "practicePlayedMs"
     private const val EXTRA_PRACTICE_STRETCH_STARTED_AT = "practiceStretchStartedAt"
     private const val EXTRA_SUBTITLE = "setlistSubtitle"
@@ -463,6 +467,16 @@ class PlaybackService : Service() {
         Intent(context, PlaybackService::class.java)
           .setAction(ACTION_SONG_ORDER)
           .putExtra(EXTRA_SONG_ORDER, order.name),
+      )
+    }
+
+    // The card reads the engine only on its tick, so a seek the app makes is published at once.
+    fun seekedSong(context: Context, positionFrames: Long) {
+      if (!running && !startRequested) return
+      context.startService(
+        Intent(context, PlaybackService::class.java)
+          .setAction(ACTION_SONG_SEEKED)
+          .putExtra(EXTRA_POSITION_FRAMES, positionFrames),
       )
     }
 

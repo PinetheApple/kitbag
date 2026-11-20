@@ -12,6 +12,7 @@ import '@/runtime/tunerRuntime';
 import '@/runtime/lastToolRuntime';
 import '@/runtime/homeLayoutRuntime';
 import '@/runtime/swipeHintRuntime';
+import '@/runtime/repeatHintRuntime';
 import '@/runtime/appearanceRuntime';
 import '@/runtime/countInRuntime';
 import '@/runtime/standaloneMetronomeRuntime';

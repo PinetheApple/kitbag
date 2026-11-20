@@ -12,6 +12,7 @@ import {
   UP_NEXT_SOURCE,
   upNextTitle,
   type OnStage,
+  type QueuedSong,
   type PresetSetlistEntry,
   type LibrarySongs,
   type SetlistEntry,
@@ -65,6 +66,18 @@ export function upNextText(next: UpNext, context: UpNextContext): UpNextText {
     title,
     source: setlistSource(entry, context),
     metronome: isPresetEntry(entry),
+  };
+}
+
+export function repeatedText(
+  song: QueuedSong,
+  library: LibrarySongs,
+  loopHeld: boolean,
+): UpNextText {
+  return {
+    title: upNextTitle({ source: UP_NEXT_SOURCE.queue, song }, library),
+    source: loopHeld ? QUEUE_TEXT.afterLoopCleared : QUEUE_TEXT.playsAgain,
+    metronome: false,
   };
 }
 

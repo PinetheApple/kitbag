@@ -9,6 +9,7 @@ import {
   screenBar,
   SheetHost,
   QUEUE_TEXT,
+  repeatAllHint,
   ThemeProvider,
   useLeftSetlistNotice,
   useNotice,
@@ -17,6 +18,8 @@ import {
   configurePlayOrder,
   libraryStore,
   playOrderStore,
+  REPEAT,
+  repeatStore,
   songLibraryStore,
   songPlayerStore,
   stemPlayerStore,
@@ -72,6 +75,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   libraryStore.setState(libraryBefore, true);
   stemPlayerStore.setState(stemPlayerBefore, true);
+  repeatStore.setState({ mode: REPEAT.off, allHintSeen: false });
 });
 
 type SheetUnderTestProps = Omit<QueueSheetProps, 'notice' | 'onLeftSetlist'>;
@@ -313,5 +317,19 @@ describe('leaving the setlist with the queue sheet open', () => {
     );
     expect(sheet.has('Left Gig')).toBe(true);
     expect(undo.some(inSheetLayer)).toBe(true);
+  });
+});
+
+describe('the Repeat all hint in the queue sheet', () => {
+  it('shows while Repeat all is on and the hint was never seen', async () => {
+    repeatStore.setState({ mode: REPEAT.all, allHintSeen: false });
+    const sheet = await openOnList(stems(NIGHT_BUS));
+    expect(sheet.has(repeatAllHint(null))).toBe(true);
+  });
+
+  it('stays away once the seen flag is set', async () => {
+    repeatStore.setState({ mode: REPEAT.all, allHintSeen: true });
+    const sheet = await openOnList(stems(NIGHT_BUS));
+    expect(sheet.has(repeatAllHint(null))).toBe(false);
   });
 });

@@ -6,6 +6,7 @@ import {
   nextFromLabel,
   playerWaveBars,
   QUEUE_TEXT,
+  repeatAllHint,
   SectionHeader,
   Sheet,
   SheetHint,
@@ -14,16 +15,22 @@ import {
   type Notice,
 } from '@kitbag/core-design';
 import {
-  entriesAfter,
   isPresetEntry,
   playQueuedNow,
+  playQueuedSongNow,
   stopForMetronome,
   queuedSongOf,
+  REPEAT,
+  markRepeatAllHintSeen,
+  setlistWraps,
   useLibrary,
   usePlayOrder,
   useShownSongId,
   useShownStemSetId,
+  useRepeatAllHintSeen,
+  useRepeatMode,
   useStage,
+  useUpcoming,
   useUpNextCount,
   type LeftSetlist,
   type QueuedSong,
@@ -33,9 +40,11 @@ import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
 import { clearQueueBody } from '../logic/upNextText.ts';
+import { RepeatChip } from './RepeatChip.tsx';
 import {
   MetronomeHint,
   NowPlaying,
+  PendingRow,
   QueuedRow,
   SetlistRow,
 } from './QueueRows.tsx';
@@ -64,7 +73,8 @@ function QueuedSection({
 }: Pick<QueueListProps, 'onPlay' | 'onClear'>) {
   const styles = useStyles();
   const queue = usePlayOrder((s) => s.queue);
-  if (queue.length === 0) return null;
+  const { pending } = useUpcoming();
+  if (queue.length === 0 && pending.length === 0) return null;
   return (
     <>
       <SectionHeader
@@ -90,6 +100,13 @@ function QueuedSection({
             onPlay={onPlay}
           />
         ))}
+        {pending.map((song) => (
+          <PendingRow
+            key={`${song.kind}-${String(song.id)}`}
+            song={song}
+            onPlay={onPlay}
+          />
+        ))}
       </View>
     </>
   );
@@ -100,9 +117,9 @@ function SetlistSection({
   onLeave,
 }: Pick<QueueListProps, 'onOpen' | 'onLeave'>) {
   const styles = useStyles();
-  const { stage, cursor, name } = useStage();
+  const { stage, name } = useStage();
+  const { setlist: later } = useUpcoming();
   if (stage.setlistId === null) return null;
-  const later = entriesAfter(stage, cursor);
   return (
     <>
       <SectionHeader
@@ -137,6 +154,7 @@ function SetlistSection({
 
 function QueueList(props: QueueListProps) {
   const upNextCount = useUpNextCount();
+  const repeatsOne = useRepeatMode() === REPEAT.one;
   return (
     <>
       <QueuedSection onPlay={props.onPlay} onClear={props.onClear} />
@@ -145,7 +163,11 @@ function QueueList(props: QueueListProps) {
         <EmptyState
           icon="queue"
           title={QUEUE_TEXT.nothingQueued}
-          reason={QUEUE_TEXT.nothingQueuedReason}
+          reason={
+            repeatsOne
+              ? QUEUE_TEXT.nothingQueuedPlaysAgainReason
+              : QUEUE_TEXT.nothingQueuedReason
+          }
         />
       ) : null}
     </>
@@ -227,6 +249,8 @@ export interface QueueSheetProps extends PlayOrderRoutes {
   readonly notice: Notice;
 }
 
+type StartSong = typeof playQueuedNow;
+
 const stemsOf = (stemSetId: number): QueuedSong => ({
   kind: 'stems',
   id: stemSetId,
@@ -238,8 +262,8 @@ function useQueuePlay(props: QueueSheetProps) {
   const exit = useLeaveAfterClose(props, props.visible);
   const { onDismiss, playsInPlace } = props;
   const startHere = useCallback(
-    (song: QueuedSong, committing: Promise<unknown>) => {
-      void committing.then(() => playQueuedNow(song, playerWaveBars));
+    (song: QueuedSong, committing: Promise<unknown>, start: StartSong) => {
+      void committing.then(() => start(song, playerWaveBars));
       if (!playsInPlace) exit.leaveFor(leaveForQueued(song));
       onDismiss();
     },
@@ -247,14 +271,14 @@ function useQueuePlay(props: QueueSheetProps) {
   );
   const play = useCallback(
     (song: QueuedSong) => {
-      startHere(song, playQueued(song));
+      startHere(song, playQueued(song), playQueuedSongNow);
     },
     [startHere, playQueued],
   );
   const open = useCallback(
     (entry: SetlistEntry) => {
       if (!isPresetEntry(entry)) {
-        startHere(stemsOf(entry.stemSetId), openEntry(entry));
+        startHere(stemsOf(entry.stemSetId), openEntry(entry), playQueuedNow);
         return;
       }
       stopForMetronome();
@@ -284,6 +308,14 @@ function useQueueRowActions(props: QueueSheetProps) {
   return { play, open, leave, closed, playQueue, queued: first !== undefined };
 }
 
+function useRepeatAllHint(): string | undefined {
+  const mode = useRepeatMode();
+  const seen = useRepeatAllHintSeen();
+  const { stage, name } = useStage();
+  if (mode !== REPEAT.all || seen) return undefined;
+  return repeatAllHint(setlistWraps(stage) ? name : null);
+}
+
 function useNothingPlaying(): boolean {
   const songId = useShownSongId();
   const setId = useShownStemSetId();
@@ -296,6 +328,7 @@ export function QueueSheet(props: QueueSheetProps) {
   const upNextCount = useUpNextCount();
   const idle = useNothingPlaying();
   const actions = useQueueRowActions(props);
+  const hint = useRepeatAllHint();
   const shown: Shown = !visible ? null : confirming ? 'confirm' : 'list';
   const askClear = useCallback(() => {
     setConfirming(true);
@@ -307,6 +340,12 @@ export function QueueSheet(props: QueueSheetProps) {
     setConfirming(false);
     onDismiss();
   }, [onDismiss]);
+  const hintShown = hint !== undefined;
+  const { closed: leaveOnClose } = actions;
+  const closed = useCallback(() => {
+    if (hintShown) markRepeatAllHintSeen();
+    leaveOnClose();
+  }, [hintShown, leaveOnClose]);
   return (
     <>
       <Sheet
@@ -315,10 +354,12 @@ export function QueueSheet(props: QueueSheetProps) {
         titleDetail={
           upNextCount === 0 ? undefined : upNextCountLabel(upNextCount)
         }
+        titleAction={<RepeatChip />}
+        {...(hint === undefined ? {} : { hint })}
         dismissLabel={QUEUE_TEXT.closeQueue}
         bottomInset={bottomInset}
         onDismiss={dismiss}
-        onClosed={actions.closed}
+        onClosed={closed}
         pinnedBelowBar
         notice={<NoticeSnackbar inline notice={props.notice} />}
         footer={

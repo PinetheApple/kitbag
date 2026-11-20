@@ -1,10 +1,9 @@
 import type { SongTransportOrder } from '@kitbag/core-native';
 
-import { libraryStore } from '../library/store.ts';
 import { getStemPlayer } from '../stemPlayer/runtime.ts';
-import { cursorOf, onStageOf, upNext, type PlayOrder } from './order.ts';
+import { upNext, type PlayOrder } from './order.ts';
+import { playOrderNow, subscribePlayOrder } from './orderNow.ts';
 import { backFromNow, backOf } from './previous.ts';
-import { playOrderStore } from './store.ts';
 
 export function cardOrderOf(
   order: PlayOrder,
@@ -21,16 +20,6 @@ export interface CardOrderDeps {
   readonly send: (order: SongTransportOrder) => void;
 }
 
-function playOrderNow(): PlayOrder {
-  const library = libraryStore.getState();
-  const stage = onStageOf(library);
-  return {
-    queue: playOrderStore.getState().queue,
-    stage,
-    cursor: cursorOf(stage, library.loaded),
-  };
-}
-
 function canGoBack(): boolean {
   const from = backFromNow();
   return from !== null && backOf(from) !== null;
@@ -39,17 +28,7 @@ function canGoBack(): boolean {
 const defaultDeps: CardOrderDeps = {
   order: playOrderNow,
   back: canGoBack,
-  subscribe: (listener) => {
-    const stops = [
-      playOrderStore.subscribe(listener),
-      libraryStore.subscribe(listener),
-    ];
-    return () => {
-      stops.forEach((stop) => {
-        stop();
-      });
-    };
-  },
+  subscribe: subscribePlayOrder,
   send: (order) => {
     getStemPlayer().commands.songTransportOrder(order);
   },

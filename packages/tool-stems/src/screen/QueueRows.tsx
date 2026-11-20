@@ -10,6 +10,7 @@ import {
   PLAYING,
   QUEUE_TEXT,
   queueSheet,
+  pendingRowLabel,
   queuedRowLabel,
   removeFromQueueLabel,
   setlistPlaceParts,
@@ -239,6 +240,33 @@ export function QueuedRow({ entry, index, count, onPlay }: QueuedRowProps) {
         </View>
       }
       accessibilityLabel={queuedRowLabel(index + 1, title)}
+      onPress={play}
+    />
+  );
+}
+
+interface PendingRowProps {
+  readonly song: QueuedSong;
+  readonly onPlay: (song: QueuedSong) => void;
+}
+
+export function PendingRow({ song, onPlay }: PendingRowProps) {
+  const styles = useStyles();
+  const library = useLibrarySongs();
+  const title = queuedSongTitle(song, library);
+  const play = useCallback(() => {
+    onPlay(song);
+  }, [onPlay, song]);
+  return (
+    <PlainListRow
+      title={title}
+      subtitle={queuedSongFacts(song, library)}
+      trailing={
+        <View style={styles.trailing}>
+          {song.kind === 'stems' ? <StemsBadge /> : null}
+        </View>
+      }
+      accessibilityLabel={pendingRowLabel(title)}
       onPress={play}
     />
   );

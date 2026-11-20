@@ -26,6 +26,7 @@ import {
 } from './setlistPosition.ts';
 import { metronomeSongsOf } from './metronomeSongs.ts';
 import { serialised, stepTarget, wasDeleted } from './stepTarget.ts';
+import { repeatsAll } from '../playOrder/repeat.ts';
 import {
   sessionStateOf,
   setlistSessionActions,
@@ -394,11 +395,12 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       return true;
     },
     stepSong: async (step: SongStep): Promise<SongStepResult> => {
-      const first = stepTarget(get(), step);
+      const wraps = repeatsAll();
+      const first = stepTarget(get(), step, wraps);
       if (first === undefined) return NO_STEP;
       if (!isPresetEntry(first.entry)) await get().refresh();
       const skipped = wasDeleted(get(), first);
-      const next = stepTarget(get(), step);
+      const next = stepTarget(get(), step, wraps);
       if (next === undefined) return { entry: undefined, skipped };
       const { entry, setlistId } = next;
       if (isPresetEntry(entry)) {

@@ -44,6 +44,17 @@ export function adjacentEntry(
   return step === SONG_STEP.next ? entries[0] : undefined;
 }
 
+export function steppedEntry(
+  entries: readonly SetlistEntry[],
+  position: StagePosition | null,
+  step: SongStep,
+  wraps: boolean,
+): SetlistEntry | undefined {
+  const entry = adjacentEntry(entries, position, step);
+  if (entry !== undefined || !wraps || position?.itemId == null) return entry;
+  return step === SONG_STEP.next ? entries[0] : entries.at(-1);
+}
+
 export function indexIn(
   entries: readonly SetlistEntry[] | undefined,
   itemId: number,

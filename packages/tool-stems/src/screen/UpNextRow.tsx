@@ -12,9 +12,13 @@ import {
 } from '@kitbag/core-design';
 import {
   PREVIOUS_RESTARTS_AFTER_SECONDS,
+  REPEAT,
   useCanGoBack,
   usePlayOrder,
   useLibrarySongs,
+  useRepeatMode,
+  useShownLoopHeld,
+  useShownSong,
   useStage,
   useUpNext,
 } from '@kitbag/core-state';
@@ -23,7 +27,12 @@ import { Pressable, Text, View } from 'react-native';
 import { useAnimatedReaction, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { upNextText, type UpNextText } from '../logic/upNextText.ts';
+import {
+  repeatedText,
+  upNextText,
+  type UpNextText,
+} from '../logic/upNextText.ts';
+import { RepeatChip } from './RepeatChip.tsx';
 
 export const UP_NEXT = 'Up next';
 
@@ -63,13 +72,31 @@ function usePastRestart(songSec: SharedValue<number>): boolean {
   return past;
 }
 
-function useUpNextRowText(): UpNextText | null {
-  const next = useUpNext();
+interface UpNextRowText {
+  readonly shown: UpNextText;
+  readonly next: UpNextText | null;
+}
+
+function useUpNextRowText(): UpNextRowText {
+  const upNext = useUpNext();
   const queueLength = usePlayOrder((s) => s.queue.length);
   const { stage, name } = useStage();
   const library = useLibrarySongs();
-  if (next === undefined) return null;
-  return upNextText(next, { queueLength, stage, setlistName: name, library });
+  const repeatsOne = useRepeatMode() === REPEAT.one;
+  const playing = useShownSong();
+  const loopHeld = useShownLoopHeld();
+  const next =
+    upNext === undefined
+      ? null
+      : upNextText(upNext, {
+          queueLength,
+          stage,
+          setlistName: name,
+          library,
+        });
+  if (repeatsOne && playing !== null)
+    return { shown: repeatedText(playing, library, loopHeld), next };
+  return { shown: next ?? NOTHING_NEXT, next };
 }
 
 export interface UpNextRowProps {
@@ -111,10 +138,9 @@ export function UpNextRow({
   onPrevious,
 }: UpNextRowProps) {
   const styles = useStyles();
-  const next = useUpNextRowText();
+  const { shown: text, next } = useUpNextRowText();
   const canGoBack = useCanGoBack();
   const pastRestart = usePastRestart(songSec);
-  const text = next ?? NOTHING_NEXT;
   return (
     <View style={styles.row}>
       <TransportKey
@@ -139,6 +165,7 @@ export function UpNextRow({
           {text.source}
         </Text>
       </Pressable>
+      <RepeatChip />
       {next === null ? null : <NextKey text={next} onNext={onNext} />}
     </View>
   );

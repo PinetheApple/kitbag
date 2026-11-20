@@ -20,12 +20,14 @@ import {
 } from '@kitbag/core-design';
 import {
   activeSetView,
-  adjacentEntry,
   entryName,
+  REPEAT,
   SONG_STEP,
   stagePositionOf,
+  steppedEntry,
   stemSongTitle,
   useLibrary,
+  useRepeatMode,
   useStemSongs,
   type ActiveSet,
   type SetlistEntry,
@@ -271,9 +273,10 @@ function useStepTargets(context: SongContext & { readonly set: ActiveSet }) {
   const stems = useStemSongs();
   const nameOf = (entry: SetlistEntry | undefined) =>
     entry === undefined ? undefined : entryName(entry, stems);
+  const wraps = useRepeatMode() === REPEAT.all;
   const position = stagePositionOf(loaded, set.id);
-  const previous = adjacentEntry(entries, position, SONG_STEP.previous);
-  const next = adjacentEntry(entries, position, SONG_STEP.next);
+  const previous = steppedEntry(entries, position, SONG_STEP.previous, wraps);
+  const next = steppedEntry(entries, position, SONG_STEP.next, wraps);
   return { previous: nameOf(previous), next: nameOf(next) };
 }
 

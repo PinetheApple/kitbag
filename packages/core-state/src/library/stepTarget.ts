@@ -1,8 +1,8 @@
 import {
   activeSetlistOf,
-  adjacentEntry,
   indexIn,
   stagePositionOf,
+  steppedEntry,
   type SongStep,
 } from './setlistPosition.ts';
 import type { SetlistEntry } from './snapshot.ts';
@@ -18,13 +18,14 @@ type Stage = Pick<LibraryState, 'setlists' | 'entries' | 'loaded'>;
 export function stepTarget(
   state: Stage,
   step: SongStep,
+  wraps: boolean,
 ): StepTarget | undefined {
   const active = activeSetlistOf(state.setlists);
   if (active === undefined) return undefined;
   const setlistId = active.setlist.id;
   const entries = state.entries[setlistId] ?? [];
   const position = stagePositionOf(state.loaded, setlistId);
-  const entry = adjacentEntry(entries, position, step);
+  const entry = steppedEntry(entries, position, step, wraps);
   return entry === undefined ? undefined : { entry, setlistId };
 }
 

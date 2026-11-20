@@ -1,5 +1,7 @@
 import type { NoticeContent } from './components/useNotice.ts';
 
+const HOW_TO_QUEUE = 'Use Play next or Add to queue on a song.';
+
 export const QUEUE_TEXT = {
   playNext: 'Play next',
   addToQueue: 'Add to queue',
@@ -18,9 +20,14 @@ export const QUEUE_TEXT = {
   done: 'Done',
   closeQueue: 'Close the queue',
   nothingQueued: 'Nothing queued',
-  nothingQueuedReason:
-    'Use Play next or Add to queue on a song. When this song ends, playback stops.',
+  nothingQueuedReason: `${HOW_TO_QUEUE} When this song ends, playback stops.`,
   playbackStops: 'Playback stops when this song ends',
+  playsAgain: 'Plays again when this song ends',
+  nothingQueuedPlaysAgainReason: `${HOW_TO_QUEUE} When this song ends, it plays again.`,
+  repeatOff: 'Repeat off',
+  repeatAll: 'Repeat all',
+  repeatOne: 'Repeat one',
+  afterLoopCleared: 'After the A-B loop is cleared',
   previous: 'Previous',
   remove: 'Remove',
   metronomeBadge: 'METRONOME',
@@ -31,6 +38,16 @@ export const QUEUE_TEXT = {
 
 export function nextFromLabel(setlistName: string): string {
   return `Next from: ${setlistName}`;
+}
+
+export function repeatAllHint(wrappingSetlistName: string | null): string {
+  return wrappingSetlistName === null
+    ? 'Repeat all: once the queue runs out, the songs played from it come back in the order they played.'
+    : `Repeat all: once the queue and ${wrappingSetlistName} run out, the songs played from the queue come back, then ${wrappingSetlistName} starts again from song 1.`;
+}
+
+export function pendingRowLabel(title: string): string {
+  return `${title}, back in the queue when the round starts again. Plays it now`;
 }
 
 export function upNextCountLabel(count: number): string {
