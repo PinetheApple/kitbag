@@ -1,0 +1,1 @@
+• The song player shows the song's click as chips; tap one to change the song's click sound and accents without touching your Metronome.
