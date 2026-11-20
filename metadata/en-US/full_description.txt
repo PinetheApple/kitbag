@@ -26,8 +26,7 @@ WAIT #555: single-song speed
 - Import songs from StemDeck, as a file or from your own StemDeck server.
 - Put stem songs in setlists and queue what plays next.
 - Stem songs keep playing in the background, with controls in the notification.
-- Songs show their controls in the same notification.
-WAIT #237: single songs playing in the background and from the lock screen
+- Single songs keep playing in the background too, with the same notification.
 - A stem song played from a setlist or Up next has Next and Previous in the
   notification and on the lock screen.
 

@@ -392,7 +392,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   bar; stop rewinds, and dismissing a paused card is stop. `kb_player_*` gets no card until
   a single-song screen exists. The skip icons are fixed at 10 to match the in-app transport,
   so changing `SKIP_SECONDS` means redrawing them. **[recorded]**
-  <!-- WAIT #237: resolution note for "kb_player_* gets no card"; the single-song player (#315) drives kb_mixer_*, and its card is #237 -->
+  **Resolved 2026-11-19 (#515):** single songs play through the mixer (2026-11-07 entry), so
+  `kb_player_*` still has no caller; they show the shared song card, and its Stop ends the
+  session. The device check is open in #237.
 
 - **2026-10-30 · Home and Library layout (§6.2, §12.4, #178)** — The owner chose variant B
   ("Two tiles, two screens") in `design/kitbag-library.html`; for the Home
@@ -511,7 +513,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   **Resolved 2026-11-01 (#282):** Q10, Backup and Restore shipped.
   **Resolved 2026-11-19 (#500):** Q10, the Data folder replaced Base directory (D11).
   **Resolved 2026-11-01 (#276):** Q12, sessions are written.
-  <!-- WAIT #170: Settings resolution note once #170 closes -->
+  #170 stays open for its device check, including latency calibration on wired and
+  Bluetooth output.
 
 - **2026-10-31 · Settings section labels (§12.2, §12.6, #170, #189)** — Settings section
   labels use `theme.accentInk` (light: `accentDeep`), a contrast exception to the design's

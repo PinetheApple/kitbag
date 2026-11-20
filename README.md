@@ -27,7 +27,8 @@ paywalls, ever.
   and count-in, a mini-player that keeps the song playing on Home and Songs, and
   a media notification shared with the metronome.
   <!-- WAIT #555: single-song speed -->
-  <!-- WAIT #237: single-song playback in the background and from the lock screen -->
+  Background playback with lock-screen and headset control is in place (#515)
+  but has no device check yet (#237).
 - **Stem songs** — import StemDeck bundles from a zip, a folder or a StemDeck
   server; per-stem volume, mute and solo; speed and key; sections and synced
   lyrics; save the mix as a WAV; setlists, a play-next queue and playing the next

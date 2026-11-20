@@ -2452,13 +2452,15 @@ need a phone check, tracked in #516 and the open feature issues.
 - **1 is built:** setlists and the preset editor (#130), layout B (#193),
   on-stage previous and next (#207), poly N against M (#238), practice
   summaries (#276, #278), custom click sounds (#473) and practice history
-  (#524, #533). <!-- WAIT #286: #286 still lacks its device check with several saved sessions -->
+  (#524, #533). The history list, session detail, Repeat and delete with Undo are built
+  (#533); the device check with several saved sessions is still open (#286).
 - **2 is built:** import with background beat analysis (#162) and meter
   detection (#408); the single-song player on the native engine (#315) with
   its click on the song's bars (#342), its own click sound and accents (#536,
   #543), an A-B loop (#418), count-in (#546), a mini-player (#370) and the
   media notification shared with the metronome, whose Stop ends the song
-  (#515). <!-- WAIT #237: single-song playback in the background and from the lock screen -->
+  (#515). Background playback with lock-screen and headset control is in place
+  (#515) but not yet checked on a device (#237).
   <!-- WAIT #555: single-song speed -->
 - **3 is built:** the stem player (#182) with background playback and a media
   notification (#186), StemDeck import from a zip or folder (#169) and from a
@@ -2475,7 +2477,8 @@ need a phone check, tracked in #516 and the open feature issues.
   SD card (#462, #470, #500, #506, #519; the card move is emulator-checked in
   the #532 and #548 re-checks, phone check pending); a database that fails to open blocks
   on a screen naming the failure (#514), and a copy is kept before a schema
-  upgrade (#518). <!-- WAIT #170: Settings status once #170 closes -->
+  upgrade (#518). Every Settings section is built; #170 stays open for its
+  device check, including latency calibration on wired and Bluetooth output.
 - **Releases:** every merge to `main` publishes a signed APK as a GitHub
   release (#216). The F-Droid submission is drafted in `metadata/` (#61) and
   not yet sent (§17.1).
