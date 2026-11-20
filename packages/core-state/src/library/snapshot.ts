@@ -1,6 +1,6 @@
 import type { Setlist, SetlistItem, SongPreset } from '@kitbag/core-db';
 
-import { metronomeSongs } from './metronomeSongs.ts';
+import { metronomeSongsOf } from './metronomeSongs.ts';
 import type { LibraryRepositories } from './runtime.ts';
 
 export const ENTRY_KIND = { preset: 'preset', stem: 'stem' } as const;
@@ -35,7 +35,7 @@ export interface LibrarySnapshot {
   readonly setlists: readonly SetlistSummary[];
   readonly entries: Readonly<Record<number, readonly SetlistEntry[]>>;
   readonly presets: readonly SongPreset[];
-  readonly songs: readonly SongPreset[];
+  readonly metronomeSongs: readonly SongPreset[];
   readonly standalone: readonly SongPreset[];
 }
 
@@ -86,14 +86,14 @@ export async function takeSnapshot(
       list.filter(isPresetEntry).map((e) => e.preset.id),
     ),
   );
-  const songs = metronomeSongs(presets);
+  const metronomeSongs = metronomeSongsOf(presets);
   return {
     setlists: setlists
       .map((setlist) => summarize(setlist, entries[setlist.id] ?? []))
       .sort(activeFirst),
     entries,
     presets,
-    songs,
-    standalone: songs.filter((preset) => !listed.has(preset.id)),
+    metronomeSongs,
+    standalone: metronomeSongs.filter((preset) => !listed.has(preset.id)),
   };
 }

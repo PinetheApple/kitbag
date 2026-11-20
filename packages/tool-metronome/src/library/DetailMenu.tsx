@@ -58,7 +58,7 @@ function useAddActions({
   entries,
   onEdit,
 }: AddActionsProps): SheetAction[] {
-  const songs = useLibrary((s) => s.songs);
+  const songs = useLibrary((s) => s.metronomeSongs);
   const addToSetlist = useLibrary((s) => s.addToSetlist);
   const newSong = useLibrary((s) => s.newSongFromCurrent);
   const inSet = new Set(entries.map((e) => e.preset.id));

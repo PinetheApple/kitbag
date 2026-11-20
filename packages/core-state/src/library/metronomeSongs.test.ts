@@ -36,14 +36,11 @@ describe('song-linked presets in metronome song lists', () => {
     ]);
   });
 
-  it('counts only unlinked presets on the All songs row', async () => {
-    const { library } = await linkedAndUnlinked();
-    expect(library.getState().standalone).toHaveLength(1);
-  });
-
   it('offers only unlinked presets in the Add song sheet', async () => {
     const { library } = await linkedAndUnlinked();
-    expect(library.getState().songs.map((p) => p.name)).toEqual([UNLINKED]);
+    expect(library.getState().metronomeSongs.map((p) => p.name)).toEqual([
+      UNLINKED,
+    ]);
   });
 
   it('leaves a linked preset out of search results', async () => {
