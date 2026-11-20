@@ -23,6 +23,10 @@ export default defineConfig({
       'src/screen/CustomSounds.test.tsx',
       'src/screen/CustomSoundSheets.test.tsx',
       'src/screen/SoundSheets.test.tsx',
+      'src/library/SetlistDetailScreen.test.tsx',
+      'src/screen/useStepSong.test.tsx',
+      'src/screen/SetlistSongsSheet.test.tsx',
+      'src/screen/MetronomeAppBar.test.tsx',
       'src/library/songLists.test.tsx',
     ],
     alias: {

@@ -6,6 +6,7 @@ import {
   ADVANCE,
   advanceOf,
   cursorAt,
+  entriesAfter,
   UP_NEXT_SOURCE,
   upNext,
   type OnStage,
@@ -131,5 +132,21 @@ describe('advance', () => {
 
   it('ends when nothing is up next', () => {
     expect(advanceOf(undefined)).toEqual({ kind: ADVANCE.end });
+  });
+});
+
+describe('the rest of the setlist', () => {
+  it('is every entry after the one on stage', () => {
+    expect(entriesAfter(stage(), cursorAt(stage(), 2))).toEqual(
+      setlist.slice(2),
+    );
+  });
+
+  it('is the whole setlist when nothing from it is on stage', () => {
+    expect(entriesAfter(stage(), null)).toEqual(setlist);
+  });
+
+  it('is nothing after the last entry', () => {
+    expect(entriesAfter(stage(), cursorAt(stage(), 4))).toEqual([]);
   });
 });

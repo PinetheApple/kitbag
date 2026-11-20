@@ -1,6 +1,8 @@
 import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
+import { insertStemSet } from '@kitbag/core-db/src/stem-entries.test-helper';
+
 import { isPresetEntry } from '../library/snapshot.ts';
 import { setup } from '../library/store.test-helper.ts';
 import { BPM_BOUNDS } from './config.ts';
@@ -67,7 +69,7 @@ async function saveSongInSetlist(app: ReturnType<typeof setup>) {
     isPresetEntry,
   );
   if (entry === undefined) throw new Error('missing setlist entry');
-  return { presetId, itemId: entry.item.id, setlistId };
+  return { presetId, itemId: entry.item.id, setlistId, index: 0 };
 }
 
 async function standaloneThenSong(memory: Memory) {
@@ -197,6 +199,27 @@ describe('standalone metronome across an app restart', () => {
     await settled();
 
     expect(memory.stored().bpm).toBe(SONG_BPM);
+  });
+
+  it('treats a stem song on stage like a loaded song, then leaves the settings standalone', async () => {
+    const memory = memoryPersistence();
+    const { app, song } = await standaloneThenSong(memory);
+    const s = app.library.getState();
+    const stem = await insertStemSet(app.handle.db, 'Night Bus');
+    const item = await app.repos.setlists.addStemSet(song.setlistId, stem);
+    await s.refresh();
+    await s.loadSong(song.presetId, song.itemId, song.setlistId);
+    await s.openStemEntry(item.id, song.setlistId);
+    app.metronome.getState().setTempo(SONG_EDIT_BPM);
+    await settled();
+    expect(memory.stored().bpm).toBe(STANDALONE_BPM);
+
+    await s.leaveSetlist();
+    await settled();
+    expect(memory.stored().bpm).toBe(SONG_EDIT_BPM);
+    const relaunched = launch(memory);
+    expect(relaunched.metronome.getState().bpm).toBe(SONG_EDIT_BPM);
+    expect(relaunched.library.getState().loaded).toBeNull();
   });
 
   it('does not save when an undone discard re-links the song', async () => {

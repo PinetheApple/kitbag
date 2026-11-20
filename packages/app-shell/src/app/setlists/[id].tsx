@@ -17,6 +17,8 @@ function SetlistDetailRoute() {
       onBack={routes.back}
       onEditPreset={routes.openPreset}
       onLoaded={routes.toMetronome}
+      onOpenStemSet={routes.openStemSet}
+      onAddStemSongs={routes.openStemSongsToAdd}
     />
   );
 }
