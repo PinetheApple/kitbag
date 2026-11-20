@@ -1,14 +1,25 @@
 import {
   Button,
   createThemedStyles,
+  NoticeSnackbar,
+  QUEUE_TEXT,
+  SetlistPickerSheet,
   Sheet,
   SheetHint,
+  snackbar,
   space,
   TextField,
+  useNotice,
+  useQueueNotices,
+  type AddedToSetlist,
 } from '@kitbag/core-design';
 import {
   cleanName,
   REPLACE_LABELS,
+  useIsQueued,
+  useQueueRefresh,
+  useQueueSong,
+  useSetlistPicker,
   useSongLibrary,
   type AnalysisFailure,
   type LibraryRow,
@@ -36,7 +47,7 @@ const useStyles = createThemedStyles(() => ({
   row: { flexDirection: 'row', gap: space.controlGap },
 }));
 
-type Kind = 'none' | 'actions' | 'rename' | 'delete';
+type Kind = 'none' | 'actions' | 'rename' | 'delete' | 'setlists';
 
 export function useLibraryMenu() {
   const [kind, setKind] = useState<Kind>('none');
@@ -51,6 +62,9 @@ export function useLibraryMenu() {
   const openDelete = useCallback(() => {
     setKind('delete');
   }, []);
+  const openSetlists = useCallback(() => {
+    setKind('setlists');
+  }, []);
   const close = useCallback(() => {
     setKind('none');
   }, []);
@@ -61,9 +75,10 @@ export function useLibraryMenu() {
       openActions,
       openRename,
       openDelete,
+      openSetlists,
       close,
     }),
-    [kind, target, openActions, openRename, openDelete, close],
+    [kind, target, openActions, openRename, openDelete, openSetlists, close],
   );
 }
 
@@ -82,17 +97,62 @@ function sheetNotice(
   return away ? UNAVAILABLE_TEXT : null;
 }
 
-function ActionsSheet({ menu, bottomInset }: SheetProps) {
+interface QueueButtonsProps {
+  readonly stemSetId: number;
+  readonly onPlayNext: () => void;
+  readonly onAddToSetlist: () => void;
+}
+
+function QueueButtons({
+  stemSetId,
+  onPlayNext,
+  onAddToSetlist,
+}: QueueButtonsProps) {
+  const queued = useIsQueued(stemSetId);
+  return (
+    <>
+      <Button
+        label={queued ? QUEUE_TEXT.inUpNext : QUEUE_TEXT.playNext}
+        icon={queued ? 'inUpNext' : 'playNext'}
+        iconSize="sheetButton"
+        align="start"
+        variant="tonal"
+        disabled={queued}
+        disabledLook="faded"
+        onPress={onPlayNext}
+      />
+      <Button
+        label={QUEUE_TEXT.addToSetlist}
+        icon="addToSetlist"
+        iconSize="sheetButton"
+        align="start"
+        variant="tonal"
+        onPress={onAddToSetlist}
+      />
+    </>
+  );
+}
+
+interface ActionsSheetProps extends SheetProps {
+  readonly onPlayNext: (stemSetId: number) => void;
+}
+
+function ActionsSheet({ menu, bottomInset, onPlayNext }: ActionsSheetProps) {
   const styles = useStyles();
   const reanalyze = useSongLibrary((s) => s.reanalyze);
-  const { target, close, openRename, openDelete } = menu;
+  const { target, close, openRename, openDelete, openSetlists } = menu;
   const failure = useRowFailure(target);
   const away = useRowFiles(target) === 'unavailable';
   const failureNotice = sheetNotice(failure, away);
+  const stemSetId = target?.kind === 'stems' && !away ? target.id : null;
   const retry = useCallback(() => {
     close();
     if (target?.kind === 'song') void reanalyze(target.id);
   }, [close, reanalyze, target]);
+  const playNext = useCallback(() => {
+    close();
+    if (stemSetId !== null) onPlayNext(stemSetId);
+  }, [close, onPlayNext, stemSetId]);
   const title = target?.title ?? '';
   return (
     <Sheet
@@ -106,6 +166,13 @@ function ActionsSheet({ menu, bottomInset }: SheetProps) {
         <SheetHint>{failureNotice.text}</SheetHint>
       )}
       <View style={styles.stack}>
+        {stemSetId === null ? null : (
+          <QueueButtons
+            stemSetId={stemSetId}
+            onPlayNext={playNext}
+            onAddToSetlist={openSetlists}
+          />
+        )}
         <Button label="Rename" variant="tonal" onPress={openRename} />
         {target?.kind === 'song' && !away && canReanalyze(failure) ? (
           <Button label={REANALYZE_LABEL} variant="tonal" onPress={retry} />
@@ -260,13 +327,50 @@ function ReplaceSheet({ bottomInset }: Pick<SheetProps, 'bottomInset'>) {
   );
 }
 
-export function LibrarySheets(props: SheetProps) {
+interface SetlistsSheetProps extends SheetProps {
+  readonly onAdded: (added: AddedToSetlist) => void;
+}
+
+function SetlistsSheet({ menu, bottomInset, onAdded }: SetlistsSheetProps) {
+  const { target, close } = menu;
+  const picker = useSetlistPicker(target?.kind === 'stems' ? target.id : null);
+  return (
+    <SetlistPickerSheet
+      {...picker}
+      visible={menu.kind === 'setlists'}
+      songTitle={target?.title ?? ''}
+      bottomInset={bottomInset}
+      onDismiss={close}
+      onAdded={onAdded}
+    />
+  );
+}
+
+interface LibrarySheetsProps extends SheetProps {
+  readonly stemRows: boolean;
+  readonly onOpenSetlist: (setlistId: number) => void;
+}
+
+export function LibrarySheets({
+  stemRows,
+  onOpenSetlist,
+  ...props
+}: LibrarySheetsProps) {
+  const notice = useNotice();
+  useQueueRefresh(stemRows);
+  const queueSong = useQueueSong();
+  const queue = useQueueNotices(notice, queueSong, onOpenSetlist);
   return (
     <>
-      <ActionsSheet {...props} />
+      <ActionsSheet {...props} onPlayNext={queue.playNext} />
       <RenameSheet {...props} />
       <DeleteSheet {...props} />
+      <SetlistsSheet {...props} onAdded={queue.added} />
       <ReplaceSheet bottomInset={props.bottomInset} />
+      <NoticeSnackbar
+        notice={notice}
+        bottom={props.bottomInset + snackbar.aboveSheet}
+      />
     </>
   );
 }

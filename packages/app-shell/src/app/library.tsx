@@ -31,6 +31,7 @@ function SongsRoute() {
         onBack={routes.back}
         onOpenStemSet={routes.openStemSet}
         onOpenSong={routes.openSong}
+        onOpenSetlist={routes.openSetlist}
         onUnavailable={folder.showUnavailable}
         strip={folder.strip}
         {...(metronomeOn ? { onOpenSetlists: routes.openSetlists } : {})}

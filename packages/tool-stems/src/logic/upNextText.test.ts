@@ -3,13 +3,11 @@ import {
   UP_NEXT_SOURCE,
   type LibraryStemSetRow,
   type SetlistEntry,
-  type SetlistSummary,
 } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import {
   clearQueueBody,
-  pickerSubtitle,
   setlistRowSubtitle,
   upNextText,
 } from './upNextText.ts';
@@ -90,22 +88,5 @@ describe('up next sheet text', () => {
       'The 3 queued songs leave Up next. Friday gig carries on after this song.',
     );
     expect(clearQueueBody(1, '')).toBe('The 1 queued song leaves Up next.');
-  });
-});
-
-describe('setlist picker row', () => {
-  it('counts the songs, the stem songs among them, and whether it is on stage', () => {
-    const summary = {
-      setlist: { active: true },
-      songCount: 5,
-    } as SetlistSummary;
-    expect(pickerSubtitle(summary, entries)).toBe(
-      '5 songs · 4 stem songs · on stage',
-    );
-    const quiet = {
-      setlist: { active: false },
-      songCount: 1,
-    } as SetlistSummary;
-    expect(pickerSubtitle(quiet, [click(1)])).toBe('1 song');
   });
 });

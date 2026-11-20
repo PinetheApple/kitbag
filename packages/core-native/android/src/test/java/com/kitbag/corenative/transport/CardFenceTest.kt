@@ -46,9 +46,36 @@ class CardFenceTest {
   fun `handing the metronome over leaves song presses running`() {
     val fences = CardFences()
     val song = fences.song.issue()
-    fences.metronome.keep()
-    fences.handOverMetronome {}
+    fences.showMetronome()
+    fences.hideMetronome {}
     assertEquals(RAN, fences.song.run(song) { RAN })
+  }
+
+  @Test
+  fun `a withdrawn card is no longer held`() {
+    val shown = fence.keep()
+    assertTrue(fence.holds(shown))
+    fence.withdraw()
+    assertFalse(fence.holds(shown))
+  }
+
+  @Test
+  fun `only the newer card is held after a keep that follows a withdraw`() {
+    val first = fence.keep()
+    fence.withdraw()
+    val next = fence.keep()
+    assertFalse(fence.holds(first))
+    assertTrue(fence.holds(next))
+  }
+
+  @Test
+  fun `a hide withdraws the card it was sent for, and the next show gets a new card`() {
+    val fences = CardFences()
+    val shown = fences.showMetronome()
+    fences.hideMetronome {}
+    val next = fences.showMetronome()
+    assertFalse(fences.metronome.holds(shown))
+    assertTrue(fences.metronome.holds(next))
   }
 
   @Test

@@ -54,6 +54,7 @@ function StemSongsRoute() {
         onBack={routes.back}
         onOpenStemSet={routes.openStemSet}
         onOpenSong={routes.openSong}
+        onOpenSetlist={routes.openSetlist}
         onUnavailable={folder.showUnavailable}
         strip={folder.strip}
         onAdd={openAdd}

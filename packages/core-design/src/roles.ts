@@ -224,6 +224,7 @@ export const iconSizes = {
   action: 16,
   title: 17,
   tile: 17,
+  sheetButton: 20,
   fab: 24,
   empty: 26,
   toolTile: 26,

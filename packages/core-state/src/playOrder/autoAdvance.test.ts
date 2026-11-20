@@ -40,7 +40,7 @@ function harness(
   for (const step of steps) peekNext.mockResolvedValueOnce(step);
   peekNext.mockResolvedValue(end);
   const commitNext = vi.fn<AutoAdvanceDeps['commitNext']>(() =>
-    Promise.resolve(),
+    Promise.resolve(true),
   );
   const advanceTo = vi.fn<AutoAdvanceDeps['advanceTo']>();
   for (const outcome of outcomes) advanceTo.mockResolvedValueOnce(outcome);
@@ -112,7 +112,10 @@ describe('auto-advance at the end of a stem song', () => {
   it('commits the step it looked at before following it', async () => {
     const h = harness([play(NIGHT_BUS)]);
     await h.songEnds();
-    expect(h.commitNext).toHaveBeenCalledWith(play(NIGHT_BUS).advance);
+    expect(h.commitNext).toHaveBeenCalledWith(
+      play(NIGHT_BUS).advance,
+      expect.any(Function),
+    );
     expect(h.commitNext.mock.invocationCallOrder[0]).toBeLessThan(
       h.advanceTo.mock.invocationCallOrder[0] ?? 0,
     );
@@ -125,6 +128,25 @@ describe('auto-advance at the end of a stem song', () => {
     expect(h.peekNext).toHaveBeenCalledTimes(1);
     expect(h.commitNext).not.toHaveBeenCalled();
     expect(h.advanceTo).not.toHaveBeenCalled();
+    expect(h.seen).toEqual([]);
+  });
+
+  it('commits only while the end still stands', async () => {
+    const stillEnded = vi.fn(() => true);
+    const h = harness([play(NIGHT_BUS)], [], 1, stillEnded);
+    await h.songEnds();
+    expect(h.commitNext).toHaveBeenCalledWith(
+      play(NIGHT_BUS).advance,
+      stillEnded,
+    );
+  });
+
+  it('follows nothing once a press during the commit undid it', async () => {
+    const h = harness([play(NIGHT_BUS)]);
+    h.commitNext.mockResolvedValueOnce(false);
+    await h.songEnds();
+    expect(h.advanceTo).not.toHaveBeenCalled();
+    expect(h.stopAdvancing).not.toHaveBeenCalled();
     expect(h.seen).toEqual([]);
   });
 

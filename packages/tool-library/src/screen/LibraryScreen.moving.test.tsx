@@ -81,6 +81,7 @@ describe('the row a move is copying', () => {
           onBack: () => undefined,
           onOpenStemSet: () => undefined,
           onOpenSong: () => undefined,
+          onOpenSetlist: () => undefined,
           onUnavailable: () => undefined,
         }),
       );

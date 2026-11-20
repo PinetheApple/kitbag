@@ -3,13 +3,17 @@ import {
   countLabel,
   createThemedStyles,
   EmptyState,
+  NoticeSnackbar,
   PlayerDock,
   readerHiding,
   SegmentedControl,
+  snackbar,
   space,
   stemPlayer,
   textRoles,
   textStyle,
+  type AddedToSetlist,
+  type Notice,
   type SegmentOption,
 } from '@kitbag/core-design';
 import { KB_MAX_TRACKS } from '@kitbag/core-native';
@@ -33,7 +37,6 @@ import { ExportCancelledSnackbar, ExportNotice } from './ExportNotice.tsx';
 import { ExportSheet } from './ExportSheet.tsx';
 import { LoopUndoSnackbar } from './LoopUndoSnackbar.tsx';
 import { PlayerMenu } from './PlayerMenu.tsx';
-import { type AddedToSetlist } from './SetlistPickerSheet.tsx';
 import {
   SetlistSheet,
   useCarriedSkipNotice,
@@ -50,7 +53,6 @@ import { StemList } from './StemList.tsx';
 import { StemMeterSheet } from './StemMeterSheet.tsx';
 import { WAVEFORM_BARS } from './StemRowView.tsx';
 import { StemTransport } from './StemTransport.tsx';
-import { PlayerNoticeSnackbar, usePlayerNotice } from './PlayerNotice.tsx';
 import { TempoSheet } from './TempoSheet.tsx';
 import { UpNextRow } from './UpNextRow.tsx';
 import { UpNextSheet } from './UpNextSheet.tsx';
@@ -255,7 +257,7 @@ interface BodyProps {
   readonly onBack: () => void;
   readonly onOpenUpNext: () => void;
   readonly onNext: () => void;
-  readonly notice: ReturnType<typeof usePlayerNotice>;
+  readonly notice: Notice;
   readonly onSpeedKey: () => void;
 }
 
@@ -291,7 +293,7 @@ function Body({
         <AdvanceCountIn />
         <LoopUndoSnackbar />
         <ExportCancelledSnackbar />
-        <PlayerNoticeSnackbar notice={notice} />
+        <NoticeSnackbar notice={notice} bottom={snackbar.aboveDock} />
       </View>
       <Dock
         frame={frame}

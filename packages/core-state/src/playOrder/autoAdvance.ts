@@ -45,7 +45,10 @@ export interface AutoAdvanceDeps {
   readonly onSongEnd: (listener: () => void) => () => void;
   readonly advanceTo: (stemSetId: number) => Promise<AdvanceOutcome>;
   readonly peekNext: () => Promise<SkipResult>;
-  readonly commitNext: (next: Advance) => Promise<void>;
+  readonly commitNext: (
+    next: Advance,
+    stands: () => boolean,
+  ) => Promise<boolean>;
   readonly placeOf: (advance: Advance) => SetlistPlace | null;
   readonly candidates: () => number;
   readonly stillEnded: () => boolean;
@@ -63,7 +66,8 @@ const defaultDeps: AutoAdvanceDeps = {
   onSongEnd: (listener) => stemPlayerStore.getState().onSongEnd(listener),
   advanceTo: (stemSetId) => stemPlayerStore.getState().advanceTo(stemSetId),
   peekNext: () => playOrderStore.getState().peekNext(),
-  commitNext: (next) => playOrderStore.getState().commitNext(next),
+  commitNext: (next, stands) =>
+    playOrderStore.getState().commitNext(next, stands),
   placeOf: (advance) => {
     if (advance.kind !== ADVANCE.play || advance.setlistItemId === null)
       return null;
@@ -95,7 +99,7 @@ export function startAutoAdvance(deps: AutoAdvanceDeps = defaultDeps) {
       if (step.skipped) skipped = SKIP.deleted;
       const next = step.advance;
       if (next.kind !== ADVANCE.play) break;
-      await deps.commitNext(next);
+      if (!(await deps.commitNext(next, deps.stillEnded))) return;
       const { stemSetId } = next;
       const place = deps.placeOf(next);
       arrive({ kind: ARRIVAL.arriving, stemSetId });
