@@ -20,10 +20,19 @@ import {
 import { getLibrary, type LibraryRepositories } from './runtime.ts';
 import {
   activeSetlistOf,
-  adjacentPresetEntry,
+  adjacentEntry,
+  followedIndex,
+  indexIn,
+  stagePositionOf,
   type SongStep,
 } from './setlistPosition.ts';
-import { takeSnapshot, type LibrarySnapshot } from './snapshot.ts';
+import { metronomeSongsOf } from './metronomeSongs.ts';
+import {
+  isPresetEntry,
+  takeSnapshot,
+  type LibrarySnapshot,
+  type SetlistEntry,
+} from './snapshot.ts';
 
 export {
   loadedBaselineOf,
@@ -31,14 +40,30 @@ export {
   type PresetOverlay,
 } from './loadedPreset.ts';
 
-export interface LoadedSong {
+export interface LoadedPreset {
   readonly presetId: number;
   readonly itemId: number | null;
   readonly setlistId: number | null;
+  readonly index?: number;
+}
+
+export interface LoadedStem {
+  readonly presetId: null;
+  readonly stemSetId: number;
+  readonly itemId: number;
+  readonly setlistId: number;
+  readonly index: number;
+}
+
+export type LoadedSong = LoadedPreset | LoadedStem;
+
+export interface SongStepResult {
+  readonly entry: SetlistEntry | undefined;
+  readonly skipped: boolean;
 }
 
 export interface DiscardedChanges {
-  readonly loaded: LoadedSong;
+  readonly loaded: LoadedPreset;
   readonly settings: LiveSongFields;
   readonly at: number;
 }
@@ -57,6 +82,8 @@ export interface LibraryState extends LibrarySnapshot {
   readonly played: readonly number[];
   readonly results: SearchResults | null;
   readonly presetOverlay: PresetOverlay | null;
+  readonly carriedSkip: boolean;
+  readonly songLoads: number;
 }
 
 export type PresetEdit = Partial<Omit<NewSongPreset, 'id'>>;
@@ -70,6 +97,7 @@ export interface LibraryActions {
   deleteSetlist: (setlistId: number) => Promise<void>;
   newSongFromCurrent: (name: string, setlistId?: number) => Promise<number>;
   addToSetlist: (setlistId: number, presetId: number) => Promise<void>;
+  addStemToSetlist: (setlistId: number, stemSetId: number) => Promise<void>;
   reorder: (setlistId: number, from: number, to: number) => Promise<void>;
   moveToSetlist: (itemId: number, setlistId: number) => Promise<void>;
   removeFromSet: (itemId: number) => Promise<void>;
@@ -86,7 +114,9 @@ export interface LibraryActions {
     itemId?: number,
     setlistId?: number,
   ) => Promise<void>;
-  stepSong: (step: SongStep) => Promise<void>;
+  openStemEntry: (itemId: number, setlistId: number) => Promise<boolean>;
+  stepSong: (step: SongStep) => Promise<SongStepResult>;
+  carrySkip: (carried: boolean) => void;
   leaveSetlist: () => Promise<void>;
   clearSong: () => void;
   setPresetOverlay: (overlay: PresetOverlay | null) => void;
@@ -115,12 +145,15 @@ const EMPTY: LibraryState = {
   setlists: [],
   entries: {},
   presets: [],
+  metronomeSongs: [],
   standalone: [],
   loaded: null,
   discarded: null,
   played: [],
   results: null,
   presetOverlay: null,
+  carriedSkip: false,
+  songLoads: 0,
 };
 
 function discardedNow(
@@ -128,11 +161,12 @@ function discardedNow(
   deps: LibraryDeps,
 ): DiscardedChanges | null {
   const preset = loadedBaselineOf(state);
-  if (state.loaded === null || preset === undefined) return null;
+  const { loaded } = state;
+  if (loaded?.presetId == null || preset === undefined) return null;
   const live = deps.metronome();
   if (!isLoadedSongUnsaved(preset, live)) return null;
   return {
-    loaded: state.loaded,
+    loaded: { ...loaded, presetId: loaded.presetId },
     settings: presetFromMetronome(live),
     at: deps.now(),
   };
@@ -175,6 +209,10 @@ function itemActions(deps: LibraryDeps, get: Get) {
   return {
     addToSetlist: async (setlistId: number, presetId: number) => {
       await sets().add(setlistId, presetId);
+      await get().refresh();
+    },
+    addStemToSetlist: async (setlistId: number, stemSetId: number) => {
+      await sets().addStemSet(setlistId, stemSetId);
       await get().refresh();
     },
     reorder: async (setlistId: number, from: number, to: number) => {
@@ -241,6 +279,30 @@ function presetEditActions(deps: LibraryDeps, set: SetState, get: Get) {
   };
 }
 
+const NO_STEP: SongStepResult = { entry: undefined, skipped: false };
+
+interface StepTarget {
+  readonly entry: SetlistEntry;
+  readonly setlistId: number;
+}
+
+function stepTarget(
+  state: LibraryState,
+  step: SongStep,
+): StepTarget | undefined {
+  const active = activeSetlistOf(state.setlists);
+  if (active === undefined) return undefined;
+  const setlistId = active.setlist.id;
+  const entries = state.entries[setlistId] ?? [];
+  const position = stagePositionOf(state.loaded, setlistId);
+  const entry = adjacentEntry(entries, position, step);
+  return entry === undefined ? undefined : { entry, setlistId };
+}
+
+function wasDeleted(state: LibraryState, target: StepTarget): boolean {
+  return indexIn(state.entries[target.setlistId], target.entry.item.id) < 0;
+}
+
 function serialised() {
   let tail: Promise<unknown> = Promise.resolve();
   return <T>(task: () => Promise<T>): Promise<T> => {
@@ -261,6 +323,13 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       set({ played });
       await get().refresh();
     });
+  const pinQuietly = async (setlistId: number, itemId: number) => {
+    try {
+      await pin(setlistId, itemId);
+    } catch {
+      // The song is already open; a failed pin only loses the on-stage marker.
+    }
+  };
   const leave = () =>
     inOrder(async () => {
       if (activeSetlistOf(get().setlists) === undefined) return;
@@ -282,17 +351,21 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
   ) => {
     applyPreset(preset, deps.metronome);
     if (setlistId === null || itemId === null) {
-      set({ loaded: { presetId: preset.id, itemId: null, setlistId: null } });
+      set({
+        loaded: { presetId: preset.id, itemId: null, setlistId: null },
+        songLoads: get().songLoads + 1,
+      });
       // The stage bar keys off loaded.setlistId, so it hides even if this fails.
       await leaveOrWarn();
       return;
     }
-    set({ loaded: { presetId: preset.id, itemId, setlistId } });
-    try {
-      await pin(setlistId, itemId);
-    } catch {
-      // The song is already playing; a failed pin only loses the on-stage marker.
-    }
+    const index = indexIn(get().entries[setlistId], itemId);
+    const at = index < 0 ? {} : { index };
+    set({
+      loaded: { presetId: preset.id, itemId, setlistId, ...at },
+      songLoads: get().songLoads + 1,
+    });
+    await pinQuietly(setlistId, itemId);
   };
   const noteDiscard = () => {
     const discarded = discardedNow(get(), deps);
@@ -308,17 +381,34 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       const linking = () => link(applied, itemId ?? null, target);
       await (applied === preset ? linking() : applyCountInTransiently(linking));
     },
-    stepSong: async (step: SongStep) => {
-      const active = activeSetlistOf(get().setlists);
-      if (active === undefined) return;
-      const setlistId = active.setlist.id;
-      const entry = adjacentPresetEntry(
-        get().entries[setlistId] ?? [],
-        get().loaded?.itemId ?? null,
-        step,
-      );
-      if (entry === undefined) return;
-      await get().loadSong(entry.preset.id, entry.item.id, setlistId);
+    openStemEntry: async (itemId: number, setlistId: number) => {
+      const entries = get().entries[setlistId];
+      const index = indexIn(entries, itemId);
+      const entry = entries?.[index];
+      if (entry === undefined || isPresetEntry(entry)) return false;
+      noteDiscard();
+      const { stemSetId } = entry;
+      set({ loaded: { presetId: null, stemSetId, itemId, setlistId, index } });
+      await pinQuietly(setlistId, itemId);
+      return true;
+    },
+    stepSong: async (step: SongStep): Promise<SongStepResult> => {
+      const first = stepTarget(get(), step);
+      if (first === undefined) return NO_STEP;
+      if (!isPresetEntry(first.entry)) await get().refresh();
+      const skipped = wasDeleted(get(), first);
+      const next = stepTarget(get(), step);
+      if (next === undefined) return { entry: undefined, skipped };
+      const { entry, setlistId } = next;
+      if (isPresetEntry(entry)) {
+        await get().loadSong(entry.preset.id, entry.item.id, setlistId);
+        return { entry, skipped };
+      }
+      const opened = await get().openStemEntry(entry.item.id, setlistId);
+      return { entry: opened ? entry : undefined, skipped };
+    },
+    carrySkip: (carried: boolean) => {
+      set({ carriedSkip: carried });
     },
     leaveSetlist: async () => {
       noteDiscard();
@@ -333,9 +423,9 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       set({ loaded: null });
     },
     saveLoadedSong: async () => {
-      const { loaded } = get();
-      if (loaded === null) return;
-      await get().saveCurrentInto(loaded.presetId);
+      const presetId = get().loaded?.presetId;
+      if (presetId == null) return;
+      await get().saveCurrentInto(presetId);
     },
     revertLoadedSong: () => {
       const { presetOverlay } = get();
@@ -383,7 +473,12 @@ function readActions(deps: LibraryDeps, set: SetState, get: Get) {
         set({ ready: true, failed: true });
         return;
       }
-      set({ ...snapshot, ready: true, failed: false });
+      const loaded = followedIndex(
+        get().loaded,
+        get().entries,
+        snapshot.entries,
+      );
+      set({ ...snapshot, loaded, ready: true, failed: false });
       const query = get().results?.query;
       if (query === undefined) return;
       try {
@@ -402,7 +497,7 @@ function readActions(deps: LibraryDeps, set: SetState, get: Get) {
         repos.setlists.search(query),
         repos.presets.search(query),
       ]);
-      set({ results: { query, setlists, presets } });
+      set({ results: { query, setlists, presets: metronomeSongsOf(presets) } });
     },
   };
 }

@@ -1,9 +1,13 @@
 import { countLabel } from '@kitbag/core-design';
 import { KB_COUNT_IN_OFF } from '@kitbag/core-native';
-import type { SongPreset } from '@kitbag/core-state';
+import {
+  soundLabel,
+  type CustomSoundView,
+  type SongPreset,
+  countInBarsFromOption,
+} from '@kitbag/core-state';
 
-import { countInLabel, countInBarsFromOption } from './countIn.ts';
-import { soundLabel, type CustomSoundView } from './soundChoice.ts';
+import { countInLabel } from './countIn.ts';
 import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
 import { rampChipValue } from './trainer.ts';
 

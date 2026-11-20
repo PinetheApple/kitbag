@@ -14,7 +14,7 @@ import {
 } from '@kitbag/core-design';
 import { backupFilesAvailable, getAppVersion } from '@kitbag/core-native';
 import { useAppearance, useTools, type ThemeChoice } from '@kitbag/core-state';
-import { useCallback, useMemo, useReducer, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { Linking, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -26,7 +26,7 @@ import {
 } from './about.ts';
 import { formatAppVersion } from './appVersion.ts';
 import { BackUpRow, RestoreRow } from './BackupRows.tsx';
-import { DataFolderRow } from './DataFolderRow.tsx';
+import { DataFolderRow, ReturnedCardRow } from './DataFolderRow.tsx';
 import { DataFolderSheets } from './DataFolderSheets.tsx';
 import { mediaSize } from './dataFolderText.ts';
 import {
@@ -97,10 +97,12 @@ function ToolsSection({ onOpenTools }: { readonly onOpenTools: () => void }) {
 }
 
 function DataSection({
+  openDataFolder,
   onOpenRestore,
   onOpenPractice,
   onNotice,
 }: {
+  readonly openDataFolder: boolean;
   readonly onOpenRestore: () => void;
   readonly onOpenPractice: () => void;
   readonly onNotice: (text: string) => void;
@@ -108,6 +110,10 @@ function DataSection({
   const { report, missing, removalFailed, refresh, removeMissing } =
     useStorage();
   const dataFolder = useDataFolderSheets(onNotice);
+  const openOnArrival = dataFolder.open;
+  useEffect(() => {
+    if (openDataFolder) openOnArrival();
+  }, [openDataFolder, openOnArrival]);
   const summary = report === null ? null : storageSummary(report);
   const [sheet, send] = useReducer(nextStorageSheet, 'none');
   const handlers = useMemo(() => {
@@ -136,6 +142,7 @@ function DataSection({
           <PracticeValue />
         </EditRow>
         <DataFolderRow onOpen={dataFolder.open} />
+        <ReturnedCardRow onOffer={dataFolder.offerReturn} />
         <EditRow
           label={STORAGE_LABEL}
           accessibilityLabel={
@@ -278,6 +285,7 @@ function AboutSection({
 }
 
 export interface SettingsScreenProps {
+  readonly openDataFolder?: boolean;
   readonly onBack: () => void;
   readonly onOpenAttributions: () => void;
   readonly onOpenCalibration: () => void;
@@ -287,6 +295,7 @@ export interface SettingsScreenProps {
 }
 
 export function SettingsScreen({
+  openDataFolder = false,
   onBack,
   onOpenAttributions,
   onOpenCalibration,
@@ -312,6 +321,7 @@ export function SettingsScreen({
       <RigSection onOpenCalibration={onOpenCalibration} />
       <ToolsSection onOpenTools={onOpenTools} />
       <DataSection
+        openDataFolder={openDataFolder}
         onOpenRestore={onOpenRestore}
         onOpenPractice={onOpenPractice}
         onNotice={setNotice}

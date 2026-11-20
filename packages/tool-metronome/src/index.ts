@@ -8,7 +8,6 @@ export { useCustomSoundViews } from './screen/CustomSounds.tsx';
 export {
   countInLabel,
   polyRatioLabel,
-  soundChipLabel,
   subdivisionName,
   transportSubtitle,
 } from './pure.ts';

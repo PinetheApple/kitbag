@@ -12,12 +12,12 @@ import {
   isCountInBars,
   perAccentSoundsOf,
   SECONDS_PER_MINUTE,
+  soundChipLabel,
   type TimelineStretch,
 } from '@kitbag/core-state';
 import {
   countInLabel,
   polyRatioLabel,
-  soundChipLabel,
   subdivisionName,
 } from '@kitbag/tool-metronome';
 

@@ -1,6 +1,6 @@
 import { act } from 'react';
 import type { HostInstance } from 'react-native';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import {
   ACTIONS,
@@ -134,4 +134,25 @@ it('moves reader focus back to the initial focus target of a sheet shown again m
   rerender(tree, { actions: false, remove: false, focus });
   rerender(tree, { actions: true, remove: false, focus });
   expect(focusReaderOn).toHaveBeenCalledExactlyOnceWith(focus.current);
+});
+
+it('reports a sheet closed only once its slot has left the tree', () => {
+  const closed = vi.fn();
+  const tree = mount({ actions: true, remove: false, closed });
+  rerender(tree, { actions: false, remove: false, closed });
+  finishExits();
+  expect(closed).not.toHaveBeenCalled();
+  settleFrames();
+  expect(titles(tree)).toEqual([]);
+  expect(closed).toHaveBeenCalledOnce();
+});
+
+it('does not report a sheet closed when it is shown again before its exit ends', () => {
+  const closed = vi.fn();
+  const tree = mount({ actions: true, remove: false, closed });
+  rerender(tree, { actions: false, remove: false, closed });
+  rerender(tree, { actions: true, remove: false, closed });
+  finishExits();
+  settleFrames();
+  expect(closed).not.toHaveBeenCalled();
 });

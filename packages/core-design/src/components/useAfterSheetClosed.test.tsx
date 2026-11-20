@@ -1,0 +1,62 @@
+// react-test-renderer is deprecated, but it alone exposes host props with no DOM.
+/* eslint-disable @typescript-eslint/no-deprecated */
+import { act, createElement } from 'react';
+import { create } from 'react-test-renderer';
+import { expect, it, vi } from 'vitest';
+
+import { useAfterSheetClosed } from './useAfterSheetClosed.ts';
+
+function mounted() {
+  let hook: ReturnType<typeof useAfterSheetClosed> | undefined;
+  function Probe({ visible }: { readonly visible: boolean }) {
+    hook = useAfterSheetClosed(visible);
+    return null;
+  }
+  const renderer = create(createElement(Probe, { visible: false }));
+  const show = (visible: boolean) => {
+    act(() => {
+      renderer.update(createElement(Probe, { visible }));
+    });
+  };
+  show(true);
+  if (hook === undefined) throw new Error('not mounted');
+  return { ...hook, show };
+}
+
+it('runs what was asked for once, when the sheet has closed', () => {
+  const { after, closed, show } = mounted();
+  const then = vi.fn();
+  after(then);
+  show(false);
+  expect(then).not.toHaveBeenCalled();
+  closed();
+  closed();
+  expect(then).toHaveBeenCalledOnce();
+});
+
+it('runs at once when the sheet closed before it was asked', () => {
+  const { after, closed, show } = mounted();
+  show(false);
+  closed();
+  const then = vi.fn();
+  after(then);
+  expect(then).toHaveBeenCalledOnce();
+});
+
+it('forgets what was asked when the sheet shows again before it closes', () => {
+  const { after, closed, show } = mounted();
+  const then = vi.fn();
+  after(then);
+  show(false);
+  show(true);
+  show(false);
+  closed();
+  expect(then).not.toHaveBeenCalled();
+});
+
+it('does nothing on a close nobody asked to follow', () => {
+  const { closed } = mounted();
+  expect(() => {
+    closed();
+  }).not.toThrow();
+});

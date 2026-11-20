@@ -64,6 +64,7 @@ export {
   moveStatus,
   releaseOldCopies,
   resumeMove,
+  startCardReturn,
   startMove,
   undoMove,
   switchToInternalStorage,
@@ -78,6 +79,11 @@ export {
   saveDatabaseCopy,
   shareBackup,
 } from './backupFiles';
+export {
+  databaseFreeBytes,
+  removeDatabaseCopy,
+  replaceDatabaseCopy,
+} from './migrationCopies';
 export {
   mixdownCancel,
   mixdownProgress,

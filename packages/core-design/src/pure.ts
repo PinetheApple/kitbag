@@ -22,3 +22,4 @@ export * from './stemPlayerRoles.ts';
 export * from './fontFaces.ts';
 export * from './readerHiding.ts';
 export * from './meterText.ts';
+export * from './components/useAfterSheetClosed.ts';

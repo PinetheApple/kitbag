@@ -10,6 +10,8 @@ import {
 import { daysAgoText, weekdayDate } from '../practice/dates.ts';
 import { SEPARATOR } from '../settings/separator.ts';
 
+import { SONG_NOUNS, STEM_SONG_NOUNS } from '../nouns.ts';
+
 export const UPCOMING_SUBTEXT = 'Coming soon';
 export const MORE_TOOLS_TITLE = 'More tools';
 export const MORE_TOOLS_SUBTEXT = 'Turn tools on or off';
@@ -50,11 +52,11 @@ export function metronomeResumeSubtitle(summary: MetronomeSummary): string {
 }
 
 export function songsTileSubtext(summary: LibrarySummary): string {
-  return `${countLabel(summary.songCount, 'song', 'songs')} · ${String(summary.analyzedCount)} analyzed`;
+  return `${countLabel(summary.songCount, ...SONG_NOUNS)} · ${String(summary.analyzedCount)} analyzed`;
 }
 
 export function stemsTileSubtext(summary: LibrarySummary): string {
-  return countLabel(summary.stemSongCount, 'stem song', 'stem songs');
+  return countLabel(summary.stemSongCount, ...STEM_SONG_NOUNS);
 }
 
 export const NO_PRACTICE_SUBTEXT = 'No sessions yet';

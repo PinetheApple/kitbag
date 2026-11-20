@@ -11,7 +11,7 @@ import {
 import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 
 import type { IconName } from '../icons.ts';
-import { inset, radius, size, space, textRoles } from '../roles.ts';
+import { inset, opacity, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
@@ -94,6 +94,9 @@ const useStyles = createThemedStyles((theme) => ({
   fill: {
     flexGrow: 1,
   },
+  muted: {
+    opacity: opacity.muted,
+  },
   fillHit: {
     alignSelf: 'stretch',
   },
@@ -172,6 +175,7 @@ export interface ChipProps {
   readonly neighbourGapDp?: number | NeighbourGaps;
   readonly size?: ChipSize;
   readonly disabled?: boolean;
+  readonly muted?: boolean;
 }
 
 export function Chip({
@@ -186,6 +190,7 @@ export function Chip({
   neighbourGapDp,
   size: chipSize = 'default',
   disabled = false,
+  muted = false,
 }: ChipProps) {
   const styles = useStyles();
   const id = useId();
@@ -228,6 +233,7 @@ export function Chip({
           chipSize === 'large' && styles.largeChip,
           active && styles.chipActive,
           fill && styles.fillFace,
+          muted && styles.muted,
         ]}
       >
         <ChipFace

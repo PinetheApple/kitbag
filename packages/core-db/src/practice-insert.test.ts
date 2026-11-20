@@ -7,12 +7,17 @@ import { connectDatabase } from './client';
 import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 import type { NewPracticeSession } from './practice-repository';
 import { memoryClickSoundFiles } from './click-sound-files.test-helper';
+import { unusedMigrationCopyFiles } from './migration-copy-files.test-helper';
 
 const STARTED_AT = new Date('2026-11-01T18:00:00Z');
 
 function open() {
   const { connection } = fakeOpSqlite();
-  return connectDatabase(connection, memoryClickSoundFiles().files);
+  return connectDatabase(
+    connection,
+    memoryClickSoundFiles().files,
+    unusedMigrationCopyFiles,
+  );
 }
 
 function session(

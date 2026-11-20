@@ -90,6 +90,10 @@ export const iconGlyphs = {
   dataFolder: 'folder-outline',
   tempoCorrection: 'arrow-expand-horizontal',
   delete: 'trash-can-outline',
+  playNext: 'playlist-play',
+  inUpNext: 'playlist-check',
+  addToSetlist: 'playlist-plus',
+  clearQueue: 'playlist-remove',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;

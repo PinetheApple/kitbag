@@ -5,12 +5,14 @@ import {
   importCardShows,
   ImportStatusCard,
 } from '@kitbag/tool-stems';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useLibraryFolder } from '@/dataFolder/useLibraryFolder';
 import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
-import { useLibraryRoutes } from '@/runtime/libraryRoutes';
+import { ADD_STEM_SONGS, useLibraryRoutes } from '@/runtime/libraryRoutes';
 import { useStemDeckRoutes } from '@/runtime/stemDeckRoutes';
 
 function StemSongsRoute() {
@@ -19,8 +21,11 @@ function StemSongsRoute() {
   const stemDeck = useStemDeckRoutes();
   const markUsed = useLastTool((s) => s.markUsed);
   const importStemFolder = useSongLibrary((s) => s.importStemFolder);
-  const [adding, setAdding] = useState(false);
+  const params =
+    useLocalSearchParams<Partial<Record<typeof ADD_STEM_SONGS, string>>>();
+  const [adding, setAdding] = useState(params[ADD_STEM_SONGS] !== undefined);
   const showImport = useStemDeck((s) => importCardShows(s.importView));
+  const folder = useLibraryFolder('stems');
 
   useEffect(() => {
     markUsed(TOOL_ID.stems);
@@ -49,6 +54,8 @@ function StemSongsRoute() {
         onBack={routes.back}
         onOpenStemSet={routes.openStemSet}
         onOpenSong={routes.openSong}
+        onUnavailable={folder.showUnavailable}
+        strip={folder.strip}
         onAdd={openAdd}
         {...(showImport
           ? { status: <ImportStatusCard onView={stemDeck.openImport} /> }
@@ -61,6 +68,7 @@ function StemSongsRoute() {
         onFromPhone={fromPhone}
         onFromStemDeck={fromStemDeck}
       />
+      {folder.sheet}
     </>
   );
 }

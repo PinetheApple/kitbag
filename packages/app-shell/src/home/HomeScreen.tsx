@@ -9,7 +9,9 @@ import {
   type ToolGridItem,
 } from '@kitbag/core-design';
 import {
+  pausedMove,
   summarize,
+  useDataFolder,
   useHomeLayout,
   useLastTool,
   useMetronome,
@@ -23,6 +25,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { MovePausedBanner } from '../dataFolder/MovePausedBanner.tsx';
 import { DockedMiniPlayer } from '../miniPlayer/DockedMiniPlayer.tsx';
 import { useMiniPlayerDocked } from '../miniPlayer/useMiniPlayerDocked.ts';
 import { useSettingsRoutes } from '../settings/settingsRoutes.ts';
@@ -139,6 +142,7 @@ export function HomeScreen() {
   );
   const liveText = useLiveText(usePracticeTileText(practiceShown));
   const docked = useMiniPlayerDocked();
+  const movePaused = useDataFolder((s) => pausedMove(s) !== null);
   const [arranging, setArranging] = useState(false);
   const openArrange = useCallback(() => {
     setArranging(true);
@@ -170,6 +174,17 @@ export function HomeScreen() {
 
   const resume = continueTarget(lastToolId, HOME_TOOLS, isOn);
   const resumeText = resume === undefined ? undefined : liveText[resume.id];
+  const resumeRow =
+    resume === undefined || resumeText === undefined ? null : (
+      <ToolRow
+        variant="resume"
+        icon={resume.icon}
+        title={`Continue · ${resume.name}`}
+        subtitle={resumeText.resume}
+        status="ready"
+        onPress={open(resume)}
+      />
+    );
 
   const tiles: ToolGridItem[] = visibleTiles(arrangement).flatMap((tile) => {
     const tool = toolFor(tile);
@@ -212,16 +227,7 @@ export function HomeScreen() {
           }
         />
 
-        {resume === undefined || resumeText === undefined ? null : (
-          <ToolRow
-            variant="resume"
-            icon={resume.icon}
-            title={`Continue · ${resume.name}`}
-            subtitle={resumeText.resume}
-            status="ready"
-            onPress={open(resume)}
-          />
-        )}
+        {movePaused ? <MovePausedBanner /> : resumeRow}
 
         <ToolGrid tiles={tiles} />
 

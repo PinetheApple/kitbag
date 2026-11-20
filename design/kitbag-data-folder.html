@@ -218,10 +218,85 @@ svg.i{fill:currentColor;display:block;flex:none}
 <div class="frames">
 <figure><figcaption><b>8a · Songs list</b>Stem songs behave the same way.</figcaption><div data-frame="songsGone"></div></figure>
 <figure><figcaption><b>8a · Font scale 2.0</b></figcaption><div data-frame="songsGone" data-fs="2"></div></figure>
-<figure><figcaption><b>8b · The prompt</b>Reinsert is the fix that needs no choice, so it leads. Use internal storage switches the folder for new songs. The card's songs stay listed as unavailable; when the card returns, Kitbag offers to move them to internal storage, and they play from the card until that move is accepted.</figcaption><div data-frame="gonePrompt"></div></figure>
+<figure><figcaption><b>8b · The prompt</b>Reinsert is the fix that needs no choice, so it leads. Use internal storage switches the folder for new songs. The card's songs stay listed as unavailable; when the card returns, Kitbag offers to move them to internal storage (frames R1 to R6), and they play from the card until that move is accepted.</figcaption><div data-frame="gonePrompt"></div></figure>
 <figure><figcaption><b>8b · Font scale 2.0</b></figcaption><div data-frame="gonePrompt" data-fs="2"></div></figure>
 <figure><figcaption><b>8c · Settings with the card missing</b>The row names the missing volume in red ink, with its words, not only its colour.</figcaption><div data-frame="settingsGone"></div></figure>
 </div>
+</section>
+
+<section>
+<div class="kicker">Frame R1</div><h2>Where the offer appears</h2>
+<p>Trigger: <code>returnedCards</code> is non-empty, meaning a mounted portable card that is not the data folder and holds away files, while no move is running or pending and nothing is waiting for Resume. The offer never shows during another move. It appears in two places: the strip slot on Songs and Stem songs (the slot of 4b and 8a), and a row in Settings → Data. Both open the same sheet (R2). Size is always shown, from <code>awayBytes</code>. The song count is the view’s own noun (songs on Songs, stem songs on Stem songs), counted from the away list by native (awaySongs, awayStemSongs).</p>
+<div class="frames">
+<figure><figcaption><b>R1a · Songs list, card back</b>The strip uses the 8a layout with the card icon in normal ink, since nothing is wrong. Move opens R2 and starts nothing. The rows play from the card, so they carry no warning badge.</figcaption><div data-frame="returnSongsBack"></div></figure>
+<figure><figcaption><b>R1a · Font scale 2.0</b></figcaption><div data-frame="returnSongsBack" data-fs="2"></div></figure>
+<figure><figcaption><b>R1b · Settings, Data section</b>A row under Data folder that exists only while the offer stands, highlighted like the moving row in 1a. It stays after Not now, so declining is never final.</figcaption><div data-frame="returnSettingsBack"></div></figure>
+</div>
+</section>
+
+<section>
+<div class="kicker">Frame R2</div><h2>The offer</h2>
+<p>Laid out like confirmation (frame 3): what moves, from where, to where, and the space left after. Not now closes the sheet and changes nothing: the songs keep playing from the card.</p>
+<div class="frames">
+<figure><figcaption><b>R2 · Move to internal storage?</b>Move starts the move and shows R3a. Not now leaves the songs on the card, playing as they are, and hides the Songs strip until the card is next inserted; the Settings row stays.</figcaption><div data-frame="returnOffer"></div></figure>
+<figure><figcaption><b>R2 · Font scale 2.0</b>Buttons stack with the primary first, as in frame 3.</figcaption><div data-frame="returnOffer" data-fs="2"></div></figure>
+</div>
+</section>
+
+<section>
+<div class="kicker">Frame R3</div><h2>Moving</h2>
+<p>The 4a sheet and 4b strip, unchanged in shape. Only the hint changes: in an ordinary move <i>every</i> song plays from the source, but here only the card’s songs do, and the card has to stay in. The UI needs to know which kind of move is running to pick this copy.</p>
+<div class="frames">
+<figure><figcaption><b>R3a · Progress sheet</b>Settings behind it: the Data folder row shows the move, and the “Still on the SD card” row is gone while a move runs.</figcaption><div data-frame="returnMoving"></div></figure>
+<figure><figcaption><b>R3b · Songs list while moving</b>The existing strip copy fits as it stands. MOVING marks the song being copied; it plays from the card until the switch.</figcaption><div data-frame="returnSongsMoving"></div></figure>
+<figure><figcaption><b>R3c · Stop moving?</b>Cancel is offered only until the switch, as in frame 5. The existing hint says “Everything stays on …”, which is wrong here: it is the card’s songs that stay.</figcaption><div data-frame="returnCancelAsk"></div></figure>
+</div>
+</section>
+
+<section>
+<div class="kicker">Frame R4</div><h2>Paused</h2>
+<p>A move closed mid-way, or one that lost the card, waits for Resume and never restarts on its own (lane call). <b>Undo here removes the copies made so far from internal storage</b>; the card is untouched and the offer comes back. The 6 caption’s “removes the partial copies from the card” does not apply to this direction.</p>
+<div class="frames">
+<figure><figcaption><b>R4a · Home, Kitbag closed during the move</b>The frame 6 banner with this direction’s copy.</figcaption><div data-frame="returnResume"></div></figure>
+<figure><figcaption><b>R4b · Home, card taken out mid-move</b>The move pauses instead of failing. Resume stays disabled until the card is back; Undo works without the card, since it only deletes internal copies.</figcaption><div data-frame="returnResumeNoCard"></div></figure>
+<figure><figcaption><b>R4c · Songs list, card taken out mid-move</b>The card’s songs show NO CARD as in 8a. The strip is the paused move strip, but its detail says what to do instead of “songs still play”.</figcaption><div data-frame="returnSongsNoCard"></div></figure>
+</div>
+</section>
+
+<section>
+<div class="kicker">Frame R5</div><h2>Failures</h2>
+<p>Each one says what happened, that the songs are still on the card and play from it, and what to do next. Nothing switches.</p>
+<div class="frames">
+<figure><figcaption><b>R5a · Not enough space on internal storage</b>Checked before anything copies. Shown in place of R2’s Move outcome; the offer stays. The need includes the 128 MB a move keeps free, so the three numbers add up.</figcaption><div data-frame="returnNoSpace"></div></figure>
+<figure><figcaption><b>R5b · Verify mismatch</b>As 7c, with the card as the original.</figcaption><div data-frame="returnMismatch"></div></figure>
+</div>
+</section>
+
+<section>
+<div class="kicker">Frame R6</div><h2>Done</h2>
+<div class="frames">
+<figure><figcaption><b>R6a · Switched, card copies waiting</b>The existing switched strip. The card copies go once nothing plays from them.</figcaption><div data-frame="returnSwitched"></div></figure>
+<figure><figcaption><b>R6b · Finished</b>The strip goes and a snackbar confirms. If the card is pulled during clean-up, the existing “removed when the card is back” text applies.</figcaption><div data-frame="returnDone"></div></figure>
+</div>
+</section>
+
+<section>
+<div class="kicker">Copy</div><h2>Strings for this direction</h2>
+<p>New strings, or existing ones that read wrong when the source is a returned card. Everything else reuses <code>dataFolderText.ts</code> and <code>dataFolderMoveText.ts</code> as is.</p>
+<table class="vt"><thead><tr><th>Where</th><th>Existing</th><th>Returned card</th></tr></thead><tbody>
+<tr><td>Strip R1a</td><td class="new">new</td><td>SD card is back · 12 songs on it · 840 MB · [Move]</td></tr>
+<tr><td>Settings row R1b</td><td class="new">new</td><td>Still on the SD card · 13 songs · 840 MB</td></tr>
+<tr><td>Offer title R2</td><td><code>confirmTitle(null)</code></td><td>Move to internal storage? (reused)</td></tr>
+<tr><td>Offer hints R2</td><td class="new">new</td><td>As drawn in R2</td></tr>
+<tr><td>movingHint</td><td>Every song keeps playing from the SD card until the move finishes.</td><td>The card’s songs keep playing from it until the move finishes. Keep the card in.</td></tr>
+<tr><td>stopHint</td><td>… Everything stays on the SD card, where it is now.</td><td>The 14 files already copied are removed from internal storage. The card’s songs stay on it and play from it, as now.</td></tr>
+<tr><td>pausedHint</td><td>… Your songs still play from the SD card.</td><td>… The card’s songs still play from it. Undo removes the copies made so far from internal storage.</td></tr>
+<tr><td>Card out mid-move</td><td class="new">new</td><td>SD card taken out. 14 of 38 files are on internal storage. Put the card back to resume, or undo to remove those copies. Its songs play again once it’s in.</td></tr>
+<tr><td>Strip detail, paused, no card</td><td>320 MB of 840 MB · songs still play</td><td>320 MB of 840 MB · put the card back</td></tr>
+<tr><td>noSpace</td><td>Free up space on internal storage to move here …</td><td>As drawn in R5a</td></tr>
+<tr><td>hashMismatch</td><td>… Every song still plays from the SD card.</td><td>… The card’s songs still play from it.</td></tr>
+<tr><td>Done</td><td>Move finished. Your files are on internal storage.</td><td>Move finished. The card’s songs now play from internal storage and are off the card.</td></tr>
+</tbody></table>
 </section>
 
 <section>
@@ -397,6 +472,79 @@ function gonePrompt(fs){
   const inner=`<p class="hint">Your song audio, stems and waveforms are on ${VOL.sd}. Put the card back and they play again as they were. Nothing has been deleted.</p><p class="hint">Or use internal storage for new songs from now on. The songs on the card stay listed until it’s back.</p>`+(fs?`<div class="acts"><span class="btn pri t">I’ve put it back</span><span class="btn gho t">Use internal storage</span></div>`:`<div class="acts"><span class="btn gho t">Use internal storage</span><span class="btn pri t">I’ve put it back</span></div>`);
   return songsGone()+sheet('SD card not found',inner,{icon:'micro-sd',lead:'red'});
 }
+const RETURNED=(()=>{
+const SD=VOL.sd, AWAY='840 MB', AWAY_NEED='968 MB', AWAY_FILES='38 files';
+function dataFolderValue(state){
+  if(state==='moving')return `Moving to internal storage <span class="m">· 38%</span>`;
+  return `${VOL.int} <span class="m">· ${FREE_INT}</span>`;
+}
+function settings({state='int',back=false}={}){
+  const away=back?er('Still on the SD card',`13 songs <span class="m">· ${AWAY}</span>`,{tap:true,cls:'hl'}):'';
+  const data=`${seclab('Data')}<div class="pcard grp">${er('Back up everything','<span class="m">3 setlists · 24 songs</span>',{tap:true})}${er('Restore from backup','',{tap:true})}${er('Practice','34 sessions <span class="m">· 18h 20m · avg 112 BPM</span>')}${er('Data folder',dataFolderValue(state),{tap:true,cls:state==='moving'?'hl':''})}${away}${er('Storage',`<span class="m">${MEDIA} · ${FILES}</span>`,{tap:true})}</div>`;
+  const tools=`${seclab('Tools')}<div class="pcard t"><div class="trow"><span class="ticon">${ic('cog-outline',20)}</span><span class="tl"><b>Tools</b><span>4 on</span></span>${chev()}</div></div>`;
+  const look=`${seclab('Appearance')}<div class="pcard grp">${er('Theme','System')}${er('Haptics','On')}</div>`;
+  return sb()+appbar('Settings')+`<div class="body">${tools}${data}${look}</div>${gest()}`;
+}
+const songRow=(t,s,b,{na=false}={})=>`<div class="row t ${na?'na':''}"><div class="ticon">${ic('music-note',20)}</div><div class="tl"><b>${t}</b><span>${s}</span></div>${b}<span class="ib dim t">${ic('dots-vertical',24,false)}</span></div>`;
+const GRID=badge('ok','GRID','check');
+const NA=badge('bad','NO CARD');
+function songs(strip,rows,extra=''){
+  return sb()+`<div class="ab"><span class="ib t">${ic('arrow-left',24,false)}</span><div class="ttl"><b>Songs</b></div><span class="ib dim t">${ic('cog-outline',24,false)}</span></div>${strip}<div class="body" style="padding-top:12px"><div class="search t">${ic('magnify',20)}Search songs</div><div>${rows}</div></div><div class="fab t">${ic('plus',28,false)}</div>${extra}${gest()}`;
+}
+const plainRows=(first=GRID)=>songRow('Everlong','4:10 · 158 BPM',first)+songRow('Redbone','5:27 · 80 BPM',GRID)+songRow('Dreams','4:17 · 120 BPM',GRID)+songRow('Blackbird','2:18 · 94 BPM',GRID)+songRow('Teardrop','5:29 · 77 BPM',GRID);
+function moveStrip(title,detail,pct,{bad=false}={}){
+  const prog=pct===null?'':`<div class="prog"><i style="width:${pct}%"></i></div>`;
+  return `<div class="strip t ${bad?'bad':''}"><div class="trow"><span class="ticon">${ic('folder-move-outline',20)}</span><span class="tl"><b>${title}</b><span>${detail}</span></span>${chev()}</div>${prog}</div>`;
+}
+function songsBack(){
+  const strip=`<div class="strip"><div class="trow"><span class="ticon">${ic('micro-sd',20)}</span><span class="tl"><b>SD card is back</b><span>12 songs on it · ${AWAY}</span></span><span class="btn sm t" style="margin-right:12px">Move</span></div></div>`;
+  return songs(strip,plainRows());
+}
+const settingsBack=()=>settings({back:true});
+function offer(fs){
+  const rows=er('Moves',`${AWAY} <span class="m">· 13 songs</span>`)+er('From',SD)+er('To',VOL.int)+er('Free on internal storage after','40.4 GB');
+  const hint=`<p class="hint">Left on the card when you switched to internal storage.</p><p class="hint">Kitbag copies and checks them, then removes them from the card. They play from the card until the switch; cancel any time before it.</p>`;
+  return songsBack()+sheet('Move to internal storage?',rows+hint+btnsStacked('Not now','Move',fs),{icon:'folder-move-outline',close:false});
+}
+function progress(){
+  return `<div class="pnums"><span>320 MB <span class="m">of ${AWAY}</span></span><span>14 <span class="m">of ${AWAY_FILES}</span></span></div><div class="track"><i style="width:38%"></i></div>`;
+}
+function moving(){
+  const inner=progress()+`<p class="hint">Copying Everlong. The card’s songs keep playing from it until the move finishes. Keep the card in.</p><div class="acts"><span class="btn gho t">Cancel move</span></div><p class="hint">Close this and keep using Kitbag. The Songs list shows how the move is going.</p>`;
+  return settings({state:'moving'})+sheet('Moving to internal storage',inner,{icon:'folder-move-outline'});
+}
+const songsMoving=()=>songs(moveStrip('Moving files to internal storage',`320 MB of ${AWAY} · songs still play`,38),plainRows(badge('warn','MOVING')));
+function cancelAsk(){
+  const inner=`<p class="hint">The 14 files already copied are removed from internal storage. The card’s songs stay on it and play from it, as now.</p><div class="acts"><span class="btn gho t">Stop moving</span><span class="btn pri t">Keep moving</span></div>`;
+  return settings({state:'moving'})+sheet('Stop moving?',inner,{close:false});
+}
+function home(banner){
+  const tile=(n,t,s)=>`<div class="tile t">${ic(n,26)}<b>${t}</b><span>${s}</span></div>`;
+  const row=(n,t,s)=>`<div class="pcard t" style="padding:14px"><div class="trow"><div class="ticon">${ic(n,17)}</div><div class="tl"><b>${t}</b><span>${s}</span></div>${chev()}</div></div>`;
+  return sb()+`<div class="ab" style="padding:0 16px"><div class="ttl"><b style="font-weight:700;letter-spacing:.03em">KITBAG</b></div><span class="btn sm t">${ic('pencil-outline',14)}Edit</span><span class="ib dim t">${ic('cog-outline',24,false)}</span></div><div class="body">${banner}<div class="grid">${tile('metronome','Metronome','124 BPM ready')}${tile('guitar-acoustic','Tuner','Guitar · Standard E')}${tile('playlist-music','Songs','24 songs · 22 analyzed')}${tile('tune-vertical','Stem songs','1 stem song')}</div>${row('dots-grid','More tools','Turn tools on or off')}</div>${gest()}`;
+}
+function banner(text,{resumeOff=false}={}){
+  const res=`<span class="btn pri t"${resumeOff?' style="opacity:.4"':''}>Resume</span>`;
+  return `<div class="pcard hot banner"><div class="trow" style="align-items:flex-start"><div class="ticon">${ic('folder-move-outline',20)}</div><div class="tl"><b>Move to internal storage paused</b><span>${text}</span></div></div><div class="acts" style="margin-top:12px"><span class="btn gho t">Undo</span>${res}</div></div>`;
+}
+const resume=()=>home(banner('Kitbag closed during the move. 14 of 38 files are on internal storage. The card’s songs still play from it. Undo removes the copies made so far from internal storage.'));
+const resumeNoCard=()=>home(banner('SD card taken out. 14 of 38 files are on internal storage. Put the card back to resume, or undo to remove those copies. Its songs play again once it’s in.',{resumeOff:true}));
+function songsNoCard(){
+  const rows=songRow('Everlong','4:10 · 158 BPM',NA,{na:true})+songRow('Redbone','5:27 · 80 BPM',NA,{na:true})+songRow('Dreams','4:17 · 120 BPM',NA,{na:true})+songRow('Blackbird','2:18 · 94 BPM',NA,{na:true});
+  return songs(moveStrip('Move to internal storage paused',`320 MB of ${AWAY} · put the card back`,38),rows);
+}
+function noSpace(){
+  const inner=`<p class="hint">The card’s songs need ${AWAY_NEED} and internal storage has 610 MB free. Free up 358 MB to move them.</p><p class="hint">Nothing has moved. They are still on the card and play from it.</p><div class="acts"><span class="btn pri t">OK</span></div>`;
+  return songsBack()+sheet('Not enough space on internal storage',inner,{icon:'alert-circle',lead:'red',close:false});
+}
+function mismatch(){
+  const inner=`<p class="hint">3 of 38 copies on internal storage didn’t match the card, so Kitbag stopped before switching and removed them.</p><p class="hint">Nothing is lost. The card’s songs still play from it. Trying again copies them afresh; if it fails again the card may be failing.</p>`+btns('Not now','Try again');
+  return songsBack()+sheet('Move didn’t finish',inner,{icon:'alert-circle',lead:'red',close:false});
+}
+const switched=()=>songs(moveStrip('Files moved to internal storage','Old copies go once nothing plays',null),plainRows());
+const done=()=>songs('',plainRows(),snack(`${ic('check-circle',20)}<span>Move finished. The card’s songs now play from internal storage and are off the card.</span>`,112));
+return {songsBack,settingsBack,offer,moving,songsMoving,cancelAsk,resume,resumeNoCard,songsNoCard,noSpace,mismatch,switched,done};
+})();
 const FRAMES={
   settings:()=>settings(),
   storage:()=>storage(),
@@ -404,6 +552,19 @@ const FRAMES={
   chooserRO:()=>chooser({sub:'Read-only. Kitbag can’t write to this card.',state:'off'}),
   confirm,moving,songsMoving,storageMoving,cancelAsk,cancelDone,resume,noSpace,notWritable,mismatch,songsGone,gonePrompt,
   settingsGone:()=>settings({state:'gone'}),
+  returnSongsBack:RETURNED.songsBack,
+  returnSettingsBack:RETURNED.settingsBack,
+  returnOffer:RETURNED.offer,
+  returnMoving:RETURNED.moving,
+  returnSongsMoving:RETURNED.songsMoving,
+  returnCancelAsk:RETURNED.cancelAsk,
+  returnResume:RETURNED.resume,
+  returnResumeNoCard:RETURNED.resumeNoCard,
+  returnSongsNoCard:RETURNED.songsNoCard,
+  returnNoSpace:RETURNED.noSpace,
+  returnMismatch:RETURNED.mismatch,
+  returnSwitched:RETURNED.switched,
+  returnDone:RETURNED.done,
 };
 document.querySelectorAll('[data-frame]').forEach(el=>{
   const theme=el.dataset.theme==='daylight'?'daylight':'stage';

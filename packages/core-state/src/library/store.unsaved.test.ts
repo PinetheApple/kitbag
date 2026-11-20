@@ -87,12 +87,14 @@ describe('discarding unsaved changes', () => {
       presetId: first,
       itemId: opener.item.id,
       setlistId,
+      index: 0,
     });
     await library.getState().undoDiscard();
     expect(library.getState().loaded).toEqual({
       presetId: first,
       itemId: opener.item.id,
       setlistId,
+      index: 0,
     });
     expect(metronome.getState().bpm).toBe(EDITED_BPM);
     expect(metronome.getState().subdivision).toBe(2);

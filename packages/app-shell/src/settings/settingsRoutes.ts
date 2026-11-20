@@ -1,6 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 
+export const SHEET_PARAM = 'sheet';
+export const DATA_FOLDER_SHEET = 'dataFolder';
+
 export function useSettingsRoutes() {
   const router = useRouter();
   return useMemo(
@@ -10,6 +13,12 @@ export function useSettingsRoutes() {
       },
       openSettings: () => {
         router.push('/settings');
+      },
+      openDataFolder: () => {
+        router.push({
+          pathname: '/settings',
+          params: { [SHEET_PARAM]: DATA_FOLDER_SHEET },
+        });
       },
       openAttributions: () => {
         router.push('/settings/attributions');

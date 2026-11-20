@@ -34,9 +34,3 @@ export const COUNT_IN_SEGMENT_OPTIONS = KB_COUNT_IN_BARS.map((bars) => ({
   label: bars === KB_COUNT_IN_OFF ? OFF_LABEL : String(bars),
   accessibilityLabel: countInLabel(bars),
 }));
-
-export function countInBarsFromOption(option: string): KbCountInBars {
-  return (
-    KB_COUNT_IN_BARS.find((bars) => String(bars) === option) ?? KB_COUNT_IN_OFF
-  );
-}

@@ -12,6 +12,7 @@ import {
   useClickSounds,
   type ClickSound,
   type PerAccentSounds,
+  rolesUsing,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { View, type TextInput } from 'react-native';
@@ -21,7 +22,6 @@ import {
   removeText,
   removeTitle,
 } from '../logic/customSoundText.ts';
-import { rolesUsing } from '../logic/soundChoice.ts';
 
 const useStyles = createThemedStyles(() => ({
   stack: { gap: space.controlGap },

@@ -19,6 +19,7 @@ vi.mock('@op-engineering/op-sqlite', async () => {
 
 import { connectDatabase, openDatabase } from './client';
 import { memoryClickSoundFiles } from './click-sound-files.test-helper';
+import { unusedMigrationCopyFiles } from './migration-copy-files.test-helper';
 import {
   opSqliteError,
   throwsOpenError,
@@ -27,7 +28,10 @@ import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 import { SQLITE_IOERR } from './sqlite-result-codes';
 
 function openAppDatabase() {
-  const database = openDatabase(memoryClickSoundFiles().files);
+  const database = openDatabase(
+    memoryClickSoundFiles().files,
+    unusedMigrationCopyFiles,
+  );
   const connection = opened.at(-1);
   if (connection === undefined) throw new Error('no connection opened');
   return { database, connection };
@@ -54,7 +58,11 @@ describe('foreign keys on the app connection', () => {
           : connection.executeSync(sql, params),
     };
     throwsOpenError('foreign-keys', () =>
-      connectDatabase(ignoringForeignKeys, memoryClickSoundFiles().files),
+      connectDatabase(
+        ignoringForeignKeys,
+        memoryClickSoundFiles().files,
+        unusedMigrationCopyFiles,
+      ),
     );
     expect(close).toHaveBeenCalledOnce();
   });
@@ -74,7 +82,11 @@ describe('foreign keys on the app connection', () => {
         },
       };
       const error = throwsOpenError(kind, () =>
-        connectDatabase(unreadable, memoryClickSoundFiles().files),
+        connectDatabase(
+          unreadable,
+          memoryClickSoundFiles().files,
+          unusedMigrationCopyFiles,
+        ),
       );
       expect(error.cause).toBe(failure);
     },
