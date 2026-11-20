@@ -1174,3 +1174,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 - **2026-11-20 · Practice history menu (#286)** — The ⋮ and long-press menu is
   the app's bottom actions sheet, not the pop-up the design draws, so every list
   menu works the same way. **[REC TAKEN, owner may overturn]**
+- **2026-11-20 · Waveform drawn as SVG paths until Skia lands (§13.8, #547)** — Interim:
+  the shared `Waveform` draws each bar layer as one react-native-svg path, not one View per
+  bar, so the playing players stop taking 4–7 s per accessibility read. Skia stays §13.8's
+  target; it is not added now because this run takes no new dependency, and react-native-svg
+  is already one. **[coordinator, 2026-11-20]**
