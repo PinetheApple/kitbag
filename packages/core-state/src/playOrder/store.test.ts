@@ -4,7 +4,7 @@ import { createSongPresetRepository } from '@kitbag/core-db/src/song-preset-repo
 import { openTestDatabase } from '@kitbag/core-db/src/sqlite.test-helper';
 import { deleteStemSet } from '@kitbag/core-db/src/stem-bundle-repository';
 import { insertStemSet } from '@kitbag/core-db/src/stem-entries.test-helper';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { takeSnapshot } from '../library/snapshot.ts';
 import { ADVANCE, cursorOf } from './order.ts';
@@ -16,10 +16,43 @@ afterEach(() => {
   for (const { connection } of handles.splice(0)) connection.close();
 });
 
-async function setup() {
+const DISK_FULL = 'disk full';
+const UNDO_FAILED = 'undo failed';
+
+function deferred() {
+  let resolve: () => void = () => undefined;
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+function heldWrite() {
+  const write = deferred();
+  let standing = true;
+  return {
+    afterWrite: () => write.promise,
+    stands: () => standing,
+    press: () => {
+      standing = false;
+    },
+    release: write.resolve,
+  };
+}
+
+async function setup(
+  afterWrite: () => Promise<void> = () => Promise.resolve(),
+) {
   const handle = openTestDatabase();
   handles.push(handle);
-  const queue = createPlayQueueRepository(handle);
+  const repository = createPlayQueueRepository(handle);
+  const queue = {
+    ...repository,
+    takeThrough: async (stemSetId: number) => {
+      await repository.takeThrough(stemSetId);
+      await afterWrite();
+    },
+  };
   const library = {
     setlists: createSetlistRepository(handle),
     presets: createSongPresetRepository(handle),
@@ -49,6 +82,11 @@ async function setup() {
     entries = (await setlist()) ?? [];
   };
   let onStage: number | null = null;
+  let moves = 0;
+  const putOnStage = (itemId: number) => {
+    onStage = itemId;
+    moves++;
+  };
   const stage = () => ({ setlistId: gig.id, entries });
   const order = createPlayOrderStore({
     queue: () => queue,
@@ -57,13 +95,22 @@ async function setup() {
       cursorOf(stage(), { presetId: 0, itemId: onStage, setlistId: gig.id }),
     refreshStage: reload,
     playSetlistEntry: (itemId) => {
-      onStage = itemId;
-      return Promise.resolve();
+      putOnStage(itemId);
+      return afterWrite();
+    },
+    markStage: () => {
+      const at = onStage;
+      let written = moves;
+      return {
+        wrote: () => {
+          written = moves;
+        },
+        restore: () => {
+          if (moves === written) onStage = at;
+        },
+      };
     },
   });
-  const putOnStage = (itemId: number) => {
-    onStage = itemId;
-  };
   await order.getState().refresh();
   return {
     order,
@@ -194,5 +241,150 @@ describe('play order', () => {
       stemSetId: a,
       setlistItemId: again.id,
     });
+  });
+});
+
+describe('a press while the next step is committed', () => {
+  it('leaves a queued song queued', async () => {
+    const hold = heldWrite();
+    const { order, c } = await setup(hold.afterWrite);
+    await order.getState().enqueue(c);
+    const step = await order.getState().peekNext();
+    const commit = order.getState().commitNext(step.advance, hold.stands);
+    hold.press();
+    hold.release();
+    expect(await commit).toBe(false);
+    expect(queuedIds(order)).toEqual([c]);
+    expect(await order.getState().peekNext()).toEqual(step);
+  });
+
+  it('leaves the setlist cursor where it was', async () => {
+    const hold = heldWrite();
+    const { order, click, putOnStage } = await setup(hold.afterWrite);
+    putOnStage(click.id);
+    const step = await order.getState().peekNext();
+    const commit = order.getState().commitNext(step.advance, hold.stands);
+    hold.press();
+    hold.release();
+    expect(await commit).toBe(false);
+    expect(await order.getState().peekNext()).toEqual(step);
+  });
+
+  it('keeps an entry the press itself put on stage', async () => {
+    const hold = heldWrite();
+    const { order, click, first, putOnStage } = await setup(hold.afterWrite);
+    putOnStage(click.id);
+    const step = await order.getState().peekNext();
+    const commit = order.getState().commitNext(step.advance, hold.stands);
+    hold.press();
+    putOnStage(first.id);
+    hold.release();
+    expect(await commit).toBe(false);
+    expect((await order.getState().peekNext()).advance).toMatchObject({
+      kind: ADVANCE.open,
+    });
+  });
+
+  it('keeps the setlist entry the press itself opened again', async () => {
+    const hold = heldWrite();
+    const { order, click, last, putOnStage } = await setup(hold.afterWrite);
+    putOnStage(click.id);
+    const step = await order.getState().peekNext();
+    const commit = order.getState().commitNext(step.advance, hold.stands);
+    hold.press();
+    putOnStage(last.id);
+    hold.release();
+    expect(await commit).toBe(false);
+    expect((await order.getState().peekNext()).advance).toEqual({
+      kind: ADVANCE.end,
+    });
+  });
+
+  it('does not queue again the song the press played from Up next', async () => {
+    const hold = heldWrite();
+    const { order, a, b, c } = await setup(hold.afterWrite);
+    for (const id of [a, b, c]) await order.getState().enqueue(id);
+    const step = await order.getState().peekNext();
+    const commit = order.getState().commitNext(step.advance, hold.stands);
+    hold.press();
+    const tap = order.getState().playQueued(a);
+    hold.release();
+    await Promise.all([commit, tap]);
+    expect(queuedIds(order)).toEqual([b, c]);
+  });
+
+  it('keeps the queue a later song played from Up next left', async () => {
+    const hold = heldWrite();
+    const { order, a, b, c } = await setup(hold.afterWrite);
+    for (const id of [a, b, c]) await order.getState().enqueue(id);
+    const step = await order.getState().peekNext();
+    const commit = order.getState().commitNext(step.advance, hold.stands);
+    hold.press();
+    const tap = order.getState().playQueued(c);
+    hold.release();
+    await Promise.all([commit, tap]);
+    expect(queuedIds(order)).toEqual([]);
+  });
+
+  it('keeps the queued songs ahead of one added during the commit', async () => {
+    const hold = heldWrite();
+    const { order, a, b, c } = await setup(hold.afterWrite);
+    for (const id of [a, b]) await order.getState().enqueue(id);
+    const step = await order.getState().peekNext();
+    const commit = order.getState().commitNext(step.advance, hold.stands);
+    hold.press();
+    await order.getState().enqueue(c);
+    hold.release();
+    expect(await commit).toBe(false);
+    expect(queuedIds(order)).toEqual([a, b, c]);
+  });
+
+  it('takes the step when the end still stands', async () => {
+    const hold = heldWrite();
+    const { order, c } = await setup(hold.afterWrite);
+    await order.getState().enqueue(c);
+    const step = await order.getState().peekNext();
+    const commit = order.getState().commitNext(step.advance, hold.stands);
+    hold.release();
+    expect(await commit).toBe(true);
+    expect(queuedIds(order)).toEqual([]);
+  });
+});
+
+describe('a commit whose write fails', () => {
+  const failing = () => Promise.reject(new Error(DISK_FULL));
+
+  it('puts the queued song back', async () => {
+    const { order, c } = await setup(failing);
+    await order.getState().enqueue(c);
+    const step = await order.getState().peekNext();
+    await expect(order.getState().commitNext(step.advance)).rejects.toThrow(
+      DISK_FULL,
+    );
+    await order.getState().refresh();
+    expect(queuedIds(order)).toEqual([c]);
+  });
+
+  it('throws the failed write, not a failed undo', async () => {
+    const { order, queue, c } = await setup(failing);
+    await order.getState().enqueue(c);
+    const step = await order.getState().peekNext();
+    vi.spyOn(queue, 'add').mockRejectedValue(new Error(UNDO_FAILED));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await expect(order.getState().commitNext(step.advance)).rejects.toThrow(
+      DISK_FULL,
+    );
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
+  it('puts the setlist cursor back', async () => {
+    const { order, click, putOnStage } = await setup(failing);
+    putOnStage(click.id);
+    const step = await order.getState().peekNext();
+    await expect(order.getState().commitNext(step.advance)).rejects.toThrow(
+      DISK_FULL,
+    );
+    expect(await order.getState().peekNext()).toEqual(step);
   });
 });
