@@ -10,17 +10,19 @@ vi.mock('@op-engineering/op-sqlite', () => ({ open }));
 
 import { openDatabase } from './client';
 import { memoryClickSoundFiles } from './click-sound-files.test-helper';
+import { unusedMigrationCopyFiles } from './migration-copy-files.test-helper';
 import {
   opSqliteError,
   throwsOpenError,
 } from './database-open-error.test-helper';
-import { SCHEMA_VERSION } from './migrate';
+import { SCHEMA_VERSION, V24_SCHEMA_VERSION } from './migrate';
+import { MIGRATION_COPY_MARGIN_BYTES } from './migration-copy';
 import { SQLITE_CANTOPEN } from './sqlite-result-codes';
 
 const MIGRATION_FAILURE = new Error('disk I/O error');
 
 const openNamed = (name: string) => () =>
-  openDatabase(memoryClickSoundFiles().files, name);
+  openDatabase(memoryClickSoundFiles().files, unusedMigrationCopyFiles, name);
 
 function failingMigration(sql: string) {
   if (sql === 'PRAGMA user_version') return { rows: [{ user_version: 0 }] };
@@ -72,7 +74,7 @@ describe('openDatabase', () => {
     connection.executeSync.mockImplementation(() => ({
       rows: [{ user_version: 0, foreign_keys: 1 }],
     }));
-    openDatabase(memoryClickSoundFiles().files, 'ok');
+    openDatabase(memoryClickSoundFiles().files, unusedMigrationCopyFiles, 'ok');
     expect(connection.close).not.toHaveBeenCalled();
   });
 
@@ -111,5 +113,37 @@ describe('openDatabase', () => {
       ['PRAGMA user_version'],
     ]);
     expect(connection.close).toHaveBeenCalledOnce();
+  });
+
+  it('copies the database before upgrading it, outside the migration transaction', () => {
+    const files = {
+      freeBytes: () => MIGRATION_COPY_MARGIN_BYTES,
+      remove: vi.fn(),
+      replace: vi.fn(),
+    };
+    connection.executeSync.mockImplementation((sql: string) => {
+      if (sql === 'PRAGMA user_version')
+        return { rows: [{ user_version: V24_SCHEMA_VERSION }] };
+      if (sql.includes('pragma_database_list'))
+        return { rows: [{ file: '/data/databases/kitbag' }] };
+      if (sql.includes('pragma_page_size')) return { rows: [{ bytes: 0 }] };
+      return { rows: [{ foreign_keys: 1 }] };
+    });
+
+    openDatabase(memoryClickSoundFiles().files, files, 'kitbag');
+
+    const statements = connection.executeSync.mock.calls.map(([sql]) =>
+      String(sql),
+    );
+    expect(statements).toContain(
+      "VACUUM INTO '/data/databases/kitbag.v24.bak.part'",
+    );
+    expect(
+      statements.indexOf("VACUUM INTO '/data/databases/kitbag.v24.bak.part'"),
+    ).toBeLessThan(statements.indexOf('BEGIN'));
+    expect(files.replace).toHaveBeenCalledExactlyOnceWith(
+      'kitbag.v24.bak.part',
+      'kitbag.v24.bak',
+    );
   });
 });

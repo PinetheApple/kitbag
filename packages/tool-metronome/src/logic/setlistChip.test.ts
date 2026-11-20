@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { SONG_STEP } from '@kitbag/core-state';
 
-import { entry } from './fixtures.test-helper.ts';
 import {
   loadedSongName,
   notSavedMessage,
@@ -126,9 +125,7 @@ describe('song chip', () => {
   });
 
   it('names the song a step would load', () => {
-    expect(stepA11yLabel(SONG_STEP.next, entry(1, 'Shuffle'))).toBe(
-      'Next song, Shuffle',
-    );
+    expect(stepA11yLabel(SONG_STEP.next, 'Shuffle')).toBe('Next song, Shuffle');
     expect(stepA11yLabel(SONG_STEP.previous, undefined)).toBe('Previous song');
   });
 });

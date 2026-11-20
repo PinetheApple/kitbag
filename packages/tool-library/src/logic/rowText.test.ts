@@ -11,6 +11,7 @@ import {
   formatLength,
   rowBadges,
   rowSubtitle,
+  type RowPlace,
   spokenLength,
   spokenRow,
 } from './rowText.ts';
@@ -188,6 +189,32 @@ describe('spoken row', () => {
     const status = failureText(failure).status;
     expect(spokenRow({ ...SONG, bpm: null }, 'failed', status)).toBe(
       `Everlong, Foo Fighters, 4 minutes 10 seconds, ${spoken}`,
+    );
+  });
+});
+
+describe('rows away from the data folder', () => {
+  const placeLabels = (row: LibraryRow, place: RowPlace) =>
+    rowBadges(row, 'grid', place).map((badge) => [badge.label, badge.tone]);
+
+  it('marks a song whose files are moving in place of its status', () => {
+    expect(placeLabels(SONG, 'moving')).toEqual([['MOVING', 'warning']]);
+  });
+
+  it('marks a song on a missing card NO CARD, never missing', () => {
+    expect(placeLabels(SONG, 'unavailable')).toEqual([['NO CARD', 'danger']]);
+  });
+
+  it('keeps a stem song’s stem count beside its place', () => {
+    expect(placeLabels(STEMS, 'unavailable')).toEqual([
+      ['STEMS ×6', 'accent'],
+      ['NO CARD', 'danger'],
+    ]);
+  });
+
+  it('says why a row on a missing card can’t play', () => {
+    expect(spokenRow(SONG, 'grid', null, 'unavailable')).toContain(
+      'SD card not found, can’t play',
     );
   });
 });

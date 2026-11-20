@@ -38,11 +38,14 @@ export const NOT_NOW = 'Not now';
 export const CHOOSE_ANOTHER = 'Choose another place';
 export const CLOSE_DATA_FOLDER = 'Close data folder';
 
+export const OLD_COPIES_WAITING = 'old copies go once nothing plays';
+export const OLD_COPIES_LEFT = 'old copies left';
+
 const NOT_FOUND = 'Not found';
 const INTERNAL_PLACE = 'internal storage';
-const CARD_PLACE = 'SD card';
-const THE_CARD = 'the SD card';
-const PERCENT = 100;
+export const CARD_PLACE = 'SD card';
+export const THE_CARD = 'the SD card';
+export const PERCENT = 100;
 
 export function placeName(volumeUuid: string | null): string {
   return volumeUuid === null ? INTERNAL_PLACE : CARD_PLACE;
@@ -101,11 +104,11 @@ export function dataFolderRowValue(
     return move.error === null || move.running
       ? {
           lead: moved,
-          detail: `${SEPARATOR} old copies go once nothing plays`,
+          detail: `${SEPARATOR} ${OLD_COPIES_WAITING}`,
           missing: false,
           highlighted: true,
         }
-      : { ...quiet, lead: moved, detail: `${SEPARATOR} old copies left` };
+      : { ...quiet, lead: moved, detail: `${SEPARATOR} ${OLD_COPIES_LEFT}` };
   }
   if (move?.running === true) {
     return {

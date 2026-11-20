@@ -8,10 +8,10 @@ data class MoveStatus(
   val progress: MoveProgress,
   val running: Boolean,
   val failure: MoveFailure?,
+  val switched: Boolean,
+  val cardReturn: Boolean,
 ) {
   val phase: MovePhase get() = progress.phase
-
-  val switched: Boolean get() = phase >= MovePhase.SWITCHED
 
   val paused: Boolean get() = !running && !switched
 
@@ -21,7 +21,8 @@ data class MoveStatus(
     fun of(state: MoveState?, running: Boolean, live: MoveProgress?): MoveStatus? {
       state ?: return null
       val progress = live?.takeIf { running && it.phase == state.phase } ?: state.progress(null)
-      return MoveStatus(state.source, state.target, progress, running, state.failure)
+      val cardReturn = state.kind == MoveKind.CARD_RETURN
+      return MoveStatus(state.source, state.target, progress, running, state.failure, state.switched, cardReturn)
     }
   }
 }

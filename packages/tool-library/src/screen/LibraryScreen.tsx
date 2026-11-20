@@ -15,7 +15,12 @@ import {
 import {
   filterRows,
   inView,
+  movingRowKey,
+  rowKey,
+  rowMatchIndex,
+  useDataFolder,
   useSongLibrary,
+  type LibraryRow,
   type LibraryView,
 } from '@kitbag/core-state';
 import { useCallback, useEffect, useMemo, type ReactElement } from 'react';
@@ -49,6 +54,8 @@ export interface LibraryScreenProps {
   readonly dock?: ReactElement;
   readonly onAdd?: () => void;
   readonly status?: ReactElement;
+  readonly strip?: ReactElement;
+  readonly onUnavailable: (row: LibraryRow) => void;
 }
 
 const FAB_ROOM = libraryList.fab + libraryList.fabBottom;
@@ -171,12 +178,24 @@ interface ListProps {
   readonly menu: LibraryMenu;
   readonly onOpenStemSet: (id: number) => void;
   readonly onOpenSong: (id: number) => void;
+  readonly onUnavailable: (row: LibraryRow) => void;
 }
 
-function SongList({ view, menu, onOpenStemSet, onOpenSong }: ListProps) {
+function SongList({
+  view,
+  menu,
+  onOpenStemSet,
+  onOpenSong,
+  onUnavailable,
+}: ListProps) {
   const styles = useStyles();
   const rows = useSongLibrary((s) => s.rows);
   const query = useSongLibrary((s) => s.query);
+  const rowPaths = useSongLibrary((s) => s.rowPaths);
+  const index = useMemo(() => rowMatchIndex(rowPaths), [rowPaths]);
+  const movingKey = useDataFolder((s) =>
+    s.codes === null ? null : movingRowKey(s.move, s.codes.movePhases, index),
+  );
   const shown = useMemo(
     () => filterRows(rows, query, view),
     [rows, query, view],
@@ -198,9 +217,11 @@ function SongList({ view, menu, onOpenStemSet, onOpenSong }: ListProps) {
           key={`${row.kind}-${String(row.id)}`}
           row={row}
           selected={open?.kind === row.kind && open.id === row.id}
+          moving={movingKey === rowKey(row)}
           onActions={menu.openActions}
           onOpenStemSet={onOpenStemSet}
           onOpenSong={onOpenSong}
+          onUnavailable={onUnavailable}
         />
       ))}
     </View>
@@ -238,6 +259,7 @@ function LibraryBody({
   menu,
   onOpenStemSet,
   onOpenSong,
+  onUnavailable,
   startImport,
 }: BodyProps) {
   const text = VIEW_TEXT[view];
@@ -262,6 +284,7 @@ function LibraryBody({
       menu={menu}
       onOpenStemSet={onOpenStemSet}
       onOpenSong={onOpenSong}
+      onUnavailable={onUnavailable}
     />
   );
 }
@@ -285,6 +308,8 @@ export function LibraryScreen({
   dock,
   onAdd,
   status,
+  strip,
+  onUnavailable,
 }: LibraryScreenProps) {
   const styles = useStyles();
   useEntry();
@@ -313,6 +338,7 @@ export function LibraryScreen({
     <View style={frame}>
       <View style={styles.main}>
         <AppBar flush title={text.title} onBack={onBack} actions={actions} />
+        {strip}
         <View style={styles.body}>
           {listed ? (
             <SearchBar text={text} covered={menu.kind !== 'none'} />
@@ -329,6 +355,7 @@ export function LibraryScreen({
               menu={menu}
               onOpenStemSet={onOpenStemSet}
               onOpenSong={onOpenSong}
+              onUnavailable={onUnavailable}
               startImport={startImport}
             />
           </ScrollView>

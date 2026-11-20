@@ -1,0 +1,139 @@
+// react-test-renderer is deprecated, but it alone exposes host props with no DOM.
+/* eslint-disable @typescript-eslint/no-deprecated */
+import type { LibrarySongRow, RowFiles } from '@kitbag/core-state';
+import { act, createElement } from 'react';
+import { create, type ReactTestRenderer } from 'react-test-renderer';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const library = vi.hoisted(() => ({ files: null as RowFiles | null }));
+
+vi.mock('react-native', () => ({
+  View: 'View',
+  Pressable: 'Pressable',
+  Text: 'Text',
+  useWindowDimensions: () => ({ fontScale: 1 }),
+}));
+
+vi.mock('@kitbag/core-design', async (original) => {
+  const pure = await original<{ opacity: { muted: number } }>();
+  return {
+    ...pure,
+    Badge: 'Badge',
+    EllipsizedText: 'EllipsizedText',
+    Icon: () => null,
+    libraryList: new Proxy({}, { get: () => 0 }),
+    createThemedStyles: () => () =>
+      new Proxy(
+        {},
+        {
+          get: (_styles, key) =>
+            key === 'muted' ? { opacity: pure.opacity.muted } : {},
+        },
+      ),
+    useTheme: () => ({}),
+  };
+});
+
+vi.mock('@kitbag/core-state', async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  useSongLibrary: (select: (state: { codes: unknown }) => unknown) =>
+    select({ codes: {} }),
+  songBadge: () => 'grid',
+  analysisFailure: () => null,
+  rowFilesOf: () => library.files,
+}));
+
+const { LibraryRowView } = await import('./LibraryRowView.tsx');
+const { opacity } = await import('@kitbag/core-design');
+
+const ROW = {
+  kind: 'song',
+  id: 7,
+  title: 'Everlong',
+  artist: '',
+  durationSec: 250,
+  bpm: 158,
+  tempoCorrection: 'none',
+} as unknown as LibrarySongRow;
+
+const handlers = {
+  onActions: vi.fn(),
+  onOpenStemSet: vi.fn(),
+  onOpenSong: vi.fn(),
+  onUnavailable: vi.fn(),
+};
+
+function mount(moving = false): ReactTestRenderer {
+  let tree: ReactTestRenderer | undefined;
+  act(() => {
+    tree = create(
+      createElement(LibraryRowView, {
+        row: ROW,
+        selected: false,
+        moving,
+        ...handlers,
+      }),
+    );
+  });
+  if (tree === undefined) throw new Error('not mounted');
+  return tree;
+}
+
+function pressRow(tree: ReactTestRenderer) {
+  const [body] = tree.root.findAllByType('Pressable' as never);
+  act(() => {
+    (body?.props as { onPress: () => void }).onPress();
+  });
+}
+
+const badgeLabels = (tree: ReactTestRenderer) =>
+  tree.root
+    .findAllByType('Badge' as never)
+    .map((badge) => (badge.props as { label: string }).label);
+
+const titleOpacity = (tree: ReactTestRenderer) => {
+  const title = tree.root.findAllByType('EllipsizedText' as never)[0];
+  const style = [(title?.props as { style: unknown }).style].flat(2);
+  return (Object.assign({}, ...style) as { opacity?: number }).opacity;
+};
+
+beforeEach(() => {
+  library.files = null;
+  vi.clearAllMocks();
+});
+
+describe('a row on a missing SD card', () => {
+  beforeEach(() => {
+    library.files = 'unavailable';
+  });
+
+  it('never opens the player and shows why instead', () => {
+    pressRow(mount());
+    expect(handlers.onOpenSong).not.toHaveBeenCalled();
+    expect(handlers.onUnavailable).toHaveBeenCalledWith(ROW);
+  });
+
+  it('reads NO CARD with its title muted', () => {
+    const tree = mount();
+    expect(badgeLabels(tree)).toEqual(['NO CARD']);
+    expect(titleOpacity(tree)).toBe(opacity.muted);
+  });
+});
+
+describe('a row whose files are moving', () => {
+  it('still opens the player, as its old copy plays', () => {
+    const tree = mount(true);
+    pressRow(tree);
+    expect(handlers.onOpenSong).toHaveBeenCalledWith(ROW.id);
+    expect(badgeLabels(tree)).toEqual(['MOVING']);
+    expect(titleOpacity(tree)).toBeUndefined();
+  });
+});
+
+describe('a row at home', () => {
+  it('opens the player', () => {
+    pressRow(mount());
+    expect(handlers.onOpenSong).toHaveBeenCalledWith(ROW.id);
+    expect(handlers.onUnavailable).not.toHaveBeenCalled();
+  });
+});

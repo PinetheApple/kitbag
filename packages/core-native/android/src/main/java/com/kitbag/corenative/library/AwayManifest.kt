@@ -7,6 +7,20 @@ import org.json.JSONObject
 
 data class AwayFiles(val volumeUuid: String, val paths: Set<String>, val mountedRoot: File?)
 
+data class AwaySongCounts(val songs: Int, val stemSongs: Int) {
+  companion object {
+    private const val FOLDER_DEPTH = 2
+
+    fun of(paths: Collection<String>): AwaySongCounts {
+      val folders = paths.map { it.split('/') }.filter { it.size > FOLDER_DEPTH }.mapTo(HashSet()) { it[0] to it[1] }
+      return AwaySongCounts(
+        songs = folders.count { it.first == LibraryPaths.SONGS_DIR_NAME },
+        stemSongs = folders.count { it.first == LibraryPaths.STEMS_DIR_NAME },
+      )
+    }
+  }
+}
+
 class AwayManifest(
   file: File,
   warn: (message: String, cause: Exception) -> Unit,
@@ -26,6 +40,12 @@ class AwayManifest(
   }
 
   fun remove(volumeUuid: String) = replace(volumeUuid, emptySet())
+
+  @Synchronized
+  fun removeAway(volumeUuid: String, relativePaths: Collection<String>) {
+    val existing = load() ?: throw UnreadableStateException(state.name)
+    replace(volumeUuid, existing[volumeUuid].orEmpty() - relativePaths.toSet())
+  }
 
   @Synchronized
   fun replace(volumeUuid: String, relativePaths: Set<String>) {

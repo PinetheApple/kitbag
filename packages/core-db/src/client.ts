@@ -8,6 +8,11 @@ import { createClickSoundRepository } from './click-sound-repository';
 import { DatabaseOpenError } from './database-open-error';
 import * as schema from './schema';
 import { migrate, type MigrationDriver } from './migrate';
+import {
+  copyBeforeMigration,
+  type MigrationCopyFiles,
+  type MigrationCopySql,
+} from './migration-copy';
 import { openConnection } from './openConnection';
 import { createPlayQueueRepository } from './play-queue-repository';
 import { createPracticeRepository } from './practice-repository';
@@ -44,9 +49,14 @@ export function drizzleClient(connection: Connection) {
 
 export function openDatabase(
   clickSoundFiles: ClickSoundFiles,
+  migrationCopyFiles: MigrationCopyFiles,
   name: string = DATABASE_NAME,
 ) {
-  return connectDatabase(openNativeConnection(name), clickSoundFiles);
+  return connectDatabase(
+    openNativeConnection(name),
+    clickSoundFiles,
+    migrationCopyFiles,
+  );
 }
 
 function openNativeConnection(name: string): Connection {
@@ -71,9 +81,16 @@ function requireForeignKeys(connection: Connection): void {
 export function connectDatabase(
   connection: Connection,
   clickSoundFiles: ClickSoundFiles,
+  migrationCopyFiles: MigrationCopyFiles,
 ) {
   try {
-    migrate(opSqliteMigrationDriver(connection));
+    migrate(opSqliteMigrationDriver(connection), (fromVersion) => {
+      copyBeforeMigration(
+        opSqliteCopySql(connection),
+        migrationCopyFiles,
+        fromVersion,
+      );
+    });
     requireForeignKeys(connection);
   } catch (error) {
     // The caller retries, so a failed open must not leave a connection behind.
@@ -114,6 +131,18 @@ export function connectDatabase(
 export type KitbagDatabase = ReturnType<typeof openDatabase>;
 export type SetlistRepository = KitbagDatabase['setlists'];
 export type SongPresetRepository = KitbagDatabase['presets'];
+
+function opSqliteCopySql(connection: Connection): MigrationCopySql {
+  return {
+    exec: (sql) => {
+      connection.executeSync(sql);
+    },
+    value: (sql) => {
+      const [row] = connection.executeSync(sql).rows;
+      return row === undefined ? undefined : Object.values(row)[0];
+    },
+  };
+}
 
 function opSqliteMigrationDriver(connection: Connection): MigrationDriver {
   return {

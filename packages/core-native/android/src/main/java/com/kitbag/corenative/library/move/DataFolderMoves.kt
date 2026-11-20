@@ -61,6 +61,12 @@ class DataFolderMoves(
       runner.start(target)
     }
 
+  fun returnCard(card: DataFolderLocation.Card): MoveOutcome =
+    settle {
+      refusalToStart(card)?.let { return@settle MoveOutcome.Refused(it) }
+      runner.returnCard(card)
+    }
+
   fun resume(): MoveOutcome =
     settle {
       refusalToResume()?.let { return@settle MoveOutcome.Refused(it) }

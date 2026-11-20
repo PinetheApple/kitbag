@@ -1,5 +1,13 @@
-import type { MoveFinished, MoveStatus } from '@kitbag/core-native';
-import { moveSettled, type DataFolderStore } from '@kitbag/core-state';
+import type {
+  DataFolderVolumes,
+  MoveFinished,
+  MoveStatus,
+} from '@kitbag/core-native';
+import {
+  cardMounted,
+  moveSettled,
+  type DataFolderStore,
+} from '@kitbag/core-state';
 
 import {
   CLOSED,
@@ -21,9 +29,17 @@ export interface DataFolderSheetController {
   readonly step: () => DataFolderStep;
   readonly subscribe: (listener: () => void) => () => void;
   readonly open: () => void;
+  readonly offerReturn: (volumeUuid: string) => void;
+  readonly returning: () => boolean;
+  readonly places: () => Places;
+  readonly setFocused: (focused: boolean) => void;
   readonly close: () => void;
   readonly choose: (target: string | null) => void;
   readonly act: Readonly<Record<DataFolderAction, () => void>>;
+}
+
+function otherPlace(volumes: DataFolderVolumes | null): string | null {
+  return volumes?.volumes.find((volume) => !volume.inUse)?.volumeUuid ?? null;
 }
 
 export function createDataFolderSheetController(
@@ -32,8 +48,35 @@ export function createDataFolderSheetController(
 ): DataFolderSheetController {
   let step: DataFolderStep = CLOSED;
   let places: Places = { source: null, target: null };
+  let focused = true;
   const listeners = new Set<() => void>();
   const state = () => store.getState();
+
+  // Stacked screens each host the sheets; only the one on screen speaks.
+  const post = (text: string) => {
+    if (focused) notify(text);
+  };
+
+  const currentPlaces = (): Places => {
+    const { move, volumes } = state();
+    if (move !== null) {
+      return {
+        source: move.sourceVolumeUuid,
+        target: move.targetVolumeUuid,
+        cardReturn: move.cardReturn,
+      };
+    }
+    if (places.cardReturn === true) return places;
+    const chosen =
+      step.kind === 'confirm' || step.kind === 'starting'
+        ? step.target
+        : otherPlace(volumes);
+    return {
+      source: volumes?.currentVolumeUuid ?? null,
+      target: chosen,
+      cardReturn: false,
+    };
+  };
 
   const send = (event: DataFolderEvent) => {
     const next = nextDataFolderStep(step, event);
@@ -52,16 +95,23 @@ export function createDataFolderSheetController(
       settled: moveSettled(finished, codes.moveOutcomes),
     });
     const text = outcomeText(finished, codes, places);
-    if (text !== null) notify(text);
+    if (text !== null) post(text);
   };
 
   const remember = (move: MoveStatus | null) => {
     if (move === null) return;
-    places = { source: move.sourceVolumeUuid, target: move.targetVolumeUuid };
+    places = {
+      source: move.sourceVolumeUuid,
+      target: move.targetVolumeUuid,
+      cardReturn: move.cardReturn,
+    };
   };
 
   const follow = (now: DataFolderStore, before: DataFolderStore) => {
     remember(now.move);
+    if (step.kind === 'returnOffer' && !cardMounted(now, step.volumeUuid)) {
+      send({ kind: 'close' });
+    }
     if (now.move !== null && before.move === null) {
       send({ kind: 'progressed' });
     }
@@ -94,11 +144,30 @@ export function createDataFolderSheetController(
       });
   };
 
+  const returnCard = () => {
+    if (step.kind !== 'returnOffer') return;
+    const { volumeUuid } = step;
+    const target = state().volumes?.currentVolumeUuid ?? null;
+    places = { source: volumeUuid, target, cardReturn: true };
+    send({ kind: 'start' });
+    void state()
+      .returnCard(volumeUuid)
+      .then((acted) => {
+        if (!acted) send({ kind: 'requestSettled' });
+      });
+  };
+
+  const declineReturn = () => {
+    if (step.kind !== 'returnOffer') return;
+    state().declineReturn(step.volumeUuid);
+    send({ kind: 'close' });
+  };
+
   const undo = async () => {
     const source = state().move?.sourceVolumeUuid ?? null;
     if (!(await state().undoMove())) return;
     send({ kind: 'close' });
-    notify(undoneText(source));
+    post(undoneText(source));
   };
 
   return {
@@ -119,12 +188,22 @@ export function createDataFolderSheetController(
     open: () => {
       send({ kind: 'open' });
     },
+    offerReturn: (volumeUuid) => {
+      send({ kind: 'offerReturn', volumeUuid });
+    },
+    returning: () => places.cardReturn === true,
+    places: currentPlaces,
+    setFocused: (next) => {
+      focused = next;
+    },
     close,
     choose: (target) => {
       send({ kind: 'choose', target });
     },
     act: {
       move: startMove,
+      returnMove: returnCard,
+      declineReturn,
       backToChooser: () => {
         send({ kind: 'back' });
       },
