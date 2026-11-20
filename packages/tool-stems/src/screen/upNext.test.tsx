@@ -7,6 +7,7 @@ import {
   songLibraryStore,
   songPlayerStore,
   startAutoAdvance,
+  stopSongsForMetronome,
   type QueuedSong,
 } from '@kitbag/core-state';
 import { playerWaveBars, Snackbar, SwipeDeleteRow } from '@kitbag/core-design';
@@ -354,6 +355,23 @@ describe('a metronome entry up next', () => {
     await p.press('Open');
     await flush();
     expect(loadSong).toHaveBeenCalledWith(BALLAD_PRESET, BALLAD_ITEM, GIG);
+    expect(p.routes.onOpenMetronome).toHaveBeenCalledOnce();
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it('opens in the metronome from Open while loading it closes the stem player', async () => {
+    const { loadSong, start } = metronomeEntryOnStage();
+    loadSong.mockImplementation(() => {
+      libraryStore.setState({
+        songLoads: libraryStore.getState().songLoads + 1,
+      });
+      return Promise.resolve();
+    });
+    const stopTakeover = stopSongsForMetronome();
+    const p = await withQueue();
+    await p.press('Open');
+    await flush();
+    stopTakeover();
     expect(p.routes.onOpenMetronome).toHaveBeenCalledOnce();
     expect(start).not.toHaveBeenCalled();
   });

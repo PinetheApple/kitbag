@@ -82,10 +82,7 @@ export interface AutoAdvanceDeps {
   ) => Promise<Undo | null>;
   readonly placeOf: (advance: Advance) => SetlistPlace | null;
   readonly candidates: () => number;
-  readonly commitOpen: (
-    entry: PresetSetlistEntry,
-    stands: () => boolean,
-  ) => Promise<boolean>;
+  readonly commitOpen: (entry: PresetSetlistEntry) => Promise<boolean>;
   readonly arrivals: StoreApi<ArrivalState>;
 }
 
@@ -148,8 +145,7 @@ export const autoAdvanceDeps = (bars: WaveformBars): AutoAdvanceDeps => ({
   },
   candidates: () =>
     playOrderStore.getState().queue.length + onStageNow().stage.entries.length,
-  commitOpen: (entry, stands) =>
-    playOrderStore.getState().commitOpen(entry, stands),
+  commitOpen: (entry) => playOrderStore.getState().commitOpen(entry),
   arrivals: arrivalStore,
 });
 
@@ -170,7 +166,9 @@ async function openMetronome(
   arrive: Arrive,
   entry: PresetSetlistEntry,
 ) {
-  if (!(await deps.commitOpen(entry, player.stillEnded))) return;
+  // Loading a metronome song closes every song player, so the press can only
+  // be checked before the load (advance does), never after it.
+  if (!(await deps.commitOpen(entry))) return;
   player.handToMetronome();
   arrive({ kind: ARRIVAL.metronome });
 }

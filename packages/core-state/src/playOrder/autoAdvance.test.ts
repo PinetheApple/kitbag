@@ -353,7 +353,7 @@ describe('Next from the song card', () => {
     const stillEnded = vi.fn(() => true);
     const h = harness([metronomeNext], [], 1, stillEnded);
     await h.pressNext();
-    expect(h.commitOpen).toHaveBeenCalledWith(BALLAD_COUNT, stillEnded);
+    expect(h.commitOpen).toHaveBeenCalledWith(BALLAD_COUNT);
     expect(h.peekNext.mock.invocationCallOrder[0]).toBeLessThan(
       h.commitOpen.mock.invocationCallOrder[0] ?? 0,
     );
@@ -369,7 +369,7 @@ describe('Next from the song card', () => {
     });
   });
 
-  it('keeps the stem song when a press during the load undid the commit', async () => {
+  it('keeps the stem song when the metronome song does not load', async () => {
     const h = harness([metronomeNext]);
     h.commitOpen.mockResolvedValueOnce(false);
     await h.pressNext();
