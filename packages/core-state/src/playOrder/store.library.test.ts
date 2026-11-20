@@ -16,6 +16,8 @@ import {
 } from './order.ts';
 import { createPlayOrderStore, stageMarkOf } from './store.ts';
 
+const EDITED_BPM = 150;
+
 function orderOn(
   library: StoreApi<LibraryStore>,
   queue: ReturnType<typeof createPlayQueueRepository>,
@@ -85,8 +87,8 @@ describe('the setlist Up next plays from', () => {
     expect(activeSetlistOf(library.getState().setlists)?.setlist.id).toBe(
       context.gig,
     );
+    expect(library.getState().session).toBeNull();
     await order.getState().enqueue(context.a);
-    library.getState().endSetlistSession();
     expect(laterFromSetlist(library)).toEqual([]);
     expect(order.getState().upNext()).toEqual({
       source: UP_NEXT_SOURCE.queue,
@@ -119,6 +121,37 @@ describe('the setlist Up next plays from', () => {
     expect(laterFromSetlist(library)).toMatchObject([{ stemSetId: d }]);
     await library.getState().openStemEntry(first.id, gig);
     expect(onStageOf(library.getState()).setlistId).toBe(gig);
+    expect(library.getState().endedSetlist).toMatchObject({
+      setlistId: encore,
+      setlistName: 'Encore',
+    });
+  });
+
+  it('says which setlist a list start ended, and only when one was running', async () => {
+    const { library, gig } = await setup();
+    library.getState().endSetlistSession();
+    expect(library.getState().endedSetlist).toMatchObject({
+      setlistId: gig,
+      setlistName: 'Gig',
+    });
+    library.getState().dismissEndedSetlist();
+    library.getState().endSetlistSession();
+    expect(library.getState().endedSetlist).toBeNull();
+  });
+
+  it('keeps the setlist when the list reopens the song playing from it', async () => {
+    const { library, gig, a, first } = await setup();
+    await library.getState().openStemEntry(first.id, gig);
+    library.getState().endSetlistSession(a);
+    expect(library.getState().session?.setlistId).toBe(gig);
+    expect(library.getState().endedSetlist).toBeNull();
+  });
+
+  it('starts a different song from the list even when it is in the setlist', async () => {
+    const { library, gig, b, first } = await setup();
+    await library.getState().openStemEntry(first.id, gig);
+    library.getState().endSetlistSession(b);
+    expect(library.getState().session).toBeNull();
   });
 
   it('skips an entry removed from Up next this time, without editing the setlist', async () => {
@@ -136,11 +169,31 @@ describe('the setlist Up next plays from', () => {
     expect(order.getState().upNext()).toBeUndefined();
     expect(activeSetlistOf(library.getState().setlists)).toBeUndefined();
     if (left === null) throw new Error('nothing was left');
-    await library.getState().rejoinSetlist(left);
+    expect(await library.getState().rejoinSetlist(left)).toBe(true);
     expect(activeSetlistOf(library.getState().setlists)?.setlist.id).toBe(gig);
     expect(order.getState().upNext()).toMatchObject({
       entry: { stemSetId: a },
     });
+  });
+
+  it('does not undo a Leave over a setlist started since', async () => {
+    const { library, gig, second } = await setup();
+    const left = await library.getState().leaveSetlist();
+    if (left === null) throw new Error('nothing was left');
+    await library.getState().openStemEntry(second.id, gig);
+    const started = library.getState().loaded;
+    expect(await library.getState().rejoinSetlist(left)).toBe(false);
+    expect(library.getState().loaded).toBe(started);
+  });
+
+  it('drops the unsaved-edit undo that Leave noted when Leave is undone', async () => {
+    const { library, metronome } = await setup();
+    metronome.getState().setTempo(EDITED_BPM);
+    const left = await library.getState().leaveSetlist();
+    expect(library.getState().discarded).not.toBeNull();
+    if (left === null) throw new Error('nothing was left');
+    await library.getState().rejoinSetlist(left);
+    expect(library.getState().discarded).toBeNull();
   });
 });
 

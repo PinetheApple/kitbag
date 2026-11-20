@@ -50,6 +50,7 @@ import {
 } from './PracticeSummarySheet.tsx';
 import { PresetRow } from './PresetRow.tsx';
 import { StatusStack } from './StatusStack.tsx';
+import { EndedSetlistSnackbar } from './EndedSetlistSnackbar.tsx';
 import { SkippedSongSnackbar } from './SkippedSongSnackbar.tsx';
 import { SongClickSnackbar } from './SongClickSnackbar.tsx';
 import { SubdivisionSheet } from './SubdivisionSheet.tsx';
@@ -449,6 +450,7 @@ export function MetronomeScreen({
         >
           <UnsavedSnackbar bottomInset={insets.bottom} />
           <SongClickSnackbar bottomInset={insets.bottom} />
+          <EndedSetlistSnackbar bottomInset={insets.bottom} />
           <SkippedSongSnackbar
             shownAt={skipped.shownAt}
             bottomInset={insets.bottom}

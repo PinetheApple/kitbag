@@ -1,3 +1,5 @@
+import type { NoticeContent } from './components/useNotice.ts';
+
 export const QUEUE_TEXT = {
   playNext: 'Play next',
   inUpNext: 'In Up next',
@@ -8,6 +10,12 @@ export const QUEUE_TEXT = {
   undo: 'Undo',
 } as const;
 
-export function leftSetlistText(setlistName: string): string {
-  return `Left ${setlistName}`;
+export function leftSetlistNotice(
+  setlistName: string,
+  onUndo: () => void,
+): NoticeContent {
+  return {
+    message: `Left ${setlistName}`,
+    action: { label: QUEUE_TEXT.undo, onPress: onUndo },
+  };
 }

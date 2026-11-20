@@ -22,6 +22,7 @@ import {
 import {
   songBadge,
   useLibrary,
+  useStemPlayer,
   type LibraryRow,
   type SongBadge,
 } from '@kitbag/core-state';
@@ -172,6 +173,9 @@ export function LibraryRowView({
   const place = useRowPlace(row, moving);
   const away = place === 'unavailable';
   const endSetlistSession = useLibrary((s) => s.endSetlistSession);
+  const openStemSetId = useStemPlayer((s) =>
+    s.status === 'ready' ? s.setId : null,
+  );
   const openActions = useCallback(() => {
     onActions(row);
   }, [onActions, row]);
@@ -180,10 +184,19 @@ export function LibraryRowView({
       onUnavailable(row);
       return;
     }
-    endSetlistSession();
+    const reopens = row.kind === 'stems' && row.id === openStemSetId;
+    endSetlistSession(reopens ? row.id : undefined);
     if (row.kind === 'stems') onOpenStemSet(row.id);
     else onOpenSong(row.id);
-  }, [away, endSetlistSession, onUnavailable, onOpenStemSet, onOpenSong, row]);
+  }, [
+    away,
+    endSetlistSession,
+    openStemSetId,
+    onUnavailable,
+    onOpenStemSet,
+    onOpenSong,
+    row,
+  ]);
   const badges = (
     <View style={[styles.badges, badgesUnderText && styles.badgesUnderText]}>
       {rowBadges(row, status, place).map((badge) => (

@@ -50,7 +50,7 @@ type PlayQueueEntry = PlayOrderStore['queue'][number];
 const useStyles = createThemedStyles(() => ({
   list: { gap: space.controlGap },
   trailing: { flexDirection: 'row', alignItems: 'center' },
-  remove: {
+  iconTarget: {
     width: minTouchTargetDp,
     height: minTouchTargetDp,
     alignItems: 'center',
@@ -128,7 +128,7 @@ function QueuedRow({ entry, index, count, onPlay }: QueuedRowProps) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Remove ${title} from Up next`}
-          style={styles.remove}
+          style={styles.iconTarget}
           onPress={remove}
         >
           <Icon name="close" size="transportSmall" color="text2" />
@@ -167,7 +167,7 @@ function SetlistRow({ entry, setlistName, onOpen }: SetlistRowProps) {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Skip ${title} this time`}
-            style={styles.remove}
+            style={styles.iconTarget}
             onPress={skip}
           >
             <Icon name="close" size="transportSmall" color="text2" />
@@ -184,22 +184,42 @@ interface UpNextListProps {
   readonly onPlay: (stemSetId: number) => void;
   readonly onOpen: (entry: SetlistEntry) => void;
   readonly onDone: () => void;
+  readonly onLeave: () => void;
 }
 
-function UpNextList({ onPlay, onOpen, onDone }: UpNextListProps) {
+function UpNextList({ onPlay, onOpen, onDone, onLeave }: UpNextListProps) {
   const styles = useStyles();
   const queue = usePlayOrder((s) => s.queue);
   const { stage, cursor, name } = useStage();
   const later = entriesAfter(stage, cursor);
+  const setlistHeader =
+    stage.setlistId === null ? null : (
+      <SectionHeader
+        label={`Then from ${name}`}
+        action={
+          <Button
+            variant="ghost"
+            size="target"
+            icon="close"
+            iconSize="caret"
+            label={QUEUE_TEXT.leaveSetlist}
+            onPress={onLeave}
+          />
+        }
+      />
+    );
   if (queue.length === 0 && later.length === 0)
     return (
-      <EmptyState
-        icon="playNext"
-        title="Nothing queued"
-        reason="Use Play next on a stem song to queue it here. When this song ends, playback stops."
-        actionLabel="Done"
-        onAction={onDone}
-      />
+      <>
+        {setlistHeader}
+        <EmptyState
+          icon="playNext"
+          title="Nothing queued"
+          reason="Use Play next on a stem song to queue it here. When this song ends, playback stops."
+          actionLabel="Done"
+          onAction={onDone}
+        />
+      </>
     );
   return (
     <>
@@ -219,9 +239,9 @@ function UpNextList({ onPlay, onOpen, onDone }: UpNextListProps) {
           </View>
         </>
       )}
+      {setlistHeader}
       {later.length === 0 ? null : (
         <>
-          <SectionHeader label={`Then from ${name}`} />
           <View style={styles.list}>
             {later.map((entry) => (
               <SetlistRow
@@ -279,14 +299,20 @@ export interface UpNextSheetProps extends PlayOrderRoutes {
   readonly visible: boolean;
   readonly bottomInset: number;
   readonly onDismiss: () => void;
-  readonly onLeftSetlist: (left: LeftSetlist, setlistName: string) => void;
+  readonly onLeftSetlist: (left: LeftSetlist) => void;
 }
 
 function useUpNextSheet(props: UpNextSheetProps) {
   const nav = usePlayOrderNav(props);
   const playQueued = usePlayOrder((s) => s.playQueued);
   const exit = useLeaveAfterClose(props, props.visible);
-  const { onDismiss } = props;
+  const leaveSetlist = useLibrary((s) => s.leaveSetlist);
+  const { onDismiss, onLeftSetlist } = props;
+  const leave = useCallback(() => {
+    void leaveSetlist().then((left) => {
+      if (left !== null) onLeftSetlist(left);
+    });
+  }, [leaveSetlist, onLeftSetlist]);
   const play = useCallback(
     (stemSetId: number) => {
       exit.leaveFor({ kind: 'stem', stemSetId });
@@ -303,7 +329,7 @@ function useUpNextSheet(props: UpNextSheetProps) {
     },
     [nav, exit, onDismiss],
   );
-  return { play, open, closed: exit.closed };
+  return { play, open, leave, closed: exit.closed };
 }
 
 export function UpNextSheet(props: UpNextSheetProps) {
@@ -311,16 +337,8 @@ export function UpNextSheet(props: UpNextSheetProps) {
   const { visible, bottomInset, onDismiss } = props;
   const [confirming, setConfirming] = useState(false);
   const queued = usePlayOrder((s) => s.queue.length > 0);
-  const { stage, cursor, name } = useStage();
-  const fromSetlist = entriesAfter(stage, cursor).length > 0;
-  const empty = !queued && !fromSetlist;
-  const leaveSetlist = useLibrary((s) => s.leaveSetlist);
-  const { onLeftSetlist } = props;
-  const leave = useCallback(() => {
-    void leaveSetlist().then((left) => {
-      if (left !== null) onLeftSetlist(left, name);
-    });
-  }, [leaveSetlist, onLeftSetlist, name]);
+  const { stage, cursor } = useStage();
+  const empty = !queued && entriesAfter(stage, cursor).length === 0;
   const sheet = useUpNextSheet(props);
   const shown: Shown = !visible ? null : confirming ? 'confirm' : 'list';
   const askClear = useCallback(() => {
@@ -345,7 +363,12 @@ export function UpNextSheet(props: UpNextSheetProps) {
       >
         <SectionHeader label="Now playing" />
         <NowPlaying />
-        <UpNextList onPlay={sheet.play} onOpen={sheet.open} onDone={dismiss} />
+        <UpNextList
+          onPlay={sheet.play}
+          onOpen={sheet.open}
+          onDone={dismiss}
+          onLeave={sheet.leave}
+        />
         {empty ? null : (
           <View style={styles.footer}>
             {queued ? (
@@ -355,14 +378,6 @@ export function UpNextSheet(props: UpNextSheetProps) {
                 icon="clearQueue"
                 label="Clear queue"
                 onPress={askClear}
-              />
-            ) : null}
-            {fromSetlist ? (
-              <Button
-                fill
-                variant="ghost"
-                label={QUEUE_TEXT.leaveSetlist}
-                onPress={leave}
               />
             ) : null}
             <Button fill variant="tonal" label="Done" onPress={dismiss} />

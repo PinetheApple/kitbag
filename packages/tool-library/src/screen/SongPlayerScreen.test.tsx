@@ -40,6 +40,9 @@ vi.mock('react-native', async () =>
   (await import('./SongPlayerScreen.mocks.test-helper.ts')).reactNativeMock(),
 );
 
+vi.mock('./EndedSetlistSnackbar.tsx', () => ({
+  EndedSetlistSnackbar: () => null,
+}));
 vi.mock('./SongClickChips.tsx', async () =>
   (await import('./SongPlayerScreen.mocks.test-helper.ts')).clickChipsMock(),
 );

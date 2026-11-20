@@ -1,7 +1,6 @@
 import {
-  leftSetlistText,
-  QUEUE_TEXT,
   SetlistPickerSheet,
+  useLeftSetlistNotice,
   useQueueNotices,
   type Notice,
   type SetlistPickerSheetProps,
@@ -12,8 +11,8 @@ import {
   useQueueRefresh,
   useQueueSong,
   useSetlistPicker,
+  useEndedSetlistNotice,
   useStemPlayer,
-  type LeftSetlist,
 } from '@kitbag/core-state';
 import { useCallback, useEffect } from 'react';
 
@@ -40,24 +39,6 @@ export function useCarriedSkipNotice(showMessage: (message: string) => void) {
   }, [carried, carrySkip, showMessage]);
 }
 
-function useLeftSetlistNotice(notice: Notice) {
-  const rejoinSetlist = useLibrary((s) => s.rejoinSetlist);
-  return useCallback(
-    (left: LeftSetlist, setlistName: string) => {
-      notice.show({
-        message: leftSetlistText(setlistName),
-        action: {
-          label: QUEUE_TEXT.undo,
-          onPress: () => {
-            void rejoinSetlist(left);
-          },
-        },
-      });
-    },
-    [notice, rejoinSetlist],
-  );
-}
-
 export function useQueueActions(
   notice: Notice,
   closeSheet: () => void,
@@ -75,6 +56,8 @@ export function useQueueActions(
     closeSheet();
     if (setId !== null) queueNext(setId);
   }, [closeSheet, setId, queueNext]);
-  const leftSetlist = useLeftSetlistNotice(notice);
+  const rejoinSetlist = useLibrary((s) => s.rejoinSetlist);
+  const leftSetlist = useLeftSetlistNotice(notice, rejoinSetlist);
+  useEndedSetlistNotice(leftSetlist);
   return { playNext, added, leftSetlist };
 }

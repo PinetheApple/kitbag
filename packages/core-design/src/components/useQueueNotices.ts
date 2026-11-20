@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 
-import { QUEUE_TEXT } from '../queueText.ts';
+import { leftSetlistNotice, QUEUE_TEXT } from '../queueText.ts';
 import {
   addedToSetlistNotice,
   type AddedToSetlist,
@@ -27,4 +27,19 @@ export function useQueueNotices(
     [notice, onOpenSetlist],
   );
   return useMemo(() => ({ playNext, added }), [playNext, added]);
+}
+
+export function useLeftSetlistNotice<
+  Left extends { readonly setlistName: string },
+>(notice: Notice, rejoin: (left: Left) => Promise<unknown>) {
+  return useCallback(
+    (left: Left) => {
+      notice.show(
+        leftSetlistNotice(left.setlistName, () => {
+          void rejoin(left);
+        }),
+      );
+    },
+    [notice, rejoin],
+  );
 }

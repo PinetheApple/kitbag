@@ -61,6 +61,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
   analysisFailure: () => null,
   rowFilesOf: () => null,
   useLibrary: () => () => undefined,
+  useStemPlayer: () => null,
 }));
 
 const { LibraryRowView } = await import('./LibraryRowView.tsx');

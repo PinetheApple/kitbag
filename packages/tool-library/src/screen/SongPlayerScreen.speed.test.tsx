@@ -13,6 +13,9 @@ import {
   transport,
 } from './SongPlayerScreen.mocks.test-helper.ts';
 
+vi.mock('./EndedSetlistSnackbar.tsx', () => ({
+  EndedSetlistSnackbar: () => null,
+}));
 vi.mock('react-native', async () =>
   (await import('./SongPlayerScreen.mocks.test-helper.ts')).reactNativeMock(),
 );

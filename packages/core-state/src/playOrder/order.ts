@@ -86,13 +86,18 @@ export function entriesAfter(
   if (next === undefined) return [];
   return stage.entries
     .slice(stage.entries.indexOf(next))
-    .filter((entry) => !stage.skipped.includes(entry.item.id));
+    .filter((entry) => !isSkipped(stage, entry));
+}
+
+function isSkipped({ skipped }: OnStage, entry: SetlistEntry): boolean {
+  return skipped.includes(entry.item.id);
 }
 
 function nextSetlistEntry(
-  { setlistId, entries, skipped }: OnStage,
+  stage: OnStage,
   cursor: SetlistCursor | null,
 ): SetlistEntry | undefined {
+  const { setlistId, entries } = stage;
   const after =
     setlistId === null || cursor?.setlistId !== setlistId
       ? entries[0]
@@ -100,7 +105,7 @@ function nextSetlistEntry(
   if (after === undefined) return undefined;
   return entries
     .slice(entries.indexOf(after))
-    .find((entry) => !skipped.includes(entry.item.id));
+    .find((entry) => !isSkipped(stage, entry));
 }
 
 export function upNext({

@@ -244,6 +244,7 @@ export {
   type TunerRuntime,
 } from './tuner/runtime.ts';
 export { useLibrary } from './library/useLibrary.ts';
+export { useEndedSetlistNotice } from './library/useEndedSetlistNotice.ts';
 export { setlistPicks, useSetlistPicker } from './library/setlistPicker.ts';
 export {
   createLibraryStore,
