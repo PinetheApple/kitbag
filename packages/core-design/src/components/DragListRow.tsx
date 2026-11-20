@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   type SharedValue,
@@ -24,6 +25,7 @@ import {
   usePlainRowStyles,
   type PlainListRowProps,
 } from './PlainListRow.tsx';
+import { useSheetContentLive } from './sheetContentLive.ts';
 
 const HANDLE_HIT_SLOP = { top: inset.rowV, bottom: inset.rowV };
 const DRAGGING_Z = 1;
@@ -73,10 +75,24 @@ export function useHandleDrag(reorder: DragReorder) {
   const offset = useSharedValue(0);
   const pitch = useSharedValue(0);
   const moved = useSharedValue(false);
+  const live = useSheetContentLive();
   const { index, count, onMove, onDragActive, group } = reorder;
   useLayoutEffect(() => {
     offset.value = 0;
   }, [index, offset]);
+  const settleRow = () => {
+    'worklet';
+    if (group !== undefined && moved.value) return;
+    offset.value = 0;
+    if (group !== undefined) group.from.value = NO_DRAG;
+  };
+  useAnimatedReaction(
+    () => live.value,
+    (now, previous) => {
+      if (!now || previous !== false) return;
+      settleRow();
+    },
+  );
   const pan = Gesture.Pan()
     .hitSlop(HANDLE_HIT_SLOP)
     .onBegin(() => {
@@ -84,12 +100,13 @@ export function useHandleDrag(reorder: DragReorder) {
       if (onDragActive !== undefined) scheduleOnRN(onDragActive, true);
     })
     .onStart(() => {
-      if (group === undefined) return;
+      if (group === undefined || !live.value) return;
       group.from.value = index;
       group.target.value = index;
       group.pitch.value = pitch.value;
     })
     .onUpdate((event) => {
+      if (!live.value) return;
       offset.value = event.translationY;
       if (group === undefined) return;
       group.target.value = reorderTarget(
@@ -113,9 +130,8 @@ export function useHandleDrag(reorder: DragReorder) {
     })
     .onFinalize(() => {
       if (onDragActive !== undefined) scheduleOnRN(onDragActive, false);
-      if (group !== undefined && moved.value) return;
-      offset.value = 0;
-      if (group !== undefined) group.from.value = NO_DRAG;
+      if (!live.value) return;
+      settleRow();
     });
   const style = useAnimatedStyle(() => ({
     transform: [{ translateY: offset.value }],
