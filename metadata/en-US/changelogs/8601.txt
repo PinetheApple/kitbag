@@ -1,0 +1,1 @@
+• Fixed: moving songs back from a returned SD card could fail for good after a song was re-analysed.
