@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { opacity } from '../roles.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { Chip } from './Chip.tsx';
+import { flatStyle } from './flatStyle.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: unknown };
 
@@ -25,8 +26,6 @@ vi.mock('react-native', async (original) => {
 
 vi.mock('./Icon.tsx', () => ({ Icon: () => null }));
 
-const { StyleSheet } = await import('react-native');
-
 function faceOpacity(muted: boolean): ViewStyle['opacity'] {
   faces.length = 0;
   renderToStaticMarkup(
@@ -34,7 +33,7 @@ function faceOpacity(muted: boolean): ViewStyle['opacity'] {
       <Chip label="Count-in" muted={muted} onPress={vi.fn()} />
     </ThemeProvider>,
   );
-  return StyleSheet.flatten(faces[0]?.style as StyleProp<ViewStyle>).opacity;
+  return flatStyle(faces[0]?.style as StyleProp<ViewStyle>).opacity;
 }
 
 describe('a muted chip', () => {

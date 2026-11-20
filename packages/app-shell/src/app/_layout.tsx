@@ -134,7 +134,9 @@ function ThemedRoot({ databaseError }: ThemedRootProps) {
 function AppStack({
   screenOptions,
 }: {
-  readonly screenOptions: ComponentProps<typeof Stack>['screenOptions'];
+  readonly screenOptions: NonNullable<
+    ComponentProps<typeof Stack>['screenOptions']
+  >;
 }) {
   useSongLibraryAnalysis();
   return (

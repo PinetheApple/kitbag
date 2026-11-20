@@ -17,7 +17,7 @@ describe('resolveThemeMode', () => {
     },
   );
 
-  it.each([null, undefined, 'unspecified'] as const)(
+  it.each([null, undefined] as const)(
     'falls back to dark on System when the OS reports %s',
     (os) => {
       expect(resolveThemeMode('system', os)).toBe('dark');

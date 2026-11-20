@@ -4,6 +4,7 @@ import type { StyleProp, TextStyle } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { textRoles } from '../roles.ts';
+import { flatStyle } from './flatStyle.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 type Layout = (event: { nativeEvent: { layout: { width: number } } }) => void;
@@ -51,7 +52,6 @@ vi.mock('react-native', async (original) => {
   };
 });
 
-const { StyleSheet } = await import('react-native');
 const { DesignFloorOneLineText } = await import('./DesignFloorOneLineText.tsx');
 
 const ROLE = textRoles.preset;
@@ -95,11 +95,11 @@ function shown(): Props | undefined {
 }
 
 function shownStyle(): TextStyle {
-  return StyleSheet.flatten(shown()?.style as StyleProp<TextStyle>);
+  return flatStyle(shown()?.style as StyleProp<TextStyle>);
 }
 
 function measurerStyle(): TextStyle {
-  return StyleSheet.flatten(measurer()?.style as StyleProp<TextStyle>);
+  return flatStyle(measurer()?.style as StyleProp<TextStyle>);
 }
 
 function settle(fontScale: number, ...widths: readonly number[]) {

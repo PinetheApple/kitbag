@@ -6,6 +6,7 @@ import { expect, it, vi } from 'vitest';
 import { opacity } from '../roles.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { TransportKey } from './TransportKey.tsx';
+import { flatStyle } from './flatStyle.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -25,8 +26,6 @@ vi.mock('react-native', async (original) => {
 
 vi.mock('./IconGlyph.tsx', () => ({ InlineIcon: () => null }));
 
-const { StyleSheet } = await import('react-native');
-
 function rendered(muted: boolean, disabled: boolean) {
   pressables.length = 0;
   renderToStaticMarkup(
@@ -44,7 +43,7 @@ function rendered(muted: boolean, disabled: boolean) {
   return {
     pressable: key?.disabled,
     announced: (key?.accessibilityState as { disabled: boolean }).disabled,
-    opacity: StyleSheet.flatten(key?.style as StyleProp<ViewStyle>).opacity,
+    opacity: flatStyle(key?.style as StyleProp<ViewStyle>).opacity,
   };
 }
 

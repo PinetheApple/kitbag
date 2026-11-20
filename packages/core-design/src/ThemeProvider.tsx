@@ -19,7 +19,9 @@ export function useTheme(): Theme {
   return themes[useContext(ThemeModeContext)];
 }
 
-export function createThemedStyles<T extends StyleSheet.NamedStyles<T>>(
+type NamedStyles = Parameters<typeof StyleSheet.create>[0];
+
+export function createThemedStyles<T extends NamedStyles>(
   factory: (theme: Theme) => T,
 ): () => T {
   const byMode = new Map<ThemeMode, T>();

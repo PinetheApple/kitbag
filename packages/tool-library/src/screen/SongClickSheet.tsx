@@ -20,7 +20,7 @@ import {
   type SoundRole,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState, type RefObject } from 'react';
-import { View } from 'react-native';
+import { View, type ViewInstance } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
 import { accentLedLabel, accentLedState } from '../logic/accentLeds.ts';
@@ -48,7 +48,7 @@ export type SongClickSheetState = ReturnType<typeof useSongClickSheet>;
 
 interface GroupHeaderProps {
   readonly label: string;
-  readonly headerRef: RefObject<View | null>;
+  readonly headerRef: RefObject<ViewInstance | null>;
 }
 
 function GroupHeader({ label, headerRef }: GroupHeaderProps) {
@@ -151,9 +151,9 @@ export function SongClickSheet({
   const handleSave = useCallback(() => {
     void save();
   }, [save]);
-  const countInRef = useRef<View>(null);
-  const soundRef = useRef<View>(null);
-  const accentsRef = useRef<View>(null);
+  const countInRef = useRef<ViewInstance>(null);
+  const soundRef = useRef<ViewInstance>(null);
+  const accentsRef = useRef<ViewInstance>(null);
   const focusRefs = {
     [CLICK_GROUP.countIn]: countInRef,
     [CLICK_GROUP.sound]: soundRef,

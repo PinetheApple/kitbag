@@ -3,11 +3,11 @@ import {
   PresetEditorScreen,
 } from '@kitbag/tool-metronome';
 import {
+  useLocalSearchParams,
   useNavigation,
   usePreventRemove,
   type NavigationAction,
-} from '@react-navigation/native';
-import { useLocalSearchParams } from 'expo-router';
+} from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 

@@ -22,12 +22,13 @@ import {
 } from '@kitbag/core-state';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
+  type LayoutChangeEvent,
   Pressable,
   ScrollView,
+  type ScrollViewInstance,
   Text,
   useWindowDimensions,
   View,
-  type LayoutChangeEvent,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -216,7 +217,7 @@ export function SectionCards({
   const reduceMotion = useReduceMotion();
   const current = useCrossedIndex(songSec, sections, sectionAt, NO_SECTION);
   const width = sectionCardWidth(fontScale);
-  const list = useRef<ScrollView>(null);
+  const list = useRef<ScrollViewInstance>(null);
   const [viewport, setViewport] = useState(0);
   const onLayout = useCallback((event: LayoutChangeEvent) => {
     setViewport(event.nativeEvent.layout.width);

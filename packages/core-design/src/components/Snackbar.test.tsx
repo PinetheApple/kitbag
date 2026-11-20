@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { snackbar } from '../snackbarRoles.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { Snackbar, type SnackbarProps } from './Snackbar.tsx';
+import { flatStyle } from './flatStyle.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -23,8 +24,6 @@ vi.mock('react-native', async (original) => {
   };
 });
 
-const { StyleSheet } = await import('react-native');
-
 const FLOATING_BOTTOM = 96;
 
 function barStyle(placement: Pick<SnackbarProps, 'bottom' | 'inline'>) {
@@ -38,7 +37,7 @@ function barStyle(placement: Pick<SnackbarProps, 'bottom' | 'inline'>) {
       />
     </ThemeProvider>,
   );
-  return StyleSheet.flatten(bars[0]?.style as StyleProp<ViewStyle>);
+  return flatStyle(bars[0]?.style as StyleProp<ViewStyle>);
 }
 
 describe('Snackbar placement', () => {

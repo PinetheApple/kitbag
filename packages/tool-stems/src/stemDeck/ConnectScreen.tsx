@@ -5,7 +5,7 @@ import {
   type StemDeckStore,
 } from '@kitbag/core-state';
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
-import { ScrollView, Text, View, type TextInput } from 'react-native';
+import { ScrollView, Text, type TextInputInstance, View } from 'react-native';
 
 import { AddressField } from './AddressField.tsx';
 import {
@@ -34,7 +34,7 @@ export interface ConnectScreenProps {
   readonly onExplainCamera: () => void;
 }
 
-function useAddressFocus(input: RefObject<TextInput | null>) {
+function useAddressFocus(input: RefObject<TextInputInstance | null>) {
   const addressFocus = useStemDeck((s) => s.addressFocus);
   const seen = useRef(addressFocus);
   useEffect(() => {
@@ -110,7 +110,7 @@ function ConnectFailure() {
 function AddressRow({
   input,
 }: {
-  readonly input: RefObject<TextInput | null>;
+  readonly input: RefObject<TextInputInstance | null>;
 }) {
   const styles = useStemDeckStyles();
   const address = useStemDeck((s) => s.address);
@@ -154,7 +154,7 @@ export function ConnectScreen({
 }: ConnectScreenProps) {
   const styles = useStemDeckStyles();
   const connect = useStemDeck((s) => s.connect);
-  const input = useRef<TextInput>(null);
+  const input = useRef<TextInputInstance>(null);
   useEntry(onConnected);
   useAddressFocus(input);
   const connectTo = useCallback(

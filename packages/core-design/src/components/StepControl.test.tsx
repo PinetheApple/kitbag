@@ -7,6 +7,7 @@ import { space } from '../roles.ts';
 import { themes } from '../theme.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { StepControl } from './StepControl.tsx';
+import { flatStyle } from './flatStyle.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -36,8 +37,6 @@ vi.mock('react-native', async (original) => {
 
 vi.mock('./IconGlyph.tsx', () => ({ InlineIcon: () => null }));
 
-const { StyleSheet } = await import('react-native');
-
 function suffixGapAt(fontScale: number): unknown {
   display.fontScale = fontScale;
   suffixes.length = 0;
@@ -53,8 +52,7 @@ function suffixGapAt(fontScale: number): unknown {
       />
     </ThemeProvider>,
   );
-  return StyleSheet.flatten(suffixes[0]?.style as StyleProp<TextStyle>)
-    .marginLeft;
+  return flatStyle(suffixes[0]?.style as StyleProp<TextStyle>).marginLeft;
 }
 
 describe('StepControl suffix under font scale', () => {
@@ -81,7 +79,7 @@ describe('StepControl accented inline', () => {
         />
       </ThemeProvider>,
     );
-    return StyleSheet.flatten(views[0]?.style as StyleProp<ViewStyle>);
+    return flatStyle(views[0]?.style as StyleProp<ViewStyle>);
   }
 
   it('takes the active fill and border only when accented', () => {
