@@ -56,10 +56,10 @@ vi.mock('@kitbag/core-state', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   useSongLibrary: (select: (state: unknown) => unknown) =>
     select({ codes: {}, replacePrompt: null }),
-  useQueueSong: (readQueue: boolean) => {
-    queue.reads.push(readQueue);
-    return queue.queueSong;
+  useQueueRefresh: (enabled: boolean) => {
+    queue.reads.push(enabled);
   },
+  useQueueSong: () => queue.queueSong,
   useIsQueued: (stemSetId: number | null) =>
     stemSetId !== null && shown.queue.includes(stemSetId),
   useSetlistPicker: () => ({
@@ -268,7 +268,7 @@ describe('the actions sheet of a stem song', () => {
     const { tree } = openStemRow('present', [NIGHT_BUS]);
     expect(button(tree, 'In Up next').props).toMatchObject({
       disabled: true,
-      fadedWhenDisabled: true,
+      disabledLook: 'faded',
     });
   });
 

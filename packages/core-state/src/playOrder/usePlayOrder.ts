@@ -19,15 +19,18 @@ export function usePlayOrder<T>(selector: (state: PlayOrderStore) => T): T {
 const QUEUE_READ_FAILED = '[kitbag] play queue read failed';
 const QUEUE_ADD_FAILED = '[kitbag] play queue add failed';
 
-export function useQueueSong(readQueue: boolean) {
-  const enqueue = usePlayOrder((s) => s.enqueue);
+export function useQueueRefresh(enabled: boolean) {
   const refresh = usePlayOrder((s) => s.refresh);
   useEffect(() => {
-    if (!readQueue) return;
+    if (!enabled) return;
     refresh().catch((error: unknown) => {
       console.warn(QUEUE_READ_FAILED, error);
     });
-  }, [readQueue, refresh]);
+  }, [enabled, refresh]);
+}
+
+export function useQueueSong() {
+  const enqueue = usePlayOrder((s) => s.enqueue);
   return useCallback(
     (stemSetId: number) =>
       enqueue(stemSetId).then(

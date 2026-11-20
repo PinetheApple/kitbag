@@ -7,6 +7,7 @@ import {
 import {
   SKIPPED_STEM_SONG,
   useLibrary,
+  useQueueRefresh,
   useQueueSong,
   useSetlistPicker,
   useStemPlayer,
@@ -42,9 +43,11 @@ export function useQueueActions(
   onOpenSetlist: (setlistId: number) => void,
 ) {
   const setId = useStemPlayer((s) => s.setId);
+  useQueueRefresh(true);
+  const queueSong = useQueueSong();
   const { playNext: queueNext, added } = useQueueNotices(
     notice,
-    useQueueSong(true),
+    queueSong,
     onOpenSetlist,
   );
   const playNext = useCallback(() => {

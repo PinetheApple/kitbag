@@ -1,14 +1,7 @@
 import { countLabel } from './countLabel.ts';
 import type { NoticeContent } from './components/useNotice.ts';
+import { QUEUE_TEXT } from './queueText.ts';
 import { FACT_SEPARATOR } from './separator.ts';
-
-export const QUEUE_TEXT = {
-  playNext: 'Play next',
-  inUpNext: 'In Up next',
-  addToSetlist: 'Add to setlist',
-  addedToUpNext: 'Added to Up next',
-  openSetlist: 'Open',
-} as const;
 
 export interface AddedToSetlist {
   readonly setlistId: number;

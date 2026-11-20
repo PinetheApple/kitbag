@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from 'react';
 
+import { QUEUE_TEXT } from '../queueText.ts';
 import {
   addedToSetlistNotice,
-  QUEUE_TEXT,
   type AddedToSetlist,
 } from '../setlistPickText.ts';
 import type { Notice } from './useNotice.ts';

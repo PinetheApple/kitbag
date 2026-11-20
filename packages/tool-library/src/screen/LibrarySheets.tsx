@@ -17,6 +17,7 @@ import {
   cleanName,
   REPLACE_LABELS,
   useIsQueued,
+  useQueueRefresh,
   useQueueSong,
   useSetlistPicker,
   useSongLibrary,
@@ -117,7 +118,7 @@ function QueueButtons({
         align="start"
         variant="tonal"
         disabled={queued}
-        fadedWhenDisabled
+        disabledLook="faded"
         onPress={onPlayNext}
       />
       <Button
@@ -356,7 +357,9 @@ export function LibrarySheets({
   ...props
 }: LibrarySheetsProps) {
   const notice = useNotice();
-  const queue = useQueueNotices(notice, useQueueSong(stemRows), onOpenSetlist);
+  useQueueRefresh(stemRows);
+  const queueSong = useQueueSong();
+  const queue = useQueueNotices(notice, queueSong, onOpenSetlist);
   return (
     <>
       <ActionsSheet {...props} onPlayNext={queue.playNext} />

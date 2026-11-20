@@ -26,6 +26,7 @@ import { InlineIcon } from './IconGlyph.tsx';
 
 export type ButtonVariant = 'primary' | 'tonal' | 'ghost' | 'destructive';
 export type ButtonAlign = 'center' | 'start';
+export type ButtonDisabledLook = 'cleared' | 'outlined' | 'faded';
 export type ButtonSize =
   'default' | 'sheet' | 'prompt' | 'target' | 'small' | 'bar';
 
@@ -59,8 +60,7 @@ export interface ButtonProps {
   readonly iconSize?: IconSize;
   readonly iconTone?: 'label' | 'accent';
   readonly disabled?: boolean;
-  readonly outlinedWhenDisabled?: boolean;
-  readonly fadedWhenDisabled?: boolean;
+  readonly disabledLook?: ButtonDisabledLook;
   readonly align?: ButtonAlign;
   readonly fill?: boolean;
   readonly accessibilityLabel?: string;
@@ -183,8 +183,7 @@ export function Button({
   iconSize,
   iconTone = 'label',
   disabled = false,
-  outlinedWhenDisabled = false,
-  fadedWhenDisabled = false,
+  disabledLook = 'cleared',
   align = 'center',
   fill = false,
   accessibilityLabel,
@@ -192,7 +191,8 @@ export function Button({
   size: buttonSize = 'default',
 }: ButtonProps) {
   const styles = useStyles();
-  const cleared = disabled && !fadedWhenDisabled;
+  const faded = disabled && disabledLook === 'faded';
+  const cleared = disabled && !faded;
   const labelStyle = cleared ? styles.disabledLabel : styles[`${variant}Label`];
   return (
     <Pressable
@@ -214,8 +214,8 @@ export function Button({
           fill && styles.fillFace,
           align === 'start' && styles.start,
           cleared && styles.disabled,
-          cleared && outlinedWhenDisabled && styles.disabledOutline,
-          disabled && fadedWhenDisabled && styles.faded,
+          cleared && disabledLook === 'outlined' && styles.disabledOutline,
+          faded && styles.faded,
         ]}
       >
         {icon === undefined ? null : (

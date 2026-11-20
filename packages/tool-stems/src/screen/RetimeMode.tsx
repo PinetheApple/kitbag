@@ -288,7 +288,7 @@ function RetimeControls({
           iconSize="lyricsChip"
           label="Undo tap"
           disabled={retime.taps.length === 0}
-          outlinedWhenDisabled
+          disabledLook="outlined"
           onPress={undoRetimeTap}
         />
       </View>

@@ -72,7 +72,7 @@ describe('Button opt-in looks', () => {
 
   it('fades a disabled tonal button instead of clearing its fill', () => {
     const enabled = drawButton({});
-    const faded = drawButton({ disabled: true, fadedWhenDisabled: true });
+    const faded = drawButton({ disabled: true, disabledLook: 'faded' });
     expect(faded.face.backgroundColor).toBe(enabled.face.backgroundColor);
     expect(faded.face.borderColor).toBe(enabled.face.borderColor);
     expect(faded.face.opacity).toBe(opacity.muted);
