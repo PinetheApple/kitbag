@@ -1,5 +1,5 @@
 appId: com.kitbag.app
-name: '#382: a stem song that plays to its end opens and plays the next one in the setlist; the last one stops'
+name: '#382: a stem song that plays to its end opens and plays the next one; at a metronome song it stops and offers Open, with no click'
 tags:
   - issue-382
 env:
@@ -25,20 +25,38 @@ env:
       STEM_SONG: ${FIXTURE_STEMS_NO_GRID}
 - back
 - runFlow: ../../subflows/open-metronome-first-time.yaml
+- runFlow:
+    file: ../../subflows/set-tempo.yaml
+    env:
+      BPM: 120
 - tapOn: 'Setlists'
 - tapOn: '${SETLIST}, .*'
+- runFlow:
+    file: ../../subflows/add-new-song-to-setlist.yaml
+    env:
+      BPM: 120
+- assertVisible: '3\. New song, 120 · .*'
 - tapOn: 'Play from 1'
 - extendedWaitUntil:
-    visible: 'Up next: ${FIXTURE_STEMS_NO_GRID}, ${SETLIST} · 2 of 2'
+    visible: 'Up next: ${FIXTURE_STEMS_NO_GRID}, ${SETLIST} · 2 of 3'
     timeout: 20000
 - tapOn: 'Play'
 - extendedWaitUntil:
-    visible: 'Playing ${FIXTURE_STEMS_NO_GRID} · 2 of 2'
+    visible: 'Playing ${FIXTURE_STEMS_NO_GRID} · 2 of 3'
     timeout: 30000
+- assertVisible: '${FIXTURE_STEMS_NO_GRID}'
+- assertNotVisible: '${FIXTURE_STEMS}'
 - assertVisible: 'Pause'
-- assertNotVisible: 'Up next: .*'
+- assertVisible: 'Up next: New song, ${SETLIST} · 3 of 3 · metronome'
+- assertVisible: 'Open'
 - extendedWaitUntil:
     visible: 'Play'
     timeout: 30000
-- assertNotVisible: 'Up next: .*'
-- assertNotVisible: 'Playing .*'
+- assertVisible: '${FIXTURE_STEMS_NO_GRID}'
+- assertVisible: 'Up next: New song, ${SETLIST} · 3 of 3 · metronome'
+- tapOn: 'Open'
+- extendedWaitUntil:
+    visible: 'New song, Setlist ${SETLIST}, song 3 of 3'
+    timeout: 10000
+- assertVisible: 'Play'
+- assertNotVisible: 'Stop'
