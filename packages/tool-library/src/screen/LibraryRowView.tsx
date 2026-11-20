@@ -14,6 +14,7 @@ import {
   opacity,
   size,
   space,
+  textIconScale,
   textRoles,
   textStyle,
   unshared,
@@ -36,6 +37,7 @@ import {
   playingSubtitle,
   rowBadges,
   rowSubtitle,
+  showsGridIcon,
   spokenRow,
   type RowPlace,
 } from '../logic/rowText.ts';
@@ -209,20 +211,31 @@ export function LibraryRowView({
     onOpenSong,
     row,
   ]);
-  const badges = (
-    <View style={[styles.badges, badgesUnderText && styles.badgesUnderText]}>
-      {rowBadges(row, status, place).map((badge) => (
-        <Badge
-          key={badge.key}
-          variant="list"
-          label={badge.label}
-          tone={badge.tone}
-          {...(badge.icon === undefined ? {} : { icon: badge.icon })}
-          accessibilityLabel={badge.spoken}
-        />
-      ))}
-    </View>
-  );
+  const shownBadges = rowBadges(row, status, place);
+  const gridIcon = showsGridIcon(row, place);
+  const badges =
+    shownBadges.length > 0 || gridIcon ? (
+      <View style={[styles.badges, badgesUnderText && styles.badgesUnderText]}>
+        {shownBadges.map((badge) => (
+          <Badge
+            key={badge.key}
+            variant="list"
+            label={badge.label}
+            tone={badge.tone}
+            {...(badge.icon === undefined ? {} : { icon: badge.icon })}
+            accessibilityLabel={badge.spoken}
+          />
+        ))}
+        {gridIcon && (
+          <Icon
+            name="beatGrid"
+            size="listBadge"
+            color="greenInk"
+            scale={textIconScale(fontScale)}
+          />
+        )}
+      </View>
+    ) : null;
   return (
     <View style={[styles.row, selected && styles.selected]}>
       <Pressable

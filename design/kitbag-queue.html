@@ -176,6 +176,7 @@ svg.i{fill:currentColor;display:block;flex:none}
 .sr .tl span{font-size:12.5px;font-variant-numeric:tabular-nums}
 .sr.now .tl b{color:var(--ink)}
 .sr .bd{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
+.sr .bd.gi{color:var(--grn)}
 .list{display:flex;flex-direction:column;margin:0 -16px}
 .bdg{font:600 10.5px/1 'Space Grotesk';letter-spacing:.06em;border-radius:6px;padding:4px 7px;border:1px solid var(--line);color:var(--tx2);background:var(--s1);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
 .bdg.ok{color:var(--grn);border-color:color-mix(in srgb,var(--grn) 45%,var(--line))}
@@ -357,7 +358,7 @@ function mini(o={}){
 }
 function listRow(k,o={}){
   const s=SONGS[k];
-  return `<div class="sr${o.now?' now':''}"><span class="ti">${ic('tune-vertical',22)}</span><div class="tl"><b>${s.t}</b><span>${o.now?'Playing · ':''}${s.f}</span></div><div class="bd"><span class="bdg st">STEMS ×${s.n}</span><span class="bdg ok">${ic('grid',12)}GRID</span></div><span class="more t">${ic('dots-vertical')}</span></div>`;
+  return `<div class="sr${o.now?' now':''}"><span class="ti">${ic('tune-vertical',22)}</span><div class="tl"><b>${s.t}</b><span>${o.now?'Playing · ':''}${s.f}</span></div>${s.grid===false?'':`<div class="bd gi">${ic('grid',12)}</div>`}<span class="more t">${ic('dots-vertical')}</span></div>`;
 }
 function listScreen(o={}){
   const count=o.count===undefined?3:o.count;

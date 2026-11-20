@@ -41,14 +41,6 @@ export interface BadgeSpec {
   readonly icon?: IconName;
 }
 
-const GRID_BADGE: BadgeSpec = {
-  key: 'status',
-  label: 'GRID',
-  icon: 'check',
-  spoken: 'Beat grid ready',
-  tone: 'success',
-};
-
 const STATUS_BADGES: Readonly<Record<SongBadge, BadgeSpec>> = {
   pending: {
     key: 'status',
@@ -63,7 +55,13 @@ const STATUS_BADGES: Readonly<Record<SongBadge, BadgeSpec>> = {
     spoken: 'Analyzing',
     tone: 'warning',
   },
-  grid: GRID_BADGE,
+  grid: {
+    key: 'status',
+    label: 'GRID',
+    icon: 'check',
+    spoken: 'Beat grid ready',
+    tone: 'success',
+  },
   noGrid: {
     key: 'status',
     label: 'NO GRID',
@@ -107,26 +105,31 @@ export function songStatusBadge(badge: SongBadge): BadgeSpec {
   return STATUS_BADGES[badge];
 }
 
-function statusBadges(row: LibraryRow, status: SongBadge): BadgeSpec[] {
-  if (row.kind === 'song') return [STATUS_BADGES[status]];
-  return row.hasGrid ? [GRID_BADGE] : [];
-}
-
 export function rowBadges(
   row: LibraryRow,
   status: SongBadge,
   place: RowPlace = 'here',
 ): BadgeSpec[] {
-  const shown =
-    place === 'here' ? statusBadges(row, status) : [PLACE_BADGES[place]];
-  if (row.kind === 'song') return shown;
-  const stems: BadgeSpec = {
-    key: 'stems',
-    label: `STEMS ×${String(row.stemCount)}`,
-    spoken: countLabel(row.stemCount, 'stem', 'stems'),
-    tone: 'accent',
-  };
-  return [stems, ...shown];
+  if (place !== 'here') return [PLACE_BADGES[place]];
+  return row.kind === 'song' ? [STATUS_BADGES[status]] : [];
+}
+
+function stemsHere(row: LibraryRow, place: RowPlace): boolean {
+  return row.kind === 'stems' && place === 'here';
+}
+
+export function showsGridIcon(row: LibraryRow, place: RowPlace): boolean {
+  return stemsHere(row, place) && row.hasGrid;
+}
+
+function spokenStatus(
+  row: LibraryRow,
+  status: SongBadge,
+  place: RowPlace,
+): string[] {
+  if (!stemsHere(row, place))
+    return rowBadges(row, status, place).map((badge) => badge.spoken);
+  return [STATUS_BADGES[showsGridIcon(row, place) ? 'grid' : 'noGrid'].spoken];
 }
 
 function rowFacts(row: LibraryRow): SongFact[] {
@@ -173,7 +176,7 @@ export function spokenRow(
   if (row.durationSec > 0) parts.push(spokenLength(row.durationSec));
   if (row.kind === 'stems' || STATUS_NOTES[status] === undefined)
     parts.push(...rowFacts(row).map((fact) => fact.spoken));
-  parts.push(...rowBadges(row, status, place).map((badge) => badge.spoken));
+  parts.push(...spokenStatus(row, status, place));
   if (failureStatus !== null) parts.push(failureStatus);
   return parts.join(', ');
 }

@@ -13,6 +13,7 @@ import {
   rowBadges,
   rowSubtitle,
   type RowPlace,
+  showsGridIcon,
   spokenLength,
   spokenRow,
 } from './rowText.ts';
@@ -142,14 +143,16 @@ describe('row badges', () => {
     expect(labels(SONG, status)).toEqual(expected);
   });
 
-  it('puts the stem count above the grid on a stem song', () => {
-    expect(labels(STEMS, 'grid')).toEqual([
-      ['STEMS ×6', undefined, 'accent'],
-      ['GRID', 'check', 'success'],
-    ]);
-    expect(labels(BARE_STEMS, 'noGrid')).toEqual([
-      ['STEMS ×6', undefined, 'accent'],
-    ]);
+  it('gives a stem song no pill, neither its stem count nor its grid', () => {
+    expect(labels(STEMS, 'grid')).toEqual([]);
+    expect(labels(BARE_STEMS, 'noGrid')).toEqual([]);
+  });
+
+  it('marks only a stem song that has a grid and is here with the grid icon', () => {
+    expect(showsGridIcon(STEMS, 'here')).toBe(true);
+    expect(showsGridIcon(BARE_STEMS, 'here')).toBe(false);
+    expect(showsGridIcon(STEMS, 'unavailable')).toBe(false);
+    expect(showsGridIcon(SONG, 'here')).toBe(false);
   });
 });
 
@@ -160,16 +163,19 @@ describe('spoken row', () => {
     );
   });
 
-  it('speaks a stem song with its key and stem count', () => {
+  it('speaks a stem song with its key and whether it has a grid', () => {
     expect(spokenRow(STEMS, 'grid', null)).toBe(
-      'Redbone, 5 minutes 26 seconds, 81 beats per minute, key F major, 6 stems, Beat grid ready',
+      'Redbone, 5 minutes 26 seconds, 81 beats per minute, key F major, Beat grid ready',
+    );
+    expect(spokenRow(BARE_STEMS, 'noGrid', null)).toBe(
+      'Redbone, 5 minutes 26 seconds, No beat grid found',
     );
   });
 
   it('speaks the artist of a stem song that has one, and keeps it off the facts line', () => {
     const named: LibraryStemSetRow = { ...STEMS, artist: 'Childish Gambino' };
     expect(spokenRow(named, 'grid', null)).toBe(
-      'Redbone, Childish Gambino, 5 minutes 26 seconds, 81 beats per minute, key F major, 6 stems, Beat grid ready',
+      'Redbone, Childish Gambino, 5 minutes 26 seconds, 81 beats per minute, key F major, Beat grid ready',
     );
     expect(rowSubtitle(named, 'grid', null)).toBe('5:26 · 81 BPM · F maj');
   });
@@ -216,11 +222,8 @@ describe('rows away from the data folder', () => {
     expect(placeLabels(SONG, 'unavailable')).toEqual([['NO CARD', 'danger']]);
   });
 
-  it('keeps a stem song’s stem count beside its place', () => {
-    expect(placeLabels(STEMS, 'unavailable')).toEqual([
-      ['STEMS ×6', 'accent'],
-      ['NO CARD', 'danger'],
-    ]);
+  it('shows only the place of a stem song away from the folder', () => {
+    expect(placeLabels(STEMS, 'unavailable')).toEqual([['NO CARD', 'danger']]);
   });
 
   it('says why a row on a missing card can’t play', () => {
