@@ -60,6 +60,8 @@ vi.mock('@kitbag/core-state', async (original) => ({
   songBadge: () => 'grid',
   analysisFailure: () => null,
   rowFilesOf: () => null,
+  useLibrary: () => () => undefined,
+  useStemPlayer: () => null,
 }));
 
 const { LibraryRowView } = await import('./LibraryRowView.tsx');

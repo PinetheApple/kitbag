@@ -23,8 +23,9 @@ const metronome = (itemId: number) =>
 const gig: OnStage = {
   setlistId: SETLIST_ID,
   entries: [stem(1), metronome(2), stem(3)],
+  skipped: [],
 };
-const alone: OnStage = { setlistId: null, entries: [] };
+const alone: OnStage = { setlistId: null, entries: [], skipped: [] };
 const queued: PlayQueueEntry[] = [
   { id: 1, stemSetId: QUEUED_SET_ID, position: 0 },
 ];

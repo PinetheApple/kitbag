@@ -82,7 +82,7 @@ export async function setup(
     onStage = itemId;
     moves++;
   };
-  const stage = () => ({ setlistId: gig.id, entries });
+  const stage = () => ({ setlistId: gig.id, entries, skipped: [] });
   const order = createPlayOrderStore({
     queue: () => queue,
     stage,

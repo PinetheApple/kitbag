@@ -94,9 +94,13 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const BALLAD_UP_NEXT = 'Up next: Ballad, Gig · 1 of 1 · metronome';
+const NIGHT_BUS_UP_NEXT = 'Up next: Night Bus, Queued';
+
 function metronomeEntryOnStage() {
   const loadSong = vi.fn(() => Promise.resolve());
   libraryStore.setState({
+    session: { setlistId: GIG, skipped: [] },
     setlists: [
       {
         setlist: { id: GIG, name: 'Gig', active: true },
@@ -295,7 +299,7 @@ describe('a metronome entry up next', () => {
   it('opens in the metronome from the Up next sheet without starting the click', async () => {
     const { loadSong, start } = metronomeEntryOnStage();
     const p = await withQueue();
-    await p.press('Up next: Ballad, Gig · 1 of 1 · metronome');
+    await p.press(BALLAD_UP_NEXT);
     await p.press('Ballad, from Gig');
     await flush();
     p.frames(0, 4);
@@ -303,6 +307,75 @@ describe('a metronome entry up next', () => {
     expect(loadSong).toHaveBeenCalledWith(BALLAD_PRESET, BALLAD_ITEM, GIG);
     expect(p.routes.onOpenMetronome).toHaveBeenCalledOnce();
     expect(start).not.toHaveBeenCalled();
+  });
+});
+
+describe('the setlist part of Up next', () => {
+  it('is absent for a setlist pinned before this session started', async () => {
+    metronomeEntryOnStage();
+    libraryStore.setState({ session: null });
+    const p = await withQueue();
+    expect(p.has('Up next')).toBe(false);
+  });
+
+  it('skips an entry this time from the sheet', async () => {
+    metronomeEntryOnStage();
+    const p = await withQueue(NIGHT_BUS);
+    await p.press(NIGHT_BUS_UP_NEXT);
+    await p.press('Skip Ballad this time');
+    await flush();
+    expect(libraryStore.getState().session?.skipped).toEqual([BALLAD_ITEM]);
+    expect(p.has('Ballad, from Gig')).toBe(false);
+  });
+
+  it('leaves the setlist from the sheet, and Undo rejoins it', async () => {
+    metronomeEntryOnStage();
+    const left = {
+      setlistId: GIG,
+      setlistName: 'Gig',
+      restores: {
+        session: { setlistId: GIG, skipped: [] },
+        loaded: null,
+        played: [],
+        discarded: null,
+      },
+      leftAs: { session: null, loaded: null },
+    };
+    const leaveSetlist = vi.fn(() => {
+      libraryStore.setState({ session: null });
+      return Promise.resolve(left);
+    });
+    const rejoinSetlist = vi.fn(() => Promise.resolve(true));
+    libraryStore.setState({ leaveSetlist, rejoinSetlist });
+    const p = await withQueue();
+    await p.press(BALLAD_UP_NEXT);
+    await p.press('Leave setlist');
+    await flush();
+    expect(leaveSetlist).toHaveBeenCalledOnce();
+    expect(p.has('Left Gig')).toBe(true);
+    await p.press('Undo');
+    expect(rejoinSetlist).toHaveBeenCalledWith(left);
+  });
+
+  it('offers Leave setlist while the setlist is running, even with nothing after this song', async () => {
+    metronomeEntryOnStage();
+    libraryStore.getState().skipSetlistEntry(BALLAD_ITEM);
+    const p = await withQueue(NIGHT_BUS);
+    await p.press(NIGHT_BUS_UP_NEXT);
+    expect(p.has('Ballad, from Gig')).toBe(false);
+    expect(p.has('Leave setlist')).toBe(true);
+  });
+
+  it('says which setlist a list start ended, with Undo', async () => {
+    metronomeEntryOnStage();
+    const rejoinSetlist = vi.fn(() => Promise.resolve(true));
+    libraryStore.setState({ rejoinSetlist });
+    libraryStore.getState().endSetlistSession();
+    const p = await withQueue();
+    expect(p.has('Left Gig')).toBe(true);
+    expect(libraryStore.getState().endedSetlist).toBeNull();
+    await p.press('Undo');
+    expect(rejoinSetlist).toHaveBeenCalledOnce();
   });
 });
 

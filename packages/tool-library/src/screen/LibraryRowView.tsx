@@ -19,7 +19,13 @@ import {
   useTheme,
   withAlpha,
 } from '@kitbag/core-design';
-import { songBadge, type LibraryRow, type SongBadge } from '@kitbag/core-state';
+import {
+  songBadge,
+  useLibrary,
+  useStemPlayer,
+  type LibraryRow,
+  type SongBadge,
+} from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Pressable, useWindowDimensions, View } from 'react-native';
 
@@ -166,14 +172,31 @@ export function LibraryRowView({
   const failure = useRowFailure(row);
   const place = useRowPlace(row, moving);
   const away = place === 'unavailable';
+  const endSetlistSession = useLibrary((s) => s.endSetlistSession);
+  const openStemSetId = useStemPlayer((s) =>
+    s.status === 'ready' ? s.setId : null,
+  );
   const openActions = useCallback(() => {
     onActions(row);
   }, [onActions, row]);
   const open = useCallback(() => {
-    if (away) onUnavailable(row);
-    else if (row.kind === 'stems') onOpenStemSet(row.id);
+    if (away) {
+      onUnavailable(row);
+      return;
+    }
+    const reopens = row.kind === 'stems' && row.id === openStemSetId;
+    endSetlistSession(reopens ? row.id : undefined);
+    if (row.kind === 'stems') onOpenStemSet(row.id);
     else onOpenSong(row.id);
-  }, [away, onUnavailable, onOpenStemSet, onOpenSong, row]);
+  }, [
+    away,
+    endSetlistSession,
+    openStemSetId,
+    onUnavailable,
+    onOpenStemSet,
+    onOpenSong,
+    row,
+  ]);
   const badges = (
     <View style={[styles.badges, badgesUnderText && styles.badgesUnderText]}>
       {rowBadges(row, status, place).map((badge) => (

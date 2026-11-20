@@ -244,6 +244,7 @@ export {
   type TunerRuntime,
 } from './tuner/runtime.ts';
 export { useLibrary } from './library/useLibrary.ts';
+export { useEndedSetlistNotice } from './library/useEndedSetlistNotice.ts';
 export { setlistPicks, useSetlistPicker } from './library/setlistPicker.ts';
 export {
   createLibraryStore,
@@ -251,12 +252,14 @@ export {
   loadedBaselineOf,
   loadedPresetOf,
   type DiscardedChanges,
+  type LeftSetlist,
   type LibraryStore,
   type LoadedPreset,
   type LoadedSong,
   type LoadedStem,
   type PresetEdit,
   type PresetOverlay,
+  type SetlistSession,
   type SongStepResult,
   type SearchResults,
 } from './library/store.ts';

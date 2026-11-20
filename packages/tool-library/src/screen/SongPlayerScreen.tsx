@@ -43,6 +43,7 @@ import { songTitle } from '../logic/songTitle.ts';
 import { REANALYZE_LABEL } from '../logic/viewText.ts';
 import { frameAtTap } from '../logic/waveSeek.ts';
 import type { UsePlayhead } from './playhead.ts';
+import { EndedSetlistSnackbar } from './EndedSetlistSnackbar.tsx';
 import { SongClickChips } from './SongClickChips.tsx';
 import {
   SongClickSheet,
@@ -369,6 +370,7 @@ export function SongPlayerScreen({
         onTempoCorrection={openTempo}
         onCountIn={openCountIn}
       />
+      <EndedSetlistSnackbar />
     </View>
   );
 }

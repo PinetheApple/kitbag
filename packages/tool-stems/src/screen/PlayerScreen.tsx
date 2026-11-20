@@ -55,7 +55,7 @@ import { WAVEFORM_BARS } from './StemRowView.tsx';
 import { StemTransport } from './StemTransport.tsx';
 import { TempoSheet } from './TempoSheet.tsx';
 import { UpNextRow } from './UpNextRow.tsx';
-import { UpNextSheet } from './UpNextSheet.tsx';
+import { UpNextSheet, type UpNextSheetProps } from './UpNextSheet.tsx';
 import { usePlayerRoutes } from './playerRoutes.ts';
 import {
   clickSectionOf,
@@ -331,6 +331,7 @@ interface PlayerSheetsProps {
   readonly onPlayNext: () => void;
   readonly onAddToSetlist: () => void;
   readonly onAddedToSetlist: (added: AddedToSetlist) => void;
+  readonly onLeftSetlist: UpNextSheetProps['onLeftSetlist'];
   readonly sheet: OpenSheet | null;
   readonly bottomInset: number;
   readonly playhead: MixerFrameValues['songSec'];
@@ -377,6 +378,7 @@ function PlayerSheets(props: PlayerSheetsProps) {
         visible={sheet === 'upNext'}
         bottomInset={bottomInset}
         onDismiss={onClose}
+        onLeftSetlist={props.onLeftSetlist}
       />
       <SetlistSheet
         visible={sheet === 'setlists'}
@@ -467,6 +469,7 @@ export function PlayerScreen({
         onPlayNext={queue.playNext}
         onAddToSetlist={sheets.openSetlists}
         onAddedToSetlist={queue.added}
+        onLeftSetlist={queue.leftSetlist}
         sheet={sheets.sheet}
         bottomInset={insets.bottom}
         playhead={frame.songSec}

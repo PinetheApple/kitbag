@@ -32,6 +32,9 @@ const INITIAL_DISPLAY = { ...display };
 const hint = vi.hoisted(() => ({ props: null as Props | null }));
 const scroll = vi.hoisted(() => ({ props: null as Props | null }));
 
+vi.mock('./EndedSetlistSnackbar.tsx', () => ({
+  EndedSetlistSnackbar: () => null,
+}));
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
   return {

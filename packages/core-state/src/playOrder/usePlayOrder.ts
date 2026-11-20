@@ -60,13 +60,14 @@ export function useStage(): Stage {
   const setlists = useStore(libraryStore, (s) => s.setlists);
   const entries = useStore(libraryStore, (s) => s.entries);
   const loaded = useStore(libraryStore, (s) => s.loaded);
+  const session = useStore(libraryStore, (s) => s.session);
   return useMemo(() => {
-    const stage = onStageOf({ setlists, entries });
+    const stage = onStageOf({ setlists, entries, session });
     const name =
       setlists.find((s) => s.setlist.id === stage.setlistId)?.setlist.name ??
       '';
     return { stage, cursor: cursorOf(stage, loaded), name };
-  }, [setlists, entries, loaded]);
+  }, [setlists, entries, loaded, session]);
 }
 
 export function useUpNext(): UpNext | undefined {

@@ -1,11 +1,15 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
-import type { LibrarySongRow, RowFiles } from '@kitbag/core-state';
+import type { LibraryRow, LibrarySongRow, RowFiles } from '@kitbag/core-state';
 import { act, createElement } from 'react';
 import { create, type ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const library = vi.hoisted(() => ({ files: null as RowFiles | null }));
+const library = vi.hoisted(() => ({
+  files: null as RowFiles | null,
+  endSetlistSession: vi.fn(),
+  player: { status: 'ready', setId: null as number | null },
+}));
 
 vi.mock('react-native', () => ({
   View: 'View',
@@ -41,6 +45,9 @@ vi.mock('@kitbag/core-state', async (original) => ({
   songBadge: () => 'grid',
   analysisFailure: () => null,
   rowFilesOf: () => library.files,
+  useLibrary: (select: (state: typeof library) => unknown) => select(library),
+  useStemPlayer: (select: (state: typeof library.player) => unknown) =>
+    select(library.player),
 }));
 
 const { LibraryRowView } = await import('./LibraryRowView.tsx');
@@ -63,12 +70,14 @@ const handlers = {
   onUnavailable: vi.fn(),
 };
 
-function mount(moving = false): ReactTestRenderer {
+const STEM_ROW = { ...ROW, kind: 'stems', id: 9 } as unknown as LibraryRow;
+
+function mount(moving = false, row: LibraryRow = ROW): ReactTestRenderer {
   let tree: ReactTestRenderer | undefined;
   act(() => {
     tree = create(
       createElement(LibraryRowView, {
-        row: ROW,
+        row,
         selected: false,
         moving,
         ...handlers,
@@ -99,6 +108,7 @@ const titleOpacity = (tree: ReactTestRenderer) => {
 
 beforeEach(() => {
   library.files = null;
+  library.player.setId = null;
   vi.clearAllMocks();
 });
 
@@ -109,6 +119,7 @@ describe('a row on a missing SD card', () => {
 
   it('never opens the player and shows why instead', () => {
     pressRow(mount());
+    expect(library.endSetlistSession).not.toHaveBeenCalled();
     expect(handlers.onOpenSong).not.toHaveBeenCalled();
     expect(handlers.onUnavailable).toHaveBeenCalledWith(ROW);
   });
@@ -135,5 +146,29 @@ describe('a row at home', () => {
     pressRow(mount());
     expect(handlers.onOpenSong).toHaveBeenCalledWith(ROW.id);
     expect(handlers.onUnavailable).not.toHaveBeenCalled();
+  });
+
+  it('ends the setlist started this session, as the song starts from a list', () => {
+    pressRow(mount());
+    expect(library.endSetlistSession).toHaveBeenCalledExactlyOnceWith(
+      undefined,
+    );
+  });
+
+  it('names the stem song it reopens when that song is the one playing', () => {
+    library.player.setId = STEM_ROW.id;
+    pressRow(mount(false, STEM_ROW));
+    expect(library.endSetlistSession).toHaveBeenCalledExactlyOnceWith(
+      STEM_ROW.id,
+    );
+    expect(handlers.onOpenStemSet).toHaveBeenCalledWith(STEM_ROW.id);
+  });
+
+  it('starts a stem song that is not the one playing as a new song', () => {
+    library.player.setId = STEM_ROW.id + 1;
+    pressRow(mount(false, STEM_ROW));
+    expect(library.endSetlistSession).toHaveBeenCalledExactlyOnceWith(
+      undefined,
+    );
   });
 });

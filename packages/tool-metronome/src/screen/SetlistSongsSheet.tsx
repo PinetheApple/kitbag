@@ -10,6 +10,7 @@ import {
   space,
   textRoles,
   textStyle,
+  QUEUE_TEXT,
   TRANSPARENT,
   UnsavedDot,
   useAfterSheetClosed,
@@ -259,7 +260,7 @@ export function SetlistSongsSheet({
         size="target"
         icon="close"
         iconSize="caret"
-        label="Leave setlist"
+        label={QUEUE_TEXT.leaveSetlist}
         onPress={handleLeave}
       />
     </Sheet>

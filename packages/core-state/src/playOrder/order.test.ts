@@ -37,6 +37,7 @@ const setlist = [stem(1, 11), metronome(2), stem(3, 13), stem(4, 11)];
 const stage = (entries = setlist, setlistId = SETLIST_ID): OnStage => ({
   setlistId,
   entries,
+  skipped: [],
 });
 const onStageAt = (itemId: number | null, queue = queued()) => ({
   queue,
@@ -45,6 +46,7 @@ const onStageAt = (itemId: number | null, queue = queued()) => ({
 });
 const without = (itemId: number) =>
   stage(setlist.filter((entry) => entry.item.id !== itemId));
+const skipping = (...skipped: number[]): OnStage => ({ ...stage(), skipped });
 
 describe('up next', () => {
   it('is the first queued song, ahead of the setlist', () => {
@@ -79,6 +81,28 @@ describe('up next', () => {
     expect(upNext(onStageAt(4))).toBeUndefined();
     expect(
       upNext({ queue: [], stage: stage([]), cursor: null }),
+    ).toBeUndefined();
+  });
+});
+
+describe('up next with entries skipped this time', () => {
+  it('passes over a skipped entry to the one after it', () => {
+    expect(
+      upNext({
+        queue: [],
+        stage: skipping(3),
+        cursor: cursorAt(stage(), 2),
+      }),
+    ).toEqual({ source: UP_NEXT_SOURCE.setlist, entry: setlist[3] });
+  });
+
+  it('is nothing when every entry left is skipped', () => {
+    expect(
+      upNext({
+        queue: [],
+        stage: skipping(3, 4),
+        cursor: cursorAt(stage(), 2),
+      }),
     ).toBeUndefined();
   });
 });
@@ -144,6 +168,13 @@ describe('the rest of the setlist', () => {
 
   it('is the whole setlist when nothing from it is on stage', () => {
     expect(entriesAfter(stage(), null)).toEqual(setlist);
+  });
+
+  it('leaves out the entries skipped this time', () => {
+    expect(entriesAfter(skipping(3), cursorAt(stage(), 1))).toEqual([
+      setlist[1],
+      setlist[3],
+    ]);
   });
 
   it('is nothing after the last entry', () => {

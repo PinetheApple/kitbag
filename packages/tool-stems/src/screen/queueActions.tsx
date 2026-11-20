@@ -1,5 +1,6 @@
 import {
   SetlistPickerSheet,
+  useLeftSetlistNotice,
   useQueueNotices,
   type Notice,
   type SetlistPickerSheetProps,
@@ -10,6 +11,7 @@ import {
   useQueueRefresh,
   useQueueSong,
   useSetlistPicker,
+  useEndedSetlistNotice,
   useStemPlayer,
 } from '@kitbag/core-state';
 import { useCallback, useEffect } from 'react';
@@ -54,5 +56,8 @@ export function useQueueActions(
     closeSheet();
     if (setId !== null) queueNext(setId);
   }, [closeSheet, setId, queueNext]);
-  return { playNext, added };
+  const rejoinSetlist = useLibrary((s) => s.rejoinSetlist);
+  const leftSetlist = useLeftSetlistNotice(notice, rejoinSetlist);
+  useEndedSetlistNotice(leftSetlist);
+  return { playNext, added, leftSetlist };
 }
