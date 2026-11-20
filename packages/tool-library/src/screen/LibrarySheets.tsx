@@ -10,19 +10,26 @@ import {
   cleanName,
   REPLACE_LABELS,
   useSongLibrary,
+  type AnalysisFailure,
   type LibraryRow,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { View, type TextInput } from 'react-native';
 
-import { canReanalyze, failureText, replaceText } from '../logic/notices.ts';
+import {
+  canReanalyze,
+  failureText,
+  replaceText,
+  UNAVAILABLE_TEXT,
+  type FailureText,
+} from '../logic/notices.ts';
 import {
   REANALYZE_LABEL,
   REPLACE_SHEET_TEXT,
   replaceButtonLabel,
   replaceSheetTitle,
 } from '../logic/viewText.ts';
-import { useRowFailure } from './rowFailureHooks.ts';
+import { useRowFailure, useRowFiles } from './rowFailureHooks.ts';
 
 const useStyles = createThemedStyles(() => ({
   stack: { gap: space.controlGap },
@@ -67,12 +74,21 @@ interface SheetProps {
   readonly bottomInset: number;
 }
 
+function sheetNotice(
+  failure: AnalysisFailure | null,
+  away: boolean,
+): FailureText | null {
+  if (failure !== null) return failureText(failure);
+  return away ? UNAVAILABLE_TEXT : null;
+}
+
 function ActionsSheet({ menu, bottomInset }: SheetProps) {
   const styles = useStyles();
   const reanalyze = useSongLibrary((s) => s.reanalyze);
   const { target, close, openRename, openDelete } = menu;
   const failure = useRowFailure(target);
-  const failureNotice = failure === null ? null : failureText(failure);
+  const away = useRowFiles(target) === 'unavailable';
+  const failureNotice = sheetNotice(failure, away);
   const retry = useCallback(() => {
     close();
     if (target?.kind === 'song') void reanalyze(target.id);
@@ -91,14 +107,18 @@ function ActionsSheet({ menu, bottomInset }: SheetProps) {
       )}
       <View style={styles.stack}>
         <Button label="Rename" variant="tonal" onPress={openRename} />
-        {target?.kind === 'song' && canReanalyze(failure) ? (
+        {target?.kind === 'song' && !away && canReanalyze(failure) ? (
           <Button label={REANALYZE_LABEL} variant="tonal" onPress={retry} />
         ) : null}
-        <Button
-          label={target?.kind === 'stems' ? 'Delete stem song' : 'Delete song'}
-          variant="destructive"
-          onPress={openDelete}
-        />
+        {away ? null : (
+          <Button
+            label={
+              target?.kind === 'stems' ? 'Delete stem song' : 'Delete song'
+            }
+            variant="destructive"
+            onPress={openDelete}
+          />
+        )}
       </View>
     </Sheet>
   );

@@ -10,6 +10,7 @@ import {
   libraryMix,
   lineRatio,
   minTouchTargetDp,
+  opacity,
   size,
   space,
   textRoles,
@@ -24,8 +25,13 @@ import { Pressable, useWindowDimensions, View } from 'react-native';
 
 import { failureText } from '../logic/notices.ts';
 import { rowLayout } from '../logic/rowLayout.ts';
-import { rowBadges, rowSubtitle, spokenRow } from '../logic/rowText.ts';
-import { useRowFailure } from './rowFailureHooks.ts';
+import {
+  rowBadges,
+  rowSubtitle,
+  spokenRow,
+  type RowPlace,
+} from '../logic/rowText.ts';
+import { useRowFailure, useRowFiles } from './rowFailureHooks.ts';
 
 const MORE_HIT_BOX = hitBoxStyle(
   hitExtension(libraryList.moreWidth, minTouchTargetDp, {
@@ -69,6 +75,7 @@ const useStyles = createThemedStyles((theme) => ({
   stemTile: {
     backgroundColor: theme.stemTileFill,
   },
+  muted: { opacity: opacity.muted },
   text: { flex: 1, minWidth: 0 },
   title: {
     ...textStyle(textRoles.listTitle),
@@ -105,11 +112,19 @@ function rowStatus(row: LibraryRow): SongBadge {
   return row.hasGrid ? 'grid' : 'noGrid';
 }
 
-function RowTile({ stems }: { readonly stems: boolean }) {
+function RowTile({
+  stems,
+  muted,
+}: {
+  readonly stems: boolean;
+  readonly muted: boolean;
+}) {
   const styles = useStyles();
   const theme = useTheme();
   return (
-    <View style={[styles.tile, stems && styles.stemTile]}>
+    <View
+      style={[styles.tile, stems && styles.stemTile, muted && styles.muted]}
+    >
       <Icon
         name={stems ? 'stems' : 'song'}
         size="listTile"
@@ -122,33 +137,46 @@ function RowTile({ stems }: { readonly stems: boolean }) {
 export interface LibraryRowViewProps {
   readonly row: LibraryRow;
   readonly selected: boolean;
+  readonly moving: boolean;
   readonly onActions: (row: LibraryRow) => void;
   readonly onOpenStemSet: (id: number) => void;
   readonly onOpenSong: (id: number) => void;
+  readonly onUnavailable: (row: LibraryRow) => void;
+}
+
+function useRowPlace(row: LibraryRow, moving: boolean): RowPlace {
+  const files = useRowFiles(row);
+  if (files === 'unavailable') return 'unavailable';
+  return moving ? 'moving' : 'here';
 }
 
 export function LibraryRowView({
   row,
   selected,
+  moving,
   onActions,
   onOpenStemSet,
   onOpenSong,
+  onUnavailable,
 }: LibraryRowViewProps) {
   const styles = useStyles();
   const { fontScale } = useWindowDimensions();
   const { titleLines, factsLines, badgesUnderText } = rowLayout(fontScale);
   const status = rowStatus(row);
   const failure = useRowFailure(row);
+  const place = useRowPlace(row, moving);
+  const away = place === 'unavailable';
   const openActions = useCallback(() => {
     onActions(row);
   }, [onActions, row]);
   const open = useCallback(() => {
-    if (row.kind === 'stems') onOpenStemSet(row.id);
+    if (away) onUnavailable(row);
+    else if (row.kind === 'stems') onOpenStemSet(row.id);
     else onOpenSong(row.id);
-  }, [onOpenStemSet, onOpenSong, row.kind, row.id]);
+  }, [away, onUnavailable, onOpenStemSet, onOpenSong, row]);
   const badges = (
     <View style={[styles.badges, badgesUnderText && styles.badgesUnderText]}>
-      {rowBadges(row, status).map((badge) => (
+      {rowBadges(row, status, place).map((badge) => (
         <Badge
           key={badge.key}
           variant="list"
@@ -169,14 +197,18 @@ export function LibraryRowView({
           row,
           status,
           failure === null ? null : failureText(failure).status,
+          place,
         )}
         style={[styles.body, isTextScaled(fontScale) && styles.scaledBody]}
         onLongPress={openActions}
         onPress={open}
       >
-        <RowTile stems={row.kind === 'stems'} />
+        <RowTile stems={row.kind === 'stems'} muted={away} />
         <View style={styles.text}>
-          <EllipsizedText style={styles.title} numberOfLines={titleLines}>
+          <EllipsizedText
+            style={[styles.title, away && styles.muted]}
+            numberOfLines={titleLines}
+          >
             {row.title}
           </EllipsizedText>
           <EllipsizedText style={styles.facts} numberOfLines={factsLines}>

@@ -27,6 +27,7 @@ export default defineConfig({
       'src/screen/useStepSong.test.tsx',
       'src/screen/SetlistSongsSheet.test.tsx',
       'src/screen/MetronomeAppBar.test.tsx',
+      'src/library/songLists.test.tsx',
     ],
     alias: {
       '@kitbag/core-native': stub('../core-native/src/pure.ts'),

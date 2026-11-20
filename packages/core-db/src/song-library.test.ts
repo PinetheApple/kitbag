@@ -13,6 +13,7 @@ import { createSongPresetRepository } from './song-preset-repository';
 import { openTestDatabase } from './sqlite.test-helper';
 import { TEMPO_CORRECTION } from './tempo-correction';
 import { memoryClickSoundFiles } from './click-sound-files.test-helper';
+import { unusedMigrationCopyFiles } from './migration-copy-files.test-helper';
 
 const open: ReturnType<typeof openTestDatabase>[] = [];
 
@@ -372,6 +373,7 @@ describe('song library over the op-sqlite 17 connection', () => {
     const database = connectDatabase(
       fakeOpSqlite().connection,
       memoryClickSoundFiles().files,
+      unusedMigrationCopyFiles,
     );
     const id = await database.songLibrary.insertSong(song('Everlong'));
     expect(await database.songLibrary.claimUnfinishedAnalyses()).toEqual([
