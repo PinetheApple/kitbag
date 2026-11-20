@@ -1,0 +1,1 @@
+• Stem songs rows show a small grid icon instead of the STEMS and GRID badges.
