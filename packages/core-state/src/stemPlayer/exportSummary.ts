@@ -52,9 +52,10 @@ export async function summarizeExport(
   const loaded = source.stems.flatMap((row, track) =>
     row.loaded ? [{ row, track }] : [],
   );
+  const keyed = loaded.filter(({ row }) => row.transposable);
   const [speed, keys] = await Promise.all([
     commands.mixerRate(),
-    Promise.all(loaded.map(({ track }) => commands.mixerTrackPitch(track))),
+    Promise.all(keyed.map(({ track }) => commands.mixerTrackPitch(track))),
   ]);
   const key = sharedKey(keys);
   const lengthSec = source.durationFrames / source.engineRate / speed;

@@ -17,6 +17,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import type { ClickSection } from '../logic/clickView.ts';
 import { exportRowValue } from '../logic/exportView.ts';
+import { resetValue, speedKeyCopy } from '../logic/speedKeyView.ts';
 import {
   meterGridState,
   NO_GRID_REASON,
@@ -104,6 +105,27 @@ function StemMeterRow({ onMeter }: { readonly onMeter: () => void }) {
   );
 }
 
+function ResetSpeedKeyRow({ onDone }: { readonly onDone: () => void }) {
+  const styles = useStyles();
+  const resetSpeedKey = useStemPlayer((s) => s.resetSpeedKey);
+  const reset = useCallback(() => {
+    void resetSpeedKey();
+    onDone();
+  }, [resetSpeedKey, onDone]);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${speedKeyCopy.reset}: full speed, every stem at the recorded key`}
+      style={[styles.row, styles.divided]}
+      onPress={reset}
+    >
+      <Icon name="reset" size="title" color="text2" />
+      <Text style={styles.label}>{speedKeyCopy.reset}</Text>
+      <Text style={styles.value}>{resetValue()}</Text>
+    </Pressable>
+  );
+}
+
 interface QueueRowsProps {
   readonly onPlayNext: () => void;
   readonly onAddToSetlist: () => void;
@@ -176,6 +198,7 @@ export function PlayerMenu({
         <Text style={styles.label}>Reset mix</Text>
         <Text style={styles.value}>levels, mutes, solos</Text>
       </Pressable>
+      <ResetSpeedKeyRow onDone={onClose} />
       <StemMeterRow onMeter={onMeter} />
       <TempoRow onOpen={onTempo} />
       <ClickRows onOpen={onClick} />

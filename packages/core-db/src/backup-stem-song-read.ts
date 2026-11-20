@@ -8,6 +8,7 @@ import {
   STEM_SET_SOURCES,
   type StemSetSource,
 } from './stem-set-source';
+import { isStemSetPitch, STEM_SET_PITCH } from './stem-speed-key';
 import { isTempoMode } from './stem-tempo';
 
 function numbers(r: Reader, key: string, path: string): number[] {
@@ -103,6 +104,16 @@ function readPlayback(
   return { speed, lyricsRetimed, chosenTempoMode };
 }
 
+function readSongPitch(r: Reader, path: string): number {
+  const pitch = r.optionalNumber('pitch', STEM_SET_PITCH.unshifted);
+  if (!isStemSetPitch(pitch))
+    invalidField(
+      `${path}.pitch`,
+      `expected whole semitones from ${String(STEM_SET_PITCH.min)} to ${String(STEM_SET_PITCH.max)}`,
+    );
+  return pitch;
+}
+
 export function readStemSong(value: unknown, path: string): StemSongRecord {
   const r = reader(value, path);
   return {
@@ -111,6 +122,7 @@ export function readStemSong(value: unknown, path: string): StemSongRecord {
     title: nullableText(r, 'title', path),
     ...readMeter(r, path),
     ...readPlayback(r, asObject(value, path), path),
+    pitch: readSongPitch(r, path),
     ...readClick(r, path),
     stems: readMixes(r, path),
   };

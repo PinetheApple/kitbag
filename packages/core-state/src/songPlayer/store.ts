@@ -36,6 +36,12 @@ import {
 } from '../songLibrary/store.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 import { songCard } from './songCard.ts';
+import {
+  linkedPreset,
+  readyState,
+  songPresetActions,
+  type LoadedSong,
+} from './songPreset.ts';
 import type { SongPlayerActions } from './actions.ts';
 import {
   songClickActions,
@@ -144,6 +150,7 @@ export function createSongPlayerStore(
       };
     };
     const context = { set, get, runtimeOf, session: mixer.current };
+    const presets = songPresetActions({ ...context, live });
     const card = songCard({ ...context, close: mixer.close });
     mixer.onSongStopped(card.stopped);
 
@@ -181,10 +188,21 @@ export function createSongPlayerStore(
       );
     };
 
+    const becomeReady = async (opened: number, loaded: LoadedSong) => {
+      detectedGrid = loaded.record;
+      set(readyState(loaded, get().clickSettings));
+      showWaveform(opened, loaded.record.waveformPath);
+      if (loaded.preset !== undefined && !get().click)
+        await get().toggleClick();
+    };
+
     const load = async (opened: number, songId: number) => {
       const runtime = runtimeOf();
       const { commands } = runtime;
-      const record = await runtime.records.readSong(songId);
+      const [record, preset] = await Promise.all([
+        runtime.records.readSong(songId),
+        linkedPreset(runtime, songId),
+      ]);
       if (!live(opened)) return;
       if (record === undefined) {
         set({ status: 'missing' });
@@ -215,20 +233,9 @@ export function createSongPlayerStore(
         set({ status: 'failed' });
         return;
       }
-      detectedGrid = record;
-      const grid = recordGrid(record);
-      set({
-        status: 'ready',
-        engineRate,
-        durationFrames,
-        beats: grid.beats,
-        downbeatIndices: grid.downbeatIndices,
-        detected: grid.detected,
-        meterOverride: meterOverrideOf(record),
-      });
       if (decoded > 0)
         correctStoredLength(record, framesToSeconds(decoded, engineRate));
-      showWaveform(opened, record.waveformPath);
+      await becomeReady(opened, { record, preset, engineRate, durationFrames });
     };
 
     const isOpenAndReady = (songId: number) => {
@@ -375,6 +382,7 @@ export function createSongPlayerStore(
         clickStarting: clickEngine.clickStarting,
       }),
       ...clickSettings.actions,
+      saveForSong: presets.saveForSong,
     };
   });
 }

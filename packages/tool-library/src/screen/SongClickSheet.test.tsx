@@ -26,6 +26,7 @@ const song = vi.hoisted(() => ({
   setClickSounds: vi.fn(),
   cycleClickAccent: vi.fn(),
   setClickCountIn: vi.fn(),
+  saveForSong: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('react-native', () => ({ View: 'View' }));
@@ -90,6 +91,7 @@ function givenSong(
     setClickSounds: song.setClickSounds,
     cycleClickAccent: song.cycleClickAccent,
     setClickCountIn: song.setClickCountIn,
+    saveForSong: song.saveForSong,
     ...change,
   };
 }
@@ -272,10 +274,12 @@ describe('the Click for this song sheet', () => {
     ).toBe(true);
   });
 
-  it('draws Save for this song, not yet pressable', () => {
+  it("saves the song's click from Save for this song", () => {
     const save = opened().root.findByType('Button' as never);
     expect(save.props.label).toBe(SONG_CLICK_TEXT.save);
-    expect(save.props.disabled).toBe(true);
+    expect(save.props.disabled).toBeUndefined();
+    press(save);
+    expect(song.saveForSong).toHaveBeenCalledOnce();
   });
 
   it('closes on dismiss', () => {

@@ -45,6 +45,8 @@ import { RetimeBody } from './RetimeMode.tsx';
 import { StemAppBar } from './StemAppBar.tsx';
 import { Scrubber } from './Scrubber.tsx';
 import { SongFactChips } from './SongFactChips.tsx';
+import { SpeedKeyControls } from './SpeedKeyControls.tsx';
+import { SpeedKeySheet } from './SpeedKeySheet.tsx';
 import { StemList } from './StemList.tsx';
 import { StemMeterSheet } from './StemMeterSheet.tsx';
 import { WAVEFORM_BARS } from './StemRowView.tsx';
@@ -53,6 +55,12 @@ import { TempoSheet } from './TempoSheet.tsx';
 import { UpNextRow } from './UpNextRow.tsx';
 import { UpNextSheet } from './UpNextSheet.tsx';
 import { usePlayerRoutes } from './playerRoutes.ts';
+import {
+  clickSectionOf,
+  TEMPO_SHEET,
+  usePlayerSheet,
+  type OpenSheet,
+} from './usePlayerSheet.ts';
 import type { PlayOrderRoutes } from './usePlayOrderNav.ts';
 import { useMixerFrame, type MixerFrameValues } from './useMixerFrame.ts';
 
@@ -70,7 +78,6 @@ const MIX = 'mix';
 const DETAILS = 'details';
 type Tab = typeof MIX | typeof DETAILS;
 type RetimeAsk = 'reset' | 'leave';
-type PlayerSheet = 'menu' | 'meter' | 'export' | 'upNext' | 'setlists';
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
@@ -131,13 +138,15 @@ interface DockProps {
   readonly bottom: number;
   readonly onOpenUpNext: () => void;
   readonly onNext: () => void;
+  readonly onSpeedKey: () => void;
 }
 
-function Dock({ frame, bottom, onOpenUpNext, onNext }: DockProps) {
+function Dock({ frame, bottom, onOpenUpNext, onNext, onSpeedKey }: DockProps) {
   return (
     <PlayerDock bottomInset={bottom}>
       <UpNextRow onOpenSheet={onOpenUpNext} onNext={onNext} />
       <Scrubber frame={frame} />
+      <SpeedKeyControls onOpen={onSpeedKey} />
       <StemTransport playing={frame.playing} />
     </PlayerDock>
   );
@@ -247,6 +256,7 @@ interface BodyProps {
   readonly onOpenUpNext: () => void;
   readonly onNext: () => void;
   readonly notice: Notice;
+  readonly onSpeedKey: () => void;
 }
 
 function Body({
@@ -256,6 +266,7 @@ function Body({
   onOpenUpNext,
   onNext,
   notice,
+  onSpeedKey,
 }: BodyProps) {
   const styles = useStyles();
   const status = useStemPlayer((s) => s.status);
@@ -286,6 +297,7 @@ function Body({
         bottom={bottom}
         onOpenUpNext={onOpenUpNext}
         onNext={onNext}
+        onSpeedKey={onSpeedKey}
       />
     </>
   );
@@ -309,41 +321,6 @@ function useRetimeAsk() {
   }, []);
   const shown = stale ? null : asking;
   return { retiming, shown, askReset, askLeave, closeAsk };
-}
-
-interface ClickSheetOpen {
-  readonly kind: 'click';
-  readonly section: ClickSection;
-}
-
-const TEMPO_SHEET = { kind: 'tempo' } as const;
-
-type OpenSheet = PlayerSheet | ClickSheetOpen | typeof TEMPO_SHEET;
-
-const clickSectionOf = (sheet: OpenSheet | null) =>
-  typeof sheet === 'object' && sheet?.kind === 'click' ? sheet.section : null;
-
-function usePlayerSheet(retiming: boolean) {
-  const [sheet, setSheet] = useState<OpenSheet | null>(null);
-  if (sheet !== null && retiming) setSheet(null);
-  const handlers = useMemo(() => {
-    const opener = (next: OpenSheet | null) => () => {
-      setSheet(next);
-    };
-    return {
-      openMenu: opener('menu'),
-      openMeter: opener('meter'),
-      openExport: opener('export'),
-      openUpNext: opener('upNext'),
-      openSetlists: opener('setlists'),
-      openTempo: opener(TEMPO_SHEET),
-      openClick: (section: ClickSection) => {
-        setSheet({ kind: 'click', section });
-      },
-      closeSheet: opener(null),
-    };
-  }, []);
-  return { sheet, ...handlers };
 }
 
 interface PlayerSheetsProps {
@@ -421,6 +398,11 @@ function PlayerSheets(props: PlayerSheetsProps) {
         bottomInset={bottomInset}
         onClose={onClose}
       />
+      <SpeedKeySheet
+        visible={sheet === 'speedKey'}
+        bottomInset={bottomInset}
+        onClose={onClose}
+      />
     </>
   );
 }
@@ -472,6 +454,7 @@ export function PlayerScreen({
           onOpenUpNext={sheets.openUpNext}
           onNext={skip}
           notice={notice}
+          onSpeedKey={sheets.openSpeedKey}
         />
       </View>
       <PlayerSheets
