@@ -40,7 +40,10 @@ env:
 - extendedWaitUntil:
     visible: 'Up next: ${FIXTURE_STEMS_NO_GRID}, ${SETLIST} · 2 of 3'
     timeout: 20000
-- tapOn: 'Play'
+- runFlow:
+    file: ../../subflows/tap-while-playing.yaml
+    env:
+      TARGET: 'Play'
 - extendedWaitUntil:
     visible: 'Playing ${FIXTURE_STEMS_NO_GRID} · 2 of 3'
     timeout: 30000
