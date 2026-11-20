@@ -7,13 +7,9 @@ import {
   presetFromMetronome,
 } from '../library/presetMapping.ts';
 import { clamp, isCountInBars, resizeAccents } from '../metronome/config.ts';
-import type { MetronomeConfig } from '../metronome/store.ts';
+import { initialConfig } from '../metronome/store.ts';
 import type { SongPlayerRuntime } from './runtime.ts';
-import {
-  songMeter,
-  type SongClickMetronome,
-  type SongClickSettings,
-} from './songClick.ts';
+import { songMeter, type SongClickSettings } from './songClick.ts';
 import type { SongPlayerState } from './state.ts';
 
 type SavedSong = Pick<
@@ -21,31 +17,32 @@ type SavedSong = Pick<
   'title' | 'artist' | 'bpm' | 'clickSettings'
 >;
 
-export function presetOfSong(
-  song: SavedSong,
-  standalone: MetronomeConfig,
-): LinkedPresetValues {
+export function presetOfSong(song: SavedSong): LinkedPresetValues {
   const { countInBars, sounds, accents } = song.clickSettings;
+  const defaults = initialConfig();
   return {
     ...presetFromMetronome({
-      ...standalone,
+      ...defaults,
       beatsPerBar: accents.length,
       accents,
       sounds,
-      countIn: { ...standalone.countIn, bars: countInBars },
+      countIn: { ...defaults.countIn, bars: countInBars },
     }),
     name: song.title,
     title: song.title,
     artist: song.artist,
-    bpm: clamp(
-      song.bpm ?? standalone.bpm,
-      KB_BPM_BOUNDS.min,
-      KB_BPM_BOUNDS.max,
-    ),
+    bpm: clamp(song.bpm ?? defaults.bpm, KB_BPM_BOUNDS.min, KB_BPM_BOUNDS.max),
     polyEnabled: false,
     rampEnabled: false,
     barMuteEnabled: false,
   };
+}
+
+export function linkedPreset(runtime: SongPlayerRuntime, songId: number) {
+  return runtime.records.forLibrarySong(songId).catch((error: unknown) => {
+    console.warn('[kitbag] song preset unreadable', error);
+    return undefined;
+  });
 }
 
 type SongMeterState = Pick<
@@ -53,7 +50,7 @@ type SongMeterState = Pick<
   'meterOverride' | 'detected' | 'clickSettings'
 >;
 
-export function clickSettingsOf(
+function clickSettingsOf(
   preset: SongPreset,
   song: SongMeterState,
 ): SongClickSettings {
@@ -67,11 +64,19 @@ export function clickSettingsOf(
   };
 }
 
+export function savedClick(
+  preset: SongPreset | undefined,
+  song: SongMeterState,
+): Partial<Pick<SongPlayerState, 'clickSettings'>> {
+  return preset === undefined
+    ? {}
+    : { clickSettings: clickSettingsOf(preset, song) };
+}
+
 interface SongPresetContext {
   readonly set: (change: Pick<SongPlayerState, 'clickSettings'>) => void;
   readonly get: () => SongPlayerState;
   readonly runtimeOf: () => SongPlayerRuntime;
-  readonly metronome: SongClickMetronome;
   readonly session: () => number;
   readonly live: (opened: number) => boolean;
 }
@@ -80,7 +85,6 @@ export function songPresetActions({
   set,
   get,
   runtimeOf,
-  metronome,
   session,
   live,
 }: SongPresetContext) {
@@ -90,7 +94,7 @@ export function songPresetActions({
       if (song.songId === null || song.status !== 'ready') return;
       const opened = session();
       const saved = song.clickSettings;
-      const values = presetOfSong(song, metronome.store.getState());
+      const values = presetOfSong(song);
       try {
         await runtimeOf().records.saveForLibrarySong(song.songId, values);
       } catch (error: unknown) {

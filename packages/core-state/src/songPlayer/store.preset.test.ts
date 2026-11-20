@@ -1,6 +1,7 @@
 import { KB_ACCENT, KB_SOUND_NAMES } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { initialConfig } from '../metronome/store.ts';
 import {
   BARS,
   fakeSongRuntime,
@@ -19,6 +20,7 @@ const SONG_BPM = 120;
 const SAVED_COUNT_IN = 2;
 const FIRST_BEAT = 0;
 const OTHER_SONG = SONG_ID + 1;
+const STANDALONE_SUBDIVISION = 3;
 const { KB_ACCENT_ACCENTED: ACC, KB_ACCENT_NORMAL: NOR } = KB_ACCENT;
 
 beforeEach(() => {
@@ -56,6 +58,14 @@ async function reopened(
   await store.getState().open(SONG_ID, BARS).loaded;
 }
 
+function standaloneConfig(store: { getState: () => object }) {
+  return Object.fromEntries(
+    Object.entries(store.getState()).filter(
+      ([, value]) => typeof value !== 'function',
+    ),
+  );
+}
+
 describe('a song without a saved preset', () => {
   it('opens with its click off, seeded from the standalone metronome', async () => {
     const { fake, store } = await openedBesideStandalone();
@@ -63,6 +73,16 @@ describe('a song without a saved preset', () => {
     expect(store.getState().click).toBe(false);
     expect(store.getState().clickSettings.sounds).toEqual(STANDALONE_SOUNDS);
     expect(store.getState().clickSettings.dirty).toBe(false);
+  });
+
+  it('opens with the click off when its preset cannot be read', async () => {
+    const fake = fakeSongRuntime();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    fake.records.forLibrarySong.mockRejectedValueOnce(new Error('disk'));
+    const store = songStore(fake);
+    await store.getState().open(SONG_ID, BARS).loaded;
+    expect(store.getState().status).toBe('ready');
+    expect(store.getState().click).toBe(false);
   });
 });
 
@@ -88,6 +108,22 @@ describe('Save for this song', () => {
       SONG_SOUNDS.normal,
       SONG_SOUNDS.accent,
     ]);
+  });
+
+  it("seeds what the song does not own from the defaults, not the standalone's", async () => {
+    const fake = fakeSongRuntime();
+    fake.standalone.store.getState().setSubdivision(STANDALONE_SUBDIVISION);
+    const store = songStore(fake);
+    await store.getState().open(SONG_ID, BARS).loaded;
+    await store.getState().saveForSong();
+    const defaults = initialConfig();
+    expect(fake.records.saveForLibrarySong.mock.calls[0]?.[1]).toMatchObject({
+      subdivision: defaults.subdivision,
+      denominator: defaults.denominator,
+      polyBeats: defaults.polyBeats,
+      rampStep: defaults.ramp.stepBpm,
+      barMutePlayBars: defaults.barMute.playBars,
+    });
   });
 
   it('clears the unsaved mark', async () => {
@@ -140,6 +176,25 @@ describe('a song with a saved preset', () => {
     fake.records.readSong.mockResolvedValue(songRecord({ bpm: SONG_BPM + 1 }));
     await reopened(store);
     expect(store.getState().bpm).toBe(SONG_BPM + 1);
+  });
+
+  it('takes the engine metronome from a running standalone, leaving its settings', async () => {
+    const { fake, store } = await editedAndSaved();
+    const before = standaloneConfig(fake.standalone.store);
+    fake.sharedMetronome.active.mockReturnValue(true);
+    await reopened(store);
+    expect(fake.sharedMetronome.release).toHaveBeenCalled();
+    expect(standaloneConfig(fake.standalone.store)).toEqual(before);
+  });
+
+  it('opens with the click off while the song has no grid', async () => {
+    const { fake, store } = await editedAndSaved();
+    fake.records.readSong.mockResolvedValue(
+      songRecord({ beats: [], downbeatIndices: [] }),
+    );
+    await reopened(store);
+    expect(store.getState().status).toBe('ready');
+    expect(store.getState().click).toBe(false);
   });
 
   it('does not lend its click to another song', async () => {

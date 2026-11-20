@@ -88,6 +88,17 @@ describe("a library song's linked preset", () => {
     expect(await presets.forLibrarySong(two)).toMatchObject(RESAVED);
   });
 
+  it('picks, and updates, the oldest when two presets link one song', async () => {
+    const { library, presets } = setup();
+    const id = await library.insertSong(song('Everlong'));
+    const oldest = await presets.create({ ...CLICK, librarySongId: id });
+    const newer = await presets.create({ ...RESAVED, librarySongId: id });
+    expect(await presets.forLibrarySong(id)).toEqual(oldest);
+    await presets.saveForLibrarySong(id, RESAVED);
+    expect(await presets.get(oldest.id)).toMatchObject(RESAVED);
+    expect(await presets.get(newer.id)).toEqual(newer);
+  });
+
   it('refuses an invalid preset and writes nothing', async () => {
     const { library, presets } = setup();
     const id = await library.insertSong(song('Everlong'));
