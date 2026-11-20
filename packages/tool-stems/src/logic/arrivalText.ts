@@ -16,6 +16,7 @@ export function arrivalText(
   if (arrival.kind === ARRIVAL.gaveUp) return skippedText(arrival.skipped);
   const { skipped, song, place } = arrival;
   if (skipped !== null) return skippedText(skipped);
+  if (arrival.inApp) return null;
   const playing = `${PLAYING} ${queuedSongTitle(song, library)}`;
   if (place === null) return playing;
   return [playing, placeLabel(place.number, place.of)].join(FACT_SEPARATOR);

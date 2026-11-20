@@ -33,7 +33,11 @@ export function endedOnLastFrame(
   );
 }
 
-export const ADVANCE_CAUSE = { ended: 'ended', next: 'next' } as const;
+export const ADVANCE_CAUSE = {
+  ended: 'ended',
+  next: 'next',
+  nextInApp: 'nextInApp',
+} as const;
 
 export type AdvanceCause = (typeof ADVANCE_CAUSE)[keyof typeof ADVANCE_CAUSE];
 
@@ -69,12 +73,12 @@ export function songEnds(ended: () => boolean, session: () => number) {
         ADVANCE_CAUSE.ended,
       );
     },
-    pressedNext: (pressedIn: number) => {
+    pressedNext: (
+      pressedIn: number,
+      cause: AdvanceCause = ADVANCE_CAUSE.next,
+    ) => {
       if (pressedIn !== session()) return;
-      leave(
-        { session: pressedIn, why: LEFT_BECAUSE.pressed },
-        ADVANCE_CAUSE.next,
-      );
+      leave({ session: pressedIn, why: LEFT_BECAUSE.pressed }, cause);
     },
     subscribe: (listener: AdvanceListener) => {
       listeners.add(listener);

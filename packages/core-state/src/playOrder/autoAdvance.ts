@@ -45,6 +45,7 @@ export type ArrivalEvent =
       readonly song: QueuedSong;
       readonly place: SetlistPlace | null;
       readonly skipped: SkippedSong | null;
+      readonly inApp: boolean;
     }
   | { readonly kind: typeof ARRIVAL.gaveUp; readonly skipped: SkippedSong }
   | { readonly kind: typeof ARRIVAL.metronome };
@@ -222,12 +223,17 @@ function startNext(
   return handOver(players, from, song);
 }
 
+interface Said {
+  readonly skipped: SkippedSong | null;
+  readonly inApp: boolean;
+}
+
 async function play(
   deps: AutoAdvanceDeps,
   arrive: Arrive,
   from: PlayerKind,
   next: PlayAdvance,
-  skipped: SkippedSong | null,
+  said: Said,
 ): Promise<Tried> {
   const undo = await deps.commitNext(next, deps.players[from].stillEnded);
   if (undo === null) return { played: PLAYED.settled, by: from };
@@ -237,7 +243,7 @@ async function play(
   const outcome = await startNext(deps.players, from, song);
   if (outcome === ADVANCE_OUTCOME.displaced) await undo();
   if (outcome === ADVANCE_OUTCOME.playing)
-    arrive({ kind: ARRIVAL.playing, song, place, skipped });
+    arrive({ kind: ARRIVAL.playing, song, place, ...said });
   return outcome === ADVANCE_OUTCOME.unplayable
     ? { played: PLAYED.tryNext, by: song.kind }
     : { played: PLAYED.settled, by: song.kind };
@@ -259,12 +265,15 @@ async function advance(
     if (step.skipped !== null)
       skipped = { reason: SKIP.deleted, kind: step.skipped };
     const next = step.advance;
-    if (next.kind === ADVANCE.open && cause === ADVANCE_CAUSE.next) {
+    if (next.kind === ADVANCE.open && cause !== ADVANCE_CAUSE.ended) {
       await openMetronome(deps, player, arrive, next.entry);
       return;
     }
     if (!isPlayAdvance(next)) break;
-    const tried = await play(deps, arrive, from, next, skipped);
+    const tried = await play(deps, arrive, from, next, {
+      skipped,
+      inApp: cause === ADVANCE_CAUSE.nextInApp,
+    });
     if (tried.played === PLAYED.settled) return;
     from = tried.by;
     skipped = { reason: SKIP.unopened, kind: tried.by };

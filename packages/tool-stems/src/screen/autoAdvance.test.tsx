@@ -77,6 +77,7 @@ const playingNow = (
   song: { kind: 'stems', id: stemSetId },
   place: null,
   skipped: null,
+  inApp: false,
   ...change,
 });
 

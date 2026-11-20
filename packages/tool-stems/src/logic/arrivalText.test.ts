@@ -25,6 +25,7 @@ const playing: Arrival = {
   song: { kind: 'stems', id: NIGHT_BUS },
   place: { number: 3, of: 5 },
   skipped: null,
+  inApp: false,
 };
 
 describe('what the player says after an advance', () => {
@@ -39,6 +40,23 @@ describe('what the player says after an advance', () => {
         library,
       ),
     ).toBe('Playing Hum');
+  });
+
+  it('says nothing about a song the in-app Next played', () => {
+    expect(arrivalText({ ...playing, inApp: true }, library)).toBeNull();
+  });
+
+  it('still says a skip that an in-app Next caused', () => {
+    expect(
+      arrivalText(
+        {
+          ...playing,
+          inApp: true,
+          skipped: { reason: SKIP.deleted, kind: 'stems' },
+        },
+        library,
+      ),
+    ).toBe(SKIPPED_STEM_SONG);
   });
 
   it('says nothing while the song is still opening', () => {
@@ -95,6 +113,7 @@ describe('what the player says after an advance', () => {
           song: { kind: 'stems', id: NIGHT_BUS },
           place: null,
           skipped: { reason: SKIP.unopened, kind: 'stems' },
+          inApp: false,
         },
         library,
       ),

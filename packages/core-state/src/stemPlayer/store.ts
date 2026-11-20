@@ -41,6 +41,7 @@ import { retimeActions, retimeAnchor } from './retimeActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
 import { sortedSections } from './sections.ts';
 import {
+  ADVANCE_CAUSE,
   endedOnLastFrame,
   songEnds,
   type AdvanceListener,
@@ -448,7 +449,7 @@ export function createStemPlayerStore(
       },
       ...advancing,
       pressNext: () => {
-        ends.pressedNext(mixer.current());
+        ends.pressedNext(mixer.current(), ADVANCE_CAUSE.nextInApp);
       },
       onSongEnd: ends.subscribe,
       songStillEnded: ends.stands,
