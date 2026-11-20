@@ -41,6 +41,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
       failed: false,
       ready: true,
       rows: [{ kind: 'song', id: 1 }],
+      rowPaths: new Map(),
       importing: [],
       notice: null,
       query: '',
@@ -51,6 +52,8 @@ vi.mock('@kitbag/core-state', async (original) => ({
     }),
   inView: () => true,
   filterRows: () => [],
+  useDataFolder: (select: (state: { move: null; codes: null }) => unknown) =>
+    select({ move: null, codes: null }),
 }));
 
 vi.mock('./LibraryRowView.tsx', () => ({ LibraryRowView: () => null }));
@@ -80,6 +83,7 @@ function mount(
         onBack: () => undefined,
         onOpenStemSet: () => undefined,
         onOpenSong: () => undefined,
+        onUnavailable: () => undefined,
         ...(dock === undefined ? {} : { dock: dock as never }),
         ...extra,
       }),
@@ -157,5 +161,20 @@ describe('the Stem songs screen with its own way to add', () => {
   it('shows the status the route gives above the list', () => {
     const tree = mount(undefined, { status: createElement('Status') });
     expect(tree.root.findAllByType('Status' as never)).toHaveLength(1);
+  });
+});
+
+describe('the data folder strip', () => {
+  it('sits under the app bar, above the search and the list', () => {
+    const tree = mount(undefined, { strip: createElement('Strip') });
+    const strip = tree.root.findByType('Strip' as never);
+    const siblings = strip.parent?.children ?? [];
+    const body = siblings.find(
+      (child) =>
+        typeof child !== 'string' &&
+        child.findAllByType('ScrollView' as never).length > 0,
+    );
+    if (body === undefined) throw new Error('no list body');
+    expect(siblings.indexOf(strip)).toBe(siblings.indexOf(body) - 1);
   });
 });

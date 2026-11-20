@@ -402,7 +402,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun readWaveform(relativePath: String, buckets: Double, promise: Promise) {
     io.execute {
       try {
-        val envelope = NativeWaveform.envelope(LibraryPaths.resolve(libraryRoot(), relativePath), buckets.toInt())
+        val envelope = NativeWaveform.envelope(dataFolder().readable(relativePath), buckets.toInt())
           ?: throw IOException("Unreadable waveform sidecar")
         promise.resolve(Arguments.createArray().apply { envelope.forEach { pushDouble(it.toDouble()) } })
       } catch (e: Exception) {
