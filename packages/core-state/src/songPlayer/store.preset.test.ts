@@ -197,6 +197,18 @@ describe('a song with a saved preset', () => {
     expect(store.getState().click).toBe(false);
   });
 
+  it("turns the next song's saved click on when opened over a playing click", async () => {
+    const { fake, store } = await editedAndSaved();
+    await reopened(store);
+    const saved = fake.records.saveForLibrarySong.mock.calls[0]?.[1];
+    if (saved === undefined) throw new Error('nothing saved');
+    await fake.records.saveForLibrarySong(OTHER_SONG, saved);
+    expect(store.getState().click).toBe(true);
+    await store.getState().open(OTHER_SONG, BARS).loaded;
+    expect(store.getState().songId).toBe(OTHER_SONG);
+    expect(store.getState().click).toBe(true);
+  });
+
   it('does not lend its click to another song', async () => {
     const { store } = await editedAndSaved();
     store.getState().close();

@@ -36,7 +36,12 @@ import {
 } from '../songLibrary/store.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 import { songCard } from './songCard.ts';
-import { linkedPreset, savedClick, songPresetActions } from './songPreset.ts';
+import {
+  linkedPreset,
+  readyState,
+  songPresetActions,
+  type LoadedSong,
+} from './songPreset.ts';
 import type { SongPlayerActions } from './actions.ts';
 import {
   songClickActions,
@@ -183,6 +188,14 @@ export function createSongPlayerStore(
       );
     };
 
+    const becomeReady = async (opened: number, loaded: LoadedSong) => {
+      detectedGrid = loaded.record;
+      set(readyState(loaded, get().clickSettings));
+      showWaveform(opened, loaded.record.waveformPath);
+      if (loaded.preset !== undefined && !get().click)
+        await get().toggleClick();
+    };
+
     const load = async (opened: number, songId: number) => {
       const runtime = runtimeOf();
       const { commands } = runtime;
@@ -220,24 +233,9 @@ export function createSongPlayerStore(
         set({ status: 'failed' });
         return;
       }
-      detectedGrid = record;
-      const grid = recordGrid(record);
-      const meterOverride = meterOverrideOf(record);
-      const song = { ...get(), meterOverride, detected: grid.detected };
-      set({
-        status: 'ready',
-        engineRate,
-        durationFrames,
-        beats: grid.beats,
-        downbeatIndices: grid.downbeatIndices,
-        detected: grid.detected,
-        meterOverride,
-        ...savedClick(preset, song),
-      });
       if (decoded > 0)
         correctStoredLength(record, framesToSeconds(decoded, engineRate));
-      showWaveform(opened, record.waveformPath);
-      if (preset !== undefined) await get().toggleClick();
+      await becomeReady(opened, { record, preset, engineRate, durationFrames });
     };
 
     const isOpenAndReady = (songId: number) => {

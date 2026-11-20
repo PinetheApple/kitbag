@@ -113,8 +113,7 @@ async function updatePreset(
 
 export type LinkedPresetValues = Omit<NewSongPreset, 'id' | 'librarySongId'>;
 
-// No unique index on library_song_id (no schema change), so one preset per song
-// holds by reading then writing inside the repository's own BEGIN/COMMIT.
+// No unique index on library_song_id: one preset per song holds only because this read-then-write runs in one transaction.
 async function saveLinkedPreset(
   db: Database,
   songId: number,
