@@ -25,6 +25,7 @@ import { CODES } from '../songLibrary/store.test-helper.ts';
 import { createStemPlayerStore, type StemPlayerStore } from './store.ts';
 
 export const RATE = 44100;
+export const SONG_FRAMES = 10 * RATE;
 export const SAVE_MS = 500;
 export const SEEK_MS = 100;
 export const BARS = 8;
