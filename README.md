@@ -63,9 +63,6 @@ sha256sum -c kitbag.apk.sha256
 Then open `kitbag.apk` on the phone (allow installs from that source), or
 `adb install kitbag.apk`. Later releases install over it.
 
-If you have a debug-signed development build installed, uninstall it first: a
-build signed with a different key cannot update it.
-
 ## Architecture
 
 - **C++ realtime audio core** (`native/audio_core`) on miniaudio — sample-accurate
