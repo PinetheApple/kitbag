@@ -11,15 +11,19 @@ interface Splash {
   readonly dark?: { readonly backgroundColor?: string };
 }
 
-const expo = (
+type PluginEntry = string | readonly [string, Splash];
+
+const { plugins } = (
   JSON.parse(readFileSync(join(APP, 'app.json'), 'utf8')) as {
-    expo: {
-      splash: Splash;
-      android: { splash: Splash };
-      ios: { splash: Splash };
-    };
+    expo: { plugins: readonly PluginEntry[] };
   }
 ).expo;
+
+function isSplashPlugin(
+  plugin: PluginEntry,
+): plugin is readonly [string, Splash] {
+  return typeof plugin !== 'string' && plugin[0] === 'expo-splash-screen';
+}
 
 function splashColour(valuesDir: string): string | undefined {
   const xml = readFileSync(join(RES, valuesDir, 'colors.xml'), 'utf8');
@@ -30,11 +34,9 @@ function splashColour(valuesDir: string): string | undefined {
 
 describe('splash background', () => {
   it('is the light theme background by default and the dark one at night', () => {
-    expect(expo.splash.backgroundColor).toBe(palette.bg.light);
-    expect(expo.android.splash.backgroundColor).toBe(palette.bg.light);
-    expect(expo.android.splash.dark?.backgroundColor).toBe(palette.bg.dark);
-    expect(expo.ios.splash.backgroundColor).toBe(palette.bg.light);
-    expect(expo.ios.splash.dark?.backgroundColor).toBe(palette.bg.dark);
+    const splash = plugins.find(isSplashPlugin)?.[1];
+    expect(splash?.backgroundColor).toBe(palette.bg.light);
+    expect(splash?.dark?.backgroundColor).toBe(palette.bg.dark);
     expect(splashColour('values')).toBe(palette.bg.light);
     expect(splashColour('values-night')).toBe(palette.bg.dark);
   });

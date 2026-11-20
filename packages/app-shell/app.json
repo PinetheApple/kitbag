@@ -4,28 +4,12 @@
     "slug": "kitbag",
     "version": "0.1.0",
     "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "backgroundColor": "#F5F3EE",
-      "resizeMode": "contain"
-    },
     "orientation": "portrait",
     "scheme": "kitbag",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "android": {
       "package": "com.kitbag.app",
       "predictiveBackGestureEnabled": false,
-      "splash": {
-        "image": "./assets/splash-icon.png",
-        "backgroundColor": "#F5F3EE",
-        "resizeMode": "contain",
-        "dark": {
-          "image": "./assets/splash-icon.png",
-          "backgroundColor": "#0E0D10",
-          "resizeMode": "contain"
-        }
-      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon/foreground.png",
         "backgroundImage": "./assets/adaptive-icon/background.png",
@@ -37,22 +21,25 @@
         "android.permission.VIBRATE"
       ]
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#F5F3EE",
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#0E0D10"
+          }
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     },
     "ios": {
       "bundleIdentifier": "com.kitbag.app",
-      "splash": {
-        "image": "./assets/splash-icon.png",
-        "backgroundColor": "#F5F3EE",
-        "resizeMode": "contain",
-        "dark": {
-          "image": "./assets/splash-icon.png",
-          "backgroundColor": "#0E0D10",
-          "resizeMode": "contain"
-        }
-      },
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Kitbag uses the microphone to hear your instrument while the tuner screen is open. It stops listening when you leave the tuner or switch apps."
       }
