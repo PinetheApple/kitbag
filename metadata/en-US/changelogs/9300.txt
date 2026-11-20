@@ -1,0 +1,1 @@
+• A Queue sheet lists what plays next, from the mini-player, the stem player and Stem songs, and Next in the stem player now keeps playing.
