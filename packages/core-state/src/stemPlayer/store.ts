@@ -56,7 +56,7 @@ import { countPending, songStart } from './songStart.ts';
 import { songGrid, tempoActions } from './tempoActions.ts';
 import { longestSeconds, tempoModeOf } from './tempoGrid.ts';
 import { framesToSeconds, secondsToFrames } from './time.ts';
-import { loadTracks, rowsOf } from './tracks.ts';
+import { loadTracks, loadWaveforms, rowsOf } from './tracks.ts';
 
 const MIX_SAVE_DELAY_MS = 600;
 export const SCRUB_SEEK_DELAY_MS = 120;
@@ -353,30 +353,6 @@ export function createStemPlayerStore(
       anchorRetime(frame);
       start.afterSeek(frame);
     };
-    const loadWaveforms = (
-      opened: number,
-      record: StemSetRecord,
-      bars: number,
-    ) => {
-      get().stems.forEach((row, track) => {
-        const path = record.stems[track]?.waveformPath ?? null;
-        if (path === null) return;
-        runtimeOf()
-          .readWaveform(path, bars)
-          .then((envelope) => {
-            if (!live(opened)) return;
-            set((s) => ({
-              stems: s.stems.map((r) =>
-                r.id === row.id ? { ...r, envelope } : r,
-              ),
-            }));
-          })
-          .catch((error: unknown) => {
-            console.warn('[kitbag] stem waveform unreadable', error);
-          });
-      });
-    };
-
     const load = async (opened: number, setId: number, bars: number) => {
       const runtime = runtimeOf();
       const { commands } = runtime;
@@ -415,7 +391,7 @@ export function createStemPlayerStore(
         sections: sortedSections(record.sections),
         lyrics: songLyrics(record.lyrics, record.lyricsRetimed),
       });
-      loadWaveforms(opened, record, bars);
+      loadWaveforms(context, () => live(opened), record, bars);
     };
 
     const beginSession = (
