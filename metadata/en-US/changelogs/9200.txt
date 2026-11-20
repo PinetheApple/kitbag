@@ -1,0 +1,1 @@
+• Add to queue joins Play next, Play next now really plays next, and single songs can be queued too. Starting the metronome stops a playing song.
