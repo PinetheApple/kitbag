@@ -20,9 +20,13 @@ import {
 } from '@kitbag/core-design';
 import {
   activeSetView,
-  adjacentPresetEntry,
+  adjacentEntry,
+  entryName,
   SONG_STEP,
+  stagePositionOf,
+  stemSongTitle,
   useLibrary,
+  useStemSongs,
   type ActiveSet,
   type SetlistEntry,
 } from '@kitbag/core-state';
@@ -41,6 +45,7 @@ import {
   type SongChipText,
 } from '../logic/setlistChip.ts';
 import { LoadedSongSheet } from './LoadedSongSheet.tsx';
+import { useStepSong, type StemStepHandlers } from './useStepSong.ts';
 import { SetlistSongsSheet } from './SetlistSongsSheet.tsx';
 import { useLoadedSongUnsaved } from './UnsavedChanges.tsx';
 
@@ -155,7 +160,12 @@ function useSongContext(): SongContext {
   const allEntries = useLibrary((s) => s.entries);
   const loaded = useLibrary((s) => s.loaded);
   const loadedItemId = loaded?.itemId ?? null;
-  const song = useLibrary((s) => loadedSongName(s.presets, s.loaded));
+  const preset = useLibrary((s) => loadedSongName(s.presets, s.loaded));
+  const stems = useStemSongs();
+  const song =
+    loaded !== null && loaded.presetId === null
+      ? stemSongTitle(loaded.stemSetId, stems)
+      : preset;
   const set = useMemo(
     () => activeSetView(setlists, allEntries, loaded),
     [setlists, allEntries, loaded],
@@ -255,28 +265,40 @@ function SetlistsChip({ onPress }: { readonly onPress: () => void }) {
   );
 }
 
-interface StageBarProps {
+function useStepTargets(context: SongContext & { readonly set: ActiveSet }) {
+  const { entries, set } = context;
+  const loaded = useLibrary((s) => s.loaded);
+  const stems = useStemSongs();
+  const nameOf = (entry: SetlistEntry | undefined) =>
+    entry === undefined ? undefined : entryName(entry, stems);
+  const position = stagePositionOf(loaded, set.id);
+  const previous = adjacentEntry(entries, position, SONG_STEP.previous);
+  const next = adjacentEntry(entries, position, SONG_STEP.next);
+  return { previous: nameOf(previous), next: nameOf(next) };
+}
+
+interface StageBarProps extends StemStepHandlers {
   readonly context: SongContext & { readonly set: ActiveSet };
   readonly bottomInset: number;
   readonly onBack: (() => void) | undefined;
 }
 
-function StageBar({ context, bottomInset, onBack }: StageBarProps) {
-  const { song, set, entries, loadedItemId } = context;
-  const stepSong = useLibrary((s) => s.stepSong);
+function StageBar({
+  context,
+  bottomInset,
+  onBack,
+  ...handlers
+}: StageBarProps) {
+  const { song, set } = context;
+  const step = useStepSong(handlers);
   const [listOpen, setListOpen] = useState(false);
-  const previous = adjacentPresetEntry(
-    entries,
-    loadedItemId,
-    SONG_STEP.previous,
-  );
-  const next = adjacentPresetEntry(entries, loadedItemId, SONG_STEP.next);
+  const { previous, next } = useStepTargets(context);
   const handlePrevious = useCallback(() => {
-    void stepSong(SONG_STEP.previous);
-  }, [stepSong]);
+    void step(SONG_STEP.previous);
+  }, [step]);
   const handleNext = useCallback(() => {
-    void stepSong(SONG_STEP.next);
-  }, [stepSong]);
+    void step(SONG_STEP.next);
+  }, [step]);
   const handleOpenList = useCallback(() => {
     setListOpen(true);
   }, []);
@@ -317,6 +339,7 @@ function StageBar({ context, bottomInset, onBack }: StageBarProps) {
         set={set}
         bottomInset={bottomInset}
         onDismiss={handleCloseList}
+        onOpenStemSet={handlers.onOpenStemSet}
       />
     </>
   );
@@ -379,7 +402,7 @@ function PlainBar({
   );
 }
 
-interface MetronomeAppBarProps {
+interface MetronomeAppBarProps extends StemStepHandlers {
   readonly bottomInset: number;
   readonly onBack?: (() => void) | undefined;
   readonly onOpenSetlists?: (() => void) | undefined;
@@ -389,6 +412,8 @@ export function MetronomeAppBar({
   bottomInset,
   onBack,
   onOpenSetlists,
+  onOpenStemSet,
+  onSkipped,
 }: MetronomeAppBarProps) {
   const context = useSongContext();
   const { set } = context;
@@ -398,6 +423,8 @@ export function MetronomeAppBar({
         context={{ ...context, set }}
         bottomInset={bottomInset}
         onBack={onBack}
+        onOpenStemSet={onOpenStemSet}
+        onSkipped={onSkipped}
       />
     );
   return (

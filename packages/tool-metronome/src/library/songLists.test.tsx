@@ -50,6 +50,12 @@ vi.mock('./sheets.tsx', () => ({
   ConfirmSheet: () => null,
   guarded: () => Promise.resolve(),
 }));
+vi.mock('./AddSongSheet.tsx', () => ({
+  AddSongSheet: (props: { readonly metronomeActions: readonly Action[] }) => {
+    seen.actions = props.metronomeActions;
+    return null;
+  },
+}));
 vi.mock('./ScreenFrame.tsx', async () => {
   const { createElement: h } = await import('react');
   return {
@@ -103,6 +109,7 @@ describe('song-linked presets on metronome screens', () => {
         entries: [],
         bottomInset: 0,
         onEdit: ignore,
+        onAddStemSongs: ignore,
       }),
     );
     expect(seen.actions.map((action) => action.label)).toEqual([
