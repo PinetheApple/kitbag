@@ -94,10 +94,7 @@ export interface AutoAdvanceDeps {
   ) => Promise<Undo | null>;
   readonly placeOf: (advance: Advance) => SetlistPlace | null;
   readonly candidates: () => number;
-  readonly commitOpen: (
-    entry: PresetSetlistEntry,
-    stands: () => boolean,
-  ) => Promise<boolean>;
+  readonly commitOpen: (entry: PresetSetlistEntry) => Promise<boolean>;
   readonly arrivals: StoreApi<ArrivalState>;
   readonly backOf: (from: PlayerKind) => Back | null;
   readonly commitBack: (back: Back) => Promise<void>;
@@ -172,8 +169,7 @@ export const autoAdvanceDeps = (bars: WaveformBars): AutoAdvanceDeps => ({
   },
   candidates: () =>
     playOrderStore.getState().queue.length + onStageNow().stage.entries.length,
-  commitOpen: (entry, stands) =>
-    playOrderStore.getState().commitOpen(entry, stands),
+  commitOpen: (entry) => playOrderStore.getState().commitOpen(entry),
   arrivals: arrivalStore,
   backOf: backNow,
   commitBack,
@@ -195,9 +191,10 @@ async function openMetronome(
   player: AdvancingPlayer,
   arrive: Arrive,
   entry: PresetSetlistEntry,
-  stands: () => boolean = player.stillEnded,
 ) {
-  if (!(await deps.commitOpen(entry, stands))) return;
+  // Loading a metronome song closes every song player, so the press can only
+  // be checked before the load (advance does), never after it.
+  if (!(await deps.commitOpen(entry))) return;
   player.handToMetronome();
   arrive({ kind: ARRIVAL.metronome });
 }
@@ -318,8 +315,6 @@ async function advance(
     arrive({ kind: ARRIVAL.gaveUp, skipped });
 }
 
-const ALWAYS = () => true;
-
 interface BackStep {
   readonly from: PlayerKind;
   readonly inApp: boolean;
@@ -353,7 +348,7 @@ async function stepBack(deps: AutoAdvanceDeps, arrive: Arrive, step: BackStep) {
   }
   const { entry } = back;
   if (isPresetEntry(entry)) {
-    await openMetronome(deps, player, arrive, entry, ALWAYS);
+    await openMetronome(deps, player, arrive, entry);
     return;
   }
   const song: QueuedSong = { kind: 'stems', id: entry.stemSetId };

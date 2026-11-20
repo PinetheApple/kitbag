@@ -54,7 +54,7 @@ async function heldLoad() {
     commitNext: (next, stands) => order.getState().commitNext(next, stands),
     placeOf: () => null,
     candidates: () => order.getState().queue.length + SETLIST_CANDIDATES,
-    commitOpen: (entry, stands) => order.getState().commitOpen(entry, stands),
+    commitOpen: (entry) => order.getState().commitOpen(entry),
     arrivals: createStore<ArrivalState>(() => ({ arrival: null })),
     ...NO_BACK,
   });

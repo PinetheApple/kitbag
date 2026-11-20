@@ -48,10 +48,22 @@ env:
     visible: 'Up next: ${FIXTURE_STEMS_NO_GRID}, ${SETLIST} · 2 of 4'
     timeout: 20000
 - assertVisible: 'Play'
-- tapOn: 'Next: ${FIXTURE_STEMS_NO_GRID}'
+- runFlow:
+    file: ../../subflows/tap-while-playing.yaml
+    env:
+      TARGET: 'Next: ${FIXTURE_STEMS_NO_GRID}'
 - extendedWaitUntil:
     visible: 'Up next: ${FIXTURE_STEMS}, ${SETLIST} · 3 of 4'
     timeout: 20000
+- assertVisible: 'Pause'
+# Next plays the song it steps to; pausing keeps it from ending under the steps below.
+- runFlow:
+    file: ../../subflows/tap-while-playing.yaml
+    env:
+      TARGET: 'Pause'
+- extendedWaitUntil:
+    visible: 'Play'
+    timeout: 10000
 - back
 - assertVisible: '2\. ${FIXTURE_STEMS_NO_GRID}, stem song.*, now loaded'
 - back
