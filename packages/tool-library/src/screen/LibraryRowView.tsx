@@ -14,6 +14,7 @@ import {
   opacity,
   size,
   space,
+  textIconScale,
   textRoles,
   textStyle,
   unshared,
@@ -36,6 +37,7 @@ import {
   playingSubtitle,
   rowBadges,
   rowSubtitle,
+  showsGridIcon,
   spokenRow,
   type RowPlace,
 } from '../logic/rowText.ts';
@@ -221,6 +223,14 @@ export function LibraryRowView({
           accessibilityLabel={badge.spoken}
         />
       ))}
+      {showsGridIcon(row, place) && (
+        <Icon
+          name="beatGrid"
+          size="listBadge"
+          color="greenInk"
+          scale={textIconScale(fontScale)}
+        />
+      )}
     </View>
   );
   return (

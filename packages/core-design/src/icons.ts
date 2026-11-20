@@ -82,6 +82,7 @@ export const iconGlyphs = {
   exportMix: 'file-export-outline',
   share: 'share-variant',
   clickGrouping: 'view-week-outline',
+  beatGrid: 'grid',
   clickRate: 'music-note-eighth',
   tempoMode: 'chart-line-variant',
   internalStorage: 'cellphone',

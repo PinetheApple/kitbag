@@ -107,26 +107,27 @@ export function songStatusBadge(badge: SongBadge): BadgeSpec {
   return STATUS_BADGES[badge];
 }
 
-function statusBadges(row: LibraryRow, status: SongBadge): BadgeSpec[] {
-  if (row.kind === 'song') return [STATUS_BADGES[status]];
-  return row.hasGrid ? [GRID_BADGE] : [];
-}
-
 export function rowBadges(
   row: LibraryRow,
   status: SongBadge,
   place: RowPlace = 'here',
 ): BadgeSpec[] {
-  const shown =
-    place === 'here' ? statusBadges(row, status) : [PLACE_BADGES[place]];
-  if (row.kind === 'song') return shown;
-  const stems: BadgeSpec = {
-    key: 'stems',
-    label: `STEMS ×${String(row.stemCount)}`,
-    spoken: countLabel(row.stemCount, 'stem', 'stems'),
-    tone: 'accent',
-  };
-  return [stems, ...shown];
+  if (place !== 'here') return [PLACE_BADGES[place]];
+  return row.kind === 'song' ? [STATUS_BADGES[status]] : [];
+}
+
+export function showsGridIcon(row: LibraryRow, place: RowPlace): boolean {
+  return row.kind === 'stems' && place === 'here' && row.hasGrid;
+}
+
+function spokenStatus(
+  row: LibraryRow,
+  status: SongBadge,
+  place: RowPlace,
+): string[] {
+  if (row.kind === 'stems' && place === 'here')
+    return [STATUS_BADGES[status].spoken];
+  return rowBadges(row, status, place).map((badge) => badge.spoken);
 }
 
 function rowFacts(row: LibraryRow): SongFact[] {
@@ -173,7 +174,7 @@ export function spokenRow(
   if (row.durationSec > 0) parts.push(spokenLength(row.durationSec));
   if (row.kind === 'stems' || STATUS_NOTES[status] === undefined)
     parts.push(...rowFacts(row).map((fact) => fact.spoken));
-  parts.push(...rowBadges(row, status, place).map((badge) => badge.spoken));
+  parts.push(...spokenStatus(row, status, place));
   if (failureStatus !== null) parts.push(failureStatus);
   return parts.join(', ');
 }
