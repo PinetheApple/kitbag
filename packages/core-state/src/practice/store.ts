@@ -1,4 +1,8 @@
-import { MS_PER_SECOND, type NewPracticeSession } from '@kitbag/core-db';
+import {
+  loggedSettingsOf,
+  MS_PER_SECOND,
+  type NewPracticeSession,
+} from '@kitbag/core-db';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { activeSetView } from '../library/activeSet.ts';
@@ -8,19 +12,29 @@ import {
   type LibraryState,
   type LibraryStore,
 } from '../library/store.ts';
-import { metronomeStore, type MetronomeStore } from '../metronome/store.ts';
+import { presetFromMetronome } from '../library/presetMapping.ts';
+import { roundToEngineBpm } from '../metronome/config.ts';
+import {
+  metronomeStore,
+  type MetronomeConfig,
+  type MetronomeStore,
+} from '../metronome/store.ts';
 import {
   endPracticeSession,
   MIN_SAVED_PLAYED_MS,
   PRACTICE_TEMPO_SAMPLE_MS,
   practiceSessionAfterContext,
-  practiceSessionAfterRunning,
+  practiceSessionAfterPause,
+  practiceSessionAfterPlay,
+  practiceSessionAfterSettings,
   practiceSessionAfterTempo,
+  practiceSessionAfterTempoChange,
   startPracticeSession,
   type PracticeContext,
+  type PracticeRecording,
   type PracticeSession,
-  type PracticeSummary,
 } from './session.ts';
+import type { StretchSetup } from './stretch.ts';
 
 export interface PracticePersistence {
   readonly insert: (session: NewPracticeSession) => Promise<void>;
@@ -28,11 +42,11 @@ export interface PracticePersistence {
 
 export interface PracticeSessionState {
   readonly session: PracticeSession | null;
-  readonly pending: readonly PracticeSummary[];
+  readonly pending: readonly PracticeRecording[];
 }
 
 export interface PracticeSessionActions {
-  endSession: () => PracticeSummary | null;
+  endSession: () => PracticeRecording | null;
   saveSession: () => Promise<void>;
   discardSession: () => void;
 }
@@ -49,28 +63,67 @@ export interface PracticeSessionDeps {
   readonly every: (ms: number, tick: () => void) => () => void;
 }
 
-function contextOf(state: LibraryState): PracticeContext {
+function stageOf(state: LibraryState): PracticeContext['setlist'] {
   const set = activeSetView(state.setlists, state.entries, state.loaded);
+  const summary = state.setlists.find((s) => s.setlist.id === set?.id);
+  if (set === undefined || summary === undefined) return null;
+  return {
+    id: set.id,
+    uuid: summary.setlist.uuid,
+    name: set.name,
+    position: set.position ?? null,
+    itemId: state.loaded?.itemId ?? null,
+  };
+}
+
+function contextOf(state: LibraryState): PracticeContext {
   const preset = loadedPresetOf(state);
   return {
-    setlist: set === undefined ? null : { id: set.id, name: set.name },
+    setlist: stageOf(state),
     song:
       preset === undefined ? null : { uuid: preset.uuid, title: preset.name },
   };
 }
 
 function sameContext(a: PracticeContext, b: PracticeContext): boolean {
-  return a.setlist?.id === b.setlist?.id && a.song?.uuid === b.song?.uuid;
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
-export function practiceRecordOf(summary: PracticeSummary): NewPracticeSession {
+function setupOf(config: MetronomeConfig): StretchSetup {
+  const { bars, distinct, sound } = config.countIn;
   return {
-    uuid: summary.uuid,
-    startedAt: new Date(summary.startedAt),
-    durationSeconds: Math.round(summary.playedMs / MS_PER_SECOND),
-    avgBpm: summary.avgBpm,
-    setlistId: summary.setlist?.id ?? null,
-    songUuids: summary.songs.map((song) => song.uuid),
+    settings: loggedSettingsOf(presetFromMetronome(config)),
+    countIn: { bars, distinct, sound },
+  };
+}
+
+function settingsKey(config: MetronomeConfig): string {
+  const settings = { ...presetFromMetronome(config), bpm: null };
+  return JSON.stringify([settings, config.countIn]);
+}
+
+function isUserTempoChange(
+  state: MetronomeConfig,
+  previous: MetronomeConfig,
+): boolean {
+  return (
+    !state.ramp.enabled &&
+    roundToEngineBpm(state.bpm) !== roundToEngineBpm(previous.bpm)
+  );
+}
+
+export function practiceRecordOf(
+  recording: PracticeRecording,
+): NewPracticeSession {
+  return {
+    uuid: recording.uuid,
+    startedAt: new Date(recording.startedAt),
+    durationSeconds: Math.round(recording.playedMs / MS_PER_SECOND),
+    avgBpm: recording.avgBpm,
+    setlistId: recording.setlist?.id ?? null,
+    setlistName: recording.setlist?.name ?? null,
+    songUuids: recording.songs.map((song) => song.uuid),
+    log: recording.log,
   };
 }
 
@@ -94,7 +147,7 @@ export function createPracticeSessionStore(
         pending: get().pending.filter((summary) => summary.uuid !== uuid),
       });
     };
-    const write = (summary: PracticeSummary) =>
+    const write = (summary: PracticeRecording) =>
       Promise.resolve()
         .then(() => deps.persistence.insert(practiceRecordOf(summary)))
         .then(
@@ -124,7 +177,13 @@ export function createPracticeSessionStore(
         set({
           pending: summary === null ? pending : [summary, ...pending],
           session: metronomeState.running
-            ? startPracticeSession(deps.newUuid(), at, bpm, session.context)
+            ? startPracticeSession(
+                deps.newUuid(),
+                at,
+                bpm,
+                session.context,
+                setupOf(metronomeState),
+              )
             : null,
         });
         return summary;
@@ -163,12 +222,11 @@ export function createPracticeSessionStore(
     stopSampling?.();
     stopSampling = null;
     if (!state.running) {
-      update((session) =>
-        practiceSessionAfterRunning(session, false, at, state.bpm),
-      );
+      update((session) => practiceSessionAfterPause(session, at, state.bpm));
       return;
     }
     const { session } = store.getState();
+    const setup = setupOf(state);
     store.setState({
       session:
         session === null
@@ -177,23 +235,40 @@ export function createPracticeSessionStore(
               at,
               state.bpm,
               contextOf(library.getState()),
+              setup,
             )
-          : practiceSessionAfterRunning(session, true, at, state.bpm),
+          : practiceSessionAfterPlay(session, at, state.bpm, setup),
     });
     stopSampling = deps.every(PRACTICE_TEMPO_SAMPLE_MS, sampleTempo);
   };
 
+  const onChange = (state: MetronomeStore, previous: MetronomeStore) => {
+    const at = now();
+    const { bpm } = state;
+    if (settingsKey(state) !== settingsKey(previous))
+      update((s) => practiceSessionAfterSettings(s, at, bpm, setupOf(state)));
+    else if (isUserTempoChange(state, previous))
+      update((s) =>
+        practiceSessionAfterTempoChange(s, at, bpm, setupOf(state)),
+      );
+    else if (bpm !== previous.bpm)
+      update((s) => practiceSessionAfterTempo(s, at, bpm));
+  };
+
   metronome.subscribe((state, previous) => {
     if (state.running !== previous.running) onRunning(state);
-    else if (state.bpm !== previous.bpm)
-      update((session) => practiceSessionAfterTempo(session, now(), state.bpm));
+    else onChange(state, previous);
   });
 
   library.subscribe((state) => {
     const context = contextOf(state);
     const { session } = store.getState();
     if (session === null || sameContext(session.context, context)) return;
-    update((current) => practiceSessionAfterContext(current, context, now()));
+    const live = metronome.getState();
+    const bpm = live.readTempo();
+    update((current) =>
+      practiceSessionAfterContext(current, context, now(), bpm, setupOf(live)),
+    );
   });
 
   return store;

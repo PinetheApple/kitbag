@@ -29,7 +29,8 @@ export const V22_SCHEMA_VERSION = V21_SCHEMA_VERSION + 1;
 export const V23_SCHEMA_VERSION = V22_SCHEMA_VERSION + 1;
 export const V24_SCHEMA_VERSION = V23_SCHEMA_VERSION + 1;
 export const V25_SCHEMA_VERSION = V24_SCHEMA_VERSION + 1;
-export const SCHEMA_VERSION = V25_SCHEMA_VERSION + 1;
+export const V26_SCHEMA_VERSION = V25_SCHEMA_VERSION + 1;
+export const SCHEMA_VERSION = V26_SCHEMA_VERSION + 1;
 
 const OLDEST_UPGRADABLE_VERSION = V7_SCHEMA_VERSION;
 
@@ -362,8 +363,17 @@ export const MIGRATE_V24_TO_V25: readonly string[] = [
 )`,
 ];
 
-// Frozen at the engine's key range when written; a later range change needs its own migration.
 export const MIGRATE_V25_TO_V26: readonly string[] = [
+  'ALTER TABLE practice_sessions ADD COLUMN log TEXT',
+  'ALTER TABLE practice_sessions ADD COLUMN setlist_name TEXT',
+  `UPDATE practice_sessions SET setlist_name =
+   (SELECT name FROM setlists WHERE setlists.id = practice_sessions.setlist_id)
+   WHERE setlist_id IS NOT NULL`,
+  'CREATE INDEX practice_sessions_start_time ON practice_sessions (start_time)',
+];
+
+// Frozen at the engine's key range when written; a later range change needs its own migration.
+export const MIGRATE_V26_TO_V27: readonly string[] = [
   'ALTER TABLE stem_sets ADD COLUMN pitch INTEGER NOT NULL DEFAULT 0 CHECK (pitch BETWEEN -6 AND 6)',
 ];
 
@@ -384,6 +394,7 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V23_TO_V24,
   ...MIGRATE_V24_TO_V25,
   ...MIGRATE_V25_TO_V26,
+  ...MIGRATE_V26_TO_V27,
 ];
 
 export const MIGRATE_V7_TO_V8: readonly string[] = [
@@ -441,7 +452,8 @@ const UPGRADES: readonly {
   { to: V23_SCHEMA_VERSION, steps: MIGRATE_V22_TO_V23 },
   { to: V24_SCHEMA_VERSION, steps: MIGRATE_V23_TO_V24 },
   { to: V25_SCHEMA_VERSION, steps: MIGRATE_V24_TO_V25 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V25_TO_V26 },
+  { to: V26_SCHEMA_VERSION, steps: MIGRATE_V25_TO_V26 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V26_TO_V27 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {

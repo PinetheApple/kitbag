@@ -18,6 +18,13 @@ class LibraryErrorsTest {
     assertEquals(FALLBACK, LibraryErrors.codeFor(IOException("disk full"), FALLBACK))
   }
 
+  @Test
+  fun `a database copy rejects with the code of why it could not be made`() {
+    assertEquals(LibraryErrors.DATABASE_COPY_NO_SPACE, LibraryErrors.databaseCopyCode(DatabaseCopyNoSpaceException()))
+    assertEquals(LibraryErrors.DATABASE_COPY_UNREADABLE, LibraryErrors.databaseCopyCode(DatabaseCopyUnreadableException()))
+    assertEquals(LibraryErrors.SAVE_FAILED, LibraryErrors.databaseCopyCode(IOException("disk full")))
+  }
+
   private companion object {
     const val CARD_UUID = "1234-ABCD"
     const val FALLBACK = "E_IMPORT_FAILED"

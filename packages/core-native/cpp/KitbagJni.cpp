@@ -327,6 +327,11 @@ Java_com_kitbag_corenative_EngineTransport_nativeMixerPlaying(JNIEnv*, jobject) 
   return kb_mixer_is_playing(kitbag::kitbagEngine()) != 0 ? JNI_TRUE : JNI_FALSE;
 }
 
+JNIEXPORT jlong JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeEndCount(JNIEnv*, jobject) {
+  return static_cast<jlong>(kb_mixer_end_count(kitbag::kitbagEngine()));
+}
+
 JNIEXPORT jdouble JNICALL
 Java_com_kitbag_corenative_EngineTransport_nativeSampleRate(JNIEnv*, jobject) {
   return static_cast<jdouble>(kb_engine_sample_rate(kitbag::kitbagEngine()));

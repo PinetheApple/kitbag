@@ -5,53 +5,84 @@ import { migrate, SCHEMA_VERSION } from './migrate';
 import { buildV25Fixture, pragma, rows } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
-const LOWEST_KEY = -6;
-const HIGHEST_KEY = 6;
+const INSERT_SESSION = `INSERT INTO practice_sessions
+  (start_time, duration_seconds, avg_bpm, songs_played, uuid)
+  VALUES (1700000000, 600, 96, '["p"]', 's')`;
 
-const insertSet = (id: number) =>
-  `INSERT INTO stem_sets (id, name, created_at, uuid)
-   VALUES (${String(id)}, 'Echo', 1700000000, 'u${String(id)}')`;
+const practiceShape = (db: DatabaseSync) => ({
+  columns: rows(db, 'PRAGMA table_info(practice_sessions)'),
+  indexes: rows(
+    db,
+    "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'practice_sessions' ORDER BY name",
+  ),
+});
 
-const setPitch = (db: DatabaseSync, pitch: number) => {
-  db.exec(`UPDATE stem_sets SET pitch = ${String(pitch)} WHERE id = 1`);
-};
-
-function freshDatabase() {
-  const db = new DatabaseSync(':memory:');
+function upgraded() {
+  const db = buildV25Fixture();
+  db.exec(INSERT_SESSION);
+  const before = rows<Record<string, unknown>>(
+    db,
+    'SELECT * FROM practice_sessions ORDER BY id',
+  );
   migrate(nodeSqliteDriver(db));
-  db.exec(insertSet(1));
-  return db;
+  return { db, before };
 }
 
 describe('migrate v25 to v26', () => {
-  it('gives every existing stem song the unshifted song key and keeps the rest', () => {
-    const db = buildV25Fixture();
-    db.exec(insertSet(1));
-    db.exec(insertSet(2));
-    const before = rows<Record<string, unknown>>(
-      db,
-      'SELECT * FROM stem_sets ORDER BY id',
-    );
-    migrate(nodeSqliteDriver(db));
-    expect(rows(db, 'SELECT * FROM stem_sets ORDER BY id')).toEqual(
-      before.map((row) => ({ ...row, pitch: 0 })),
-    );
+  it('gives an upgraded database the practice shape of a fresh one', () => {
+    const fresh = new DatabaseSync(':memory:');
+    migrate(nodeSqliteDriver(fresh));
+    const { db } = upgraded();
+    expect(practiceShape(db)).toEqual(practiceShape(fresh));
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
   });
 
-  it.each([LOWEST_KEY, 0, HIGHEST_KEY])('stores a song key of %i', (pitch) => {
-    const db = freshDatabase();
-    setPitch(db, pitch);
-    expect(rows(db, 'SELECT pitch FROM stem_sets')).toEqual([{ pitch }]);
+  it('keeps every earlier session, with no log', () => {
+    const { db, before } = upgraded();
+    expect(before.length).toBeGreaterThan(0);
+    const names = new Map(
+      rows<{ id: number; name: string }>(
+        db,
+        'SELECT id, name FROM setlists',
+      ).map(({ id, name }) => [id, name]),
+    );
+    expect(rows(db, 'SELECT * FROM practice_sessions ORDER BY id')).toEqual(
+      before.map((row) => ({
+        ...row,
+        log: null,
+        setlist_name: names.get(Number(row.setlist_id)) ?? null,
+      })),
+    );
   });
 
-  it.each([LOWEST_KEY - 1, HIGHEST_KEY + 1])(
-    'refuses a song key of %i',
-    (pitch) => {
-      const db = freshDatabase();
-      expect(() => {
-        setPitch(db, pitch);
-      }).toThrow(/CHECK/);
-    },
-  );
+  it('names each earlier session after the setlist it still links to', () => {
+    const db = buildV25Fixture();
+    db.exec(
+      "INSERT INTO setlists (id, name, uuid) VALUES (900, 'Wedding', 'w')",
+    );
+    db.exec(`INSERT INTO practice_sessions
+      (start_time, duration_seconds, avg_bpm, setlist_id, uuid)
+      VALUES (1, 60, 96, 900, 'linked'), (2, 60, 96, NULL, 'unlinked')`);
+    migrate(nodeSqliteDriver(db));
+    expect(
+      rows(
+        db,
+        "SELECT uuid, setlist_name FROM practice_sessions WHERE uuid IN ('linked', 'unlinked') ORDER BY uuid",
+      ),
+    ).toEqual([
+      { uuid: 'linked', setlist_name: 'Wedding' },
+      { uuid: 'unlinked', setlist_name: null },
+    ]);
+  });
+
+  it('reads sessions newest first through the start time index', () => {
+    const { db } = upgraded();
+    const plan = rows<{ detail: string }>(
+      db,
+      'EXPLAIN QUERY PLAN SELECT uuid FROM practice_sessions ORDER BY start_time DESC, id DESC',
+    );
+    expect(plan.map((step) => step.detail).join(' ')).toContain(
+      'practice_sessions_start_time',
+    );
+  });
 });

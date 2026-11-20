@@ -23,10 +23,30 @@ export type { Preferences } from './preferences';
 export { COUNT_IN_PREFERENCE_KEYS } from './count-in-preferences';
 export { STANDALONE_METRONOME_KEY } from './standalone-metronome-preference';
 export type {
+  DeletedPracticeSession,
   NewPracticeSession,
   PracticeRepository,
+  PracticeSessionListing,
   PracticeStats,
+  SavedPracticeSession,
 } from './practice-repository';
+export {
+  isStemSong,
+  loggedSettingsOf,
+  PRACTICE_LOG_VERSION,
+  STRETCH_END,
+  type LoggedCountIn,
+  type LoggedPresetSong,
+  type LoggedSetlist,
+  type LoggedSettings,
+  type LoggedSong,
+  type LoggedStemSong,
+  type LoggedStretch,
+  type PracticeLog,
+  type StretchEnd,
+  type StretchSettingsFields,
+  type TempoChange,
+} from './practice-log';
 export type {
   RouteLatency,
   RouteLatencyRepository,

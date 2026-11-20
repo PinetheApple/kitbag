@@ -170,6 +170,8 @@ export const practiceSessions = sqliteTable('practice_sessions', {
   }),
   songsPlayed: text('songs_played'),
   uuid: text('uuid').notNull(),
+  log: text('log'),
+  setlistName: text('setlist_name'),
 });
 
 export const stemSets = sqliteTable(
