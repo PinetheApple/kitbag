@@ -793,17 +793,22 @@ referenced but never drew: **setlists**, **setlist detail**, **preset editor**.
   Back, previous, a song chip, next; the "Metronome" title gives way. The chip
   shows the loaded song over the setlist and position ("Test gig · 2/4").
   Previous and next load the adjacent song in one tap, through the same load
-  path as tapping it in setlist detail, and are disabled on the first and last
-  song. After the on-stage entry is removed, Next loads the entry now at its
-  position, Previous the one before it; with no song from the set on stage
-  (cleared, or freshly activated) Next loads song 1 and the chip shows the
-  setlist name. Deleting the on-stage metronome song itself counts as cleared;
+  path as tapping it in setlist detail. They are filled 48 dp keys
+  (`design/kitbag-queue.html` §i), and Previous always loads the entry before
+  (no 3 s restart; §7.9). They are disabled on the first and last song unless
+  Repeat is Repeat all (§7.9); then Next on the last song loads song 1 and
+  Previous on the first loads the last. After the on-stage entry is removed,
+  Next loads the entry now at its position, Previous the one before it; with no
+  song from the set on stage (cleared, or freshly activated) Next loads song 1
+  and the chip shows the setlist name. Deleting the on-stage metronome song itself counts as cleared;
   deleting an on-stage stem song keeps the position. The chip opens the
   setlist's song list, the loaded song marked NOW; tapping a row loads it, and
-  "Leave setlist" deactivates the setlist. A song loaded from outside the
-  setlist (All songs, search) clears it. With no setlist active the bar keeps
-  its title, and a song loaded on its own shows in the chip as "Not in a
-  setlist"; the chip then opens a sheet with "Clear song" and "Open setlists".
+  "Leave setlist" ends the setlist as §7.9 defines. A song loaded from outside
+  the setlist (All songs, search) clears it. A setlist pinned here in an earlier
+  app run stays pinned but is not started (§7.9) until one of its entries is
+  loaded. With no setlist active the bar keeps its title, and a song loaded on
+  its own shows in the chip as "Not in a setlist"; the chip then opens a sheet
+  with "Clear song" and "Open setlists".
   Clear song and Leave setlist unlink the loaded song but keep the metronome's
   current settings, so the bar returns to the plain "Setlists" chip without the
   sound changing.
@@ -1003,17 +1008,22 @@ working. Changes:
 - Speed control in the transport, driven by the same stretch stage as the stem
   player (§7.6): the stem player's range, steps and presets, saved per song and
   restored on open. Reset speed sits in the overflow menu (#528).
+- **Up next row** — the stem player's Previous · Up next · Repeat · Next row
+  (§7.9), built from the same parts; `design/kitbag-queue.html` §e binds it
+  here too, with no separate mockup.
 - Tapping the Songs row of the song the mini-player is showing opens the player
   on that song as it is, still playing if it was. Any other row tap on Songs
   opens the player paused.
 - **Stop** lives in the player's overflow menu, with Re-analyse under the same
-  rule. Stop ends the song session and removes the mini-player. Stop in the
-  song's media notification does the same.
-- **Mini-player** — leaving the player keeps the session, so the click keeps
-  running while you open the tuner or edit a setlist. A docked bar shows on Home
-  and Songs only: music-note icon, title, artist and click state, play/pause,
-  close, and a thin progress line. A tap opens the player; close stops the song
-  as Stop does.
+  rule. Stop ends the listening session (§7.9) and removes the mini-player. Stop
+  in the song's media notification does the same.
+- **Mini-player** — leaving the player, or the stem player, keeps the session,
+  so the click keeps running while you open the tuner or edit a setlist. A
+  docked bar shows on Home, Songs and Stem songs: a music-note or stem tile,
+  title, a detail line (artist · "Next: <title>", artist · setlist · position
+  for a setlist song, the artist alone with nothing up next), click state,
+  Queue, play/pause, close, and a thin progress line. A tap opens the player;
+  Queue opens the queue sheet (§7.9); close stops the song as Stop does.
 
 ### 6.4 Metronome lock
 
@@ -1110,6 +1120,7 @@ first implementation**, gated on §4.1.
 - Metronome joins the stem mix on the same grid. **Built** (#137): the
   transport's click key follows the stem grid (D16).
 - Speed and key controls; see §7.6.
+- Previous, Up next, Repeat and Next; see §7.9.
 
 ### 7.4 Track count
 
@@ -1240,6 +1251,52 @@ phone. That page defines the format; this spec does not copy it.
   and deletes none. An older backup leaves local stem songs untouched (#407).
 - Out of scope: separation, lead/backing vocal split, lyric transcription,
   search and download — StemDeck's job, on hardware built for it.
+
+### 7.9 Queue and Up next
+
+`design/kitbag-queue.html` (owner, 2026-11-20; #574; D17).
+
+- **One queue** for single songs and stem songs. Up next is Next in queue
+  (songs the user added, each once, played once unless Repeat all is on, in
+  the user's order), then Next from: <setlist>. `play_queue` is keyed by
+  `stem_set_id` alone (§11.2); its key must cover single songs too, a schema
+  change built in #570.
+- **Entry points:** a Queue key on the mini-player (§6.3), a Queue icon on the
+  stem player, and a Queue icon in the Stem songs app bar, badged with the
+  count up next (no badge at 0). Each opens the same queue sheet, as does the
+  Up next row of either player.
+- **Play next** puts a song first in Next in queue; **Add to queue** puts it
+  last; a song already queued offers Move to end of queue instead. Both are in
+  the row menus of the Songs and Stem songs lists and in the stem player's ⋮
+  menu. Queued rows reorder by drag and go by ✕ or a swipe; "Clear queue" asks
+  first and removes queued songs only.
+- **Setlist context.** A setlist is started in this listening session when the
+  user loads one of its entries, metronome or stem song, during this app run;
+  a setlist pinned in an earlier run is not started until then. "Next from:
+  <setlist>" shows only for a started setlist. Starting a song from a list
+  (Songs, Stem songs, search) ends it; starting another setlist replaces it;
+  queued songs stay either way. Its rows keep setlist order, and ✕ skips an
+  entry this time without editing the setlist. A listening session ends with
+  Stop (the mini-player's close or the notification) or when the app closes.
+- **Leave setlist** means one thing in the queue sheet and on the Metronome
+  (§5.4): it ends the setlist context and unpins the setlist. The queue sheet
+  offers Undo.
+- **A metronome song** in the setlist carries a METRONOME badge. Playback stops
+  before it; Open, or the notification's Next, loads it on the Metronome
+  stopped.
+- **At the end** playback stops. No autoplay.
+- **Repeat** is a labelled chip on the Up next row and in the queue sheet's
+  header, cycling Repeat off → Repeat all → Repeat one. Repeat all loops the
+  queue (a queued song goes back to the end once played) and the setlist (song
+  1 after its last), and wraps the Metronome's Next (§5.4). A setlist whose
+  last entry is a metronome song does not wrap: playback stops before it. An
+  active A-B loop wins over Repeat one, which acts only once the loop is
+  cleared.
+- **Previous and Next** sit beside the Up next row, on the stem player and the
+  single-song player (§6.3). Past 3 s Previous restarts the song; otherwise it
+  goes to the song played before it in this session, or the setlist entry
+  before it. Next plays the next entry. On the Metronome Previous always goes
+  back an entry (§5.4).
 
 ---
 
@@ -1721,7 +1778,8 @@ One migration note that is not obvious from the table:
 | `kitbag-library.html` | **Variant B only** ("Two tiles, two screens"; #178). Supersedes `kitbag-ui.html` §04's Home tiles and Library: Songs and Stem songs are separate screens. Variant C is a rejected alternative. From variant A only the filter menu binds: the Songs filter icon opens it (filter by analysis status; sort by title, date added, BPM). `docs/decisions.md` (2026-10-30, #178) lists what is deliberately not built. |
 | `kitbag-stems.html` | **Variant C only** ("Bottom dock"; #137). Supersedes `kitbag-ui.html` §04's Stem player. Variants A and B are rejected alternatives; `docs/decisions.md` (2026-10-30, #137) lists what is deliberately not built. |
 | `kitbag-stems-sections.html` | **Option C only** ("Chosen (owner, 2026-11-01)"; #139). Extends `kitbag-stems.html` variant C with the Mix \| Lyrics switch, section cards, lane notches and tint, stage lyrics and retime mode. Options A and B are rejected alternatives, kept in `docs/research/mockups/stems-sections-lyrics.html`. Retime's 0.75× subtitle is built (#299); its speed stepper is not (#328). Recorded in `docs/decisions.md`, 2026-11-01. |
-| `kitbag-song-player.html` | **The single-song player** (owner-approved 2026-11-07; #297). Supersedes `kitbag-ui.html` §04's Player. Draws the base player, the mini-player on Home and Songs, the Metronome's click-off snackbar, the click sheet, speed (owner-approved 2026-11-20, #528: speed only, in percent, Reset speed in the overflow menu, the speed on the mini-player off 100%), the no-grid states and the A-B loop. Recorded in `docs/decisions.md`, 2026-11-07. |
+| `kitbag-song-player.html` | **The single-song player** (owner-approved 2026-11-07; #297). Supersedes `kitbag-ui.html` §04's Player. Draws the base player, the mini-player on Home and Songs (Stem songs and the Queue key: `kitbag-queue.html`), the Metronome's click-off snackbar, the click sheet, speed (owner-approved 2026-11-20, #528: speed only, in percent, Reset speed in the overflow menu, the speed on the mini-player off 100%), the no-grid states and the A-B loop. Recorded in `docs/decisions.md`, 2026-11-07. |
+| `kitbag-queue.html` | **The play queue** (owner-approved 2026-11-20; #574). Draws the queue sheet (queued songs, a setlist started this session, swipe to remove, nothing playing, empty), Play next and Add to queue, the mini-player's Queue key and its place on Stem songs, the Stem songs app-bar Queue icon, the stem player's app-bar Queue icon and its Previous · Up next · Repeat · Next row, a mixed setlist, Repeat, and filled Previous and Next keys on the Metronome. Adds the Up next row and the Queue icon to `kitbag-stems.html` variant C (the row was built without a binding design); the single-song player takes the same Up next row with no separate mockup (§6.3). Supersedes the mini-player's keys and placement in `kitbag-song-player.html` §1 and the flat skip keys in `kitbag-metronome-setlist.html` D2. Frames draw stem songs; single songs share the queue (§7.9). §f's Before and §i's Superseded frames are not to build. Recorded in `docs/decisions.md`, 2026-11-20. |
 | `kitbag-practice-history.html` | **Practice history** (owner-approved 2026-11-07; #286). Draws the session list with Day, Week and Month grouping and its graph, swipe and menu delete with Undo, the Settings doorway and swipe-direction row, the optional Home tile, and the session timeline with Repeat. The ⋮ menu is built as the app's bottom sheet, not the pop-up drawn. Recorded in `docs/decisions.md`: picks 2026-11-02, mockup approved 2026-11-07. |
 | `kitbag-home-arrange.html` | **Option B only** ("Chosen (owner, 2026-10-31)"; #113). Supersedes the "long-press any tile for edit mode" bullet in `kitbag-ui.html` §04 Home and §12.4's customizable-layout bullet as to *how* editing works: Edit, or a long-press on a tile, opens the Arrange sheet. Options A and C are rejected alternatives, kept as reference in `docs/research/mockups/113/`. Recorded in `docs/decisions.md`, 2026-10-31. |
 
@@ -2334,7 +2392,8 @@ native and stay native:
    stopped through a TurboModule, holding the media session for lock-screen and
    headset controls. **This is the piece with no JS analogue and the one most
    likely to be underestimated.** Built: `PlaybackService` (#87, #177, #237) carries the
-   metronome, stem songs and single songs; its Stop ends the single-song session.
+   metronome, stem songs and single songs; its Stop ends the listening session
+   (§7.9).
 2. **Notification listener** (§8.2) — the existing `MediaSessionPlugin.kt` and
    `NotificationListenerService`, ported from a Flutter plugin to a TurboModule.
    The Android logic is correct and survives; §2.3's `requestPermission` lie and
@@ -2729,6 +2788,15 @@ saved ramps are not converted; none exist on a shipped build.
 Stems and click leave through the same output buffer, so the offset could only
 push the click off the stems. It exists to align with sources outside the phone
 (§4.7, §12.5.1). Decided 2026-10-29 (#137).
+
+### D17 — One queue; a setlist is context **only when started this session**.
+
+The owner's review of the stem queue found it hard to find, addable only at
+the front, stopping when the user left the player, and showing a setlist
+nobody had started. So one queue serves single songs and stem songs, both
+players carry the same Up next row, and a setlist is context only once started
+in this listening session. Decided 2026-11-20 (#574); §7.9 and
+`design/kitbag-queue.html` carry the rules.
 
 ---
 
