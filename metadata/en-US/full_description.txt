@@ -21,19 +21,20 @@ Songs and stems
 WAIT #555: single-song speed
 - Play a song from its separate stems, with volume, mute and solo for each.
 - Change a stem song's speed and key.
-- Sections and synced lyrics.
+- See song sections and follow synced lyrics.
 - Save a stem mix as a WAV file.
 - Import songs from StemDeck, as a file or from your own StemDeck server.
 - Put stem songs in setlists and queue what plays next.
 - Stem songs keep playing in the background, with controls in the notification.
-WAIT #237: single songs in the background and the notification
+- Songs show their controls in the same notification.
+WAIT #237: single songs playing in the background and from the lock screen
 WAIT #382: Next and Previous in the notification for stem setlists
 
 Settings
 - Calibrate the output latency per audio route, and back up or restore your
   library through files you choose.
-- Keep your songs on an SD card, choose a light or dark theme, and keep the
-  screen awake while you practise.
+- Choose a light or dark theme, and keep the screen awake while you practise.
+WAIT #170: keep your songs on an SD card
 
 Not in this build: play-along with other apps.
 

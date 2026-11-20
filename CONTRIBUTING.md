@@ -45,8 +45,8 @@ full working contract and the reasons behind it.
 2. `tuner_verify` is a CI gate like the rest (green since #117). **Don't make a
    failing check pass by loosening it.**
 3. Before committing, run `bash scripts/preflight.sh` (every CI gate, with
-   auto-fixes; `--no-fix` checks only). The lint gate also runs on its own (or
-   install the hook so it runs itself):
+   auto-fixes; `--no-fix` checks only). To run only the lint gate, or have the
+   hook run it on each commit:
    ```sh
    bash scripts/install-hooks.sh   # once per clone — pre-commit runs the gate
    bash scripts/lint.sh --staged   # what the hook runs; --staged = touched files
@@ -110,8 +110,7 @@ both, see the Ralph loop in `AGENTS.md`):
   `RampSamples`' own docstring, and two copies of a why are free to drift apart.
   (2) *Am I patching a signature?* `Drain(source, block, start_sample)` takes frames
   and samples in adjacent parameters, so prose has to carry the units — put the
-  units in the name instead. (3) *Would a
-  rename absorb it?* Then rename. A name carries **what**; only prose carries
+  units in the name instead. (3) *Would a rename absorb it?* Then rename. A name carries **what**; only prose carries
   **why** — never try to name a rationale, and never comment what a name would say.
 - **An unnameable function is a merged one.** When no verb fits, it is usually two
   functions: `VerifyBlock` checks ramp order over one span and silence over

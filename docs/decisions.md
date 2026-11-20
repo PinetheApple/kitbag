@@ -190,9 +190,12 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   preset row is the visible fallback; hint deferred. (10) `useMetronomeFrame`
   copies the #33 gate's worklet rather than importing it (§9.4 package boundary);
   deduplicating needs core-native to own the read-path accessor — filed as an M3
-  follow-up, not done now. **[recorded]** **Superseded:** (1) and (9) by the 2026-10-30
-  layout B entry (#193), (7) by the 2026-10-27 notification entry and session recording
-  (#276), (8) by poly accents (#110) and poly N against M (#238).
+  follow-up, not done now. **[recorded]**
+  **Superseded 2026-10-14 (#110):** (8), poly accents are editable.
+  **Superseded 2026-10-30 (#193):** (1) and (9), by the layout B entry.
+  **Superseded 2026-10-31 (#238):** (8), poly N against M.
+  **Superseded 2026-11-01 (#276):** (7), sessions are recorded; the clock moved to the
+  store in the 2026-10-27 notification entry.
 
 - **2026-08-18 · M3 sign-off rulings: conventional tempo bands, LED row exempt from
   48dp (§5.2, §12.6, #46)** — The two rulings the M3 build left open (entries 5 and 6
@@ -252,8 +255,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   step numbers; the needle's full scale is ±50 c. (6) The tuner does not wait for #109:
   app-shell opens the database through core-db's `openDatabase()` behind one runtime
   module, to be folded into #109's composition root when that lands. **[recorded;
-  (4) awaits design sign-off]** **Resolved 2026-10-16 (#127):** (6) the tuner reads the
-  shared `getDatabase()` in `app-shell/src/runtime/database.ts`.
+  (4) awaits design sign-off]**
+  **Resolved 2026-10-16 (#127):** (6) the tuner reads the shared `getDatabase()` in
+  `app-shell/src/runtime/database.ts`.
 
 - **2026-10-16 · Tuner needle and hold follow-up (§10.2, #118)** — Decided by the owner
   after testing the tuner on device: small errors read as large, and the needle never
@@ -502,9 +506,12 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   and the Android `colors.xml` pair, and `splash.test.ts` asserts each equals the §12.2
   `bg` of its theme. Still open with the owner: Q7 (one switch look or two) and Q13
   (licence and attribution destinations, npm licences, BPM data credits). **[recorded]**
-  **Resolved:** Q8, Rig and Tools shipped (#269, #272); Q10, Backup and Restore shipped
-  (#282) and the Data folder replaced Base directory (D11, #500); Q12, sessions are
-  written (#276). <!-- WAIT #170: Settings resolution note once #170 closes -->
+  **Resolved 2026-11-01 (#269):** Q8, Rig shipped.
+  **Resolved 2026-11-01 (#272):** Q8, Tools shipped.
+  **Resolved 2026-11-01 (#282):** Q10, Backup and Restore shipped.
+  **Resolved 2026-11-19 (#500):** Q10, the Data folder replaced Base directory (D11).
+  **Resolved 2026-11-01 (#276):** Q12, sessions are written.
+  <!-- WAIT #170: Settings resolution note once #170 closes -->
 
 - **2026-10-31 · Settings section labels (§12.2, §12.6, #170, #189)** — Settings section
   labels use `theme.accentInk` (light: `accentDeep`), a contrast exception to the design's
@@ -584,7 +591,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   This matches what the app already does: only the preset editor's Save and "Save current"
   write a song. §2.1's "live-BPM autosave" row is the Flutter-era audit and stays as
   history. The mark, where Save lives, Revert and what a step does to unsaved edits wait
-  on the owner's pick of a design. **[user]** Decided in the next entry.
+  on the owner's pick of a design. **[user]**
+  **Resolved 2026-10-31 (#212):** decided in the 2026-10-31 "Unsaved changes on a loaded
+  song" entry.
 - **2026-10-31 · react-native-svg for the x/8 flagged eighth (§12, §13.8, #212)** — Approved
   as a dependency for one glyph: the flagged eighth that the subdivision chip and tile draw
   for one click per beat in x/8, copied from `design/kitbag-metronome-b.html`. MIT; its
@@ -887,8 +896,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 
 - **2026-11-07 · Lyric retimings are not backed up (§7.7, #139)** — No backup category covers
   `stem_sets`, so a retime is lost on reinstall along with the stems, and Restore leaves it
-  untouched. **[coord]** **Superseded 2026-11-19 (#479):** stem song settings, retimings
-  included, are backed up; the stem audio is not.
+  untouched. **[coord]**
+  **Superseded 2026-11-19 (#479):** stem song settings, retimings included, are backed
+  up; the stem audio is not.
 
 - **2026-11-07 · Retime pins the pad when its body overflows (§7.7, #139)** — When the retime
   body overflows, at any font scale, the tap pad, Undo tap and Shift all lines stay pinned and
@@ -975,8 +985,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   adds its stretch stage to the mixer; extending the player would duplicate all of them.
   Count-in before the lock is parked on #298: under a grid the engine skips it, and a
   JS-timed handoff was ruled out.
-  **[recorded — coordinator call, owner may overturn]** **Resolved 2026-11-20 (#546):** a
-  single song counts in when Play starts it from the top.
+  **[recorded — coordinator call, owner may overturn]**
+  **Resolved 2026-11-20 (#546):** a single song counts in when Play starts it from the top.
 
 - **2026-11-07 · App-bar titles above the default text size (§12.6, #303)** — Amends the
   2026-11-03 #287 entry's floors. Over an artist line the title's floor is never below the
@@ -1049,7 +1059,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   A-B marks at the playhead, beat-snapped, with draggable handles. Ticks thin to fit the lane,
   falling back to downbeats at a bar stride. After a song closes the standalone metronome stays
   stopped with its settings intact. A row tap opens the player paused.
-  **[user]** **Resolved 2026-11-20 (#546):** Count-in is live.
+  **[user]**
+  **Resolved 2026-11-20 (#546):** Count-in is live.
   <!-- WAIT #555: resolution note for the disabled 1.0× key once single-song speed merges -->
 
 - **2026-11-07 · Song-grid downbeats at the ABI (§4, §4.2, #300)** — `kb_metronome_set_grid`
@@ -1096,8 +1107,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   settings carried across a restart are the ones made with no song loaded.
   **[recorded — coordinator ruling, owner may overturn]** The saved standalone state stays out
   of the backup, which carries what core-db owns today; adding it is a follow-up for the owner.
-  **[recorded — lane call, owner may overturn]** **Resolved 2026-11-18 (#394):** the
-  standalone settings are backed up.
+  **[recorded — lane call, owner may overturn]**
+  **Resolved 2026-11-18 (#394):** the standalone settings are backed up.
 
 - **2026-11-19 · The mini-player song's row opens it still playing (§6.3, #297)** — Tapping the
   Songs row of the song the mini-player is showing opens the player attached to that song as it

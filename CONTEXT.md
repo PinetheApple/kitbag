@@ -82,4 +82,7 @@ A user-imported click in a numbered slot, identified by UUID. SPEC.md §5.3.
 **Practice session** (`practice_sessions`):
 A period of practice, recorded with its context and summarised when it ends.
 SPEC.md §5.7.
-<!-- WAIT #286: add the practice history term once #286 closes -->
+**Practice history**:
+The list of past practice sessions, newest first, each opening its detail and
+offering Repeat; a session can be deleted with Undo. Opens from Settings and the
+Home practice tile. SPEC.md §5.7.

@@ -65,7 +65,7 @@ peak** in the NSDF. This is the critical octave-error fix:
   locks onto the fundamental before reaching longer-period overtones
 - Threshold: 0.9 (90%). Below 0.5, detection is too uncertain to show
 
-**An MPM configuration from published tuner engineering notes:**
+**An example MPM configuration:**
 - Window: 8192 samples @ 44100 Hz (~186ms)
 - Zero-padded to 16384 before FFT (prevents circular aliasing)
 - Parabolic interpolation for sub-sample resolution
@@ -94,21 +94,10 @@ would improve chromatic mode robustness.
 
 ### Ensemble Approaches
 
-**Three-detector ensemble (react-native-tuner-engine):**
+**Three-detector ensemble:**
 Three detectors in parallel — YIN, PYIN (probabilistic YIN), and cepstrum.
 They vote by agreement within 1 semitone. This eliminates octave errors by
 requiring cross-detector consensus. Cost: 3× compute.
-
-**Startup profile (900ms):**
-- Measure background amplitude → set noise gate floor
-- Capture any steady tone (mains hum 50/60Hz, fan pitch)
-- Freeze noise profile for the session
-
-**Environment analyser decision rules:**
-- Pitch must stay within 18 cents of itself for 320ms → acquire lock
-- Ride out gaps up to 360ms (plucked string decaying to silence)
-- If speech overlaps note, hold lock up to 800ms
-- Same note returning within 1500ms of lock drop → re-lock immediately
 
 ---
 
@@ -176,7 +165,7 @@ Recommended: native-side lock acquisition.
 - **Benefit:** Prevents needle flicker on transient noise without freezing the
   needle on genuine note changes
 
-**6. Adaptive parameter switching (Expo blog approach)**
+**6. Adaptive parameter switching**
 - **Attack mode** (first 100ms of a note): wide frequency search, strict
   confidence threshold (0.85+)
 - **Sustain mode** (after lock acquired): narrow search (±20% around last

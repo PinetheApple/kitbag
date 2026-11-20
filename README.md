@@ -1,13 +1,13 @@
 # Kitbag
 
 **The open-source everything-app for musicians.** Metronome, tuner, song
-library and player, stem player and, not built yet, play-along sync — one app,
-plugin-shaped, GPLv3, no caps, no paywalls, ever.
+library and player, stem player — one app, plugin-shaped, GPLv3, no caps, no
+paywalls, ever.
 
 > **Status: in development, released on GitHub.** Every merge to `main`
 > publishes a signed APK as a GitHub release
-> ([latest](https://github.com/PinetheApple/kitbag/releases/latest); v0.88.0 on
-> 2026-11-20). It is not on F-Droid: the submission is drafted in `metadata/`
+> ([latest](https://github.com/PinetheApple/kitbag/releases/latest)). It is not
+> on F-Droid: the submission is drafted in `metadata/`
 > and has not been sent (SPEC.md §17.1). The earlier Flutter app was removed
 > after the 2026-07-17 audit (SPEC.md §2); only the C++ core carried over.
 >
@@ -24,20 +24,22 @@ plugin-shaped, GPLv3, no caps, no paywalls, ever.
   adjustable A4.
 - **Songs** — import audio files, analysed in the background for tempo, beat
   grid and meter; a song player with a click on the song's bars, an A-B loop
-  and count-in, and a mini-player that keeps the song playing on Home and Songs.
+  and count-in, a mini-player that keeps the song playing on Home and Songs, and
+  a media notification shared with the metronome.
   <!-- WAIT #555: single-song speed -->
-  <!-- WAIT #237: single songs in the background and the media notification -->
+  <!-- WAIT #237: single-song playback in the background and from the lock screen -->
 - **Stem songs** — import StemDeck bundles from a zip, a folder or a StemDeck
   server; per-stem volume, mute and solo; speed and key; sections and synced
   lyrics; save the mix as a WAV; setlists, a play-next queue and playing the next
   song when one ends; background playback with a media notification.
   <!-- WAIT #382: Next/Previous in the notification for stem setlists (#382 c phase 2) -->
 - **Settings** — theme, keep the screen awake, the rig click and per-route
-  latency calibration, turning tools on or off, backup and restore, and the data
-  folder on internal storage or an SD card.
+  latency calibration, turning tools on or off, and backup and restore.
+  <!-- WAIT #170: the data folder on internal storage or an SD card -->
 - **Not built:** play along (SPEC.md §8).
 
-Phone checks still owed for merged features are tracked in #516.
+Some merged features still need a phone check, tracked in #516 and the open
+feature issues.
 
 ## What it looks like
 

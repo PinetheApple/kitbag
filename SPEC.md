@@ -186,7 +186,9 @@ moot. Two entries survive as instructions rather than deletions:
 - **Single shared metronome controller.** `PlayAlongScreen` mutates the
   standalone metronome's tempo with no save/restore. §6.4 and §8.9 fix this;
   the migration is a good moment to, since the state layer is being rewritten.
-  **Fixed for songs by #536**; play along (§8.9) is not built.
+  **Fixed for songs by #536 and #537:** a song's click sound and accents stay
+  with the song and the standalone ones return when it stops, and standalone
+  edits stay off a running song click. Play along (§8.9) is not built.
 - **No tests** in `tool_sync`, `tool_stems`, `tool_library`. No native mixer
   test. No metronome soak/jitter harness. **The migration does not fix this and
   makes it more urgent** — see §14. **Fixed by #26 and #159** (`mixer_verify`,
@@ -1605,8 +1607,8 @@ as a base to build on.
   strip with a fixed centre line, Auto/A4/Chromatic chips. The built tuner does
   not.
 - **Needle position carries the signal; colour reinforces.** The graduated strip
-  with a centre line stays. Position + "TUNE UP ↑" text + colour = three redundant channels,
-  colourblind-safe (§12.6).
+  with a centre line stays. Position + "TUNE UP ↑" text + colour = three
+  redundant channels, colourblind-safe (§12.6).
 - In-tune lock: needle snaps to centre, peg ring turns green, one confirmation
   haptic tick. **No sound** — you are listening to the string.
 - Median filter (3–5 frames) + EMA on cents; settle <150ms.
@@ -2196,7 +2198,7 @@ with custom rules. The four rules from §9.4, translated:
 Plus `eslint-plugin-boundaries` for the import graph in §13.1, which is cheaper
 than hand-rolling it.
 
-**The eval harness ports with the rules.** `packages/app_shell/eval/` scores lint
+**The eval harness ports with the rules.** `packages/app-shell/eval/` scores lint
 rules against `*_pass` / `*_fail` scenario files, and it is the reason a rule
 change can be verified rather than hoped at. Port it — same shape, TS scenarios,
 same "all scenarios must pass before submitting work" gate. `dart run custom_lint`
@@ -2444,19 +2446,19 @@ steady, that is a foundation problem and everything above it is rework.
    and get a real device reading first** (§8.3).
 5. **Tuner** (§10) — after §10.1's research.
 
-**Status 2026-11-20.** Each claim cites a merged PR. Phone checks owed for
-merged features are tracked in #516.
+**Status 2026-11-20.** Each claim cites a merged PR. Some merged features still
+need a phone check, tracked in #516 and the open feature issues.
 
 - **1 is built:** setlists and the preset editor (#130), layout B (#193),
   on-stage previous and next (#207), poly N against M (#238), practice
   summaries (#276, #278), custom click sounds (#473) and practice history
-  (#524, #533). <!-- WAIT #286: practice history status once #286 closes -->
+  (#524, #533). <!-- WAIT #286: #286 still lacks its device check with several saved sessions -->
 - **2 is built:** import with background beat analysis (#162) and meter
   detection (#408); the single-song player on the native engine (#315) with
   its click on the song's bars (#342), its own click sound and accents (#536,
-  #543), an A-B loop (#418), count-in (#546) and a mini-player (#370); the
-  notification's Stop ends a single song (#515).
-  <!-- WAIT #237: single-song notification and background playback -->
+  #543), an A-B loop (#418), count-in (#546), a mini-player (#370) and the
+  media notification shared with the metronome, whose Stop ends the song
+  (#515). <!-- WAIT #237: single-song playback in the background and from the lock screen -->
   <!-- WAIT #555: single-song speed -->
 - **3 is built:** the stem player (#182) with background playback and a media
   notification (#186), StemDeck import from a zip or folder (#169) and from a
