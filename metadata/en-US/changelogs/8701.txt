@@ -1,0 +1,1 @@
+• Fixed: a stale notification could replace the current one after pausing.
