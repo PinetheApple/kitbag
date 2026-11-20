@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 import { expect, it } from 'vitest';
 
+import { TRANSPORT_PLAYBACK } from './transportActions';
 import type {
   SongTransportOrder,
   SongTransportRequest,
@@ -32,8 +33,7 @@ const eventKeys = Object.keys({
 } satisfies Record<keyof TransportEvent, true>);
 
 const showKeys = Object.keys({
-  playing: true,
-  stopped: true,
+  playback: true,
   bpm: true,
   rampRunning: true,
   beatsPerBar: true,
@@ -55,13 +55,13 @@ const songShowKeys = Object.keys({
   restartFromFrame: true,
   skipSeconds: true,
   session: true,
-  inPlayOrder: true,
+  followsPlayOrder: true,
 } satisfies Record<keyof SongTransportShowState, true>);
 
 const songRequestKeys = Object.keys({
   action: true,
   frame: true,
-  session: true,
+  shownSession: true,
 } satisfies Record<keyof SongTransportRequest, true>);
 
 const songOrderKeys = Object.keys({
@@ -104,4 +104,17 @@ it('the module reads exactly the play order fields', () => {
     /order\.get\w+\("(\w+)"/g,
   );
   expect(read.sort()).toEqual([...songOrderKeys].sort());
+});
+
+it('names playback as the Kotlin Playback entries do', () => {
+  const modelSource = readFileSync(
+    join(
+      import.meta.dirname,
+      '../android/src/main/java/com/kitbag/corenative/transport/TransportModel.kt',
+    ),
+    'utf8',
+  );
+  const entries = /enum class Playback \{([^;]+);/.exec(modelSource)?.[1] ?? '';
+  const names = entries.split(',').map((entry) => entry.trim().toLowerCase());
+  expect(names.sort()).toEqual(Object.values(TRANSPORT_PLAYBACK).sort());
 });

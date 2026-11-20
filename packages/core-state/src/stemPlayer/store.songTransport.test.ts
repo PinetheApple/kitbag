@@ -77,7 +77,7 @@ describe('the song notification', () => {
     store.getState().togglePlay();
     expect(commands.songTransportShow).toHaveBeenCalledWith({
       session: OPENED_SESSION,
-      inPlayOrder: true,
+      followsPlayOrder: true,
       playing: true,
       countingIn: false,
       title: 'Song',

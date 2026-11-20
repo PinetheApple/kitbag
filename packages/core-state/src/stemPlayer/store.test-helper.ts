@@ -273,13 +273,13 @@ export function fakeRuntime(set: StemSetRecord) {
       handler();
     });
   };
-  const shownSession = () =>
+  const lastShownSession = () =>
     commands.songTransportShow.mock.lastCall?.[0].session ?? NEVER_SHOWN;
   const requestFromNotification = (
-    pressed: Omit<SongTransportRequest, 'session'>,
-    session = shownSession(),
+    pressed: Omit<SongTransportRequest, 'shownSession'>,
+    session = lastShownSession(),
   ) => {
-    const request = { ...pressed, session };
+    const request = { ...pressed, shownSession: session };
     songRequests.forEach((handler) => {
       handler(request);
     });

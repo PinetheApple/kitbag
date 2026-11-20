@@ -27,8 +27,7 @@ export type TransportSetlist = Readonly<{
 }>;
 
 export type TransportShowState = Readonly<{
-  playing: boolean;
-  stopped: boolean;
+  playback: string;
   bpm: Double;
   rampRunning: boolean;
   beatsPerBar: Int32;
@@ -50,21 +49,18 @@ export type SongTransportShowState = Readonly<{
   restartFromFrame: Double;
   skipSeconds: Double;
   session: Int32;
-  inPlayOrder: boolean;
+  followsPlayOrder: boolean;
 }>;
 
-/** What the play order holds around the song; only a card shown inPlayOrder uses it. */
 export type SongTransportOrder = Readonly<{
   previous: boolean;
   next: boolean;
 }>;
 
-/** A song-notification action for JS to apply: Next always, the rest while the card is
- *  marked countingIn. `session` is the one the card was shown with. */
 export type SongTransportRequest = Readonly<{
   action: 'play' | 'pause' | 'stop' | 'seek' | 'next';
   frame: Double | null;
-  session: Int32;
+  shownSession: Int32;
 }>;
 
 export type OutputRoute = Readonly<{

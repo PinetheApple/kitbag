@@ -24,7 +24,7 @@ import com.kitbag.corenative.transport.SongOrder
 import com.kitbag.corenative.transport.appAction
 import com.kitbag.corenative.transport.TransportChange
 import com.kitbag.corenative.transport.TransportState
-import com.kitbag.corenative.transport.playbackOf
+import com.kitbag.corenative.transport.Playback
 
 class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   NativeKitbagCommandsSpec(reactContext) {
@@ -69,7 +69,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     PlaybackService.show(
       reactApplicationContext,
       TransportState(
-        playback = playbackOf(state.getBoolean("playing"), state.getBoolean("stopped")),
+        playback = Playback.wired(state.getString("playback")),
         bpm = state.getDouble("bpm"),
         rampRunning = state.getBoolean("rampRunning"),
         beatsPerBar = state.getInt("beatsPerBar"),
@@ -103,7 +103,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
         skipSeconds = state.getDouble("skipSeconds"),
       ),
       state.getInt("session"),
-      state.getBoolean("inPlayOrder"),
+      state.getBoolean("followsPlayOrder"),
       state.getBoolean("playing"),
       state.getBoolean("countingIn"),
     )
@@ -142,7 +142,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private fun emitTransport(change: TransportChange) {
     emitOnTransport(
       Arguments.createMap().apply {
-        putString("playback", change.state.playback.name.lowercase())
+        putString("playback", change.state.playback.wire)
         putDouble("bpm", change.state.bpm)
         putBoolean("rampRunning", change.state.rampRunning)
         putDouble("practicePlayedMs", change.practice.playedMillis.toDouble())
@@ -155,11 +155,11 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     )
   }
 
-  private fun emitSongRequest(request: SongCommand, session: Int) {
+  private fun emitSongRequest(request: SongCommand, shownSession: Int) {
     emitOnSongTransport(
       Arguments.createMap().apply {
         putString("action", request.appAction)
-        putInt("session", session)
+        putInt("shownSession", shownSession)
         if (request is SongCommand.Seek) putDouble("frame", request.frame.toDouble()) else putNull("frame")
       },
     )

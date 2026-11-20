@@ -257,7 +257,7 @@ export function createStemPlayerStore(
       teardownTracks,
       counting: () =>
         countPending(get().countEndFrame, runtimeOf().engine.nowFrame()),
-      inPlayOrder: true,
+      followsPlayOrder: true,
       resetState: () => {
         set({
           ...closedState,

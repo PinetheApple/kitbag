@@ -58,8 +58,8 @@ function harness(
     if (arrival !== null) seen.push(arrival);
   });
   const stopAdvancing = vi.fn();
-  const openEntry = vi.fn<AutoAdvanceDeps['openEntry']>(() =>
-    Promise.resolve(),
+  const commitOpen = vi.fn<AutoAdvanceDeps['commitOpen']>(() =>
+    Promise.resolve(true),
   );
   const handToMetronome = vi.fn();
   const stop = startAutoAdvance({
@@ -77,7 +77,7 @@ function harness(
     candidates: () => candidates,
     stillEnded,
     stopAdvancing,
-    openEntry,
+    commitOpen,
     handToMetronome,
     arrivals,
   });
@@ -100,7 +100,7 @@ function harness(
     stop,
     unsubscribe,
     stopAdvancing,
-    openEntry,
+    commitOpen,
     handToMetronome,
     leave: (cause: AdvanceCause) => {
       leave(cause);
@@ -198,7 +198,7 @@ describe('auto-advance at the end of a stem song', () => {
     await h.songEnds();
     expect(h.advanceTo).not.toHaveBeenCalled();
     expect(h.commitNext).not.toHaveBeenCalled();
-    expect(h.openEntry).not.toHaveBeenCalled();
+    expect(h.commitOpen).not.toHaveBeenCalled();
     expect(h.handToMetronome).not.toHaveBeenCalled();
     expect(h.arrivals.getState().arrival).toBeNull();
   });
@@ -300,14 +300,19 @@ describe('Next from the song card', () => {
     });
   });
 
-  it('opens a metronome song stopped and hands the card to the metronome', async () => {
-    const h = harness([metronomeNext]);
+  it('commits the metronome song it looked at, then hands the card over', async () => {
+    const stillEnded = vi.fn(() => true);
+    const h = harness([metronomeNext], [], 1, stillEnded);
     await h.pressNext();
-    expect(h.openEntry).toHaveBeenCalledWith(BALLAD_COUNT);
+    expect(h.commitOpen).toHaveBeenCalledWith(BALLAD_COUNT, stillEnded);
+    expect(h.peekNext.mock.invocationCallOrder[0]).toBeLessThan(
+      h.commitOpen.mock.invocationCallOrder[0] ?? 0,
+    );
     expect(h.handToMetronome).toHaveBeenCalledTimes(1);
     expect(h.handToMetronome.mock.invocationCallOrder[0]).toBeGreaterThan(
-      h.openEntry.mock.invocationCallOrder[0] ?? Infinity,
+      h.commitOpen.mock.invocationCallOrder[0] ?? Infinity,
     );
+    expect(h.commitNext).not.toHaveBeenCalled();
     expect(h.advanceTo).not.toHaveBeenCalled();
     expect(h.stopAdvancing).not.toHaveBeenCalled();
     expect(h.arrivals.getState().arrival).toMatchObject({
@@ -315,16 +320,20 @@ describe('Next from the song card', () => {
     });
   });
 
-  it('keeps the stem song when another took the player while the metronome song loaded', async () => {
-    let standing = true;
-    const h = harness([metronomeNext], [], 1, () => standing);
-    h.openEntry.mockImplementationOnce(() => {
-      standing = false;
-      return Promise.resolve();
-    });
+  it('keeps the stem song when a press during the load undid the commit', async () => {
+    const h = harness([metronomeNext]);
+    h.commitOpen.mockResolvedValueOnce(false);
     await h.pressNext();
     expect(h.handToMetronome).not.toHaveBeenCalled();
     expect(h.arrivals.getState().arrival).toBeNull();
+  });
+
+  it('opens nothing when a press lands during the look-ahead', async () => {
+    const stillEnded = vi.fn(() => false).mockReturnValueOnce(true);
+    const h = harness([metronomeNext], [], 1, stillEnded);
+    await h.pressNext();
+    expect(h.commitOpen).not.toHaveBeenCalled();
+    expect(h.handToMetronome).not.toHaveBeenCalled();
   });
 
   it('ignores a second Next while the first is still committing', async () => {

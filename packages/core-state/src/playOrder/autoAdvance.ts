@@ -62,7 +62,10 @@ export interface AutoAdvanceDeps {
   readonly candidates: () => number;
   readonly stillEnded: () => boolean;
   readonly stopAdvancing: () => void;
-  readonly openEntry: (entry: PresetSetlistEntry) => Promise<void>;
+  readonly commitOpen: (
+    entry: PresetSetlistEntry,
+    stands: () => boolean,
+  ) => Promise<boolean>;
   readonly handToMetronome: () => void;
   readonly arrivals: StoreApi<ArrivalState>;
 }
@@ -94,59 +97,83 @@ const defaultDeps: AutoAdvanceDeps = {
   stopAdvancing: () => {
     stemPlayerStore.getState().stopAdvancing();
   },
-  openEntry: (entry) => playOrderStore.getState().openEntry(entry),
+  commitOpen: (entry, stands) =>
+    playOrderStore.getState().commitOpen(entry, stands),
   handToMetronome: () => {
     stemPlayerStore.getState().handToMetronome();
   },
   arrivals: arrivalStore,
 };
 
+type Arrive = (arrival: ArrivalEvent) => void;
+
+const PLAYED = { settled: 'settled', tryNext: 'tryNext' } as const;
+
+type Played = (typeof PLAYED)[keyof typeof PLAYED];
+
+async function openMetronome(
+  deps: AutoAdvanceDeps,
+  arrive: Arrive,
+  entry: PresetSetlistEntry,
+) {
+  if (!(await deps.commitOpen(entry, deps.stillEnded))) return;
+  deps.handToMetronome();
+  arrive({ kind: ARRIVAL.metronome });
+}
+
+async function play(
+  deps: AutoAdvanceDeps,
+  arrive: Arrive,
+  next: PlayAdvance,
+  skipped: Skip | null,
+): Promise<Played> {
+  if (!(await deps.commitNext(next, deps.stillEnded))) return PLAYED.settled;
+  const { stemSetId } = next;
+  const place = deps.placeOf(next);
+  arrive({ kind: ARRIVAL.arriving, stemSetId });
+  const outcome = await deps.advanceTo(stemSetId);
+  if (outcome === ADVANCE_OUTCOME.playing)
+    arrive({ kind: ARRIVAL.playing, stemSetId, place, skipped });
+  return outcome === ADVANCE_OUTCOME.unplayable
+    ? PLAYED.tryNext
+    : PLAYED.settled;
+}
+
+async function advance(
+  deps: AutoAdvanceDeps,
+  arrive: Arrive,
+  cause: AdvanceCause,
+) {
+  let skipped: Skip | null = null;
+  for (let left = deps.candidates(); left > 0; left--) {
+    if (!deps.stillEnded()) return;
+    const step = await deps.peekNext();
+    if (!deps.stillEnded()) return;
+    if (step.skipped) skipped = SKIP.deleted;
+    const next = step.advance;
+    if (next.kind === ADVANCE.open && cause === ADVANCE_CAUSE.next) {
+      await openMetronome(deps, arrive, next.entry);
+      return;
+    }
+    if (next.kind !== ADVANCE.play) break;
+    if ((await play(deps, arrive, next, skipped)) === PLAYED.settled) return;
+    skipped = SKIP.unopened;
+  }
+  deps.stopAdvancing();
+  if (skipped === SKIP.deleted) arrive({ kind: ARRIVAL.gaveUp });
+}
+
 export function startAutoAdvance(deps: AutoAdvanceDeps = defaultDeps) {
   let serial = 0;
   let stepping = false;
-  const arrive = (arrival: ArrivalEvent) => {
+  const arrive: Arrive = (arrival) => {
     serial++;
     deps.arrivals.setState({ arrival: { ...arrival, serial } });
-  };
-  const openMetronome = async (entry: PresetSetlistEntry) => {
-    await deps.openEntry(entry);
-    if (!deps.stillEnded()) return;
-    deps.handToMetronome();
-    arrive({ kind: ARRIVAL.metronome });
-  };
-  const play = async (next: PlayAdvance, skipped: Skip | null) => {
-    if (!(await deps.commitNext(next, deps.stillEnded))) return true;
-    const { stemSetId } = next;
-    const place = deps.placeOf(next);
-    arrive({ kind: ARRIVAL.arriving, stemSetId });
-    const outcome = await deps.advanceTo(stemSetId);
-    if (outcome === ADVANCE_OUTCOME.playing)
-      arrive({ kind: ARRIVAL.playing, stemSetId, place, skipped });
-    return outcome !== ADVANCE_OUTCOME.unplayable;
-  };
-  const advance = async (cause: AdvanceCause) => {
-    let skipped: Skip | null = null;
-    for (let left = deps.candidates(); left > 0; left--) {
-      if (!deps.stillEnded()) return;
-      const step = await deps.peekNext();
-      if (!deps.stillEnded()) return;
-      if (step.skipped) skipped = SKIP.deleted;
-      const next = step.advance;
-      if (next.kind === ADVANCE.open && cause === ADVANCE_CAUSE.next) {
-        await openMetronome(next.entry);
-        return;
-      }
-      if (next.kind !== ADVANCE.play) break;
-      if (await play(next, skipped)) return;
-      skipped = SKIP.unopened;
-    }
-    deps.stopAdvancing();
-    if (skipped === SKIP.deleted) arrive({ kind: ARRIVAL.gaveUp });
   };
   return deps.onSongEnd((cause) => {
     if (stepping) return;
     stepping = true;
-    advance(cause)
+    advance(deps, arrive, cause)
       .catch((error: unknown) => {
         console.warn('[kitbag] auto-advance failed', error);
       })

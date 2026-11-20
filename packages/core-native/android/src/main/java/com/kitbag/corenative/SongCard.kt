@@ -45,7 +45,7 @@ internal class SongCard(
   private val ends = SongEndWatch(EngineTransport::engineEndCount)
   private var cardNumber = CardFence.NONE
   private var session = CardFence.NONE
-  private var inPlayOrder = false
+  private var followsPlayOrder = false
   private var order = SongOrder.ALONE
   private var reservedNext: Boolean? = null
   private var countingIn = false
@@ -59,8 +59,8 @@ internal class SongCard(
   fun show(next: Song, card: SongCardTag, playing: Boolean, countingIn: Boolean) {
     cardNumber = card.cardNumber
     session = card.session
-    inPlayOrder = card.inPlayOrder
-    order = if (card.inPlayOrder) card.order else SongOrder.ALONE
+    followsPlayOrder = card.followsPlayOrder
+    order = if (card.followsPlayOrder) card.order else SongOrder.ALONE
     song = next
     transport = SongTransport(next, EngineTransport.sampleRate())
     published = null
@@ -70,7 +70,7 @@ internal class SongCard(
   }
 
   fun order(next: SongOrder) {
-    if (!inPlayOrder || next == order) return
+    if (!followsPlayOrder || next == order) return
     order = next
     postedPlaying = null
     refresh()
@@ -156,7 +156,6 @@ internal class SongCard(
     )
   }
 
-  // System media cards draw custom actions in the previous and next slots when those actions are absent.
   private fun publishPlayback(playback: SongPlayback, actions: List<SongAction>) {
     published = playback
     val builder = PlaybackStateCompat.Builder()

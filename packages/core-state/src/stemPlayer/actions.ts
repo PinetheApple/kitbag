@@ -7,7 +7,7 @@ import type { SongStart } from './songStart.ts';
 import {
   restartFromFrame,
   songTransportShown,
-  type SongCardTag,
+  type SongCardOwner,
 } from './songTransport.ts';
 import type {
   Get,
@@ -116,7 +116,7 @@ export function plainStart(
 export function transportActions(
   get: () => TransportSlice,
   runtimeOf: () => MixerRuntime,
-  card: () => SongCardTag,
+  card: () => SongCardOwner,
   scrubSeek: Debounced<[number]>,
   afterSeek?: (frame: number) => void,
   start: Pick<SongStart, 'play' | 'cancel'> = plainStart(runtimeOf),

@@ -3,14 +3,14 @@ import type { MixerSessionContext } from '../stemPlayer/mixerSession.ts';
 import type { SongStart } from '../stemPlayer/songStart.ts';
 import {
   songTransportShown,
-  type SongCardTag,
+  type SongCardOwner,
 } from '../stemPlayer/songTransport.ts';
 import type { SongPlayerState } from './state.ts';
 
 interface SongCardContext extends MixerSessionContext<SongPlayerState> {
   readonly close: () => void;
   readonly start: Pick<SongStart, 'play' | 'cancel'>;
-  readonly card: () => SongCardTag;
+  readonly card: () => SongCardOwner;
 }
 
 export function songCard(context: SongCardContext) {

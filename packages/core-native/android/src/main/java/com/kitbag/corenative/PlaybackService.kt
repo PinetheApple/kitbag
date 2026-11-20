@@ -37,7 +37,6 @@ import com.kitbag.corenative.transport.TransportCommand
 import com.kitbag.corenative.transport.TransportModel
 import com.kitbag.corenative.transport.TransportState
 import com.kitbag.corenative.transport.TransportView
-import com.kitbag.corenative.transport.playbackOf
 
 class PlaybackService : Service() {
   private var state: TransportState? = null
@@ -149,7 +148,7 @@ class PlaybackService : Service() {
       SongCardTag(
         cardNumber = intent.getIntExtra(EXTRA_SONG_CARD, CardFence.NONE),
         session = intent.getIntExtra(EXTRA_SONG_SESSION, CardFence.NONE),
-        inPlayOrder = intent.getBooleanExtra(EXTRA_IN_PLAY_ORDER, false),
+        followsPlayOrder = intent.getBooleanExtra(EXTRA_FOLLOWS_PLAY_ORDER, false),
         order = SongOrder.named(intent.getStringExtra(EXTRA_SONG_ORDER)),
       ),
       intent.getBooleanExtra(EXTRA_PLAYING, true),
@@ -199,8 +198,8 @@ class PlaybackService : Service() {
       intent.getDoubleExtra(EXTRA_MIN_BPM, 0.0),
       intent.getDoubleExtra(EXTRA_MAX_BPM, 0.0),
     )
-    val playing = intent.getBooleanExtra(EXTRA_PLAYING, true)
-    val stopped = intent.getBooleanExtra(EXTRA_STOPPED, false)
+    val playback = Playback.wired(intent.getStringExtra(EXTRA_PLAYBACK))
+    val playing = playback == Playback.PLAYING
     shownCardNumber = intent.getIntExtra(EXTRA_CARD_NUMBER, 0)
     metronomeCardNumber = intent.getIntExtra(EXTRA_METRONOME_CARD, CardFence.NONE)
     practice = PracticeClock(
@@ -208,7 +207,7 @@ class PlaybackService : Service() {
       if (playing) intent.getLongExtra(EXTRA_PRACTICE_STRETCH_STARTED_AT, System.currentTimeMillis()) else null,
     )
     state = TransportState(
-      playback = playbackOf(playing, stopped),
+      playback = playback,
       bpm = intent.getDoubleExtra(EXTRA_BPM, 0.0),
       rampRunning = intent.getBooleanExtra(EXTRA_RAMP_RUNNING, false),
       beatsPerBar = intent.getIntExtra(EXTRA_BEATS_PER_BAR, 0),
@@ -369,9 +368,9 @@ class PlaybackService : Service() {
     private const val EXTRA_MAX_BPM = "maxBpm"
     private const val EXTRA_PLAYING = "playing"
     private const val EXTRA_COUNTING_IN = "countingIn"
-    private const val EXTRA_STOPPED = "stopped"
+    private const val EXTRA_PLAYBACK = "playback"
     private const val EXTRA_SONG_SESSION = "songSession"
-    private const val EXTRA_IN_PLAY_ORDER = "inPlayOrder"
+    private const val EXTRA_FOLLOWS_PLAY_ORDER = "followsPlayOrder"
     private const val EXTRA_SONG_ORDER = "songOrder"
     private const val EXTRA_PRACTICE_PLAYED_MS = "practicePlayedMs"
     private const val EXTRA_PRACTICE_STRETCH_STARTED_AT = "practiceStretchStartedAt"
@@ -408,8 +407,7 @@ class PlaybackService : Service() {
       if (!running && !playing) return
       val intent = Intent(context, PlaybackService::class.java)
         .setAction(ACTION_SHOW)
-        .putExtra(EXTRA_PLAYING, playing)
-        .putExtra(EXTRA_STOPPED, state.playback == Playback.STOPPED)
+        .putExtra(EXTRA_PLAYBACK, state.playback.wire)
         .putExtra(EXTRA_BPM, state.bpm)
         .putExtra(EXTRA_RAMP_RUNNING, state.rampRunning)
         .putExtra(EXTRA_BEATS_PER_BAR, state.beatsPerBar)
@@ -438,14 +436,14 @@ class PlaybackService : Service() {
       context: Context,
       song: Song,
       session: Int,
-      inPlayOrder: Boolean,
+      followsPlayOrder: Boolean,
       playing: Boolean,
       countingIn: Boolean,
     ) {
       val intent = Intent(context, PlaybackService::class.java)
         .setAction(ACTION_SONG_SHOW)
         .putExtra(EXTRA_SONG_SESSION, session)
-        .putExtra(EXTRA_IN_PLAY_ORDER, inPlayOrder)
+        .putExtra(EXTRA_FOLLOWS_PLAY_ORDER, followsPlayOrder)
         .putExtra(EXTRA_SONG_ORDER, songOrder.name)
         .putExtra(EXTRA_PLAYING, playing)
         .putExtra(EXTRA_COUNTING_IN, countingIn)

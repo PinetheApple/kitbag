@@ -11,7 +11,7 @@ import { debounce } from './debounce.ts';
 import type { MixerClaim } from './mixerClaim.ts';
 import { createPendingClick } from './pendingClick.ts';
 import type { MixerRuntime, StemPlayerCommands } from './runtime.ts';
-import type { SongCardTag } from './songTransport.ts';
+import type { SongCardOwner } from './songTransport.ts';
 import type { StemPlayerState } from './store.ts';
 
 export interface MixerSessionContext<Slice> {
@@ -40,7 +40,7 @@ export interface MixerSessionOptions extends Omit<
   readonly teardownTracks: () => void;
   readonly counting?: () => boolean;
   readonly resetState: () => void;
-  readonly inPlayOrder?: boolean;
+  readonly followsPlayOrder?: boolean;
 }
 
 export function mixerSession({
@@ -55,7 +55,7 @@ export function mixerSession({
   teardownTracks,
   counting = () => false,
   resetState,
-  inPlayOrder = false,
+  followsPlayOrder = false,
 }: MixerSessionOptions) {
   let session = 0;
   let releaseEngine: (() => void) | null = null;
@@ -206,7 +206,7 @@ export function mixerSession({
     live,
     close,
     current: () => session,
-    card: (): SongCardTag => ({ session, inPlayOrder }),
+    card: (): SongCardOwner => ({ session, followsPlayOrder }),
     pendingClick,
     hold: (opened: number): MixerHold => ({
       release: () => {

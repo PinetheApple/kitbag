@@ -36,10 +36,15 @@ export type AdvanceCause = (typeof ADVANCE_CAUSE)[keyof typeof ADVANCE_CAUSE];
 
 export type AdvanceListener = (cause: AdvanceCause) => void;
 
+const LEFT_BECAUSE = {
+  ended: 'ended',
+  unopened: 'unopened',
+  pressed: 'pressed',
+} as const;
+
 interface EndedIn {
   readonly session: number;
-  readonly unopened: boolean;
-  readonly pressed: boolean;
+  readonly why: (typeof LEFT_BECAUSE)[keyof typeof LEFT_BECAUSE];
 }
 
 export function songEnds(ended: () => boolean, session: () => number) {
@@ -56,14 +61,14 @@ export function songEnds(ended: () => boolean, session: () => number) {
     reported: () => {
       if (!ended()) return;
       leave(
-        { session: session(), unopened: false, pressed: false },
+        { session: session(), why: LEFT_BECAUSE.ended },
         ADVANCE_CAUSE.ended,
       );
     },
     pressedNext: (pressedIn: number) => {
       if (pressedIn !== session()) return;
       leave(
-        { session: pressedIn, unopened: false, pressed: true },
+        { session: pressedIn, why: LEFT_BECAUSE.pressed },
         ADVANCE_CAUSE.next,
       );
     },
@@ -73,12 +78,10 @@ export function songEnds(ended: () => boolean, session: () => number) {
         listeners.delete(listener);
       };
     },
-    stands: () =>
-      current() &&
-      (from?.unopened === true || from?.pressed === true || ended()),
-    gaveUp: () => current() && from?.unopened === true,
+    stands: () => current() && (from?.why !== LEFT_BECAUSE.ended || ended()),
+    gaveUp: () => current() && from?.why === LEFT_BECAUSE.unopened,
     unopened: (opened: number) => {
-      from = { session: opened, unopened: true, pressed: false };
+      from = { session: opened, why: LEFT_BECAUSE.unopened };
     },
     advanced: () => {
       from = null;

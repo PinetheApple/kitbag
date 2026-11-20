@@ -161,7 +161,7 @@ describe('transportRuntime', () => {
     metronomeStore.setState({ bpm: 90, beatsPerBar: 7, denominator: 8 });
     const card = lastCard();
     expect(card).toMatchObject({
-      playing: false,
+      playback: 'paused',
       bpm: 90,
       beatsPerBar: 7,
       beatUnit: 8,
@@ -202,7 +202,7 @@ describe('transportRuntime', () => {
       cardNumber: oldSong,
     });
     expect(metronomeStore.getState()).toMatchObject({ running: true, bpm: 90 });
-    expect(lastCard()).toMatchObject({ playing: true, bpm: 90 });
+    expect(lastCard()).toMatchObject({ playback: 'playing', bpm: 90 });
     expect(lastCard()?.cardNumber).toBeGreaterThan(newSong);
   });
 
@@ -316,7 +316,7 @@ describe('transportRuntime', () => {
     });
     expect(native.metronomePause).toHaveBeenCalledTimes(pauses + 1);
     expect(metronomeStore.getState().running).toBe(false);
-    expect(lastCard()).toMatchObject({ playing: false, bpm: 120 });
+    expect(lastCard()).toMatchObject({ playback: 'paused', bpm: 120 });
   });
 
   it('a Play that beats the app Pause to the service starts the click', async () => {
@@ -334,7 +334,7 @@ describe('transportRuntime', () => {
     });
     expect(native.metronomeStart).toHaveBeenCalledTimes(starts + 1);
     expect(metronomeStore.getState().running).toBe(true);
-    expect(lastCard()).toMatchObject({ playing: true, bpm: 120 });
+    expect(lastCard()).toMatchObject({ playback: 'playing', bpm: 120 });
   });
 
   it('a tempo step that beats the new song card steps from the new song tempo', async () => {
@@ -355,7 +355,7 @@ describe('transportRuntime', () => {
       bpm: 91,
     });
     expect(native.setTempo).toHaveBeenLastCalledWith(91);
-    expect(lastCard()).toMatchObject({ playing: false, bpm: 91 });
+    expect(lastCard()).toMatchObject({ playback: 'paused', bpm: 91 });
   });
 
   it('an event that beats a practice reset to the service keeps the reset', async () => {
@@ -399,7 +399,7 @@ describe('transportRuntime', () => {
     native.host.current_bpm = Number.NaN;
     expect(metronomeStore.getState().bpm).toBe(121);
     expect(native.setTempo).toHaveBeenLastCalledWith(121);
-    expect(lastCard()).toMatchObject({ playing: true, bpm: 121 });
+    expect(lastCard()).toMatchObject({ playback: 'playing', bpm: 121 });
   });
 
   it('a stale step from a paused card during an app ramp steps from the ramp tempo', async () => {
@@ -454,7 +454,7 @@ describe('transportRuntime', () => {
       bpm: 97,
     });
     expect(native.setTempo).toHaveBeenLastCalledWith(97);
-    expect(lastCard()).toMatchObject({ playing: false, bpm: 97 });
+    expect(lastCard()).toMatchObject({ playback: 'paused', bpm: 97 });
   });
 
   it('a stale event with an action the app does not know takes the service result', async () => {
@@ -474,7 +474,7 @@ describe('transportRuntime', () => {
       running: true,
       bpm: 130,
     });
-    expect(lastCard()).toMatchObject({ playing: true, bpm: 130 });
+    expect(lastCard()).toMatchObject({ playback: 'playing', bpm: 130 });
     expect(lastCard()?.cardNumber).toBeGreaterThan(sent);
   });
 
@@ -552,8 +552,7 @@ describe('transportRuntime', () => {
     metronomeTransport.showStopped();
     expect(native.transportShow).toHaveBeenCalledTimes(shows + 1);
     expect(lastCard()).toMatchObject({
-      playing: false,
-      stopped: true,
+      playback: 'stopped',
       bpm: 84,
     });
     expect(native.metronomeStart).not.toHaveBeenCalled();

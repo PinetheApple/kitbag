@@ -3,7 +3,7 @@ import type { StoreApi } from 'zustand/vanilla';
 
 import type { MixerRuntime } from './runtime.ts';
 import { countPending } from './songStart.ts';
-import { songTransportShown, type SongCardTag } from './songTransport.ts';
+import { songTransportShown, type SongCardOwner } from './songTransport.ts';
 import type { StemPlayerStore } from './store.ts';
 
 type TransportPlayer = Pick<StemPlayerStore, 'togglePlay' | 'seek' | 'status'>;
@@ -36,7 +36,7 @@ export function songTransportRequests({
   next,
 }: SongTransportRequestOptions): (request: SongTransportRequest) => void {
   const playing = () => runtimeOf().engine.playing();
-  return ({ action, frame, session }) => {
+  return ({ action, frame, shownSession }) => {
     const player = get();
     switch (action) {
       case 'play':
@@ -52,7 +52,7 @@ export function songTransportRequests({
         if (frame !== null && player.status === 'ready') player.seek(frame);
         return;
       case 'next':
-        next?.(session);
+        next?.(shownSession);
         return;
     }
   };
@@ -69,7 +69,7 @@ export function showCountOnSongCard(
   store: Pick<StoreApi<CountCardState>, 'getState' | 'subscribe'>,
   runtimeOf: RuntimeOf,
   counting: () => boolean,
-  card: () => SongCardTag,
+  card: () => SongCardOwner,
 ): SongCardCount {
   let queued = false;
   let wasCounting = false;

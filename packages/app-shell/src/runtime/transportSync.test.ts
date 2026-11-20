@@ -35,8 +35,7 @@ const state = (over: Partial<TransportSource> = {}): TransportSource => ({
   ...over,
 });
 const shown: TransportShown = {
-  playing: true,
-  stopped: false,
+  playback: 'playing',
   bpm: 120,
   rampRunning: false,
   beatsPerBar: 4,
@@ -64,7 +63,7 @@ const event = (over: Partial<TransportEvent> = {}): TransportEvent => ({
 });
 const pausedShown: TransportShown = {
   ...shown,
-  playing: false,
+  playback: 'paused',
   practicePlayedMs: 30_000,
 };
 
@@ -116,7 +115,7 @@ describe('notificationStepAfterAppChange', () => {
     ).toEqual({ kind: 'none' });
     expect(
       notificationStepAfterAppChange(state(), pausedShown, 9_000),
-    ).toMatchObject({ kind: 'show', shown: { playing: true } });
+    ).toMatchObject({ kind: 'show', shown: { playback: 'playing' } });
   });
 
   it('a reset while paused from the pocket reaches the notification without resuming it', () => {
@@ -214,7 +213,7 @@ describe('shownAfterReplay', () => {
     expect(shownAfterReplay(shown, { kind: 'stop' })).toBeUndefined();
     expect(shownAfterReplay(shown, { kind: 'pause' })).toEqual({
       ...shown,
-      playing: false,
+      playback: 'paused',
     });
     expect(shownAfterReplay(undefined, { kind: 'pause' })).toBeUndefined();
   });
@@ -257,13 +256,12 @@ describe('shownAfterNativeChange', () => {
       tempoStep: TEMPO_STEP,
     });
     expect(shownAfterNativeChange(stopped, stepped)).toMatchObject({
-      playing: false,
-      stopped: true,
+      playback: 'stopped',
       bpm: 121,
     });
   });
 
-  it('forgets a card shown stopped once its Stop is pressed', () => {
+  it('lets a stopped-shown card go once its Stop is pressed', () => {
     const stopped = stoppedShown(state({ running: false }), 9_000);
     expect(
       shownAfterNativeChange(
@@ -276,19 +274,27 @@ describe('shownAfterNativeChange', () => {
   it('shows a card shown stopped as playing once its Play starts the click', () => {
     const stopped = stoppedShown(state({ running: false }), 9_000);
     expect(shownAfterNativeChange(stopped, event())).toMatchObject({
-      playing: true,
-      stopped: false,
+      playback: 'playing',
     });
   });
 });
 
 describe('stoppedShown', () => {
+  it('is let go once a stale card Stop has stopped the app', () => {
+    const stopped = stoppedShown(state({ running: false }), 9_000);
+    const step = replayOnApp(
+      event({ action: 'stop' }),
+      state({ running: false }),
+    );
+    expect(step).toEqual({ kind: 'stop' });
+    expect(shownAfterReplay(stopped, step)).toBeUndefined();
+  });
+
   it('is the metronome card, stopped, with the tempo and setlist the app has', () => {
     const setlist = setlistAt(3);
     expect(stoppedShown(state({ running: false, setlist }), 9_000)).toEqual({
       ...shown,
-      playing: false,
-      stopped: true,
+      playback: 'stopped',
       setlist,
     });
   });

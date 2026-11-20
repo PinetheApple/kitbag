@@ -154,4 +154,9 @@ export type {
   TransportShowState,
 } from './NativeKitbagCommands';
 export { focusReaderNode } from './readerFocus';
-export { transportActionNamed } from './transportActions';
+export {
+  TRANSPORT_PLAYBACK,
+  transportActionNamed,
+  transportPlaybackNamed,
+  type TransportPlayback,
+} from './transportActions';

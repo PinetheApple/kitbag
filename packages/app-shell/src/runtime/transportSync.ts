@@ -1,5 +1,8 @@
 import {
+  TRANSPORT_PLAYBACK,
   transportActionNamed,
+  transportPlaybackNamed,
+  type TransportPlayback,
   type TransportEvent,
   type TransportSetlist,
 } from '@kitbag/core-native';
@@ -11,8 +14,7 @@ export type TransportSource = Pick<
 > & { readonly setlist: TransportSetlist | null };
 
 export interface TransportShown {
-  readonly playing: boolean;
-  readonly stopped: boolean;
+  readonly playback: TransportPlayback;
   readonly bpm: number;
   readonly rampRunning: boolean;
   readonly beatsPerBar: number;
@@ -50,12 +52,13 @@ function shownFor(
   if (state.running) {
     return {
       ...cardOf(state),
-      playing: true,
-      stopped: false,
+      playback: TRANSPORT_PLAYBACK.playing,
       practiceStretchStartedAt: state.practice.stretchStartedAt ?? now,
     };
   }
-  return shown?.playing === false ? { ...shown, ...cardOf(state) } : undefined;
+  if (shown === undefined || shown.playback === TRANSPORT_PLAYBACK.playing)
+    return undefined;
+  return { ...shown, ...cardOf(state) };
 }
 
 // Shown in place of a song card that handed over, so the lock screen keeps a card.
@@ -65,15 +68,14 @@ export function stoppedShown(
 ): TransportShown {
   return {
     ...cardOf(state),
-    playing: false,
-    stopped: true,
+    playback: TRANSPORT_PLAYBACK.stopped,
     practiceStretchStartedAt: state.practice.stretchStartedAt ?? now,
   };
 }
 
 function cardOf(
   state: TransportSource,
-): Omit<TransportShown, 'playing' | 'stopped' | 'practiceStretchStartedAt'> {
+): Omit<TransportShown, 'playback' | 'practiceStretchStartedAt'> {
   return {
     bpm: state.bpm,
     rampRunning: state.ramp.enabled,
@@ -136,15 +138,17 @@ export function shownAfterReplay(
 ): TransportShown | undefined {
   if (step.kind === 'stop') return undefined;
   if (step.kind === 'pause' && shown !== undefined) {
-    return { ...shown, playing: false };
+    return { ...shown, playback: TRANSPORT_PLAYBACK.paused };
   }
   return shown;
 }
 
-// A card shown stopped stays up through its tempo keys; only its Stop ends it.
 function cardEnded(shown: TransportShown, event: TransportEvent): boolean {
-  if (event.playback !== 'stopped') return false;
-  return !shown.stopped || transportActionNamed(event.action) === 'stop';
+  if (event.playback !== TRANSPORT_PLAYBACK.stopped) return false;
+  return (
+    shown.playback !== TRANSPORT_PLAYBACK.stopped ||
+    transportActionNamed(event.action) === 'stop'
+  );
 }
 
 export function shownAfterNativeChange(
@@ -154,8 +158,7 @@ export function shownAfterNativeChange(
   if (shown === undefined || cardEnded(shown, event)) return undefined;
   const followed = {
     ...shown,
-    playing: event.playback === 'playing',
-    stopped: event.playback === 'stopped',
+    playback: transportPlaybackNamed(event.playback) ?? shown.playback,
     practicePlayedMs: event.practicePlayedMs,
     practiceStretchStartedAt: event.practiceStretchStartedAt,
   };
@@ -168,7 +171,7 @@ export function storePatchFor(
   event: TransportEvent,
   current: Pick<MetronomeConfig, 'bpm' | 'ramp'>,
 ): Pick<MetronomeConfig, 'running' | 'bpm' | 'ramp' | 'practice'> {
-  const running = event.playback === 'playing';
+  const running = event.playback === TRANSPORT_PLAYBACK.playing;
   return {
     running,
     bpm: event.rampRunning ? current.bpm : event.bpm,

@@ -50,7 +50,7 @@ describe('Next on the song card', () => {
   it('shows the card in the play order, tagged with a session a new song replaces', async () => {
     const song = await playing();
     const first = song.commands.songTransportShow.mock.lastCall?.[0];
-    expect(first?.inPlayOrder).toBe(true);
+    expect(first?.followsPlayOrder).toBe(true);
     song.store.getState().acquireSong(7, BARS);
     await vi.waitFor(() => {
       expect(song.store.getState().status).toBe('ready');

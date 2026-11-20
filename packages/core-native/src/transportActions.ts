@@ -13,3 +13,20 @@ export function transportActionNamed(
 ): TransportActionName | undefined {
   return TRANSPORT_ACTIONS.find((action) => action === name);
 }
+
+export const TRANSPORT_PLAYBACK = {
+  playing: 'playing',
+  paused: 'paused',
+  stopped: 'stopped',
+} as const;
+
+export type TransportPlayback =
+  (typeof TRANSPORT_PLAYBACK)[keyof typeof TRANSPORT_PLAYBACK];
+
+export function transportPlaybackNamed(
+  name: string,
+): TransportPlayback | undefined {
+  return Object.values(TRANSPORT_PLAYBACK).find(
+    (playback) => playback === name,
+  );
+}

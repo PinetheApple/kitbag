@@ -12,7 +12,7 @@ data class Song(
   val skipSeconds: Double,
 )
 
-data class SongCardTag(val cardNumber: Int, val session: Int, val inPlayOrder: Boolean, val order: SongOrder)
+data class SongCardTag(val cardNumber: Int, val session: Int, val followsPlayOrder: Boolean, val order: SongOrder)
 
 // SystemUI formats the artist into "%1$s by %2$s", so a null would read as "null".
 fun mediaArtist(artist: String?): String = if (artist.isNullOrBlank()) "" else artist
@@ -110,7 +110,7 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
 
   private val skipFrames: Long = (song.skipSeconds * sampleRate).roundToLong()
 
-  // Without skip actions the system card puts the first custom actions in the Previous and Next slots.
+  // The system card fills an absent Previous or Next slot with the next custom action unless it is reserved.
   fun slots(progress: SongProgress, order: SongOrder): SongSlots {
     val playPause = if (progress.shownPlaying) SongAction.PAUSE else SongAction.PLAY
     val skips = listOf(SongAction.REWIND, SongAction.FORWARD)
@@ -208,14 +208,14 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
   private fun skipActions(order: SongOrder): Long =
     when (order) {
       SongOrder.ALONE -> 0L
-      SongOrder.UP_NEXT -> SKIP_TO_PREVIOUS or PlaybackStateCompat.ACTION_SKIP_TO_NEXT
-      SongOrder.LAST -> SKIP_TO_PREVIOUS
+      SongOrder.UP_NEXT ->
+        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or PlaybackStateCompat.ACTION_SKIP_TO_NEXT
+      SongOrder.LAST -> PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
     }
 
   companion object {
     const val DRIFT_TOLERANCE_MILLIS = 300L
     private const val MAX_COMPACT_ACTIONS = 3
-    private const val SKIP_TO_PREVIOUS = PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
     private val ORDER_KEYS = setOf(SongAction.PREVIOUS, SongAction.PLAY, SongAction.PAUSE, SongAction.NEXT)
     private const val MILLIS_PER_SECOND = 1000.0
     private const val SESSION_ACTIONS =

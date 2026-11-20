@@ -46,8 +46,11 @@ class TransportModelTest {
   }
 
   @Test
-  fun `stopped shows play and no stop`() {
-    assertEquals(listOf(TEMPO_DOWN, PLAY, TEMPO_UP), model.view(state(Playback.STOPPED)).actions)
+  fun `a stopped-shown card offers Stop and Stop ends it`() {
+    val stopped = state(Playback.STOPPED)
+    assertEquals(listOf(TEMPO_DOWN, PLAY, TEMPO_UP, STOP), model.view(stopped).actions)
+    assertEquals(none, model.commandsFor(stopped, STOP))
+    assertTrue(model.endsCard(STOP, stopped))
   }
 
   @Test
@@ -101,10 +104,10 @@ class TransportModelTest {
   }
 
   @Test
-  fun `the show flags read as one playback`() {
-    assertEquals(Playback.PLAYING, playbackOf(playing = true, stopped = false))
-    assertEquals(Playback.STOPPED, playbackOf(playing = false, stopped = true))
-    assertEquals(Playback.PAUSED, playbackOf(playing = false, stopped = false))
+  fun `playback crosses the wire as one lowercase name`() {
+    for (playback in Playback.entries) assertEquals(playback, Playback.wired(playback.wire))
+    assertEquals("stopped", Playback.STOPPED.wire)
+    assertEquals(Playback.PAUSED, Playback.wired(null))
   }
 
   @Test
