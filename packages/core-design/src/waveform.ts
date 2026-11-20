@@ -21,18 +21,18 @@ export function waveBarHeights(
   });
 }
 
-function num(value: number): string {
+function pathCoord(value: number): string {
   return String(Number(value.toFixed(PATH_DECIMALS)));
 }
 
 function roundedBar(x: number, y: number, w: number, h: number, r: number) {
-  const corner = `A${num(r)} ${num(r)} 0 0 1 `;
+  const corner = `A${pathCoord(r)} ${pathCoord(r)} 0 0 1 `;
   return (
-    `M${num(x + r)} ${num(y)}H${num(x + w - r)}` +
-    `${corner}${num(x + w)} ${num(y + r)}V${num(y + h - r)}` +
-    `${corner}${num(x + w - r)} ${num(y + h)}H${num(x + r)}` +
-    `${corner}${num(x)} ${num(y + h - r)}V${num(y + r)}` +
-    `${corner}${num(x + r)} ${num(y)}Z`
+    `M${pathCoord(x + r)} ${pathCoord(y)}H${pathCoord(x + w - r)}` +
+    `${corner}${pathCoord(x + w)} ${pathCoord(y + r)}V${pathCoord(y + h - r)}` +
+    `${corner}${pathCoord(x + w - r)} ${pathCoord(y + h)}H${pathCoord(x + r)}` +
+    `${corner}${pathCoord(x)} ${pathCoord(y + h - r)}V${pathCoord(y + r)}` +
+    `${corner}${pathCoord(x + r)} ${pathCoord(y)}Z`
   );
 }
 
@@ -41,8 +41,9 @@ export function waveBarsPath(
   lane: WaveLane,
 ): string {
   const bars = heights.length;
+  if (bars === 0) return '';
   const barWidth = (lane.width - lane.gap * (bars - 1)) / bars;
-  if (bars === 0 || barWidth <= 0) return '';
+  if (barWidth <= 0) return '';
   return heights
     .map((fraction, i) => {
       const h = fraction * lane.height;
