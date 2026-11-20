@@ -1,0 +1,1 @@
+• Single songs now have a speed control, saved per song.
