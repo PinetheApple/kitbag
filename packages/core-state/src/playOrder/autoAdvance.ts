@@ -20,6 +20,7 @@ export interface Arrival {
   readonly stemSetId: number | null;
   readonly place: SetlistPlace | null;
   readonly skipped: Skip | null;
+  readonly played: boolean;
 }
 
 export interface ArrivalState {
@@ -36,6 +37,8 @@ export interface AutoAdvanceDeps {
   readonly skipToNext: () => Promise<SkipResult>;
   readonly placeOf: (advance: Advance) => SetlistPlace | null;
   readonly candidates: () => number;
+  readonly stillEnded: () => boolean;
+  readonly stopAdvancing: () => void;
   readonly arrivals: StoreApi<ArrivalState>;
 }
 
@@ -58,6 +61,10 @@ const defaultDeps: AutoAdvanceDeps = {
   },
   candidates: () =>
     playOrderStore.getState().queue.length + onStageNow().stage.entries.length,
+  stillEnded: () => stemPlayerStore.getState().songStillEnded(),
+  stopAdvancing: () => {
+    stemPlayerStore.getState().stopAdvancing();
+  },
   arrivals: arrivalStore,
 };
 
@@ -70,17 +77,25 @@ export function startAutoAdvance(deps: AutoAdvanceDeps = defaultDeps) {
   const advance = async () => {
     let skipped: Skip | null = null;
     for (let left = deps.candidates(); left > 0; left--) {
+      if (!deps.stillEnded()) return;
       const step = await deps.skipToNext();
       if (step.skipped) skipped = SKIP.deleted;
       const next = step.advance;
       if (next.kind !== ADVANCE.play) break;
+      const { stemSetId } = next;
       const place = deps.placeOf(next);
-      arrive({ stemSetId: next.stemSetId, place, skipped });
-      const outcome = await deps.advanceTo(next.stemSetId);
-      if (outcome !== ADVANCE_OUTCOME.unplayable) return;
+      arrive({ stemSetId, place, skipped, played: false });
+      const outcome = await deps.advanceTo(stemSetId);
+      if (outcome === ADVANCE_OUTCOME.displaced) return;
+      if (outcome === ADVANCE_OUTCOME.playing) {
+        arrive({ stemSetId, place, skipped, played: true });
+        return;
+      }
       skipped = SKIP.unopened;
     }
-    if (skipped !== null) arrive({ stemSetId: null, place: null, skipped });
+    deps.stopAdvancing();
+    if (skipped !== null)
+      arrive({ stemSetId: null, place: null, skipped, played: false });
   };
   return deps.onSongEnd(() => {
     advance().catch((error: unknown) => {

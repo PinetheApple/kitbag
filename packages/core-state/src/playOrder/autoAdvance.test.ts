@@ -5,6 +5,7 @@ import { ADVANCE_OUTCOME, type AdvanceOutcome } from '../stemPlayer/songEnd.ts';
 import {
   SKIP,
   startAutoAdvance,
+  type Arrival,
   type ArrivalState,
   type AutoAdvanceDeps,
 } from './autoAdvance.ts';
@@ -30,6 +31,7 @@ function harness(
   steps: readonly SkipResult[],
   outcomes: readonly AdvanceOutcome[] = [],
   candidates = steps.length,
+  stillEnded = () => true,
 ) {
   let ended: () => void = () => undefined;
   const unsubscribe = vi.fn();
@@ -40,6 +42,11 @@ function harness(
   for (const outcome of outcomes) advanceTo.mockResolvedValueOnce(outcome);
   advanceTo.mockResolvedValue(ADVANCE_OUTCOME.playing);
   const arrivals = createStore<ArrivalState>(() => ({ arrival: null }));
+  const seen: Arrival[] = [];
+  arrivals.subscribe(({ arrival }) => {
+    if (arrival !== null) seen.push(arrival);
+  });
+  const stopAdvancing = vi.fn();
   const stop = startAutoAdvance({
     onSongEnd: (listener) => {
       ended = listener;
@@ -52,16 +59,24 @@ function harness(
         ? PLACE
         : null,
     candidates: () => candidates,
+    stillEnded,
+    stopAdvancing,
     arrivals,
   });
   const songEnds = async () => {
     ended();
-    await vi.waitFor(() => {
-      expect(skipToNext).toHaveBeenCalled();
-    });
     await new Promise((resolve) => setTimeout(resolve, 0));
   };
-  return { songEnds, skipToNext, advanceTo, arrivals, stop, unsubscribe };
+  return {
+    songEnds,
+    skipToNext,
+    advanceTo,
+    arrivals,
+    seen,
+    stop,
+    unsubscribe,
+    stopAdvancing,
+  };
 }
 
 describe('auto-advance at the end of a stem song', () => {
@@ -73,7 +88,24 @@ describe('auto-advance at the end of a stem song', () => {
       stemSetId: NIGHT_BUS,
       place: PLACE,
       skipped: null,
+      played: true,
     });
+    expect(h.stopAdvancing).not.toHaveBeenCalled();
+  });
+
+  it('names the song to follow before it plays', async () => {
+    const h = harness([play(NIGHT_BUS)]);
+    await h.songEnds();
+    expect(h.seen.map((arrival) => arrival.played)).toEqual([false, true]);
+    expect(h.seen[0]).toMatchObject({ stemSetId: NIGHT_BUS });
+  });
+
+  it('touches neither the queue nor the setlist once the end no longer stands', async () => {
+    const h = harness([play(NIGHT_BUS)], [], 1, () => false);
+    await h.songEnds();
+    expect(h.skipToNext).not.toHaveBeenCalled();
+    expect(h.advanceTo).not.toHaveBeenCalled();
+    expect(h.seen).toEqual([]);
   });
 
   it('names no place for a queued song', async () => {
@@ -127,7 +159,9 @@ describe('auto-advance at the end of a stem song', () => {
     expect(h.arrivals.getState().arrival).toMatchObject({
       stemSetId: null,
       skipped: SKIP.unopened,
+      played: false,
     });
+    expect(h.stopAdvancing).toHaveBeenCalledTimes(1);
   });
 
   it('gives up once every song it could reach failed', async () => {
@@ -140,13 +174,15 @@ describe('auto-advance at the end of a stem song', () => {
     expect(h.skipToNext).toHaveBeenCalledTimes(2);
   });
 
-  it('leaves the order alone once another song took the player', async () => {
+  it('takes no further step once another song took the player', async () => {
     const h = harness(
       [play(NIGHT_BUS), play(TIN_ROOF)],
       [ADVANCE_OUTCOME.displaced],
     );
     await h.songEnds();
     expect(h.skipToNext).toHaveBeenCalledTimes(1);
+    expect(h.advanceTo).toHaveBeenCalledTimes(1);
+    expect(h.stopAdvancing).not.toHaveBeenCalled();
   });
 
   it('stops listening when stopped', () => {
