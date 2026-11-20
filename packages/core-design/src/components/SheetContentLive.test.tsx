@@ -18,9 +18,8 @@ vi.mock('./PlainListRow.tsx', () => ({
 
 const { LiveText } = await import('./LiveText.tsx');
 const { WheelPicker } = await import('./WheelPicker.tsx');
-const { useHandleDrag } = await import('./DragListRow.tsx');
 const { useSheetContentLive } = await import('./sheetContentLive.ts');
-const { useDragGroup } = await import('./DragListRow.tsx');
+const { useHandleDrag, useDragGroup } = await import('./DragListRow.tsx');
 const { LinearProgress } = await import('./LinearProgress.tsx');
 const { NO_DRAG } = await import('../dragReorder.ts');
 const { anim } = await import('./sheetExitState.test-helper.ts');
@@ -30,6 +29,7 @@ const LATER = '0:02';
 const VALUES = [1, 2, 3, 4];
 const FAR_DOWN = 1_000_000;
 const DRAGGED = 40;
+const ROW_HEIGHT = 40;
 const DRAGGED_FURTHER = 80;
 const TRACK_WIDTH = 200;
 const EARLY_MS = 100;
@@ -98,14 +98,16 @@ function DragProbe({ seen }: DragProbeProps) {
   return null;
 }
 
-type PanStage = 'begin' | 'start' | 'update' | 'finalize';
+type PanStage = 'begin' | 'start' | 'update' | 'end' | 'finalize';
 
 function panStage(seen: DragSeen, stage: PanStage, translationY = 0) {
   const pan = seen.drag?.pan as unknown as {
-    pan: Partial<Record<PanStage, (event: { translationY: number }) => void>>;
+    pan: Partial<
+      Record<PanStage, (event: { translationY: number }, ok: boolean) => void>
+    >;
   };
   act(() => {
-    pan.pan[stage]?.({ translationY });
+    pan.pan[stage]?.({ translationY }, true);
   });
 }
 
@@ -184,7 +186,7 @@ it("stops a wheel's fling from moving its selection while its sheet leaves", () 
 });
 
 it('stops a row drag from moving the row while its sheet leaves', () => {
-  const seen: DragProbeProps['seen'] = {};
+  const seen: DragSeen = {};
   const content = h(DragProbe, { seen });
   const tree = mount(inSheet(content, true));
   dragBy(seen, DRAGGED);
@@ -262,4 +264,29 @@ it('keeps content outside any sheet live', () => {
     create(h(LiveProbe, { seen }));
   });
   expect(seen.live).toBe(true);
+});
+
+it('does not leave a row lifted by a moved flag left over from an earlier drag', () => {
+  const seen: DragSeen = {};
+  const content = h(DragProbe, { seen });
+  const tree = mount(inSheet(content, true));
+  runReactions();
+  act(() => {
+    seen.drag?.onLayout({
+      nativeEvent: { layout: { height: ROW_HEIGHT } },
+    } as never);
+  });
+  panStage(seen, 'begin');
+  panStage(seen, 'start');
+  panStage(seen, 'end', FAR_DOWN);
+  panStage(seen, 'finalize');
+  rerender(tree, inSheet(content, false));
+  runReactions();
+  panStage(seen, 'begin');
+  rerender(tree, inSheet(content, true));
+  runReactions();
+  dragBy(seen, DRAGGED);
+  panStage(seen, 'end');
+  panStage(seen, 'finalize');
+  expect(seen.drag?.offset.value).toBe(0);
 });

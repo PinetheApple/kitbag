@@ -61,7 +61,6 @@ export * from './components/SectionHeader.tsx';
 export * from './components/SegmentedControl.tsx';
 export * from './components/IconGlyph.tsx';
 export * from './components/Sheet.tsx';
-export { useSheetContentLive } from './components/sheetContentLive.ts';
 export * from './components/useAfterSheetClosed.ts';
 export * from './components/Snackbar.tsx';
 export * from './components/SheetHost.tsx';

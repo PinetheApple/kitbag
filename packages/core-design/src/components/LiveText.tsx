@@ -37,7 +37,7 @@ export function LiveText({
 }: LiveTextProps) {
   const theme = useTheme();
   const live = useSheetContentLive();
-  const held = useSharedValue('');
+  const held = useSharedValue(text.value);
   useAnimatedReaction(
     () => ({ value: text.value, live: live.value }),
     (now) => {

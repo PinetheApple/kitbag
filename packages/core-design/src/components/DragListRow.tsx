@@ -80,19 +80,23 @@ export function useHandleDrag(reorder: DragReorder) {
   useLayoutEffect(() => {
     offset.value = 0;
   }, [index, offset]);
+  const settleRow = () => {
+    'worklet';
+    if (group !== undefined && moved.value) return;
+    offset.value = 0;
+    if (group !== undefined) group.from.value = NO_DRAG;
+  };
   useAnimatedReaction(
     () => live.value,
     (now, previous) => {
       if (!now || previous !== false) return;
-      if (group !== undefined && moved.value) return;
-      offset.value = 0;
-      if (group !== undefined) group.from.value = NO_DRAG;
+      settleRow();
     },
   );
   const pan = Gesture.Pan()
     .hitSlop(HANDLE_HIT_SLOP)
     .onBegin(() => {
-      if (live.value) moved.value = false;
+      moved.value = false;
       if (onDragActive !== undefined) scheduleOnRN(onDragActive, true);
     })
     .onStart(() => {
@@ -127,9 +131,7 @@ export function useHandleDrag(reorder: DragReorder) {
     .onFinalize(() => {
       if (onDragActive !== undefined) scheduleOnRN(onDragActive, false);
       if (!live.value) return;
-      if (group !== undefined && moved.value) return;
-      offset.value = 0;
-      if (group !== undefined) group.from.value = NO_DRAG;
+      settleRow();
     });
   const style = useAnimatedStyle(() => ({
     transform: [{ translateY: offset.value }],
