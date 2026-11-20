@@ -119,6 +119,9 @@ class DataFolder(
   fun forgetAway(volumeUuid: String, relativePaths: Collection<String>) =
     awayManifest.removeAway(volumeUuid, relativePaths)
 
+  fun awayHolders(relativePath: String): Set<String> =
+    awayManifest.load().orEmpty().filterValues { relativePath in it }.keys
+
   fun awayOn(volumeUuid: String): Set<String>? = awayManifest.load()?.let { it[volumeUuid].orEmpty() }
 
   fun awaySongCounts(volumeUuid: String): AwaySongCounts = AwaySongCounts.of(awayOn(volumeUuid).orEmpty())

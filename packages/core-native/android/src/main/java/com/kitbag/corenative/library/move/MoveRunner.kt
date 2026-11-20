@@ -260,8 +260,9 @@ class MoveRunner(
   private fun placeReturned(state: MoveState) {
     val card = state.source as DataFolderLocation.Card
     val targetRoot = mountedRoot(state.target) ?: throw Stop(MoveOutcome.Failed(MoveFailure.TARGET_UNAVAILABLE))
+    val away = folder.awayOn(card.volumeUuid) ?: throw UnreadableStateException(AwayManifest.FILE_NAME)
     for (entry in state.files) {
-      CardReturn.place(targetRoot, entry.path)
+      if (entry.path in away) CardReturn.place(targetRoot, entry.path) else CardReturn.discard(targetRoot, entry.path)
       emit(state, entry.path)
     }
     folder.forgetAway(card.volumeUuid, state.files.map { it.path })
@@ -279,6 +280,15 @@ class MoveRunner(
 
   private fun copyPath(state: MoveState, path: String): String =
     if (state.kind == MoveKind.CARD_RETURN) CardReturn.stagedPath(path) else path
+
+  // Parked before it leaves the away list, so the card copy is never in neither.
+  @Synchronized
+  fun supersede(relativePath: String) {
+    for (volumeUuid in folder.awayHolders(relativePath)) {
+      leftovers.record(volumeUuid, listOf(relativePath))
+      folder.forgetAway(volumeUuid, listOf(relativePath))
+    }
+  }
 
   @Synchronized
   fun finishLeftovers(): Boolean {

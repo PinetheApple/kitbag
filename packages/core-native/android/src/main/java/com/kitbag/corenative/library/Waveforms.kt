@@ -8,6 +8,7 @@ object Waveforms {
     folder: DataFolder,
     waveformRelativeDir: String,
     staged: File,
+    supersede: (relativePath: String) -> Unit,
     rename: (File, File) -> Boolean = File::renameTo,
   ): String? =
     folder.importing {
@@ -16,6 +17,7 @@ object Waveforms {
       if (!dir.isDirectory && !dir.mkdirs()) throw IOException("Could not prepare the waveform directory")
       val waveform = File(dir, staged.name)
       if (staged.isFile) DurableFiles.move(staged, waveform, rename) else waveform.delete()
+      supersede(LibraryPaths.relativize(root, waveform))
       waveform.takeIf { it.isFile }?.let { LibraryPaths.relativize(root, it) }
     }
 }

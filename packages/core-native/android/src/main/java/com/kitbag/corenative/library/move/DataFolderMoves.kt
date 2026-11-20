@@ -103,6 +103,8 @@ class DataFolderMoves(
 
   fun finishLeftovers(): Boolean = runner.finishLeftovers()
 
+  fun supersede(relativePath: String) = runner.supersede(relativePath)
+
   private fun settle(run: () -> MoveOutcome): MoveOutcome {
     live = null
     var outcome = try {
