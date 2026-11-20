@@ -1018,8 +1018,8 @@ working. Changes:
 - "Save for this song" stores a preset that belongs to the song. A song with a
   saved preset opens with its click on; a song without one opens with it off.
   The preset is a `SongPreset` linked to the library song through its existing
-  `librarySongId`; linked presets are excluded from the Metronome's "All songs"
-  list.
+  `librarySongId`. Linked presets stay out of every Metronome song list: All
+  songs and its count, search results and a setlist's Add song sheet.
 - **Play on the standalone Metronome while a song's click runs** turns the
   song's click off; the song keeps playing and its card shows click off. The
   standalone metronome starts on its own settings, untouched. Tapping CLICK OFF

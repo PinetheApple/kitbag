@@ -1,6 +1,8 @@
 import { countLabel } from '@kitbag/core-design';
 import type { LibrarySummary } from '@kitbag/core-state';
 
+import { SONG_NOUNS, STEM_SONG_NOUNS } from '../nouns.ts';
+
 export const UPCOMING_SUBTEXT = 'Coming soon';
 export const MORE_TOOLS_TITLE = 'More tools';
 export const MORE_TOOLS_SUBTEXT = 'Turn tools on or off';
@@ -41,9 +43,9 @@ export function metronomeResumeSubtitle(summary: MetronomeSummary): string {
 }
 
 export function songsTileSubtext(summary: LibrarySummary): string {
-  return `${countLabel(summary.songCount, 'song', 'songs')} · ${String(summary.analyzedCount)} analyzed`;
+  return `${countLabel(summary.songCount, ...SONG_NOUNS)} · ${String(summary.analyzedCount)} analyzed`;
 }
 
 export function stemsTileSubtext(summary: LibrarySummary): string {
-  return countLabel(summary.stemSongCount, 'stem song', 'stem songs');
+  return countLabel(summary.stemSongCount, ...STEM_SONG_NOUNS);
 }

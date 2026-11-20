@@ -57,6 +57,12 @@ export const dataFolder = {
   highlightEdge: 2,
   pathTop: 4,
   locationGap: 6,
+  stripTop: 8,
+  stripEnd: 4,
+  stripBottom: 10,
+  stripFixEnd: 12,
+  stripProgress: 2,
+  stripProgressBottom: -1,
 } as const;
 
 export const dataFolderType = {
@@ -66,4 +72,5 @@ export const dataFolderType = {
     size: 13.5,
     tabular: true,
   },
+  stripTitle: { family: fontFamily.display, weight: 500, size: 13.5 },
 } as const satisfies Record<string, TypeRole>;

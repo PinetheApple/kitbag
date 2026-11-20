@@ -337,6 +337,16 @@ export interface Spec extends TurboModule {
   releaseOldCopies(): void;
   readonly onMoveProgress: EventEmitter<MoveStatus>;
   readonly onMoveFinished: EventEmitter<MoveFinished>;
+  /** Free bytes on the database's volume; negative when they cannot be measured. */
+  databaseFreeBytes(databaseName: string): Double;
+  /** False when refused or failed. */
+  removeDatabaseCopy(databaseName: string, fileName: string): boolean;
+  /** Syncs partName and renames it over fileName; false when refused or failed. */
+  replaceDatabaseCopy(
+    databaseName: string,
+    partName: string,
+    fileName: string,
+  ): boolean;
 }
 
 export function getKitbagLibrary(): Spec {

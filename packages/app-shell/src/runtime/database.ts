@@ -1,11 +1,16 @@
 import {
+  DATABASE_NAME,
   DatabaseOpenError,
   openDatabase,
   type KitbagDatabase,
+  type MigrationCopyFiles,
 } from '@kitbag/core-db';
 import {
+  databaseFreeBytes,
   deleteClickSound,
   readClickSound,
+  removeDatabaseCopy,
+  replaceDatabaseCopy,
   writeClickSound,
 } from '@kitbag/core-native';
 
@@ -17,13 +22,26 @@ export type DatabaseStatus =
 // through here, so an uncached failure would re-run the migration on each access.
 let status: DatabaseStatus | undefined;
 
+const migrationCopyFiles: MigrationCopyFiles = {
+  freeBytes: () => databaseFreeBytes(DATABASE_NAME),
+  remove: (fileName) => {
+    removeDatabaseCopy(DATABASE_NAME, fileName);
+  },
+  replace: (partName, fileName) => {
+    replaceDatabaseCopy(DATABASE_NAME, partName, fileName);
+  },
+};
+
 function open(): DatabaseStatus {
   try {
-    const database = openDatabase({
-      read: readClickSound,
-      write: writeClickSound,
-      remove: deleteClickSound,
-    });
+    const database = openDatabase(
+      {
+        read: readClickSound,
+        write: writeClickSound,
+        remove: deleteClickSound,
+      },
+      migrationCopyFiles,
+    );
     return { ok: true, database };
   } catch (error) {
     return {

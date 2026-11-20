@@ -36,6 +36,13 @@ vi.mock('./useMiniPlayerDocked', () => ({
   useMiniPlayerDocked: () => state.docked,
 }));
 vi.mock('./DockedMiniPlayer', () => ({ DockedMiniPlayer: () => null }));
+vi.mock('@/dataFolder/useLibraryFolder', () => ({
+  useLibraryFolder: () => ({
+    strip: null,
+    sheet: null,
+    showUnavailable: () => undefined,
+  }),
+}));
 
 const SongsRoute = (await import('../app/library.tsx')).default;
 

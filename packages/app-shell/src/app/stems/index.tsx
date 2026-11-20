@@ -8,6 +8,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useLibraryFolder } from '@/dataFolder/useLibraryFolder';
 import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
@@ -21,6 +22,7 @@ function StemSongsRoute() {
   const importStemFolder = useSongLibrary((s) => s.importStemFolder);
   const [adding, setAdding] = useState(false);
   const showImport = useStemDeck((s) => importCardShows(s.importView));
+  const folder = useLibraryFolder('stems');
 
   useEffect(() => {
     markUsed(TOOL_ID.stems);
@@ -49,6 +51,8 @@ function StemSongsRoute() {
         onBack={routes.back}
         onOpenStemSet={routes.openStemSet}
         onOpenSong={routes.openSong}
+        onUnavailable={folder.showUnavailable}
+        strip={folder.strip}
         onAdd={openAdd}
         {...(showImport
           ? { status: <ImportStatusCard onView={stemDeck.openImport} /> }
@@ -61,6 +65,7 @@ function StemSongsRoute() {
         onFromPhone={fromPhone}
         onFromStemDeck={fromStemDeck}
       />
+      {folder.sheet}
     </>
   );
 }
