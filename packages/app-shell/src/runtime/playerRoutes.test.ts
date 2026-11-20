@@ -12,7 +12,9 @@ const screens = vi.hoisted(() => ({
   props: [] as {
     readonly focused?: boolean;
     readonly onOpenStemSet?: (stemSetId: number) => void;
+    readonly renderUpNext?: (songSec: unknown) => unknown;
   }[],
+  upNext: [] as Record<string, unknown>[],
 }));
 
 vi.mock('expo-router', () => ({
@@ -31,6 +33,10 @@ vi.mock('@/home/ToolGate', () => ({
   gated: (_id: string, route: ComponentType) => route,
 }));
 
+vi.mock('@/queue/useQueueSheet', () => ({
+  useQueueSheet: () => ({ open: vi.fn(), sheet: null }),
+}));
+
 function captureScreen(props: (typeof screens.props)[number]) {
   screens.props.push(props);
   return null;
@@ -39,6 +45,11 @@ function captureScreen(props: (typeof screens.props)[number]) {
 vi.mock('@kitbag/tool-library', () => ({ SongPlayerScreen: captureScreen }));
 vi.mock('@kitbag/tool-stems', () => ({
   StemPlayerScreen: captureScreen,
+  QueueSheet: () => null,
+  UpNextRow: (props: Record<string, unknown>) => {
+    screens.upNext.push(props);
+    return null;
+  },
   useMixerFrame: () => ({}),
 }));
 
@@ -62,6 +73,7 @@ function routes() {
 beforeEach(() => {
   vi.clearAllMocks();
   screens.props = [];
+  screens.upNext = [];
 });
 
 describe.each(Object.entries(ROUTES))('the %s player route', (_name, route) => {
@@ -69,6 +81,22 @@ describe.each(Object.entries(ROUTES))('the %s player route', (_name, route) => {
     nav.focused = focused;
     renderToStaticMarkup(createElement(route));
     expect(screens.props.at(-1)?.focused).toBe(focused);
+  });
+});
+
+describe('the song player route', () => {
+  it("gives the screen the stem player's Up next row, pressing the song player's Next and Previous", async () => {
+    const { songPlayerStore } = await import('@kitbag/core-state');
+    renderToStaticMarkup(createElement(ROUTES.song));
+    const songSec = { value: 0 };
+    const row = screens.props.at(-1)?.renderUpNext?.(songSec);
+    renderToStaticMarkup(row as Parameters<typeof renderToStaticMarkup>[0]);
+    const { pressNext, pressPrevious } = songPlayerStore.getState();
+    expect(screens.upNext.at(-1)).toMatchObject({
+      songSec,
+      onNext: pressNext,
+      onPrevious: pressPrevious,
+    });
   });
 });
 

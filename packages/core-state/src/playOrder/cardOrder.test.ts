@@ -46,9 +46,9 @@ describe('the play order the song card shows', () => {
   });
 
   it('has Next while a song is queued, with no setlist', () => {
-    expect(cardOrderOf({ queue: queued, stage: alone, cursor: null }, false)).toEqual(
-      UP_NEXT,
-    );
+    expect(
+      cardOrderOf({ queue: queued, stage: alone, cursor: null }, false),
+    ).toEqual(UP_NEXT);
   });
 
   it('keeps Previous and drops Next at the last entry', () => {
@@ -56,15 +56,15 @@ describe('the play order the song card shows', () => {
   });
 
   it('keeps Previous for a song on its own once an earlier song was heard', () => {
-    expect(cardOrderOf({ queue: [], stage: alone, cursor: null }, true)).toEqual(
-      LAST,
-    );
+    expect(
+      cardOrderOf({ queue: [], stage: alone, cursor: null }, true),
+    ).toEqual(LAST);
   });
 
   it('has neither for a song on its own', () => {
-    expect(cardOrderOf({ queue: [], stage: alone, cursor: null }, false)).toEqual(
-      ALONE,
-    );
+    expect(
+      cardOrderOf({ queue: [], stage: alone, cursor: null }, false),
+    ).toEqual(ALONE);
   });
 });
 

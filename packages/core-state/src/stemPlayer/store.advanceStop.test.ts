@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { AutoAdvanceDeps } from '../playOrder/autoAdvance.ts';
 import { startAutoAdvance } from '../playOrder/autoAdvance.ts';
-import { NO_BACK, restingPlayer } from '../playOrder/autoAdvance.test-helper.ts';
+import {
+  NO_BACK,
+  restingPlayer,
+} from '../playOrder/autoAdvance.test-helper.ts';
 import { ADVANCE, type Advance } from '../playOrder/order.ts';
 import type { SkipResult, Undo } from '../playOrder/store.ts';
 import { ADVANCE_OUTCOME } from './songEnd.ts';

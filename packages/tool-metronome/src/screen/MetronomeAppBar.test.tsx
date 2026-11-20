@@ -58,9 +58,7 @@ function stepKeys() {
   act(() => {
     tree = create(createElement(MetronomeAppBar, { bottomInset: 0 }));
   });
-  return tree?.root.findAll(
-    (node) => node.type === ('BarIconButton' as never),
-  );
+  return tree?.root.findAll((node) => node.type === ('BarIconButton' as never));
 }
 
 function stepButtons(): Record<string, boolean> {

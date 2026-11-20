@@ -75,7 +75,11 @@ describe('going back an entry', () => {
       stage: gig,
       cursor: cursorAt(gig, 3),
     });
-    expect(back).toMatchObject({ kind: BACK.song, song: HUM, requeue: TIN_ROOF });
+    expect(back).toMatchObject({
+      kind: BACK.song,
+      song: HUM,
+      requeue: TIN_ROOF,
+    });
   });
 
   it('with nothing heard before, goes to the setlist entry before, a metronome song included', () => {
@@ -90,7 +94,12 @@ describe('going back an entry', () => {
 
   it('has nowhere to go from the first song heard outside a setlist', () => {
     expect(
-      backOf({ heard: [plain(HUM)], current: plain(HUM), stage: alone, cursor: null }),
+      backOf({
+        heard: [plain(HUM)],
+        current: plain(HUM),
+        stage: alone,
+        cursor: null,
+      }),
     ).toBeNull();
   });
 

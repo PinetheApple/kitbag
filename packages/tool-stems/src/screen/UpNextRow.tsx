@@ -79,7 +79,10 @@ export interface UpNextRowProps {
   readonly onPrevious: () => void;
 }
 
-function NextKey({ text, onNext }: { readonly text: UpNextText } & Pick<UpNextRowProps, 'onNext'>) {
+function NextKey({
+  text,
+  onNext,
+}: { readonly text: UpNextText } & Pick<UpNextRowProps, 'onNext'>) {
   if (text.metronome)
     return (
       <Button

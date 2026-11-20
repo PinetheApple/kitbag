@@ -196,12 +196,10 @@ describe('the Up next row', () => {
     expect(p.has('Nothing queued')).toBe(true);
     expect(p.has('Playback stops when this song ends')).toBe(true);
     expect(p.labelled('Open')).toEqual([]);
-    expect(
-      p.texts().some((text) => text.startsWith('Next:')) ||
-        p
-          .labelled('')
-          .some((node) => String(node.props.accessibilityLabel).startsWith('Next:')),
-    ).toBe(false);
+    const nextKeys = p.renderer.root.findAll((node) =>
+      String(node.props.accessibilityLabel).startsWith('Next:'),
+    );
+    expect(nextKeys).toEqual([]);
   });
 
   it('names the first queued song and skips to it, dropping it from the queue', async () => {

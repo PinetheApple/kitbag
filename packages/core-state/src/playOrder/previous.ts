@@ -1,10 +1,7 @@
 import type { QueuedSong } from '@kitbag/core-db';
 
 import { adjacentEntry, SONG_STEP } from '../library/setlistPosition.ts';
-import {
-  droppedTrailing,
-  type HeardSong,
-} from '../library/setlistSession.ts';
+import { droppedTrailing, type HeardSong } from '../library/setlistSession.ts';
 import { isPresetEntry, type SetlistEntry } from '../library/snapshot.ts';
 import { libraryStore, type LoadedSong } from '../library/store.ts';
 import { songPlayerStore } from '../songPlayer/store.ts';
@@ -41,7 +38,10 @@ export interface BackFrom {
   readonly cursor: SetlistCursor | null;
 }
 
-export function heardOf(song: QueuedSong, loaded: LoadedSong | null): HeardSong {
+export function heardOf(
+  song: QueuedSong,
+  loaded: LoadedSong | null,
+): HeardSong {
   const fromSetlist =
     song.kind === 'stems' &&
     loaded?.presetId === null &&
@@ -57,13 +57,19 @@ function stageEntry(
   return stage.entries.find((entry) => entry.item.id === itemId);
 }
 
-export function backOf({ heard, current, stage, cursor }: BackFrom): Back | null {
+export function backOf({
+  heard,
+  current,
+  stage,
+  cursor,
+}: BackFrom): Back | null {
   const left = current.song;
   const leftEntry = stageEntry(stage, current.setlistItemId);
   const before = droppedTrailing(heard, left).at(-1);
   if (before !== undefined) {
     const entry = stageEntry(stage, before.setlistItemId);
-    const requeue = leftEntry !== undefined && entry !== undefined ? null : left;
+    const requeue =
+      leftEntry !== undefined && entry !== undefined ? null : left;
     return entry === undefined
       ? { kind: BACK.song, song: before.song, left, requeue }
       : { kind: BACK.setlist, entry, left, requeue };

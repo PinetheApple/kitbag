@@ -1,5 +1,8 @@
 import { useSongPlayer } from '@kitbag/core-state';
-import { SongPlayerScreen, type SongPlayerScreenProps } from '@kitbag/tool-library';
+import {
+  SongPlayerScreen,
+  type SongPlayerScreenProps,
+} from '@kitbag/tool-library';
 import { UpNextRow, useMixerFrame } from '@kitbag/tool-stems';
 import { useIsFocused, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useMemo } from 'react';
