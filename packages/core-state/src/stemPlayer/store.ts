@@ -30,6 +30,7 @@ import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
 import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
 import { mixerSession, type MixerHold } from './mixerSession.ts';
 import { mixSaver } from './mixSaver.ts';
+import { previousPresses, type PreviousListener } from './previousPresses.ts';
 import { stemSongAdvance } from './stemSongAdvance.ts';
 import { stemSongHolds } from './stemSongHolds.ts';
 import {
@@ -151,6 +152,8 @@ export interface StemPlayerActions {
   ) => Promise<AdvanceOutcome>;
   readonly handOver: () => void;
   readonly pressNext: () => void;
+  readonly pressPrevious: () => void;
+  readonly onPrevious: (listener: PreviousListener) => () => void;
   readonly onSongEnd: (listener: AdvanceListener) => () => void;
   readonly songStillEnded: () => boolean;
   readonly stopAdvancing: () => void;
@@ -297,6 +300,7 @@ export function createStemPlayerStore(
       mixer.current,
     );
     mixer.onSongEnded(ends.reported);
+    const previous = previousPresses(mixer.current);
     const holds = stemSongHolds({ mixer, get, ends, runtimeOf, start });
     holds.onCardStop(() => {
       card.stopped();
@@ -312,6 +316,7 @@ export function createStemPlayerStore(
           start.stop();
         },
         next: ends.pressedNext,
+        previous: previous.pressed,
       }),
     );
     const speedKey = speedKeySession(context, start.rateSet, () => openRecord);
@@ -451,6 +456,10 @@ export function createStemPlayerStore(
       pressNext: () => {
         ends.pressedNext(mixer.current(), ADVANCE_CAUSE.nextInApp);
       },
+      pressPrevious: () => {
+        previous.pressed(mixer.current(), true);
+      },
+      onPrevious: previous.subscribe,
       onSongEnd: ends.subscribe,
       songStillEnded: ends.stands,
       stopAdvancing: holds.gaveUp,

@@ -58,6 +58,8 @@ sealed interface SongCommand {
   data class Seek(val frame: Long) : SongCommand
 
   data object Next : SongCommand
+
+  data object Previous : SongCommand
 }
 
 val SongCommand.appAction: String
@@ -68,6 +70,7 @@ val SongCommand.appAction: String
       SongCommand.Stop, SongCommand.StopCountIn -> "stop"
       is SongCommand.Seek -> "seek"
       SongCommand.Next -> "next"
+      SongCommand.Previous -> "previous"
     }
 
 data class SongRoute(val app: SongCommand?, val engine: List<SongCommand>)
@@ -157,6 +160,7 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
   // A count-in is the app's to cancel; Stop also ends the count and the card natively, as after the start.
   fun route(progress: SongProgress, action: SongAction, appListening: Boolean): SongRoute {
     if (action == SongAction.NEXT) return SongRoute(if (appListening) SongCommand.Next else null, emptyList())
+    if (action == SongAction.PREVIOUS && appListening) return SongRoute(SongCommand.Previous, emptyList())
     if (progress.countingIn && action == SongAction.STOP) {
       return SongRoute(if (appListening) SongCommand.Stop else null, listOf(SongCommand.StopCountIn))
     }
@@ -176,7 +180,7 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
       SongCommand.Pause -> progress.copy(playing = false)
       SongCommand.Stop, SongCommand.StopCountIn -> SongProgress(playing = false, positionFrames = 0L)
       is SongCommand.Seek -> progress.copy(positionFrames = command.frame)
-      SongCommand.Next -> progress
+      SongCommand.Next, SongCommand.Previous -> progress
     }
 
   fun seekTo(positionMillis: Long): SongCommand =
@@ -189,7 +193,7 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
       SongAction.STOP -> SongCommand.Stop
       SongAction.REWIND -> seek(progress.positionFrames - skipFrames)
       SongAction.FORWARD -> seek(progress.positionFrames + skipFrames)
-      SongAction.PREVIOUS -> seek(0L)
+      SongAction.PREVIOUS -> SongCommand.Previous
       SongAction.NEXT -> SongCommand.Next
     }
 

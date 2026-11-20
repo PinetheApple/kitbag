@@ -91,15 +91,21 @@ class SongSlotsTest {
   }
 
   @Test
-  fun `previous restarts the song in the engine`() {
-    val route = transport.route(at(95.0), PREVIOUS, appListening = true)
-    assertEquals(SongRoute(null, listOf(SongCommand.Seek(0L))), route)
+  fun `previous goes to the app whenever it listens and never to the engine`() {
+    for (progress in listOf(at(1.0), at(95.0), at(95.0, playing = false), counting(5.0))) {
+      assertEquals(SongRoute(SongCommand.Previous, emptyList()), transport.route(progress, PREVIOUS, appListening = true))
+    }
   }
 
   @Test
-  fun `previous during a count-in goes to the app as a seek to the top`() {
-    val route = transport.route(counting(5.0), PREVIOUS, appListening = true)
-    assertEquals(SongRoute(SongCommand.Seek(0L), emptyList()), route)
+  fun `previous with no app listening restarts the song in the engine`() {
+    assertEquals(SongRoute(null, listOf(SongCommand.Seek(0L))), transport.route(at(95.0), PREVIOUS, appListening = false))
+  }
+
+  @Test
+  fun `previous is assumed to change nothing the card shows`() {
+    assertEquals(at(5.0), transport.applied(at(5.0), SongCommand.Previous))
+    assertFalse(SongCommand.Previous.endsSong)
   }
 
   @Test

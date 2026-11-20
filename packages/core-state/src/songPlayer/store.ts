@@ -24,7 +24,9 @@ import {
   type MixerClick,
 } from '../stemPlayer/mixerClick.ts';
 import { ATTACHABLE, mixerSession } from '../stemPlayer/mixerSession.ts';
+import { previousPresses } from '../stemPlayer/previousPresses.ts';
 import {
+  ADVANCE_CAUSE,
   endedOnLastFrame,
   songEnds,
   startSong,
@@ -148,7 +150,11 @@ export function createSongPlayerStore(
     mixer.onLastRelease({ keepsSong: () => get().status === 'ready' });
     const context = { set, get, runtimeOf, session: mixer.current };
     const presets = songPresetActions({ ...context, live });
-    const count = songCount(context, mixer, api, clickEngine, ends.pressedNext);
+    const previous = previousPresses(mixer.current);
+    const count = songCount(context, mixer, api, clickEngine, {
+      next: ends.pressedNext,
+      previous: previous.pressed,
+    });
     const gridFollowers = { gridReplaced: count.gridReplaced };
     const card = songCard({
       ...context,
@@ -358,6 +364,13 @@ export function createSongPlayerStore(
           songId,
         ),
       handOver: mixer.handOver,
+      pressNext: () => {
+        ends.pressedNext(mixer.current(), ADVANCE_CAUSE.nextInApp);
+      },
+      pressPrevious: () => {
+        previous.pressed(mixer.current(), true);
+      },
+      onPrevious: previous.subscribe,
       onSongEnd: ends.subscribe,
       songStillEnded: ends.stands,
       stopAdvancing: () => {
@@ -391,6 +404,8 @@ export function createSongPlayerStore(
         if (get().songId === songId) heldCorrection = null;
       },
       playheadBeatSeconds: () => playheadBeatSeconds(get(), runtimeOf()),
+      playheadSeconds: () =>
+        framesToSeconds(runtimeOf().engine.position(), get().engineRate),
       dismissMeterNotice: () => {
         set({ meterNotice: null });
       },

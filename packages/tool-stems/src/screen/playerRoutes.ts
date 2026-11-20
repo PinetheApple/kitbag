@@ -11,6 +11,7 @@ export function usePlayerRoutes(
 ) {
   const notice = useNotice();
   const skip = useStemPlayer((s) => s.pressNext);
+  const back = useStemPlayer((s) => s.pressPrevious);
   const routes = useMemo<PlayOrderRoutes>(
     () => ({
       onOpenStemSet,
@@ -20,5 +21,5 @@ export function usePlayerRoutes(
     }),
     [onOpenStemSet, onOpenSong, onOpenMetronome, notice.showMessage],
   );
-  return { notice, routes, skip };
+  return { notice, routes, skip, back };
 }

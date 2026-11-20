@@ -30,12 +30,17 @@ import {
   sessionStateOf,
   setlistSessionActions,
   startSession,
+  type HeardSong,
   type LeftSetlist,
   type SetlistSession,
   type SetlistSessionActions,
 } from './setlistSession.ts';
 
-export type { LeftSetlist, SetlistSession } from './setlistSession.ts';
+export type {
+  HeardSong,
+  LeftSetlist,
+  SetlistSession,
+} from './setlistSession.ts';
 import {
   isPresetEntry,
   takeSnapshot,
@@ -90,6 +95,7 @@ export interface LibraryState extends LibrarySnapshot {
   readonly discarded: DiscardedChanges | null;
   readonly played: readonly number[];
   readonly session: SetlistSession | null;
+  readonly heard: readonly HeardSong[];
   readonly endedSetlist: LeftSetlist | null;
   readonly results: SearchResults | null;
   readonly presetOverlay: PresetOverlay | null;
@@ -161,6 +167,7 @@ const EMPTY: LibraryState = {
   discarded: null,
   played: [],
   session: null,
+  heard: [],
   endedSetlist: null,
   results: null,
   presetOverlay: null,

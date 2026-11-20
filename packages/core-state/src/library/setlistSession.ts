@@ -1,3 +1,4 @@
+import { sameQueuedSong, type QueuedSong } from '@kitbag/core-db';
 import type { StoreApi } from 'zustand/vanilla';
 
 import { activeSetlistOf } from './setlistPosition.ts';
@@ -11,6 +12,34 @@ import type {
 export interface SetlistSession {
   readonly setlistId: number;
   readonly skipped: readonly number[];
+}
+
+export interface HeardSong {
+  readonly song: QueuedSong;
+  readonly setlistItemId: number | null;
+}
+
+export function droppedTrailing(
+  heard: readonly HeardSong[],
+  song: QueuedSong,
+): readonly HeardSong[] {
+  let end = heard.length;
+  const isSong = (entry: HeardSong | undefined) =>
+    entry !== undefined && sameQueuedSong(entry.song, song);
+  while (isSong(heard[end - 1])) end--;
+  return heard.slice(0, end);
+}
+
+export function heardAfter(
+  heard: readonly HeardSong[],
+  entry: HeardSong,
+): readonly HeardSong[] {
+  const last = heard.at(-1);
+  const same =
+    last !== undefined &&
+    sameQueuedSong(last.song, entry.song) &&
+    last.setlistItemId === entry.setlistItemId;
+  return same ? heard : [...heard, entry];
 }
 
 export interface SessionState {
@@ -32,6 +61,8 @@ export interface SetlistSessionActions {
   rejoinSetlist: (left: LeftSetlist) => Promise<boolean>;
   endSetlistSession: (reopenedStemSetId?: number) => void;
   endListeningSession: () => void;
+  hearSong: (entry: HeardSong) => void;
+  unhearSong: (song: QueuedSong) => void;
   skipSetlistEntry: (itemId: number) => void;
   dismissEndedSetlist: () => void;
 }
@@ -128,7 +159,13 @@ export function setlistSessionActions(
       set({ endedSetlist: leftSetlistOf(get(), session.setlistId, before) });
     },
     endListeningSession: () => {
-      set({ session: null });
+      set({ session: null, heard: [] });
+    },
+    hearSong: (entry: HeardSong) => {
+      set({ heard: heardAfter(get().heard, entry) });
+    },
+    unhearSong: (song: QueuedSong) => {
+      set({ heard: droppedTrailing(get().heard, song) });
     },
     skipSetlistEntry: (itemId: number) => {
       const { session } = get();

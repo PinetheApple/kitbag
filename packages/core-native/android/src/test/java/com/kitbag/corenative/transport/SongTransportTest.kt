@@ -226,7 +226,7 @@ class SongTransportTest {
   @Test
   fun `without the count-in marker the engine keeps every action`() {
     for (progress in listOf(at(5.0), at(5.0, playing = false))) {
-      for (action in SongAction.entries - SongAction.NEXT) {
+      for (action in SongAction.entries - SongAction.NEXT - SongAction.PREVIOUS) {
         assertEquals(
           SongRoute(null, transport.commandsFor(progress, action)),
           transport.route(progress, action, appListening = true),
@@ -266,10 +266,15 @@ class SongTransportTest {
   @Test
   fun `requests name their action for the app`() {
     assertEquals(
-      listOf("play", "pause", "stop", "seek", "next"),
-      listOf(SongCommand.Play, SongCommand.Pause, SongCommand.Stop, SongCommand.Seek(1L), SongCommand.Next).map {
-        it.appAction
-      },
+      listOf("play", "pause", "stop", "seek", "next", "previous"),
+      listOf(
+        SongCommand.Play,
+        SongCommand.Pause,
+        SongCommand.Stop,
+        SongCommand.Seek(1L),
+        SongCommand.Next,
+        SongCommand.Previous,
+      ).map { it.appAction },
     )
   }
 }

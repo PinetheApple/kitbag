@@ -14,6 +14,7 @@ import {
 } from './store.test-helper.ts';
 
 const NEXT = { action: 'next', frame: null } as const;
+const PREVIOUS = { action: 'previous', frame: null } as const;
 const NEXT_SONG = SONG_ID + 1;
 const SONG_END = secondsToFrames(songRecord().durationSec, RATE);
 
@@ -40,6 +41,26 @@ describe('a single song in the play order', () => {
     left.player.getState().onSongEnd(advance);
     left.requestFromNotification(NEXT);
     expect(advance).toHaveBeenCalledExactlyOnceWith(ADVANCE_CAUSE.next);
+  });
+
+  it('passes Previous on its card to the play order', async () => {
+    const left = await leftPlaying();
+    const back = vi.fn();
+    left.player.getState().onPrevious(back);
+    left.requestFromNotification(PREVIOUS);
+    expect(back).toHaveBeenCalledExactlyOnceWith(false);
+  });
+
+  it('passes its in-app Next and Previous to the play order', async () => {
+    const left = await leftPlaying();
+    const advance = vi.fn();
+    const back = vi.fn();
+    left.player.getState().onSongEnd(advance);
+    left.player.getState().onPrevious(back);
+    left.player.getState().pressNext();
+    left.player.getState().pressPrevious();
+    expect(advance).toHaveBeenCalledExactlyOnceWith(ADVANCE_CAUSE.nextInApp);
+    expect(back).toHaveBeenCalledExactlyOnceWith(true);
   });
 
   it('hands over with its card kept up, letting the engine go after', async () => {

@@ -142,13 +142,26 @@ interface DockProps {
   readonly bottom: number;
   readonly onOpenUpNext: () => void;
   readonly onNext: () => void;
+  readonly onPrevious: () => void;
   readonly onSpeedKey: () => void;
 }
 
-function Dock({ frame, bottom, onOpenUpNext, onNext, onSpeedKey }: DockProps) {
+function Dock({
+  frame,
+  bottom,
+  onOpenUpNext,
+  onNext,
+  onPrevious,
+  onSpeedKey,
+}: DockProps) {
   return (
     <PlayerDock bottomInset={bottom}>
-      <UpNextRow onOpenSheet={onOpenUpNext} onNext={onNext} />
+      <UpNextRow
+        songSec={frame.songSec}
+        onOpenSheet={onOpenUpNext}
+        onNext={onNext}
+        onPrevious={onPrevious}
+      />
       <Scrubber frame={frame} />
       <SpeedKeyControls onOpen={onSpeedKey} />
       <StemTransport playing={frame.playing} />
@@ -257,6 +270,7 @@ interface BodyProps {
   readonly onBack: () => void;
   readonly onOpenUpNext: () => void;
   readonly onNext: () => void;
+  readonly onPrevious: () => void;
   readonly notice: Notice;
   readonly onSpeedKey: () => void;
 }
@@ -267,6 +281,7 @@ function Body({
   onBack,
   onOpenUpNext,
   onNext,
+  onPrevious,
   notice,
   onSpeedKey,
 }: BodyProps) {
@@ -300,6 +315,7 @@ function Body({
         bottom={bottom}
         onOpenUpNext={onOpenUpNext}
         onNext={onNext}
+        onPrevious={onPrevious}
         onSpeedKey={onSpeedKey}
       />
     </>
@@ -424,7 +440,7 @@ export function PlayerScreen({
   onOpenSetlist,
 }: StemPlayerScreenProps) {
   const styles = useStyles();
-  const { notice, routes, skip } = usePlayerRoutes(
+  const { notice, routes, skip, back } = usePlayerRoutes(
     onOpenStemSet,
     onOpenSong,
     onOpenMetronome,
@@ -472,6 +488,7 @@ export function PlayerScreen({
           onBack={onBack}
           onOpenUpNext={sheets.openUpNext}
           onNext={skip}
+          onPrevious={back}
           notice={notice}
           onSpeedKey={sheets.openSpeedKey}
         />

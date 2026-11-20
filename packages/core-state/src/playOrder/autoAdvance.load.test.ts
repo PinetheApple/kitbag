@@ -9,7 +9,7 @@ import {
   type AdvanceOutcome,
 } from '../stemPlayer/songEnd.ts';
 import { startAutoAdvance, type ArrivalState } from './autoAdvance.ts';
-import { restingPlayer } from './autoAdvance.test-helper.ts';
+import { NO_BACK, restingPlayer } from './autoAdvance.test-helper.ts';
 import {
   closeDatabases,
   queuedIds,
@@ -56,6 +56,7 @@ async function heldLoad() {
     candidates: () => order.getState().queue.length + SETLIST_CANDIDATES,
     commitOpen: (entry, stands) => order.getState().commitOpen(entry, stands),
     arrivals: createStore<ArrivalState>(() => ({ arrival: null })),
+    ...NO_BACK,
   });
   const loading = async (cause: AdvanceCause) => {
     leave(cause);

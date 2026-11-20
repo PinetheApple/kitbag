@@ -13,6 +13,8 @@ import {
   type SetlistCursor,
   type UpNext,
 } from './order.ts';
+import { useShownSong } from './nowPlaying.ts';
+import { backOf, heardOf } from './previous.ts';
 import { playOrderStore, type PlayOrderStore } from './store.ts';
 
 export function usePlayOrder<T>(selector: (state: PlayOrderStore) => T): T {
@@ -115,4 +117,14 @@ export function useSetlistSpot(setId: number): SetlistSpot | null {
     number: cursor.index + 1,
     of: stage.entries.length,
   };
+}
+
+export function useCanGoBack(): boolean {
+  const heard = useStore(libraryStore, (s) => s.heard);
+  const loaded = useStore(libraryStore, (s) => s.loaded);
+  const { stage, cursor } = useStage();
+  const song = useShownSong();
+  if (song === null) return false;
+  const current = heardOf(song, loaded);
+  return backOf({ heard, current, stage, cursor }) !== null;
 }

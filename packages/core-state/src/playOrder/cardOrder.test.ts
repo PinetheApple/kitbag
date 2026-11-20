@@ -41,22 +41,28 @@ const ALONE: SongTransportOrder = { previous: false, next: false };
 
 describe('the play order the song card shows', () => {
   it('has Next while a setlist entry follows, a metronome song included', () => {
-    expect(cardOrderOf(at(1))).toEqual(UP_NEXT);
-    expect(cardOrderOf(at(2))).toEqual(UP_NEXT);
+    expect(cardOrderOf(at(1), false)).toEqual(UP_NEXT);
+    expect(cardOrderOf(at(2), false)).toEqual(UP_NEXT);
   });
 
   it('has Next while a song is queued, with no setlist', () => {
-    expect(cardOrderOf({ queue: queued, stage: alone, cursor: null })).toEqual(
+    expect(cardOrderOf({ queue: queued, stage: alone, cursor: null }, false)).toEqual(
       UP_NEXT,
     );
   });
 
   it('keeps Previous and drops Next at the last entry', () => {
-    expect(cardOrderOf(at(3))).toEqual(LAST);
+    expect(cardOrderOf(at(3), false)).toEqual(LAST);
+  });
+
+  it('keeps Previous for a song on its own once an earlier song was heard', () => {
+    expect(cardOrderOf({ queue: [], stage: alone, cursor: null }, true)).toEqual(
+      LAST,
+    );
   });
 
   it('has neither for a song on its own', () => {
-    expect(cardOrderOf({ queue: [], stage: alone, cursor: null })).toEqual(
+    expect(cardOrderOf({ queue: [], stage: alone, cursor: null }, false)).toEqual(
       ALONE,
     );
   });
@@ -69,6 +75,7 @@ describe('sending the play order to the card', () => {
     const send = vi.fn<(order: SongTransportOrder) => void>();
     startCardOrder({
       order: () => order,
+      back: () => false,
       subscribe: (listener) => {
         changed = listener;
         return () => undefined;

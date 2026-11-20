@@ -5,7 +5,9 @@ import type { IconName } from '../icons.ts';
 import {
   appBarTitleMinSize,
   lineRatio,
+  radius,
   screenBar,
+  size,
   space,
   textRoles,
   type IconSize,
@@ -53,6 +55,12 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  filled: {
+    borderRadius: radius.circle,
+    backgroundColor: theme.color.surface2,
+    borderWidth: size.stroke,
+    borderColor: theme.color.line,
+  },
   middle: {
     flex: 1,
     minWidth: 0,
@@ -86,6 +94,7 @@ export interface BarIconButtonProps {
   readonly color?: ColorToken;
   readonly size?: IconSize;
   readonly disabled?: boolean;
+  readonly filled?: boolean;
   readonly badge?: string | undefined;
 }
 
@@ -94,8 +103,9 @@ export function BarIconButton({
   label,
   onPress,
   color = 'text2',
-  size = 'bar',
+  size: iconSize = 'bar',
   disabled = false,
+  filled = false,
   badge,
 }: BarIconButtonProps) {
   const styles = useStyles();
@@ -106,12 +116,12 @@ export function BarIconButton({
       accessibilityLabel={label}
       accessibilityState={{ disabled }}
       disabled={disabled}
-      style={styles.button}
+      style={[styles.button, filled && styles.filled]}
       onPress={onPress}
     >
       <Icon
         name={icon}
-        size={size}
+        size={iconSize}
         color={disabled ? 'decor' : color}
         scale={iconScale}
       />

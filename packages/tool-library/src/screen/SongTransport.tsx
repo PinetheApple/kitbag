@@ -12,7 +12,7 @@ import {
   speedPercentText,
   useSongPlayer,
 } from '@kitbag/core-state';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 
 import { LOOP_KEY_TEXT } from '../logic/viewText.ts';
 import { SongSpeedSheet } from './SongSpeedSheet.tsx';
@@ -20,9 +20,14 @@ import { SongSpeedSheet } from './SongSpeedSheet.tsx';
 export interface SongTransportProps {
   readonly playing: PlayerFrame['playing'];
   readonly bottomInset: number;
+  readonly upNext?: ReactNode;
 }
 
-export function SongTransport({ playing, bottomInset }: SongTransportProps) {
+export function SongTransport({
+  playing,
+  bottomInset,
+  upNext,
+}: SongTransportProps) {
   const loop = useSongPlayer((s) => s.loop);
   const speed = useSongPlayer((s) => s.speed);
   const togglePlay = useSongPlayer((s) => s.togglePlay);
@@ -42,6 +47,7 @@ export function SongTransport({ playing, bottomInset }: SongTransportProps) {
   return (
     <>
       <PlayerDock bottomInset={bottomInset}>
+        {upNext}
         <PlayerTransport
           playing={playing}
           loopActive={loop.kind !== 'off'}

@@ -5,12 +5,14 @@ import {
   useNotice,
 } from '@kitbag/core-design';
 import { useLibrary } from '@kitbag/core-state';
-import { QueueSheet } from '@kitbag/tool-stems';
+import { QueueSheet, type QueueSheetProps } from '@kitbag/tool-stems';
 import { useCallback, useMemo, useState } from 'react';
 
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
-export function useQueueSheet(bottomInset: number) {
+type PlayerRoutes = Pick<QueueSheetProps, 'onOpenStemSet' | 'onOpenSong'>;
+
+export function useQueueSheet(bottomInset: number, player?: PlayerRoutes) {
   const routes = useLibraryRoutes();
   const notice = useNotice();
   const rejoinSetlist = useLibrary((s) => s.rejoinSetlist);
@@ -24,18 +26,18 @@ export function useQueueSheet(bottomInset: number) {
   }, []);
   const sheetRoutes = useMemo(
     () => ({
-      onOpenStemSet: routes.openStemSet,
-      onOpenSong: routes.openSong,
+      onOpenStemSet: player?.onOpenStemSet ?? routes.openStemSet,
+      onOpenSong: player?.onOpenSong ?? routes.openSong,
       onOpenMetronome: routes.openMetronome,
       onNotice: notice.showMessage,
     }),
-    [routes, notice.showMessage],
+    [routes, player, notice.showMessage],
   );
   const sheet = (
     <>
       <QueueSheet
         {...sheetRoutes}
-        playsInPlace
+        playsInPlace={player === undefined}
         visible={visible}
         bottomInset={bottomInset}
         onDismiss={close}

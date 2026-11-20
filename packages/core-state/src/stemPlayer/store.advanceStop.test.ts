@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { AutoAdvanceDeps } from '../playOrder/autoAdvance.ts';
 import { startAutoAdvance } from '../playOrder/autoAdvance.ts';
-import { restingPlayer } from '../playOrder/autoAdvance.test-helper.ts';
+import { NO_BACK, restingPlayer } from '../playOrder/autoAdvance.test-helper.ts';
 import { ADVANCE, type Advance } from '../playOrder/order.ts';
 import type { SkipResult, Undo } from '../playOrder/store.ts';
 import { ADVANCE_OUTCOME } from './songEnd.ts';
@@ -123,6 +123,11 @@ async function followingPlayOrder() {
     players: {
       stems: {
         onSongEnd: player.onSongEnd,
+        onPrevious: player.onPrevious,
+        playedSeconds: player.playheadSeconds,
+        restart: () => {
+          player.seek(0);
+        },
         advanceTo: player.advanceTo,
         takeOver: (id) => player.takeOver(id, 0),
         handOver: player.handOver,
@@ -141,6 +146,7 @@ async function followingPlayOrder() {
     candidates: () => 1,
     commitOpen: () => Promise.resolve(false),
     arrivals: { setState: vi.fn() } as unknown as AutoAdvanceDeps['arrivals'],
+    ...NO_BACK,
   };
   startAutoAdvance(deps);
   const shown = song.commands.songTransportShow.mock.lastCall?.[0].session;

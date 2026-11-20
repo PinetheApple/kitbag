@@ -224,7 +224,7 @@ private object MixerEngine : SongEngine {
       SongCommand.Stop -> EngineTransport.mixerStop()
       SongCommand.StopCountIn -> EngineTransport.songStop()
       is SongCommand.Seek -> EngineTransport.mixerSeek(command.frame)
-      SongCommand.Next -> Unit
+      SongCommand.Next, SongCommand.Previous -> Unit
     }
   }
 

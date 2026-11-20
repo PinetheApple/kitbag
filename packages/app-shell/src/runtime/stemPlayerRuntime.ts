@@ -5,6 +5,7 @@ import {
   configureStemPlayer,
   endSessionOnCardStop,
   metronomeStore,
+  recordHeardSongs,
   songCountIn,
   startAutoAdvance,
   startCardOrder,
@@ -45,3 +46,4 @@ startAutoAdvance(autoAdvanceDeps(playerWaveBars));
 startCardOrder();
 endSessionOnCardStop();
 stopSongsForMetronome();
+recordHeardSongs();

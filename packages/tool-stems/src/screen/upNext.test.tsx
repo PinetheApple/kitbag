@@ -190,9 +190,17 @@ describe('Add to setlist from the player', () => {
 });
 
 describe('the Up next row', () => {
-  it('shows only while something is up next', async () => {
+  it('says playback stops, with no Next, when nothing is up next', async () => {
     const p = await withQueue();
-    expect(p.has('Up next')).toBe(false);
+    expect(p.has('Nothing queued')).toBe(true);
+    expect(p.has('Playback stops when this song ends')).toBe(true);
+    expect(p.labelled('Open')).toEqual([]);
+    expect(
+      p.texts().some((text) => text.startsWith('Next:')) ||
+        p
+          .labelled('')
+          .some((node) => String(node.props.accessibilityLabel).startsWith('Next:')),
+    ).toBe(false);
   });
 
   it('names the first queued song and skips to it, dropping it from the queue', async () => {
@@ -377,7 +385,8 @@ describe('the setlist part of Up next', () => {
     metronomeEntryOnStage();
     libraryStore.setState({ session: null });
     const p = await withQueue();
-    expect(p.has('Up next')).toBe(false);
+    expect(p.has('Ballad')).toBe(false);
+    expect(p.has('Nothing queued')).toBe(true);
   });
 
   it('skips an entry this time from the sheet', async () => {
