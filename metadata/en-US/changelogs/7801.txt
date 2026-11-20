@@ -1,0 +1,1 @@
+• Changing the metronome's sounds or pattern while a song's click is playing no longer changes the song's click.
