@@ -1,4 +1,4 @@
-import { useLibrary } from '@kitbag/core-state';
+import { useLibrary, useStemPlayer } from '@kitbag/core-state';
 import { useCallback, useState } from 'react';
 
 import { PlayerScreen, type StemPlayerScreenProps } from './PlayerScreen.tsx';
@@ -22,14 +22,19 @@ export function StemPlayerScreen(props: StemPlayerScreenProps) {
   const { setId, focused, onOpenStemSet } = props;
   const [reopenCount, setReopenCount] = useState(0);
   const displaced = useDisplacedByMetronomeSong(focused);
+  const close = useStemPlayer((s) => s.close);
   const open = useCallback(
     (stemSetId: number) => {
-      if (stemSetId === setId) setReopenCount((count) => count + 1);
-      else onOpenStemSet(stemSetId);
+      if (stemSetId !== setId) {
+        onOpenStemSet(stemSetId);
+        return;
+      }
+      close();
+      setReopenCount((count) => count + 1);
     },
-    [setId, onOpenStemSet],
+    [setId, onOpenStemSet, close],
   );
-  // Unmounting is what lets go of the mixer; the metronome song now owns the stage.
+  // The metronome song took the stage; remounting on Back reopens this song.
   if (displaced) return null;
   return <PlayerScreen key={reopenCount} {...props} onOpenStemSet={open} />;
 }

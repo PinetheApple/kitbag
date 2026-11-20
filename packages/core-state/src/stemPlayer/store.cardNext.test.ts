@@ -51,7 +51,7 @@ describe('Next on the song card', () => {
     const song = await playing();
     const first = song.commands.songTransportShow.mock.lastCall?.[0];
     expect(first?.followsPlayOrder).toBe(true);
-    song.store.getState().acquireSong(7, BARS);
+    void song.store.getState().open(7, BARS);
     await vi.waitFor(() => {
       expect(song.store.getState().status).toBe('ready');
     });
@@ -64,7 +64,7 @@ describe('Next on the song card', () => {
   it('is ignored when pressed on the card of a song since replaced', async () => {
     const song = await playing();
     const shownFor = song.commands.songTransportShow.mock.lastCall?.[0].session;
-    song.store.getState().acquireSong(7, BARS);
+    void song.store.getState().open(7, BARS);
     pressNext(song, shownFor);
     expect(song.left).not.toHaveBeenCalled();
     expect(song.store.getState().songStillEnded()).toBe(false);

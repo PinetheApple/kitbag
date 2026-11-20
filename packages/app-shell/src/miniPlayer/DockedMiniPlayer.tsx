@@ -14,6 +14,7 @@ export function DockedMiniPlayer({
       usePlayhead={useMixerFrame}
       bottomInset={bottomInset}
       onOpenSong={routes.openSong}
+      onOpenStemSet={routes.openStemSet}
     />
   );
 }

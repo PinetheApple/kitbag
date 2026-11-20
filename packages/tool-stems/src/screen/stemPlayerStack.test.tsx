@@ -2,10 +2,19 @@ import {
   libraryStore,
   RETIME_PLAYBACK_RATE,
   stemPlayerStore,
+  stopStemSongOnMetronomeLoad,
 } from '@kitbag/core-state';
 import { record } from '@kitbag/core-state/src/stemPlayer/store.test-helper.ts';
 import { act } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 import {
   at,
@@ -92,6 +101,16 @@ async function uncover(player: Player, order: BackOrder): Promise<void> {
   await act(flush);
 }
 
+let stopTakeover: () => void = () => undefined;
+
+beforeAll(() => {
+  stopTakeover = stopStemSongOnMetronomeLoad();
+});
+
+afterAll(() => {
+  stopTakeover();
+});
+
 afterEach(() => {
   closeSurface();
   first?.unmount();
@@ -113,14 +132,16 @@ describe('Back to a stem song another was opened over', () => {
   });
 
   it.each(ORDERS)(
-    'stops and lets go of the engine on the last Back: %s, %s',
+    'keeps the song past the last Back, until it is closed: %s, %s',
     async (over, back) => {
       const player = await openFirst();
       await cover(player, over);
       await uncover(player, back);
       player.commands.mixerStop.mockClear();
       player.unmount();
-      expect(player.store.getState().status).toBe('idle');
+      expect(player.store.getState().status).toBe('ready');
+      expect(player.commands.mixerStop).not.toHaveBeenCalled();
+      player.store.getState().close();
       expect(player.commands.mixerStop).toHaveBeenCalledOnce();
       expect(player.commands.engineRelease).toHaveBeenCalledTimes(
         player.commands.engineHold.mock.calls.length,
@@ -129,7 +150,7 @@ describe('Back to a stem song another was opened over', () => {
   );
 
   it.each(BACK_ORDERS)(
-    'reopens when the same song was stacked over it: %s',
+    'keeps the song, unreloaded, when the same song was stacked over it: %s',
     async (back) => {
       const player = await openFirst();
       await cover(player, 'acquire before blur', SET_ID);
@@ -137,7 +158,7 @@ describe('Back to a stem song another was opened over', () => {
       expect(player.has(OPENING)).toBe(false);
       expect(player.store.getState().status).toBe('ready');
       expect(player.store.getState().setId).toBe(SET_ID);
-      expect(player.records.readStemSet).toHaveBeenCalledTimes(3);
+      expect(player.records.readStemSet).toHaveBeenCalledOnce();
     },
   );
 
@@ -222,14 +243,14 @@ describe('another route covering the player', () => {
     ]);
   });
 
-  it('still closes the song when the screen goes after being covered', async () => {
+  it('keeps the song when the screen goes after being covered', async () => {
     const player = await openFirst();
     player.setFocused(false);
     player.setFocused(true);
     player.unmount();
-    expect(player.store.getState().status).toBe('idle');
-    expect(player.commands.mixerStop).toHaveBeenCalledOnce();
-    expect(player.commands.engineRelease).toHaveBeenCalledOnce();
+    expect(player.store.getState().status).toBe('ready');
+    expect(player.commands.mixerStop).not.toHaveBeenCalled();
+    expect(player.commands.engineRelease).not.toHaveBeenCalled();
   });
 });
 
@@ -287,46 +308,34 @@ describe('a metronome song loaded over the player', () => {
     expect(player.records.readStemSet).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps its song when the blur and the load land in one render', async () => {
+  it.each([
+    ['while it is in front', false],
+    ['as it blurs', true],
+  ])('stops the song when the load lands %s', async (_, blurring) => {
     const player = await openFirst();
     act(() => {
       libraryStore.setState((s) => ({ songLoads: s.songLoads + 1 }));
-      player.setFocused(false);
+      if (blurring) player.setFocused(false);
     });
     await act(flush);
-    expect(player.commands.engineRelease).not.toHaveBeenCalled();
-    expect(player.store.getState().status).toBe('ready');
-    loadMetronomeSong();
     expect(player.commands.engineRelease).toHaveBeenCalledOnce();
-  });
-
-  it('keeps the song when the load happens while it is in front', async () => {
-    const player = await openFirst();
-    loadMetronomeSong();
-    player.setFocused(false);
-    await act(flush);
-    expect(player.commands.engineRelease).not.toHaveBeenCalled();
-    expect(player.store.getState().status).toBe('ready');
+    expect(player.store.getState().status).toBe('idle');
   });
 });
 
 describe('an Activity relaunch with the player focused', () => {
-  it('stays open when the new surface mounts before the old one stops', async () => {
+  it.each([
+    ['the new surface mounts before the old one stops', true],
+    ['the old surface stops before the new one mounts', false],
+  ])('joins the open song when %s', async (_, newFirst) => {
     const player = await openFirst();
-    await openSurface(SET_ID);
+    if (newFirst) await openSurface(SET_ID);
     player.unmount();
+    if (!newFirst) await openSurface(SET_ID);
     await act(flush);
     expect(player.store.getState().status).toBe('ready');
     expect(player.commands.engineRelease).not.toHaveBeenCalled();
-    expect(player.records.readStemSet).toHaveBeenCalledTimes(2);
-  });
-
-  it('reopens when the old surface stops before the new one mounts', async () => {
-    const player = await openFirst();
-    player.unmount();
-    await openSurface(SET_ID);
-    expect(player.store.getState().status).toBe('ready');
-    expect(player.records.readStemSet).toHaveBeenCalledTimes(2);
+    expect(player.records.readStemSet).toHaveBeenCalledOnce();
   });
 });
 
@@ -369,6 +378,7 @@ describe('something else closing the player', () => {
   it('opens nothing for a screen mounted behind another', async () => {
     const player = await openFirst();
     player.unmount();
+    player.store.getState().close();
     surface = await mountSurface(playerTree({ focused: false }));
     expect(player.store.getState().status).toBe('idle');
     expect(player.records.readStemSet).toHaveBeenCalledOnce();

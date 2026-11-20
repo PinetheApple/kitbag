@@ -5,6 +5,8 @@ const mocks = vi.hoisted(() => ({
   configureStemPlayer: vi.fn(),
   startAutoAdvance: vi.fn(),
   startCardOrder: vi.fn(),
+  endSessionOnCardStop: vi.fn(),
+  stopStemSongOnMetronomeLoad: vi.fn(),
   native: {
     mixerSetRate: vi.fn(() => Promise.resolve(0)),
     mixerRate: vi.fn(() => Promise.resolve(1)),
@@ -25,6 +27,8 @@ vi.mock('@kitbag/core-state', () => ({
   configureStemPlayer: mocks.configureStemPlayer,
   startAutoAdvance: mocks.startAutoAdvance,
   startCardOrder: mocks.startCardOrder,
+  endSessionOnCardStop: mocks.endSessionOnCardStop,
+  stopStemSongOnMetronomeLoad: mocks.stopStemSongOnMetronomeLoad,
 }));
 vi.mock('./database.ts', () => ({ getDatabase: vi.fn() }));
 vi.mock('./mixdownRuntime.ts', () => ({ mixdownRuntime: {} }));
@@ -44,6 +48,9 @@ const { commands } = runtime;
 const [configured] = mocks.configureStemPlayer.mock.invocationCallOrder;
 const [advanceStarted] = mocks.startAutoAdvance.mock.invocationCallOrder;
 const [orderStarted] = mocks.startCardOrder.mock.invocationCallOrder;
+const [cardStopsWired] = mocks.endSessionOnCardStop.mock.invocationCallOrder;
+const [takeoverWired] =
+  mocks.stopStemSongOnMetronomeLoad.mock.invocationCallOrder;
 
 describe('stem player start-up', () => {
   it('starts auto-advance after the player is configured', () => {
@@ -52,6 +59,14 @@ describe('stem player start-up', () => {
 
   it('sends the play order to the song card after the player is configured', () => {
     expect(orderStarted).toBeGreaterThan(configured ?? Infinity);
+  });
+
+  it('ends the listening session on a card Stop, once configured', () => {
+    expect(cardStopsWired).toBeGreaterThan(configured ?? Infinity);
+  });
+
+  it('stops a stem song for a metronome song, once configured', () => {
+    expect(takeoverWired).toBeGreaterThan(configured ?? Infinity);
   });
 });
 

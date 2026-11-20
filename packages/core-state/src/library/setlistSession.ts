@@ -31,6 +31,7 @@ export interface SetlistSessionActions {
   leaveSetlist: () => Promise<LeftSetlist | null>;
   rejoinSetlist: (left: LeftSetlist) => Promise<boolean>;
   endSetlistSession: (reopenedStemSetId?: number) => void;
+  endListeningSession: () => void;
   skipSetlistEntry: (itemId: number) => void;
   dismissEndedSetlist: () => void;
 }
@@ -125,6 +126,9 @@ export function setlistSessionActions(
       const before = sessionStateOf(state);
       set({ session: null });
       set({ endedSetlist: leftSetlistOf(get(), session.setlistId, before) });
+    },
+    endListeningSession: () => {
+      set({ session: null });
     },
     skipSetlistEntry: (itemId: number) => {
       const { session } = get();

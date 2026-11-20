@@ -6,6 +6,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { clampUnit } from '../clampUnit.ts';
+import type { IconName } from '../icons.ts';
 import { size } from '../roles.ts';
 import { miniPlayer, miniPlayerText } from '../stemPlayerRoles.ts';
 import { textStyle } from '../textStyle.ts';
@@ -86,7 +87,10 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
+export type MiniPlayerTile = Extract<IconName, 'song' | 'stems'>;
+
 export interface MiniPlayerBarProps {
+  readonly tile: MiniPlayerTile;
   readonly title: string;
   readonly detail: string;
   readonly progress: SharedValue<number>;
@@ -132,6 +136,7 @@ function PlayToggle({
 }
 
 export function MiniPlayerBar({
+  tile,
   title,
   detail,
   progress,
@@ -166,7 +171,7 @@ export function MiniPlayerBar({
           onPress={onOpen}
         >
           <View style={styles.tile}>
-            <Icon name="song" size="miniTile" color="text" />
+            <Icon name={tile} size="miniTile" color="text" />
           </View>
           <View style={styles.text}>
             <EllipsizedText style={styles.title}>{title}</EllipsizedText>

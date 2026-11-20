@@ -10,6 +10,16 @@ export const QUEUE_TEXT = {
   undo: 'Undo',
 } as const;
 
+export const PLAYING = 'Playing';
+
+export function placeLabel(number: number, of: number): string {
+  return `${String(number)} of ${String(of)}`;
+}
+
+export function nextUpLabel(title: string): string {
+  return `Next: ${title}`;
+}
+
 export function leftSetlistNotice(
   setlistName: string,
   onUndo: () => void,

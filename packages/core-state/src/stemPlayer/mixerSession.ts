@@ -12,7 +12,7 @@ import type { MixerClaim } from './mixerClaim.ts';
 import { createPendingClick } from './pendingClick.ts';
 import type { MixerRuntime, StemPlayerCommands } from './runtime.ts';
 import type { SongCardOwner } from './songTransport.ts';
-import type { StemPlayerState } from './store.ts';
+import type { StemPlayerState, StemPlayerStatus } from './store.ts';
 
 export interface MixerSessionContext<Slice> {
   readonly set: (change: Partial<Slice>) => void;
@@ -22,6 +22,16 @@ export interface MixerSessionContext<Slice> {
 }
 
 type SessionSlice = ClickSlice & Pick<StemPlayerState, 'loop' | 'title'>;
+
+export const ATTACHABLE: ReadonlySet<StemPlayerStatus> = new Set([
+  'loading',
+  'ready',
+]);
+
+export interface LastRelease {
+  readonly keepsSong: () => boolean;
+  readonly then?: () => void;
+}
 
 export interface MixerHold {
   readonly release: () => void;
@@ -71,7 +81,11 @@ export function mixerSession({
     StemPlayerCommands['onSongEnded']
   > | null = null;
   let songEndListener: (() => void) | null = null;
-  let held = 0;
+  let heldSession = 0;
+  let holders = 0;
+  let keepsSong = () => false;
+  let afterLastRelease: () => void = () => undefined;
+  const cardStops = new Set<() => void>();
   let afterScrubSeek: ((frame: number) => void) | null = null;
   let afterClickRelease: (() => void) | null = null;
   let songStopped = () => {
@@ -82,7 +96,7 @@ export function mixerSession({
     afterScrubSeek?.(frame);
   }, scrubSeekDelayMs);
   const live = (opened: number) => opened === session;
-  const holds = (opened: number) => opened === held && isOpen();
+  const holds = (opened: number) => opened === heldSession && isOpen();
   const pendingClick = createPendingClick();
   const clickSource: MixerClickSource = {
     running: () => get().click || pendingClick.pending() || counting(),
@@ -172,6 +186,22 @@ export function mixerSession({
     return ++session;
   };
 
+  const hold = (opened: number): MixerHold => {
+    let holding = true;
+    holders++;
+    return {
+      release: () => {
+        if (!holding || !holds(opened)) return;
+        holding = false;
+        holders--;
+        if (holders > 0) return;
+        if (keepsSong()) afterLastRelease();
+        else close();
+      },
+      live: () => holds(opened),
+    };
+  };
+
   const applyOpeningRate = async (
     opened: number,
     rate: number,
@@ -203,20 +233,33 @@ export function mixerSession({
     onSongEnded: (listener: () => void) => {
       songEndListener = listener;
     },
+    onCardStop: (listener: () => void) => {
+      cardStops.add(listener);
+      return () => {
+        cardStops.delete(listener);
+      };
+    },
+    cardStopped: () => {
+      cardStops.forEach((listener) => {
+        listener();
+      });
+    },
+    onLastRelease: (rule: LastRelease) => {
+      keepsSong = rule.keepsSong;
+      afterLastRelease = rule.then ?? (() => undefined);
+    },
+    hasHolders: () => holders > 0,
     live,
     close,
     current: () => session,
     card: (): SongCardOwner => ({ session, followsPlayOrder }),
     pendingClick,
-    hold: (opened: number): MixerHold => ({
-      release: () => {
-        if (holds(opened)) close();
-      },
-      live: () => holds(opened),
-    }),
+    hold,
+    holdAgain: () => hold(heldSession),
     begin: () => {
-      held = start({ keepCard: false });
-      return held;
+      heldSession = start({ keepCard: false });
+      holders = 0;
+      return heldSession;
     },
     advance: () => start({ keepCard: true }),
     startEngine: async (opened: number): Promise<number | null> => {
@@ -236,3 +279,5 @@ export function mixerSession({
     awaitReset,
   };
 }
+
+export type MixerSession = ReturnType<typeof mixerSession>;

@@ -324,12 +324,18 @@ export {
 } from './playOrder/autoAdvance.ts';
 export { startCardOrder } from './playOrder/cardOrder.ts';
 export {
+  endSessionOnCardStop,
+  stopSongAndSession,
+} from './playOrder/listeningSession.ts';
+export { stopStemSongOnMetronomeLoad } from './playOrder/metronomeTakeover.ts';
+export {
   entryName,
   SKIPPED_STEM_SONG,
   SKIPPED_UNOPENED_STEM_SONG,
   STEMS_BADGE,
   stemSongTitle,
   UNKNOWN_STEM_SONG,
+  upNextTitle,
   type StemSongs,
   stemFacts,
   stemSongFacts,

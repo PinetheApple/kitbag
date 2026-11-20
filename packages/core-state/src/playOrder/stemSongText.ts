@@ -3,6 +3,7 @@ import type { LibraryStemSetRow } from '@kitbag/core-db';
 import { isPresetEntry, type SetlistEntry } from '../library/snapshot.ts';
 
 import { bpmFact, shortKeyName } from '../stemPlayer/facts.ts';
+import { UP_NEXT_SOURCE, type UpNext } from './order.ts';
 import { formatClockSeconds } from '../text.ts';
 
 const FACT_SEPARATOR = ' · ';
@@ -23,6 +24,12 @@ export function entryName(entry: SetlistEntry, stems: StemSongs): string {
   return isPresetEntry(entry)
     ? entry.preset.name
     : stemSongTitle(entry.stemSetId, stems);
+}
+
+export function upNextTitle(next: UpNext, stems: StemSongs): string {
+  return next.source === UP_NEXT_SOURCE.queue
+    ? stemSongTitle(next.stemSetId, stems)
+    : entryName(next.entry, stems);
 }
 
 function lengthOf(row: LibraryStemSetRow): string | null {

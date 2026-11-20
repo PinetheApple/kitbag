@@ -1,18 +1,15 @@
-import { countLabel, FACT_SEPARATOR } from '@kitbag/core-design';
+import { countLabel, FACT_SEPARATOR, placeLabel } from '@kitbag/core-design';
 import {
   BPM_UNIT,
-  entryName,
   isPresetEntry,
   stemFacts,
-  stemSongTitle,
   UP_NEXT_SOURCE,
+  upNextTitle,
   type OnStage,
   type SetlistEntry,
   type StemSongs,
   type UpNext,
 } from '@kitbag/core-state';
-
-import { placeLabel } from './playOrderText.ts';
 
 export const QUEUED = 'Queued';
 const METRONOME = 'metronome';
@@ -48,15 +45,16 @@ function setlistSource(entry: SetlistEntry, context: UpNextContext): string {
 }
 
 export function upNextText(next: UpNext, context: UpNextContext): UpNextText {
+  const title = upNextTitle(next, context.stems);
   if (next.source === UP_NEXT_SOURCE.queue)
     return {
-      title: stemSongTitle(next.stemSetId, context.stems),
+      title,
       source: queuedSource(context.queueLength),
       metronome: false,
     };
   const { entry } = next;
   return {
-    title: entryName(entry, context.stems),
+    title,
     source: setlistSource(entry, context),
     metronome: isPresetEntry(entry),
   };

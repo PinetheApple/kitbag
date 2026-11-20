@@ -1,4 +1,4 @@
-import { FACT_SEPARATOR } from '@kitbag/core-design';
+import { FACT_SEPARATOR, placeLabel, PLAYING } from '@kitbag/core-design';
 import {
   ARRIVAL,
   SKIP,
@@ -9,8 +9,6 @@ import {
   type Skip,
   type StemSongs,
 } from '@kitbag/core-state';
-
-import { placeLabel, PLAYING } from './playOrderText.ts';
 
 const SKIPPED: Readonly<Record<Skip, string>> = {
   [SKIP.deleted]: SKIPPED_STEM_SONG,

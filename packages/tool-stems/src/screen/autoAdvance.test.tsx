@@ -166,8 +166,6 @@ describe('the player after an auto-advance', () => {
       setId: HARBOUR,
       status: 'ready',
     });
-    p.unmount();
-    expect(p.store.getState().setId).toBeNull();
   });
 
   it('acquires the song it advanced to when it gets the player back', async () => {
@@ -185,12 +183,13 @@ describe('the player after an auto-advance', () => {
     expect(p.store.getState().setId).toBe(NIGHT_BUS);
   });
 
-  it('lets go of the advanced song when the screen leaves', async () => {
+  it('keeps the advanced song when the screen leaves', async () => {
     const p = await mountTracked();
     await advanced(p);
     await p.showSet(NIGHT_BUS);
     p.unmount();
-    expect(p.store.getState().setId).toBeNull();
+    expect(p.store.getState().setId).toBe(NIGHT_BUS);
+    expect(p.commands.songTransportHide).not.toHaveBeenCalled();
   });
 
   it('names the song and its place in the set', async () => {

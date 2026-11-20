@@ -30,6 +30,7 @@ import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
 import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
 import { mixerSession, type MixerHold } from './mixerSession.ts';
 import { mixSaver } from './mixSaver.ts';
+import { stemSongHolds } from './stemSongHolds.ts';
 import {
   showCountOnSongCard,
   songTransportRequests,
@@ -147,6 +148,7 @@ export interface StemPlayerActions {
   readonly stopAdvancing: () => void;
   readonly handToMetronome: () => void;
   readonly close: () => void;
+  readonly onCardStop: (listener: () => void) => () => void;
   readonly setGain: (index: number, gain: number) => void;
   readonly toggleMute: (index: number) => void;
   readonly solo: (index: number, additive: boolean) => void;
@@ -287,10 +289,10 @@ export function createStemPlayerStore(
       mixer.current,
     );
     mixer.onSongEnded(ends.reported);
-    mixer.onSongStopped(() => {
+    const holds = stemSongHolds({ mixer, get, ends, runtimeOf, start });
+    holds.onCardStop(() => {
       card.stopped();
       start.songStopped();
-      ends.stopped();
     });
     mixer.onSongTransport(
       songTransportRequests({
@@ -419,9 +421,8 @@ export function createStemPlayerStore(
         showLoading(setId);
         await loadSession(opened, setId, bars);
       },
-      // Across an Activity relaunch the new screen can acquire before the old
-      // one unmounts, so a release only closes the session it acquired.
       acquireSong: (setId, bars) => {
+        if (holds.joins(setId)) return mixer.holdAgain();
         const acquired = mixer.begin();
         showLoading(setId);
         void loadSession(acquired, setId, bars);
@@ -448,14 +449,13 @@ export function createStemPlayerStore(
         ),
       onSongEnd: ends.subscribe,
       songStillEnded: ends.stands,
-      stopAdvancing: () => {
-        if (ends.gaveUp()) runtimeOf().commands.songTransportHide();
-      },
+      stopAdvancing: holds.gaveUp,
       handToMetronome: () => {
         runtimeOf().sharedMetronome.showStopped();
         mixer.close();
       },
       close: mixer.close,
+      onCardStop: mixer.onCardStop,
       ...mixActions(set, get, runtimeOf, saver),
       ...transportActions(
         get,

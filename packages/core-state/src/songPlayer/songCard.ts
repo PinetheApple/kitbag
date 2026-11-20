@@ -9,12 +9,14 @@ import type { SongPlayerState } from './state.ts';
 
 interface SongCardContext extends MixerSessionContext<SongPlayerState> {
   readonly close: () => void;
+  readonly cardStopped: () => void;
   readonly start: Pick<SongStart, 'play' | 'cancel'>;
   readonly card: () => SongCardOwner;
 }
 
 export function songCard(context: SongCardContext) {
-  const { set, get, runtimeOf, session, close, start, card } = context;
+  const { set, get, runtimeOf, session, close, cardStopped, start, card } =
+    context;
   let shownIn: number | null = null;
   const shown = () => shownIn === session();
   const shownStart: Pick<SongStart, 'play' | 'cancel'> = {
@@ -31,6 +33,7 @@ export function songCard(context: SongCardContext) {
       if (!shown()) return;
       turnClickOff(context);
       close();
+      cardStopped();
     },
     named: (names: Pick<SongPlayerState, 'title' | 'artist'>) => {
       const { title, artist } = get();

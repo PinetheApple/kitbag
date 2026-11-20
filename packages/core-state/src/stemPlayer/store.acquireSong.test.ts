@@ -33,7 +33,7 @@ function setup() {
 }
 
 describe('a screen holding a song in the stem player', () => {
-  it('stays open when the old screen releases after the new screen acquired', async () => {
+  it('joins the open song when a new screen acquires it, without reloading', async () => {
     const { commands, store, acquire, ready, flush } = setup();
     const releaseOld = acquire();
     await ready();
@@ -43,8 +43,8 @@ describe('a screen holding a song in the stem player', () => {
     expect(store.getState().status).toBe('ready');
     expect(store.getState().setId).toBe(SET_ID);
     expect(commands.engineRelease).not.toHaveBeenCalled();
-    expect(commands.loadTrack).toHaveBeenCalledTimes(STEMS.length * OPENS);
-    expect(commands.mixerUnloadTrack).toHaveBeenCalledTimes(STEMS.length);
+    expect(commands.loadTrack).toHaveBeenCalledTimes(STEMS.length);
+    expect(commands.mixerUnloadTrack).not.toHaveBeenCalled();
   });
 
   it('leaves a different song open when the old screen releases late', async () => {
@@ -76,29 +76,43 @@ describe('a screen holding a song in the stem player', () => {
     expect(commands.engineRelease).not.toHaveBeenCalled();
   });
 
-  it('reopens when the old screen releases before the new screen acquired', async () => {
-    const { commands, acquire, ready } = setup();
+  it('keeps the song when the old screen releases before the new screen acquired', async () => {
+    const { commands, store, acquire, ready } = setup();
     const releaseOld = acquire();
     await ready();
     releaseOld();
     acquire();
-    await ready();
-    expect(commands.engineRelease).toHaveBeenCalledOnce();
-    expect(commands.engineHold).toHaveBeenCalledTimes(OPENS);
+    expect(store.getState().status).toBe('ready');
+    expect(commands.engineRelease).not.toHaveBeenCalled();
+    expect(commands.engineHold).toHaveBeenCalledOnce();
   });
 
-  it('closes and releases the engine once when the current screen releases', async () => {
+  it('outlives every screen once ready, and closes once when closed', async () => {
     const { commands, store, acquire, ready } = setup();
     const releaseOld = acquire();
     await ready();
     const releaseNew = acquire();
-    await ready();
     releaseOld();
     releaseNew();
     releaseNew();
-    expect(store.getState().status).toBe('idle');
+    expect(store.getState().status).toBe('ready');
+    expect(commands.mixerStop).not.toHaveBeenCalled();
+    store.getState().close();
     expect(store.getState().setId).toBeNull();
     expect(commands.engineRelease).toHaveBeenCalledOnce();
+  });
+
+  it('opens a different song when a screen acquires one', async () => {
+    const { commands, records, store, acquire, ready } = setup();
+    acquire();
+    await ready();
+    records.readStemSet.mockResolvedValueOnce(
+      record(STEMS, { id: NEXT_SET_ID, title: NEXT_TITLE }),
+    );
+    acquire(NEXT_SET_ID);
+    await ready();
+    expect(store.getState().setId).toBe(NEXT_SET_ID);
+    expect(commands.loadTrack).toHaveBeenCalledTimes(STEMS.length * OPENS);
   });
 
   it('does not close again after something else already closed the player', async () => {

@@ -135,10 +135,8 @@ describe('the last Back, then Stop for a song', () => {
       lowerHold.ensureHeld(lower.acquire);
       await ready(lower, LOWER_ID);
       lowerHold.release();
-      if (lowerKind === 'song') {
-        expect(lower.opened()).toBe(LOWER_ID);
-        lower.close();
-      }
+      expect(lower.opened()).toBe(LOWER_ID);
+      lower.close();
       expect(lower.opened()).toBeNull();
       for (const { commands } of [lower.fake, upper.fake])
         expect(commands.engineRelease).toHaveBeenCalledTimes(
@@ -159,6 +157,36 @@ describe('a load that does not reach ready', () => {
     });
     hold.ensureHeld(lower.acquire);
     expect(lower.fake.records.readSong).toHaveBeenCalledOnce();
+  });
+});
+
+describe('a stem song that outlived its player', () => {
+  it('keeps playing after the last screen lets go, until it is closed', async () => {
+    const stem = mixerScreens().stem(LOWER_ID);
+    const screen = screenHold();
+    screen.ensureHeld(stem.acquire);
+    await ready(stem, LOWER_ID);
+    stem.fake.commands.mixerStop.mockClear();
+    screen.release();
+    expect(stem.opened()).toBe(LOWER_ID);
+    expect(stem.fake.commands.mixerStop).not.toHaveBeenCalled();
+    expect(stem.fake.commands.songTransportHide).not.toHaveBeenCalled();
+    stem.close();
+    expect(stem.opened()).toBeNull();
+  });
+
+  it('is picked up as it is by the next screen for the same song', async () => {
+    const stem = mixerScreens().stem(LOWER_ID);
+    const first = screenHold();
+    first.ensureHeld(stem.acquire);
+    await ready(stem, LOWER_ID);
+    first.release();
+    const loads = stem.fake.commands.loadTrack.mock.calls.length;
+    stem.fake.commands.mixerStop.mockClear();
+    screenHold().ensureHeld(stem.acquire);
+    expect(stem.fake.commands.loadTrack).toHaveBeenCalledTimes(loads);
+    expect(stem.fake.commands.mixerStop).not.toHaveBeenCalled();
+    expect(stem.shown().status).toBe('ready');
   });
 });
 

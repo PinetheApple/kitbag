@@ -1,10 +1,12 @@
 import { KB_COUNT_IN_OFF } from '@kitbag/core-native';
 import {
   configureStemPlayer,
+  endSessionOnCardStop,
   metronomeStore,
   songCountIn,
   startAutoAdvance,
   startCardOrder,
+  stopStemSongOnMetronomeLoad,
 } from '@kitbag/core-state';
 
 import { getDatabase } from './database.ts';
@@ -39,3 +41,5 @@ configureStemPlayer({
 
 startAutoAdvance();
 startCardOrder();
+endSessionOnCardStop();
+stopStemSongOnMetronomeLoad();
