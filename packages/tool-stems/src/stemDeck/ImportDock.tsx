@@ -31,7 +31,7 @@ export function ImportDock({
         icon="saveInto"
         label={importLabel(count)}
         disabled={count === 0}
-        outlinedWhenDisabled
+        disabledLook="outlined"
         onPress={onImport}
       />
     </View>

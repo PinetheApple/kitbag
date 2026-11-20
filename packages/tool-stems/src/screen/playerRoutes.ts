@@ -1,13 +1,13 @@
+import { useNotice } from '@kitbag/core-design';
 import { useCallback, useMemo } from 'react';
 
-import { usePlayerNotice } from './PlayerNotice.tsx';
 import { usePlayOrderNav, type PlayOrderRoutes } from './usePlayOrderNav.ts';
 
 export function usePlayerRoutes(
   onOpenStemSet: (stemSetId: number) => void,
   onOpenMetronome: () => void,
 ) {
-  const notice = usePlayerNotice();
+  const notice = useNotice();
   const routes = useMemo<PlayOrderRoutes>(
     () => ({ onOpenStemSet, onOpenMetronome, onNotice: notice.showMessage }),
     [onOpenStemSet, onOpenMetronome, notice.showMessage],
