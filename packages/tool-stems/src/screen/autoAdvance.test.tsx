@@ -5,7 +5,8 @@ import {
   SKIP,
   SKIPPED_UNOPENED_STEM_SONG,
   songLibraryStore,
-  type Arrival,
+  ARRIVAL,
+  type ArrivalEvent,
   type LibraryStemSetRow,
 } from '@kitbag/core-state';
 import {
@@ -59,34 +60,38 @@ afterEach(() => {
 
 let serial = 0;
 
-function arrive(change: Partial<Arrival>) {
+function arrive(event: ArrivalEvent) {
   serial++;
   act(() => {
-    arrivalStore.setState({
-      arrival: {
-        serial,
-        stemSetId: NIGHT_BUS,
-        place: null,
-        skipped: null,
-        played: true,
-        ...change,
-      },
-    });
+    arrivalStore.setState({ arrival: { ...event, serial } });
   });
 }
 
+type PlayingEvent = Extract<ArrivalEvent, { kind: typeof ARRIVAL.playing }>;
+
+const playingNow = (
+  stemSetId: number,
+  change: Partial<Pick<PlayingEvent, 'place' | 'skipped'>> = {},
+): PlayingEvent => ({
+  kind: ARRIVAL.playing,
+  stemSetId,
+  place: null,
+  skipped: null,
+  ...change,
+});
+
 async function advanced(
   p: Player,
-  change: Partial<Arrival> = {},
+  change: Parameters<typeof playingNow>[1] = {},
   song = nightBus,
 ) {
   p.endSong(at(SONG_SECONDS));
   p.records.readStemSet.mockResolvedValueOnce(song);
-  arrive({ stemSetId: song.id, played: false });
+  arrive({ kind: ARRIVAL.arriving, stemSetId: song.id });
   await act(async () => {
     await p.store.getState().advanceTo(song.id);
   });
-  arrive({ stemSetId: song.id, played: true, ...change });
+  arrive(playingNow(song.id, change));
   await flush();
 }
 
@@ -135,6 +140,12 @@ describe('the player after an auto-advance', () => {
       setId: NIGHT_BUS,
       title: 'Night Bus',
     });
+  });
+
+  it('follows as soon as the next song is picked', async () => {
+    const p = await mountTracked();
+    arrive({ kind: ARRIVAL.arriving, stemSetId: NIGHT_BUS });
+    expect(p.routes.onOpenStemSet).toHaveBeenCalledWith(NIGHT_BUS);
   });
 
   it('keeps its hold through one advance after another', async () => {
@@ -191,17 +202,17 @@ describe('the player after an auto-advance', () => {
     const p = await mountTracked();
     p.endSong(at(SONG_SECONDS));
     p.records.readStemSet.mockResolvedValueOnce(undefined);
-    arrive({ stemSetId: NIGHT_BUS, played: false });
+    arrive({ kind: ARRIVAL.arriving, stemSetId: NIGHT_BUS });
     await act(async () => {
       await p.store.getState().advanceTo(NIGHT_BUS);
     });
     const harbour = { ...nightBus, id: HARBOUR, title: 'Harbour' };
     p.records.readStemSet.mockResolvedValueOnce(harbour);
-    arrive({ stemSetId: HARBOUR, played: false });
+    arrive({ kind: ARRIVAL.arriving, stemSetId: HARBOUR });
     await act(async () => {
       await p.store.getState().advanceTo(HARBOUR);
     });
-    arrive({ stemSetId: HARBOUR, skipped: SKIP.unopened, played: true });
+    arrive(playingNow(HARBOUR, { skipped: SKIP.unopened }));
     await flush();
     expect(p.texts().some((text) => text.startsWith('Playing'))).toBe(false);
     expect(p.has(SKIPPED_UNOPENED_STEM_SONG)).toBe(true);

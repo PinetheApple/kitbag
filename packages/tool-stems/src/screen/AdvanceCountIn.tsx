@@ -9,7 +9,7 @@ import {
   stemPlayerMix,
   withAlpha,
 } from '@kitbag/core-design';
-import { KITBAG_HOST_OBJECT_KEY } from '@kitbag/core-native';
+import { KB_STOPPED_BEAT, KITBAG_HOST_OBJECT_KEY } from '@kitbag/core-native';
 import { useStemPlayer } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
@@ -23,7 +23,6 @@ import { scheduleOnRN } from 'react-native-worklets';
 import type { HostGlobal } from './useMixerFrame.ts';
 
 const NOT_COUNTING = 0;
-const NO_BEAT = -1;
 
 const useStyles = createThemedStyles((theme) => ({
   layer: {
@@ -56,7 +55,7 @@ interface CountPanelProps {
 
 function CountPanel({ beats, onOver }: CountPanelProps) {
   const styles = useStyles();
-  const currentBeat = useSharedValue(NO_BEAT);
+  const currentBeat = useSharedValue(KB_STOPPED_BEAT);
   const counting = useSharedValue(NOT_COUNTING);
   useFrameCallback(() => {
     'worklet';

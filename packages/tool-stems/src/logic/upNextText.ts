@@ -14,6 +14,7 @@ import {
 } from '@kitbag/core-state';
 
 import { SEPARATOR } from '../stemDeck/logic/songFacts.ts';
+import { placeLabel } from './playOrderText.ts';
 
 export const QUEUED = 'Queued';
 const METRONOME = 'metronome';
@@ -41,7 +42,7 @@ function queuedSource(queueLength: number): string {
 
 function setlistSource(entry: SetlistEntry, context: UpNextContext): string {
   const { entries } = context.stage;
-  const place = `${String(entries.indexOf(entry) + 1)} of ${String(entries.length)}`;
+  const place = placeLabel(entries.indexOf(entry) + 1, entries.length);
   const parts = [context.setlistName, place];
   return [...parts, ...(isPresetEntry(entry) ? [METRONOME] : [])].join(
     SEPARATOR,

@@ -1,4 +1,5 @@
 import {
+  ARRIVAL,
   arrivalStore,
   useStemPlayer,
   useStemSongs,
@@ -19,10 +20,13 @@ export function useRouteAcquire(
   useLayoutEffect(() => {
     routeId.current = setId;
   }, [setId]);
-  const fresh = () => () => acquireSong(routeId.current);
-  const [route, setRoute] = useState(() => ({ setId, acquire: fresh() }));
+  const acquireRouteSong = () => () => acquireSong(routeId.current);
+  const [route, setRoute] = useState(() => ({
+    setId,
+    acquire: acquireRouteSong(),
+  }));
   if (route.setId === setId) return route.acquire;
-  const acquire = setId === advancedTo ? route.acquire : fresh();
+  const acquire = setId === advancedTo ? route.acquire : acquireRouteSong();
   setRoute({ setId, acquire });
   return acquire;
 }
@@ -38,8 +42,8 @@ export function useArrivalFollow(
       arrivalStore.subscribe(({ arrival }, previous) => {
         if (arrival === null || arrival.serial === previous.arrival?.serial)
           return;
-        const { stemSetId } = arrival;
-        if (stemSetId !== null && stemSetId !== setId) onOpenStemSet(stemSetId);
+        if (arrival.kind !== ARRIVAL.gaveUp && arrival.stemSetId !== setId)
+          onOpenStemSet(arrival.stemSetId);
         const message = arrivalText(arrival, stems);
         if (message !== null) showMessage(message);
       }),

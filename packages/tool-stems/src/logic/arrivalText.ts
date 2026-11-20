@@ -1,4 +1,5 @@
 import {
+  ARRIVAL,
   SKIP,
   SKIPPED_STEM_SONG,
   SKIPPED_UNOPENED_STEM_SONG,
@@ -9,8 +10,7 @@ import {
 } from '@kitbag/core-state';
 
 import { SEPARATOR } from '../stemDeck/logic/songFacts.ts';
-
-const PLAYING = 'Playing';
+import { placeLabel, PLAYING } from './playOrderText.ts';
 
 const SKIPPED: Readonly<Record<Skip, string>> = {
   [SKIP.deleted]: SKIPPED_STEM_SONG,
@@ -18,17 +18,12 @@ const SKIPPED: Readonly<Record<Skip, string>> = {
 };
 
 export function arrivalText(arrival: Arrival, stems: StemSongs): string | null {
-  const { skipped, stemSetId } = arrival;
-  if (!arrival.played)
-    return stemSetId === null && skipped === SKIP.deleted
-      ? SKIPPED_STEM_SONG
-      : null;
+  if (arrival.kind === ARRIVAL.arriving) return null;
+  if (arrival.kind === ARRIVAL.gaveUp)
+    return arrival.skipped === SKIP.deleted ? SKIPPED_STEM_SONG : null;
+  const { skipped, stemSetId, place } = arrival;
   if (skipped !== null) return SKIPPED[skipped];
-  if (stemSetId === null) return null;
   const playing = `${PLAYING} ${stemSongTitle(stemSetId, stems)}`;
-  const { place } = arrival;
   if (place === null) return playing;
-  return [playing, `${String(place.number)} of ${String(place.of)}`].join(
-    SEPARATOR,
-  );
+  return [playing, placeLabel(place.number, place.of)].join(SEPARATOR);
 }
