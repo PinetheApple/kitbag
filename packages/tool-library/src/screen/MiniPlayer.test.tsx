@@ -5,11 +5,19 @@ import { create, type ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const SONG_ID = 7;
+const SET_ID = 11;
+const QUEUED_ID = 12;
+const GIG_ID = 3;
+const ITEM_ID = 31;
 
-const song = vi.hoisted(() => ({
-  state: {},
+const players = vi.hoisted(() => ({
+  song: {},
+  stem: {},
+  library: {},
+  stage: {},
+  next: undefined as { source: string; stemSetId: number } | undefined,
   togglePlay: vi.fn(),
-  close: vi.fn(),
+  stopListening: vi.fn(),
 }));
 
 vi.mock('react-native', () => ({ View: 'View' }));
@@ -22,7 +30,14 @@ vi.mock('@kitbag/core-design', async (original) => ({
 vi.mock('@kitbag/core-state', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   loopEndFrames: () => null,
-  useSongPlayer: (select: (state: unknown) => unknown) => select(song.state),
+  stopListening: players.stopListening,
+  useSongPlayer: (select: (state: unknown) => unknown) => select(players.song),
+  useStemPlayer: (select: (state: unknown) => unknown) => select(players.stem),
+  useLibrary: (select: (state: unknown) => unknown) => select(players.library),
+  useStage: () => players.stage,
+  useUpNext: () => players.next,
+  useStemSongs: () =>
+    new Map([[QUEUED_ID, { id: QUEUED_ID, title: 'King of Kings' }]]),
 }));
 
 const { MiniPlayer, useMiniPlayerShown } = await import('./MiniPlayer.tsx');
@@ -34,9 +49,17 @@ const { MiniPlayer, useMiniPlayerShown } = await import('./MiniPlayer.tsx');
 const frame = { progress: { value: 0.4 }, playing: { value: 1 } };
 const usePlayhead = vi.fn(() => frame as never);
 const onOpenSong = vi.fn();
+const onOpenStemSet = vi.fn();
+const props = { usePlayhead, onOpenSong, onOpenStemSet, bottomInset: 0 };
+const closed = { status: 'idle', songId: null, setId: null };
+const noStage = {
+  stage: { setlistId: null, entries: [] },
+  cursor: null,
+  name: '',
+};
 
 function givenSong(change: Record<string, unknown> = {}) {
-  song.state = {
+  players.song = {
     status: 'ready',
     songId: SONG_ID,
     title: 'Everlong',
@@ -45,18 +68,45 @@ function givenSong(change: Record<string, unknown> = {}) {
     speed: 1,
     engineRate: 48_000,
     durationFrames: 480_000,
-    togglePlay: song.togglePlay,
-    close: song.close,
+    togglePlay: players.togglePlay,
     ...change,
+  };
+}
+
+function givenStemSong(change: Record<string, unknown> = {}) {
+  players.song = closed;
+  players.stem = {
+    status: 'ready',
+    setId: SET_ID,
+    title: 'Echo',
+    artist: 'Charity Gayle',
+    engineRate: 44_100,
+    durationFrames: 441_000,
+    togglePlay: players.togglePlay,
+    ...change,
+  };
+}
+
+function fromGig(entries: number) {
+  players.library = {
+    loaded: {
+      presetId: null,
+      stemSetId: SET_ID,
+      itemId: ITEM_ID,
+      setlistId: GIG_ID,
+    },
+  };
+  players.stage = {
+    stage: { setlistId: GIG_ID, entries: Array.from({ length: entries }) },
+    cursor: { setlistId: GIG_ID, itemId: ITEM_ID, index: 1 },
+    name: 'Sunday worship',
   };
 }
 
 function mount(): ReactTestRenderer {
   let tree: ReactTestRenderer | undefined;
   act(() => {
-    tree = create(
-      createElement(MiniPlayer, { usePlayhead, onOpenSong, bottomInset: 0 }),
-    );
+    tree = create(createElement(MiniPlayer, props));
   });
   if (tree === undefined) throw new Error('not mounted');
   return tree;
@@ -71,6 +121,10 @@ function bar(tree: ReactTestRenderer) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  players.stem = closed;
+  players.library = { loaded: null };
+  players.stage = noStage;
+  players.next = undefined;
   givenSong();
 });
 
@@ -87,6 +141,7 @@ describe('the mini-player', () => {
 
   it('shows the title, the artist and the click state', () => {
     expect(bar(mount())).toMatchObject({
+      tile: 'song',
       title: 'Everlong',
       detail: 'Foo Fighters · Click on',
     });
@@ -98,29 +153,27 @@ describe('the mini-player', () => {
   });
 
   it('draws the engine playhead, never a store copy', () => {
-    const props = bar(mount());
+    const shown = bar(mount());
     expect(usePlayhead).toHaveBeenCalledWith(48_000, 480_000, null);
-    expect(props.progress).toBe(frame.progress);
-    expect(props.playing).toBe(frame.playing);
+    expect(shown.progress).toBe(frame.progress);
+    expect(shown.playing).toBe(frame.playing);
   });
 
   it('plays and pauses the song', () => {
     (bar(mount()).onTogglePlay as () => void)();
-    expect(song.togglePlay).toHaveBeenCalledOnce();
+    expect(players.togglePlay).toHaveBeenCalledOnce();
   });
 
-  it('stops the song from its close key', () => {
+  it('ends the listening session from its close key', () => {
     (bar(mount()).onClose as () => void)();
-    expect(song.close).toHaveBeenCalledOnce();
+    expect(players.stopListening).toHaveBeenCalledOnce();
   });
 
   it('goes away when the session closes', () => {
     const tree = mount();
     givenSong({ status: 'idle', songId: null });
     act(() => {
-      tree.update(
-        createElement(MiniPlayer, { usePlayhead, onOpenSong, bottomInset: 0 }),
-      );
+      tree.update(createElement(MiniPlayer, props));
     });
     expect(tree.toJSON()).toBeNull();
   });
@@ -128,6 +181,55 @@ describe('the mini-player', () => {
   it('opens the player on a tap', () => {
     (bar(mount()).onOpen as () => void)();
     expect(onOpenSong).toHaveBeenCalledExactlyOnceWith(SONG_ID);
+  });
+});
+
+describe('the mini-player for a stem song', () => {
+  it('shows the stem song with a stem tile and the artist alone', () => {
+    givenStemSong();
+    expect(bar(mount())).toMatchObject({
+      tile: 'stems',
+      title: 'Echo',
+      detail: 'Charity Gayle',
+    });
+    expect(usePlayhead).toHaveBeenCalledWith(44_100, 441_000, null);
+  });
+
+  it('names the song up next', () => {
+    givenStemSong();
+    players.next = { source: 'queue', stemSetId: QUEUED_ID };
+    expect(bar(mount()).detail).toBe('Charity Gayle · Next: King of Kings');
+  });
+
+  it('says where a setlist song sits in its setlist', () => {
+    givenStemSong();
+    fromGig(5);
+    players.next = { source: 'queue', stemSetId: QUEUED_ID };
+    expect(bar(mount()).detail).toBe('Charity Gayle · Sunday worship · 2 of 5');
+  });
+
+  it('returns to the stem player on a tap', () => {
+    givenStemSong();
+    (bar(mount()).onOpen as () => void)();
+    expect(onOpenStemSet).toHaveBeenCalledExactlyOnceWith(SET_ID);
+    expect(onOpenSong).not.toHaveBeenCalled();
+  });
+
+  it('plays and pauses the stem song', () => {
+    givenStemSong();
+    (bar(mount()).onTogglePlay as () => void)();
+    expect(players.togglePlay).toHaveBeenCalledOnce();
+  });
+
+  it('ends the listening session from its close key', () => {
+    givenStemSong();
+    (bar(mount()).onClose as () => void)();
+    expect(players.stopListening).toHaveBeenCalledOnce();
+  });
+
+  it('draws nothing while the stem song is still opening', () => {
+    givenStemSong({ status: 'loading' });
+    expect(mount().toJSON()).toBeNull();
   });
 });
 
@@ -152,6 +254,15 @@ describe('whether a screen docks the mini-player', () => {
     ['idle', false],
   ])('a %s song: %s', (status, expected) => {
     givenSong({ status });
+    expect(shown()).toBe(expected);
+  });
+
+  it.each([
+    ['ready', true],
+    ['loading', false],
+    ['idle', false],
+  ])('a %s stem song: %s', (status, expected) => {
+    givenStemSong({ status });
     expect(shown()).toBe(expected);
   });
 });

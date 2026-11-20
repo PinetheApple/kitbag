@@ -324,6 +324,10 @@ export {
 } from './playOrder/autoAdvance.ts';
 export { startCardOrder } from './playOrder/cardOrder.ts';
 export {
+  startListeningSession,
+  stopListening,
+} from './playOrder/listeningSession.ts';
+export {
   entryName,
   SKIPPED_STEM_SONG,
   SKIPPED_UNOPENED_STEM_SONG,

@@ -24,6 +24,7 @@ export type SongPlayerActions = Pick<
   SongClickActions & {
     readonly open: (songId: number, waveformBars: number) => SongSession;
     readonly close: () => void;
+    readonly onCardStop: (listener: () => void) => () => void;
     readonly meterOverrideChanged: (
       songId: number,
       override: MeterOverride,

@@ -113,14 +113,16 @@ describe('Back to a stem song another was opened over', () => {
   });
 
   it.each(ORDERS)(
-    'stops and lets go of the engine on the last Back: %s, %s',
+    'keeps the song past the last Back, until it is closed: %s, %s',
     async (over, back) => {
       const player = await openFirst();
       await cover(player, over);
       await uncover(player, back);
       player.commands.mixerStop.mockClear();
       player.unmount();
-      expect(player.store.getState().status).toBe('idle');
+      expect(player.store.getState().status).toBe('ready');
+      expect(player.commands.mixerStop).not.toHaveBeenCalled();
+      player.store.getState().close();
       expect(player.commands.mixerStop).toHaveBeenCalledOnce();
       expect(player.commands.engineRelease).toHaveBeenCalledTimes(
         player.commands.engineHold.mock.calls.length,
@@ -129,7 +131,7 @@ describe('Back to a stem song another was opened over', () => {
   );
 
   it.each(BACK_ORDERS)(
-    'reopens when the same song was stacked over it: %s',
+    'keeps the song, unreloaded, when the same song was stacked over it: %s',
     async (back) => {
       const player = await openFirst();
       await cover(player, 'acquire before blur', SET_ID);
@@ -137,7 +139,7 @@ describe('Back to a stem song another was opened over', () => {
       expect(player.has(OPENING)).toBe(false);
       expect(player.store.getState().status).toBe('ready');
       expect(player.store.getState().setId).toBe(SET_ID);
-      expect(player.records.readStemSet).toHaveBeenCalledTimes(3);
+      expect(player.records.readStemSet).toHaveBeenCalledOnce();
     },
   );
 
@@ -222,14 +224,14 @@ describe('another route covering the player', () => {
     ]);
   });
 
-  it('still closes the song when the screen goes after being covered', async () => {
+  it('keeps the song when the screen goes after being covered', async () => {
     const player = await openFirst();
     player.setFocused(false);
     player.setFocused(true);
     player.unmount();
-    expect(player.store.getState().status).toBe('idle');
-    expect(player.commands.mixerStop).toHaveBeenCalledOnce();
-    expect(player.commands.engineRelease).toHaveBeenCalledOnce();
+    expect(player.store.getState().status).toBe('ready');
+    expect(player.commands.mixerStop).not.toHaveBeenCalled();
+    expect(player.commands.engineRelease).not.toHaveBeenCalled();
   });
 });
 
@@ -311,22 +313,18 @@ describe('a metronome song loaded over the player', () => {
 });
 
 describe('an Activity relaunch with the player focused', () => {
-  it('stays open when the new surface mounts before the old one stops', async () => {
+  it.each([
+    ['the new surface mounts before the old one stops', true],
+    ['the old surface stops before the new one mounts', false],
+  ])('joins the open song when %s', async (_, newFirst) => {
     const player = await openFirst();
-    await openSurface(SET_ID);
+    if (newFirst) await openSurface(SET_ID);
     player.unmount();
+    if (!newFirst) await openSurface(SET_ID);
     await act(flush);
     expect(player.store.getState().status).toBe('ready');
     expect(player.commands.engineRelease).not.toHaveBeenCalled();
-    expect(player.records.readStemSet).toHaveBeenCalledTimes(2);
-  });
-
-  it('reopens when the old surface stops before the new one mounts', async () => {
-    const player = await openFirst();
-    player.unmount();
-    await openSurface(SET_ID);
-    expect(player.store.getState().status).toBe('ready');
-    expect(player.records.readStemSet).toHaveBeenCalledTimes(2);
+    expect(player.records.readStemSet).toHaveBeenCalledOnce();
   });
 });
 
@@ -369,6 +367,7 @@ describe('something else closing the player', () => {
   it('opens nothing for a screen mounted behind another', async () => {
     const player = await openFirst();
     player.unmount();
+    player.store.getState().close();
     surface = await mountSurface(playerTree({ focused: false }));
     expect(player.store.getState().status).toBe('idle');
     expect(player.records.readStemSet).toHaveBeenCalledOnce();

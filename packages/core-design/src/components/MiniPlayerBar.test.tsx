@@ -57,6 +57,7 @@ function render(playing: number) {
   renderToStaticMarkup(
     <ThemeProvider mode="dark">
       <MiniPlayerBar
+        tile="song"
         title="Everlong"
         detail="Foo Fighters · Click on"
         progress={{ value: PROGRESS } as never}

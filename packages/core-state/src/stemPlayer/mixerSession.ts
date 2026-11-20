@@ -72,6 +72,10 @@ export function mixerSession({
   > | null = null;
   let songEndListener: (() => void) | null = null;
   let held = 0;
+  let holders = 0;
+  let outlivesHolders = () => false;
+  let unheld: () => void = () => undefined;
+  const cardStops = new Set<() => void>();
   let afterScrubSeek: ((frame: number) => void) | null = null;
   let afterClickRelease: (() => void) | null = null;
   let songStopped = () => {
@@ -162,6 +166,9 @@ export function mixerSession({
     const { commands } = runtimeOf();
     songStopSubscription ??= commands.onSongStopped(() => {
       songStopped();
+      cardStops.forEach((listener) => {
+        listener();
+      });
     });
     if (songTransportListener !== null)
       songTransportSubscription ??= commands.onSongTransport(
@@ -170,6 +177,22 @@ export function mixerSession({
     if (songEndListener !== null)
       songEndSubscription ??= commands.onSongEnded(songEndListener);
     return ++session;
+  };
+
+  const hold = (opened: number): MixerHold => {
+    let holding = true;
+    holders++;
+    return {
+      release: () => {
+        if (!holding || !holds(opened)) return;
+        holding = false;
+        holders--;
+        if (holders > 0) return;
+        if (outlivesHolders()) unheld();
+        else close();
+      },
+      live: () => holds(opened),
+    };
   };
 
   const applyOpeningRate = async (
@@ -203,19 +226,30 @@ export function mixerSession({
     onSongEnded: (listener: () => void) => {
       songEndListener = listener;
     },
+    onCardStop: (listener: () => void) => {
+      cardStops.add(listener);
+      return () => {
+        cardStops.delete(listener);
+      };
+    },
+    outlivesHolders: (
+      outlives: () => boolean,
+      afterRelease: () => void = () => undefined,
+    ) => {
+      outlivesHolders = outlives;
+      unheld = afterRelease;
+    },
+    held: () => holders > 0,
     live,
     close,
     current: () => session,
     card: (): SongCardOwner => ({ session, followsPlayOrder }),
     pendingClick,
-    hold: (opened: number): MixerHold => ({
-      release: () => {
-        if (holds(opened)) close();
-      },
-      live: () => holds(opened),
-    }),
+    hold,
+    holdAgain: () => hold(held),
     begin: () => {
       held = start({ keepCard: false });
+      holders = 0;
       return held;
     },
     advance: () => start({ keepCard: true }),

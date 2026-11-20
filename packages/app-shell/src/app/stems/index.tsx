@@ -12,6 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLibraryFolder } from '@/dataFolder/useLibraryFolder';
 import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
+import { DockedMiniPlayer } from '@/miniPlayer/DockedMiniPlayer';
+import { useMiniPlayerDocked } from '@/miniPlayer/useMiniPlayerDocked';
 import { ADD_STEM_SONGS, useLibraryRoutes } from '@/runtime/libraryRoutes';
 import { useStemDeckRoutes } from '@/runtime/stemDeckRoutes';
 
@@ -26,6 +28,7 @@ function StemSongsRoute() {
   const [adding, setAdding] = useState(params[ADD_STEM_SONGS] !== undefined);
   const showImport = useStemDeck((s) => importCardShows(s.importView));
   const folder = useLibraryFolder('stems');
+  const docked = useMiniPlayerDocked();
 
   useEffect(() => {
     markUsed(TOOL_ID.stems);
@@ -60,6 +63,9 @@ function StemSongsRoute() {
         onAdd={openAdd}
         {...(showImport
           ? { status: <ImportStatusCard onView={stemDeck.openImport} /> }
+          : {})}
+        {...(docked
+          ? { dock: <DockedMiniPlayer bottomInset={insets.bottom} /> }
           : {})}
       />
       <AddStemSongSheet

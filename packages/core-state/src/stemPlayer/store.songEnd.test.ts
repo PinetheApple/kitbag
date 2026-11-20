@@ -195,12 +195,12 @@ describe('advancing to the next song', () => {
     );
   });
 
-  it('ends with the screen that held the song before it', async () => {
+  it('outlives the screen that held the song before it', async () => {
     const song = await acquired();
     await advance(song);
     song.hold.release();
-    expect(song.store.getState().setId).toBeNull();
-    expect(song.commands.songTransportHide).toHaveBeenCalledTimes(1);
+    expect(song.store.getState().setId).toBe(NEXT_SET_ID);
+    expect(song.commands.songTransportHide).not.toHaveBeenCalled();
   });
 
   it('counts in like a press of Play, and starts no click', async () => {
@@ -266,7 +266,7 @@ describe('advancing to the next song', () => {
   it('leaves a song the screen opened after the end alone', async () => {
     const song = await acquired();
     song.endSong(SONG_FRAMES);
-    song.store.getState().acquireSong(7, BARS);
+    void song.store.getState().open(7, BARS);
     vi.clearAllMocks();
     expect(await song.store.getState().advanceTo(NEXT_SET_ID)).toBe(
       'displaced',

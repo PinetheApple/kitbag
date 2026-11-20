@@ -3,6 +3,7 @@ import {
   createThemedStyles,
   miniPlayer,
   minTouchTargetDp,
+  nextUpLabel,
   size,
   textRoles,
   textStyle,
@@ -86,7 +87,7 @@ export function UpNextRow({ onOpenSheet, onNext }: UpNextRowProps) {
         <TransportKey
           size="dock"
           icon="next"
-          accessibilityLabel={`Next: ${text.title}`}
+          accessibilityLabel={nextUpLabel(text.title)}
           onPress={onNext}
         />
       )}

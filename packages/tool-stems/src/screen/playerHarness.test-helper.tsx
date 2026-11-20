@@ -235,6 +235,7 @@ export async function mountPlayer(
   change: RecordChange = SONG_DETAILS,
   stems: readonly StoredStem[] = STEMS,
 ) {
+  stemPlayerStore.getState().close();
   const fake = installFakeRuntime(change, stems);
   takeAccessibilityEvents();
   const commit = vi.fn();

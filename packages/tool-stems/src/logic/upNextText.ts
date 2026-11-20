@@ -1,4 +1,4 @@
-import { countLabel, FACT_SEPARATOR } from '@kitbag/core-design';
+import { countLabel, FACT_SEPARATOR, placeLabel } from '@kitbag/core-design';
 import {
   BPM_UNIT,
   entryName,
@@ -11,8 +11,6 @@ import {
   type StemSongs,
   type UpNext,
 } from '@kitbag/core-state';
-
-import { placeLabel } from './playOrderText.ts';
 
 export const QUEUED = 'Queued';
 const METRONOME = 'metronome';

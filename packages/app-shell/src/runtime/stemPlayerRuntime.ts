@@ -5,6 +5,7 @@ import {
   songCountIn,
   startAutoAdvance,
   startCardOrder,
+  startListeningSession,
 } from '@kitbag/core-state';
 
 import { getDatabase } from './database.ts';
@@ -39,3 +40,4 @@ configureStemPlayer({
 
 startAutoAdvance();
 startCardOrder();
+startListeningSession();

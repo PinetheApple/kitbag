@@ -171,13 +171,7 @@ describe('every way out of retime restores the speed it found', () => {
     ]);
   });
 
-  it('a relaunch whose old screen lets go late', async () => {
-    const relaunched = [
-      KB_MIXER_UNITY_RATE,
-      RETIME_PLAYBACK_RATE,
-      SONG_SPEED,
-      KB_MIXER_UNITY_RATE,
-    ];
+  it('a relaunch keeps retime until the last screen lets go', async () => {
     const song = await songAt();
     const oldScreen = song.store.getState().acquireSong(7, BARS);
     await settle();
@@ -186,10 +180,10 @@ describe('every way out of retime restores the speed it found', () => {
     const newScreen = song.store.getState().acquireSong(7, BARS);
     oldScreen.release();
     await settle();
-    expect(ratesSet(song)).toEqual(relaunched);
+    expect(ratesSet(song)).toEqual([RETIME_PLAYBACK_RATE]);
     newScreen.release();
     await settle();
-    expect(ratesSet(song)).toEqual(relaunched);
+    expect(ratesSet(song)).toEqual([RETIME_PLAYBACK_RATE, SONG_SPEED]);
   });
 
   it('restores after a slow-down still in flight when retime ends', async () => {
@@ -379,7 +373,6 @@ describe('an advance from a song in retime', () => {
     );
     await settle();
     expect(ratesSet(song)).toEqual([
-      KB_MIXER_UNITY_RATE,
       RETIME_PLAYBACK_RATE,
       SONG_SPEED,
       KB_MIXER_UNITY_RATE,

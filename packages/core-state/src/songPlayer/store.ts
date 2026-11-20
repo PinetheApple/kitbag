@@ -23,11 +23,8 @@ import {
   mixerClick,
   type MixerClick,
 } from '../stemPlayer/mixerClick.ts';
-import { mixerSession, type MixerHold } from '../stemPlayer/mixerSession.ts';
-import {
-  SCRUB_SEEK_DELAY_MS,
-  type StemPlayerStatus,
-} from '../stemPlayer/store.ts';
+import { mixerSession } from '../stemPlayer/mixerSession.ts';
+import { ATTACHABLE, SCRUB_SEEK_DELAY_MS } from '../stemPlayer/store.ts';
 import { framesToSeconds, secondsToFrames } from '../stemPlayer/time.ts';
 import {
   songLibraryStore,
@@ -69,7 +66,6 @@ import {
 } from './state.ts';
 
 const SONG_TRACK = 0;
-const ATTACHABLE: ReadonlySet<StemPlayerStatus> = new Set(['loading', 'ready']);
 // Sub-frame rounding from a rate change must never rewrite the stored length.
 export const STORED_LENGTH_TOLERANCE_SEC = 0.01;
 
@@ -102,7 +98,6 @@ export function createSongPlayerStore(
   let trackRequested = false;
   let masterToRestore: number | null = null;
   let loading: Promise<void> = Promise.resolve();
-  let holders = 0;
   let detectedGrid = NO_GRID;
   // Set while a picked factor is saving, so a re-read cannot bring back an older one.
   let heldCorrection: TempoCorrection | null = null;
@@ -139,21 +134,7 @@ export function createSongPlayerStore(
     });
     const { live, scrubSeek } = mixer;
 
-    const sharedHold = (opened: number): MixerHold => {
-      const own = mixer.hold(opened);
-      let held = true;
-      holders++;
-      return {
-        live: own.live,
-        release: () => {
-          if (!held || !own.live()) return;
-          held = false;
-          holders--;
-          const outlivesPlayer = get().status === 'ready';
-          if (holders === 0 && !outlivesPlayer) own.release();
-        },
-      };
-    };
+    mixer.outlivesHolders(() => get().status === 'ready');
     const context = { set, get, runtimeOf, session: mixer.current };
     const presets = songPresetActions({ ...context, live });
     const count = songCount(context, mixer, api, clickEngine);
@@ -323,11 +304,10 @@ export function createSongPlayerStore(
         const { songId: current, status } = get();
         if (current === songId && ATTACHABLE.has(status)) {
           const opened = mixer.current();
-          const hold = sharedHold(opened);
+          const hold = mixer.hold(opened);
           return { hold, loaded: reread(opened, songId) };
         }
         const opened = mixer.begin();
-        holders = 0;
         detectedGrid = NO_GRID;
         heldCorrection = null;
         waveform.reset(bars);
@@ -341,9 +321,10 @@ export function createSongPlayerStore(
           console.warn('[kitbag] song failed to open', error);
           if (live(opened)) set({ status: 'failed' });
         });
-        return { hold: sharedHold(opened), loaded: loading };
+        return { hold: mixer.hold(opened), loaded: loading };
       },
       close: mixer.close,
+      onCardStop: mixer.onCardStop,
       meterOverrideChanged: (songId, override) => {
         if (!isOpenAndReady(songId)) return;
         const meterOverride = meterOverrideOf(override);

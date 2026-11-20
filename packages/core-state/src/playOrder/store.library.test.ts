@@ -109,6 +109,16 @@ describe('the setlist Up next plays from', () => {
     expect(order.getState().queue).toMatchObject([{ stemSetId: b }]);
   });
 
+  it('ends on Stop without a notice, keeping the queued songs and the pin', async () => {
+    const { library, order, b, gig } = await setup();
+    await order.getState().enqueue(b);
+    library.getState().endListeningSession();
+    expect(laterFromSetlist(library)).toEqual([]);
+    expect(order.getState().queue).toMatchObject([{ stemSetId: b }]);
+    expect(library.getState().endedSetlist).toBeNull();
+    expect(activeSetlistOf(library.getState().setlists)?.setlist.id).toBe(gig);
+  });
+
   it('is the setlist started last, replacing the one before it', async () => {
     const { library, repos, handle, gig, first } = await setup();
     const encore = await library.getState().createSetlist('Encore');
