@@ -58,6 +58,8 @@ export {
   withoutSound,
 } from './metronome/config.ts';
 export { beatGroupSizes, groupStartAccents } from './metronome/meterGroups.ts';
+export { layoutBeatLeds, type LedRowLayout } from './metronome/ledLayout.ts';
+export { countInBarsFromOption } from './metronome/countInOption.ts';
 export {
   effectivePolyAgainst,
   normalizePolyAgainst,
@@ -312,6 +314,11 @@ export {
   dataFolderStore,
   folderUnavailable,
   pausedMove,
+  offeredCards,
+  cardMounted,
+  returnedCards,
+  resumeBlocked,
+  returnSourceMissing,
   type DataFolderDeps,
   type DataFolderStore,
   type PlayerWatch,
@@ -652,6 +659,20 @@ export {
   BUILT_IN_SOUND_NAMES,
   DEFAULT_SOUND_NAME,
 } from './clickSounds/soundNames.ts';
+export {
+  customSoundViews,
+  rolesUsing,
+  SOUND_OPTIONS,
+  SOUND_ROLE,
+  SOUND_ROLE_OPTIONS,
+  soundChipLabel,
+  soundLabel,
+  soundPickerLabel,
+  soundRoleName,
+  soundsWith,
+  type CustomSoundView,
+  type SoundRole,
+} from './clickSounds/soundChoice.ts';
 export {
   formatName,
   joinedFormatNames,

@@ -14,18 +14,20 @@ import {
   textStyle,
   TransportKey,
 } from '@kitbag/core-design';
-import { metronomeStore, useMetronome } from '@kitbag/core-state';
-import { useCallback } from 'react';
-import { Pressable, Text, View } from 'react-native';
-
 import {
+  metronomeStore,
+  useMetronome,
   SOUND_OPTIONS,
   SOUND_ROLE,
   soundLabel,
   soundRoleName,
   soundsWith,
   type SoundRole,
-} from '../logic/soundChoice.ts';
+  soundPickerLabel,
+} from '@kitbag/core-state';
+import { useCallback } from 'react';
+import { Pressable, Text, View } from 'react-native';
+
 import { CustomSoundSheets, useCustomSoundMenu } from './CustomSoundSheets.tsx';
 import { CustomSounds, useCustomSoundViews } from './CustomSounds.tsx';
 import { PracticeSection, usePracticeStyles } from './PracticeSection.tsx';
@@ -162,7 +164,7 @@ export function SoundListSheet({
         onDismiss={onDismiss}
       >
         <PickerGrid
-          accessibilityLabel={`${soundRoleName(shownRole)} beat sound`}
+          accessibilityLabel={soundPickerLabel(shownRole)}
           options={SOUND_OPTIONS}
           selected={String(sounds[shownRole])}
           onSelect={pickOption}

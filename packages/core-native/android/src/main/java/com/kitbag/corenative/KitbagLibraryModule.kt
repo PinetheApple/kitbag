@@ -95,6 +95,8 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
 
   override fun cancelMove(promise: Promise) = moves.cancelMove(promise)
 
+  override fun startCardReturn(volumeUuid: String, promise: Promise) = moves.startCardReturn(volumeUuid, promise)
+
   override fun resumeMove(promise: Promise) = moves.resumeMove(promise)
 
   override fun undoMove(promise: Promise) = moves.undoMove(promise)

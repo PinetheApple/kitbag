@@ -25,6 +25,7 @@ const RUNNING: MoveStatus = {
   switched: false,
   paused: false,
   awaitingRelease: false,
+  cardReturn: false,
   error: null,
 };
 

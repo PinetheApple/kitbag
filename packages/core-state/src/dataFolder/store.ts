@@ -1,5 +1,6 @@
 import type {
   DataFolderCodes,
+  DataFolderVolume,
   DataFolderVolumes,
   MoveFinished,
   MoveStatus,
@@ -32,6 +33,7 @@ export interface DataFolderState {
   readonly holders: PlayerTracks | null;
   readonly released: boolean;
   readonly pending: boolean;
+  readonly declined: readonly string[];
 }
 
 export interface DataFolderActions {
@@ -40,11 +42,13 @@ export interface DataFolderActions {
   readonly refreshVolumes: () => Promise<void>;
   readonly refreshMove: () => Promise<void>;
   readonly startMove: (volumeUuid: string | null) => Promise<boolean>;
+  readonly returnCard: (volumeUuid: string) => Promise<boolean>;
   readonly cancelMove: () => Promise<boolean>;
   readonly resumeMove: () => Promise<boolean>;
   readonly undoMove: () => Promise<boolean>;
   readonly switchToInternalStorage: () => Promise<boolean>;
   readonly dismissError: () => void;
+  readonly declineReturn: (volumeUuid: string) => void;
 }
 
 export type DataFolderStore = DataFolderState & DataFolderActions;
@@ -88,11 +92,69 @@ const INITIAL: DataFolderState = {
   holders: null,
   released: false,
   pending: false,
+  declined: [],
 };
 
 export function pausedMove(state: DataFolderState): MoveStatus | null {
   const { move } = state;
   return move?.paused === true && move.error === null ? move : null;
+}
+
+export function returnedCards(
+  state: DataFolderState,
+): readonly DataFolderVolume[] {
+  const { codes, volumes, move, pending } = state;
+  const busy = move !== null || pending || folderUnavailable(state);
+  if (codes === null || volumes === null || busy) return [];
+  return volumes.volumes.filter(
+    (volume) =>
+      volume.volumeUuid !== null &&
+      !volume.inUse &&
+      volume.state === codes.volumeStates.mounted &&
+      volume.awayFiles > 0,
+  );
+}
+
+export function offeredCards(
+  state: DataFolderState,
+): readonly DataFolderVolume[] {
+  return returnedCards(state).filter(
+    ({ volumeUuid }) =>
+      volumeUuid === null || !state.declined.includes(volumeUuid),
+  );
+}
+
+export function resumeBlocked(state: DataFolderState): boolean {
+  return state.pending || returnSourceMissing(state);
+}
+
+export function cardMounted(
+  { volumes, codes }: Pick<DataFolderState, 'volumes' | 'codes'>,
+  volumeUuid: string | null,
+): boolean {
+  return (
+    volumes?.volumes.some(
+      (volume) =>
+        volume.volumeUuid === volumeUuid &&
+        volume.state === codes?.volumeStates.mounted,
+    ) === true
+  );
+}
+
+export function returnSourceMissing(state: DataFolderState): boolean {
+  const { move, volumes, codes } = state;
+  if (move?.cardReturn !== true || volumes === null || codes === null)
+    return false;
+  return !cardMounted(state, move.sourceVolumeUuid);
+}
+
+// A card stays declined only while it stays in: the next insertion offers it again.
+function stillInserted(
+  declined: readonly string[],
+  volumes: DataFolderVolumes,
+  codes: DataFolderCodes | null,
+): readonly string[] {
+  return declined.filter((uuid) => cardMounted({ volumes, codes }, uuid));
 }
 
 export function folderUnavailable(state: DataFolderState): boolean {
@@ -217,7 +279,9 @@ export function createDataFolderStore(
       },
       refreshVolumes: async () => {
         try {
-          set({ volumes: await deps.native().listVolumes() });
+          const volumes = await deps.native().listVolumes();
+          const { declined, codes } = get();
+          set({ volumes, declined: stillInserted(declined, volumes, codes) });
         } catch (error) {
           warn('Data folder volumes unavailable', error);
         }
@@ -231,6 +295,8 @@ export function createDataFolderStore(
       },
       startMove: (volumeUuid) =>
         request(() => deps.native().startMove(volumeUuid)),
+      returnCard: (volumeUuid) =>
+        request(() => deps.native().startCardReturn(volumeUuid)),
       cancelMove: () => request(() => deps.native().cancelMove()),
       resumeMove: () => request(() => deps.native().resumeMove()),
       undoMove: () => request(() => deps.native().undoMove()),
@@ -239,6 +305,11 @@ export function createDataFolderStore(
           const paths = awayPaths(await deps.storedFiles());
           await deps.native().switchToInternalStorage(paths);
         }),
+      declineReturn: (volumeUuid) => {
+        const { declined } = get();
+        if (!declined.includes(volumeUuid))
+          set({ declined: [...declined, volumeUuid] });
+      },
       dismissError: () => {
         set({ error: null });
       },

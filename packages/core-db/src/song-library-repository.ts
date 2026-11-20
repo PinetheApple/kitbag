@@ -342,7 +342,13 @@ async function deleteSong(
 }
 
 async function listSongFiles(db: Database) {
-  return db.select({ id: songs.id, filePath: songs.filePath }).from(songs);
+  return db
+    .select({
+      id: songs.id,
+      filePath: songs.filePath,
+      waveformPath: songs.waveformPath,
+    })
+    .from(songs);
 }
 
 async function readSong(

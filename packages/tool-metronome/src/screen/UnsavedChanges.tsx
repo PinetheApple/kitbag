@@ -14,6 +14,7 @@ import {
   textRoles,
   textStyle,
   unshared,
+  UnsavedDot,
   type IconName,
 } from '@kitbag/core-design';
 import {
@@ -37,13 +38,6 @@ const ROW_ACTION_HIT_BOX = hitBoxStyle(
 );
 
 const useStyles = createThemedStyles((theme) => ({
-  dot: {
-    width: metronome.unsavedDot,
-    height: metronome.unsavedDot,
-    borderRadius: metronome.unsavedDot / 2,
-    flexShrink: 0,
-    backgroundColor: theme.color[theme.accentInk],
-  },
   note: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -92,11 +86,6 @@ export function useLoadedSongUnsaved(): boolean {
   return useMetronome(
     (live) => preset !== undefined && isLoadedSongUnsaved(preset, live),
   );
-}
-
-export function UnsavedDot() {
-  const styles = useStyles();
-  return <View style={styles.dot} />;
 }
 
 export function UnsavedNote() {

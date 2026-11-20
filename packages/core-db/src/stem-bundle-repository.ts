@@ -245,7 +245,11 @@ export async function listStemSetFolders(db: Database): Promise<string[]> {
 
 export async function listStemFiles(db: Database) {
   return db
-    .select({ setId: stems.stemSetId, filePath: stems.filePath })
+    .select({
+      setId: stems.stemSetId,
+      filePath: stems.filePath,
+      waveformPath: stems.waveformPath,
+    })
     .from(stems);
 }
 

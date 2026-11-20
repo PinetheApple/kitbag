@@ -116,6 +116,18 @@ class DataFolder(
 
   fun forgetAway(volumeUuid: String) = awayManifest.remove(volumeUuid)
 
+  fun forgetAway(volumeUuid: String, relativePaths: Collection<String>) =
+    awayManifest.removeAway(volumeUuid, relativePaths)
+
+  fun awayOn(volumeUuid: String): Set<String>? = awayManifest.load()?.let { it[volumeUuid].orEmpty() }
+
+  fun awaySongCounts(volumeUuid: String): AwaySongCounts = AwaySongCounts.of(awayOn(volumeUuid).orEmpty())
+
+  fun awayOnCard(volumeUuid: String): List<File> {
+    val root = cardRoot(volumeUuid) ?: return emptyList()
+    return awayOn(volumeUuid).orEmpty().map { LibraryPaths.resolve(root, it) }.filter { it.isFile }
+  }
+
   fun root(): File =
     when (val state = rootStateAt(location())) {
       is RootState.Mounted -> state.root

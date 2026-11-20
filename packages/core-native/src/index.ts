@@ -64,6 +64,7 @@ export {
   moveStatus,
   releaseOldCopies,
   resumeMove,
+  startCardReturn,
   startMove,
   undoMove,
   switchToInternalStorage,
