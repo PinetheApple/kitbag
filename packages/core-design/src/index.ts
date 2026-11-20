@@ -75,6 +75,7 @@ export * from './components/ToolTile.tsx';
 export * from './components/TransportKey.tsx';
 export * from './components/TuneDirectionIcon.tsx';
 export * from './components/TunerStrip.tsx';
+export * from './components/UnsavedDot.tsx';
 export * from './notation.ts';
 export * from './components/NotationGlyph.tsx';
 export * from './wheel.ts';

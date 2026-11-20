@@ -11,6 +11,7 @@ import {
   textRoles,
   textStyle,
   TRANSPARENT,
+  UnsavedDot,
   useAfterSheetClosed,
 } from '@kitbag/core-design';
 import {
@@ -33,11 +34,7 @@ import { type ErrorSetter } from '../library/sheets.tsx';
 import { nowRowA11yLabel } from '../logic/setlistChip.ts';
 import { useSheetStyles } from './sheetStyles.ts';
 import { useOpenStemPlayer } from './useOpenStemPlayer.ts';
-import {
-  NowRowActions,
-  UnsavedDot,
-  useLoadedSongUnsaved,
-} from './UnsavedChanges.tsx';
+import { NowRowActions, useLoadedSongUnsaved } from './UnsavedChanges.tsx';
 
 const NO_ENTRIES: readonly SetlistEntry[] = [];
 const UNSAVED_NAME_LINES = 2;

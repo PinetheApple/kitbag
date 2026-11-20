@@ -29,7 +29,8 @@ function deleteOnSongs({ library, row }: Playing) {
 
 function deleteFromStorage({ library, row }: Playing) {
   return removeMissingRows({
-    storedFiles: () => Promise.resolve([{ row, audioPaths: [SONG_PATH] }]),
+    storedFiles: () =>
+      Promise.resolve([{ row, audioPaths: [SONG_PATH], waveformPaths: [] }]),
     fileAvailability: () =>
       Promise.resolve({
         missing: [SONG_PATH],

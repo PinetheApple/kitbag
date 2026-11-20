@@ -124,6 +124,30 @@ describe('the Home banner for a move the app was closed in', () => {
   });
 });
 
+describe('the banner for a return whose card was taken out', () => {
+  const CARD_TAKEN = move({
+    running: false,
+    paused: true,
+    sourceVolumeUuid: CARD_OUT.currentVolumeUuid,
+    targetVolumeUuid: null,
+    cardReturn: true,
+  });
+
+  it('asks for the card and holds Resume until it is back', async () => {
+    const { tree } = await mount(CARD_TAKEN);
+    expect(texts(tree)).toEqual([
+      'Move to internal storage paused',
+      'SD card taken out. 24 of 54 files are on internal storage. Put the card back to resume, or undo to remove those copies. Its songs play again once it’s in.',
+    ]);
+    expect(
+      (button(tree, 'Resume').props as { disabled: boolean }).disabled,
+    ).toBe(true);
+    expect((button(tree, 'Undo').props as { disabled: boolean }).disabled).toBe(
+      false,
+    );
+  });
+});
+
 describe('a refused banner action', () => {
   it('says why Resume was refused', async () => {
     const { tree, native } = await mount(KILLED);

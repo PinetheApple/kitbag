@@ -4,6 +4,7 @@ import type { LibraryAvailability } from '@kitbag/core-native';
 export interface StoredRowFiles {
   readonly row: LibraryRow;
   readonly audioPaths: readonly string[];
+  readonly waveformPaths: readonly string[];
 }
 
 export interface MissingFilesSource {
