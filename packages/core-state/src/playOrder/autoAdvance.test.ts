@@ -355,7 +355,7 @@ describe('Next from the song card', () => {
 
   it('ignores a second Next while the first is still committing', async () => {
     const h = harness([play(NIGHT_BUS), play(TIN_ROOF)]);
-    let release: (kept: Undo | null) => void = () => undefined;
+    let release: (undo: Undo | null) => void = () => undefined;
     h.commitNext.mockImplementationOnce(
       () =>
         new Promise<Undo | null>((resolve) => {
@@ -373,7 +373,7 @@ describe('Next from the song card', () => {
 
   it('ignores the end of the song while a Next is still committing', async () => {
     const h = harness([play(NIGHT_BUS), play(TIN_ROOF)]);
-    let release: (kept: Undo | null) => void = () => undefined;
+    let release: (undo: Undo | null) => void = () => undefined;
     h.commitNext.mockImplementationOnce(
       () =>
         new Promise<Undo | null>((resolve) => {
