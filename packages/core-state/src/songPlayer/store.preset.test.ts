@@ -51,7 +51,7 @@ async function editedAndSaved() {
   return opened;
 }
 
-async function reopened(
+async function closedAndReopened(
   store: Awaited<ReturnType<typeof editedAndSaved>>['store'],
 ) {
   store.getState().close();
@@ -160,7 +160,7 @@ describe('Save for this song', () => {
 describe('a song with a saved preset', () => {
   it('reopens with the saved click, turned on', async () => {
     const { fake, store } = await editedAndSaved();
-    await reopened(store);
+    await closedAndReopened(store);
     expect(store.getState().clickSettings).toEqual({
       countInBars: SAVED_COUNT_IN,
       sounds: SONG_SOUNDS,
@@ -174,7 +174,7 @@ describe('a song with a saved preset', () => {
   it("keeps the song's tempo from its grid, not the preset", async () => {
     const { fake, store } = await editedAndSaved();
     fake.records.readSong.mockResolvedValue(songRecord({ bpm: SONG_BPM + 1 }));
-    await reopened(store);
+    await closedAndReopened(store);
     expect(store.getState().bpm).toBe(SONG_BPM + 1);
   });
 
@@ -182,7 +182,7 @@ describe('a song with a saved preset', () => {
     const { fake, store } = await editedAndSaved();
     const before = standaloneConfig(fake.standalone.store);
     fake.sharedMetronome.active.mockReturnValue(true);
-    await reopened(store);
+    await closedAndReopened(store);
     expect(fake.sharedMetronome.release).toHaveBeenCalled();
     expect(standaloneConfig(fake.standalone.store)).toEqual(before);
   });
@@ -192,14 +192,14 @@ describe('a song with a saved preset', () => {
     fake.records.readSong.mockResolvedValue(
       songRecord({ beats: [], downbeatIndices: [] }),
     );
-    await reopened(store);
+    await closedAndReopened(store);
     expect(store.getState().status).toBe('ready');
     expect(store.getState().click).toBe(false);
   });
 
   it("turns the next song's saved click on when opened over a playing click", async () => {
     const { fake, store } = await editedAndSaved();
-    await reopened(store);
+    await closedAndReopened(store);
     const saved = fake.records.saveForLibrarySong.mock.calls[0]?.[1];
     if (saved === undefined) throw new Error('nothing saved');
     await fake.records.saveForLibrarySong(OTHER_SONG, saved);
@@ -207,6 +207,19 @@ describe('a song with a saved preset', () => {
     await store.getState().open(OTHER_SONG, BARS).loaded;
     expect(store.getState().songId).toBe(OTHER_SONG);
     expect(store.getState().click).toBe(true);
+  });
+
+  it('continues a live session on reattach without reading the preset again', async () => {
+    const fake = fakeSongRuntime(songRecord({ bpm: SONG_BPM }));
+    const store = songStore(fake);
+    const opened = store.getState().open(SONG_ID, BARS);
+    await opened.loaded;
+    store.getState().setClickCountIn(SAVED_COUNT_IN);
+    await store.getState().saveForSong();
+    opened.hold.release();
+    await store.getState().open(SONG_ID, BARS).loaded;
+    expect(store.getState().click).toBe(false);
+    expect(fake.records.forLibrarySong).toHaveBeenCalledOnce();
   });
 
   it('does not lend its click to another song', async () => {
