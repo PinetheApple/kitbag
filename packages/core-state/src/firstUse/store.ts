@@ -1,9 +1,11 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
-export interface SwipeHintPersistence {
+export interface SeenFlagPersistence {
   readonly load: () => boolean;
   readonly save: () => void;
 }
+
+export type SwipeHintPersistence = SeenFlagPersistence;
 
 export interface SwipeHintStore {
   readonly seen: boolean;

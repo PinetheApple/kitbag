@@ -55,8 +55,9 @@ describe('the play order the song card shows', () => {
     expect(cardOrderOf(at(3), false)).toEqual(LAST);
   });
 
-  it('keeps Next at the last entry once Repeat all starts the setlist again', () => {
-    expect(cardOrderOf({ ...at(3), restarted: true }, false)).toEqual(UP_NEXT);
+  it('keeps Next at the last entry under Repeat all, which wraps to song 1', () => {
+    const round = { all: true, played: [], restarted: false };
+    expect(cardOrderOf({ ...at(3), round }, false)).toEqual(UP_NEXT);
   });
 
   it('keeps Previous for a song on its own once an earlier song was heard', () => {

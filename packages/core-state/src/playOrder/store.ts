@@ -7,7 +7,11 @@ import {
 } from '@kitbag/core-db';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
-import { libraryStore, type LibraryStore } from '../library/store.ts';
+import {
+  libraryStore,
+  type LibraryStore,
+  type LoadedSong,
+} from '../library/store.ts';
 import {
   isPresetEntry,
   type PresetSetlistEntry,
@@ -21,13 +25,17 @@ import {
   upNext,
   queuedSongOfAdvance,
   skippedKindOf,
+  wrapOf,
   type Advance,
   type OnStage,
   type PlayerKind,
+  type PlayOrder,
+  type RepeatRound,
   type SetlistCursor,
   type UpNext,
+  type Wrap,
 } from './order.ts';
-import { notePlayedQueued, repeatStore, restartedAt } from './repeat.ts';
+import { crossWrap, roundNow, type UndoWrap } from './repeatWrap.ts';
 import { getPlayOrder } from './runtime.ts';
 
 export interface PlayOrderState {
@@ -66,7 +74,8 @@ export interface PlayOrderDeps {
   readonly queue: () => PlayQueueRepository;
   readonly stage: () => OnStage;
   readonly cursor: () => SetlistCursor | null;
-  readonly restarted?: () => boolean;
+  readonly round?: () => RepeatRound;
+  readonly loaded?: () => LoadedSong | null;
   readonly refreshStage: () => Promise<void>;
   readonly playSetlistEntry: (
     itemId: number,
@@ -114,12 +123,8 @@ const defaultDeps: PlayOrderDeps = {
   queue: () => getPlayOrder().queue,
   stage: stageNow,
   cursor: () => cursorOf(stageNow(), libraryStore.getState().loaded),
-  restarted: () =>
-    restartedAt(
-      repeatStore.getState(),
-      stageNow().setlistId,
-      libraryStore.getState().loaded,
-    ),
+  round: roundNow,
+  loaded: () => libraryStore.getState().loaded,
   refreshStage: () => libraryStore.getState().refresh(),
   playSetlistEntry: (itemId, setlistId) =>
     libraryStore.getState().openStemEntry(itemId, setlistId),
@@ -170,10 +175,7 @@ function queueActions(
       edit(deps.queue().move(song, position)),
     removeQueued: (song: QueuedSong) => edit(deps.queue().remove(song)),
     clearQueue: () => edit(deps.queue().clear()),
-    playQueued: (song: QueuedSong) => {
-      notePlayedQueued(song);
-      return edit(deps.queue().takeThrough(song));
-    },
+    playQueued: (song: QueuedSong) => edit(deps.queue().takeThrough(song)),
   };
 }
 
@@ -269,24 +271,88 @@ async function kept(
   return null;
 }
 
-function orderActions(deps: PlayOrderDeps, get: Get, edits: QueueEdits) {
+function wrapCrossing(deps: PlayOrderDeps, get: Get) {
+  const orderNow = (): PlayOrder => ({
+    queue: get().queue,
+    stage: deps.stage(),
+    cursor: deps.cursor(),
+    ...(deps.round === undefined ? {} : { round: deps.round() }),
+  });
+  const crossOver = (wrap: Wrap): Promise<UndoWrap> => {
+    const place = { stage: deps.stage(), loaded: deps.loaded?.() ?? null };
+    return crossWrap(wrap, place, {
+      queued: () => get().queue.map(queuedSongOf),
+      add: (song) => deps.queue().add(song),
+      remove: (song) => deps.queue().remove(song),
+      refresh: get().refresh,
+    });
+  };
+  const cross = async (): Promise<void> => {
+    const wrap = wrapOf(orderNow());
+    if (wrap !== null) await crossOver(wrap);
+  };
+  const crossing = async (
+    commit: () => Promise<Undo | null>,
+  ): Promise<Undo | null> => {
+    const wrap = wrapOf(orderNow());
+    if (wrap === null) return commit();
+    const undoWrap = await crossOver(wrap);
+    let undo: Undo | null;
+    try {
+      undo = await commit();
+    } catch (error) {
+      await undoWrap();
+      throw error;
+    }
+    if (undo !== null)
+      return async () => {
+        await undo();
+        await undoWrap();
+      };
+    await undoWrap();
+    return null;
+  };
+  return { orderNow, cross, crossing };
+}
+
+function orderActions(
+  deps: PlayOrderDeps,
+  get: Get,
+  edits: QueueEdits,
+  take: (song: QueuedSong) => Promise<void>,
+) {
+  const { orderNow, cross, crossing } = wrapCrossing(deps, get);
   const peekNext = async (): Promise<SkipResult> => {
     const expected = get().upNext();
     await Promise.all([get().refresh(), deps.refreshStage()]);
     const next = advanceOf(get().upNext());
     return { advance: next, skipped: skippedKindOf(expected, next) };
   };
-  const commitNext = async (next: Advance, stands = ALWAYS) => {
-    const commit = commitOf(deps, get, edits, next);
-    return commit === null ? NOTHING_TO_UNDO : kept(commit, stands);
+  const commitNext = (next: Advance, stands = ALWAYS) => {
+    if (next.kind === ADVANCE.end) return Promise.resolve(NOTHING_TO_UNDO);
+    return crossing(() => {
+      const commit = commitOf(deps, get, edits, next);
+      return commit === null
+        ? Promise.resolve(NOTHING_TO_UNDO)
+        : kept(commit, stands);
+    });
   };
   const commitOpen = async (entry: PresetSetlistEntry, stands = ALWAYS) => {
-    const commit = presetCommit(deps, entry);
-    return commit !== null && (await kept(commit, stands)) !== null;
+    const undo = await crossing(() => {
+      const commit = presetCommit(deps, entry);
+      return commit === null ? Promise.resolve(null) : kept(commit, stands);
+    });
+    return undo !== null;
+  };
+  const playQueued = (song: QueuedSong) => {
+    const pending = wrapOf(orderNow())?.songs ?? [];
+    if (!pending.some((each) => sameQueuedSong(each, song))) return take(song);
+    return cross().then(() => take(song));
   };
   const openEntry = async (entry: SetlistEntry) => {
     const { setlistId } = deps.stage();
     if (setlistId === null) return;
+    await cross();
     if (isPresetEntry(entry)) await commitOpen(entry);
     else await deps.playSetlistEntry(entry.item.id, setlistId);
   };
@@ -296,13 +362,8 @@ function orderActions(deps: PlayOrderDeps, get: Get, edits: QueueEdits) {
     return step;
   };
   return {
-    upNext: () =>
-      upNext({
-        queue: get().queue,
-        stage: deps.stage(),
-        cursor: deps.cursor(),
-        restarted: deps.restarted?.() ?? false,
-      }),
+    upNext: () => upNext(orderNow()),
+    playQueued,
     advance: async () => (await skipToNext()).advance,
     skipToNext,
     peekNext,
@@ -316,11 +377,14 @@ export function createPlayOrderStore(
   deps: PlayOrderDeps = defaultDeps,
 ): StoreApi<PlayOrderStore> {
   const edits: QueueEdits = { count: 0 };
-  return createStore<PlayOrderStore>((set, get) => ({
-    queue: [],
-    ...queueActions(deps, set, get, edits),
-    ...orderActions(deps, get, edits),
-  }));
+  return createStore<PlayOrderStore>((set, get) => {
+    const queue = queueActions(deps, set, get, edits);
+    return {
+      queue: [],
+      ...queue,
+      ...orderActions(deps, get, edits, queue.playQueued),
+    };
+  });
 }
 
 export const playOrderStore = createPlayOrderStore();

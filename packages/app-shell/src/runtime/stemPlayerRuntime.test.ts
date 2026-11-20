@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
   autoAdvanceDeps: vi.fn(),
   startAutoAdvance: vi.fn(),
   startCardOrder: vi.fn(),
-  startRepeatWrap: vi.fn(),
   endSessionOnCardStop: vi.fn(),
   stopSongsForMetronome: vi.fn(),
   recordHeardSongs: vi.fn(),
@@ -31,7 +30,6 @@ vi.mock('@kitbag/core-state', () => ({
   configureStemPlayer: mocks.configureStemPlayer,
   startAutoAdvance: mocks.startAutoAdvance,
   startCardOrder: mocks.startCardOrder,
-  startRepeatWrap: mocks.startRepeatWrap,
   endSessionOnCardStop: mocks.endSessionOnCardStop,
   stopSongsForMetronome: mocks.stopSongsForMetronome,
   recordHeardSongs: mocks.recordHeardSongs,
@@ -54,7 +52,6 @@ const { commands } = runtime;
 const [configured] = mocks.configureStemPlayer.mock.invocationCallOrder;
 const [advanceStarted] = mocks.startAutoAdvance.mock.invocationCallOrder;
 const [orderStarted] = mocks.startCardOrder.mock.invocationCallOrder;
-const [wrapStarted] = mocks.startRepeatWrap.mock.invocationCallOrder;
 const [cardStopsWired] = mocks.endSessionOnCardStop.mock.invocationCallOrder;
 const [takeoverWired] = mocks.stopSongsForMetronome.mock.invocationCallOrder;
 const [heardWired] = mocks.recordHeardSongs.mock.invocationCallOrder;
@@ -66,10 +63,6 @@ describe('stem player start-up', () => {
 
   it('sends the play order to the song card after the player is configured', () => {
     expect(orderStarted).toBeGreaterThan(configured ?? Infinity);
-  });
-
-  it('loops the queue and the setlist under Repeat all, once configured', () => {
-    expect(wrapStarted).toBeGreaterThan(configured ?? Infinity);
   });
 
   it('ends the listening session on a card Stop, once configured', () => {

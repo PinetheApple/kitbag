@@ -1,6 +1,7 @@
 import { libraryStore } from '../library/store.ts';
 import { cursorOf, onStageOf, type PlayOrder } from './order.ts';
-import { repeatStore, restartedAt } from './repeat.ts';
+import { repeatStore } from './repeat.ts';
+import { roundNow } from './repeatWrap.ts';
 import { playOrderStore } from './store.ts';
 
 export function playOrderNow(): PlayOrder {
@@ -10,11 +11,7 @@ export function playOrderNow(): PlayOrder {
     queue: playOrderStore.getState().queue,
     stage,
     cursor: cursorOf(stage, library.loaded),
-    restarted: restartedAt(
-      repeatStore.getState(),
-      stage.setlistId,
-      library.loaded,
-    ),
+    round: roundNow(),
   };
 }
 

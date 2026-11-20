@@ -40,7 +40,23 @@ export interface PlayOrder {
   readonly queue: readonly PlayQueueEntry[];
   readonly stage: OnStage;
   readonly cursor: SetlistCursor | null;
-  readonly restarted?: boolean;
+  readonly round?: RepeatRound;
+}
+
+export interface RepeatRound {
+  readonly all: boolean;
+  readonly played: readonly QueuedSong[];
+  readonly restarted: boolean;
+}
+
+export interface Wrap {
+  readonly songs: readonly QueuedSong[];
+  readonly restartsSetlist: boolean;
+}
+
+export interface Upcoming {
+  readonly pending: readonly QueuedSong[];
+  readonly setlist: readonly SetlistEntry[];
 }
 
 export type PlayerKind = QueuedSong['kind'];
@@ -95,9 +111,8 @@ export function cursorOf(
 export function entriesAfter(
   stage: OnStage,
   cursor: SetlistCursor | null,
-  restarted = false,
 ): readonly SetlistEntry[] {
-  const next = nextSetlistEntry(stage, restarted ? null : cursor);
+  const next = nextSetlistEntry(stage, cursor);
   if (next === undefined) return [];
   return stage.entries
     .slice(stage.entries.indexOf(next))
@@ -123,24 +138,62 @@ function nextSetlistEntry(
     .find((entry) => !isSkipped(stage, entry));
 }
 
-export function setlistWraps({ setlistId, entries }: OnStage): boolean {
-  const last = entries.at(-1);
-  return setlistId !== null && last !== undefined && !isPresetEntry(last);
+export function setlistWraps(stage: OnStage): boolean {
+  const last = stage.entries.filter((entry) => !isSkipped(stage, entry)).at(-1);
+  return stage.setlistId !== null && last !== undefined && !isPresetEntry(last);
 }
 
-export function upNext({
-  queue,
-  stage,
+function cursorAfterRestart({
   cursor,
-  restarted = false,
-}: PlayOrder): UpNext | undefined {
-  const [queued] = queue;
-  if (queued !== undefined)
-    return { source: UP_NEXT_SOURCE.queue, song: queuedSongOf(queued) };
-  const entry = nextSetlistEntry(stage, restarted ? null : cursor);
+  round,
+}: PlayOrder): SetlistCursor | null {
+  return round?.restarted === true ? null : cursor;
+}
+
+function setlistUpNext(
+  stage: OnStage,
+  cursor: SetlistCursor | null,
+): UpNext | undefined {
+  const entry = nextSetlistEntry(stage, cursor);
   return entry === undefined
     ? undefined
     : { source: UP_NEXT_SOURCE.setlist, entry };
+}
+
+function aheadOf(order: PlayOrder): UpNext | undefined {
+  const [queued] = order.queue;
+  if (queued !== undefined)
+    return { source: UP_NEXT_SOURCE.queue, song: queuedSongOf(queued) };
+  return setlistUpNext(order.stage, cursorAfterRestart(order));
+}
+
+export function wrapOf(order: PlayOrder): Wrap | null {
+  const { round, stage } = order;
+  if (round?.all !== true) return null;
+  if (aheadOf(order) !== undefined) return null;
+  const restartsSetlist = setlistWraps(stage);
+  if (stage.setlistId !== null && !restartsSetlist) return null;
+  if (!restartsSetlist && round.played.length === 0) return null;
+  return { songs: round.played, restartsSetlist };
+}
+
+export function upNext(order: PlayOrder): UpNext | undefined {
+  const ahead = aheadOf(order);
+  if (ahead !== undefined) return ahead;
+  const wrap = wrapOf(order);
+  if (wrap === null) return undefined;
+  const [song] = wrap.songs;
+  if (song !== undefined) return { source: UP_NEXT_SOURCE.queue, song };
+  return setlistUpNext(order.stage, null);
+}
+
+export function upcoming(order: PlayOrder): Upcoming {
+  const wrap = wrapOf(order);
+  const cursor = wrap === null ? cursorAfterRestart(order) : null;
+  return {
+    pending: wrap?.songs ?? [],
+    setlist: entriesAfter(order.stage, cursor),
+  };
 }
 
 export type PlayAdvance = Extract<

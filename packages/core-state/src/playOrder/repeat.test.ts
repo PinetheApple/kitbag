@@ -1,12 +1,24 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { endListeningSession } from './listeningSession.ts';
-import { cycleRepeat, REPEAT, repeatStore } from './repeat.ts';
-import { closeDatabases, setup, stems } from './store.test-helper.ts';
+import {
+  configureRepeatAllHintPersistence,
+  cycleRepeat,
+  markRepeatAllHintSeen,
+  notePlayedQueued,
+  REPEAT,
+  repeatStore,
+} from './repeat.ts';
+
+const stems = (id: number) => ({ kind: 'stems', id }) as const;
 
 afterEach(() => {
-  closeDatabases();
-  repeatStore.setState({ mode: REPEAT.off, played: [], restart: null });
+  repeatStore.setState({
+    mode: REPEAT.off,
+    played: [],
+    restart: null,
+    allHintSeen: false,
+  });
 });
 
 describe('the repeat chip', () => {
@@ -30,23 +42,18 @@ describe('the repeat chip', () => {
   });
 });
 
-describe('a queued song that plays', () => {
-  it('is kept for the next round under Repeat all', async () => {
-    const { order, a, b } = await setup();
-    await order.getState().addToQueue(stems(a));
-    await order.getState().addToQueue(stems(b));
+describe('a song played from the queue', () => {
+  it('is kept once, in the order played, under Repeat all', () => {
     repeatStore.setState({ mode: REPEAT.all });
-    await order.getState().playQueued(stems(a));
-    await order.getState().playQueued(stems(b));
-    expect(repeatStore.getState().played).toEqual([stems(a), stems(b)]);
+    notePlayedQueued(stems(1));
+    notePlayedQueued(stems(2));
+    notePlayedQueued(stems(1));
+    expect(repeatStore.getState().played).toEqual([stems(2), stems(1)]);
   });
 
-  it('plays once otherwise', async () => {
-    const { order, a } = await setup();
-    await order.getState().addToQueue(stems(a));
-    await order.getState().playQueued(stems(a));
+  it('is not kept otherwise', () => {
+    notePlayedQueued(stems(1));
     expect(repeatStore.getState().played).toEqual([]);
-    expect(order.getState().queue).toEqual([]);
   });
 });
 
@@ -63,5 +70,21 @@ describe('Stop', () => {
       played: [],
       restart: null,
     });
+  });
+});
+
+describe('the Repeat all hint', () => {
+  it('saves the seen flag once', () => {
+    const save = vi.fn();
+    configureRepeatAllHintPersistence({ load: () => false, save });
+    markRepeatAllHintSeen();
+    markRepeatAllHintSeen();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(repeatStore.getState().allHintSeen).toBe(true);
+  });
+
+  it('stays seen after a restart that loads the saved flag', () => {
+    configureRepeatAllHintPersistence({ load: () => true, save: vi.fn() });
+    expect(repeatStore.getState().allHintSeen).toBe(true);
   });
 });

@@ -1,7 +1,9 @@
 import { sameQueuedSong, type QueuedSong } from '@kitbag/core-db';
 import { createStore } from 'zustand/vanilla';
 
+import type { SeenFlagPersistence } from '../firstUse/store.ts';
 import type { LoadedSong } from '../library/store.ts';
+import type { RepeatRound } from './order.ts';
 
 export const REPEAT = { off: 'off', all: 'all', one: 'one' } as const;
 
@@ -65,6 +67,32 @@ export function restartedAt(
   );
 }
 
-export function seeAllHint(): void {
+export function roundOf(
+  state: Pick<RepeatState, 'mode' | 'played' | 'restart'>,
+  setlistId: number | null,
+  loaded: LoadedSong | null,
+): RepeatRound {
+  return {
+    all: state.mode === REPEAT.all,
+    played: state.played,
+    restarted: restartedAt(state, setlistId, loaded),
+  };
+}
+
+let allHintFlag: SeenFlagPersistence = {
+  load: () => false,
+  save: () => undefined,
+};
+
+export function configureRepeatAllHintPersistence(
+  persistence: SeenFlagPersistence,
+): void {
+  allHintFlag = persistence;
+  repeatStore.setState({ allHintSeen: persistence.load() });
+}
+
+export function markRepeatAllHintSeen(): void {
+  if (repeatStore.getState().allHintSeen) return;
   repeatStore.setState({ allHintSeen: true });
+  allHintFlag.save();
 }

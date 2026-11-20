@@ -18,6 +18,7 @@ import {
   cursorOf,
   isPlayAdvance,
   onStageOf,
+  queuedSongOfAdvance,
   songOfPlay,
   type Advance,
   type PlayAdvance,
@@ -38,7 +39,12 @@ import {
   type BackFrom,
 } from './previous.ts';
 import { SKIP, type SkippedSong } from './queuedSongText.ts';
-import { REPEAT, repeatStore, type RepeatMode } from './repeat.ts';
+import {
+  notePlayedQueued,
+  REPEAT,
+  repeatStore,
+  type RepeatMode,
+} from './repeat.ts';
 import { playOrderStore, type SkipResult, type Undo } from './store.ts';
 
 export interface SetlistPlace {
@@ -106,6 +112,7 @@ export interface AutoAdvanceDeps {
   readonly arrivals: StoreApi<ArrivalState>;
   readonly back: BackDeps;
   readonly repeat?: () => RepeatMode;
+  readonly notePlayed?: (song: QueuedSong) => void;
 }
 
 export interface BackDeps {
@@ -191,7 +198,9 @@ export const autoAdvanceDeps = (bars: WaveformBars): AutoAdvanceDeps => ({
     return { number: cursor.index + 1, of: stage.entries.length };
   },
   candidates: () =>
-    playOrderStore.getState().queue.length + onStageNow().stage.entries.length,
+    playOrderStore.getState().queue.length +
+    repeatStore.getState().played.length +
+    onStageNow().stage.entries.length,
   commitOpen: (entry) => playOrderStore.getState().commitOpen(entry),
   arrivals: arrivalStore,
   back: {
@@ -201,6 +210,7 @@ export const autoAdvanceDeps = (bars: WaveformBars): AutoAdvanceDeps => ({
     forget: forgetSong,
   },
   repeat: () => repeatStore.getState().mode,
+  notePlayed: notePlayedQueued,
 });
 
 type Arrive = (arrival: ArrivalEvent) => void;
@@ -266,6 +276,15 @@ export function playQueuedNow(
   return startNow(players, from, song);
 }
 
+export async function playQueuedSongNow(
+  song: QueuedSong,
+  bars: WaveformBars,
+): Promise<AdvanceOutcome> {
+  const outcome = await playQueuedNow(song, bars);
+  if (outcome === ADVANCE_OUTCOME.playing) notePlayedQueued(song);
+  return outcome;
+}
+
 export function stopForMetronome(): void {
   const from = playingKind();
   if (from === 'stems') stemPlayerStore.getState().handToMetronome();
@@ -303,8 +322,10 @@ async function play(
   arrive({ kind: ARRIVAL.arriving, song });
   const outcome = await startNext(deps.players, from, song);
   if (outcome === ADVANCE_OUTCOME.displaced) await undo();
-  if (outcome === ADVANCE_OUTCOME.playing)
+  if (outcome === ADVANCE_OUTCOME.playing) {
+    if (queuedSongOfAdvance(next) !== null) deps.notePlayed?.(song);
     arrive({ kind: ARRIVAL.playing, song, place, ...said });
+  }
   return outcome === ADVANCE_OUTCOME.unplayable
     ? { played: PLAYED.tryNext, by: song.kind }
     : { played: PLAYED.settled, by: song.kind };

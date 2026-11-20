@@ -9,7 +9,6 @@ import {
   songCountIn,
   startAutoAdvance,
   startCardOrder,
-  startRepeatWrap,
   stopSongsForMetronome,
 } from '@kitbag/core-state';
 
@@ -45,7 +44,6 @@ configureStemPlayer({
 
 startAutoAdvance(autoAdvanceDeps(playerWaveBars));
 startCardOrder();
-startRepeatWrap();
 endSessionOnCardStop();
 stopSongsForMetronome();
 recordHeardSongs();

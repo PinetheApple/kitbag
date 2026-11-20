@@ -15,13 +15,13 @@ import {
   type Notice,
 } from '@kitbag/core-design';
 import {
-  entriesAfter,
   isPresetEntry,
   playQueuedNow,
+  playQueuedSongNow,
   stopForMetronome,
   queuedSongOf,
   REPEAT,
-  seeAllHint,
+  markRepeatAllHintSeen,
   setlistWraps,
   useLibrary,
   usePlayOrder,
@@ -30,6 +30,7 @@ import {
   useRepeatAllHintSeen,
   useRepeatMode,
   useStage,
+  useUpcoming,
   useUpNextCount,
   type LeftSetlist,
   type QueuedSong,
@@ -43,6 +44,7 @@ import { RepeatChip } from './RepeatChip.tsx';
 import {
   MetronomeHint,
   NowPlaying,
+  PendingRow,
   QueuedRow,
   SetlistRow,
 } from './QueueRows.tsx';
@@ -71,7 +73,8 @@ function QueuedSection({
 }: Pick<QueueListProps, 'onPlay' | 'onClear'>) {
   const styles = useStyles();
   const queue = usePlayOrder((s) => s.queue);
-  if (queue.length === 0) return null;
+  const { pending } = useUpcoming();
+  if (queue.length === 0 && pending.length === 0) return null;
   return (
     <>
       <SectionHeader
@@ -97,6 +100,13 @@ function QueuedSection({
             onPlay={onPlay}
           />
         ))}
+        {pending.map((song) => (
+          <PendingRow
+            key={`${song.kind}-${String(song.id)}`}
+            song={song}
+            onPlay={onPlay}
+          />
+        ))}
       </View>
     </>
   );
@@ -107,9 +117,9 @@ function SetlistSection({
   onLeave,
 }: Pick<QueueListProps, 'onOpen' | 'onLeave'>) {
   const styles = useStyles();
-  const { stage, cursor, restarted, name } = useStage();
+  const { stage, name } = useStage();
+  const { setlist: later } = useUpcoming();
   if (stage.setlistId === null) return null;
-  const later = entriesAfter(stage, cursor, restarted);
   return (
     <>
       <SectionHeader
@@ -239,6 +249,8 @@ export interface QueueSheetProps extends PlayOrderRoutes {
   readonly notice: Notice;
 }
 
+type StartSong = typeof playQueuedNow;
+
 const stemsOf = (stemSetId: number): QueuedSong => ({
   kind: 'stems',
   id: stemSetId,
@@ -250,8 +262,8 @@ function useQueuePlay(props: QueueSheetProps) {
   const exit = useLeaveAfterClose(props, props.visible);
   const { onDismiss, playsInPlace } = props;
   const startHere = useCallback(
-    (song: QueuedSong, committing: Promise<unknown>) => {
-      void committing.then(() => playQueuedNow(song, playerWaveBars));
+    (song: QueuedSong, committing: Promise<unknown>, start: StartSong) => {
+      void committing.then(() => start(song, playerWaveBars));
       if (!playsInPlace) exit.leaveFor(leaveForQueued(song));
       onDismiss();
     },
@@ -259,14 +271,14 @@ function useQueuePlay(props: QueueSheetProps) {
   );
   const play = useCallback(
     (song: QueuedSong) => {
-      startHere(song, playQueued(song));
+      startHere(song, playQueued(song), playQueuedSongNow);
     },
     [startHere, playQueued],
   );
   const open = useCallback(
     (entry: SetlistEntry) => {
       if (!isPresetEntry(entry)) {
-        startHere(stemsOf(entry.stemSetId), openEntry(entry));
+        startHere(stemsOf(entry.stemSetId), openEntry(entry), playQueuedNow);
         return;
       }
       stopForMetronome();
@@ -331,7 +343,7 @@ export function QueueSheet(props: QueueSheetProps) {
   const hintShown = hint !== undefined;
   const { closed: leaveOnClose } = actions;
   const closed = useCallback(() => {
-    if (hintShown) seeAllHint();
+    if (hintShown) markRepeatAllHintSeen();
     leaveOnClose();
   }, [hintShown, leaveOnClose]);
   return (

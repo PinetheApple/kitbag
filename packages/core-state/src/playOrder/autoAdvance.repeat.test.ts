@@ -29,11 +29,17 @@ afterEach(() => {
   });
 });
 
-function harness(mode: RepeatMode, loopHeld = false) {
+function harness(
+  mode: RepeatMode,
+  loopHeld = false,
+  next: SkipResult = nextSong,
+  outcome: AdvanceOutcome = ADVANCE_OUTCOME.playing,
+) {
   let leave: AdvanceListener = () => undefined;
   const advanceTo = vi.fn<(id: number) => Promise<AdvanceOutcome>>(() =>
-    Promise.resolve(ADVANCE_OUTCOME.playing),
+    Promise.resolve(outcome),
   );
+  const notePlayed = vi.fn();
   const stems = {
     ...restingPlayer(),
     onSongEnd: (listener: AdvanceListener) => {
@@ -43,7 +49,7 @@ function harness(mode: RepeatMode, loopHeld = false) {
     loopHeld: vi.fn(() => loopHeld),
     advanceTo,
   };
-  const peekNext = vi.fn(() => Promise.resolve(nextSong));
+  const peekNext = vi.fn(() => Promise.resolve(next));
   stops.push(
     startAutoAdvance({
       players: { stems, song: restingPlayer() },
@@ -55,13 +61,14 @@ function harness(mode: RepeatMode, loopHeld = false) {
       arrivals: createStore<ArrivalState>(() => ({ arrival: null })),
       ...NO_BACK,
       repeat: () => mode,
+      notePlayed,
     }),
   );
   const happens = async (cause: AdvanceCause) => {
     leave(cause);
     await new Promise((resolve) => setTimeout(resolve, 0));
   };
-  return { stems, peekNext, advanceTo, happens };
+  return { stems, peekNext, advanceTo, happens, notePlayed };
 }
 
 describe('Repeat one at the end of a song', () => {
@@ -99,4 +106,35 @@ describe('Repeat off and Repeat all at the end of a song', () => {
       expect(h.stems.replay).not.toHaveBeenCalled();
     },
   );
+});
+
+describe('a queued song kept for the next Repeat all round', () => {
+  it('is noted once it plays', async () => {
+    const h = harness(REPEAT.all);
+    await h.happens(ADVANCE_CAUSE.ended);
+    expect(h.notePlayed).toHaveBeenCalledExactlyOnceWith({
+      kind: 'stems',
+      id: NIGHT_BUS,
+    });
+  });
+
+  it.each([ADVANCE_OUTCOME.displaced, ADVANCE_OUTCOME.unplayable])(
+    'is not noted when it comes out %s',
+    async (outcome) => {
+      const h = harness(REPEAT.all, false, nextSong, outcome);
+      await h.happens(ADVANCE_CAUSE.ended);
+      expect(h.notePlayed).not.toHaveBeenCalled();
+    },
+  );
+
+  it('is never a setlist entry', async () => {
+    const entry: SkipResult = {
+      advance: { kind: ADVANCE.stems, stemSetId: NIGHT_BUS, setlistItemId: 3 },
+      skipped: null,
+    };
+    const h = harness(REPEAT.all, false, entry);
+    await h.happens(ADVANCE_CAUSE.ended);
+    expect(h.advanceTo).toHaveBeenCalledWith(NIGHT_BUS);
+    expect(h.notePlayed).not.toHaveBeenCalled();
+  });
 });

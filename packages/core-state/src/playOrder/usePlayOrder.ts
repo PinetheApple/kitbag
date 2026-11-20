@@ -6,17 +6,20 @@ import { libraryStore } from '../library/store.ts';
 import type { SetlistPlace } from './autoAdvance.ts';
 import {
   cursorOf,
-  entriesAfter,
   onStageOf,
+  upcoming,
   upNext,
   type OnStage,
+  type PlayOrder,
+  type RepeatRound,
   type SetlistCursor,
+  type Upcoming,
   type UpNext,
 } from './order.ts';
 import { useShownSong } from './nowPlaying.ts';
 import { heardStore } from './heard.ts';
 import { backFromOf, backOf } from './previous.ts';
-import { repeatStore, restartedAt, type RepeatMode } from './repeat.ts';
+import { repeatStore, roundOf, type RepeatMode } from './repeat.ts';
 import { playOrderStore, type PlayOrderStore } from './store.ts';
 
 export function usePlayOrder<T>(selector: (state: PlayOrderStore) => T): T {
@@ -73,7 +76,7 @@ export function useIsQueued(song: QueuedSong | null): boolean {
 export interface Stage {
   readonly stage: OnStage;
   readonly cursor: SetlistCursor | null;
-  readonly restarted: boolean;
+  readonly round: RepeatRound;
   readonly name: string;
 }
 
@@ -82,30 +85,42 @@ export function useStage(): Stage {
   const entries = useStore(libraryStore, (s) => s.entries);
   const loaded = useStore(libraryStore, (s) => s.loaded);
   const session = useStore(libraryStore, (s) => s.session);
+  const mode = useStore(repeatStore, (s) => s.mode);
+  const played = useStore(repeatStore, (s) => s.played);
   const restart = useStore(repeatStore, (s) => s.restart);
   return useMemo(() => {
     const stage = onStageOf({ setlists, entries, session });
     const name =
       setlists.find((s) => s.setlist.id === stage.setlistId)?.setlist.name ??
       '';
-    const restarted = restartedAt({ restart }, stage.setlistId, loaded);
-    return { stage, cursor: cursorOf(stage, loaded), restarted, name };
-  }, [setlists, entries, loaded, session, restart]);
+    const round = roundOf({ mode, played, restart }, stage.setlistId, loaded);
+    return { stage, cursor: cursorOf(stage, loaded), round, name };
+  }, [setlists, entries, loaded, session, mode, played, restart]);
+}
+
+function usePlayOrderNow(): PlayOrder {
+  const queue = usePlayOrder((s) => s.queue);
+  const { stage, cursor, round } = useStage();
+  return useMemo(
+    () => ({ queue, stage, cursor, round }),
+    [queue, stage, cursor, round],
+  );
 }
 
 export function useUpNext(): UpNext | undefined {
-  const queue = usePlayOrder((s) => s.queue);
-  const { stage, cursor, restarted } = useStage();
-  return useMemo(
-    () => upNext({ queue, stage, cursor, restarted }),
-    [queue, stage, cursor, restarted],
-  );
+  const order = usePlayOrderNow();
+  return useMemo(() => upNext(order), [order]);
+}
+
+export function useUpcoming(): Upcoming {
+  const order = usePlayOrderNow();
+  return useMemo(() => upcoming(order), [order]);
 }
 
 export function useUpNextCount(): number {
   const queueLength = usePlayOrder((s) => s.queue.length);
-  const { stage, cursor, restarted } = useStage();
-  return queueLength + entriesAfter(stage, cursor, restarted).length;
+  const { pending, setlist } = useUpcoming();
+  return queueLength + pending.length + setlist.length;
 }
 
 export interface SetlistSpot extends SetlistPlace {

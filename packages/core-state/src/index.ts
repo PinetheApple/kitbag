@@ -316,6 +316,7 @@ export {
   useUpNextCount,
   useRepeatAllHintSeen,
   useRepeatMode,
+  useUpcoming,
   type QueueSong,
   type QueueSongs,
   type SetlistSpot,
@@ -329,13 +330,13 @@ export {
   useShownStemSetId,
 } from './playOrder/nowPlaying.ts';
 export {
+  configureRepeatAllHintPersistence,
   cycleRepeat,
+  markRepeatAllHintSeen,
   REPEAT,
   repeatStore,
-  seeAllHint,
   type RepeatMode,
 } from './playOrder/repeat.ts';
-export { startRepeatWrap } from './playOrder/repeatWrap.ts';
 export { songShown, stemShown } from './playOrder/shown.ts';
 export { bindLibraryRemovals } from './playOrder/libraryRemovals.ts';
 export {
@@ -344,6 +345,7 @@ export {
   autoAdvanceDeps,
   handOverQueued,
   playQueuedNow,
+  playQueuedSongNow,
   stopForMetronome,
   startAutoAdvance,
   type Arrival,
@@ -535,6 +537,7 @@ export {
   configureSwipeHintPersistence,
   createSwipeHintStore,
   getSwipeHintStore,
+  type SeenFlagPersistence,
   type SwipeHintPersistence,
   type SwipeHintStore,
 } from './firstUse/store.ts';

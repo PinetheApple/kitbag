@@ -11,7 +11,9 @@ import type { QueuedSong } from '@kitbag/core-db';
 import { queuedSongOf } from '@kitbag/core-db';
 
 import { takeSnapshot } from '../library/snapshot.ts';
+import type { LoadedSong } from '../library/store.ts';
 import { cursorOf } from './order.ts';
+import { repeatStore, roundOf } from './repeat.ts';
 import { createPlayOrderStore } from './store.ts';
 
 const handles: ReturnType<typeof openTestDatabase>[] = [];
@@ -87,17 +89,20 @@ export async function setup(
     entries = (await setlist()) ?? [];
   };
   let onStage: number | null = null;
+  let loaded: LoadedSong = { presetId: 0, itemId: null, setlistId: gig.id };
   let moves = 0;
   const putOnStage = (itemId: number) => {
     onStage = itemId;
+    loaded = { presetId: 0, itemId, setlistId: gig.id };
     moves++;
   };
   const stage = () => ({ setlistId: gig.id, entries, skipped: [] });
   const order = createPlayOrderStore({
     queue: () => queue,
     stage,
-    cursor: () =>
-      cursorOf(stage(), { presetId: 0, itemId: onStage, setlistId: gig.id }),
+    cursor: () => cursorOf(stage(), loaded),
+    round: () => roundOf(repeatStore.getState(), gig.id, loaded),
+    loaded: () => loaded,
     refreshStage: reload,
     playSetlistEntry: (itemId) => {
       putOnStage(itemId);
@@ -115,7 +120,9 @@ export async function setup(
           written = moves;
         },
         restore: () => {
-          if (moves === written) onStage = at;
+          if (moves !== written) return;
+          onStage = at;
+          loaded = { presetId: 0, itemId: at, setlistId: gig.id };
         },
       };
     },
