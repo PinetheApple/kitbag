@@ -3,6 +3,7 @@ import {
   configureStemPlayer,
   metronomeStore,
   songCountIn,
+  startAutoAdvance,
 } from '@kitbag/core-state';
 
 import { getDatabase } from './database.ts';
@@ -32,3 +33,5 @@ configureStemPlayer({
       getDatabase().songLibrary.saveStemSetChosenTempoMode(id, mode),
   },
 });
+
+startAutoAdvance();

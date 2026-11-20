@@ -244,8 +244,18 @@ export {
 } from './playOrder/usePlayOrder.ts';
 export { bindStemSetRemovals } from './playOrder/stemSetRemovals.ts';
 export {
+  arrivalStore,
+  SKIP,
+  startAutoAdvance,
+  type Arrival,
+  type ArrivalState,
+  type SetlistPlace,
+  type Skip,
+} from './playOrder/autoAdvance.ts';
+export {
   entryName,
   SKIPPED_STEM_SONG,
+  SKIPPED_UNOPENED_STEM_SONG,
   STEMS_BADGE,
   stemSongTitle,
   UNKNOWN_STEM_SONG,
@@ -441,6 +451,7 @@ export {
   secondsToFrames,
 } from './stemPlayer/time.ts';
 export { SKIP_SECONDS } from './stemPlayer/songTransport.ts';
+export { ADVANCE_OUTCOME, type AdvanceOutcome } from './stemPlayer/songEnd.ts';
 export { RETIME_PLAYBACK_RATE } from './stemPlayer/retimeSpeed.ts';
 export {
   countedStart,
