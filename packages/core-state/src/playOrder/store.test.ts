@@ -1,140 +1,18 @@
-import { createPlayQueueRepository } from '@kitbag/core-db/src/play-queue-repository';
-import { createSetlistRepository } from '@kitbag/core-db/src/setlist-repository';
-import { createSongPresetRepository } from '@kitbag/core-db/src/song-preset-repository';
-import { openTestDatabase } from '@kitbag/core-db/src/sqlite.test-helper';
 import { deleteStemSet } from '@kitbag/core-db/src/stem-bundle-repository';
-import { insertStemSet } from '@kitbag/core-db/src/stem-entries.test-helper';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { takeSnapshot } from '../library/snapshot.ts';
-import { ADVANCE, cursorOf } from './order.ts';
-import { createPlayOrderStore } from './store.ts';
+import { ADVANCE } from './order.ts';
+import {
+  closeDatabases,
+  heldWrite,
+  queuedIds,
+  setup,
+} from './store.test-helper.ts';
 
-const handles: ReturnType<typeof openTestDatabase>[] = [];
-
-afterEach(() => {
-  for (const { connection } of handles.splice(0)) connection.close();
-});
+afterEach(closeDatabases);
 
 const DISK_FULL = 'disk full';
 const UNDO_FAILED = 'undo failed';
-
-function deferred() {
-  let resolve: () => void = () => undefined;
-  const promise = new Promise<void>((done) => {
-    resolve = done;
-  });
-  return { promise, resolve };
-}
-
-function heldWrite() {
-  const write = deferred();
-  let standing = true;
-  return {
-    afterWrite: () => write.promise,
-    stands: () => standing,
-    press: () => {
-      standing = false;
-    },
-    release: write.resolve,
-  };
-}
-
-async function setup(
-  afterWrite: () => Promise<void> = () => Promise.resolve(),
-) {
-  const handle = openTestDatabase();
-  handles.push(handle);
-  const repository = createPlayQueueRepository(handle);
-  const queue = {
-    ...repository,
-    takeThrough: async (stemSetId: number) => {
-      await repository.takeThrough(stemSetId);
-      await afterWrite();
-    },
-  };
-  const library = {
-    setlists: createSetlistRepository(handle),
-    presets: createSongPresetRepository(handle),
-  };
-  const [a, b, c] = [
-    await insertStemSet(handle.db, 'A'),
-    await insertStemSet(handle.db, 'B'),
-    await insertStemSet(handle.db, 'C'),
-  ];
-  const warmUp = await library.presets.create({
-    name: 'Warm-up',
-    bpm: 120,
-    beatsPerBar: 4,
-    subdivision: 1,
-    accents: new Uint8Array([2, 1, 1, 1]),
-    polyEnabled: false,
-    polyBeats: 0,
-    sound: 0,
-  });
-  const gig = await library.setlists.create('Gig');
-  const first = await library.setlists.addStemSet(gig.id, a);
-  const click = await library.setlists.add(gig.id, warmUp.id);
-  const last = await library.setlists.addStemSet(gig.id, b);
-  const setlist = async () => (await takeSnapshot(library)).entries[gig.id];
-  let entries = (await setlist()) ?? [];
-  const reload = async () => {
-    entries = (await setlist()) ?? [];
-  };
-  let onStage: number | null = null;
-  let moves = 0;
-  const putOnStage = (itemId: number) => {
-    onStage = itemId;
-    moves++;
-  };
-  const stage = () => ({ setlistId: gig.id, entries });
-  const order = createPlayOrderStore({
-    queue: () => queue,
-    stage,
-    cursor: () =>
-      cursorOf(stage(), { presetId: 0, itemId: onStage, setlistId: gig.id }),
-    refreshStage: reload,
-    playSetlistEntry: (itemId) => {
-      putOnStage(itemId);
-      return afterWrite();
-    },
-    loadPreset: (_presetId, itemId) => {
-      putOnStage(itemId);
-      return afterWrite();
-    },
-    markStage: () => {
-      const at = onStage;
-      let written = moves;
-      return {
-        wrote: () => {
-          written = moves;
-        },
-        restore: () => {
-          if (moves === written) onStage = at;
-        },
-      };
-    },
-  });
-  await order.getState().refresh();
-  return {
-    order,
-    queue,
-    library,
-    handle,
-    gig,
-    a,
-    b,
-    c,
-    first,
-    click,
-    last,
-    reload,
-    putOnStage,
-  };
-}
-
-const queuedIds = (order: Awaited<ReturnType<typeof setup>>['order']) =>
-  order.getState().queue.map((entry) => entry.stemSetId);
 
 describe('play order', () => {
   it('plays the queue first, then carries on through the setlist', async () => {
@@ -257,7 +135,7 @@ describe('a press while the next step is committed', () => {
     const commit = order.getState().commitNext(step.advance, hold.stands);
     hold.press();
     hold.release();
-    expect(await commit).toBe(false);
+    expect(await commit).toBeNull();
     expect(queuedIds(order)).toEqual([c]);
     expect(await order.getState().peekNext()).toEqual(step);
   });
@@ -270,7 +148,7 @@ describe('a press while the next step is committed', () => {
     const commit = order.getState().commitNext(step.advance, hold.stands);
     hold.press();
     hold.release();
-    expect(await commit).toBe(false);
+    expect(await commit).toBeNull();
     expect(await order.getState().peekNext()).toEqual(step);
   });
 
@@ -283,7 +161,7 @@ describe('a press while the next step is committed', () => {
     hold.press();
     putOnStage(first.id);
     hold.release();
-    expect(await commit).toBe(false);
+    expect(await commit).toBeNull();
     expect((await order.getState().peekNext()).advance).toMatchObject({
       kind: ADVANCE.open,
     });
@@ -298,7 +176,7 @@ describe('a press while the next step is committed', () => {
     hold.press();
     putOnStage(last.id);
     hold.release();
-    expect(await commit).toBe(false);
+    expect(await commit).toBeNull();
     expect((await order.getState().peekNext()).advance).toEqual({
       kind: ADVANCE.end,
     });
@@ -339,7 +217,7 @@ describe('a press while the next step is committed', () => {
     hold.press();
     await order.getState().enqueue(c);
     hold.release();
-    expect(await commit).toBe(false);
+    expect(await commit).toBeNull();
     expect(queuedIds(order)).toEqual([a, b, c]);
   });
 
@@ -350,7 +228,7 @@ describe('a press while the next step is committed', () => {
     const step = await order.getState().peekNext();
     const commit = order.getState().commitNext(step.advance, hold.stands);
     hold.release();
-    expect(await commit).toBe(true);
+    expect(await commit).not.toBeNull();
     expect(queuedIds(order)).toEqual([]);
   });
 });

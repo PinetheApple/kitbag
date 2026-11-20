@@ -41,7 +41,7 @@ export interface PlayOrderActions {
   advance: () => Promise<Advance>;
   skipToNext: () => Promise<SkipResult>;
   peekNext: () => Promise<SkipResult>;
-  commitNext: (next: Advance, stands?: () => boolean) => Promise<boolean>;
+  commitNext: (next: Advance, stands?: () => boolean) => Promise<Undo | null>;
   openEntry: (entry: SetlistEntry) => Promise<void>;
   commitOpen: (
     entry: PresetSetlistEntry,
@@ -67,6 +67,8 @@ export interface PlayOrderDeps {
   ) => Promise<unknown>;
   readonly markStage: () => StageMark;
 }
+
+export type Undo = () => Promise<void>;
 
 export interface StageMark {
   readonly wrote: () => void;
@@ -146,6 +148,8 @@ function queueActions(
 
 const ALWAYS = () => true;
 
+const NOTHING_TO_UNDO: Undo = () => Promise.resolve();
+
 function queueCommit(
   deps: PlayOrderDeps,
   get: Get,
@@ -212,7 +216,10 @@ function presetCommit(deps: PlayOrderDeps, entry: PresetSetlistEntry) {
   );
 }
 
-async function kept({ write, revert }: Commit, stands: () => boolean) {
+async function kept(
+  { write, revert }: Commit,
+  stands: () => boolean,
+): Promise<Undo | null> {
   try {
     await write();
   } catch (error) {
@@ -224,9 +231,9 @@ async function kept({ write, revert }: Commit, stands: () => boolean) {
     });
     throw error;
   }
-  if (stands()) return true;
+  if (stands()) return revert;
   await revert();
-  return false;
+  return null;
 }
 
 function orderActions(deps: PlayOrderDeps, get: Get, edits: QueueEdits) {
@@ -238,11 +245,11 @@ function orderActions(deps: PlayOrderDeps, get: Get, edits: QueueEdits) {
   };
   const commitNext = async (next: Advance, stands = ALWAYS) => {
     const commit = commitOf(deps, get, edits, next);
-    return commit === null || kept(commit, stands);
+    return commit === null ? NOTHING_TO_UNDO : kept(commit, stands);
   };
   const commitOpen = async (entry: PresetSetlistEntry, stands = ALWAYS) => {
     const commit = presetCommit(deps, entry);
-    return commit !== null && kept(commit, stands);
+    return commit !== null && (await kept(commit, stands)) !== null;
   };
   const openEntry = async (entry: SetlistEntry) => {
     const { setlistId } = deps.stage();

@@ -11,7 +11,7 @@ import {
 } from '../stemPlayer/songEnd.ts';
 import { stemPlayerStore } from '../stemPlayer/store.ts';
 import { ADVANCE, cursorOf, onStageOf, type Advance } from './order.ts';
-import { playOrderStore, type SkipResult } from './store.ts';
+import { playOrderStore, type SkipResult, type Undo } from './store.ts';
 
 export const SKIP = { deleted: 'deleted', unopened: 'unopened' } as const;
 
@@ -57,7 +57,7 @@ export interface AutoAdvanceDeps {
   readonly commitNext: (
     next: Advance,
     stands: () => boolean,
-  ) => Promise<boolean>;
+  ) => Promise<Undo | null>;
   readonly placeOf: (advance: Advance) => SetlistPlace | null;
   readonly candidates: () => number;
   readonly stillEnded: () => boolean;
@@ -127,11 +127,13 @@ async function play(
   next: PlayAdvance,
   skipped: Skip | null,
 ): Promise<Played> {
-  if (!(await deps.commitNext(next, deps.stillEnded))) return PLAYED.settled;
+  const undo = await deps.commitNext(next, deps.stillEnded);
+  if (undo === null) return PLAYED.settled;
   const { stemSetId } = next;
   const place = deps.placeOf(next);
   arrive({ kind: ARRIVAL.arriving, stemSetId });
   const outcome = await deps.advanceTo(stemSetId);
+  if (outcome === ADVANCE_OUTCOME.displaced) await undo();
   if (outcome === ADVANCE_OUTCOME.playing)
     arrive({ kind: ARRIVAL.playing, stemSetId, place, skipped });
   return outcome === ADVANCE_OUTCOME.unplayable
