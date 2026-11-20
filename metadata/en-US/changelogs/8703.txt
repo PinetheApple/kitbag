@@ -1,0 +1,1 @@
+• Fixed a stem song sometimes playing at the previous song's speed after a quick speed change and a song switch.
