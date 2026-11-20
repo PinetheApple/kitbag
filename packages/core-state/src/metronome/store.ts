@@ -110,6 +110,7 @@ export interface MetronomeActions {
   setBarMute: (config: BarMuteConfig) => void;
   setCountIn: (config: CountInConfig) => void;
   setCountInScope: (scope: CountInScope) => void;
+  owePattern: () => void;
   start: () => void;
   stop: () => void;
   pause: () => void;
@@ -386,6 +387,7 @@ export function createMetronomeStore(
       setCountInScope: (countInScope) => {
         set({ countInScope });
       },
+      owePattern: guard.owe,
       resetPractice: () => {
         set((s) => ({ practice: resetPracticeClock(s.practice, now()) }));
       },

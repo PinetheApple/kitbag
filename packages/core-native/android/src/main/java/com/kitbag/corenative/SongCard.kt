@@ -80,7 +80,7 @@ internal class SongCard(
   private fun progress(): SongProgress {
     val playing = MixerEngine.playing()
     if (playing) countingIn = false
-    return SongProgress(playing, MixerEngine.position(), countingIn)
+    return SongProgress(playing, MixerEngine.position(), countingIn, MixerEngine.rate())
   }
 
   private fun onTick() {
@@ -186,4 +186,6 @@ private object MixerEngine : SongEngine {
   override fun position(): Long = EngineTransport.mixerPosition()
 
   override fun playing(): Boolean = EngineTransport.mixerPlaying()
+
+  fun rate(): Float = EngineTransport.mixerRate().toFloat()
 }

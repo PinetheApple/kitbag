@@ -1,4 +1,10 @@
-import { KB_ACCENT, KB_SOUND_NAMES, customSoundId } from '@kitbag/core-native';
+import {
+  KB_ACCENT,
+  KB_COUNT_IN_OFF,
+  KB_SOUND_NAMES,
+  customSoundId,
+  type KbCountInBars,
+} from '@kitbag/core-native';
 import { customSoundViews } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
@@ -24,13 +30,20 @@ const RIMSHOT = {
 };
 const RIM_ID = customSoundId(RIMSHOT.slot);
 
+const TWO_BARS = 2;
+
 function chipFor(
   group: string,
   accents: readonly KB_ACCENT[] = [ACC, NOR, NOR, NOR],
   hasGrid = true,
+  countInBars: KbCountInBars = KB_COUNT_IN_OFF,
 ) {
   const chips = clickChips(
-    { sounds: { normal: WOODBLOCK, accent: COWBELL }, accents },
+    {
+      countInBars,
+      sounds: { normal: WOODBLOCK, accent: COWBELL },
+      accents,
+    },
     [],
     hasGrid,
   );
@@ -41,7 +54,11 @@ describe('clickChips', () => {
   it('draws Count-in, Click and Accent in that order', () => {
     expect(
       clickChips(
-        { sounds: { normal: WOODBLOCK, accent: COWBELL }, accents: [] },
+        {
+          countInBars: KB_COUNT_IN_OFF,
+          sounds: { normal: WOODBLOCK, accent: COWBELL },
+          accents: [],
+        },
         [],
         true,
       ).map((chip) => chip.group),
@@ -65,17 +82,33 @@ describe('clickChips', () => {
     expect(chip?.active).toBe(false);
   });
 
-  it('mutes the Count-in chip and says why aloud', () => {
-    const chip = chipFor(CLICK_GROUP.countIn);
-    expect(chip?.muted).toBe(true);
-    expect(chip?.spoken).toContain('Arrives with count-in for songs.');
+  it('names the Count-in chip, unlit, while the count-in is off', () => {
+    expect(chipFor(CLICK_GROUP.countIn)).toMatchObject({
+      label: 'Count-in',
+      spoken: 'Count-in off, change the count-in',
+      active: false,
+      muted: false,
+    });
+  });
+
+  it("lights the Count-in chip with the song's bars", () => {
+    expect(chipFor(CLICK_GROUP.countIn, [ACC], true, TWO_BARS)).toMatchObject({
+      label: 'Count-in: 2 bars',
+      spoken: 'Count-in: 2 bars, change the count-in',
+      active: true,
+      muted: false,
+    });
   });
 });
 
 describe('the Click chip with a custom sound', () => {
   const soundChip = (unavailable: readonly number[]) =>
     clickChips(
-      { sounds: { normal: RIM_ID, accent: COWBELL }, accents: [] },
+      {
+        countInBars: KB_COUNT_IN_OFF,
+        sounds: { normal: RIM_ID, accent: COWBELL },
+        accents: [],
+      },
       customSoundViews([RIMSHOT], unavailable),
       true,
     ).find((chip) => chip.group === CLICK_GROUP.sound)?.label;
@@ -104,14 +137,13 @@ describe('the chips with no grid', () => {
 });
 
 describe('the sheet options', () => {
-  it('offers the engine count-in lengths, all muted', () => {
+  it('offers the engine count-in lengths', () => {
     expect(COUNT_IN_OPTIONS.map((o) => o.label)).toEqual([
       'Off',
       '1 bar',
       '2 bars',
       '4 bars',
     ]);
-    expect(COUNT_IN_OPTIONS.every((o) => o.disabled)).toBe(true);
   });
 });
 

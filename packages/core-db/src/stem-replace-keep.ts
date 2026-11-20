@@ -19,6 +19,7 @@ import {
   type LyricLineTimes,
 } from './stem-lyrics';
 import { applyUserNames, readUserNames, type UserNames } from './stem-rename';
+import { STEM_SET_PITCH } from './stem-speed-key';
 import {
   carriedTempoMode,
   saveChosenTempoMode,
@@ -41,6 +42,7 @@ interface KeptOnReplace {
   readonly meter: MeterOverride;
   readonly tempoMode: TempoMode | null;
   readonly speed: number;
+  readonly pitch: number;
   readonly click: StemSetClick;
   readonly mixes: readonly RoleMix[];
 }
@@ -86,6 +88,7 @@ export async function readKept(
       barOneSeconds: stemSets.barOneSeconds,
       ...STEM_SET_TEMPO_COLUMNS,
       speed: stemSets.speed,
+      pitch: stemSets.pitch,
       clickGrouping: stemSets.clickGrouping,
       clickRate: stemSets.clickRate,
       jobId: stemSets.stemdeckJobId,
@@ -103,6 +106,7 @@ export async function readKept(
       bundle.tempo,
     ),
     speed: row.speed,
+    pitch: bundle.hasMix ? STEM_SET_PITCH.unshifted : row.pitch,
     click: stemSetClickOf(row),
     mixes: bundle.hasMix ? [] : await readRoleMixes(db, id),
   };
@@ -120,7 +124,7 @@ export async function applyKept(
   await saveStemSetClick(db, id, kept.click);
   await db
     .update(stemSets)
-    .set({ speed: kept.speed })
+    .set({ speed: kept.speed, pitch: kept.pitch })
     .where(eq(stemSets.id, id));
   await applyRoleMixes(db, id, kept.mixes);
 }

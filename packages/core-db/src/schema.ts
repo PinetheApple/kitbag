@@ -204,6 +204,7 @@ export const stemSets = sqliteTable(
     lyricsInstrumental: integer('lyrics_instrumental', { mode: 'boolean' }),
     lyricsRetimed: text('lyrics_retimed'),
     speed: real('speed').notNull().default(1),
+    pitch: integer('pitch').notNull().default(0),
     sampleRate: integer('sample_rate'),
     folder: text('folder'),
     renamed: integer('renamed', { mode: 'boolean' }).notNull().default(false),

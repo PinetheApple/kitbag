@@ -83,3 +83,34 @@ describe('song facts', () => {
     expect(shortKeyName(null, 'minor')).toBe(null);
   });
 });
+
+describe('song facts at a changed speed and key', () => {
+  const at = (speed: number, key: number, source = FULL) =>
+    songFacts(source, { speed, key });
+
+  it('shows the BPM that plays at the speed', () => {
+    const { bpm } = at(0.75, 0, { ...FULL, bpm: 123 });
+    expect([bpm?.value, bpm?.spoken]).toEqual(['92', '92 beats per minute']);
+  });
+
+  it.each([
+    ['F', 'major', -2, 'E♭ maj', 'key E flat major'],
+    ['F', 'major', 1, 'F♯ maj', 'key F sharp major'],
+    ['A', 'minor', 3, 'C min', 'key C minor'],
+    ['E', 'minor', 4, 'G♯ min', 'key G sharp minor'],
+    ['Bb', 'major', 2, 'C maj', 'key C major'],
+    ['F#', 'minor', -6, 'C min', 'key C minor'],
+    ['C', null, -1, 'B', 'key B'],
+  ])('%s %s moved %i plays as %s', (key, scale, semitones, text, spoken) => {
+    const fact = at(1, semitones, { ...FULL, key, scale }).key;
+    expect([fact?.text, fact?.spoken]).toEqual([text, spoken]);
+  });
+
+  it('keeps the recorded name when the key is unshifted', () => {
+    expect(at(1, 0, { ...FULL, key: 'F#' }).key?.text).toBe('F# maj');
+  });
+
+  it('shows no key it cannot name after a shift', () => {
+    expect(at(1, 2, { ...FULL, key: 'H' }).key).toBeNull();
+  });
+});

@@ -30,5 +30,7 @@ configureStemPlayer({
       getDatabase().songLibrary.saveStemSetClick(id, patch),
     saveStemSetChosenTempoMode: (id, mode) =>
       getDatabase().songLibrary.saveStemSetChosenTempoMode(id, mode),
+    saveStemSetSpeedKey: (id, change) =>
+      getDatabase().songLibrary.saveStemSetSpeedKey(id, change),
   },
 });

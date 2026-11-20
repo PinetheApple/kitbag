@@ -26,6 +26,7 @@ import com.kitbag.corenative.library.DatabaseCopies
 import com.kitbag.corenative.library.DocumentPicker
 import com.kitbag.corenative.library.ExportFiles
 import com.kitbag.corenative.library.FileShare
+import com.kitbag.corenative.library.LibraryDeletes
 import com.kitbag.corenative.library.LibraryErrors
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
@@ -38,6 +39,7 @@ import com.kitbag.corenative.library.toMap
 import com.kitbag.corenative.library.SupportedAudio
 import com.kitbag.corenative.library.VolumeWatcher
 import com.kitbag.corenative.library.move.DataFolderBridge
+import com.kitbag.corenative.library.move.DataFolderMoves
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ExecutorService
@@ -60,6 +62,11 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     DataFolderBridge.Events(::emitOnMoveProgress, ::emitOnMoveFinished, ::emitOnDataFolderChanged),
     ::rejectLogged,
   )
+  private val deletes = LibraryDeletes(
+    DataFolder.get(reactContext),
+    DataFolderMoves.get(reactContext).leftovers,
+    onAwayChanged = ::emitOnDataFolderChanged,
+  ) { message, cause -> Log.w(TAG, message, cause) }
   private val volumes = VolumeWatcher(reactContext, ::onVolumesChanged)
   private val databaseCopies =
     DatabaseCopies(reactContext::getDatabasePath) { message, cause -> Log.w(TAG, message, cause) }
@@ -338,11 +345,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun deleteLibraryFile(relativePath: String, promise: Promise) {
     io.execute {
       try {
-        dataFolder().importing {
-          val target = LibraryPaths.resolve(libraryRoot(), relativePath)
-          if (target.isDirectory) throw IOException("$target is a directory")
-          if (target.exists() && !target.delete()) throw IOException("Could not delete $target")
-        }
+        deletes.file(relativePath)
         promise.resolve(null)
       } catch (e: Exception) {
         rejectLogged(promise, E_DELETE_FAILED, "Delete failed", e)
@@ -351,16 +354,13 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   }
 
   override fun deleteSongFolder(folderName: String, promise: Promise) {
-    deleteFolder(promise) { LibraryPaths.songFolder(libraryRoot(), folderName) }
+    deleteFolder(promise) { deletes.songFolder(folderName) }
   }
 
-  private fun deleteFolder(promise: Promise, resolveFolder: () -> File) {
+  private fun deleteFolder(promise: Promise, delete: () -> Unit) {
     io.execute {
       try {
-        dataFolder().importing {
-          val folder = resolveFolder()
-          if (folder.exists() && !folder.deleteRecursively()) throw IOException("Could not delete $folder")
-        }
+        delete()
         promise.resolve(null)
       } catch (e: Exception) {
         rejectLogged(promise, E_DELETE_FAILED, "Delete failed", e)
@@ -401,7 +401,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   }
 
   override fun deleteStemFolder(folderName: String, promise: Promise) {
-    deleteFolder(promise) { LibraryPaths.stemFolder(libraryRoot(), folderName) }
+    deleteFolder(promise) { deletes.stemFolder(folderName) }
   }
 
   override fun readWaveform(relativePath: String, buckets: Double, promise: Promise) {

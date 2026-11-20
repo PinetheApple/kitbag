@@ -12,7 +12,7 @@ import {
   takeAfterTap,
   withTimes,
 } from './lyrics.ts';
-import { retimeSpeed } from './retimeSpeed.ts';
+import type { RetimeSpeed } from './retimeSpeed.ts';
 import type { StemPlayerRecords } from './runtime.ts';
 import { sessionGate } from './sessionGate.ts';
 import type { SongStart } from './songStart.ts';
@@ -50,7 +50,8 @@ export function retimeAnchor({
 export function retimeActions(
   { set, get, runtimeOf, session }: ActionContext,
   deferRestore: (restore: Promise<void>) => void,
-  start: Pick<SongStart, 'counting' | 'rateSet'>,
+  start: Pick<SongStart, 'counting'>,
+  speed: RetimeSpeed,
 ): Pick<
   StemPlayerActions,
   | 'beginRetime'
@@ -63,7 +64,6 @@ export function retimeActions(
   | 'resetRetime'
 > {
   const { busy, call } = sessionGate(session);
-  const speed = retimeSpeed(() => runtimeOf().commands, session, start.rateSet);
 
   const saveTiming = async (
     shown: LyricLineTimes,
