@@ -1,0 +1,1 @@
+• Stem songs can now play slower (50–100%, in 5% steps) and in another key (−6 to +6 semitones), for the whole song or per stem. Drums and the click are never transposed. Speed and key are saved with the song and restored when it opens.
