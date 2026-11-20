@@ -1,0 +1,1 @@
+• When a stem song ends, the next song in Up next or the setlist opens and plays by itself, with its count-in if it has one. It stops at a metronome song and offers Open, and stops quietly at the end of the set.
