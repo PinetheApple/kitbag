@@ -1,25 +1,20 @@
 // Write path only; 60fps reads go through the JSI HostObject (SPEC §13.3).
 // Frame arguments are uint64 engine frames as doubles, exact up to KB_MAX_EXACT_FRAME.
 
-import type { TurboModule } from 'react-native';
+import type { CodegenTypes, TurboModule } from 'react-native';
 import { TurboModuleRegistry } from 'react-native';
-import type {
-  Double,
-  EventEmitter,
-  Int32,
-} from 'react-native/Libraries/Types/CodegenTypes';
 
 /** A notification, lock-screen or headset action the engine already applied. */
 export type TransportEvent = Readonly<{
   playback: string;
-  bpm: Double;
+  bpm: CodegenTypes.Double;
   rampRunning: boolean;
-  practicePlayedMs: Double;
-  practiceStretchStartedAt: Double;
-  cardNumber: Int32;
+  practicePlayedMs: CodegenTypes.Double;
+  practiceStretchStartedAt: CodegenTypes.Double;
+  cardNumber: CodegenTypes.Int32;
   action: string;
-  tempoStep: Int32;
-  engineBpm: Double;
+  tempoStep: CodegenTypes.Int32;
+  engineBpm: CodegenTypes.Double;
 }>;
 
 export type TransportSetlist = Readonly<{
@@ -28,16 +23,16 @@ export type TransportSetlist = Readonly<{
 
 export type TransportShowState = Readonly<{
   playback: string;
-  bpm: Double;
+  bpm: CodegenTypes.Double;
   rampRunning: boolean;
-  beatsPerBar: Int32;
-  beatUnit: Int32;
-  minBpm: Double;
-  maxBpm: Double;
-  practicePlayedMs: Double;
-  practiceStretchStartedAt: Double;
+  beatsPerBar: CodegenTypes.Int32;
+  beatUnit: CodegenTypes.Int32;
+  minBpm: CodegenTypes.Double;
+  maxBpm: CodegenTypes.Double;
+  practicePlayedMs: CodegenTypes.Double;
+  practiceStretchStartedAt: CodegenTypes.Double;
   setlist: TransportSetlist | null;
-  cardNumber: Int32;
+  cardNumber: CodegenTypes.Int32;
 }>;
 
 export type SongTransportShowState = Readonly<{
@@ -45,10 +40,10 @@ export type SongTransportShowState = Readonly<{
   countingIn: boolean;
   title: string;
   artist: string | null;
-  durationFrames: Double;
-  restartFromFrame: Double;
-  skipSeconds: Double;
-  session: Int32;
+  durationFrames: CodegenTypes.Double;
+  restartFromFrame: CodegenTypes.Double;
+  skipSeconds: CodegenTypes.Double;
+  session: CodegenTypes.Int32;
   followsPlayOrder: boolean;
 }>;
 
@@ -59,8 +54,8 @@ export type SongTransportOrder = Readonly<{
 
 export type SongTransportRequest = Readonly<{
   action: 'play' | 'pause' | 'stop' | 'seek' | 'next' | 'previous';
-  frame: Double | null;
-  shownSession: Int32;
+  frame: CodegenTypes.Double | null;
+  shownSession: CodegenTypes.Int32;
 }>;
 
 export type OutputRoute = Readonly<{
@@ -72,21 +67,21 @@ export type OutputRoute = Readonly<{
 
 /** `path` is where the render writes, whatever `result` says. */
 export type MixdownStartReply = Readonly<{
-  result: Int32;
+  result: CodegenTypes.Int32;
   path: string;
 }>;
 
 /** kb_fit_constant_tempo's outputs; each reads 0 unless `result` is KB_OK. */
 export type ConstantTempoFit = Readonly<{
-  result: Int32;
-  bpm: Double;
-  anchorSec: Double;
-  beatsPerBar: Int32;
+  result: CodegenTypes.Int32;
+  bpm: CodegenTypes.Double;
+  anchorSec: CodegenTypes.Double;
+  beatsPerBar: CodegenTypes.Int32;
 }>;
 
 export type KitbagCommandsConstants = Readonly<{
   versionName: string;
-  versionCode: Double;
+  versionCode: CodegenTypes.Double;
 }>;
 
 export interface Spec extends TurboModule {
@@ -96,93 +91,119 @@ export interface Spec extends TurboModule {
   engineHold(): Promise<number>;
   engineRelease(): void;
 
-  metronomeStart(anchorFrame: Double): void;
+  metronomeStart(anchorFrame: CodegenTypes.Double): void;
   metronomeStop(): void;
   metronomePause(): void;
 
   rigClickStart(
-    bpm: Double,
-    subdivision: Int32,
-    startFrame: Double,
+    bpm: CodegenTypes.Double,
+    subdivision: CodegenTypes.Int32,
+    startFrame: CodegenTypes.Double,
   ): Promise<number>;
   rigClickStop(): void;
   rigClickIsActive(): Promise<boolean>;
 
-  setTempo(bpm: Double): void;
+  setTempo(bpm: CodegenTypes.Double): void;
   setGrid(
-    beatTimesSec: readonly Double[],
-    downbeatIndices: readonly Int32[],
-    anchorFrame: Double,
+    beatTimesSec: readonly CodegenTypes.Double[],
+    downbeatIndices: readonly CodegenTypes.Int32[],
+    anchorFrame: CodegenTypes.Double,
   ): Promise<number>;
   clearGrid(): void;
   /** Beats go to the fit as 32-bit floats. Rejects E_FIT_FAILED if the bridge throws. */
   fitConstantTempo(
-    beatTimesSec: readonly Double[],
-    downbeatIndices: readonly Int32[],
+    beatTimesSec: readonly CodegenTypes.Double[],
+    downbeatIndices: readonly CodegenTypes.Int32[],
   ): Promise<ConstantTempoFit>;
-  setGridGrouping(sizes: readonly Int32[]): Promise<number>;
-  setGridRate(rate: Int32): Promise<number>;
+  setGridGrouping(sizes: readonly CodegenTypes.Int32[]): Promise<number>;
+  setGridRate(rate: CodegenTypes.Int32): Promise<number>;
   metronomeFollowMixer(enabled: boolean): void;
 
-  setBeats(beatsPerBar: Int32, denominator: Int32): void;
-  setSubdivision(subdivision: Int32): void;
-  setSubdivisionAccents(subdivision: Int32, slotMask: Int32): void;
-  setAccent(beatIndex: Int32, accent: Int32): void;
-  setPoly(enabled: boolean, beats: Int32): void;
-  setPolyAccent(beatIndex: Int32, accent: Int32): void;
-  setPolyAgainst(mainBeats: Int32): void;
-  setSounds(normalSound: Int32, accentSound: Int32): void;
-  previewSound(sound: Int32, accented: boolean): void;
-  setCountIn(bars: Int32, distinct: boolean, sound: Int32): void;
-  setVolume(volume: Double): void;
-  setLatencyOffset(latencyMs: Double): void;
+  setBeats(
+    beatsPerBar: CodegenTypes.Int32,
+    denominator: CodegenTypes.Int32,
+  ): void;
+  setSubdivision(subdivision: CodegenTypes.Int32): void;
+  setSubdivisionAccents(
+    subdivision: CodegenTypes.Int32,
+    slotMask: CodegenTypes.Int32,
+  ): void;
+  setAccent(beatIndex: CodegenTypes.Int32, accent: CodegenTypes.Int32): void;
+  setPoly(enabled: boolean, beats: CodegenTypes.Int32): void;
+  setPolyAccent(
+    beatIndex: CodegenTypes.Int32,
+    accent: CodegenTypes.Int32,
+  ): void;
+  setPolyAgainst(mainBeats: CodegenTypes.Int32): void;
+  setSounds(
+    normalSound: CodegenTypes.Int32,
+    accentSound: CodegenTypes.Int32,
+  ): void;
+  previewSound(sound: CodegenTypes.Int32, accented: boolean): void;
+  setCountIn(
+    bars: CodegenTypes.Int32,
+    distinct: boolean,
+    sound: CodegenTypes.Int32,
+  ): void;
+  setVolume(volume: CodegenTypes.Double): void;
+  setLatencyOffset(latencyMs: CodegenTypes.Double): void;
 
   setRamp(
     enabled: boolean,
-    startBpm: Double,
-    targetBpm: Double,
-    stepBpm: Double,
-    interval: Double,
-    unit: Int32,
+    startBpm: CodegenTypes.Double,
+    targetBpm: CodegenTypes.Double,
+    stepBpm: CodegenTypes.Double,
+    interval: CodegenTypes.Double,
+    unit: CodegenTypes.Int32,
     loop: boolean,
   ): void;
-  setBarMute(enabled: boolean, playBars: Int32, muteBars: Int32): void;
+  setBarMute(
+    enabled: boolean,
+    playBars: CodegenTypes.Int32,
+    muteBars: CodegenTypes.Int32,
+  ): void;
 
-  loadTrack(track: Int32, relativePath: string): Promise<number>;
-  mixerUnloadTrack(track: Int32): void;
-  mixerSetGain(track: Int32, gain: Double): void;
-  mixerSetMute(track: Int32, muted: boolean): void;
-  mixerSetSolo(track: Int32, soloed: boolean): void;
-  mixerSetMasterGain(gain: Double): void;
+  loadTrack(track: CodegenTypes.Int32, relativePath: string): Promise<number>;
+  mixerUnloadTrack(track: CodegenTypes.Int32): void;
+  mixerSetGain(track: CodegenTypes.Int32, gain: CodegenTypes.Double): void;
+  mixerSetMute(track: CodegenTypes.Int32, muted: boolean): void;
+  mixerSetSolo(track: CodegenTypes.Int32, soloed: boolean): void;
+  mixerSetMasterGain(gain: CodegenTypes.Double): void;
   mixerMasterGain(): Promise<number>;
   mixerPlay(): void;
   mixerPause(): void;
   mixerStop(): void;
-  mixerSeek(frame: Double): void;
+  mixerSeek(frame: CodegenTypes.Double): void;
   /** Seek first: it starts from the current head. */
   songCountIn(
-    endFrame: Double,
-    beatFrames: Double,
-    beatsPerBar: Int32,
+    endFrame: CodegenTypes.Double,
+    beatFrames: CodegenTypes.Double,
+    beatsPerBar: CodegenTypes.Int32,
     startClick: boolean,
   ): Promise<number>;
   songPause(): void;
   songStop(): void;
-  mixerSetLoop(startFrame: Double, endFrame: Double): Promise<number>;
+  mixerSetLoop(
+    startFrame: CodegenTypes.Double,
+    endFrame: CodegenTypes.Double,
+  ): Promise<number>;
   mixerClearLoop(): Promise<number>;
-  mixerSetRate(rate: Double): Promise<number>;
+  mixerSetRate(rate: CodegenTypes.Double): Promise<number>;
   mixerRate(): Promise<number>;
-  mixerSetTrackPitch(track: Int32, semitones: Int32): Promise<number>;
-  mixerTrackPitch(track: Int32): Promise<number>;
-  mixerTrackFrames(track: Int32): Promise<number>;
+  mixerSetTrackPitch(
+    track: CodegenTypes.Int32,
+    semitones: CodegenTypes.Int32,
+  ): Promise<number>;
+  mixerTrackPitch(track: CodegenTypes.Int32): Promise<number>;
+  mixerTrackFrames(track: CodegenTypes.Int32): Promise<number>;
   /** Rejects E_BAD_FILE_NAME for a name unsafe as a path; old exports are cleared. */
   mixdownStart(fileName: string): Promise<MixdownStartReply>;
   mixdownCancel(): void;
 
   /** Rejects E_BAD_FILE_NAME for a name unsafe as a click sound file. */
-  loadCustomSound(slot: Int32, fileName: string): Promise<number>;
-  clearCustomSound(slot: Int32): void;
-  customSoundLoaded(slot: Int32): Promise<boolean>;
+  loadCustomSound(slot: CodegenTypes.Int32, fileName: string): Promise<number>;
+  clearCustomSound(slot: CodegenTypes.Int32): void;
+  customSoundLoaded(slot: CodegenTypes.Int32): Promise<boolean>;
 
   // --- Tuner (kitbag_tuner_api.h) ------------------------------------------
   //
@@ -193,13 +214,13 @@ export interface Spec extends TurboModule {
   tunerStart(): Promise<number>;
   tunerStop(): void;
   tunerSetTuning(
-    instrument: Int32,
-    stringMidis: readonly Int32[],
+    instrument: CodegenTypes.Int32,
+    stringMidis: readonly CodegenTypes.Int32[],
   ): Promise<number>;
-  tunerSetTargetString(stringIndex: Int32): Promise<number>;
+  tunerSetTargetString(stringIndex: CodegenTypes.Int32): Promise<number>;
   tunerSetChromatic(): Promise<number>;
-  tunerSetA4(a4Hz: Double): Promise<number>;
-  tunerResetNotePresence(pauseMs: Double): Promise<number>;
+  tunerSetA4(a4Hz: CodegenTypes.Double): Promise<number>;
+  tunerResetNotePresence(pauseMs: CodegenTypes.Double): Promise<number>;
 
   transportShow(state: TransportShowState): void;
   transportHide(): void;
@@ -210,16 +231,16 @@ export interface Spec extends TurboModule {
   setKeepScreenOn(on: boolean): void;
   setAppNightMode(mode: string): void;
   setSystemBarAppearance(light: boolean): void;
-  readonly onTransport: EventEmitter<TransportEvent>;
+  readonly onTransport: CodegenTypes.EventEmitter<TransportEvent>;
   /** A stop from the song notification or media session; during a count-in it follows
    *  that onSongTransport stop. mixerStop() does not fire it. */
-  readonly onSongStopped: EventEmitter<void>;
+  readonly onSongStopped: CodegenTypes.EventEmitter<void>;
   /** The mixer played onto the song's last frame and stopped; read on the song card's tick, so it lags. */
-  readonly onSongEnded: EventEmitter<void>;
-  readonly onSongTransport: EventEmitter<SongTransportRequest>;
+  readonly onSongEnded: CodegenTypes.EventEmitter<void>;
+  readonly onSongTransport: CodegenTypes.EventEmitter<SongTransportRequest>;
   getOutputRoute(): Promise<OutputRoute>;
-  readonly onOutputRoute: EventEmitter<OutputRoute>;
-  focusReaderView(viewTag: Int32): void;
+  readonly onOutputRoute: CodegenTypes.EventEmitter<OutputRoute>;
+  focusReaderView(viewTag: CodegenTypes.Int32): void;
 }
 
 // Lazy: resolving throws until the native module is registered, and the barrel

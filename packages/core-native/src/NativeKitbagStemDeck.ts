@@ -1,13 +1,8 @@
-import type { TurboModule } from 'react-native';
+import type { CodegenTypes, TurboModule } from 'react-native';
 import { TurboModuleRegistry } from 'react-native';
-import type {
-  Double,
-  EventEmitter,
-  Int32,
-} from 'react-native/Libraries/Types/CodegenTypes';
 
 export type StemDeckText = Readonly<{
-  status: Int32;
+  status: CodegenTypes.Int32;
   contentType: string;
   body: string;
 }>;
@@ -22,8 +17,8 @@ export type StemDeckProbe = Readonly<{
 export type StemDeckServer = Readonly<{
   origin: string;
   fingerprint: string | null;
-  trustedAt: Double;
-  lastUsedAt: Double;
+  trustedAt: CodegenTypes.Double;
+  lastUsedAt: CodegenTypes.Double;
   plain: boolean;
 }>;
 
@@ -32,19 +27,19 @@ export type StemDeckImportRequest = Readonly<{
   title: string;
   stems: readonly string[];
   replace: string;
-  replaceTarget: Double | null;
+  replaceTarget: CodegenTypes.Double | null;
 }>;
 
 export type StemDeckImportItem = Readonly<{
   jobId: string;
   title: string;
   replace: string;
-  replaceTarget: Double | null;
+  replaceTarget: CodegenTypes.Double | null;
   state: string;
   failure: string | null;
-  bytesDone: Double;
-  bytesTotal: Double;
-  bytesFree: Double;
+  bytesDone: CodegenTypes.Double;
+  bytesTotal: CodegenTypes.Double;
+  bytesFree: CodegenTypes.Double;
   fileUri: string | null;
 }>;
 
@@ -64,20 +59,20 @@ export type StemDeckScanLook = Readonly<{
   barInk: string;
   actionInk: string;
   scrimColor: string;
-  scrimOpacity: Double;
+  scrimOpacity: CodegenTypes.Double;
   promptInk: string;
   cornerColor: string;
-  frameDp: Double;
-  cornerDp: Double;
-  strokeDp: Double;
-  cornerRadiusDp: Double;
-  promptGapDp: Double;
-  promptInsetDp: Double;
-  barHeightDp: Double;
-  touchTargetDp: Double;
-  titleSp: Double;
-  actionSp: Double;
-  promptSp: Double;
+  frameDp: CodegenTypes.Double;
+  cornerDp: CodegenTypes.Double;
+  strokeDp: CodegenTypes.Double;
+  cornerRadiusDp: CodegenTypes.Double;
+  promptGapDp: CodegenTypes.Double;
+  promptInsetDp: CodegenTypes.Double;
+  barHeightDp: CodegenTypes.Double;
+  touchTargetDp: CodegenTypes.Double;
+  titleSp: CodegenTypes.Double;
+  actionSp: CodegenTypes.Double;
+  promptSp: CodegenTypes.Double;
 }>;
 
 export type StemDeckScan = Readonly<{
@@ -86,7 +81,7 @@ export type StemDeckScan = Readonly<{
 }>;
 
 export type StemDeckConstants = Readonly<{
-  unknownBytes: Double;
+  unknownBytes: CodegenTypes.Double;
   hasCamera: boolean;
   scanRead: string;
   scanTypeAddress: string;
@@ -154,7 +149,7 @@ export interface Spec extends TurboModule {
   settleDownload(jobId: string, outcome: string): void;
   setWatching(watching: boolean): void;
   scanQr(look: StemDeckScanLook): Promise<StemDeckScan | null>;
-  readonly onImport: EventEmitter<StemDeckImportSnapshot>;
+  readonly onImport: CodegenTypes.EventEmitter<StemDeckImportSnapshot>;
 }
 
 export function getKitbagStemDeck(): Spec {
