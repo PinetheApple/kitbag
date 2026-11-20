@@ -184,6 +184,7 @@ export interface SheetProps {
   readonly bottomInset?: number;
   readonly onDismiss: () => void;
   readonly onShow?: () => void;
+  readonly onClosed?: () => void;
   readonly initialFocusRef?: RefObject<HostInstance | null>;
   readonly dim?: boolean;
   readonly scrollEnabled?: boolean;
@@ -202,6 +203,7 @@ export function Sheet({
   bottomInset = 0,
   onDismiss,
   onShow,
+  onClosed,
   initialFocusRef,
   dim = false,
   scrollEnabled = true,
@@ -364,6 +366,7 @@ export function Sheet({
     dragY,
     scrimOpacity,
     onReturn: focusTitle,
+    onClosed,
   });
 
   return null;

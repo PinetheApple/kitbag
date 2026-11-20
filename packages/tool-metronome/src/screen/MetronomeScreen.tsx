@@ -50,6 +50,7 @@ import {
 } from './PracticeSummarySheet.tsx';
 import { PresetRow } from './PresetRow.tsx';
 import { StatusStack } from './StatusStack.tsx';
+import { SkippedSongSnackbar } from './SkippedSongSnackbar.tsx';
 import { SongClickSnackbar } from './SongClickSnackbar.tsx';
 import { SubdivisionSheet } from './SubdivisionSheet.tsx';
 import { SwipeHint } from './SwipeHint.tsx';
@@ -131,6 +132,7 @@ export interface MetronomeScreenProps {
   readonly insets: ShellMeasuredInsets;
   readonly onBack?: () => void;
   readonly onOpenSetlists?: () => void;
+  readonly onOpenStemSet?: (stemSetId: number) => void;
 }
 
 function useNoteStrip(): NoteStrip | null {
@@ -145,11 +147,24 @@ function useNoteStrip(): NoteStrip | null {
   return useMemo(() => noteStrip(songLoaded, notes), [songLoaded, notes]);
 }
 
+function useSkippedNotice() {
+  const [shownAt, setShownAt] = useState<number | null>(null);
+  const show = useCallback(() => {
+    setShownAt(Date.now());
+  }, []);
+  const hide = useCallback(() => {
+    setShownAt(null);
+  }, []);
+  return { shownAt, show, hide };
+}
+
 export function MetronomeScreen({
   insets,
   onBack,
   onOpenSetlists,
+  onOpenStemSet,
 }: MetronomeScreenProps) {
+  const skipped = useSkippedNotice();
   useHoldEngine();
   useEndPracticeOnLeave();
   useLibraryRefresh();
@@ -343,6 +358,8 @@ export function MetronomeScreen({
             bottomInset={insets.bottom}
             onBack={onBack}
             onOpenSetlists={onOpenSetlists}
+            onOpenStemSet={onOpenStemSet}
+            onSkipped={skipped.show}
           />
           <View style={styles.bodyClip} onLayout={handleBodyClipLayout}>
             <ScrollView
@@ -432,6 +449,11 @@ export function MetronomeScreen({
         >
           <UnsavedSnackbar bottomInset={insets.bottom} />
           <SongClickSnackbar bottomInset={insets.bottom} />
+          <SkippedSongSnackbar
+            shownAt={skipped.shownAt}
+            bottomInset={insets.bottom}
+            onDone={skipped.hide}
+          />
         </View>
         {hintShown ? (
           <SwipeHint

@@ -98,17 +98,23 @@ export type TransportSlice = Pick<
   'title' | 'artist' | 'durationFrames' | 'engineRate' | 'status'
 >;
 
+export function plainStart(
+  runtimeOf: () => MixerRuntime,
+): Pick<SongStart, 'play' | 'cancel'> {
+  return {
+    play: () => {
+      runtimeOf().commands.mixerPlay();
+    },
+    cancel: () => false,
+  };
+}
+
 export function transportActions(
   get: () => TransportSlice,
   runtimeOf: () => MixerRuntime,
   scrubSeek: Debounced<[number]>,
   afterSeek?: (frame: number) => void,
-  start: Pick<SongStart, 'play' | 'cancel'> = {
-    play: () => {
-      runtimeOf().commands.mixerPlay();
-    },
-    cancel: () => false,
-  },
+  start: Pick<SongStart, 'play' | 'cancel'> = plainStart(runtimeOf),
 ): Pick<
   StemPlayerActions,
   'togglePlay' | 'scrub' | 'cancelScrub' | 'seek' | 'skip'

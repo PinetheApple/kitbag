@@ -22,6 +22,7 @@ import com.kitbag.corenative.library.AnalysisTarget
 import com.kitbag.corenative.library.BackupShare
 import com.kitbag.corenative.library.ClickSoundFiles
 import com.kitbag.corenative.library.DataFolder
+import com.kitbag.corenative.library.DatabaseCopies
 import com.kitbag.corenative.library.DocumentPicker
 import com.kitbag.corenative.library.ExportFiles
 import com.kitbag.corenative.library.FileShare
@@ -66,6 +67,8 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     DataFolderMoves.get(reactContext).leftovers,
   ) { message, cause -> Log.w(TAG, message, cause) }
   private val volumes = VolumeWatcher(reactContext, ::onVolumesChanged)
+  private val databaseCopies =
+    DatabaseCopies(reactContext::getDatabasePath) { message, cause -> Log.w(TAG, message, cause) }
 
   private val listener: (AnalysisResult) -> Unit = ::emitAnalysis
 
@@ -412,6 +415,14 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  override fun databaseFreeBytes(databaseName: String): Double = databaseCopies.freeBytes(databaseName)
+
+  override fun removeDatabaseCopy(databaseName: String, fileName: String): Boolean =
+    databaseCopies.remove(databaseName, fileName)
+
+  override fun replaceDatabaseCopy(databaseName: String, partName: String, fileName: String): Boolean =
+    databaseCopies.replace(databaseName, partName, fileName)
+
   override fun storageReport(databaseName: String, promise: Promise) {
     io.execute {
       try {
@@ -458,8 +469,8 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       "supportedAudioMimeTypes" to SupportedAudio.MIME_TYPES,
       "unsupportedAudioExtensions" to SupportedAudio.UNSUPPORTED_EXTENSIONS,
       "exportMaxBaseNameBytes" to ExportFiles.MAX_BASE_NAME_BYTES,
-      "databaseCopyUnsettled" to LibraryErrors.DATABASE_UNSETTLED,
-    ) + StemBundleBridge.CONSTANTS + LibraryErrors.EXPORT_CONSTANTS + DataFolderBridge.CONSTANTS
+    ) + StemBundleBridge.CONSTANTS + LibraryErrors.EXPORT_CONSTANTS +
+      LibraryErrors.DATABASE_COPY_CONSTANTS + DataFolderBridge.CONSTANTS
 
   companion object {
     private const val TAG = "KitbagLibrary"

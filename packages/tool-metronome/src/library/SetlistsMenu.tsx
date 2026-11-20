@@ -2,6 +2,7 @@ import { backupFilesAvailable } from '@kitbag/core-native';
 import { shareSetlist, useLibrary } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 
+import { CHANGE_NOT_SAVED } from './setlistCopy.ts';
 import { ActionsSheet, ConfirmSheet, guarded, NameSheet } from './sheets.tsx';
 
 type Open =
@@ -68,14 +69,10 @@ function useSetlistCommands(menu: SetlistsMenu) {
   );
   const { close, onCreated } = menu;
   const run = (work: () => Promise<unknown>) =>
-    guarded(
-      menu.setError,
-      'Could not save this change. Try again.',
-      async () => {
-        await work();
-        close();
-      },
-    );
+    guarded(menu.setError, CHANGE_NOT_SAVED, async () => {
+      await work();
+      close();
+    });
   const onTarget = (work: (setlistId: number) => Promise<unknown>) =>
     target === undefined ? Promise.resolve() : run(() => work(target));
   return {

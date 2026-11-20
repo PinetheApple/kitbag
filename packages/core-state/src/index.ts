@@ -74,8 +74,10 @@ export {
 } from './metronome/runtime.ts';
 export {
   PRACTICE_TEMPO_SAMPLE_MS,
+  type PracticeRecording,
   type PracticeSetlist,
   type PracticeSong,
+  type PracticeStemSong,
   type PracticeStretch,
   type PracticeSummary,
 } from './practice/session.ts';
@@ -189,8 +191,11 @@ export {
   loadedPresetOf,
   type DiscardedChanges,
   type LibraryStore,
+  type LoadedPreset,
   type LoadedSong,
+  type LoadedStem,
   type PresetEdit,
+  type SongStepResult,
   type SearchResults,
 } from './library/store.ts';
 export {
@@ -207,16 +212,21 @@ export {
 } from './library/snapshot.ts';
 export {
   activeSetlistOf,
-  adjacentPresetEntry,
+  adjacentEntry,
   SONG_STEP,
+  stagePositionOf,
+  type StagePosition,
   type SongStep,
 } from './library/setlistPosition.ts';
 export {
   ADVANCE,
   advanceOf,
+  entriesAfter,
+  onStageOf,
   UP_NEXT_SOURCE,
   upNext,
   type Advance,
+  type OnStage,
   type PlayOrder,
   type UpNext,
 } from './playOrder/order.ts';
@@ -224,7 +234,28 @@ export {
   createPlayOrderStore,
   playOrderStore,
   type PlayOrderStore,
+  type SkipResult,
 } from './playOrder/store.ts';
+export {
+  usePlayOrder,
+  useStage,
+  useUpNext,
+  type Stage,
+} from './playOrder/usePlayOrder.ts';
+export { bindStemSetRemovals } from './playOrder/stemSetRemovals.ts';
+export {
+  entryName,
+  SKIPPED_STEM_SONG,
+  STEMS_BADGE,
+  stemSongTitle,
+  UNKNOWN_STEM_SONG,
+  type StemSongs,
+  stemFacts,
+  stemSongFacts,
+  stemSongListFacts,
+  stemSongsById,
+} from './playOrder/stemSongText.ts';
+export { useStemSongs } from './playOrder/useStemSongs.ts';
 export {
   configurePlayOrder,
   type PlayOrderRepositories,

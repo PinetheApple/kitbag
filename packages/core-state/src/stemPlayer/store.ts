@@ -343,7 +343,11 @@ export function createStemPlayerStore(
       }),
     );
     const clickShape = clickShapeActions(context);
-    const clicks = clickActions(context, mixer.pendingClick, start, clickShape);
+    const clicks = clickActions(context, mixer.pendingClick, {
+      recountWithClickOff: start.recountWithClickOff,
+      recountWithClickOn: start.recountWithClickOn,
+      gridSent: clickShape.gridSent,
+    });
     const songDownbeats = (beats: readonly number[], override: MeterOverride) =>
       overrideDownbeats(
         { beats, downbeatIndices: markedDownbeatIndices },

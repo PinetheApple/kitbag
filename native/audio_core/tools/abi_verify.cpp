@@ -27,7 +27,7 @@ using kitbag_test::g_failures;
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 212;
+constexpr int kExpectedChecks = 214;
 
 struct Downbeats {
   const int32_t* indices = nullptr;
@@ -194,6 +194,7 @@ void TestMixerTransportIsNullSafe(kb_engine* engine) {
       kb_mixer_is_playing(engine) == 0,
       "mixer: a fresh engine is not playing"
   );
+  Check(kb_mixer_end_count(engine) == 0, "mixer: fresh end count is 0");
 
   kb_mixer_seek(engine, 4321);
   kb_mixer_play(engine);
@@ -203,6 +204,7 @@ void TestMixerTransportIsNullSafe(kb_engine* engine) {
   kb_mixer_pause(nullptr);  // a null engine is a no-op, not a crash
   kb_mixer_seek(nullptr, 0);
   Check(kb_mixer_position(nullptr) == 0, "mixer: null engine position is 0");
+  Check(kb_mixer_end_count(nullptr) == 0, "mixer: null end count is 0");
 }
 
 // A null engine/path, an out-of-range track and a file that will not open are

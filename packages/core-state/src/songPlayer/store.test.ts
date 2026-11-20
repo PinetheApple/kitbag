@@ -434,6 +434,7 @@ describe('the click', () => {
   it('turns off when the notification stops the song', async () => {
     const { store, commands, stopSongFromNotification } = await openedSong();
     await store.getState().toggleClick();
+    store.getState().togglePlay();
     stopSongFromNotification();
     expect(store.getState().click).toBe(false);
     expect(commands.clearGrid).toHaveBeenCalledOnce();

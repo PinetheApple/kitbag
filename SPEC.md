@@ -785,16 +785,19 @@ referenced but never drew: **setlists**, **setlist detail**, **preset editor**.
   shows the loaded song over the setlist and position ("Test gig · 2/4").
   Previous and next load the adjacent song in one tap, through the same load
   path as tapping it in setlist detail, and are disabled on the first and last
-  song. When no song from the set is loaded, next loads song 1 and the chip
-  shows the setlist name. The chip opens the setlist's song list, the loaded
-  song marked NOW; tapping a row loads it, and "Leave setlist" deactivates the
-  setlist. A song
-  loaded from outside the setlist (All songs, search) clears it. With no setlist
-  active the bar keeps its title, and a song loaded on its own shows in the chip
-  as "Not in a setlist"; the chip then opens a sheet with "Clear song" and
-  "Open setlists". Clear song and Leave setlist unlink the loaded song but keep
-  the metronome's current settings, so the bar returns to the plain "Setlists"
-  chip without the sound changing.
+  song. After the on-stage entry is removed, Next loads the entry now at its
+  position, Previous the one before it; with no song from the set on stage
+  (cleared, or freshly activated) Next loads song 1 and the chip shows the
+  setlist name. Deleting the on-stage metronome song itself counts as cleared;
+  deleting an on-stage stem song keeps the position. The chip opens the
+  setlist's song list, the loaded song marked NOW; tapping a row loads it, and
+  "Leave setlist" deactivates the setlist. A song loaded from outside the
+  setlist (All songs, search) clears it. With no setlist active the bar keeps
+  its title, and a song loaded on its own shows in the chip as "Not in a
+  setlist"; the chip then opens a sheet with "Clear song" and "Open setlists".
+  Clear song and Leave setlist unlink the loaded song but keep the metronome's
+  current settings, so the bar returns to the plain "Setlists" chip without the
+  sound changing.
 - **Live edits are unsaved until Save** (owner, 2026-10-31; #212). Changing a
   loaded song's settings on the metronome (tempo, meter, subdivision, accents,
   poly, sound, ramp, mute, count-in) never writes the song; a visible mark shows
@@ -1018,8 +1021,8 @@ working. Changes:
 - "Save for this song" stores a preset that belongs to the song. A song with a
   saved preset opens with its click on; a song without one opens with it off.
   The preset is a `SongPreset` linked to the library song through its existing
-  `librarySongId`; linked presets are excluded from the Metronome's "All songs"
-  list.
+  `librarySongId`. Linked presets stay out of every Metronome song list: All
+  songs and its count, search results and a setlist's Add song sheet.
 - **Play on the standalone Metronome while a song's click runs** turns the
   song's click off; the song keeps playing and its card shows click off. The
   standalone metronome starts on its own settings, untouched. Tapping CLICK OFF
@@ -2326,8 +2329,8 @@ native and stay native:
 1. **Foreground service** (§5.6) — no RN API exists. A Kotlin service, started and
    stopped through a TurboModule, holding the media session for lock-screen and
    headset controls. **This is the piece with no JS analogue and the one most
-   likely to be underestimated.** Built: `PlaybackService` (#87, #177) carries the
-   metronome and stem songs.
+   likely to be underestimated.** Built: `PlaybackService` (#87, #177, #237) carries the
+   metronome, stem songs and single songs; its Stop ends the single-song session.
 2. **Notification listener** (§8.2) — the existing `MediaSessionPlugin.kt` and
    `NotificationListenerService`, ported from a Flutter plugin to a TurboModule.
    The Android logic is correct and survives; §2.3's `requestPermission` lie and

@@ -78,6 +78,8 @@ function practiceValues(record: PracticeSessionRecord, ids: IdMaps) {
     avgBpm: record.avgBpm,
     setlistId: lookup(ids.setlists, record.setlistUuid),
     songsPlayed: record.songsPlayed,
+    setlistName: record.setlistName,
+    log: record.log,
   };
 }
 

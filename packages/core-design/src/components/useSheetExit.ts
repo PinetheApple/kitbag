@@ -17,6 +17,7 @@ export interface SheetExitOptions {
   readonly dragY: SharedValue<number>;
   readonly scrimOpacity: SharedValue<number>;
   readonly onReturn: () => void;
+  readonly onClosed?: (() => void) | undefined;
 }
 
 const SLOT_SETTLE_FRAMES = 2;
@@ -43,6 +44,7 @@ export function useSheetExit({
   dragY,
   scrimOpacity,
   onReturn,
+  onClosed,
 }: SheetExitOptions): void {
   const { show, hide } = useSheetPortal();
   const { height: windowHeight } = useWindowDimensions();
@@ -51,11 +53,16 @@ export function useSheetExit({
   const visibleNow = useRef(visible);
   const lastShown = useRef<ReactNode>(null);
   const latestExit = useRef(0);
+  const closed = useRef(onClosed);
+  closed.current = onClosed;
   const finishExit = useCallback(
     (exit: number) => {
       if (visibleNow.current || exit !== latestExit.current) return;
       present.current = false;
       hide(id);
+      requestAnimationFrame(() => {
+        if (!visibleNow.current) closed.current?.();
+      });
     },
     [hide, id],
   );

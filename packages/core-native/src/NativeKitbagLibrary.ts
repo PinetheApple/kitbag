@@ -269,8 +269,9 @@ export type LibraryConstants = Readonly<{
   exportNoShareTarget: string;
   exportShareFailed: string;
   exportMaxBaseNameBytes: Int32;
-  /** Reject code of saveDatabaseCopy while the database has an unfinished journal. */
-  databaseCopyUnsettled: string;
+  /** Reject codes of saveDatabaseCopy when an unfinished journal could not be settled in a private copy. */
+  databaseCopyNoSpace: string;
+  databaseCopyUnreadable: string;
   supportedAudioFamilies: readonly string[];
   supportedAudioExtensions: readonly string[];
   supportedAudioMimeTypes: readonly string[];
@@ -290,7 +291,7 @@ export interface Spec extends TurboModule {
   shareBackup(fileName: string, contents: string): Promise<void>;
   /** Resolves false when the user cancels the save dialog. */
   saveBackup(fileName: string, contents: string): Promise<boolean>;
-  /** Copies the database file as it is on disk, without opening it; false when cancelled. */
+  /** Never opens the live database; an unfinished journal is settled in a private copy first. False when cancelled. */
   saveDatabaseCopy(databaseName: string, fileName: string): Promise<boolean>;
   /** Only a file mixdownStart wrote; rejects E_BAD_FILE_NAME for any other path. */
   shareExport(path: string): Promise<void>;
@@ -348,6 +349,16 @@ export interface Spec extends TurboModule {
   releaseOldCopies(): void;
   readonly onMoveProgress: EventEmitter<MoveStatus>;
   readonly onMoveFinished: EventEmitter<MoveFinished>;
+  /** Free bytes on the database's volume; negative when they cannot be measured. */
+  databaseFreeBytes(databaseName: string): Double;
+  /** False when refused or failed. */
+  removeDatabaseCopy(databaseName: string, fileName: string): boolean;
+  /** Syncs partName and renames it over fileName; false when refused or failed. */
+  replaceDatabaseCopy(
+    databaseName: string,
+    partName: string,
+    fileName: string,
+  ): boolean;
 }
 
 export function getKitbagLibrary(): Spec {
