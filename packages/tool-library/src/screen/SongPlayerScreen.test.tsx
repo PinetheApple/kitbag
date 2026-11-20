@@ -19,8 +19,7 @@ import { METER_FAILED } from '../logic/songMeterText.ts';
 import {
   LOOP_KEY_TEXT,
   REANALYZE_LABEL,
-  SPEED_KEY_TEXT,
-  SPEED_NOTE,
+  SONG_SPEED_TEXT,
 } from '../logic/viewText.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
@@ -32,6 +31,7 @@ const SONG_SECONDS = 200;
 const DROPPED_FRACTION = 0.25;
 
 const display = vi.hoisted(() => ({
+  speed: 1,
   scaled: false,
   status: 'ready',
   song: {},
@@ -61,6 +61,8 @@ const transport = vi.hoisted(() => ({
   skip: vi.fn(),
   togglePlay: vi.fn(),
   toggleClick: vi.fn(),
+  setSpeed: vi.fn(),
+  resetSpeed: vi.fn(),
 }));
 const mixer = vi.hoisted(() => ({
   session: 0,
@@ -128,6 +130,7 @@ vi.mock('@kitbag/core-design', async (original) => {
       h('PlayerTransport', props, props.extraKey as ReactNode),
     Snackbar: (props: Props) => h('Snackbar', props),
     TransportKey: (props: Props) => h('TransportKey', props),
+    SpeedGroup: (props: Props) => h('SpeedGroup', props),
     ScrubRow: (props: Props) =>
       h('ScrubRow', { loopHandles: props.loopHandles }),
     textStyle: () => ({}),
@@ -154,6 +157,12 @@ vi.mock('@kitbag/core-state', async (original) => {
     soundPickerLabel,
     soundsWith,
     countInBarsFromOption,
+    isUnitySpeed,
+    speedHint,
+    speedKeyCopy,
+    speedPercentText,
+    speedPresetTexts,
+    steppedSpeed,
   } = await original<{
     useFocusedMixerHold: unknown;
     playerSongBadge: unknown;
@@ -172,6 +181,12 @@ vi.mock('@kitbag/core-state', async (original) => {
     soundPickerLabel: unknown;
     soundsWith: unknown;
     countInBarsFromOption: unknown;
+    isUnitySpeed: unknown;
+    speedHint: unknown;
+    speedKeyCopy: unknown;
+    speedPercentText: unknown;
+    speedPresetTexts: unknown;
+    steppedSpeed: unknown;
   }>();
   const open = () => {
     const mine = ++mixer.session;
@@ -209,6 +224,12 @@ vi.mock('@kitbag/core-state', async (original) => {
     soundPickerLabel,
     soundsWith,
     countInBarsFromOption,
+    isUnitySpeed,
+    speedHint,
+    speedKeyCopy,
+    speedPercentText,
+    speedPresetTexts,
+    steppedSpeed,
     bpmFact: (bpm: number | null) =>
       bpm === null
         ? null
@@ -236,6 +257,7 @@ vi.mock('@kitbag/core-state', async (original) => {
     useSongPlayer: (select: (state: unknown) => unknown) =>
       select({
         status: display.status,
+        speed: display.speed,
         ...display.song,
         click: false,
         durationFrames: SONG_SECONDS * ENGINE_RATE,
@@ -321,6 +343,7 @@ function styleAround(tree: ReactTestRenderer, type: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  display.speed = 1;
   display.scaled = false;
   display.status = 'ready';
   display.song = OPEN_SONG;
@@ -520,6 +543,17 @@ describe('the player menu', () => {
     expect(openMenu().root.findAllByType('Sheet' as never)).toHaveLength(1);
   });
 
+  it('resets the speed from the menu and closes it', () => {
+    const tree = openMenu();
+    const row = menuButton(tree, SONG_SPEED_TEXT.reset);
+    expect(row.props.value).toBe('100%');
+    act(() => {
+      (row.props.onPress as () => void)();
+    });
+    expect(transport.resetSpeed).toHaveBeenCalledOnce();
+    expect(tree.root.findAllByType('Sheet' as never)).toHaveLength(0);
+  });
+
   it('leaves the player and stops the song', () => {
     const tree = openMenu();
     act(() => {
@@ -551,6 +585,7 @@ describe('the player menu', () => {
   ])('offers no Re-analyse for a song %s', (_case, failure) => {
     failWith(failure);
     expect(menuLabels(openMenu())).toEqual([
+      SONG_SPEED_TEXT.reset,
       'Meter',
       'Tempo correction',
       'Count-in',
@@ -560,6 +595,7 @@ describe('the player menu', () => {
 
   it('lists Re-analyse, Meter, Tempo correction, Count-in and Stop', () => {
     expect(menuLabels(openMenu())).toEqual([
+      SONG_SPEED_TEXT.reset,
       REANALYZE_LABEL,
       'Meter',
       'Tempo correction',
@@ -839,12 +875,21 @@ describe('a song with no beat grid', () => {
 
 describe('the transport', () => {
   function speedKey(tree: ReactTestRenderer) {
-    return tree.root.find(
-      (node) =>
-        String(node.type) === 'TransportKey' &&
-        node.props.text === SPEED_KEY_TEXT,
-    );
+    return tree.root
+      .findByType('PlayerTransport' as never)
+      .findByType('TransportKey' as never);
   }
+
+  function openSpeed(): ReactTestRenderer {
+    const tree = mount();
+    act(() => {
+      (speedKey(tree).props.onPress as () => void)();
+    });
+    return tree;
+  }
+
+  const speedGroup = (tree: ReactTestRenderer) =>
+    tree.root.findByType('SpeedGroup' as never);
 
   it('labels the loop key A|B and marks the loop with it', () => {
     const dock = mount().root.findByType('PlayerTransport' as never);
@@ -855,35 +900,75 @@ describe('the transport', () => {
     expect(transport.markLoop).toHaveBeenCalledOnce();
   });
 
-  it('shows the speed key muted but pressable', () => {
-    expect(speedKey(mount()).props).toMatchObject({ muted: true });
-    expect(speedKey(mount()).props.disabled).toBeUndefined();
+  it('shows full speed on a plain, live key', () => {
+    expect(speedKey(mount()).props).toMatchObject({
+      text: '100%',
+      selected: false,
+      accessibilityLabel: 'Speed 100%',
+    });
+    expect(speedKey(mount()).props.muted).toBeUndefined();
   });
 
-  it('shows the note on a speed tap and sends nothing to the mixer', () => {
-    const tree = mount();
-    expect(tree.root.findAllByType('Snackbar' as never)).toHaveLength(0);
-    act(() => {
-      (speedKey(tree).props.onPress as () => void)();
+  it('accents the key while the song is slowed', () => {
+    display.speed = 0.9;
+    expect(speedKey(mount()).props).toMatchObject({
+      text: '90%',
+      selected: true,
     });
-    expect(tree.root.findByType('Snackbar' as never).props.message).toBe(
-      SPEED_NOTE,
+  });
+
+  it('opens the speed sheet for this song with the song tempo', () => {
+    const tree = openSpeed();
+    const sheet = tree.root.findByType('Sheet' as never);
+    expect(sheet.props.title).toBe(SONG_SPEED_TEXT.title);
+    expect(speedGroup(tree).props).toMatchObject({
+      value: '100%',
+      accented: false,
+      hint: 'Song 120 BPM',
+    });
+    expect(tree.root.findAllByType('Snackbar' as never)).toHaveLength(0);
+  });
+
+  it('names the tempo that plays and marks the preset at a slower speed', () => {
+    display.speed = 0.9;
+    const group = speedGroup(openSpeed());
+    expect(group.props.hint).toBe('Song 120 BPM, plays at 108 BPM');
+    expect(
+      (group.props.presets as readonly { label: string; selected: boolean }[])
+        .filter(({ selected }) => selected)
+        .map(({ label }) => label),
+    ).toEqual(['90%']);
+  });
+
+  it('says there is no BPM for a song without one', () => {
+    display.song = { ...OPEN_SONG, bpm: null };
+    expect(speedGroup(openSpeed()).props.hint).toBe(
+      'No beat grid, so there is no BPM to show',
     );
-    for (const command of Object.values(transport))
-      expect(command).not.toHaveBeenCalled();
   });
 
-  it('hides the note when it times out', () => {
+  it('sets a picked preset and a stepped speed', () => {
+    const group = speedGroup(openSpeed());
+    act(() => {
+      (group.props.onPick as (speed: number) => void)(0.75);
+      (group.props.onStep as (delta: number) => void)(-1);
+    });
+    expect(transport.setSpeed.mock.calls).toEqual([[0.75], [0.95]]);
+  });
+});
+
+describe('the song tempo at a slower speed', () => {
+  it('shows the tempo that plays in the app bar and on the lock card', () => {
+    display.speed = 0.9;
     const tree = mount();
-    act(() => {
-      (speedKey(tree).props.onPress as () => void)();
-    });
-    act(() => {
-      (
-        tree.root.findByType('Snackbar' as never).props.onTimeout as () => void
-      )();
-    });
-    expect(tree.root.findAllByType('Snackbar' as never)).toHaveLength(0);
+    expect(tree.root.findByType('Badge' as never).props.label).toBe('108 BPM');
+    expect(
+      tree.root.findAll(
+        (node) =>
+          String(node.type) === 'Text' &&
+          node.props.children === '108 BPM · grid ready',
+      ),
+    ).toHaveLength(1);
   });
 });
 

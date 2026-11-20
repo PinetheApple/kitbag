@@ -992,8 +992,8 @@ working. Changes:
   A then B at the playhead, a third tap clears; the A and B handles on the
   scrub bar drag, beat-snapped.
 - Speed control in the transport, driven by the same stretch stage as the stem
-  player (§7.6). Single-file playback gets it when the stem player has it; until
-  then the 1.0× key stays in place, looks disabled, and shows a note on tap.
+  player (§7.6): the stem player's range, steps and presets, saved per song and
+  restored on open. Reset speed sits in the overflow menu (#528).
 - Tapping the Songs row of the song the mini-player is showing opens the player
   on that song as it is, still playing if it was. Any other row tap on Songs
   opens the player paused.

@@ -19,7 +19,8 @@ vi.mock('@kitbag/core-design', async (original) => ({
   MiniPlayerBar: 'MiniPlayerBar',
 }));
 
-vi.mock('@kitbag/core-state', () => ({
+vi.mock('@kitbag/core-state', async (original) => ({
+  ...(await original<Record<string, unknown>>()),
   loopEndFrames: () => null,
   useSongPlayer: (select: (state: unknown) => unknown) => select(song.state),
 }));
@@ -41,6 +42,7 @@ function givenSong(change: Record<string, unknown> = {}) {
     title: 'Everlong',
     artist: 'Foo Fighters',
     click: true,
+    speed: 1,
     engineRate: 48_000,
     durationFrames: 480_000,
     togglePlay: song.togglePlay,
@@ -88,6 +90,11 @@ describe('the mini-player', () => {
       title: 'Everlong',
       detail: 'Foo Fighters · Click on',
     });
+  });
+
+  it('adds the speed while the song is slowed', () => {
+    givenSong({ speed: 0.9 });
+    expect(bar(mount()).detail).toBe('Foo Fighters · Click on · 90%');
   });
 
   it('draws the engine playhead, never a store copy', () => {

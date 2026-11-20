@@ -1,6 +1,8 @@
 import {
   bpmFact,
+  isUnitySpeed,
   playerSongBadge,
+  speedPercentText,
   type AnalysisFailure,
   type SongBadge,
   type SongPlayerStore,
@@ -17,7 +19,8 @@ export interface LockText {
   readonly action: LockAction;
 }
 
-const LOCK_SOURCE = 'phase auto · from beat grid';
+const LOCK_PHASE = 'phase auto';
+const LOCK_SOURCE = 'from beat grid';
 const GRID_READY = 'grid ready';
 const NO_GRID_TITLE = 'No beat grid';
 
@@ -49,6 +52,17 @@ const PLAYER_NO_GRID: BadgeSpec = {
   ...songStatusBadge('noGrid'),
   tone: 'danger',
 };
+
+function lockSource(speed: number): string {
+  const how = isUnitySpeed(speed)
+    ? LOCK_PHASE
+    : `${speedPercentText(speed)} speed`;
+  return `${how} · ${LOCK_SOURCE}`;
+}
+
+export function playedBpm(bpm: number | null, speed: number): number | null {
+  return bpm === null ? null : bpm * speed;
+}
 
 function withBpm(bpmText: string | null, detail: string): string {
   return bpmText === null ? detail : `${bpmText} · ${detail}`;
@@ -91,6 +105,7 @@ export function lockText(
   click: boolean,
   bpmText: string | null,
   failure: AnalysisFailure | null,
+  speed: number,
 ): LockText {
   switch (badge) {
     case 'pending':
@@ -104,7 +119,7 @@ export function lockText(
       return click
         ? {
             title: 'Metronome locked',
-            detail: withBpm(bpmText, LOCK_SOURCE),
+            detail: withBpm(bpmText, lockSource(speed)),
             action: 'click',
           }
         : {

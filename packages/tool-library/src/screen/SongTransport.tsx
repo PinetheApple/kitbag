@@ -1,21 +1,21 @@
 import {
   PlayerDock,
   PlayerTransport,
-  snackbar,
-  Snackbar,
   TransportKey,
   type PlayerFrame,
 } from '@kitbag/core-design';
-import { loopKeyLabel, SKIP_SECONDS, useSongPlayer } from '@kitbag/core-state';
+import {
+  isUnitySpeed,
+  loopKeyLabel,
+  SKIP_SECONDS,
+  speedKeyCopy,
+  speedPercentText,
+  useSongPlayer,
+} from '@kitbag/core-state';
 import { useCallback, useState } from 'react';
 
-import {
-  LOOP_KEY_TEXT,
-  SPEED_KEY_LABEL,
-  SPEED_KEY_TEXT,
-  SPEED_NOTE,
-} from '../logic/viewText.ts';
-import { NoteAnchor } from './NoteAnchor.tsx';
+import { LOOP_KEY_TEXT } from '../logic/viewText.ts';
+import { SongSpeedSheet } from './SongSpeedSheet.tsx';
 
 export interface SongTransportProps {
   readonly playing: PlayerFrame['playing'];
@@ -24,30 +24,23 @@ export interface SongTransportProps {
 
 export function SongTransport({ playing, bottomInset }: SongTransportProps) {
   const loop = useSongPlayer((s) => s.loop);
+  const speed = useSongPlayer((s) => s.speed);
   const togglePlay = useSongPlayer((s) => s.togglePlay);
   const skip = useSongPlayer((s) => s.skip);
   const markLoop = useSongPlayer((s) => s.markLoop);
-  const [speedNote, setSpeedNote] = useState(false);
+  const [speedOpen, setSpeedOpen] = useState(false);
   const onLoop = useCallback(() => {
     void markLoop();
   }, [markLoop]);
-  const showSpeedNote = useCallback(() => {
-    setSpeedNote(true);
+  const openSpeed = useCallback(() => {
+    setSpeedOpen(true);
   }, []);
-  const hideSpeedNote = useCallback(() => {
-    setSpeedNote(false);
+  const closeSpeed = useCallback(() => {
+    setSpeedOpen(false);
   }, []);
+  const speedText = speedPercentText(speed);
   return (
     <>
-      <NoteAnchor>
-        {speedNote ? (
-          <Snackbar
-            message={SPEED_NOTE}
-            bottom={snackbar.aboveDock}
-            onTimeout={hideSpeedNote}
-          />
-        ) : null}
-      </NoteAnchor>
       <PlayerDock bottomInset={bottomInset}>
         <PlayerTransport
           playing={playing}
@@ -61,14 +54,19 @@ export function SongTransport({ playing, bottomInset }: SongTransportProps) {
           extraKey={
             <TransportKey
               size="dock"
-              text={SPEED_KEY_TEXT}
-              muted
-              accessibilityLabel={SPEED_KEY_LABEL}
-              onPress={showSpeedNote}
+              text={speedText}
+              selected={!isUnitySpeed(speed)}
+              accessibilityLabel={`${speedKeyCopy.speed} ${speedText}`}
+              onPress={openSpeed}
             />
           }
         />
       </PlayerDock>
+      <SongSpeedSheet
+        visible={speedOpen}
+        bottomInset={bottomInset}
+        onClose={closeSpeed}
+      />
     </>
   );
 }
