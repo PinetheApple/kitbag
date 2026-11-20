@@ -1,0 +1,1 @@
+• Fixed scanning StemDeck's QR code showing "That isn't an address Kitbag can use" instead of connecting.
