@@ -13,6 +13,7 @@ vi.mock('@/runtime/cryptoRuntime', () => ({}));
 vi.mock('@/runtime/metronomeRuntime', () => ({}));
 vi.mock('@/runtime/libraryRuntime', () => ({}));
 vi.mock('@/runtime/practiceRuntime', () => ({}));
+vi.mock('@/runtime/historyPrefsRuntime', () => ({}));
 vi.mock('@/runtime/stemDeckRuntime', () => ({}));
 vi.mock('@/runtime/stemPlayerRuntime', () => ({}));
 vi.mock('@/runtime/songPlayerRuntime', () => ({}));

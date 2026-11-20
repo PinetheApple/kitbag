@@ -1,7 +1,15 @@
 import type { NewSongPreset, Setlist, SongPreset } from '@kitbag/core-db';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
+import { applyCountInTransiently } from '../metronome/countInPersistence.ts';
 import { metronomeStore, type MetronomeStore } from '../metronome/store.ts';
+import {
+  loadedBaselineOf,
+  loadedPresetOf,
+  overlaid,
+  withoutPreset,
+  type PresetOverlay,
+} from './loadedPreset.ts';
 import {
   applyPreset,
   isLoadedSongUnsaved,
@@ -25,6 +33,12 @@ import {
   type LibrarySnapshot,
   type SetlistEntry,
 } from './snapshot.ts';
+
+export {
+  loadedBaselineOf,
+  loadedPresetOf,
+  type PresetOverlay,
+} from './loadedPreset.ts';
 
 export interface LoadedPreset {
   readonly presetId: number;
@@ -67,6 +81,7 @@ export interface LibraryState extends LibrarySnapshot {
   readonly discarded: DiscardedChanges | null;
   readonly played: readonly number[];
   readonly results: SearchResults | null;
+  readonly presetOverlay: PresetOverlay | null;
   readonly carriedSkip: boolean;
   readonly songLoads: number;
 }
@@ -104,6 +119,7 @@ export interface LibraryActions {
   carrySkip: (carried: boolean) => void;
   leaveSetlist: () => Promise<void>;
   clearSong: () => void;
+  setPresetOverlay: (overlay: PresetOverlay | null) => void;
 }
 
 export type LibraryStore = LibraryState & LibraryActions;
@@ -135,23 +151,16 @@ const EMPTY: LibraryState = {
   discarded: null,
   played: [],
   results: null,
+  presetOverlay: null,
   carriedSkip: false,
   songLoads: 0,
 };
-
-export function loadedPresetOf(
-  state: Pick<LibraryState, 'presets' | 'loaded'>,
-): SongPreset | undefined {
-  const { loaded } = state;
-  if (loaded === null) return undefined;
-  return state.presets.find((preset) => preset.id === loaded.presetId);
-}
 
 function discardedNow(
   state: LibraryState,
   deps: LibraryDeps,
 ): DiscardedChanges | null {
-  const preset = loadedPresetOf(state);
+  const preset = loadedBaselineOf(state);
   const { loaded } = state;
   if (loaded?.presetId == null || preset === undefined) return null;
   const live = deps.metronome();
@@ -367,7 +376,10 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       const preset = get().presets.find((p) => p.id === presetId);
       if (preset === undefined) return;
       noteDiscard();
-      await link(preset, itemId ?? null, setlistId ?? null);
+      const target = setlistId ?? null;
+      const applied = overlaid(get(), preset, target);
+      const linking = () => link(applied, itemId ?? null, target);
+      await (applied === preset ? linking() : applyCountInTransiently(linking));
     },
     openStemEntry: async (itemId: number, setlistId: number) => {
       const entries = get().entries[setlistId];
@@ -403,6 +415,9 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       set({ loaded: null });
       await leaveOrWarn();
     },
+    setPresetOverlay: (presetOverlay: PresetOverlay | null) => {
+      set({ presetOverlay });
+    },
     clearSong: () => {
       noteDiscard();
       set({ loaded: null });
@@ -413,8 +428,12 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       await get().saveCurrentInto(presetId);
     },
     revertLoadedSong: () => {
+      const { presetOverlay } = get();
       const preset = loadedPresetOf(get());
-      if (preset !== undefined) applyPreset(preset, deps.metronome);
+      if (preset === undefined) return;
+      if (presetOverlay !== null)
+        set({ presetOverlay: withoutPreset(presetOverlay, preset.id) });
+      applyPreset(preset, deps.metronome);
     },
     undoDiscard: async () => {
       const { discarded } = get();

@@ -22,7 +22,13 @@ export const DEFAULT_ARRANGEMENT: HomeArrangement = HOME_TOOLS.flatMap(
   (tool) =>
     tool.layout === 'row'
       ? []
-      : [{ toolId: tool.id, size: tool.layout, hidden: false }],
+      : [
+          {
+            toolId: tool.id,
+            size: tool.layout,
+            hidden: tool.shortcut === true,
+          },
+        ],
 );
 
 export function homeArrangement(

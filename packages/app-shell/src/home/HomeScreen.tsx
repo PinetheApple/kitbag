@@ -54,6 +54,7 @@ import {
   type MetronomeSummary,
 } from './subtext.ts';
 import { useToolOn } from './toolsOn.ts';
+import { usePracticeTileText } from './usePracticeTileText.ts';
 
 const useStyles = createThemedStyles((theme) => ({
   screen: {
@@ -85,10 +86,9 @@ function useMetronomeSummary(): MetronomeSummary {
 }
 
 // Only tools with a store to read get live text; the rest are not built and
-// show as upcoming rather than with a made-up number (SPEC §2).
-function useLiveText(): Readonly<Record<string, LiveText>> {
+// show as upcoming rather than with a made-up number.
+function useLiveText(practice: string): Readonly<Record<string, LiveText>> {
   const metronome = useMetronomeSummary();
-  // The tuning the next visit opens on: the session's, else the default.
   const tuning = tuningLabel(useTuner((s) => s.tuning) ?? DEFAULT_TUNING);
   const libraryRows = useSongLibrary((s) => s.rows);
   const libraryFailed = useSongLibrary((s) => s.failed);
@@ -108,8 +108,9 @@ function useLiveText(): Readonly<Record<string, LiveText>> {
       [TOOL_ID.tuner]: { tile: tuning, resume: tuning },
       [TOOL_ID.library]: { tile: songs, resume: songs },
       [TOOL_ID.stems]: { tile: stems, resume: stems },
+      [TOOL_ID.practiceHistory]: { tile: practice, resume: practice },
     };
-  }, [metronome, tuning, libraryRows, libraryFailed]);
+  }, [metronome, tuning, libraryRows, libraryFailed, practice]);
 }
 
 function useArrangement(isOn: ToolOnTest) {
@@ -132,11 +133,14 @@ export function HomeScreen() {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const liveText = useLiveText();
   const lastToolId = useLastTool((s) => s.toolId);
   const { openSettings } = useSettingsRoutes();
   const isOn = useToolOn();
   const { arrangement, onArrange } = useArrangement(isOn);
+  const practiceShown = visibleTiles(arrangement).some(
+    (tile) => tile.toolId === TOOL_ID.practiceHistory,
+  );
+  const liveText = useLiveText(usePracticeTileText(practiceShown));
   const docked = useMiniPlayerDocked();
   const movePaused = useDataFolder((s) => pausedMove(s) !== null);
   const [arranging, setArranging] = useState(false);

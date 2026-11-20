@@ -1,10 +1,23 @@
 import type { PracticeStats } from '@kitbag/core-db';
-import { configurePracticeSessions } from '@kitbag/core-state';
+import {
+  configurePracticeHistory,
+  configurePracticeSessions,
+  startRepeatRuntime,
+  type PracticeHistoryRepository,
+} from '@kitbag/core-state';
 
 const NO_PRACTICE: PracticeStats = {
   sessions: 0,
   totalSeconds: 0,
   avgBpm: null,
+};
+
+const NO_HISTORY: PracticeHistoryRepository = {
+  list: () => Promise.resolve([]),
+  stats: () => Promise.resolve(NO_PRACTICE),
+  get: () => Promise.resolve(undefined),
+  delete: () => Promise.resolve(undefined),
+  restore: () => Promise.resolve(),
 };
 
 export function readPracticeStats(): Promise<PracticeStats> {
@@ -16,3 +29,5 @@ export function savePracticeSession(): Promise<void> {
 }
 
 configurePracticeSessions({ insert: savePracticeSession });
+configurePracticeHistory(() => NO_HISTORY);
+startRepeatRuntime();

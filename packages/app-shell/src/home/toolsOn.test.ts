@@ -34,6 +34,7 @@ describe('Home and Arrange with a tool off', () => {
       TOOL_ID.metronome,
       TOOL_ID.library,
       TOOL_ID.stems,
+      TOOL_ID.practiceHistory,
     ]);
   });
 
@@ -46,6 +47,7 @@ describe('Home and Arrange with a tool off', () => {
       TOOL_ID.tuner,
       TOOL_ID.library,
       TOOL_ID.metronome,
+      TOOL_ID.practiceHistory,
     ]);
   });
 
