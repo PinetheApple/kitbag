@@ -4,7 +4,12 @@ import {
   type AccessibilityActionEvent,
   type LayoutChangeEvent,
 } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import {
+  GestureDetector,
+  useCompetingGestures,
+  usePanGesture,
+  useTapGesture,
+} from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -119,13 +124,13 @@ function useSliderGesture(props: SliderProps, width: SharedValue<number>) {
     value.value = target;
     scheduleOnRN(onRelease, target);
   };
-  const pan = Gesture.Pan()
-    .activeOffsetX([-sliderGeometry.dragSlop, sliderGeometry.dragSlop])
-    .failOffsetY([-sliderGeometry.dragSlop, sliderGeometry.dragSlop])
-    .onStart(() => {
+  const pan = usePanGesture({
+    activeOffsetX: [-sliderGeometry.dragSlop, sliderGeometry.dragSlop],
+    failOffsetY: [-sliderGeometry.dragSlop, sliderGeometry.dragSlop],
+    onActivate: () => {
       origin.value = value.value;
-    })
-    .onUpdate((event) => {
+    },
+    onUpdate: (event) => {
       drag.value = snapToDetent(
         dragTarget(mode, origin.value, {
           x: event.x,
@@ -135,26 +140,30 @@ function useSliderGesture(props: SliderProps, width: SharedValue<number>) {
         detent,
       );
       if (onSlide !== undefined) scheduleOnRN(onSlide, drag.value);
-    })
-    .onEnd((_, success) => {
+    },
+    onDeactivate: (event) => {
+      const success = !event.canceled;
       if (!success && onCancel !== undefined) scheduleOnRN(onCancel);
       commit(releaseTarget(mode, 'pan', success, drag.value, origin.value));
-    })
-    .onFinalize(() => {
+    },
+    onFinalize: () => {
       drag.value = NOT_DRAGGING;
-    });
-  const tap = Gesture.Tap().onEnd((event, success) => {
-    const target = snapToDetent(
-      dragTarget(mode, value.value, {
-        x: event.x,
-        translationX: 0,
-        width: width.value,
-      }),
-      detent,
-    );
-    commit(releaseTarget(mode, 'tap', success, target, value.value));
+    },
   });
-  return { gesture: Gesture.Race(pan, tap), drag };
+  const tap = useTapGesture({
+    onDeactivate: (event) => {
+      const target = snapToDetent(
+        dragTarget(mode, value.value, {
+          x: event.x,
+          translationX: 0,
+          width: width.value,
+        }),
+        detent,
+      );
+      commit(releaseTarget(mode, 'tap', !event.canceled, target, value.value));
+    },
+  });
+  return { gesture: useCompetingGestures(pan, tap), drag };
 }
 
 export function Slider(props: SliderProps) {

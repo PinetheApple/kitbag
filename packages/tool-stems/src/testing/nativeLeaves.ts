@@ -1,9 +1,8 @@
-const chain: Record<string, unknown> = new Proxy(
-  {},
-  { get: () => () => chain },
-);
+const noGesture = (): Record<string, never> => ({});
 
-export const Gesture = new Proxy({}, { get: () => () => chain });
+export const usePanGesture = noGesture;
+export const useTapGesture = noGesture;
+export const useCompetingGestures = noGesture;
 export const GestureDetector = 'GestureDetector';
 export const GestureHandlerRootView = 'GestureHandlerRootView';
 

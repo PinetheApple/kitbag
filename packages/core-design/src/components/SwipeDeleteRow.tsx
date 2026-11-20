@@ -1,6 +1,6 @@
 import { useCallback, useMemo, type ReactNode } from 'react';
 import { Text, View, type LayoutChangeEvent } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -104,13 +104,13 @@ export function SwipeDeleteRow({
       if (!deleted) offset.value = withTiming(0);
     });
   }, [onDelete, offset]);
-  const pan = Gesture.Pan()
-    .activeOffsetX(swipeActivation(side, swipeDelete.swipeStartDp))
-    .failOffsetY(VERTICAL_FAIL)
-    .onUpdate((event) => {
+  const pan = usePanGesture({
+    activeOffsetX: swipeActivation(side, swipeDelete.swipeStartDp),
+    failOffsetY: VERTICAL_FAIL,
+    onUpdate: (event) => {
       offset.value = swipeOffset(event.translationX, side);
-    })
-    .onEnd((event) => {
+    },
+    onDeactivate: (event) => {
       if (!swipeDeletes(event.translationX, width.value, side)) {
         offset.value = withTiming(0);
         return;
@@ -119,7 +119,8 @@ export function SwipeDeleteRow({
       offset.value = withTiming(gone, undefined, (finished) => {
         if (finished === true) scheduleOnRN(runDelete);
       });
-    });
+    },
+  });
   const rowStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: offset.value }],
     backgroundColor: offset.value === 0 ? TRANSPARENT : moving,

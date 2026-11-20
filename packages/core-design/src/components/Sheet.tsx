@@ -7,17 +7,18 @@ import {
   type RefObject,
 } from 'react';
 import {
+  type AccessibilityActionEvent,
+  type HostInstance,
+  type LayoutChangeEvent,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  type TextInstance,
   View,
-  type AccessibilityActionEvent,
-  type HostInstance,
-  type LayoutChangeEvent,
 } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
   SlideInDown,
   useAnimatedStyle,
@@ -237,7 +238,7 @@ export function Sheet({
     titleAction !== undefined && styles.titleBesideAction,
   ];
   const motion = useReduceMotionMode();
-  const titleRef = useRef<Text>(null);
+  const titleRef = useRef<TextInstance>(null);
   const focusTitle = useCallback(() => {
     focusReaderOn(initialFocusRef?.current ?? titleRef.current);
   }, [initialFocusRef]);
@@ -276,24 +277,21 @@ export function Sheet({
     open.value = visible;
   }, [open, visible]);
   // A leaving slot keeps the gesture it was shown with, so it gates on a shared value.
-  const dragToDismiss = useMemo(
-    () =>
-      Gesture.Pan()
-        .activeOffsetY(SHEET_DRAG_ACTIVATION_DP)
-        .onUpdate((event) => {
-          if (!open.value) return;
-          dragY.value = Math.max(0, event.translationY);
-        })
-        .onEnd((event) => {
-          if (!open.value) return;
-          if (shouldDismissSheet(event.translationY, sheetHeight.value)) {
-            scheduleOnRN(onDismiss);
-            return;
-          }
-          dragY.value = withSpring(0, { reduceMotion: motion });
-        }),
-    [open, dragY, sheetHeight, onDismiss, motion],
-  );
+  const dragToDismiss = usePanGesture({
+    activeOffsetY: SHEET_DRAG_ACTIVATION_DP,
+    onUpdate: (event) => {
+      if (!open.value) return;
+      dragY.value = Math.max(0, event.translationY);
+    },
+    onDeactivate: (event) => {
+      if (!open.value) return;
+      if (shouldDismissSheet(event.translationY, sheetHeight.value)) {
+        scheduleOnRN(onDismiss);
+        return;
+      }
+      dragY.value = withSpring(0, { reduceMotion: motion });
+    },
+  });
 
   const sheetStyle = useSheetCardStyle({ visible, bottomInset, dragY });
   const noticeStyle = useAnimatedStyle(() => ({

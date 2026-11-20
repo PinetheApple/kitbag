@@ -162,25 +162,31 @@ vi.mock('react-native-reanimated', async () => {
   };
 });
 vi.mock('react-native-gesture-handler', () => {
-  type PanHandler = (event: { translationY: number }) => void;
-  const PAN_EVENTS = ['Begin', 'Start', 'Update', 'End', 'Finalize'];
-  function Pan() {
+  interface PanEvent {
+    readonly translationY: number;
+  }
+  type PanCallback = (event: PanEvent & { canceled: boolean }) => void;
+  type PanHandler = (event: PanEvent, success?: boolean) => void;
+  const PAN_STAGES = {
+    onBegin: 'begin',
+    onActivate: 'start',
+    onUpdate: 'update',
+    onDeactivate: 'end',
+    onFinalize: 'finalize',
+  } as const;
+  function usePanGesture(config: Partial<Record<string, PanCallback>>) {
     const pan: Partial<Record<string, PanHandler>> = {};
-    const chain: Record<string, unknown> = {
-      pan,
-      activeOffsetY: () => chain,
-      hitSlop: () => chain,
-    };
-    for (const name of PAN_EVENTS) {
-      chain[`on${name}`] = (handler: PanHandler) => {
-        pan[name.toLowerCase()] = handler;
-        return chain;
-      };
+    for (const [key, stage] of Object.entries(PAN_STAGES)) {
+      const callback = config[key];
+      if (callback !== undefined)
+        pan[stage] = (event, success = true) => {
+          callback({ ...event, canceled: !success });
+        };
     }
-    return chain;
+    return { pan };
   }
   return {
-    Gesture: { Pan },
+    usePanGesture,
     GestureDetector: 'GestureDetector',
   };
 });

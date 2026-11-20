@@ -15,7 +15,7 @@ import {
   rolesUsing,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { View, type TextInput } from 'react-native';
+import { type TextInputInstance, View } from 'react-native';
 
 import {
   optionsHint,
@@ -97,7 +97,7 @@ function RenameSheet({ menu, bottomInset }: SheetProps) {
   const { target, close } = menu;
   const name = target?.name ?? '';
   const [draft, setDraft] = useState(name);
-  const field = useRef<TextInput>(null);
+  const field = useRef<TextInputInstance>(null);
   const cleaned = cleanName(draft);
   const prefill = useCallback(() => {
     setDraft(name);

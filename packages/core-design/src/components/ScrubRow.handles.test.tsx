@@ -89,24 +89,25 @@ vi.mock('react-native-gesture-handler', async () => {
   const unset = () => {
     throw new Error('callback not registered');
   };
+  type Ended = (event: { canceled: boolean }) => void;
+  const finish =
+    (run: Ended | undefined): Done =>
+    (event, success) => {
+      if (run === undefined) unset();
+      else run({ ...(event as object), canceled: !success });
+    };
   return {
-    Gesture: {
-      Pan: () => {
-        const pan: Pan & Record<string, unknown> = {
-          update: unset,
-          end: unset,
-          finalize: unset,
-        };
-        const chain = {
-          pan,
-          activeOffsetX: () => chain,
-          failOffsetY: () => chain,
-          onUpdate: (run: Update) => ((pan.update = run), chain),
-          onEnd: (run: Done) => ((pan.end = run), chain),
-          onFinalize: (run: Done) => ((pan.finalize = run), chain),
-        };
-        return chain;
-      },
+    usePanGesture: (config: {
+      onUpdate?: Update;
+      onDeactivate?: Ended;
+      onFinalize?: Ended;
+    }) => {
+      const pan: Pan = {
+        update: config.onUpdate ?? unset,
+        end: finish(config.onDeactivate),
+        finalize: finish(config.onFinalize),
+      };
+      return { pan };
     },
     GestureDetector: (props: {
       gesture: { pan: Pan };

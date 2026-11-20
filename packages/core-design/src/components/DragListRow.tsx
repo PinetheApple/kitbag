@@ -5,7 +5,7 @@ import {
   type AccessibilityActionEvent,
   type LayoutChangeEvent,
 } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
@@ -108,19 +108,19 @@ export function useHandleDrag(reorder: DragReorder) {
       settleRow();
     },
   );
-  const pan = Gesture.Pan()
-    .hitSlop(HANDLE_HIT_SLOP)
-    .onBegin(() => {
+  const pan = usePanGesture({
+    hitSlop: HANDLE_HIT_SLOP,
+    onBegin: () => {
       moved.value = false;
       if (onDragActive !== undefined) scheduleOnRN(onDragActive, true);
-    })
-    .onStart(() => {
+    },
+    onActivate: () => {
       if (group === undefined || !live.value) return;
       group.from.value = index;
       group.target.value = index;
       group.pitch.value = pitch.value;
-    })
-    .onUpdate((event) => {
+    },
+    onUpdate: (event) => {
       if (!live.value) return;
       offset.value = event.translationY;
       if (group === undefined) return;
@@ -130,24 +130,25 @@ export function useHandleDrag(reorder: DragReorder) {
         pitch.value,
         count,
       );
-    })
-    .onEnd((event, success) => {
+    },
+    onDeactivate: (event) => {
       const to = dropTarget(
         index,
         event.translationY,
         pitch.value,
         count,
-        success,
+        !event.canceled,
       );
       if (to === null) return;
       moved.value = true;
       scheduleOnRN(onMove, index, to);
-    })
-    .onFinalize(() => {
+    },
+    onFinalize: () => {
       if (onDragActive !== undefined) scheduleOnRN(onDragActive, false);
       if (!live.value) return;
       settleRow();
-    });
+    },
+  });
   const style = useAnimatedStyle(() => ({
     transform: [{ translateY: offset.value }],
     zIndex: offset.value === 0 ? 0 : DRAGGING_Z,

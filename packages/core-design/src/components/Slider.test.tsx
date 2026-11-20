@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 import { Slider } from './Slider.tsx';
+import { flatStyle } from './flatStyle.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -36,14 +37,14 @@ vi.mock('react-native-gesture-handler', async () => {
   const { createElement: h, Fragment } = await import('react');
   const chain: object = new Proxy({}, { get: () => () => chain });
   return {
-    Gesture: { Pan: () => chain, Tap: () => chain, Race: () => chain },
+    useCompetingGestures: () => chain,
+    usePanGesture: () => chain,
+    useTapGesture: () => chain,
     GestureDetector: (props: Props) => h(Fragment, null, props.children),
   };
 });
 
 vi.mock('react-native-worklets', () => ({ scheduleOnRN: vi.fn() }));
-
-const { StyleSheet } = await import('react-native');
 
 function hitArea(): ViewStyle {
   hitAreas.length = 0;
@@ -59,7 +60,7 @@ function hitArea(): ViewStyle {
       />
     </ThemeProvider>,
   );
-  return StyleSheet.flatten(hitAreas[0]?.style as StyleProp<ViewStyle>);
+  return flatStyle(hitAreas[0]?.style as StyleProp<ViewStyle>);
 }
 
 describe('Slider hit area', () => {

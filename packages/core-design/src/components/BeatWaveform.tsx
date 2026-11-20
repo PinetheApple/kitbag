@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { GestureDetector, useTapGesture } from 'react-native-gesture-handler';
 import type { SharedValue } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
@@ -66,15 +66,12 @@ export function BeatWaveform({
       ),
     [ticks],
   );
-  const tap = useMemo(
-    () =>
-      Gesture.Tap()
-        .runOnJS(true)
-        .onEnd((event, success) => {
-          if (success) onTap(event.x, width);
-        }),
-    [onTap, width],
-  );
+  const tap = useTapGesture({
+    runOnJS: true,
+    onDeactivate: (event) => {
+      if (!event.canceled) onTap(event.x, width);
+    },
+  });
   return (
     <GestureDetector gesture={tap}>
       <View style={styles.lane} onLayout={onLayout}>

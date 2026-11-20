@@ -16,10 +16,10 @@ import {
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import {
+  type LayoutChangeEvent,
   Text,
   useWindowDimensions,
   View,
-  type LayoutChangeEvent,
 } from 'react-native';
 
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
@@ -223,15 +223,17 @@ export function MetronomeScreen({
     [dismissHint, setTempoEndingTapSeries],
   );
 
-  const scrollRef = useRef<ScrollView>(null);
   const scrollable = Math.round(contentHeight) > Math.round(bodyHeight);
-  const screenSwipe = useTempoSwipe(frame.currentBpm, handleSwipeOrTypedTempo, {
-    enabled: !scrollable,
-  });
-  const zoneSwipe = useTempoSwipe(frame.currentBpm, handleSwipeOrTypedTempo, {
-    enabled: true,
-    blocks: scrollRef,
-  });
+  const screenSwipe = useTempoSwipe(
+    frame.currentBpm,
+    handleSwipeOrTypedTempo,
+    !scrollable,
+  );
+  const zoneSwipe = useTempoSwipe(
+    frame.currentBpm,
+    handleSwipeOrTypedTempo,
+    true,
+  );
 
   const handleNudge = useCallback(
     (delta: number) => {
@@ -366,7 +368,7 @@ export function MetronomeScreen({
             <ScrollView
               style={[styles.body, viewportFrame]}
               contentContainerStyle={[styles.bodyContent, scrollSlack]}
-              ref={scrollRef}
+              requireToFail={zoneSwipe}
               scrollEnabled={scrollable}
               showsVerticalScrollIndicator={false}
               onLayout={handleBodyLayout}
