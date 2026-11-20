@@ -1,0 +1,44 @@
+appId: com.kitbag.app
+name: '#382: a stem song that plays to its end opens and plays the next one in the setlist; the last one stops'
+tags:
+  - issue-382
+env:
+  SETLIST: Advance gig
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- runFlow:
+    file: ../../subflows/import-stem-song.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS}
+- back
+- runFlow:
+    file: ../../subflows/import-stem-song.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS_NO_GRID}
+- runFlow:
+    file: ../../subflows/add-stem-song-to-setlist.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS}
+- runFlow:
+    file: ../../subflows/add-stem-song-to-setlist.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS_NO_GRID}
+- back
+- runFlow: ../../subflows/open-metronome-first-time.yaml
+- tapOn: 'Setlists'
+- tapOn: '${SETLIST}, .*'
+- tapOn: 'Play from 1'
+- extendedWaitUntil:
+    visible: 'Up next: ${FIXTURE_STEMS_NO_GRID}, ${SETLIST} · 2 of 2'
+    timeout: 20000
+- tapOn: 'Play'
+- extendedWaitUntil:
+    visible: 'Playing ${FIXTURE_STEMS_NO_GRID} · 2 of 2'
+    timeout: 30000
+- assertVisible: 'Pause'
+- assertNotVisible: 'Up next: .*'
+- extendedWaitUntil:
+    visible: 'Play'
+    timeout: 30000
+- assertNotVisible: 'Up next: .*'
+- assertNotVisible: 'Playing .*'
