@@ -75,7 +75,7 @@ export const practiceHistoryText = {
   summaryHint: { family: body, weight: 400, size: 13 },
   time: { family: display, weight: 500, size: 12, tabular: true },
   stretchTitle: { family: display, weight: 500, size: 14.5 },
-  stretchPlace: { family: body, weight: 500, size: 12 },
+  stretchPlace: { family: body, weight: 400, size: 12 },
   stretchFacts: { family: body, weight: 400, size: 12, tabular: true },
   stretchLength: { family: display, weight: 500, size: 14, tabular: true },
   pause: { family: body, weight: 400, size: 12 },

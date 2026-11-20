@@ -187,9 +187,15 @@ const GRAPH_SPAN: Readonly<Record<HistoryGrouping, string>> = {
   month: 'months',
 };
 
-function mostText(seconds: number): string {
+const GRAPH_IN_HOURS: Readonly<Record<HistoryGrouping, boolean>> = {
+  day: false,
+  week: true,
+  month: true,
+};
+
+function mostText(seconds: number, grouping: HistoryGrouping): string {
   const { hours, minutes } = clockParts(seconds);
-  if (hours === 0) return `${String(minutes)} m`;
+  if (hours === 0 && !GRAPH_IN_HOURS[grouping]) return `${String(minutes)} m`;
   return `${String(hours)} h ${pad(minutes)} m`;
 }
 
@@ -200,7 +206,8 @@ export function graphCaption(
   const span = `last ${String(bars.length)} ${GRAPH_SPAN[grouping]}`;
   const most = longestBar(bars);
   const parts = [GRAPH_CAPTION[grouping], span];
-  if (most >= SECONDS_PER_MINUTE) parts.push(`most ${mostText(most)}`);
+  if (most >= SECONDS_PER_MINUTE)
+    parts.push(`most ${mostText(most, grouping)}`);
   return join(parts);
 }
 

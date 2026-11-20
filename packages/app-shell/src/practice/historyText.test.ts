@@ -170,6 +170,29 @@ describe('graph text', () => {
       'Hours a week · last 12 weeks',
     );
   });
+
+  it.each([
+    ['week', 'Hours a week · last 12 weeks · most 0 h 01 m'],
+    ['month', 'Hours a month · last 12 months · most 0 h 01 m'],
+  ] as const)('writes the %s maximum in hours', (grouping, caption) => {
+    const bars = historyGraph(
+      [session(new Date(2026, 10, 1, 9), { durationSeconds: MINUTE })],
+      grouping,
+      NOW,
+    );
+    expect(graphCaption(bars, grouping)).toBe(caption);
+  });
+
+  it('writes a short day maximum in minutes', () => {
+    const bars = historyGraph(
+      [session(new Date(2026, 10, 1, 9), { durationSeconds: MINUTE })],
+      'day',
+      NOW,
+    );
+    expect(graphCaption(bars, 'day')).toBe(
+      'Minutes a day · last 14 days · most 1 m',
+    );
+  });
 });
 
 describe('deletedMessage', () => {
