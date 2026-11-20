@@ -260,8 +260,9 @@ class MoveRunner(
   private fun placeReturned(state: MoveState) {
     val card = state.source as DataFolderLocation.Card
     val targetRoot = mountedRoot(state.target) ?: throw Stop(MoveOutcome.Failed(MoveFailure.TARGET_UNAVAILABLE))
+    val stillAway = folder.awayOn(card.volumeUuid) ?: throw UnreadableStateException(AwayManifest.FILE_NAME)
     for (entry in state.files) {
-      CardReturn.place(targetRoot, entry.path)
+      if (entry.path in stillAway) CardReturn.place(targetRoot, entry.path) else CardReturn.drop(targetRoot, entry.path)
       emit(state, entry.path)
     }
     folder.forgetAway(card.volumeUuid, state.files.map { it.path })
