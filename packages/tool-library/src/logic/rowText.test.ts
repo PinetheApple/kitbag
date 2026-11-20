@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   formatLength,
+  playingSubtitle,
   rowBadges,
   rowSubtitle,
   type RowPlace,
@@ -53,6 +54,16 @@ const BARE_STEMS: LibraryStemSetRow = {
   scale: null,
   hasGrid: false,
 };
+
+describe('the facts of the playing row', () => {
+  it('start with Playing for a stem song', () => {
+    expect(playingSubtitle(STEMS, '3:10 · Gm')).toBe('Playing · 3:10 · Gm');
+  });
+
+  it('stay as they are for a single song', () => {
+    expect(playingSubtitle(SONG, '3:10 · Gm')).toBe('3:10 · Gm');
+  });
+});
 
 describe('length', () => {
   it.each([

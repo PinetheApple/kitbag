@@ -5,6 +5,7 @@ import {
   hitBoxStyle,
   hitExtension,
   Icon,
+  type IconName,
   isTextScaled,
   libraryList,
   libraryMix,
@@ -32,11 +33,13 @@ import { Pressable, useWindowDimensions, View } from 'react-native';
 import { failureText } from '../logic/notices.ts';
 import { rowLayout } from '../logic/rowLayout.ts';
 import {
+  playingSubtitle,
   rowBadges,
   rowSubtitle,
   spokenRow,
   type RowPlace,
 } from '../logic/rowText.ts';
+import { useNowPlaying } from './nowPlaying.ts';
 import { useRowFailure, useRowFiles } from './rowFailureHooks.ts';
 
 const MORE_HIT_BOX = hitBoxStyle(
@@ -88,6 +91,7 @@ const useStyles = createThemedStyles((theme) => ({
     lineHeight: textRoles.listTitle.size * lineRatio.title,
     color: theme.color.text,
   },
+  playingTitle: { color: theme.color[theme.accentInk] },
   facts: {
     ...textStyle(textRoles.listFacts),
     lineHeight: textRoles.listFacts.size * lineRatio.compactBody,
@@ -118,12 +122,19 @@ function rowStatus(row: LibraryRow): SongBadge {
   return row.hasGrid ? 'grid' : 'noGrid';
 }
 
+function tileIcon(stems: boolean, playing: boolean): IconName {
+  if (stems) return 'stems';
+  return playing ? 'pause' : 'song';
+}
+
 function RowTile({
   stems,
   muted,
+  playing,
 }: {
   readonly stems: boolean;
   readonly muted: boolean;
+  readonly playing: boolean;
 }) {
   const styles = useStyles();
   const theme = useTheme();
@@ -132,7 +143,7 @@ function RowTile({
       style={[styles.tile, stems && styles.stemTile, muted && styles.muted]}
     >
       <Icon
-        name={stems ? 'stems' : 'song'}
+        name={tileIcon(stems, playing)}
         size="listTile"
         color={stems ? theme.accentInk : 'text2'}
       />
@@ -172,6 +183,7 @@ export function LibraryRowView({
   const failure = useRowFailure(row);
   const place = useRowPlace(row, moving);
   const away = place === 'unavailable';
+  const playing = useNowPlaying(row);
   const endSetlistSession = useLibrary((s) => s.endSetlistSession);
   const openStemSetId = useStemPlayer((s) =>
     s.status === 'ready' ? s.setId : null,
@@ -226,16 +238,22 @@ export function LibraryRowView({
         onLongPress={openActions}
         onPress={open}
       >
-        <RowTile stems={row.kind === 'stems'} muted={away} />
+        <RowTile stems={row.kind === 'stems'} muted={away} playing={playing} />
         <View style={styles.text}>
           <EllipsizedText
-            style={[styles.title, away && styles.muted]}
+            style={[
+              styles.title,
+              playing && styles.playingTitle,
+              away && styles.muted,
+            ]}
             numberOfLines={titleLines}
           >
             {row.title}
           </EllipsizedText>
           <EllipsizedText style={styles.facts} numberOfLines={factsLines}>
-            {rowSubtitle(row, status, failure)}
+            {playing
+              ? playingSubtitle(row, rowSubtitle(row, status, failure))
+              : rowSubtitle(row, status, failure)}
           </EllipsizedText>
           {badgesUnderText && badges}
         </View>

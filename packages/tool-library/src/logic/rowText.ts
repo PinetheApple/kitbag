@@ -1,4 +1,10 @@
-import { countLabel, type BadgeTone, type IconName } from '@kitbag/core-design';
+import {
+  countLabel,
+  FACT_SEPARATOR,
+  PLAYING,
+  type BadgeTone,
+  type IconName,
+} from '@kitbag/core-design';
 import {
   bpmFact,
   correctedBpm,
@@ -149,6 +155,11 @@ export function rowSubtitle(
     ...(failure?.keptGrid === true ? [KEPT_GRID_NOTE] : []),
   ];
   return parts.join(' · ');
+}
+
+export function playingSubtitle(row: LibraryRow, subtitle: string): string {
+  if (row.kind !== 'stems') return subtitle;
+  return [PLAYING, subtitle].filter((part) => part !== '').join(FACT_SEPARATOR);
 }
 
 export function spokenRow(

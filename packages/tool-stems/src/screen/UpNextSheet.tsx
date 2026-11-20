@@ -8,6 +8,7 @@ import {
   Icon,
   minTouchTargetDp,
   PlainListRow,
+  PLAYING,
   QUEUE_TEXT,
   RowText,
   usePlainRowStyles,
@@ -35,7 +36,6 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { PLAYING } from '../logic/playOrderText.ts';
 import { clearQueueBody, setlistRowSubtitle } from '../logic/upNextText.ts';
 import { UP_NEXT } from './UpNextRow.tsx';
 import {
