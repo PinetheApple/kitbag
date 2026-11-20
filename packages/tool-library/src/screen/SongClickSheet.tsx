@@ -9,10 +9,13 @@ import {
 } from '@kitbag/core-design';
 import { KB_STOPPED_BEAT } from '@kitbag/core-native';
 import {
+  countInBarsFromOption,
   layoutBeatLeds,
   SOUND_OPTIONS,
   SOUND_ROLE,
   SOUND_ROLE_OPTIONS,
+  soundPickerLabel,
+  soundsWith,
   useSongPlayer,
   type SoundRole,
 } from '@kitbag/core-state';
@@ -60,7 +63,7 @@ function CountInGroup({ headerRef }: Pick<GroupHeaderProps, 'headerRef'>) {
   const setCountIn = useSongPlayer((s) => s.setClickCountIn);
   const select = useCallback(
     (value: string) => {
-      setCountIn(Number(value));
+      setCountIn(countInBarsFromOption(value));
     },
     [setCountIn],
   );
@@ -85,9 +88,8 @@ function SoundGroup({ headerRef }: Pick<GroupHeaderProps, 'headerRef'>) {
   const setSounds = useSongPlayer((s) => s.setClickSounds);
   const pick = useCallback(
     (value: string) => {
-      const id = Number(value);
-      if (role === SOUND_ROLE.accent) setSounds(sounds.normal, id);
-      else setSounds(id, sounds.accent);
+      const next = soundsWith(sounds, role, Number(value));
+      setSounds(next.normal, next.accent);
     },
     [role, setSounds, sounds],
   );
@@ -102,7 +104,7 @@ function SoundGroup({ headerRef }: Pick<GroupHeaderProps, 'headerRef'>) {
         onSelect={setRole}
       />
       <PickerGrid
-        accessibilityLabel={`${role} beat sound`}
+        accessibilityLabel={soundPickerLabel(role)}
         options={SOUND_OPTIONS}
         selected={String(sounds[role])}
         onSelect={pick}

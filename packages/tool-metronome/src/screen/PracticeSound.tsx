@@ -23,6 +23,7 @@ import {
   soundRoleName,
   soundsWith,
   type SoundRole,
+  soundPickerLabel,
 } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -163,7 +164,7 @@ export function SoundListSheet({
         onDismiss={onDismiss}
       >
         <PickerGrid
-          accessibilityLabel={`${soundRoleName(shownRole)} beat sound`}
+          accessibilityLabel={soundPickerLabel(shownRole)}
           options={SOUND_OPTIONS}
           selected={String(sounds[shownRole])}
           onSelect={pickOption}

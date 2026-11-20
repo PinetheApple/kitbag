@@ -59,6 +59,7 @@ export {
 } from './metronome/config.ts';
 export { beatGroupSizes, groupStartAccents } from './metronome/meterGroups.ts';
 export { layoutBeatLeds, type LedRowLayout } from './metronome/ledLayout.ts';
+export { countInBarsFromOption } from './metronome/countInOption.ts';
 export {
   effectivePolyAgainst,
   normalizePolyAgainst,
@@ -619,6 +620,7 @@ export {
   SOUND_ROLE_OPTIONS,
   soundChipLabel,
   soundLabel,
+  soundPickerLabel,
   soundRoleName,
   soundsWith,
   type CustomSoundView,

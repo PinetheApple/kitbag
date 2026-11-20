@@ -13,6 +13,7 @@ import {
   SOUND_OPTIONS,
   SOUND_ROLE,
   SOUND_ROLE_OPTIONS,
+  soundPickerLabel,
   soundsWith,
   type SoundRole,
 } from '@kitbag/core-state';
@@ -95,7 +96,7 @@ export function SoundPickerSheet({
           onSelect={setRole}
         />
         <PickerGrid
-          accessibilityLabel={`${role} beat sound`}
+          accessibilityLabel={soundPickerLabel(role)}
           options={SOUND_OPTIONS}
           selected={String(sounds[role])}
           onSelect={pickOption}

@@ -15,6 +15,10 @@ export function soundRoleName(role: SoundRole): string {
   return role === SOUND_ROLE.accent ? 'Accent' : 'Normal';
 }
 
+export function soundPickerLabel(role: SoundRole): string {
+  return `${soundRoleName(role)} beat sound`;
+}
+
 export const SOUND_ROLE_OPTIONS = [
   { value: SOUND_ROLE.normal, label: soundRoleName(SOUND_ROLE.normal) },
   { value: SOUND_ROLE.accent, label: soundRoleName(SOUND_ROLE.accent) },

@@ -12,14 +12,12 @@ import {
   type PerAccentSounds,
   soundChipLabel,
   soundLabel,
+  countInBarsFromOption,
 } from '@kitbag/core-state';
 import { useCallback, useState } from 'react';
 import { Pressable } from 'react-native';
 
-import {
-  COUNT_IN_BAR_OPTIONS,
-  countInBarsFromOption,
-} from '../../logic/countIn.ts';
+import { COUNT_IN_BAR_OPTIONS } from '../../logic/countIn.ts';
 import type { BarMuteDraft, RampDraft } from '../../logic/presetDraft.ts';
 import {
   RAMP_UNIT_OPTIONS,

@@ -7,7 +7,7 @@ export const MAX_LEDS_PER_ROW = 7;
 export type LedRowLayout = readonly (readonly number[])[];
 
 // MIN_LEDS_PER_ROW is no branch: the group sizes and the ceiling keep every
-// filled row above it, and only the last row can end short (pinned in the test).
+// filled row above it.
 export function layoutBeatLeds(
   beatCount: number,
   maxPerRow: number = MAX_LEDS_PER_ROW,

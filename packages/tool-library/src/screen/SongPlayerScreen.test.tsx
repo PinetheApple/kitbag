@@ -150,6 +150,9 @@ vi.mock('@kitbag/core-state', async (original) => {
     SOUND_ROLE_OPTIONS,
     layoutBeatLeds,
     soundLabel,
+    soundPickerLabel,
+    soundsWith,
+    countInBarsFromOption,
   } = await original<{
     useFocusedMixerHold: unknown;
     playerSongBadge: unknown;
@@ -165,6 +168,9 @@ vi.mock('@kitbag/core-state', async (original) => {
     SOUND_ROLE_OPTIONS: unknown;
     layoutBeatLeds: unknown;
     soundLabel: unknown;
+    soundPickerLabel: unknown;
+    soundsWith: unknown;
+    countInBarsFromOption: unknown;
   }>();
   const open = () => {
     const mine = ++mixer.session;
@@ -199,6 +205,9 @@ vi.mock('@kitbag/core-state', async (original) => {
     SOUND_ROLE_OPTIONS,
     layoutBeatLeds,
     soundLabel,
+    soundPickerLabel,
+    soundsWith,
+    countInBarsFromOption,
     bpmFact: (bpm: number | null) =>
       bpm === null
         ? null

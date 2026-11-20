@@ -1,12 +1,12 @@
 import { KB_COUNT_IN_BARS } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
+import { countInBarsFromOption } from '@kitbag/core-state';
 
 import {
   COUNT_IN_BAR_OPTIONS,
   COUNT_IN_MODE_OPTIONS,
   COUNT_IN_SEGMENT_OPTIONS,
   countInMode,
-  countInBarsFromOption,
   countInLabel,
 } from './countIn.ts';
 
