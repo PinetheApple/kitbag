@@ -1,0 +1,1 @@
+• Up next no longer shows a setlist you didn't start, and Leave setlist removes it.
