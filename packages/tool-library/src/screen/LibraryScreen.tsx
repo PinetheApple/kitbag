@@ -51,6 +51,7 @@ export interface LibraryScreenProps {
   readonly onOpenStemSet: (id: number) => void;
   readonly onOpenSong: (id: number) => void;
   readonly onOpenSetlists?: () => void;
+  readonly onOpenSetlist: (setlistId: number) => void;
   readonly dock?: ReactElement;
   readonly onAdd?: () => void;
   readonly status?: ReactElement;
@@ -305,6 +306,7 @@ export function LibraryScreen({
   onOpenStemSet,
   onOpenSong,
   onOpenSetlists,
+  onOpenSetlist,
   dock,
   onAdd,
   status,
@@ -371,7 +373,12 @@ export function LibraryScreen({
         ) : null}
       </View>
       {dock}
-      <LibrarySheets menu={menu} bottomInset={insets.bottom} />
+      <LibrarySheets
+        menu={menu}
+        bottomInset={insets.bottom}
+        stemRows={view === 'stems'}
+        onOpenSetlist={onOpenSetlist}
+      />
     </View>
   );
 }

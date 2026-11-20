@@ -4,13 +4,14 @@ import {
   isOverridden,
   MenuRow,
   MeterRow,
+  QUEUE_TEXT,
   Sheet,
   size,
   stemPlayer,
   textRoles,
   textStyle,
 } from '@kitbag/core-design';
-import { exportBlock, usePlayOrder, useStemPlayer } from '@kitbag/core-state';
+import { exportBlock, useIsQueued, useStemPlayer } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -133,20 +134,18 @@ interface QueueRowsProps {
 function QueueRows({ onPlayNext, onAddToSetlist }: QueueRowsProps) {
   const styles = useStyles();
   const setId = useStemPlayer((s) => s.setId);
-  const queued = usePlayOrder((s) =>
-    s.queue.some((entry) => entry.stemSetId === setId),
-  );
+  const queued = useIsQueued(setId);
   return (
     <View style={styles.divided}>
       <MenuRow
         icon={queued ? 'inUpNext' : 'playNext'}
-        label={queued ? 'In Up next' : 'Play next'}
+        label={queued ? QUEUE_TEXT.inUpNext : QUEUE_TEXT.playNext}
         disabled={queued}
         onPress={onPlayNext}
       />
       <MenuRow
         icon="addToSetlist"
-        label="Add to setlist"
+        label={QUEUE_TEXT.addToSetlist}
         onPress={onAddToSetlist}
       />
     </View>

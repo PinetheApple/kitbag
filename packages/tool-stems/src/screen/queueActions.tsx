@@ -1,27 +1,30 @@
 import {
+  SetlistPickerSheet,
+  useQueueNotices,
+  type Notice,
+  type SetlistPickerSheetProps,
+} from '@kitbag/core-design';
+import {
   SKIPPED_STEM_SONG,
   useLibrary,
-  usePlayOrder,
+  useQueueRefresh,
+  useQueueSong,
+  useSetlistPicker,
   useStemPlayer,
 } from '@kitbag/core-state';
 import { useCallback, useEffect } from 'react';
 
-import type { usePlayerNotice } from './PlayerNotice.tsx';
-import {
-  SetlistPickerSheet,
-  type AddedToSetlist,
-  type SetlistPickerSheetProps,
-} from './SetlistPickerSheet.tsx';
+type SetlistSheetProps = Pick<
+  SetlistPickerSheetProps,
+  'visible' | 'bottomInset' | 'onDismiss' | 'onAdded'
+>;
 
-export const ADDED_TO_UP_NEXT = 'Added to Up next';
-
-export function SetlistSheet(
-  props: Omit<SetlistPickerSheetProps, 'songTitle' | 'stemSetId'>,
-) {
+export function SetlistSheet(props: SetlistSheetProps) {
   const title = useStemPlayer((s) => s.title);
   const setId = useStemPlayer((s) => s.setId);
+  const picker = useSetlistPicker(setId);
   if (setId === null) return null;
-  return <SetlistPickerSheet {...props} songTitle={title} stemSetId={setId} />;
+  return <SetlistPickerSheet {...props} {...picker} songTitle={title} />;
 }
 
 export function useCarriedSkipNotice(showMessage: (message: string) => void) {
@@ -35,38 +38,21 @@ export function useCarriedSkipNotice(showMessage: (message: string) => void) {
 }
 
 export function useQueueActions(
-  notice: ReturnType<typeof usePlayerNotice>,
+  notice: Notice,
   closeSheet: () => void,
   onOpenSetlist: (setlistId: number) => void,
 ) {
-  const enqueue = usePlayOrder((s) => s.enqueue);
-  const refresh = usePlayOrder((s) => s.refresh);
   const setId = useStemPlayer((s) => s.setId);
-  useEffect(() => {
-    refresh().catch((error: unknown) => {
-      console.warn('[kitbag] play queue read failed', error);
-    });
-  }, [refresh]);
+  useQueueRefresh(true);
+  const queueSong = useQueueSong();
+  const { playNext: queueNext, added } = useQueueNotices(
+    notice,
+    queueSong,
+    onOpenSetlist,
+  );
   const playNext = useCallback(() => {
     closeSheet();
-    if (setId === null) return;
-    void enqueue(setId).then(() => {
-      notice.show({ message: ADDED_TO_UP_NEXT });
-    });
-  }, [closeSheet, setId, enqueue, notice]);
-  const added = useCallback(
-    ({ setlistId, name }: AddedToSetlist) => {
-      notice.show({
-        message: `Added to ${name}`,
-        action: {
-          label: 'Open',
-          onPress: () => {
-            onOpenSetlist(setlistId);
-          },
-        },
-      });
-    },
-    [notice, onOpenSetlist],
-  );
+    if (setId !== null) queueNext(setId);
+  }, [closeSheet, setId, queueNext]);
   return { playNext, added };
 }

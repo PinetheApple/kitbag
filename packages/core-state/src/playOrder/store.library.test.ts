@@ -72,6 +72,20 @@ describe('play order on the library stage', () => {
     expect(library.getState()).toMatchObject({ loaded, played, discarded });
   });
 
+  it('keeps the stem entry a press opened again during the commit', async () => {
+    const { library, order, gig, first } = await setup();
+    const step = await order.getState().peekNext();
+    const pressOpeningSameEntry = () => {
+      void library.getState().openStemEntry(first.id, gig);
+      return false;
+    };
+    await order.getState().commitNext(step.advance, pressOpeningSameEntry);
+    expect(library.getState().loaded).toMatchObject({
+      presetId: null,
+      itemId: first.id,
+    });
+  });
+
   it('says a stem song deleted after it was shown as up next was skipped', async () => {
     const { order, handle, a, b } = await setup();
     await deleteStemSet(handle.db, a);

@@ -1,3 +1,4 @@
+import { FACT_SEPARATOR } from '@kitbag/core-design';
 import {
   ARRIVAL,
   SKIP,
@@ -9,7 +10,6 @@ import {
   type StemSongs,
 } from '@kitbag/core-state';
 
-import { SEPARATOR } from '../stemDeck/logic/songFacts.ts';
 import { placeLabel, PLAYING } from './playOrderText.ts';
 
 const SKIPPED: Readonly<Record<Skip, string>> = {
@@ -24,5 +24,5 @@ export function arrivalText(arrival: Arrival, stems: StemSongs): string | null {
   if (skipped !== null) return SKIPPED[skipped];
   const playing = `${PLAYING} ${stemSongTitle(stemSetId, stems)}`;
   if (place === null) return playing;
-  return [playing, placeLabel(place.number, place.of)].join(SEPARATOR);
+  return [playing, placeLabel(place.number, place.of)].join(FACT_SEPARATOR);
 }

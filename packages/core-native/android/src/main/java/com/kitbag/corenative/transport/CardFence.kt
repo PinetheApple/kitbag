@@ -22,8 +22,10 @@ class CardFence {
   }
 
   @Synchronized
-  fun <T> run(cardNumber: Int, body: () -> T): T? =
-    if (cardNumber != NONE && cardNumber == live) body() else null
+  fun holds(cardNumber: Int): Boolean = cardNumber != NONE && cardNumber == live
+
+  @Synchronized
+  fun <T> run(cardNumber: Int, body: () -> T): T? = if (holds(cardNumber)) body() else null
 
   companion object {
     const val NONE = 0
@@ -34,7 +36,9 @@ class CardFences {
   val song = CardFence()
   val metronome = CardFence()
 
-  fun handOverMetronome(hide: () -> Unit) {
+  fun showMetronome(): Int = metronome.keep()
+
+  fun hideMetronome(hide: () -> Unit) {
     metronome.withdraw()
     hide()
   }

@@ -2,10 +2,15 @@ import { KB_MIXER_UNITY_RATE } from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 
 import { UNSHIFTED_KEY } from './mix.ts';
-import { BARS, opened, RATE, record, stem } from './store.test-helper.ts';
+import {
+  BARS,
+  opened,
+  record,
+  SONG_FRAMES,
+  stem,
+} from './store.test-helper.ts';
 
 const NEXT_SET_ID = 8;
-const SONG_FRAMES = 10 * RATE;
 const PRACTICE_SPEED = 0.8;
 const UP_TWO = 2;
 const STORED_SPEED = 0.75;

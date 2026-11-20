@@ -1,4 +1,8 @@
-import type { BadgeTone, IconName } from '@kitbag/core-design';
+import {
+  FACT_SEPARATOR,
+  type BadgeTone,
+  type IconName,
+} from '@kitbag/core-design';
 import type {
   StemDeckFailure,
   StemDeckImportPhase,
@@ -7,7 +11,7 @@ import type {
 } from '@kitbag/core-state';
 
 import { CONNECTION_LOST, type Notice } from './failureText.ts';
-import { plural, SEPARATOR, stemCount } from './songFacts.ts';
+import { plural, stemCount } from './songFacts.ts';
 
 const BYTES_PER_MB = 1_000_000;
 const PERCENT = 100;
@@ -65,15 +69,15 @@ export function percentText(percent: number): string {
 function failedDetail(row: StemDeckImportRow): string {
   const total = row.bytesTotal;
   if (row.failure === 'noSpace' && total !== null)
-    return `Needs ${megabytes(total)} MB${SEPARATOR}${NOTHING_ADDED}`;
+    return `Needs ${megabytes(total)} MB${FACT_SEPARATOR}${NOTHING_ADDED}`;
   if (row.failure !== null && CONNECTION_LOST.has(row.failure)) {
     const at =
       total === null || total <= 0
         ? ''
         : ` at ${percentText(Math.floor((row.bytesDone * PERCENT) / total))}`;
-    return `Connection lost${at}${SEPARATOR}${NOTHING_ADDED}`;
+    return `Connection lost${at}${FACT_SEPARATOR}${NOTHING_ADDED}`;
   }
-  return `Not added${SEPARATOR}${NOTHING_ADDED}`;
+  return `Not added${FACT_SEPARATOR}${NOTHING_ADDED}`;
 }
 
 export function rowDetail(
@@ -84,15 +88,15 @@ export function rowDetail(
     case 'added':
       return stems === null
         ? 'In Stem songs'
-        : `${stemCount(stems)}${SEPARATOR}in Stem songs`;
+        : `${stemCount(stems)}${FACT_SEPARATOR}in Stem songs`;
     case 'skipped':
-      return `Already in your library${SEPARATOR}skipped`;
+      return `Already in your library${FACT_SEPARATOR}skipped`;
     case 'adding':
       return 'Adding to your library…';
     case 'downloading':
       return row.bytesTotal === null
-        ? `Downloading${SEPARATOR}${megabytes(row.bytesDone)} MB`
-        : `Downloading${SEPARATOR}${megabytes(row.bytesDone)} of ${megabytes(row.bytesTotal)} MB`;
+        ? `Downloading${FACT_SEPARATOR}${megabytes(row.bytesDone)} MB`
+        : `Downloading${FACT_SEPARATOR}${megabytes(row.bytesDone)} of ${megabytes(row.bytesTotal)} MB`;
     case 'preparing':
       return 'StemDeck is preparing this song. It can take a minute or two.';
     case 'waiting':
@@ -188,11 +192,11 @@ export function importClearable(view: StemDeckImportView): boolean {
 
 export function statusCardText(view: StemDeckImportView): string {
   if (view.running)
-    return `Getting songs from StemDeck${SEPARATOR}${addedText(view)}`;
+    return `Getting songs from StemDeck${FACT_SEPARATOR}${addedText(view)}`;
   const lead =
     view.stopped === null
       ? addedText(view)
       : stopNotice(view, view.stopped).title;
   const left = plural(view.retryCount, 'song', 'songs');
-  return `${lead}${SEPARATOR}${left} left`;
+  return `${lead}${FACT_SEPARATOR}${left} left`;
 }

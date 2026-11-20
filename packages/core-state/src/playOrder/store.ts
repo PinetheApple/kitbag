@@ -50,10 +50,13 @@ export interface PlayOrderDeps {
     itemId: number,
     setlistId: number,
   ) => Promise<unknown>;
-  readonly markStage: () => RestoreStage;
+  readonly markStage: () => StageMark;
 }
 
-export type RestoreStage = () => void;
+export interface StageMark {
+  readonly wrote: () => void;
+  readonly restore: () => void;
+}
 
 interface Commit {
   readonly write: () => Promise<unknown>;
@@ -61,10 +64,17 @@ interface Commit {
 }
 
 export function stageMarkOf(library: StoreApi<LibraryStore>) {
-  return (): RestoreStage => {
+  return (): StageMark => {
     const { loaded, played, discarded } = library.getState();
-    return () => {
-      library.setState({ loaded, played, discarded });
+    let written = loaded;
+    return {
+      wrote: () => {
+        written = library.getState().loaded;
+      },
+      restore: () => {
+        if (library.getState().loaded !== written) return;
+        library.setState({ loaded, played, discarded });
+      },
     };
   };
 }
@@ -84,10 +94,23 @@ const defaultDeps: PlayOrderDeps = {
 type SetState = StoreApi<PlayOrderStore>['setState'];
 type Get = StoreApi<PlayOrderStore>['getState'];
 
-function queueActions(deps: PlayOrderDeps, set: SetState, get: Get) {
+interface QueueEdits {
+  count: number;
+}
+
+function queueActions(
+  deps: PlayOrderDeps,
+  set: SetState,
+  get: Get,
+  edits: QueueEdits,
+) {
   const refreshAfter = async (work: Promise<unknown>) => {
     await work;
     await get().refresh();
+  };
+  const edit = (work: Promise<unknown>) => {
+    edits.count++;
+    return refreshAfter(work);
   };
   return {
     refresh: async () => {
@@ -96,24 +119,34 @@ function queueActions(deps: PlayOrderDeps, set: SetState, get: Get) {
     enqueue: (stemSetId: number, position?: number) =>
       refreshAfter(deps.queue().add(stemSetId, position)),
     moveQueued: (stemSetId: number, position: number) =>
-      refreshAfter(deps.queue().move(stemSetId, position)),
-    removeQueued: (stemSetId: number) =>
-      refreshAfter(deps.queue().remove(stemSetId)),
-    clearQueue: () => refreshAfter(deps.queue().clear()),
+      edit(deps.queue().move(stemSetId, position)),
+    removeQueued: (stemSetId: number) => edit(deps.queue().remove(stemSetId)),
+    clearQueue: () => edit(deps.queue().clear()),
     playQueued: (stemSetId: number) =>
-      refreshAfter(deps.queue().takeThrough(stemSetId)),
+      edit(deps.queue().takeThrough(stemSetId)),
   };
 }
 
 const ALWAYS = () => true;
 
-function queueCommit(deps: PlayOrderDeps, get: Get, stemSetId: number): Commit {
+function queueCommit(
+  deps: PlayOrderDeps,
+  get: Get,
+  edits: QueueEdits,
+  stemSetId: number,
+): Commit {
   const { queue } = get();
   const through = queue.findIndex((entry) => entry.stemSetId === stemSetId);
   const taken = queue.slice(0, through + 1);
+  let ours = edits.count;
   return {
-    write: () => get().playQueued(stemSetId),
+    write: () => {
+      const taking = get().playQueued(stemSetId);
+      ours = edits.count;
+      return taking;
+    },
     revert: async () => {
+      if (edits.count !== ours) return;
       for (const [position, entry] of taken.entries())
         await deps.queue().add(entry.stemSetId, position);
       await get().refresh();
@@ -126,20 +159,29 @@ function setlistCommit(
   itemId: number,
   setlistId: number,
 ): Commit {
-  const restore = deps.markStage();
+  const mark = deps.markStage();
   return {
-    write: () => deps.playSetlistEntry(itemId, setlistId),
+    write: () => {
+      const opening = deps.playSetlistEntry(itemId, setlistId);
+      mark.wrote();
+      return opening;
+    },
     revert: () => {
-      if (deps.cursor()?.itemId === itemId) restore();
+      mark.restore();
       return Promise.resolve();
     },
   };
 }
 
-function commitOf(deps: PlayOrderDeps, get: Get, next: Advance) {
+function commitOf(
+  deps: PlayOrderDeps,
+  get: Get,
+  edits: QueueEdits,
+  next: Advance,
+) {
   if (next.kind !== ADVANCE.play) return null;
   if (next.setlistItemId === null)
-    return queueCommit(deps, get, next.stemSetId);
+    return queueCommit(deps, get, edits, next.stemSetId);
   const { setlistId } = deps.stage();
   if (setlistId === null) return null;
   return setlistCommit(deps, next.setlistItemId, setlistId);
@@ -149,7 +191,12 @@ async function kept({ write, revert }: Commit, stands: () => boolean) {
   try {
     await write();
   } catch (error) {
-    await revert();
+    await revert().catch((undoError: unknown) => {
+      console.warn(
+        '[kitbag] undoing a failed play order step failed',
+        undoError,
+      );
+    });
     throw error;
   }
   if (stands()) return true;
@@ -157,7 +204,7 @@ async function kept({ write, revert }: Commit, stands: () => boolean) {
   return false;
 }
 
-function orderActions(deps: PlayOrderDeps, get: Get) {
+function orderActions(deps: PlayOrderDeps, get: Get, edits: QueueEdits) {
   const peekNext = async (): Promise<SkipResult> => {
     const expected = get().upNext();
     await Promise.all([get().refresh(), deps.refreshStage()]);
@@ -165,7 +212,7 @@ function orderActions(deps: PlayOrderDeps, get: Get) {
     return { advance: next, skipped: advanceSkipped(expected, next) };
   };
   const commitNext = async (next: Advance, stands = ALWAYS) => {
-    const commit = commitOf(deps, get, next);
+    const commit = commitOf(deps, get, edits, next);
     return commit === null || kept(commit, stands);
   };
   const skipToNext = async () => {
@@ -190,10 +237,11 @@ function orderActions(deps: PlayOrderDeps, get: Get) {
 export function createPlayOrderStore(
   deps: PlayOrderDeps = defaultDeps,
 ): StoreApi<PlayOrderStore> {
+  const edits: QueueEdits = { count: 0 };
   return createStore<PlayOrderStore>((set, get) => ({
     queue: [],
-    ...queueActions(deps, set, get),
-    ...orderActions(deps, get),
+    ...queueActions(deps, set, get, edits),
+    ...orderActions(deps, get, edits),
   }));
 }
 
