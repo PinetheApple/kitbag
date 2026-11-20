@@ -8,25 +8,24 @@ import {
   SheetHint,
 } from '@kitbag/core-design';
 import { KB_STOPPED_BEAT } from '@kitbag/core-native';
-import { useSongPlayer } from '@kitbag/core-state';
+import {
+  layoutBeatLeds,
+  SOUND_OPTIONS,
+  SOUND_ROLE,
+  SOUND_ROLE_OPTIONS,
+  useSongPlayer,
+  type SoundRole,
+} from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState, type RefObject } from 'react';
 import { View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
-import {
-  accentLedLabel,
-  accentLedLayout,
-  accentLedState,
-} from '../logic/accentLeds.ts';
+import { accentLedLabel, accentLedState } from '../logic/accentLeds.ts';
 import {
   CLICK_GROUP,
   COUNT_IN_OPTIONS,
   SONG_CLICK_TEXT,
-  SOUND_OPTIONS,
-  SOUND_ROLE,
-  SOUND_ROLE_OPTIONS,
   type ClickGroup,
-  type SoundRole,
 } from '../logic/clickChipText.ts';
 
 const SAVE_NOT_BUILT = () => undefined;
@@ -116,7 +115,7 @@ function AccentsGroup({ headerRef }: Pick<GroupHeaderProps, 'headerRef'>) {
   const silent = useSharedValue(KB_STOPPED_BEAT);
   const accents = useSongPlayer((s) => s.clickSettings.accents);
   const cycle = useSongPlayer((s) => s.cycleClickAccent);
-  const layout = useMemo(() => accentLedLayout(accents.length), [accents]);
+  const layout = useMemo(() => layoutBeatLeds(accents.length), [accents]);
   const states = useMemo(() => accents.map(accentLedState), [accents]);
   return (
     <>

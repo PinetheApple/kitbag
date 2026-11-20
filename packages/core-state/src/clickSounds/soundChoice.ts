@@ -1,10 +1,8 @@
 import { customSoundId, isCustomSoundId } from '@kitbag/core-native';
-import {
-  BUILT_IN_SOUND_NAMES,
-  DEFAULT_SOUND_NAME,
-  type ClickSound,
-  type PerAccentSounds,
-} from '@kitbag/core-state';
+import type { ClickSound } from '@kitbag/core-db';
+
+import type { PerAccentSounds } from '../metronome/config.ts';
+import { BUILT_IN_SOUND_NAMES, DEFAULT_SOUND_NAME } from './soundNames.ts';
 
 export const SOUND_ROLE = { normal: 'normal', accent: 'accent' } as const;
 export type SoundRole = (typeof SOUND_ROLE)[keyof typeof SOUND_ROLE];

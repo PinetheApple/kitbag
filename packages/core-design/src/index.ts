@@ -36,6 +36,7 @@ export * from './components/Button.tsx';
 export * from './components/Card.tsx';
 export * from './components/CheckListRow.tsx';
 export * from './components/Chip.tsx';
+export * from './components/UnsavedDot.tsx';
 export * from './components/DesignFloorOneLineText.tsx';
 export * from './components/DragListRow.tsx';
 export * from './components/EditRow.tsx';

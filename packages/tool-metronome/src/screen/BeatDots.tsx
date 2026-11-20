@@ -14,6 +14,7 @@ import Animated, {
   useSharedValue,
   type SharedValue,
 } from 'react-native-reanimated';
+import { layoutBeatLeds } from '@kitbag/core-state';
 
 import {
   beatLabel,
@@ -24,7 +25,6 @@ import {
 } from '../logic/beatDot.ts';
 import {
   beatDotSize,
-  layoutBeatLeds,
   MAX_DOTS_PER_LINE,
   widestLineWidth,
 } from '../logic/ledLayout.ts';

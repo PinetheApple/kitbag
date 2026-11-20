@@ -8,6 +8,8 @@ export * from './stemPlayer/beatStep.ts';
 export * from './importText.ts';
 export * from './clickSounds/soundNames.ts';
 export { beatGroupSizes } from './metronome/meterGroups.ts';
+export * from './metronome/ledLayout.ts';
+export * from './clickSounds/soundChoice.ts';
 export {
   correctedBpm,
   TEMPO_CORRECTION,

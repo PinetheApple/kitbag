@@ -2,15 +2,14 @@ import {
   Chip,
   ChipRow,
   createThemedStyles,
-  metronome,
-  opacity,
+  UnsavedDot,
 } from '@kitbag/core-design';
 import {
+  customSoundViews,
   useClickSounds,
   useSongPlayer,
-  type ClickSoundStore,
 } from '@kitbag/core-state';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 
 import {
@@ -21,18 +20,9 @@ import {
 } from '../logic/clickChipText.ts';
 import { lockBadgeOf } from '../logic/lockText.ts';
 
-const useStyles = createThemedStyles((theme) => ({
-  muted: { opacity: opacity.muted },
-  dot: {
-    alignSelf: 'center',
-    width: metronome.unsavedDot,
-    height: metronome.unsavedDot,
-    borderRadius: metronome.unsavedDot / 2,
-    backgroundColor: theme.color[theme.accentInk],
-  },
+const useStyles = createThemedStyles(() => ({
+  dot: { alignSelf: 'center' },
 }));
-
-const customSoundsOf = (state: ClickSoundStore) => state.sounds;
 
 interface SongClickChipProps {
   readonly chip: ClickChip;
@@ -41,20 +31,19 @@ interface SongClickChipProps {
 }
 
 function SongClickChip({ chip, enabled, onOpen }: SongClickChipProps) {
-  const styles = useStyles();
   const handlePress = useCallback(() => {
     onOpen(chip.group);
   }, [onOpen, chip.group]);
-  const face = (
+  return (
     <Chip
       label={chip.label}
       active={chip.active}
+      muted={chip.muted}
       accessibilityLabel={chip.spoken}
       disabled={!enabled}
       onPress={handlePress}
     />
   );
-  return chip.muted ? <View style={styles.muted}>{face}</View> : face;
 }
 
 export function SongClickChips({
@@ -65,10 +54,15 @@ export function SongClickChips({
   const styles = useStyles();
   const settings = useSongPlayer((s) => s.clickSettings);
   const hasGrid = useSongPlayer(lockBadgeOf) === 'grid';
-  const custom = useClickSounds(customSoundsOf);
+  const sounds = useClickSounds((s) => s.sounds);
+  const unavailable = useClickSounds((s) => s.unavailable);
+  const custom = useMemo(
+    () => customSoundViews(sounds, unavailable),
+    [sounds, unavailable],
+  );
   return (
     <ChipRow>
-      {clickChips(settings, custom).map((chip) => (
+      {clickChips(settings, custom, hasGrid).map((chip) => (
         <SongClickChip
           key={chip.group}
           chip={chip}
@@ -81,7 +75,9 @@ export function SongClickChips({
           accessible
           accessibilityLabel={SONG_CLICK_TEXT.unsaved}
           style={styles.dot}
-        />
+        >
+          <UnsavedDot />
+        </View>
       ) : null}
     </ChipRow>
   );

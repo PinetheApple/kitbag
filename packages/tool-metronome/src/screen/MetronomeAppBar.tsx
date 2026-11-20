@@ -16,6 +16,7 @@ import {
   textRoles,
   textStyle,
   useTheme,
+  UnsavedDot,
 } from '@kitbag/core-design';
 import {
   activeSetView,
@@ -41,7 +42,7 @@ import {
 } from '../logic/setlistChip.ts';
 import { LoadedSongSheet } from './LoadedSongSheet.tsx';
 import { SetlistSongsSheet } from './SetlistSongsSheet.tsx';
-import { UnsavedDot, useLoadedSongUnsaved } from './UnsavedChanges.tsx';
+import { useLoadedSongUnsaved } from './UnsavedChanges.tsx';
 
 const NO_ENTRIES: readonly SetlistEntry[] = [];
 

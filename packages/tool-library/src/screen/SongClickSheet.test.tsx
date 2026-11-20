@@ -19,6 +19,8 @@ const COWBELL = KB_SOUND_NAMES.indexOf('cowbell');
 const BEEP = KB_SOUND_NAMES.indexOf('beep');
 const TOM = KB_SOUND_NAMES.indexOf('tom');
 
+const NO_CUSTOM_SOUNDS = vi.hoisted(() => ({ sounds: [], unavailable: [] }));
+
 const song = vi.hoisted(() => ({
   state: {},
   setClickSounds: vi.fn(),
@@ -40,6 +42,7 @@ vi.mock('@kitbag/core-design', async (original) => {
     createThemedStyles: (build: (theme: unknown) => unknown) => () =>
       build({ color: {}, accentInk: 'accent' }),
     Chip: host('Chip'),
+    UnsavedDot: host('UnsavedDot'),
     ChipRow: host('ChipRow'),
     Button: host('Button'),
     SectionHeader: host('SectionHeader'),
@@ -56,7 +59,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   useSongPlayer: (select: (state: unknown) => unknown) => select(song.state),
   useClickSounds: (select: (state: unknown) => unknown) =>
-    select({ sounds: [] }),
+    select(NO_CUSTOM_SOUNDS),
   useMetronome: (select: (state: unknown) => unknown) =>
     select({ sounds: { normal: COWBELL, accent: COWBELL }, accents: [] }),
 }));
@@ -175,13 +178,27 @@ describe('the song click chips', () => {
     expect(labels).toEqual(['Count-in', 'Click: Woodblock', 'Accent 1']);
   });
 
-  it('mutes every chip while the song has no grid', () => {
+  it('mutes and disables every chip while the song has no grid', () => {
     givenSong({}, { beats: [] });
-    for (const c of chips(mount())) expect(c.props.disabled).toBe(true);
+    for (const c of chips(mount())) {
+      expect(c.props.disabled).toBe(true);
+      expect(c.props.muted).toBe(true);
+      expect(c.props.active).toBe(false);
+    }
   });
 
-  it('keeps the chips live with a grid', () => {
-    for (const c of chips(mount())) expect(c.props.disabled).toBe(false);
+  it('keeps the chips live with a grid, Count-in alone muted', () => {
+    const live = chips(mount());
+    expect(live.map((c) => c.props.disabled as boolean)).toEqual([
+      false,
+      false,
+      false,
+    ]);
+    expect(live.map((c) => c.props.muted as boolean)).toEqual([
+      true,
+      false,
+      false,
+    ]);
   });
 
   it('shows the unsaved dot only while the song click is dirty', () => {

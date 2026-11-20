@@ -1,12 +1,11 @@
 import { grownTextScale, isTextScaled, metronome } from '@kitbag/core-design';
 import { KB_MAX_BEATS } from '@kitbag/core-native';
+import { layoutBeatLeds, type LedRowLayout } from '@kitbag/core-state';
 
 import {
   beatDotSize,
-  layoutBeatLeds,
   MAX_DOTS_PER_LINE,
   type DotMetrics,
-  type LedRowLayout,
 } from './ledLayout.ts';
 import type { ScreenDensity } from './screenDensity.ts';
 

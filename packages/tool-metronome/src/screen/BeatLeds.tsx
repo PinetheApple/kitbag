@@ -6,9 +6,9 @@ import {
 import { KB_ACCENT } from '@kitbag/core-native';
 import { useMemo } from 'react';
 import type { SharedValue } from 'react-native-reanimated';
+import { layoutBeatLeds } from '@kitbag/core-state';
 
 import { beatLabel, ledStateFor } from '../logic/beatDot.ts';
-import { layoutBeatLeds } from '../logic/ledLayout.ts';
 
 interface BeatLedsProps {
   readonly beatCount: number;

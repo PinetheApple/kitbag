@@ -7,7 +7,12 @@ import {
   type StepDelta,
 } from '@kitbag/core-design';
 import { KB_MIN_RAMP_STEP_BPM, KB_MUTE_BARS_BOUNDS } from '@kitbag/core-native';
-import { BPM_BOUNDS, type PerAccentSounds } from '@kitbag/core-state';
+import {
+  BPM_BOUNDS,
+  type PerAccentSounds,
+  soundChipLabel,
+  soundLabel,
+} from '@kitbag/core-state';
 import { useCallback, useState } from 'react';
 import { Pressable } from 'react-native';
 
@@ -24,7 +29,6 @@ import {
   stepRampInterval,
   withRampUnit,
 } from '../../logic/rampUnit.ts';
-import { soundChipLabel, soundLabel } from '../../logic/soundChoice.ts';
 import { stepWithin } from '../../logic/trainer.ts';
 import { useCustomSoundViews } from '../../screen/CustomSounds.tsx';
 import { SoundPickerSheet } from '../../screen/SoundSheet.tsx';

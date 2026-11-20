@@ -1,15 +1,13 @@
 import { countLabel } from '@kitbag/core-design';
 import {
-  customSoundId,
   KB_ACCENT,
   KB_COUNT_IN_BARS,
   KB_COUNT_IN_OFF,
   type KbCountInBars,
 } from '@kitbag/core-native';
 import {
-  BUILT_IN_SOUND_NAMES,
-  DEFAULT_SOUND_NAME,
-  type ClickSound,
+  soundLabel,
+  type CustomSoundView,
   type SongPlayerStore,
 } from '@kitbag/core-state';
 
@@ -34,19 +32,6 @@ export const SONG_CLICK_TEXT = {
   unsaved: 'Unsaved changes',
 } as const;
 
-export const SOUND_ROLE = { normal: 'normal', accent: 'accent' } as const;
-export type SoundRole = (typeof SOUND_ROLE)[keyof typeof SOUND_ROLE];
-
-export const SOUND_ROLE_OPTIONS = [
-  { value: SOUND_ROLE.normal, label: 'Normal' },
-  { value: SOUND_ROLE.accent, label: 'Accent' },
-] as const;
-
-export const SOUND_OPTIONS = BUILT_IN_SOUND_NAMES.map((label, id) => ({
-  value: String(id),
-  label,
-}));
-
 const NO_ACCENT = 'No accent';
 const BEAT_SEPARATOR = ' · ';
 
@@ -59,18 +44,6 @@ export const COUNT_IN_OPTIONS = KB_COUNT_IN_BARS.map((bars) => ({
   label: countInOptionLabel(bars),
   disabled: true,
 }));
-
-export function clickSoundName(
-  id: number,
-  custom: readonly ClickSound[],
-): string {
-  const builtIn = BUILT_IN_SOUND_NAMES[id];
-  if (builtIn !== undefined) return builtIn;
-  const sound = custom.find(
-    (candidate) => customSoundId(candidate.slot) === id,
-  );
-  return sound?.name ?? DEFAULT_SOUND_NAME;
-}
 
 export function accentedBeats(accents: readonly KB_ACCENT[]): number[] {
   return accents.flatMap((accent, beat) =>
@@ -101,11 +74,11 @@ function accentChip(accents: readonly KB_ACCENT[]): ClickChip {
   };
 }
 
-export function clickChips(
+function songChips(
   settings: Pick<SongPlayerStore['clickSettings'], 'sounds' | 'accents'>,
-  custom: readonly ClickSound[],
+  custom: readonly CustomSoundView[],
 ): readonly ClickChip[] {
-  const sound = `Click: ${clickSoundName(settings.sounds.normal, custom)}`;
+  const sound = `Click: ${soundLabel(settings.sounds.normal, custom)}`;
   return [
     {
       group: CLICK_GROUP.countIn,
@@ -123,4 +96,14 @@ export function clickChips(
     },
     accentChip(settings.accents),
   ];
+}
+
+export function clickChips(
+  settings: Pick<SongPlayerStore['clickSettings'], 'sounds' | 'accents'>,
+  custom: readonly CustomSoundView[],
+  hasGrid: boolean,
+): readonly ClickChip[] {
+  const chips = songChips(settings, custom);
+  if (hasGrid) return chips;
+  return chips.map((chip) => ({ ...chip, active: false, muted: true }));
 }

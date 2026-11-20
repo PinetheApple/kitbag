@@ -1,13 +1,12 @@
 import { KB_ACCENT, KB_SOUND_NAMES, customSoundId } from '@kitbag/core-native';
+import { customSoundViews } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import {
   accentedBeats,
   clickChips,
-  clickSoundName,
   CLICK_GROUP,
   COUNT_IN_OPTIONS,
-  SOUND_OPTIONS,
 } from './clickChipText.ts';
 
 const {
@@ -17,16 +16,23 @@ const {
 } = KB_ACCENT;
 const WOODBLOCK = KB_SOUND_NAMES.indexOf('woodblock');
 const COWBELL = KB_SOUND_NAMES.indexOf('cowbell');
-const CUSTOM_SLOT = 0;
-const CUSTOM = [{ slot: CUSTOM_SLOT, name: 'Rimshot' }] as never;
+const RIMSHOT = {
+  slot: 0,
+  uuid: '6f1c2a3b-4d5e-4f60-8a71-92b3c4d5e6f7',
+  name: 'Rimshot',
+  fileName: 'a.wav',
+};
+const RIM_ID = customSoundId(RIMSHOT.slot);
 
 function chipFor(
   group: string,
   accents: readonly KB_ACCENT[] = [ACC, NOR, NOR, NOR],
+  hasGrid = true,
 ) {
   const chips = clickChips(
     { sounds: { normal: WOODBLOCK, accent: COWBELL }, accents },
     [],
+    hasGrid,
   );
   return chips.find((chip) => chip.group === group);
 }
@@ -37,6 +43,7 @@ describe('clickChips', () => {
       clickChips(
         { sounds: { normal: WOODBLOCK, accent: COWBELL }, accents: [] },
         [],
+        true,
       ).map((chip) => chip.group),
     ).toEqual([CLICK_GROUP.countIn, CLICK_GROUP.sound, CLICK_GROUP.accents]);
   });
@@ -65,23 +72,38 @@ describe('clickChips', () => {
   });
 });
 
-describe('clickSoundName', () => {
-  it('names a custom sound by its own name', () => {
-    expect(clickSoundName(customSoundId(CUSTOM_SLOT), CUSTOM)).toBe('Rimshot');
+describe('the Click chip with a custom sound', () => {
+  const soundChip = (unavailable: readonly number[]) =>
+    clickChips(
+      { sounds: { normal: RIM_ID, accent: COWBELL }, accents: [] },
+      customSoundViews([RIMSHOT], unavailable),
+      true,
+    ).find((chip) => chip.group === CLICK_GROUP.sound)?.label;
+
+  it('names it by its own name', () => {
+    expect(soundChip([])).toBe('Click: Rimshot');
   });
 
-  it('falls back to the default sound for a custom sound that is gone', () => {
-    expect(clickSoundName(customSoundId(CUSTOM_SLOT), [])).toBe('Tick');
+  it('names an unavailable one by what plays instead', () => {
+    expect(soundChip([RIMSHOT.slot])).toBe('Click: Tick');
+  });
+});
+
+describe('the chips with no grid', () => {
+  it('mutes every chip and lights none', () => {
+    for (const group of Object.values(CLICK_GROUP)) {
+      const chip = chipFor(group, [ACC, NOR, NOR, NOR], false);
+      expect(chip?.muted).toBe(true);
+      expect(chip?.active).toBe(false);
+    }
+  });
+
+  it('lights the accent chip again once the grid is there', () => {
+    expect(chipFor(CLICK_GROUP.accents)?.active).toBe(true);
   });
 });
 
 describe('the sheet options', () => {
-  it('offers one tile per engine sound', () => {
-    expect(SOUND_OPTIONS.map((o) => o.value)).toEqual(
-      KB_SOUND_NAMES.map((_, id) => String(id)),
-    );
-  });
-
   it('offers the engine count-in lengths, all muted', () => {
     expect(COUNT_IN_OPTIONS.map((o) => o.label)).toEqual([
       'Off',

@@ -145,9 +145,11 @@ vi.mock('@kitbag/core-state', async (original) => {
     TEMPO_CORRECTIONS,
     formatName,
     joinedFormatNames,
-    BUILT_IN_SOUND_NAMES,
-    DEFAULT_SOUND_NAME,
-    beatGroupSizes,
+    SOUND_OPTIONS,
+    SOUND_ROLE,
+    SOUND_ROLE_OPTIONS,
+    layoutBeatLeds,
+    soundLabel,
   } = await original<{
     useFocusedMixerHold: unknown;
     playerSongBadge: unknown;
@@ -158,9 +160,11 @@ vi.mock('@kitbag/core-state', async (original) => {
     TEMPO_CORRECTIONS: unknown;
     formatName: unknown;
     joinedFormatNames: unknown;
-    BUILT_IN_SOUND_NAMES: unknown;
-    DEFAULT_SOUND_NAME: unknown;
-    beatGroupSizes: unknown;
+    SOUND_OPTIONS: unknown;
+    SOUND_ROLE: unknown;
+    SOUND_ROLE_OPTIONS: unknown;
+    layoutBeatLeds: unknown;
+    soundLabel: unknown;
   }>();
   const open = () => {
     const mine = ++mixer.session;
@@ -190,11 +194,11 @@ vi.mock('@kitbag/core-state', async (original) => {
     TEMPO_CORRECTIONS,
     formatName,
     joinedFormatNames,
-    BUILT_IN_SOUND_NAMES,
-    DEFAULT_SOUND_NAME,
-    beatGroupSizes,
-    useClickSounds: (select: (state: unknown) => unknown) =>
-      select({ sounds: [] }),
+    SOUND_OPTIONS,
+    SOUND_ROLE,
+    SOUND_ROLE_OPTIONS,
+    layoutBeatLeds,
+    soundLabel,
     bpmFact: (bpm: number | null) =>
       bpm === null
         ? null

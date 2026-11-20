@@ -59,6 +59,12 @@ export {
 } from './metronome/config.ts';
 export { beatGroupSizes, groupStartAccents } from './metronome/meterGroups.ts';
 export {
+  layoutBeatLeds,
+  MAX_LEDS_PER_ROW,
+  MIN_LEDS_PER_ROW,
+  type LedRowLayout,
+} from './metronome/ledLayout.ts';
+export {
   effectivePolyAgainst,
   normalizePolyAgainst,
   stepPolyAgainst,
@@ -608,6 +614,20 @@ export {
   BUILT_IN_SOUND_NAMES,
   DEFAULT_SOUND_NAME,
 } from './clickSounds/soundNames.ts';
+export {
+  customSoundViews,
+  rolesUsing,
+  SOUND_OPTIONS,
+  SOUND_ROLE,
+  SOUND_ROLE_OPTIONS,
+  SOUND_ROLES,
+  soundChipLabel,
+  soundLabel,
+  soundRoleName,
+  soundsWith,
+  type CustomSoundView,
+  type SoundRole,
+} from './clickSounds/soundChoice.ts';
 export {
   formatName,
   joinedFormatNames,
