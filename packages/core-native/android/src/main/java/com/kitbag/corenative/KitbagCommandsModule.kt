@@ -18,12 +18,13 @@ import com.kitbag.corenative.library.MixdownExport
 import com.kitbag.corenative.library.UnsafeLibraryPathException
 import com.kitbag.corenative.route.OutputRoute
 import com.kitbag.corenative.route.OutputRouteWatcher
-import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.SongCommand
+import com.kitbag.corenative.transport.SongOrder
 import com.kitbag.corenative.transport.appAction
 import com.kitbag.corenative.transport.TransportChange
 import com.kitbag.corenative.transport.TransportState
+import com.kitbag.corenative.transport.Playback
 
 class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   NativeKitbagCommandsSpec(reactContext) {
@@ -32,7 +33,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private val transportListener: (TransportChange) -> Unit = ::emitTransport
   private val songStoppedListener: () -> Unit = ::emitOnSongStopped
   private val songEndedListener: () -> Unit = ::emitOnSongEnded
-  private val songRequestListener: (SongCommand) -> Unit = ::emitSongRequest
+  private val songRequestListener: (SongCommand, Int) -> Unit = ::emitSongRequest
   private val outputRoutes =
     OutputRouteWatcher(reactContext, ::outputDeviceId, ::emitOutputRoute)
 
@@ -68,7 +69,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     PlaybackService.show(
       reactApplicationContext,
       TransportState(
-        playback = if (state.getBoolean("playing")) Playback.PLAYING else Playback.PAUSED,
+        playback = Playback.wired(state.getString("playback")),
         bpm = state.getDouble("bpm"),
         rampRunning = state.getBoolean("rampRunning"),
         beatsPerBar = state.getInt("beatsPerBar"),
@@ -101,8 +102,17 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
         restartFromFrame = state.getDouble("restartFromFrame").toLong(),
         skipSeconds = state.getDouble("skipSeconds"),
       ),
+      state.getInt("session"),
+      state.getBoolean("followsPlayOrder"),
       state.getBoolean("playing"),
       state.getBoolean("countingIn"),
+    )
+  }
+
+  override fun songTransportOrder(order: ReadableMap) {
+    PlaybackService.orderSong(
+      reactApplicationContext,
+      SongOrder.of(previous = order.getBoolean("previous"), next = order.getBoolean("next")),
     )
   }
 
@@ -132,7 +142,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private fun emitTransport(change: TransportChange) {
     emitOnTransport(
       Arguments.createMap().apply {
-        putString("playback", change.state.playback.name.lowercase())
+        putString("playback", change.state.playback.wire)
         putDouble("bpm", change.state.bpm)
         putBoolean("rampRunning", change.state.rampRunning)
         putDouble("practicePlayedMs", change.practice.playedMillis.toDouble())
@@ -145,10 +155,11 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     )
   }
 
-  private fun emitSongRequest(request: SongCommand) {
+  private fun emitSongRequest(request: SongCommand, shownSession: Int) {
     emitOnSongTransport(
       Arguments.createMap().apply {
         putString("action", request.appAction)
+        putInt("shownSession", shownSession)
         if (request is SongCommand.Seek) putDouble("frame", request.frame.toDouble()) else putNull("frame")
       },
     )

@@ -98,6 +98,10 @@ async function setup(
       putOnStage(itemId);
       return afterWrite();
     },
+    loadPreset: (_presetId, itemId) => {
+      putOnStage(itemId);
+      return afterWrite();
+    },
     markStage: () => {
       const at = onStage;
       let written = moves;
@@ -386,5 +390,47 @@ describe('a commit whose write fails', () => {
       DISK_FULL,
     );
     expect(await order.getState().peekNext()).toEqual(step);
+  });
+});
+
+describe('opening a metronome entry', () => {
+  it('loads its preset onto the stage', async () => {
+    const { order, click, last, putOnStage, first } = await setup();
+    putOnStage(first.id);
+    const { advance } = await order.getState().peekNext();
+    expect(advance).toMatchObject({ entry: { item: { id: click.id } } });
+    if (advance.kind !== ADVANCE.open) return;
+    await order.getState().openEntry(advance.entry);
+    expect(order.getState().upNext()).toMatchObject({
+      entry: { item: { id: last.id } },
+    });
+  });
+
+  it('puts a metronome entry back off the stage when a press lands during its load', async () => {
+    const hold = heldWrite();
+    const { order, click, first, putOnStage } = await setup(hold.afterWrite);
+    putOnStage(first.id);
+    const { advance } = await order.getState().peekNext();
+    if (advance.kind !== ADVANCE.open)
+      throw new Error('expected a metronome entry');
+    const commit = order.getState().commitOpen(advance.entry, hold.stands);
+    hold.press();
+    hold.release();
+    expect(await commit).toBe(false);
+    expect(order.getState().upNext()).toMatchObject({
+      entry: { item: { id: click.id } },
+    });
+  });
+
+  it('keeps a metronome entry on the stage when its load stands', async () => {
+    const { order, last, first, putOnStage } = await setup();
+    putOnStage(first.id);
+    const { advance } = await order.getState().peekNext();
+    if (advance.kind !== ADVANCE.open)
+      throw new Error('expected a metronome entry');
+    expect(await order.getState().commitOpen(advance.entry)).toBe(true);
+    expect(order.getState().upNext()).toMatchObject({
+      entry: { item: { id: last.id } },
+    });
   });
 });

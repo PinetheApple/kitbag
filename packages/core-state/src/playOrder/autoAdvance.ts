@@ -1,7 +1,14 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { libraryStore } from '../library/store.ts';
-import { ADVANCE_OUTCOME, type AdvanceOutcome } from '../stemPlayer/songEnd.ts';
+import type { PresetSetlistEntry } from '../library/snapshot.ts';
+import {
+  ADVANCE_CAUSE,
+  ADVANCE_OUTCOME,
+  type AdvanceCause,
+  type AdvanceListener,
+  type AdvanceOutcome,
+} from '../stemPlayer/songEnd.ts';
 import { stemPlayerStore } from '../stemPlayer/store.ts';
 import { ADVANCE, cursorOf, onStageOf, type Advance } from './order.ts';
 import { playOrderStore, type SkipResult } from './store.ts';
@@ -19,6 +26,7 @@ export const ARRIVAL = {
   arriving: 'arriving',
   playing: 'playing',
   gaveUp: 'gaveUp',
+  metronome: 'metronome',
 } as const;
 
 export type ArrivalEvent =
@@ -29,7 +37,8 @@ export type ArrivalEvent =
       readonly place: SetlistPlace | null;
       readonly skipped: Skip | null;
     }
-  | { readonly kind: typeof ARRIVAL.gaveUp };
+  | { readonly kind: typeof ARRIVAL.gaveUp }
+  | { readonly kind: typeof ARRIVAL.metronome };
 
 export type Arrival = ArrivalEvent & { readonly serial: number };
 
@@ -42,7 +51,7 @@ export const arrivalStore = createStore<ArrivalState>(() => ({
 }));
 
 export interface AutoAdvanceDeps {
-  readonly onSongEnd: (listener: () => void) => () => void;
+  readonly onSongEnd: (listener: AdvanceListener) => () => void;
   readonly advanceTo: (stemSetId: number) => Promise<AdvanceOutcome>;
   readonly peekNext: () => Promise<SkipResult>;
   readonly commitNext: (
@@ -53,8 +62,15 @@ export interface AutoAdvanceDeps {
   readonly candidates: () => number;
   readonly stillEnded: () => boolean;
   readonly stopAdvancing: () => void;
+  readonly commitOpen: (
+    entry: PresetSetlistEntry,
+    stands: () => boolean,
+  ) => Promise<boolean>;
+  readonly handToMetronome: () => void;
   readonly arrivals: StoreApi<ArrivalState>;
 }
+
+type PlayAdvance = Extract<Advance, { readonly kind: typeof ADVANCE.play }>;
 
 function onStageNow() {
   const library = libraryStore.getState();
@@ -81,42 +97,88 @@ const defaultDeps: AutoAdvanceDeps = {
   stopAdvancing: () => {
     stemPlayerStore.getState().stopAdvancing();
   },
+  commitOpen: (entry, stands) =>
+    playOrderStore.getState().commitOpen(entry, stands),
+  handToMetronome: () => {
+    stemPlayerStore.getState().handToMetronome();
+  },
   arrivals: arrivalStore,
 };
 
+type Arrive = (arrival: ArrivalEvent) => void;
+
+const PLAYED = { settled: 'settled', tryNext: 'tryNext' } as const;
+
+type Played = (typeof PLAYED)[keyof typeof PLAYED];
+
+async function openMetronome(
+  deps: AutoAdvanceDeps,
+  arrive: Arrive,
+  entry: PresetSetlistEntry,
+) {
+  if (!(await deps.commitOpen(entry, deps.stillEnded))) return;
+  deps.handToMetronome();
+  arrive({ kind: ARRIVAL.metronome });
+}
+
+async function play(
+  deps: AutoAdvanceDeps,
+  arrive: Arrive,
+  next: PlayAdvance,
+  skipped: Skip | null,
+): Promise<Played> {
+  if (!(await deps.commitNext(next, deps.stillEnded))) return PLAYED.settled;
+  const { stemSetId } = next;
+  const place = deps.placeOf(next);
+  arrive({ kind: ARRIVAL.arriving, stemSetId });
+  const outcome = await deps.advanceTo(stemSetId);
+  if (outcome === ADVANCE_OUTCOME.playing)
+    arrive({ kind: ARRIVAL.playing, stemSetId, place, skipped });
+  return outcome === ADVANCE_OUTCOME.unplayable
+    ? PLAYED.tryNext
+    : PLAYED.settled;
+}
+
+async function advance(
+  deps: AutoAdvanceDeps,
+  arrive: Arrive,
+  cause: AdvanceCause,
+) {
+  let skipped: Skip | null = null;
+  for (let left = deps.candidates(); left > 0; left--) {
+    if (!deps.stillEnded()) return;
+    const step = await deps.peekNext();
+    if (!deps.stillEnded()) return;
+    if (step.skipped) skipped = SKIP.deleted;
+    const next = step.advance;
+    if (next.kind === ADVANCE.open && cause === ADVANCE_CAUSE.next) {
+      await openMetronome(deps, arrive, next.entry);
+      return;
+    }
+    if (next.kind !== ADVANCE.play) break;
+    if ((await play(deps, arrive, next, skipped)) === PLAYED.settled) return;
+    skipped = SKIP.unopened;
+  }
+  deps.stopAdvancing();
+  if (skipped === SKIP.deleted) arrive({ kind: ARRIVAL.gaveUp });
+}
+
 export function startAutoAdvance(deps: AutoAdvanceDeps = defaultDeps) {
   let serial = 0;
-  const arrive = (arrival: ArrivalEvent) => {
+  let stepping = false;
+  const arrive: Arrive = (arrival) => {
     serial++;
     deps.arrivals.setState({ arrival: { ...arrival, serial } });
   };
-  const advance = async () => {
-    let skipped: Skip | null = null;
-    for (let left = deps.candidates(); left > 0; left--) {
-      if (!deps.stillEnded()) return;
-      const step = await deps.peekNext();
-      if (!deps.stillEnded()) return;
-      if (step.skipped) skipped = SKIP.deleted;
-      const next = step.advance;
-      if (next.kind !== ADVANCE.play) break;
-      if (!(await deps.commitNext(next, deps.stillEnded))) return;
-      const { stemSetId } = next;
-      const place = deps.placeOf(next);
-      arrive({ kind: ARRIVAL.arriving, stemSetId });
-      const outcome = await deps.advanceTo(stemSetId);
-      if (outcome === ADVANCE_OUTCOME.displaced) return;
-      if (outcome === ADVANCE_OUTCOME.playing) {
-        arrive({ kind: ARRIVAL.playing, stemSetId, place, skipped });
-        return;
-      }
-      skipped = SKIP.unopened;
-    }
-    deps.stopAdvancing();
-    if (skipped === SKIP.deleted) arrive({ kind: ARRIVAL.gaveUp });
-  };
-  return deps.onSongEnd(() => {
-    advance().catch((error: unknown) => {
-      console.warn('[kitbag] auto-advance failed', error);
-    });
+  return deps.onSongEnd((cause) => {
+    if (stepping) return;
+    stepping = true;
+    advance(deps, arrive, cause)
+      .catch((error: unknown) => {
+        console.warn('[kitbag] auto-advance failed', error);
+      })
+      .finally(() => {
+        stepping = false;
+      });
   });
 }

@@ -3,8 +3,6 @@ import {
   isPresetEntry,
   SKIPPED_STEM_SONG,
   usePlayOrder,
-  useLibrary,
-  useStage,
   type SetlistEntry,
 } from '@kitbag/core-state';
 import { useAfterSheetClosed } from '@kitbag/core-design';
@@ -42,19 +40,7 @@ export function useLeaveAfterClose(routes: PlayOrderRoutes, visible: boolean) {
 
 export function usePlayOrderNav(routes: PlayOrderRoutes) {
   const skipToNext = usePlayOrder((s) => s.skipToNext);
-  const loadSong = useLibrary((s) => s.loadSong);
-  const openStemEntry = useLibrary((s) => s.openStemEntry);
-  const { stage } = useStage();
-  const { setlistId } = stage;
-  const openEntry = useCallback(
-    async (entry: SetlistEntry) => {
-      if (setlistId === null) return;
-      if (isPresetEntry(entry))
-        await loadSong(entry.preset.id, entry.item.id, setlistId);
-      else await openStemEntry(entry.item.id, setlistId);
-    },
-    [setlistId, openStemEntry, loadSong],
-  );
+  const openEntry = usePlayOrder((s) => s.openEntry);
   const skip = useCallback(async () => {
     const { advance, skipped } = await skipToNext();
     if (skipped) routes.onNotice(SKIPPED_STEM_SONG);

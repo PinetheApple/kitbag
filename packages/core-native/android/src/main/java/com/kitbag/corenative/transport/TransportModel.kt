@@ -2,7 +2,18 @@ package com.kitbag.corenative.transport
 
 import kotlin.math.roundToInt
 
-enum class Playback { STOPPED, PLAYING, PAUSED }
+enum class Playback {
+  STOPPED,
+  PLAYING,
+  PAUSED;
+
+  val wire: String
+    get() = name.lowercase()
+
+  companion object {
+    fun wired(wire: String?): Playback = entries.find { it.wire == wire } ?: PAUSED
+  }
+}
 
 data class TransportState(
   val playback: Playback,
@@ -57,10 +68,7 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
   fun view(state: TransportState): TransportView {
     val playPause =
       if (state.playback == Playback.PLAYING) TransportAction.PAUSE else TransportAction.PLAY
-    val actions = buildList {
-      addAll(listOf(TransportAction.TEMPO_DOWN, playPause, TransportAction.TEMPO_UP))
-      if (state.playback != Playback.STOPPED) add(TransportAction.STOP)
-    }
+    val actions = listOf(TransportAction.TEMPO_DOWN, playPause, TransportAction.TEMPO_UP, TransportAction.STOP)
     return TransportView(title(state), state.subtitle, actions)
   }
 
@@ -73,6 +81,9 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
         if (state.playback == Playback.STOPPED) emptyList() else listOf(TransportCommand.Stop)
       TransportAction.TEMPO_DOWN, TransportAction.TEMPO_UP -> stepTempo(state, tempoStep(action))
     }
+
+  fun endsCard(action: TransportAction, next: TransportState): Boolean =
+    action == TransportAction.STOP && next.playback == Playback.STOPPED
 
   fun tempoStep(action: TransportAction): Int =
     when (action) {

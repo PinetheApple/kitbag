@@ -3,6 +3,11 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { libraryStore, type LibraryStore } from '../library/store.ts';
 import {
+  isPresetEntry,
+  type PresetSetlistEntry,
+  type SetlistEntry,
+} from '../library/snapshot.ts';
+import {
   ADVANCE,
   advanceOf,
   advanceSkipped,
@@ -37,6 +42,11 @@ export interface PlayOrderActions {
   skipToNext: () => Promise<SkipResult>;
   peekNext: () => Promise<SkipResult>;
   commitNext: (next: Advance, stands?: () => boolean) => Promise<boolean>;
+  openEntry: (entry: SetlistEntry) => Promise<void>;
+  commitOpen: (
+    entry: PresetSetlistEntry,
+    stands?: () => boolean,
+  ) => Promise<boolean>;
 }
 
 export type PlayOrderStore = PlayOrderState & PlayOrderActions;
@@ -47,6 +57,11 @@ export interface PlayOrderDeps {
   readonly cursor: () => SetlistCursor | null;
   readonly refreshStage: () => Promise<void>;
   readonly playSetlistEntry: (
+    itemId: number,
+    setlistId: number,
+  ) => Promise<unknown>;
+  readonly loadPreset: (
+    presetId: number,
     itemId: number,
     setlistId: number,
   ) => Promise<unknown>;
@@ -88,6 +103,8 @@ const defaultDeps: PlayOrderDeps = {
   refreshStage: () => libraryStore.getState().refresh(),
   playSetlistEntry: (itemId, setlistId) =>
     libraryStore.getState().openStemEntry(itemId, setlistId),
+  loadPreset: (presetId, itemId, setlistId) =>
+    libraryStore.getState().loadSong(presetId, itemId, setlistId),
   markStage: stageMarkOf(libraryStore),
 };
 
@@ -156,13 +173,12 @@ function queueCommit(
 
 function setlistCommit(
   deps: PlayOrderDeps,
-  itemId: number,
-  setlistId: number,
+  open: () => Promise<unknown>,
 ): Commit {
   const mark = deps.markStage();
   return {
     write: () => {
-      const opening = deps.playSetlistEntry(itemId, setlistId);
+      const opening = open();
       mark.wrote();
       return opening;
     },
@@ -184,7 +200,16 @@ function commitOf(
     return queueCommit(deps, get, edits, next.stemSetId);
   const { setlistId } = deps.stage();
   if (setlistId === null) return null;
-  return setlistCommit(deps, next.setlistItemId, setlistId);
+  const itemId = next.setlistItemId;
+  return setlistCommit(deps, () => deps.playSetlistEntry(itemId, setlistId));
+}
+
+function presetCommit(deps: PlayOrderDeps, entry: PresetSetlistEntry) {
+  const { setlistId } = deps.stage();
+  if (setlistId === null) return null;
+  return setlistCommit(deps, () =>
+    deps.loadPreset(entry.preset.id, entry.item.id, setlistId),
+  );
 }
 
 async function kept({ write, revert }: Commit, stands: () => boolean) {
@@ -215,6 +240,16 @@ function orderActions(deps: PlayOrderDeps, get: Get, edits: QueueEdits) {
     const commit = commitOf(deps, get, edits, next);
     return commit === null || kept(commit, stands);
   };
+  const commitOpen = async (entry: PresetSetlistEntry, stands = ALWAYS) => {
+    const commit = presetCommit(deps, entry);
+    return commit !== null && kept(commit, stands);
+  };
+  const openEntry = async (entry: SetlistEntry) => {
+    const { setlistId } = deps.stage();
+    if (setlistId === null) return;
+    if (isPresetEntry(entry)) await commitOpen(entry);
+    else await deps.playSetlistEntry(entry.item.id, setlistId);
+  };
   const skipToNext = async () => {
     const step = await peekNext();
     await commitNext(step.advance);
@@ -231,6 +266,8 @@ function orderActions(deps: PlayOrderDeps, get: Get, edits: QueueEdits) {
     skipToNext,
     peekNext,
     commitNext,
+    openEntry,
+    commitOpen,
   };
 }
 

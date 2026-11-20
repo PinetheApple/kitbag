@@ -30,33 +30,58 @@ export function endedOnLastFrame(
   );
 }
 
+export const ADVANCE_CAUSE = { ended: 'ended', next: 'next' } as const;
+
+export type AdvanceCause = (typeof ADVANCE_CAUSE)[keyof typeof ADVANCE_CAUSE];
+
+export type AdvanceListener = (cause: AdvanceCause) => void;
+
+const LEFT_BECAUSE = {
+  ended: 'ended',
+  unopened: 'unopened',
+  pressed: 'pressed',
+} as const;
+
 interface EndedIn {
   readonly session: number;
-  readonly unopened: boolean;
+  readonly why: (typeof LEFT_BECAUSE)[keyof typeof LEFT_BECAUSE];
 }
 
 export function songEnds(ended: () => boolean, session: () => number) {
-  const listeners = new Set<() => void>();
+  const listeners = new Set<AdvanceListener>();
   let from: EndedIn | null = null;
   const current = () => from !== null && from.session === session();
+  const leave = (left: EndedIn, cause: AdvanceCause) => {
+    from = left;
+    listeners.forEach((listener) => {
+      listener(cause);
+    });
+  };
   return {
     reported: () => {
       if (!ended()) return;
-      from = { session: session(), unopened: false };
-      listeners.forEach((listener) => {
-        listener();
-      });
+      leave(
+        { session: session(), why: LEFT_BECAUSE.ended },
+        ADVANCE_CAUSE.ended,
+      );
     },
-    subscribe: (listener: () => void) => {
+    pressedNext: (pressedIn: number) => {
+      if (pressedIn !== session()) return;
+      leave(
+        { session: pressedIn, why: LEFT_BECAUSE.pressed },
+        ADVANCE_CAUSE.next,
+      );
+    },
+    subscribe: (listener: AdvanceListener) => {
       listeners.add(listener);
       return () => {
         listeners.delete(listener);
       };
     },
-    stands: () => current() && (from?.unopened === true || ended()),
-    gaveUp: () => current() && from?.unopened === true,
+    stands: () => current() && (from?.why !== LEFT_BECAUSE.ended || ended()),
+    gaveUp: () => current() && from?.why === LEFT_BECAUSE.unopened,
     unopened: (opened: number) => {
-      from = { session: opened, unopened: true };
+      from = { session: opened, why: LEFT_BECAUSE.unopened };
     },
     advanced: () => {
       from = null;

@@ -88,6 +88,9 @@ const commands: StemPlayerCommands = {
     askForNotificationsOnce();
     getKitbagCommands().songTransportShow(state);
   },
+  songTransportOrder: (order) => {
+    getKitbagCommands().songTransportOrder(order);
+  },
   songTransportHide: () => {
     getKitbagCommands().songTransportHide();
   },
@@ -101,6 +104,7 @@ export const mixerRuntime: MixerRuntime = {
   sharedMetronome: {
     active: metronomeTransport.active,
     release: metronomeTransport.release,
+    showStopped: metronomeTransport.showStopped,
   },
   engine: {
     sampleRate: () => getKitbagHostObject().engine_sample_rate,
