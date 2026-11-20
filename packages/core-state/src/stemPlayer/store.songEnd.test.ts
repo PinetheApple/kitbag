@@ -96,6 +96,81 @@ describe('the end of the open song', () => {
   });
 });
 
+function nextAdvance(song: Song) {
+  song.records.readStemSet.mockResolvedValueOnce(nextSong);
+  return song.store.getState().advanceTo(NEXT_SET_ID);
+}
+
+describe('a press between the end and the advance', () => {
+  it('Play keeps the ended song', async () => {
+    const song = await acquired();
+    song.endSong(SONG_FRAMES);
+    song.store.getState().togglePlay();
+    song.engine.playing = true;
+    expect(song.store.getState().songStillEnded()).toBe(false);
+    expect(await nextAdvance(song)).toBe('displaced');
+    expect(song.store.getState().setId).toBe(7);
+  });
+
+  it('a seek keeps it', async () => {
+    const song = await acquired();
+    song.endSong(SONG_FRAMES);
+    song.store.getState().seek(at(1));
+    song.engine.position = at(1);
+    expect(await nextAdvance(song)).toBe('displaced');
+  });
+
+  it('a counted Play keeps it', async () => {
+    const song = await acquired();
+    song.countInBars.mockReturnValue(1);
+    song.endSong(SONG_FRAMES);
+    song.store.getState().togglePlay();
+    expect(song.commands.songCountIn).toHaveBeenCalled();
+    expect(await nextAdvance(song)).toBe('displaced');
+  });
+
+  it('a Stop from the notification keeps it', async () => {
+    const song = await acquired();
+    song.endSong(SONG_FRAMES);
+    song.stopSongFromNotification();
+    expect(await nextAdvance(song)).toBe('displaced');
+  });
+});
+
+describe('a lyrics re-time recording', () => {
+  it('holds the song where it ended', async () => {
+    const song = await opened([stem(1)], SONG_DETAILS);
+    const ended = listening(song);
+    song.store.getState().beginRetime(0);
+    song.endSong(SONG_FRAMES);
+    expect(ended).not.toHaveBeenCalled();
+    expect(song.store.getState().songStillEnded()).toBe(false);
+  });
+});
+
+describe('the song card when the advance gives up', () => {
+  it('goes once nothing after an unopened song plays', async () => {
+    const song = await acquired();
+    song.store.getState().togglePlay();
+    song.endSong(SONG_FRAMES);
+    vi.clearAllMocks();
+    song.records.readStemSet.mockResolvedValueOnce(undefined);
+    await song.store.getState().advanceTo(NEXT_SET_ID);
+    expect(song.commands.songTransportHide).not.toHaveBeenCalled();
+    song.store.getState().stopAdvancing();
+    expect(song.commands.songTransportHide).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays for the ended song that is still loaded', async () => {
+    const song = await acquired();
+    song.store.getState().togglePlay();
+    song.endSong(SONG_FRAMES);
+    vi.clearAllMocks();
+    song.store.getState().stopAdvancing();
+    expect(song.commands.songTransportHide).not.toHaveBeenCalled();
+  });
+});
+
 describe('advancing to the next song', () => {
   it('opens and plays it under the hold the screen already has', async () => {
     const song = await acquired();
@@ -140,10 +215,12 @@ describe('advancing to the next song', () => {
       false,
     );
     expect(song.commands.metronomeStart).not.toHaveBeenCalled();
-    expect(song.store.getState()).toMatchObject({
+    const state = song.store.getState();
+    expect(state).toMatchObject({
       click: false,
       countBeatsPerBar: TWO_FOUR[0]?.beatsPerBar,
     });
+    expect(state.advanceCountEnd).toBe(state.countEndFrame);
   });
 
   it('turns off a click the ended song had on', async () => {
