@@ -1,7 +1,3 @@
-// Metro config for the app-shell inside a pnpm monorepo (SPEC §13.1).
-// Watches the workspace root and resolves from both node_modules trees so the
-// @kitbag/* workspace packages resolve under the hoisted linker.
-// NOTE (#27): not exercised this task — bundling/device boot is #33.
 const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
 const { withNativewind } = require('nativewind/metro');
@@ -32,4 +28,15 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     : context.resolveRequest(context, moduleName, platform);
 };
 
-module.exports = withNativewind(config);
+const nativewindConfig = withNativewind(config);
+const classNameResolveRequest = nativewindConfig.resolver.resolveRequest;
+const expoAssetDir = `${path.sep}node_modules${path.sep}expo-asset${path.sep}`;
+// react-native-css 3.1.0-rc.1 swaps 'react-native' for a shim that lacks RN 0.88's
+// AssetRegistry, which expo-asset imports to load every font and image asset.
+nativewindConfig.resolver.resolveRequest = (context, moduleName, platform) =>
+  moduleName === 'react-native' &&
+  context.originModulePath.includes(expoAssetDir)
+    ? config.resolver.resolveRequest(context, moduleName, platform)
+    : classNameResolveRequest(context, moduleName, platform);
+
+module.exports = nativewindConfig;
