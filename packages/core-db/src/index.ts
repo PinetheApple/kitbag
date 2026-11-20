@@ -64,6 +64,11 @@ export type {
   StoredSection,
   StoredStem,
 } from './stem-bundle-repository';
+export {
+  STEM_SET_PITCH,
+  type StemKey,
+  type StemSetSpeedKey,
+} from './stem-speed-key';
 export { MS_PER_SECOND, SECONDS_PER_MINUTE, UNITY_GAIN } from './units';
 export { parseLrc, plainLyricTexts, type LyricLine } from './lrc';
 export {

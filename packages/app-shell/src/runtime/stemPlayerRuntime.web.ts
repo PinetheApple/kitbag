@@ -16,5 +16,6 @@ configureStemPlayer({
     saveStemSetMeterOverride: () => Promise.resolve(),
     saveStemSetClick: () => Promise.resolve(),
     saveStemSetChosenTempoMode: () => Promise.resolve(),
+    saveStemSetSpeedKey: () => Promise.resolve(),
   },
 });

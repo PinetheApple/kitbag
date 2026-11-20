@@ -54,6 +54,7 @@ function stemSongRecord(
     title: row.renamed ? row.name : null,
     ...meterOverrideOf(row),
     speed: row.speed,
+    pitch: row.pitch,
     lyricsRetimed: parseRetimedLyrics(row.lyricsRetimed),
     ...stemSetClickOf(row),
     chosenTempoMode: stemSetTempoOf(row).chosenTempoMode,
@@ -119,7 +120,7 @@ export async function restoreStemSong(
   await saveChosenTempoMode(db, localId, record.chosenTempoMode);
   await db
     .update(stemSets)
-    .set({ speed: record.speed })
+    .set({ speed: record.speed, pitch: record.pitch })
     .where(eq(stemSets.id, localId));
   await restoreMixes(db, localId, record.stems);
   return localId;

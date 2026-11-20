@@ -81,6 +81,7 @@ export function record(
     sampleRate: RATE,
     createdAt: new Date(0),
     speed: 1,
+    pitch: 0,
     bpm: 120,
     key: null,
     scale: null,
@@ -142,8 +143,12 @@ export function fakeRuntime(set: StemSetRecord) {
       return Promise.resolve(KB_RESULT.KB_OK);
     }),
     mixerRate: vi.fn(() => Promise.resolve(engine.rate)),
-    mixerSetTrackPitch: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
-    mixerTrackPitch: vi.fn(() => Promise.resolve(0)),
+    mixerSetTrackPitch: vi.fn<StemPlayerCommands['mixerSetTrackPitch']>(() =>
+      Promise.resolve(KB_RESULT.KB_OK),
+    ),
+    mixerTrackPitch: vi.fn<StemPlayerCommands['mixerTrackPitch']>(() =>
+      Promise.resolve(0),
+    ),
     mixerTrackFrames: vi.fn(() => Promise.resolve(0)),
     setGrid: vi.fn<StemPlayerCommands['setGrid']>(() =>
       Promise.resolve<number>(KB_RESULT.KB_OK),
@@ -200,6 +205,9 @@ export function fakeRuntime(set: StemSetRecord) {
       stored = { ...stored, chosenTempoMode };
       return Promise.resolve();
     }),
+    saveStemSetSpeedKey: vi.fn<StemPlayerRecords['saveStemSetSpeedKey']>(() =>
+      Promise.resolve(),
+    ),
   };
   const sharedMetronome = { active: vi.fn(() => false), release: vi.fn() };
   const countInBars = vi.fn<() => number>(() => KB_COUNT_IN_OFF);
@@ -269,8 +277,10 @@ export function fakeRuntime(set: StemSetRecord) {
 export async function opened(
   stems: StoredStem[],
   change: Partial<StemSetRecord> = {},
+  before: (fake: ReturnType<typeof fakeRuntime>) => void = () => undefined,
 ) {
   const fake = fakeRuntime(record(stems, change));
+  before(fake);
   const store = createStemPlayerStore(() => fake.runtime, {
     mixSaveDelayMs: SAVE_MS,
     scrubSeekDelayMs: SEEK_MS,

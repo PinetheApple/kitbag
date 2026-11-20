@@ -1,5 +1,8 @@
+import { STEM_SET_PITCH } from '@kitbag/core-db/src/stem-speed-key';
+
 export { UNITY_GAIN } from '@kitbag/core-db/src/units';
-export const UNSHIFTED_KEY = 0;
+
+export const UNSHIFTED_KEY = STEM_SET_PITCH.unshifted;
 
 export function soloAfter(
   soloed: readonly boolean[],

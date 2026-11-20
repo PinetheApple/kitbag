@@ -8,6 +8,7 @@ import {
   pragma,
   rows,
   V22_TEMPO_COLUMNS,
+  V27_STEM_SET_COLUMNS,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -27,7 +28,11 @@ describe('migrate v21 to v22', () => {
     );
     migrate(nodeSqliteDriver(db));
     expect(rows(db, 'SELECT * FROM stem_sets ORDER BY id')).toEqual(
-      before.map((row) => ({ ...row, ...V22_TEMPO_COLUMNS })),
+      before.map((row) => ({
+        ...row,
+        ...V22_TEMPO_COLUMNS,
+        ...V27_STEM_SET_COLUMNS,
+      })),
     );
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
   });
