@@ -13,6 +13,7 @@ import com.kitbag.corenative.library.LibraryStorage
 import com.kitbag.corenative.library.MissingSongException
 import com.kitbag.corenative.library.SongAnalyzer
 import com.kitbag.corenative.library.Waveforms
+import com.kitbag.corenative.library.move.DataFolderMoves
 
 class AnalysisWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
 
@@ -48,7 +49,8 @@ class AnalysisWorker(context: Context, params: WorkerParameters) : Worker(contex
     val song = folder.readable(relativePath)
     if (!song.isFile) throw MissingSongException()
     val output = SongAnalyzer.analyze(song, LibraryStorage.staging(folder)) { staged ->
-      Waveforms.place(folder, waveformRelativeDir, staged)
+      val moves = DataFolderMoves.get(applicationContext)
+      Waveforms.place(folder, waveformRelativeDir, staged, moves::supersede, { message, cause -> Log.w(TAG, message, cause) })
     }
     return AnalysisResult(
       relativePath = relativePath,

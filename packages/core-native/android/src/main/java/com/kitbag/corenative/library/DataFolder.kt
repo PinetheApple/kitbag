@@ -119,6 +119,9 @@ class DataFolder(
   fun forgetAway(volumeUuid: String, relativePaths: Collection<String>) =
     awayManifest.removeAway(volumeUuid, relativePaths)
 
+  fun awayHolders(relativePath: String): Set<String> =
+    awayManifest.load().orEmpty().filterValues { relativePath in it }.keys
+
   fun awayUnder(relativePath: String, folderMatch: Boolean): List<AwayFiles> {
     val away = awayManifest.load() ?: throw UnreadableStateException(AwayManifest.FILE_NAME)
     val folderPrefix = "$relativePath/"
