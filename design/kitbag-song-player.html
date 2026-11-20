@@ -147,7 +147,7 @@ svg.i{fill:currentColor;display:block;flex:none}
 <section>
 <div class="kicker">Section 0</div><h2>Base player</h2>
 <div class="frames">
-<figure><figcaption><b>0 · Base player</b>From <code>kitbag-ui.html</code> §04, in the stem player's dock sizes, plus Back, a menu (Stop, Re-analyse) and beat ticks. Stop ends the song session and removes the mini-player. Tapping the Songs row of the song the mini-player is showing opens the player on that song as it is, still playing if it was. Any other row tap on Songs opens the player paused. Count-in stays muted until count-in under a grid exists (#298).</figcaption><div data-frame="base"></div></figure>
+<figure><figcaption><b>0 · Base player</b>From <code>kitbag-ui.html</code> §04, in the stem player's dock sizes, plus Back, a menu (Stop, Re-analyse) and beat ticks. Stop ends the song session and removes the mini-player. Tapping the Songs row of the song the mini-player is showing opens the player on that song as it is, still playing if it was. Any other row tap on Songs opens the player paused. Play from the top counts the song in with its Count-in; a resume never does (#298).</figcaption><div data-frame="base"></div></figure>
 <figure style="width:auto"><figcaption style="max-width:411px"><b>Ticks thin to fit the lane</b>Ticks never sit closer than 3 dp. When every beat fits, every beat is drawn, tall on downbeats. When it does not, only downbeats are drawn, at a stride of 1, 2, 4, 8… bars, so each tick stays readable. Everlong: 658 beats across 353 dp puts bars 2.1 dp apart, so every second bar is drawn. Crop is 2.625× so CSS pixels equal device pixels.</figcaption>
 <div class="crop" data-crop="fit"></div></figure>
 </div>
@@ -173,7 +173,7 @@ svg.i{fill:currentColor;display:block;flex:none}
 <section>
 <div class="kicker">Section 2</div><h2>The three chips</h2>
 <div class="frames">
-<figure><figcaption><b>2 · Each chip opens one sheet</b>Count-in, Click and Accent open the same sheet at the tapped group, over running playback; values apply live (§5.3). Changes stay with this song, unsaved until "Save for this song"; the standalone metronome is untouched. Sound names come from the engine. The Count-in group is muted until count-in under a grid exists.</figcaption><div data-frame="sheet"></div></figure>
+<figure><figcaption><b>2 · Each chip opens one sheet</b>Count-in, Click and Accent open the same sheet at the tapped group, over running playback; values apply live (§5.3). Changes stay with this song, unsaved until "Save for this song"; the standalone metronome is untouched. Sound names come from the engine. The Count-in group sets how many bars this song counts in.</figcaption><div data-frame="sheet"></div></figure>
 </div>
 </section>
 
@@ -244,7 +244,7 @@ const CARDS={
   failed:`<div class="pcard"><div class="trow"><div class="ticon" style="color:var(--red)">${ic('alert-circle',20)}</div><div class="tl"><b>No beat grid</b><span>Analysis failed, so no click</span></div><span class="btn sm t">Re-analyse</span></div></div>`,
 };
 function chips({off=false,sound='woodblock',cls=''}={}){
-  return `<div class="chips ${off?'off':''} ${cls}"><span class="chip dis t">Count-in</span><span class="chip t">Click: ${sound}</span><span class="chip on t">Accent 1</span></div>`;
+  return `<div class="chips ${off?'off':''} ${cls}"><span class="chip on t">Count-in: 2 bars</span><span class="chip t">Click: ${sound}</span><span class="chip on t">Accent 1</span></div>`;
 }
 const SKIP_BACK=ic('rewind-10',24),SKIP_FWD=ic('fast-forward-10',24);
 function transport({ab=false}={}){
@@ -281,7 +281,7 @@ function sheet(){
   const pick=['beep','woodblock','click','tom','tick','cowbell'].map(n=>`<span class="t ${n==='woodblock'?'on':''}">${n==='woodblock'?ic('check',14):''}${n}</span>`).join('');
   const ledHit=(c)=>`<span class="ledhit t"><span class="led ${c}"></span></span>`;
   return player()+`<div class="scrim"></div><div class="sheet"><div class="grab"></div><h4>Click for this song<span class="ib t" style="margin:-8px -10px -8px 0">${ic('close')}</span></h4>
-  <div class="sec">Count-in</div><div class="seg dis t"><i class="on">Off</i><i>1 bar</i><i>2 bars</i><i>4 bars</i></div><p class="hint">Arrives with count-in for songs.</p>
+  <div class="sec">Count-in</div><div class="seg t"><i>Off</i><i>1 bar</i><i class="on">2 bars</i><i>4 bars</i></div>
   <div class="sec">Sound</div><div class="seg t"><i class="on">Normal</i><i>Accent</i></div><div class="pick">${pick}</div>
   <div class="sec">Accents</div><div class="leds tight" style="justify-content:flex-start">${ledHit('acc')}${ledHit('')}${ledHit('')}${ledHit('')}</div><p class="hint">Tap a beat: accent, normal, mute. Your Metronome stays as you left it.</p>
   <span class="btn pri t" style="margin-top:2px">Save for this song</span></div>`;

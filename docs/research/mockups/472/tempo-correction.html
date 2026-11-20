@@ -327,7 +327,7 @@ function menu({f='one',state='ready'}={}){
     mrow({icon:'refresh',label:'Re-analyse',detail:'Find the beat again'}),
     mrow({icon:'metronome',label:'Meter',value:off?'':'4/4',detail:reason,dis:off}),
     mrow({icon:'arrow-expand-horizontal',label:'Tempo correction',value:off?'':`${fac.shown} · ${bpmOf(fac.f)} BPM`,detail:reason,dis:off}),
-    mrow({icon:'timer-sand',label:'Count-in',value:'Off',detail:'Arrives with count-in for songs',dis:true}),
+    mrow({icon:'timer-sand',label:'Count-in',value:off?'':'2 bars',detail:reason,dis:off}),
     mrow({icon:'stop',label:'Stop',detail:'Ends the song and the mini-player'}),
   ].join('');
   return `<div class="scrim"></div><div class="slot"><div class="sheet"><div class="grab"></div><h4>Player</h4><div class="mrows">${rows}</div></div></div>`;
