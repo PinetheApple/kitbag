@@ -2464,8 +2464,9 @@ need a phone check, tracked in #516 and the open feature issues.
   notification (#186), StemDeck import from a zip or folder (#169) and from a
   server (#404), sections and synced lyrics (#305), speed and key (#331,
   #530), WAV mixdown (#439), setlists and a play-next queue (#499, #525, #549)
-  and playing the next song when one ends (#544).
-  <!-- WAIT #382: notification Next/Previous for stem setlists (#382 c phase 2) -->
+  and playing the next song when one ends (#544), with Next and Previous on
+  the notification and lock screen for a song played from a setlist or Up next
+  (#563; its device check is owed in #382).
 - **4 has not started;** `tool-sync` is a skeleton.
 - **5 is built** (#119, #127).
 - **Around the tools:** the Home hub (#111) with Arrange (#244); Settings

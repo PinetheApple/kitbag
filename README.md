@@ -32,7 +32,8 @@ paywalls, ever.
   server; per-stem volume, mute and solo; speed and key; sections and synced
   lyrics; save the mix as a WAV; setlists, a play-next queue and playing the next
   song when one ends; background playback with a media notification.
-  <!-- WAIT #382: Next/Previous in the notification for stem setlists (#382 c phase 2) -->
+  A stem song played from a setlist or Up next has Next and Previous on its
+  notification and lock screen (#563); this still needs a phone check.
 - **Settings** — theme, keep the screen awake, the rig click and per-route
   latency calibration, turning tools on or off, backup and restore, and moving
   the data folder to an SD card and back (#500, #519). The card move is checked

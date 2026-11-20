@@ -240,7 +240,7 @@ the tools, one issue per PR against `main`. As of 2026-11-20:
   whose issue (#170) is still open for the settings it lacks.
 - **Not started:** play along (§8); `tool-sync` is a skeleton.
 - **Open work:** `gh issue list --state open` is the current list; among it are
-  notification Next/Previous for stem setlists (#382), single-song speed (#528)
+  the device checks for stem setlists (#382), single-song speed (#528)
   and stem songs on the phone (#134).
 - **Owed:** the phone checks for merged features (#516).
 

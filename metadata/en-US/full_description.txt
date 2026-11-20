@@ -28,7 +28,8 @@ WAIT #555: single-song speed
 - Stem songs keep playing in the background, with controls in the notification.
 - Songs show their controls in the same notification.
 WAIT #237: single songs playing in the background and from the lock screen
-WAIT #382: Next and Previous in the notification for stem setlists
+- A stem song played from a setlist or Up next has Next and Previous in the
+  notification and on the lock screen.
 
 Settings
 - Calibrate the output latency per audio route, and back up or restore your
