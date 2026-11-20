@@ -14,7 +14,11 @@ export type SongStartRuntime = MixerRuntime &
   Pick<StemPlayerRuntime, 'countInBars'>;
 
 export interface SongStartOptions {
-  readonly set: (change: Pick<SongStartSlice, 'countEndFrame'>) => void;
+  readonly set: (
+    change: Partial<
+      Pick<StemPlayerState, 'countEndFrame' | 'countBeatsPerBar'>
+    >,
+  ) => void;
   readonly get: () => SongStartSlice;
   readonly runtimeOf: () => SongStartRuntime;
   readonly session: () => number;
@@ -110,7 +114,10 @@ export function songStart({
     const mine = ++generation;
     const opened = session();
     pending = counted;
-    set({ countEndFrame: counted.endFrame });
+    set({
+      countEndFrame: counted.endFrame,
+      countBeatsPerBar: counted.beatsPerBar,
+    });
     void runtimeOf()
       .commands.songCountIn(
         counted.endFrame,

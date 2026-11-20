@@ -64,6 +64,11 @@ export function mixerSession({
   > | null = null;
   let songTransportListener: ((request: SongTransportRequest) => void) | null =
     null;
+  let songEndSubscription: ReturnType<
+    StemPlayerCommands['onSongEnded']
+  > | null = null;
+  let songEndListener: (() => void) | null = null;
+  let held = 0;
   let afterScrubSeek: ((frame: number) => void) | null = null;
   let afterClickRelease: (() => void) | null = null;
   let songStopped = () => {
@@ -74,6 +79,7 @@ export function mixerSession({
     afterScrubSeek?.(frame);
   }, scrubSeekDelayMs);
   const live = (opened: number) => opened === session;
+  const holds = (opened: number) => opened === held && isOpen();
   const pendingClick = createPendingClick();
   const clickSource: MixerClickSource = {
     running: () => get().click || pendingClick.pending() || counting(),
@@ -85,7 +91,7 @@ export function mixerSession({
     },
   };
 
-  const teardown = () => {
+  const teardown = ({ keepCard }: { readonly keepCard: boolean }) => {
     beforeTeardown?.();
     const runtime = runtimeOf();
     const { commands } = runtime;
@@ -93,7 +99,7 @@ export function mixerSession({
     scrubSeek.cancel();
     const countPending = counting();
     if (click) stopClick(runtime);
-    commands.songTransportHide();
+    if (!keepCard) commands.songTransportHide();
     if (countPending) commands.songStop();
     else commands.mixerStop();
     if (loop.kind === 'on') void commands.mixerClearLoop().catch(() => null);
@@ -108,7 +114,7 @@ export function mixerSession({
     mixerClick.detach(clickSource);
     pendingClick.cancel();
     session++;
-    teardown();
+    teardown({ keepCard: false });
     resetState();
     releaseEngine?.();
     releaseEngine = null;
@@ -116,6 +122,8 @@ export function mixerSession({
     songStopSubscription = null;
     songTransportSubscription?.remove();
     songTransportSubscription = null;
+    songEndSubscription?.remove();
+    songEndSubscription = null;
   };
 
   const awaitReset = async (opened: number, reset: Promise<number>) => {
@@ -140,6 +148,27 @@ export function mixerSession({
     return awaitReset(opened, commands.mixerSetRate(KB_MIXER_UNITY_RATE));
   };
 
+  // An advance keeps the card up: a hidden card ends the foreground service,
+  // and Android 12+ refuses to restart one from behind a locked screen.
+  const start = (keepCard: boolean) => {
+    if (isOpen()) teardown({ keepCard });
+    releaseEngine ??= acquireEngineHold(runtimeOf().commands);
+    claim.claim(close);
+    pendingClick.cancel();
+    mixerClick.attach(clickSource);
+    const { commands } = runtimeOf();
+    songStopSubscription ??= commands.onSongStopped(() => {
+      songStopped();
+    });
+    if (songTransportListener !== null)
+      songTransportSubscription ??= commands.onSongTransport(
+        songTransportListener,
+      );
+    if (songEndListener !== null)
+      songEndSubscription ??= commands.onSongEnded(songEndListener);
+    return ++session;
+  };
+
   return {
     scrubSeek,
     onScrubSeek: (listener: (frame: number) => void) => {
@@ -154,32 +183,24 @@ export function mixerSession({
     onSongStopped: (listener: () => void) => {
       songStopped = listener;
     },
+    onSongEnded: (listener: () => void) => {
+      songEndListener = listener;
+    },
     live,
     close,
     current: () => session,
     pendingClick,
     hold: (opened: number): MixerHold => ({
       release: () => {
-        if (live(opened)) close();
+        if (holds(opened)) close();
       },
-      live: () => live(opened),
+      live: () => holds(opened),
     }),
     begin: () => {
-      if (isOpen()) teardown();
-      releaseEngine ??= acquireEngineHold(runtimeOf().commands);
-      claim.claim(close);
-      pendingClick.cancel();
-      mixerClick.attach(clickSource);
-      songStopSubscription ??= runtimeOf().commands.onSongStopped(() => {
-        songStopped();
-      });
-      if (songTransportListener !== null) {
-        songTransportSubscription ??= runtimeOf().commands.onSongTransport(
-          songTransportListener,
-        );
-      }
-      return ++session;
+      held = start(false);
+      return held;
     },
+    advance: () => start(true),
     startEngine: async (opened: number): Promise<number | null> => {
       const { commands, engine, sharedMetronome } = runtimeOf();
       if (sharedMetronome.active()) sharedMetronome.release();
