@@ -15,7 +15,7 @@ import {
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { runFrame } from '../testing/reanimatedDriver.ts';
+import { animatedStyleOf, runFrame } from '../testing/reanimatedDriver.ts';
 import {
   at,
   flush,
@@ -68,6 +68,7 @@ function arrive(change: Partial<Arrival>) {
         stemSetId: NIGHT_BUS,
         place: null,
         skipped: null,
+        played: true,
         ...change,
       },
     });
@@ -81,19 +82,23 @@ async function advanced(
 ) {
   p.endSong(at(SONG_SECONDS));
   p.records.readStemSet.mockResolvedValueOnce(song);
-  arrive({ stemSetId: song.id, ...change });
+  arrive({ stemSetId: song.id, played: false });
   await act(async () => {
     await p.store.getState().advanceTo(song.id);
   });
+  arrive({ stemSetId: song.id, played: true, ...change });
   await flush();
 }
 
-function countingIn(currentBeat: number) {
+const NOT_COUNTING = 0;
+const COUNTING = 1;
+
+function engineCount(countingIn: number, currentBeat: number) {
   (globalThis as unknown as Record<string, unknown>)[KITBAG_HOST_OBJECT_KEY] = {
     mixer_position: 0,
     mixer_playing: 0,
-    frames_rendered: 0,
-    counting_in: 1,
+    frames_rendered: countingIn === COUNTING ? 0 : at(SONG_SECONDS),
+    counting_in: countingIn,
     current_beat: currentBeat,
   };
   act(() => {
@@ -101,10 +106,23 @@ function countingIn(currentBeat: number) {
   });
 }
 
+const countingIn = (currentBeat: number) => {
+  engineCount(COUNTING, currentBeat);
+};
+
+const squareNodes = (p: Player) => p.renderer.root.findAllByType(CountSquare);
+
 const squares = (p: Player) =>
-  p.renderer.root
-    .findAllByType(CountSquare)
-    .map((square) => square.props.beat as number);
+  squareNodes(p).map((square) => square.props.beat as number);
+
+function countPanel(p: Player) {
+  const [first] = squareNodes(p);
+  if (first?.parent == null) throw new Error('no count squares');
+  return {
+    opacity: animatedStyleOf(first.parent.props.style).opacity,
+    beat: (first.props.currentBeat as { value: number }).value,
+  };
+}
 
 describe('the player after an auto-advance', () => {
   it('follows the next song in the route without opening it again', async () => {
@@ -134,6 +152,21 @@ describe('the player after an auto-advance', () => {
     expect(p.store.getState().setId).toBeNull();
   });
 
+  it('acquires the song it advanced to when it gets the player back', async () => {
+    const p = await mountTracked();
+    await advanced(p);
+    await p.showSet(NIGHT_BUS);
+    p.setFocused(false);
+    act(() => {
+      p.store.getState().close();
+    });
+    p.records.readStemSet.mockResolvedValueOnce(nightBus);
+    p.setFocused(true);
+    await flush();
+    expect(p.records.readStemSet).toHaveBeenLastCalledWith(NIGHT_BUS);
+    expect(p.store.getState().setId).toBe(NIGHT_BUS);
+  });
+
   it('lets go of the advanced song when the screen leaves', async () => {
     const p = await mountTracked();
     await advanced(p);
@@ -152,6 +185,73 @@ describe('the player after an auto-advance', () => {
     const p = await mountTracked();
     await advanced(p, { skipped: SKIP.unopened });
     expect(p.has(SKIPPED_UNOPENED_STEM_SONG)).toBe(true);
+  });
+
+  it('says only that it skipped when the next song will not open', async () => {
+    const p = await mountTracked();
+    p.endSong(at(SONG_SECONDS));
+    p.records.readStemSet.mockResolvedValueOnce(undefined);
+    arrive({ stemSetId: NIGHT_BUS, played: false });
+    await act(async () => {
+      await p.store.getState().advanceTo(NIGHT_BUS);
+    });
+    const harbour = { ...nightBus, id: HARBOUR, title: 'Harbour' };
+    p.records.readStemSet.mockResolvedValueOnce(harbour);
+    arrive({ stemSetId: HARBOUR, played: false });
+    await act(async () => {
+      await p.store.getState().advanceTo(HARBOUR);
+    });
+    arrive({ stemSetId: HARBOUR, skipped: SKIP.unopened, played: true });
+    await flush();
+    expect(p.texts().some((text) => text.startsWith('Playing'))).toBe(false);
+    expect(p.has(SKIPPED_UNOPENED_STEM_SONG)).toBe(true);
+  });
+
+  it('lights the squares from the engine count', async () => {
+    const p = await mountTracked();
+    p.countInBars.mockReturnValue(1);
+    await advanced(p);
+    countingIn(2);
+    expect(countPanel(p)).toEqual({ opacity: 1, beat: 2 });
+  });
+
+  it('drops the squares once its count is over', async () => {
+    const p = await mountTracked();
+    p.countInBars.mockReturnValue(1);
+    await advanced(p);
+    countingIn(1);
+    engineCount(NOT_COUNTING, -1);
+    expect(squares(p)).toEqual([]);
+  });
+
+  it('shows no squares for a Play pressed after the advance', async () => {
+    const p = await mountTracked();
+    p.countInBars.mockReturnValue(1);
+    await advanced(p);
+    countingIn(1);
+    engineCount(NOT_COUNTING, -1);
+    p.engine.now = at(SONG_SECONDS);
+    await p.press('Play');
+    countingIn(0);
+    expect(p.commands.songCountIn).toHaveBeenCalledTimes(2);
+    expect(squares(p)).toEqual([]);
+  });
+
+  it('shows no squares for a count a press restarted', async () => {
+    const p = await mountTracked();
+    p.countInBars.mockReturnValue(1);
+    await advanced(p);
+    countingIn(1);
+    act(() => {
+      p.store.getState().togglePlay();
+    });
+    p.engine.now = at(1);
+    act(() => {
+      p.store.getState().togglePlay();
+    });
+    countingIn(0);
+    expect(p.commands.songCountIn).toHaveBeenCalledTimes(2);
+    expect(squares(p)).toEqual([]);
   });
 
   it('shows the count squares over the stems while the song counts in', async () => {

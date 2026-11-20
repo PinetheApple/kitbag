@@ -23,7 +23,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { AdvanceCountIn } from './AdvanceCountIn.tsx';
-import { useAcquireTarget, useArrivalFollow } from './advanceFollow.ts';
+import { useArrivalFollow, useRouteAcquire } from './advanceFollow.ts';
 import { detailTabLabel } from '../logic/detailView.ts';
 import { CLICK_SECTION, type ClickSection } from '../logic/clickView.ts';
 import { hasUnsavedRetime } from '../logic/retimeView.ts';
@@ -442,17 +442,17 @@ export function PlayerScreen({
   );
   useCarriedSkipNotice(notice.showMessage);
   useArrivalFollow(setId, onOpenStemSet, notice.showMessage);
-  const target = useAcquireTarget(setId);
   const ready = useStemPlayer((s) => s.status === 'ready');
   const acquireSong = useStemPlayer((s) => s.acquireSong);
   const { retiming, shown, askReset, askLeave, closeAsk } = useRetimeAsk();
   const sheets = usePlayerSheet(retiming);
   const queue = useQueueActions(notice, sheets.closeSheet, onOpenSetlist);
   const frame = useStemFrame();
-  const acquire = useCallback(
-    () => acquireSong(target, WAVEFORM_BARS),
-    [acquireSong, target],
+  const acquireAt = useCallback(
+    (id: number) => acquireSong(id, WAVEFORM_BARS),
+    [acquireSong],
   );
+  const acquire = useRouteAcquire(setId, acquireAt);
   useFocusedMixerHold(focused, acquire);
   const padding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
   const dialogOpen = shown !== null;

@@ -18,9 +18,12 @@ const SKIPPED: Readonly<Record<Skip, string>> = {
 };
 
 export function arrivalText(arrival: Arrival, stems: StemSongs): string | null {
-  if (arrival.skipped !== null) return SKIPPED[arrival.skipped];
-  if (arrival.stemSetId === null) return null;
-  const playing = `${PLAYING} ${stemSongTitle(arrival.stemSetId, stems)}`;
+  const { skipped, stemSetId } = arrival;
+  if (!arrival.played)
+    return stemSetId === null && skipped !== null ? SKIPPED[skipped] : null;
+  if (skipped !== null) return SKIPPED[skipped];
+  if (stemSetId === null) return null;
+  const playing = `${PLAYING} ${stemSongTitle(stemSetId, stems)}`;
   const { place } = arrival;
   if (place === null) return playing;
   return [playing, `${String(place.number)} of ${String(place.of)}`].join(

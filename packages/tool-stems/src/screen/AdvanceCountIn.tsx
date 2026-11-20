@@ -11,13 +11,14 @@ import {
 } from '@kitbag/core-design';
 import { KITBAG_HOST_OBJECT_KEY } from '@kitbag/core-native';
 import { useStemPlayer } from '@kitbag/core-state';
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useFrameCallback,
   useSharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import type { HostGlobal } from './useMixerFrame.ts';
 
@@ -48,7 +49,12 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-function CountPanel({ beats }: { readonly beats: number }) {
+interface CountPanelProps {
+  readonly beats: number;
+  readonly onOver: () => void;
+}
+
+function CountPanel({ beats, onOver }: CountPanelProps) {
   const styles = useStyles();
   const currentBeat = useSharedValue(NO_BEAT);
   const counting = useSharedValue(NOT_COUNTING);
@@ -56,7 +62,10 @@ function CountPanel({ beats }: { readonly beats: number }) {
     'worklet';
     const host = (globalThis as unknown as HostGlobal)[KITBAG_HOST_OBJECT_KEY];
     if (host === undefined) return;
-    if (counting.value !== host.counting_in) counting.value = host.counting_in;
+    const now = host.counting_in;
+    if (counting.value !== NOT_COUNTING && now === NOT_COUNTING)
+      scheduleOnRN(onOver);
+    if (counting.value !== now) counting.value = now;
     if (currentBeat.value !== host.current_beat)
       currentBeat.value = host.current_beat;
   });
@@ -88,10 +97,16 @@ function CountPanel({ beats }: { readonly beats: number }) {
 }
 
 export function AdvanceCountIn() {
-  const beats = useStemPlayer((s) =>
-    s.advancedTo !== null && s.countEndFrame !== null
-      ? s.countBeatsPerBar
+  const count = useStemPlayer((s) =>
+    s.advanceCountEnd !== null && s.countEndFrame === s.advanceCountEnd
+      ? s.advanceCountEnd
       : null,
   );
-  return beats === null ? null : <CountPanel beats={beats} />;
+  const beats = useStemPlayer((s) => s.countBeatsPerBar);
+  const [over, setOver] = useState<number | null>(null);
+  const finish = useCallback(() => {
+    setOver(count);
+  }, [count]);
+  if (count === null || over === count) return null;
+  return <CountPanel beats={beats} onOver={finish} />;
 }
