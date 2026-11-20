@@ -9,6 +9,7 @@ import {
   stemPlayer,
   textRoles,
   textStyle,
+  useTextScaled,
 } from '@kitbag/core-design';
 import { SPEED_PRESETS, speedPercent, useStemPlayer } from '@kitbag/core-state';
 import { useCallback, useState } from 'react';
@@ -23,6 +24,8 @@ import {
 } from '../logic/speedKeyView.ts';
 import { SongKeyStepper, SpeedStepper } from './SpeedKeyDock.tsx';
 import { StemKeyRows } from './StemKeyRows.tsx';
+
+export const PER_STEM_STACKED_ID = 'per-stem-stacked';
 
 const ROW_GAPS = { top: space.sectionGap, bottom: space.sectionGap };
 
@@ -55,6 +58,8 @@ const useStyles = createThemedStyles((theme) => ({
     flexShrink: 1,
     textAlign: 'right',
   },
+  toggleBody: { flexGrow: 1, flexShrink: 1 },
+  valueBelow: { ...textStyle(textRoles.menuValue), color: theme.color.text2 },
 }));
 
 function SpeedPreset({ speed }: { readonly speed: number }) {
@@ -111,6 +116,7 @@ function KeyGroup() {
 function PerStemKeys() {
   const styles = useStyles();
   const [open, setOpen] = useState(false);
+  const scaled = useTextScaled();
   const summary = useStemPlayer((s) => perStemSummary(s.stems, s.songKey));
   const toggle = useCallback(() => {
     setOpen((was) => !was);
@@ -124,8 +130,17 @@ function PerStemKeys() {
         style={styles.toggle}
         onPress={toggle}
       >
-        <Text style={styles.label}>{speedKeyCopy.perStem}</Text>
-        <Text style={styles.value}>{summary}</Text>
+        {scaled ? (
+          <View testID={PER_STEM_STACKED_ID} style={styles.toggleBody}>
+            <Text style={styles.label}>{speedKeyCopy.perStem}</Text>
+            <Text style={styles.valueBelow}>{summary}</Text>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.label}>{speedKeyCopy.perStem}</Text>
+            <Text style={styles.value}>{summary}</Text>
+          </>
+        )}
         <Icon
           name={open ? 'caretUp' : 'caretDown'}
           size="title"

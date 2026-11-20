@@ -7,6 +7,7 @@ import {
   StepControl,
   textRoles,
   textStyle,
+  useTextScaled,
   type StepDelta,
 } from '@kitbag/core-design';
 import { steppedKey, useStemPlayer } from '@kitbag/core-state';
@@ -23,6 +24,8 @@ import { stemNameWidth } from '../logic/stemName.ts';
 
 const STEPPER_GAPS = { top: 0, bottom: 0 };
 
+export const STACKED_ID = 'stem-key-stacked';
+
 const useStyles = createThemedStyles((theme) => ({
   row: {
     flexDirection: 'row',
@@ -38,6 +41,7 @@ const useStyles = createThemedStyles((theme) => ({
     flex: 1,
   },
   statusApart: { color: theme.color[theme.accentInk] },
+  stacked: { flex: 1 },
   restore: {
     width: minTouchTargetDp,
     height: minTouchTargetDp,
@@ -49,6 +53,7 @@ const useStyles = createThemedStyles((theme) => ({
 function StemKeyRow({ index }: { readonly index: number }) {
   const styles = useStyles();
   const { fontScale } = useWindowDimensions();
+  const scaled = useTextScaled();
   const nameBox = useMemo(
     () => ({ width: stemNameWidth(fontScale) }),
     [fontScale],
@@ -68,17 +73,32 @@ function StemKeyRow({ index }: { readonly index: number }) {
   }, [setStemKey, index, songKey]);
   if (row === undefined) return null;
   const apart = isSetApart(row, songKey);
+  const name = (
+    <DesignFloorOneLineText
+      text={row.name}
+      role={textRoles.stemName}
+      style={[styles.name, !row.transposable && styles.nameFixed]}
+      boxStyle={scaled ? undefined : nameBox}
+    />
+  );
+  const status = (
+    <Text style={[styles.status, apart && styles.statusApart]}>
+      {stemKeyStatus(row, songKey)}
+    </Text>
+  );
   return (
     <View style={styles.row}>
-      <DesignFloorOneLineText
-        text={row.name}
-        role={textRoles.stemName}
-        style={[styles.name, !row.transposable && styles.nameFixed]}
-        boxStyle={nameBox}
-      />
-      <Text style={[styles.status, apart && styles.statusApart]}>
-        {stemKeyStatus(row, songKey)}
-      </Text>
+      {scaled ? (
+        <View testID={STACKED_ID} style={styles.stacked}>
+          {name}
+          {status}
+        </View>
+      ) : (
+        <>
+          {name}
+          {status}
+        </>
+      )}
       {row.transposable ? (
         <StepControl
           variant="inlineLarge"

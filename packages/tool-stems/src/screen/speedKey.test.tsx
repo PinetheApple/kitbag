@@ -3,9 +3,13 @@ import { stem } from '@kitbag/core-state/src/stemPlayer/store.test-helper.ts';
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { display } from '../testing/reactNativeHosts.ts';
+import { PER_STEM_STACKED_ID } from './SpeedKeySheet.tsx';
+import { STACKED_ID } from './StemKeyRows.tsx';
 import {
   flush,
   mountPlayer,
+  withTestId,
   retiming,
   SONG_DETAILS,
   unmountTracked,
@@ -27,6 +31,7 @@ const BAND = [
 let player: Player | undefined;
 
 afterEach(() => {
+  display.fontScale = 1;
   player?.store.getState().close();
   player?.unmount();
   player = undefined;
@@ -150,5 +155,47 @@ describe('resetting speed and key', () => {
       songKey: 0,
     });
     expect(ratesSet(p).at(-1)).toBe(KB_MIXER_UNITY_RATE);
+  });
+});
+
+describe('per-stem key rows under font scale', () => {
+  async function openRows(fontScale: number) {
+    display.fontScale = fontScale;
+    const p = await openSheet(await open());
+    await p.press(`${PER_STEM}, all follow the song`);
+    return p;
+  }
+
+  const holds = (
+    box: {
+      findAll: (
+        test: (n: { props: Record<string, unknown> }) => boolean,
+      ) => unknown[];
+    },
+    text: string,
+  ) => box.findAll((node) => node.props.children === text).length > 0;
+
+  it('keeps name, status and stepper on one line at the design size', async () => {
+    const p = await openRows(1);
+    expect(withTestId(p, STACKED_ID)).toHaveLength(0);
+    expect(withTestId(p, PER_STEM_STACKED_ID)).toHaveLength(0);
+    expect(p.has('follows the song')).toBe(true);
+  });
+
+  it('stacks each status under its stem name and the summary under its label at 2.0', async () => {
+    const p = await openRows(2);
+    const stacks = withTestId(p, STACKED_ID);
+    expect(stacks).toHaveLength(BAND.length);
+    expect(
+      stacks.every(
+        (stack) =>
+          holds(stack, 'follows the song') || holds(stack, 'not transposed'),
+      ),
+    ).toBe(true);
+    const [header] = withTestId(p, PER_STEM_STACKED_ID);
+    expect(header !== undefined && holds(header, 'all follow the song')).toBe(
+      true,
+    );
+    expect(header !== undefined && holds(header, PER_STEM)).toBe(true);
   });
 });
