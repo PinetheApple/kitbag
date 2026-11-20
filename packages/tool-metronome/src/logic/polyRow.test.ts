@@ -1,12 +1,11 @@
 import { metronome, space } from '@kitbag/core-design';
 import { KB_POLY_AGAINST_BAR, KB_POLY_PHASE_NONE } from '@kitbag/core-native';
-import { effectivePolyAgainst } from '@kitbag/core-state';
+import { effectivePolyAgainst, layoutBeatLeds } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import { beatDotMetrics, DOT_METRICS } from './belowTempo.ts';
 import {
   beatDotSize,
-  layoutBeatLeds,
   MAX_DOTS_PER_LINE,
   widestLineWidth,
 } from './ledLayout.ts';

@@ -41,6 +41,8 @@ import { songTitle } from '../logic/songTitle.ts';
 import { REANALYZE_LABEL } from '../logic/viewText.ts';
 import { frameAtTap } from '../logic/waveSeek.ts';
 import type { UsePlayhead } from './playhead.ts';
+import { SongClickChips } from './SongClickChips.tsx';
+import { SongClickSheet, useSongClickSheet } from './SongClickSheet.tsx';
 import { SongMeter } from './SongMeter.tsx';
 import { SongPlayerMenu } from './SongPlayerMenu.tsx';
 import { SongTempoCorrection } from './SongTempoCorrection.tsx';
@@ -244,6 +246,7 @@ function Body({
   const playhead = usePlayhead(rate, frames, loopEnd);
   const scrub = useLoopScrub(useSongPlayer);
   const handles = useLoopHandles();
+  const clickSheet = useSongClickSheet();
   if (status !== 'ready')
     return (
       <View style={styles.bodyContent}>
@@ -261,7 +264,13 @@ function Body({
           <ScrubRow frame={playhead} {...scrub} loopHandles={handles} />
         </Card>
         <LockCard songId={songId} />
+        <SongClickChips onOpen={clickSheet.open} />
       </ScrollView>
+      <SongClickSheet
+        group={clickSheet.group}
+        bottomInset={bottom}
+        onDismiss={clickSheet.close}
+      />
       <SongMeter
         songId={songId}
         visible={meterOpen}

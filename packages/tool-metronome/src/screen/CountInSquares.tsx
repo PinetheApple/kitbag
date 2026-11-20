@@ -11,8 +11,8 @@ import Animated, {
   useAnimatedStyle,
   type SharedValue,
 } from 'react-native-reanimated';
+import type { LedRowLayout } from '@kitbag/core-state';
 
-import type { LedRowLayout } from '../logic/ledLayout.ts';
 import { countSquare } from '../logic/statusRows.ts';
 import { TEXT_PLACEHOLDER } from '../logic/textPlaceholder.ts';
 import { useBeatDotStyles } from './beatDotStyles.ts';

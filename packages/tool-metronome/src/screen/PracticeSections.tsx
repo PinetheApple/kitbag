@@ -12,13 +12,16 @@ import {
   unshared,
   useTextScaled,
 } from '@kitbag/core-design';
-import { COUNT_IN_SCOPE, useMetronome } from '@kitbag/core-state';
+import {
+  COUNT_IN_SCOPE,
+  useMetronome,
+  countInBarsFromOption,
+} from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 
 import {
   COUNT_IN_SEGMENT_OPTIONS,
-  countInBarsFromOption,
   countInMode,
   COUNT_IN_MODE,
   COUNT_IN_MODE_OPTIONS,

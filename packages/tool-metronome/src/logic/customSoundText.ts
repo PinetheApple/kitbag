@@ -10,9 +10,9 @@ import {
   unsupportedImportText,
   type ClickSoundNotice,
   type ClickSoundProblem,
+  soundRoleName,
+  type SoundRole,
 } from '@kitbag/core-state';
-
-import { soundRoleName, type SoundRole } from './soundChoice.ts';
 
 const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five'];
 const countWord = (count: number) => COUNT_WORDS[count] ?? String(count);

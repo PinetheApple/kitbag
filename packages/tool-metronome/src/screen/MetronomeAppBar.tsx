@@ -16,6 +16,7 @@ import {
   textRoles,
   textStyle,
   useTheme,
+  UnsavedDot,
 } from '@kitbag/core-design';
 import {
   activeSetView,
@@ -46,7 +47,7 @@ import {
 import { LoadedSongSheet } from './LoadedSongSheet.tsx';
 import { useStepSong, type StemStepHandlers } from './useStepSong.ts';
 import { SetlistSongsSheet } from './SetlistSongsSheet.tsx';
-import { UnsavedDot, useLoadedSongUnsaved } from './UnsavedChanges.tsx';
+import { useLoadedSongUnsaved } from './UnsavedChanges.tsx';
 
 const NO_ENTRIES: readonly SetlistEntry[] = [];
 

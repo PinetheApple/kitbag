@@ -13,7 +13,12 @@ import {
   useTextScaled,
 } from '@kitbag/core-design';
 import { customSoundId, KB_CUSTOM_SOUND_SLOTS } from '@kitbag/core-native';
-import { useClickSounds, type ClickSound } from '@kitbag/core-state';
+import {
+  useClickSounds,
+  type ClickSound,
+  customSoundViews,
+  type CustomSoundView,
+} from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
 import { Text, View } from 'react-native';
 
@@ -27,10 +32,6 @@ import {
   unavailableText,
   YOUR_SOUNDS,
 } from '../logic/customSoundText.ts';
-import {
-  customSoundViews,
-  type CustomSoundView,
-} from '../logic/soundChoice.ts';
 
 const useStyles = createThemedStyles((theme) => ({
   block: { gap: space.sectionGap },
