@@ -18,7 +18,7 @@ const FINGERPRINT_SHOWN_CHARS = 16;
 const FINGERPRINT_GROUP_CHARS = 4;
 
 const SCHEME = /^([a-z][a-z0-9+.-]*):\/\//i;
-const AUTHORITY = /^(\[[0-9a-f:.]+\]|[^:/[\]]+)(?::(\d*))?\/?$/i;
+const AUTHORITY = /^(\[[0-9a-f:.]+\]|[^:/[\]]+)(?::(\d*))?(?:\/[^?#\s]*)?$/i;
 const NUMERIC_HOST = /^[\d.]+$/;
 const HOST_NAME = /^[a-z0-9-]+(\.[a-z0-9-]+)*$/i;
 
@@ -43,7 +43,7 @@ function portOf(raw: string | undefined, scheme: string): number | null {
     : null;
 }
 
-// A bare address means https: that is what StemDeck's QR code shows.
+// A bare address means https. A path, as in StemDeck's QR URL, is dropped.
 export function parseAddress(text: string): ParsedAddress {
   const trimmed = text.trim();
   if (trimmed === '') return problem('empty');

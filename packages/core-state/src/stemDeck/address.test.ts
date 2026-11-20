@@ -10,6 +10,9 @@ describe('parseAddress', () => {
     ['  HTTP://10.0.0.12:8000/ ', 'http://10.0.0.12:8000', false],
     ['http://Studio.Local', 'http://studio.local:80', false],
     ['[fe80::1]:8443', 'https://[fe80::1]:8443', true],
+    ['http://192.168.0.100:8000/mobile/', 'http://192.168.0.100:8000', false],
+    ['https://studio.local:8443/mobile', 'https://studio.local:8443', true],
+    ['192.168.1.50/api/jobs', 'https://192.168.1.50:443', true],
   ])('reads %s as %s', (text, origin, secure) => {
     expect(parseAddress(text)).toEqual({ ok: true, origin, secure });
   });
@@ -25,7 +28,10 @@ describe('parseAddress', () => {
     ['192.168.1.50.7', 'invalid'],
     ['192.168.1.50:70000', 'invalid'],
     ['192.168.1.50:0', 'invalid'],
-    ['192.168.1.50/api/jobs', 'invalid'],
+    ['http://192.168.0.100:8000/mobile/?k=1', 'invalid'],
+    ['http://192.168.0.100:8000/mobile/#top', 'invalid'],
+    ['192.168.0.100:8000?k=1', 'invalid'],
+    ['192.168.0.100#top', 'invalid'],
     ['stem deck', 'invalid'],
   ])('refuses %j as %s', (text, problem) => {
     expect(parseAddress(text)).toEqual({ ok: false, problem });
