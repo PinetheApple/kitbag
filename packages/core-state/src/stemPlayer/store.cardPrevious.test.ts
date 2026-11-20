@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { BARS, at, opened, stem } from './store.test-helper.ts';
+import { BARS, at, countingSong, opened, stem } from './store.test-helper.ts';
 
 const PREVIOUS = { action: 'previous', frame: null } as const;
 
@@ -38,5 +38,24 @@ describe('Previous on a stem song', () => {
     void song.store.getState().open(7, BARS);
     song.requestFromNotification(PREVIOUS, shownFor);
     expect(song.back).not.toHaveBeenCalled();
+  });
+});
+
+describe('Previous during a count-in', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('reaches the play order from the card without cutting the count', async () => {
+    vi.useFakeTimers();
+    const song = await countingSong();
+    song.store.getState().togglePlay();
+    await vi.runAllTimersAsync();
+    expect(song.commands.songCountIn).toHaveBeenCalledOnce();
+    const back = vi.fn();
+    song.store.getState().onPrevious(back);
+    song.requestFromNotification(PREVIOUS);
+    expect(back).toHaveBeenCalledExactlyOnceWith(false);
+    expect(song.commands.songStop).not.toHaveBeenCalled();
   });
 });

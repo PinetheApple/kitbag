@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { QueuedSong } from '@kitbag/core-db';
 
+import { heardStore } from './heard.ts';
+import { HUM, NIGHT_BUS, plain } from './heard.test-helper.ts';
 import {
+  endListeningSession,
   endSessionOnCardStop,
   recordHeardSongs,
   stopSongAndSession,
@@ -52,9 +55,6 @@ describe('the listening session', () => {
 });
 
 describe('the songs heard in the listening session', () => {
-  const NIGHT_BUS: QueuedSong = { kind: 'stems', id: 21 };
-  const HUM: QueuedSong = { kind: 'song', id: 41 };
-
   function recording(first: QueuedSong | null) {
     let shown = first;
     let changed: () => void = () => undefined;
@@ -86,5 +86,13 @@ describe('the songs heard in the listening session', () => {
     show(null);
     show(HUM);
     expect(hear.mock.calls).toEqual([[HUM], [HUM]]);
+  });
+});
+
+describe('ending the listening session', () => {
+  it('forgets the songs heard in it', () => {
+    heardStore.setState({ heard: [plain(HUM)] });
+    endListeningSession();
+    expect(heardStore.getState().heard).toEqual([]);
   });
 });

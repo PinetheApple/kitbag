@@ -1,15 +1,12 @@
-import type { QueuedSong } from '@kitbag/core-db';
 import { describe, expect, it } from 'vitest';
 
-import type { HeardSong } from '../library/setlistSession.ts';
+import type { HeardSong } from './heard.ts';
+import { HUM, NIGHT_BUS, plain, TIN_ROOF } from './heard.test-helper.ts';
 import { ENTRY_KIND, type SetlistEntry } from '../library/snapshot.ts';
 import { cursorAt, type OnStage } from './order.ts';
 import { BACK, backOf, heardOf } from './previous.ts';
 
 const SETLIST_ID = 5;
-const NIGHT_BUS: QueuedSong = { kind: 'stems', id: 21 };
-const TIN_ROOF: QueuedSong = { kind: 'stems', id: 22 };
-const HUM: QueuedSong = { kind: 'song', id: 41 };
 
 const stem = (itemId: number, stemSetId: number) =>
   ({
@@ -31,8 +28,7 @@ const gig: OnStage = {
 };
 const alone: OnStage = { setlistId: null, entries: [], skipped: [] };
 
-const plain = (song: QueuedSong): HeardSong => ({ song, setlistItemId: null });
-const fromGig = (song: QueuedSong, itemId: number): HeardSong => ({
+const fromGig = (song: HeardSong['song'], itemId: number): HeardSong => ({
   song,
   setlistItemId: itemId,
 });
@@ -50,6 +46,7 @@ describe('going back an entry', () => {
       song: NIGHT_BUS,
       left: HUM,
       requeue: HUM,
+      fromHistory: true,
     });
   });
 
@@ -65,6 +62,7 @@ describe('going back an entry', () => {
       entry: gig.entries[1],
       left: TIN_ROOF,
       requeue: null,
+      fromHistory: true,
     });
   });
 
@@ -89,7 +87,11 @@ describe('going back an entry', () => {
       stage: gig,
       cursor: cursorAt(gig, 2),
     });
-    expect(back).toMatchObject({ kind: BACK.setlist, entry: gig.entries[0] });
+    expect(back).toMatchObject({
+      kind: BACK.setlist,
+      entry: gig.entries[0],
+      fromHistory: false,
+    });
   });
 
   it('has nowhere to go from the first song heard outside a setlist', () => {

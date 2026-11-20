@@ -21,11 +21,14 @@ type RenderUpNext = NonNullable<SongPlayerScreenProps['renderUpNext']>;
 
 function useSongUpNext(bottomInset: number, onOpenSong: (id: number) => void) {
   const routes = useLibraryRoutes();
-  const player = useMemo(
-    () => ({ onOpenStemSet: routes.replaceStemSet, onOpenSong }),
+  const place = useMemo(
+    () => ({
+      playsInPlace: false,
+      routes: { onOpenStemSet: routes.replaceStemSet, onOpenSong },
+    }),
     [routes.replaceStemSet, onOpenSong],
   );
-  const queue = useQueueSheet(bottomInset, player);
+  const queue = useQueueSheet(bottomInset, place);
   const pressNext = useSongPlayer((s) => s.pressNext);
   const pressPrevious = useSongPlayer((s) => s.pressPrevious);
   const renderUpNext = useCallback<RenderUpNext>(

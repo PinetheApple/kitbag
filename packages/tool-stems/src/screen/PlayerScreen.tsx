@@ -57,7 +57,7 @@ import { StemTransport } from './StemTransport.tsx';
 import { TempoSheet } from './TempoSheet.tsx';
 import { UpNextRow } from './UpNextRow.tsx';
 import { QueueSheet, type QueueSheetProps } from './QueueSheet.tsx';
-import { usePlayerRoutes } from './playerRoutes.ts';
+import { usePlayerRoutes, useStemPresses } from './playerRoutes.ts';
 import {
   clickSectionOf,
   TEMPO_SHEET,
@@ -141,26 +141,17 @@ interface DockProps {
   readonly frame: MixerFrameValues;
   readonly bottom: number;
   readonly onOpenUpNext: () => void;
-  readonly onNext: () => void;
-  readonly onPrevious: () => void;
   readonly onSpeedKey: () => void;
 }
 
-function Dock({
-  frame,
-  bottom,
-  onOpenUpNext,
-  onNext,
-  onPrevious,
-  onSpeedKey,
-}: DockProps) {
+function Dock({ frame, bottom, onOpenUpNext, onSpeedKey }: DockProps) {
+  const presses = useStemPresses();
   return (
     <PlayerDock bottomInset={bottom}>
       <UpNextRow
         songSec={frame.songSec}
         onOpenSheet={onOpenUpNext}
-        onNext={onNext}
-        onPrevious={onPrevious}
+        {...presses}
       />
       <Scrubber frame={frame} />
       <SpeedKeyControls onOpen={onSpeedKey} />
@@ -269,8 +260,6 @@ interface BodyProps {
   readonly frame: MixerFrameValues;
   readonly onBack: () => void;
   readonly onOpenUpNext: () => void;
-  readonly onNext: () => void;
-  readonly onPrevious: () => void;
   readonly notice: Notice;
   readonly onSpeedKey: () => void;
 }
@@ -280,8 +269,6 @@ function Body({
   frame,
   onBack,
   onOpenUpNext,
-  onNext,
-  onPrevious,
   notice,
   onSpeedKey,
 }: BodyProps) {
@@ -314,8 +301,6 @@ function Body({
         frame={frame}
         bottom={bottom}
         onOpenUpNext={onOpenUpNext}
-        onNext={onNext}
-        onPrevious={onPrevious}
         onSpeedKey={onSpeedKey}
       />
     </>
@@ -440,7 +425,7 @@ export function PlayerScreen({
   onOpenSetlist,
 }: StemPlayerScreenProps) {
   const styles = useStyles();
-  const { notice, routes, skip, back } = usePlayerRoutes(
+  const { notice, routes } = usePlayerRoutes(
     onOpenStemSet,
     onOpenSong,
     onOpenMetronome,
@@ -487,8 +472,6 @@ export function PlayerScreen({
           frame={frame}
           onBack={onBack}
           onOpenUpNext={sheets.openUpNext}
-          onNext={skip}
-          onPrevious={back}
           notice={notice}
           onSpeedKey={sheets.openSpeedKey}
         />

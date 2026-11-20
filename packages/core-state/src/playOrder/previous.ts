@@ -1,19 +1,26 @@
 import type { QueuedSong } from '@kitbag/core-db';
 
 import { adjacentEntry, SONG_STEP } from '../library/setlistPosition.ts';
-import { droppedTrailing, type HeardSong } from '../library/setlistSession.ts';
-import { isPresetEntry, type SetlistEntry } from '../library/snapshot.ts';
+import {
+  isPresetEntry,
+  type PresetSetlistEntry,
+  type SetlistEntry,
+} from '../library/snapshot.ts';
 import { libraryStore, type LoadedSong } from '../library/store.ts';
-import { songPlayerStore } from '../songPlayer/store.ts';
-import { stemPlayerStore } from '../stemPlayer/store.ts';
+import {
+  droppedTrailing,
+  heardAfter,
+  heardStore,
+  type HeardSong,
+} from './heard.ts';
+import { shownSong } from './nowPlaying.ts';
 import {
   cursorOf,
   onStageOf,
   type OnStage,
-  type PlayerKind,
   type SetlistCursor,
 } from './order.ts';
-import { playOrderStore } from './store.ts';
+import { playOrderStore, stageMarkOf, type Undo } from './store.ts';
 
 export const PREVIOUS_RESTARTS_AFTER_SECONDS = 3;
 
@@ -22,6 +29,7 @@ export const BACK = { song: 'song', setlist: 'setlist' } as const;
 interface Leaving {
   readonly left: QueuedSong;
   readonly requeue: QueuedSong | null;
+  readonly fromHistory: boolean;
 }
 
 export type Back =
@@ -70,43 +78,84 @@ export function backOf({
     const entry = stageEntry(stage, before.setlistItemId);
     const requeue =
       leftEntry !== undefined && entry !== undefined ? null : left;
+    const leaving = { left, requeue, fromHistory: true };
     return entry === undefined
-      ? { kind: BACK.song, song: before.song, left, requeue }
-      : { kind: BACK.setlist, entry, left, requeue };
+      ? { kind: BACK.song, song: before.song, ...leaving }
+      : { kind: BACK.setlist, entry, ...leaving };
   }
   if (leftEntry === undefined || cursor === null) return null;
   const entry = adjacentEntry(stage.entries, cursor, SONG_STEP.previous);
-  return entry === undefined
-    ? null
-    : { kind: BACK.setlist, entry, left, requeue: null };
+  if (entry === undefined) return null;
+  return { kind: BACK.setlist, entry, left, requeue: null, fromHistory: false };
 }
 
-function shownId(from: PlayerKind): number | null {
-  return from === 'stems'
-    ? stemPlayerStore.getState().setId
-    : songPlayerStore.getState().songId;
+export function songOfBack(back: Back): QueuedSong | null {
+  if (back.kind === BACK.song) return back.song;
+  const { entry } = back;
+  return isPresetEntry(entry) ? null : { kind: 'stems', id: entry.stemSetId };
 }
 
-export function backNow(from: PlayerKind): Back | null {
-  const id = shownId(from);
-  if (id === null) return null;
+export function presetOfBack(back: Back): PresetSetlistEntry | null {
+  if (back.kind !== BACK.setlist || !isPresetEntry(back.entry)) return null;
+  return back.entry;
+}
+
+export function heardOfBack(back: Back): HeardSong | null {
+  const song = songOfBack(back);
+  if (song === null) return null;
+  return {
+    song,
+    setlistItemId: back.kind === BACK.setlist ? back.entry.item.id : null,
+  };
+}
+
+export function backFromOf(
+  song: QueuedSong | null,
+  heard: readonly HeardSong[],
+  loaded: LoadedSong | null,
+  stage: OnStage,
+): BackFrom | null {
+  if (song === null) return null;
+  const current = heardOf(song, loaded);
+  return { heard, current, stage, cursor: cursorOf(stage, loaded) };
+}
+
+export function backFromNow(): BackFrom | null {
   const library = libraryStore.getState();
-  const stage = onStageOf(library);
-  return backOf({
-    heard: library.heard,
-    current: heardOf({ kind: from, id }, library.loaded),
-    stage,
-    cursor: cursorOf(stage, library.loaded),
+  return backFromOf(
+    shownSong(),
+    heardStore.getState().heard,
+    library.loaded,
+    onStageOf(library),
+  );
+}
+
+const NOTHING_TO_UNDO: Undo = () => Promise.resolve();
+
+export async function openBack(back: Back): Promise<Undo | null> {
+  if (back.kind !== BACK.setlist || isPresetEntry(back.entry))
+    return NOTHING_TO_UNDO;
+  const library = libraryStore.getState();
+  const { setlistId } = onStageOf(library);
+  if (setlistId === null) return null;
+  const mark = stageMarkOf(libraryStore)();
+  if (!(await library.openStemEntry(back.entry.item.id, setlistId))) {
+    mark.restore();
+    return null;
+  }
+  mark.wrote();
+  return () => {
+    mark.restore();
+    return Promise.resolve();
+  };
+}
+
+export async function settleBack(back: Back, from: BackFrom): Promise<void> {
+  const kept = droppedTrailing(from.heard, back.left);
+  const target = heardOfBack(back);
+  heardStore.setState({
+    heard: target === null ? kept : heardAfter(kept, target),
   });
-}
-
-export async function commitBack(back: Back): Promise<void> {
-  const library = libraryStore.getState();
-  library.unhearSong(back.left);
   if (back.requeue !== null)
     await playOrderStore.getState().playNext(back.requeue);
-  if (back.kind !== BACK.setlist || isPresetEntry(back.entry)) return;
-  const { setlistId } = onStageOf(library);
-  if (setlistId !== null)
-    await library.openStemEntry(back.entry.item.id, setlistId);
 }

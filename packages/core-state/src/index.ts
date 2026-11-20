@@ -346,6 +346,7 @@ export {
   stopSongAndSession,
 } from './playOrder/listeningSession.ts';
 export { PREVIOUS_RESTARTS_AFTER_SECONDS } from './playOrder/previous.ts';
+export { heardStore, type HeardSong } from './playOrder/heard.ts';
 export { stopSongsForMetronome } from './playOrder/metronomeTakeover.ts';
 export {
   entryName,

@@ -17,7 +17,11 @@ export function restingPlayer(): AdvancingPlayer {
   };
 }
 
-export const NO_BACK: Pick<AutoAdvanceDeps, 'backOf' | 'commitBack'> = {
-  backOf: () => null,
-  commitBack: () => Promise.resolve(),
+export const NO_BACK: Pick<AutoAdvanceDeps, 'back'> = {
+  back: {
+    from: () => null,
+    open: () => Promise.resolve(null),
+    settle: () => Promise.resolve(),
+    forget: () => undefined,
+  },
 };

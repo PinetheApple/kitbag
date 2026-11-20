@@ -12,7 +12,17 @@ import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
 type PlayerRoutes = Pick<QueueSheetProps, 'onOpenStemSet' | 'onOpenSong'>;
 
-export function useQueueSheet(bottomInset: number, player?: PlayerRoutes) {
+export interface QueueSheetPlace {
+  readonly playsInPlace: boolean;
+  readonly routes?: PlayerRoutes;
+}
+
+const IN_PLACE: QueueSheetPlace = { playsInPlace: true };
+
+export function useQueueSheet(
+  bottomInset: number,
+  { playsInPlace, routes: player }: QueueSheetPlace = IN_PLACE,
+) {
   const routes = useLibraryRoutes();
   const notice = useNotice();
   const rejoinSetlist = useLibrary((s) => s.rejoinSetlist);
@@ -37,7 +47,7 @@ export function useQueueSheet(bottomInset: number, player?: PlayerRoutes) {
     <>
       <QueueSheet
         {...sheetRoutes}
-        playsInPlace={player === undefined}
+        playsInPlace={playsInPlace}
         visible={visible}
         bottomInset={bottomInset}
         onDismiss={close}

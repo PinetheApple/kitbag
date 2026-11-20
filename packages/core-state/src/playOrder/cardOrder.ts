@@ -2,9 +2,8 @@ import type { SongTransportOrder } from '@kitbag/core-native';
 
 import { libraryStore } from '../library/store.ts';
 import { getStemPlayer } from '../stemPlayer/runtime.ts';
-import { playingKind } from './nowPlaying.ts';
 import { cursorOf, onStageOf, upNext, type PlayOrder } from './order.ts';
-import { backNow } from './previous.ts';
+import { backFromNow, backOf } from './previous.ts';
 import { playOrderStore } from './store.ts';
 
 export function cardOrderOf(
@@ -33,8 +32,8 @@ function playOrderNow(): PlayOrder {
 }
 
 function canGoBack(): boolean {
-  const kind = playingKind();
-  return kind !== null && backNow(kind) !== null;
+  const from = backFromNow();
+  return from !== null && backOf(from) !== null;
 }
 
 const defaultDeps: CardOrderDeps = {

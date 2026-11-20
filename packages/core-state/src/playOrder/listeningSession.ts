@@ -4,6 +4,7 @@ import { libraryStore } from '../library/store.ts';
 import { songPlayerStore } from '../songPlayer/store.ts';
 import { stemPlayerStore } from '../stemPlayer/store.ts';
 import { shownSong } from './nowPlaying.ts';
+import { forgetHeard, hearSong } from './heard.ts';
 import { heardOf } from './previous.ts';
 
 type CardStops = (listener: () => void) => () => void;
@@ -12,6 +13,11 @@ export interface ListeningDeps {
   readonly cardStops: readonly CardStops[];
   readonly closePlayers: () => void;
   readonly endSession: () => void;
+}
+
+export function endListeningSession(): void {
+  libraryStore.getState().endListeningSession();
+  forgetHeard();
 }
 
 const defaultDeps: ListeningDeps = {
@@ -23,9 +29,7 @@ const defaultDeps: ListeningDeps = {
     songPlayerStore.getState().close();
     stemPlayerStore.getState().close();
   },
-  endSession: () => {
-    libraryStore.getState().endListeningSession();
-  },
+  endSession: endListeningSession,
 };
 
 export function stopSongAndSession(deps: ListeningDeps = defaultDeps) {
@@ -62,8 +66,7 @@ const heardDeps: HeardDeps = {
     };
   },
   hear: (song) => {
-    const library = libraryStore.getState();
-    library.hearSong(heardOf(song, library.loaded));
+    hearSong(heardOf(song, libraryStore.getState().loaded));
   },
 };
 

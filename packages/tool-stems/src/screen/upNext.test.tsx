@@ -2,13 +2,11 @@ import {
   autoAdvanceDeps,
   configurePlayOrder,
   libraryStore,
-  playOrderStore,
   SKIPPED_STEM_SONG,
   songLibraryStore,
   songPlayerStore,
   startAutoAdvance,
   stopSongsForMetronome,
-  type QueuedSong,
 } from '@kitbag/core-state';
 import { playerWaveBars, Snackbar, SwipeDeleteRow } from '@kitbag/core-design';
 import { act } from 'react';
@@ -27,6 +25,7 @@ import {
   single,
   stemRow,
   stems,
+  withQueue,
 } from './playQueue.test-helper.ts';
 import {
   flush,
@@ -62,16 +61,6 @@ afterEach(() => {
 
 const BALLAD_UP_NEXT = 'Up next: Ballad, Gig · 1 of 1 · metronome';
 const NIGHT_BUS_UP_NEXT = 'Up next: Night Bus, Next in queue';
-
-async function withQueue(...songs: (number | QueuedSong)[]) {
-  setQueued(
-    songs.map((entry) => (typeof entry === 'number' ? stems(entry) : entry)),
-  );
-  const player = await mountTracked();
-  await playOrderStore.getState().refresh();
-  await flush();
-  return player;
-}
 
 describe('Play next and Add to queue from the player', () => {
   it('puts the open song first on Play next and says so', async () => {
@@ -187,29 +176,6 @@ describe('Add to setlist from the player', () => {
     await p.press('Cancel');
     await flush();
     expect(p.has('Added to Gig')).toBe(false);
-  });
-});
-
-describe('the Up next row', () => {
-  it('says playback stops, with no Next, when nothing is up next', async () => {
-    const p = await withQueue();
-    expect(p.has('Nothing queued')).toBe(true);
-    expect(p.has('Playback stops when this song ends')).toBe(true);
-    expect(p.labelled('Open')).toEqual([]);
-    const nextKeys = p.renderer.root.findAll((node) =>
-      String(node.props.accessibilityLabel).startsWith('Next:'),
-    );
-    expect(nextKeys).toEqual([]);
-  });
-
-  it('names the first queued song and skips to it, dropping it from the queue', async () => {
-    const p = await withQueue(NIGHT_BUS, TIN_ROOF);
-    expect(p.has('Night Bus')).toBe(true);
-    expect(p.has('Next in queue · 1 more after it')).toBe(true);
-    await p.press('Next: Night Bus');
-    await flush();
-    expect(p.routes.onOpenStemSet).toHaveBeenCalledWith(NIGHT_BUS);
-    expect(queued).toEqual([stems(TIN_ROOF)]);
   });
 });
 

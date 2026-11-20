@@ -10,10 +10,9 @@ import {
   type AdvanceListener,
   type AdvanceOutcome,
 } from '../stemPlayer/songEnd.ts';
-import type { PreviousListener } from '../stemPlayer/previousPresses.ts';
+import type { PreviousListener } from '../stemPlayer/cardPresses.ts';
 import { stemPlayerStore } from '../stemPlayer/store.ts';
 import { songPlayerStore } from '../songPlayer/store.ts';
-import { isPresetEntry } from '../library/snapshot.ts';
 import {
   ADVANCE,
   cursorOf,
@@ -25,12 +24,18 @@ import {
   type PlayerKind,
 } from './order.ts';
 import { playingKind } from './nowPlaying.ts';
+import { forgetSong, withoutSong } from './heard.ts';
 import {
   BACK,
-  backNow,
-  commitBack,
+  backFromNow,
+  backOf,
+  openBack,
+  presetOfBack,
   PREVIOUS_RESTARTS_AFTER_SECONDS,
+  settleBack,
+  songOfBack,
   type Back,
+  type BackFrom,
 } from './previous.ts';
 import { SKIP, type SkippedSong } from './queuedSongText.ts';
 import { playOrderStore, type SkipResult, type Undo } from './store.ts';
@@ -96,8 +101,14 @@ export interface AutoAdvanceDeps {
   readonly candidates: () => number;
   readonly commitOpen: (entry: PresetSetlistEntry) => Promise<boolean>;
   readonly arrivals: StoreApi<ArrivalState>;
-  readonly backOf: (from: PlayerKind) => Back | null;
-  readonly commitBack: (back: Back) => Promise<void>;
+  readonly back: BackDeps;
+}
+
+export interface BackDeps {
+  readonly from: () => BackFrom | null;
+  readonly open: (back: Back) => Promise<Undo | null>;
+  readonly settle: (back: Back, start: BackFrom) => Promise<void>;
+  readonly forget: (song: QueuedSong) => void;
 }
 
 function onStageNow() {
@@ -171,8 +182,12 @@ export const autoAdvanceDeps = (bars: WaveformBars): AutoAdvanceDeps => ({
     playOrderStore.getState().queue.length + onStageNow().stage.entries.length,
   commitOpen: (entry) => playOrderStore.getState().commitOpen(entry),
   arrivals: arrivalStore,
-  backOf: backNow,
-  commitBack,
+  back: {
+    from: backFromNow,
+    open: openBack,
+    settle: settleBack,
+    forget: forgetSong,
+  },
 });
 
 type Arrive = (arrival: ArrivalEvent) => void;
@@ -191,12 +206,13 @@ async function openMetronome(
   player: AdvancingPlayer,
   arrive: Arrive,
   entry: PresetSetlistEntry,
-) {
+): Promise<boolean> {
   // Loading a metronome song closes every song player, so the press can only
   // be checked before the load (advance does), never after it.
-  if (!(await deps.commitOpen(entry))) return;
+  if (!(await deps.commitOpen(entry))) return false;
   player.handToMetronome();
   arrive({ kind: ARRIVAL.metronome });
+  return true;
 }
 
 export function handOver(
@@ -320,44 +336,89 @@ interface BackStep {
   readonly inApp: boolean;
 }
 
-async function playBack(
+async function tryBack(
   deps: AutoAdvanceDeps,
   arrive: Arrive,
   { from, inApp }: BackStep,
+  back: Back,
   song: QueuedSong,
-  place: SetlistPlace | null,
-) {
+  start: BackFrom,
+): Promise<AdvanceOutcome | null> {
+  const undo = await deps.back.open(back);
+  if (undo === null) return null;
+  const place =
+    back.kind === BACK.setlist
+      ? deps.placeOf({
+          kind: ADVANCE.stems,
+          stemSetId: song.id,
+          setlistItemId: back.entry.item.id,
+        })
+      : null;
   arrive({ kind: ARRIVAL.arriving, song });
   const outcome = await startNow(deps.players, from, song);
+  if (
+    outcome !== ADVANCE_OUTCOME.playing &&
+    outcome !== ADVANCE_OUTCOME.stopped
+  ) {
+    await undo();
+    return outcome;
+  }
+  await deps.back.settle(back, start);
   if (outcome === ADVANCE_OUTCOME.playing)
     arrive({ kind: ARRIVAL.playing, song, place, skipped: null, inApp });
+  return outcome;
+}
+
+async function backToMetronome(
+  deps: AutoAdvanceDeps,
+  arrive: Arrive,
+  player: AdvancingPlayer,
+  back: Back,
+  start: BackFrom,
+) {
+  const preset = presetOfBack(back);
+  if (preset === null) return;
+  if (await openMetronome(deps, player, arrive, preset))
+    await deps.back.settle(back, start);
 }
 
 async function stepBack(deps: AutoAdvanceDeps, arrive: Arrive, step: BackStep) {
   const player = deps.players[step.from];
   const restarts = player.playedSeconds() > PREVIOUS_RESTARTS_AFTER_SECONDS;
-  const back = restarts ? null : deps.backOf(step.from);
-  if (back === null) {
+  let start = restarts ? null : deps.back.from();
+  let back = start === null ? null : backOf(start);
+  if (start === null || back === null) {
     player.restart();
     return;
   }
-  await deps.commitBack(back);
-  if (back.kind === BACK.song) {
-    await playBack(deps, arrive, step, back.song, null);
-    return;
+  let by = step.from;
+  let skipped: SkippedSong | null = null;
+  while (back !== null) {
+    const song = songOfBack(back);
+    if (song === null) {
+      await backToMetronome(deps, arrive, player, back, start);
+      return;
+    }
+    const outcome = await tryBack(
+      deps,
+      arrive,
+      { ...step, from: by },
+      back,
+      song,
+      start,
+    );
+    if (outcome !== null && outcome !== ADVANCE_OUTCOME.unplayable) return;
+    if (outcome !== null) {
+      by = song.kind;
+      skipped = { reason: SKIP.unopened, kind: song.kind };
+    }
+    deps.back.forget(song);
+    if (!back.fromHistory) break;
+    start = { ...start, heard: withoutSong(start.heard, song) };
+    back = backOf(start);
   }
-  const { entry } = back;
-  if (isPresetEntry(entry)) {
-    await openMetronome(deps, player, arrive, entry);
-    return;
-  }
-  const song: QueuedSong = { kind: 'stems', id: entry.stemSetId };
-  const place = deps.placeOf({
-    kind: ADVANCE.stems,
-    stemSetId: entry.stemSetId,
-    setlistItemId: entry.item.id,
-  });
-  await playBack(deps, arrive, step, song, place);
+  deps.players[by].stopAdvancing();
+  if (skipped !== null) arrive({ kind: ARRIVAL.gaveUp, skipped });
 }
 
 const PLAYER_KINDS: readonly PlayerKind[] = ['stems', 'song'];

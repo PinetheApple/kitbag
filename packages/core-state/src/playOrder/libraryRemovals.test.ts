@@ -4,6 +4,7 @@ import { createStore } from 'zustand/vanilla';
 import type { LibraryStore } from '../library/store.ts';
 import type { SongLibraryStore } from '../songLibrary/store.ts';
 import type { PlayOrderStore } from './store.ts';
+import type { HeardState } from './heard.ts';
 import { bindLibraryRemovals } from './libraryRemovals.ts';
 
 const stems = (...ids: number[]) =>
@@ -23,8 +24,14 @@ function setup() {
   const order = createStore(
     () => ({ refresh: orderRefresh }) as unknown as PlayOrderStore,
   );
-  bindLibraryRemovals(songs, library, order);
-  return { songs, libraryRefresh, orderRefresh };
+  const heard = createStore<HeardState>(() => ({
+    heard: [
+      { song: { kind: 'stems', id: 1 }, setlistItemId: null },
+      { song: { kind: 'song', id: 1 }, setlistItemId: null },
+    ],
+  }));
+  bindLibraryRemovals(songs, library, order, heard);
+  return { songs, libraryRefresh, orderRefresh, heard };
 }
 
 describe('library removals', () => {
@@ -39,6 +46,14 @@ describe('library removals', () => {
     const { songs, orderRefresh } = setup();
     songs.setState({ rows: stems(1, 2) });
     expect(orderRefresh).toHaveBeenCalledOnce();
+  });
+
+  it('forgets a deleted song from the songs heard, so Previous skips it', () => {
+    const { songs, heard } = setup();
+    songs.setState({ rows: [...stems(2), song(1)] });
+    expect(heard.getState().heard).toEqual([
+      { song: { kind: 'song', id: 1 }, setlistItemId: null },
+    ]);
   });
 
   it('leaves them alone when songs are only added', () => {
