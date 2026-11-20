@@ -1,0 +1,1 @@
+• Click settings saved for a library song no longer show up in the metronome's song lists.
