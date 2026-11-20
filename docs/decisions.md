@@ -1218,11 +1218,25 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   starting a song from a list and replaced by starting another setlist, queued
   songs kept either way, "Clear queue" for queued songs and "Leave setlist" for
   the setlist part, and playback stopping at the end with no autoplay; (4)
-  Repeat as a labelled chip cycling Off, Repeat all, Repeat one, where Repeat
+  Repeat as a labelled chip cycling Repeat off, Repeat all, Repeat one, where Repeat
   all loops the queue and the setlist and an active A-B loop wins over Repeat
   one; (5) Previous and Next beside the Up next row, Previous restarting a stem
   song past 3 s and always going back an entry on the Metronome. Rationale: the
   owner's review found the queue hard to find, addable only at the front,
   stopping when the user left the player, and showing a setlist nobody started
-  in this session. The mockup binds as `design/kitbag-queue.html`.
+  in this session. The mockup binds as `design/kitbag-queue.html`. Further
+  owner rulings the same day: the single-song player gets the same Up next row
+  with Previous, Next and the Repeat chip, built from the stem player's parts
+  with no separate mockup (SPEC §6.3); and Repeat all also wraps a Metronome
+  setlist's Next from the last song to the first (§5.4).
   **[owner, 2026-11-20]**
+
+- **2026-11-20 · Queue definitions (#574, SPEC §5.4, §7.9)** — (a) A setlist is
+  started in this listening session when the user loads one of its entries,
+  metronome or stem song, during this app run; one pinned in an earlier run is
+  not started until then. (b) "Leave setlist" means one thing on the Metronome
+  and in the queue sheet: it ends the setlist context and unpins the setlist.
+  (c) Under Repeat all, a setlist whose last entry is a metronome song stops
+  before it and does not wrap. Rationale: the owner's decisions left these
+  three undefined; each follows the no-autoplay rule and keeps one meaning per
+  term. **[recorded]**
