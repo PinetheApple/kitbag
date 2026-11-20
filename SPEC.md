@@ -1285,12 +1285,17 @@ phone. That page defines the format; this spec does not copy it.
   stopped.
 - **At the end** playback stops. No autoplay.
 - **Repeat** is a labelled chip on the Up next row and in the queue sheet's
-  header, cycling Repeat off → Repeat all → Repeat one. Repeat all loops the
-  queue (a queued song goes back to the end once played) and the setlist (song
-  1 after its last), and wraps the Metronome's Next (§5.4). A setlist whose
-  last entry is a metronome song does not wrap: playback stops before it. An
-  active A-B loop wins over Repeat one, which acts only once the loop is
-  cleared.
+  header, cycling Repeat off → Repeat all → Repeat one. The mode survives Stop
+  and resets when the app restarts. Repeat all plays in rounds: the queue, then
+  the rest of the setlist, then the songs that played from the queue (in the
+  order they played), then the setlist from song 1 (owner, 2026-11-20). Those
+  songs go back into the queue only when the round wraps; until then Up next,
+  the queue sheet and the card show them as pending. A queued song counts as
+  played only once it plays. Repeat all also wraps the Metronome's Next (§5.4).
+  A setlist whose last entry (ignoring entries skipped this time) is a
+  metronome song does not wrap: playback stops before it. The Repeat all hint
+  shows in the queue sheet once per install (owner, 2026-11-20). An active A-B
+  loop wins over Repeat one, which acts only once the loop is cleared.
 - **Previous and Next** sit beside the Up next row, on the stem player and the
   single-song player (§6.3). Past 3 s Previous restarts the song; otherwise it
   goes to the song played before it in this session, or the setlist entry
