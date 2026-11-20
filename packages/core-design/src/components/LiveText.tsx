@@ -6,6 +6,8 @@ import {
 } from 'react-native';
 import Animated, {
   useAnimatedProps,
+  useAnimatedReaction,
+  useSharedValue,
   type SharedValue,
 } from 'react-native-reanimated';
 
@@ -13,6 +15,7 @@ import { textRoles, type TextRoleName } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { useTheme } from '../ThemeProvider.tsx';
 import type { ColorToken } from '../tokens.ts';
+import { useSheetContentLive } from './sheetContentLive.ts';
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
@@ -33,8 +36,16 @@ export function LiveText({
   style,
 }: LiveTextProps) {
   const theme = useTheme();
+  const live = useSheetContentLive();
+  const held = useSharedValue(text.value);
+  useAnimatedReaction(
+    () => ({ value: text.value, live: live.value }),
+    (now) => {
+      if (now.live) held.value = now.value;
+    },
+  );
   const animatedProps = useAnimatedProps(() => {
-    const value = text.value;
+    const value = live.value ? text.value : held.value;
     // `text` is the native prop a TextInput reads from the UI thread; it is not
     // in TextInputProps, hence the cast.
     return {

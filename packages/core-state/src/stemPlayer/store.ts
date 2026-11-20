@@ -43,6 +43,7 @@ import {
   advanceSong,
   endedOnLastFrame,
   songEnds,
+  type AdvanceListener,
   type AdvanceOutcome,
 } from './songEnd.ts';
 import { countPending, songStart } from './songStart.ts';
@@ -137,9 +138,10 @@ export interface StemPlayerActions {
   readonly open: (setId: number, waveformBars: number) => Promise<void>;
   readonly acquireSong: (setId: number, waveformBars: number) => MixerHold;
   readonly advanceTo: (setId: number) => Promise<AdvanceOutcome>;
-  readonly onSongEnd: (listener: () => void) => () => void;
+  readonly onSongEnd: (listener: AdvanceListener) => () => void;
   readonly songStillEnded: () => boolean;
   readonly stopAdvancing: () => void;
+  readonly handToMetronome: () => void;
   readonly close: () => void;
   readonly setGain: (index: number, gain: number) => void;
   readonly toggleMute: (index: number) => void;
@@ -255,6 +257,7 @@ export function createStemPlayerStore(
       teardownTracks,
       counting: () =>
         countPending(get().countEndFrame, runtimeOf().engine.nowFrame()),
+      followsPlayOrder: true,
       resetState: () => {
         set({
           ...closedState,
@@ -275,7 +278,12 @@ export function createStemPlayerStore(
     });
     mixer.onScrubSeek(start.afterSeek);
     mixer.onClickReleased(start.endCountNow);
-    const card = showCountOnSongCard(store, runtimeOf, start.counting);
+    const card = showCountOnSongCard(
+      store,
+      runtimeOf,
+      start.counting,
+      mixer.card,
+    );
     const ends = songEnds(
       () => endedOnLastFrame(get(), runtimeOf().engine, start.counting()),
       mixer.current,
@@ -294,6 +302,7 @@ export function createStemPlayerStore(
           card.stopped();
           start.stop();
         },
+        next: ends.pressedNext,
       }),
     );
     const speedKey = speedKeySession(context, start.rateSet, () => openRecord);
@@ -443,9 +452,20 @@ export function createStemPlayerStore(
       stopAdvancing: () => {
         if (ends.gaveUp()) runtimeOf().commands.songTransportHide();
       },
+      handToMetronome: () => {
+        runtimeOf().sharedMetronome.showStopped();
+        mixer.close();
+      },
       close: mixer.close,
       ...mixActions(set, get, runtimeOf, saver),
-      ...transportActions(get, runtimeOf, scrubSeek, afterSeek, start),
+      ...transportActions(
+        get,
+        runtimeOf,
+        mixer.card,
+        scrubSeek,
+        afterSeek,
+        start,
+      ),
       ...sectionLoopActions(context),
       ...clicks,
       ...clickShape.actions,

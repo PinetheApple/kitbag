@@ -28,7 +28,9 @@ import com.kitbag.corenative.transport.PracticeClock
 import com.kitbag.corenative.transport.SessionButton
 import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.SongAction
+import com.kitbag.corenative.transport.SongCardTag
 import com.kitbag.corenative.transport.SongCommand
+import com.kitbag.corenative.transport.SongOrder
 import com.kitbag.corenative.transport.TransportAction
 import com.kitbag.corenative.transport.TransportChange
 import com.kitbag.corenative.transport.TransportCommand
@@ -95,6 +97,7 @@ class PlaybackService : Service() {
       ACTION_SONG_SHOW -> CardEvent.SongShown
       ACTION_SONG -> CardEvent.SongTapped(intent.getStringExtra(EXTRA_ACTION))
       ACTION_SONG_HIDE -> CardEvent.SongHidden
+      ACTION_SONG_ORDER -> CardEvent.SongOrdered(SongOrder.named(intent.getStringExtra(EXTRA_SONG_ORDER)))
       else -> CardEvent.StartUnrecognised
     }
 
@@ -107,6 +110,7 @@ class PlaybackService : Service() {
       CardEffect.ShowSong -> intent?.let { showSong(it) }
       is CardEffect.SongControl -> song?.handle(effect.action)
       is CardEffect.SeekSong -> song?.seekTo(effect.positionMillis)
+      is CardEffect.OrderSong -> song?.order(effect.order)
       CardEffect.EndSong -> endSong()
       CardEffect.ReturnToMetronome -> returnToMetronome()
       CardEffect.RemoveCard -> finish()
@@ -141,7 +145,12 @@ class PlaybackService : Service() {
     ) { songStopped() }.also { song = it }
     songCard.show(
       next,
-      intent.getIntExtra(EXTRA_SONG_CARD, CardFence.NONE),
+      SongCardTag(
+        cardNumber = intent.getIntExtra(EXTRA_SONG_CARD, CardFence.NONE),
+        session = intent.getIntExtra(EXTRA_SONG_SESSION, CardFence.NONE),
+        followsPlayOrder = intent.getBooleanExtra(EXTRA_FOLLOWS_PLAY_ORDER, false),
+        order = SongOrder.named(intent.getStringExtra(EXTRA_SONG_ORDER)),
+      ),
       intent.getBooleanExtra(EXTRA_PLAYING, true),
       intent.getBooleanExtra(EXTRA_COUNTING_IN, false),
     )
@@ -189,7 +198,8 @@ class PlaybackService : Service() {
       intent.getDoubleExtra(EXTRA_MIN_BPM, 0.0),
       intent.getDoubleExtra(EXTRA_MAX_BPM, 0.0),
     )
-    val playing = intent.getBooleanExtra(EXTRA_PLAYING, true)
+    val playback = Playback.wired(intent.getStringExtra(EXTRA_PLAYBACK))
+    val playing = playback == Playback.PLAYING
     shownCardNumber = intent.getIntExtra(EXTRA_CARD_NUMBER, 0)
     metronomeCardNumber = intent.getIntExtra(EXTRA_METRONOME_CARD, CardFence.NONE)
     practice = PracticeClock(
@@ -197,7 +207,7 @@ class PlaybackService : Service() {
       if (playing) intent.getLongExtra(EXTRA_PRACTICE_STRETCH_STARTED_AT, System.currentTimeMillis()) else null,
     )
     state = TransportState(
-      playback = if (playing) Playback.PLAYING else Playback.PAUSED,
+      playback = playback,
       bpm = intent.getDoubleExtra(EXTRA_BPM, 0.0),
       rampRunning = intent.getBooleanExtra(EXTRA_RAMP_RUNNING, false),
       beatsPerBar = intent.getIntExtra(EXTRA_BEATS_PER_BAR, 0),
@@ -215,7 +225,7 @@ class PlaybackService : Service() {
     state = next
     val step = transportModel.tempoStep(action)
     listener?.invoke(TransportChange(next, practice, shownCardNumber, action, step, engineBpm))
-    if (next.playback == Playback.STOPPED) route(CardEvent.MetronomeStopped) else render()
+    if (transportModel.endsCard(action, next)) route(CardEvent.MetronomeStopped) else render()
   }
 
   // A running ramp moves the tempo without telling the service, so read it live.
@@ -319,6 +329,10 @@ class PlaybackService : Service() {
 
     override fun onFastForward() = route(CardEvent.SessionPressed(SessionButton.FAST_FORWARD))
 
+    override fun onSkipToPrevious() = route(CardEvent.SessionPressed(SessionButton.PREVIOUS))
+
+    override fun onSkipToNext() = route(CardEvent.SessionPressed(SessionButton.NEXT))
+
     override fun onSeekTo(pos: Long) = route(CardEvent.SessionSeeked(pos))
 
     override fun onCustomAction(action: String, extras: Bundle?) =
@@ -337,6 +351,7 @@ class PlaybackService : Service() {
     private const val ACTION_SONG_SHOW = "com.kitbag.corenative.SONG_SHOW"
     private const val ACTION_SONG_HIDE = "com.kitbag.corenative.SONG_HIDE"
     private const val ACTION_SONG = "com.kitbag.corenative.SONG"
+    private const val ACTION_SONG_ORDER = "com.kitbag.corenative.SONG_ORDER"
     private const val SONG_CHANNEL_ID = "kitbag_songs_card"
     private val RETIRED_CHANNEL_IDS = listOf("kitbag_metronome", "kitbag_songs")
     private const val EXTRA_TITLE = "title"
@@ -353,6 +368,10 @@ class PlaybackService : Service() {
     private const val EXTRA_MAX_BPM = "maxBpm"
     private const val EXTRA_PLAYING = "playing"
     private const val EXTRA_COUNTING_IN = "countingIn"
+    private const val EXTRA_PLAYBACK = "playback"
+    private const val EXTRA_SONG_SESSION = "songSession"
+    private const val EXTRA_FOLLOWS_PLAY_ORDER = "followsPlayOrder"
+    private const val EXTRA_SONG_ORDER = "songOrder"
     private const val EXTRA_PRACTICE_PLAYED_MS = "practicePlayedMs"
     private const val EXTRA_PRACTICE_STRETCH_STARTED_AT = "practiceStretchStartedAt"
     private const val EXTRA_SUBTITLE = "setlistSubtitle"
@@ -371,7 +390,9 @@ class PlaybackService : Service() {
 
     @Volatile var songEndedListener: (() -> Unit)? = null
 
-    @Volatile var songRequestListener: ((SongCommand) -> Unit)? = null
+    @Volatile var songRequestListener: ((SongCommand, Int) -> Unit)? = null
+
+    @Volatile private var songOrder = SongOrder.ALONE
 
     fun show(
       context: Context,
@@ -386,7 +407,7 @@ class PlaybackService : Service() {
       if (!running && !playing) return
       val intent = Intent(context, PlaybackService::class.java)
         .setAction(ACTION_SHOW)
-        .putExtra(EXTRA_PLAYING, playing)
+        .putExtra(EXTRA_PLAYBACK, state.playback.wire)
         .putExtra(EXTRA_BPM, state.bpm)
         .putExtra(EXTRA_RAMP_RUNNING, state.rampRunning)
         .putExtra(EXTRA_BEATS_PER_BAR, state.beatsPerBar)
@@ -411,9 +432,19 @@ class PlaybackService : Service() {
 
     fun handOver(context: Context) = hide(context)
 
-    fun showSong(context: Context, song: Song, playing: Boolean, countingIn: Boolean) {
+    fun showSong(
+      context: Context,
+      song: Song,
+      session: Int,
+      followsPlayOrder: Boolean,
+      playing: Boolean,
+      countingIn: Boolean,
+    ) {
       val intent = Intent(context, PlaybackService::class.java)
         .setAction(ACTION_SONG_SHOW)
+        .putExtra(EXTRA_SONG_SESSION, session)
+        .putExtra(EXTRA_FOLLOWS_PLAY_ORDER, followsPlayOrder)
+        .putExtra(EXTRA_SONG_ORDER, songOrder.name)
         .putExtra(EXTRA_PLAYING, playing)
         .putExtra(EXTRA_COUNTING_IN, countingIn)
         .putExtra(EXTRA_TITLE, song.title)
@@ -423,6 +454,16 @@ class PlaybackService : Service() {
         .putExtra(EXTRA_SKIP_SECONDS, song.skipSeconds)
         .putExtra(EXTRA_SONG_CARD, fences.song.issue())
       start(context, intent)
+    }
+
+    fun orderSong(context: Context, order: SongOrder) {
+      songOrder = order
+      if (!running && !startRequested) return
+      context.startService(
+        Intent(context, PlaybackService::class.java)
+          .setAction(ACTION_SONG_ORDER)
+          .putExtra(EXTRA_SONG_ORDER, order.name),
+      )
     }
 
     fun hideSong(context: Context) {

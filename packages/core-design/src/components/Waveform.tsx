@@ -1,15 +1,16 @@
-import { useCallback, useState } from 'react';
-import { View, type LayoutChangeEvent } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   type SharedValue,
 } from 'react-native-reanimated';
+import Svg, { Path } from 'react-native-svg';
 
 import { clampUnit } from '../clampUnit.ts';
 import { asPercent } from '../percent.ts';
 import { radius, space, waveMinBarFraction } from '../roles.ts';
-import { createThemedStyles } from '../ThemeProvider.tsx';
-import { waveBarHeights, type BarHeight } from '../waveform.ts';
+import { useTheme } from '../ThemeProvider.tsx';
+import { waveBarHeights, waveBarsPath } from '../waveform.ts';
 
 export interface WaveformProps {
   readonly envelope: readonly number[] | null;
@@ -19,20 +20,12 @@ export interface WaveformProps {
   readonly extent?: number;
 }
 
-const useStyles = createThemedStyles((theme) => ({
+const styles = StyleSheet.create({
   lane: {
     alignSelf: 'stretch',
     overflow: 'hidden',
   },
-  row: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.waveBarGap,
-  },
+  layer: { position: 'absolute', left: 0, top: 0 },
   played: {
     position: 'absolute',
     left: 0,
@@ -48,31 +41,20 @@ const useStyles = createThemedStyles((theme) => ({
     bottom: 0,
     right: 0,
   },
-  bar: {
-    flex: 1,
-    minWidth: 0,
-    borderRadius: radius.waveBar,
-    backgroundColor: theme.color.wave,
-  },
-  hot: {
-    backgroundColor: theme.color.waveHot,
-  },
-}));
+});
 
 interface BarsProps {
-  readonly heights: readonly BarHeight[];
+  readonly path: string;
   readonly width: number;
-  readonly hot: boolean;
+  readonly height: number;
+  readonly color: string;
 }
 
-function Bars({ heights, width, hot }: BarsProps) {
-  const styles = useStyles();
+function Bars({ path, width, height, color }: BarsProps) {
   return (
-    <View style={[styles.row, { width }]}>
-      {heights.map((height, i) => (
-        <View key={i} style={[styles.bar, hot && styles.hot, { height }]} />
-      ))}
-    </View>
+    <Svg style={styles.layer} width={width} height={height}>
+      <Path d={path} fill={color} />
+    </Svg>
   );
 }
 
@@ -85,10 +67,19 @@ export function Waveform({
   progress,
   extent = 1,
 }: WaveformProps) {
-  const styles = useStyles();
+  const theme = useTheme();
   const [width, setWidth] = useState(0);
-  const heights = waveBarHeights(envelope, bars, waveMinBarFraction);
   const barsWidth = width * clampUnit(extent);
+  const path = useMemo(
+    () =>
+      waveBarsPath(waveBarHeights(envelope, bars, waveMinBarFraction), {
+        width: barsWidth,
+        height,
+        gap: space.waveBarGap,
+        radius: radius.waveBar,
+      }),
+    [envelope, bars, barsWidth, height],
+  );
   const onLayout = useCallback((event: LayoutChangeEvent) => {
     setWidth(event.nativeEvent.layout.width);
   }, []);
@@ -107,11 +98,21 @@ export function Waveform({
       importantForAccessibility="no-hide-descendants"
       accessibilityElementsHidden
     >
-      <Bars heights={heights} width={barsWidth} hot={false} />
+      <Bars
+        path={path}
+        width={barsWidth}
+        height={height}
+        color={theme.color.wave}
+      />
       {progress === undefined ? null : (
         <Animated.View style={[styles.played, clipStyle]}>
           <Animated.View style={[styles.fill, contentStyle]}>
-            <Bars heights={heights} width={barsWidth} hot />
+            <Bars
+              path={path}
+              width={barsWidth}
+              height={height}
+              color={theme.color.waveHot}
+            />
           </Animated.View>
         </Animated.View>
       )}

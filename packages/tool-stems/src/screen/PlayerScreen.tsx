@@ -425,7 +425,7 @@ export function PlayerScreen({
     onOpenMetronome,
   );
   useCarriedSkipNotice(notice.showMessage);
-  useArrivalFollow(setId, onOpenStemSet, notice.showMessage);
+  useArrivalFollow(setId, routes);
   const ready = useStemPlayer((s) => s.status === 'ready');
   const acquireSong = useStemPlayer((s) => s.acquireSong);
   const { retiming, shown, askReset, askLeave, closeAsk } = useRetimeAsk();

@@ -24,6 +24,8 @@ import type {
 import { CODES } from '../songLibrary/store.test-helper.ts';
 import { createStemPlayerStore, type StemPlayerStore } from './store.ts';
 
+const NEVER_SHOWN = -1;
+
 export const RATE = 44100;
 export const SONG_FRAMES = 10 * RATE;
 export const SAVE_MS = 500;
@@ -161,7 +163,8 @@ export function fakeRuntime(set: StemSetRecord) {
     metronomeFollowMixer: vi.fn(),
     metronomeStart: vi.fn(),
     metronomeStop: vi.fn(),
-    songTransportShow: vi.fn(),
+    songTransportShow: vi.fn<StemPlayerCommands['songTransportShow']>(),
+    songTransportOrder: vi.fn<StemPlayerCommands['songTransportOrder']>(),
     songTransportHide: vi.fn(),
     onSongStopped: vi.fn((handler: () => void) => {
       songStopped.add(handler);
@@ -215,7 +218,11 @@ export function fakeRuntime(set: StemSetRecord) {
       Promise.resolve(),
     ),
   };
-  const sharedMetronome = { active: vi.fn(() => false), release: vi.fn() };
+  const sharedMetronome = {
+    active: vi.fn(() => false),
+    release: vi.fn(),
+    showStopped: vi.fn(),
+  };
   const countInBars = vi.fn<() => number>(() => KB_COUNT_IN_OFF);
   const mixdownEngine = {
     state: KB_MIXDOWN_STATE.KB_MIXDOWN_STATE_IDLE as KB_MIXDOWN_STATE,
@@ -266,7 +273,13 @@ export function fakeRuntime(set: StemSetRecord) {
       handler();
     });
   };
-  const requestFromNotification = (request: SongTransportRequest) => {
+  const lastShownSession = () =>
+    commands.songTransportShow.mock.lastCall?.[0].session ?? NEVER_SHOWN;
+  const requestFromNotification = (
+    pressed: Omit<SongTransportRequest, 'shownSession'>,
+    session = lastShownSession(),
+  ) => {
+    const request = { ...pressed, shownSession: session };
     songRequests.forEach((handler) => {
       handler(request);
     });
