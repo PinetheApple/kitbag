@@ -32,7 +32,7 @@ export function clockParts(totalSeconds: number): ClockParts {
   };
 }
 
-function pad(value: number): string {
+export function pad(value: number): string {
   'worklet';
   return String(value).padStart(TWO_DIGITS, '0');
 }
@@ -42,4 +42,8 @@ export function formatClockSeconds(totalSeconds: number): string {
   const { hours, minutes, seconds } = clockParts(totalSeconds);
   if (hours === 0) return `${String(minutes)}:${pad(seconds)}`;
   return `${String(hours)}:${pad(minutes)}:${pad(seconds)}`;
+}
+
+export function clockTime(at: Date): string {
+  return `${pad(at.getHours())}:${pad(at.getMinutes())}`;
 }

@@ -18,6 +18,7 @@ export default function SettingsRoute() {
       onOpenCalibration={routes.openCalibration}
       onOpenTools={routes.openTools}
       onOpenRestore={routes.openRestore}
+      onOpenPractice={routes.openPractice}
     />
   );
 }
