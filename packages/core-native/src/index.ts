@@ -80,6 +80,11 @@ export {
   shareBackup,
 } from './backupFiles';
 export {
+  databaseFreeBytes,
+  removeDatabaseCopy,
+  replaceDatabaseCopy,
+} from './migrationCopies';
+export {
   mixdownCancel,
   mixdownProgress,
   mixdownStart,
