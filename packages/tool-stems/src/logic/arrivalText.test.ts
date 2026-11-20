@@ -1,7 +1,9 @@
 import {
   ARRIVAL,
   SKIP,
+  SKIPPED_SONG,
   SKIPPED_STEM_SONG,
+  SKIPPED_UNOPENED_SONG,
   SKIPPED_UNOPENED_STEM_SONG,
   type Arrival,
 } from '@kitbag/core-state';
@@ -53,9 +55,35 @@ describe('what the player says after an advance', () => {
   });
 
   it('says it skipped a deleted song when nothing plays', () => {
-    expect(arrivalText({ kind: ARRIVAL.gaveUp, serial: SERIAL }, library)).toBe(
-      SKIPPED_STEM_SONG,
-    );
+    expect(
+      arrivalText(
+        {
+          kind: ARRIVAL.gaveUp,
+          serial: SERIAL,
+          skipped: { reason: SKIP.deleted, kind: 'stems' },
+        },
+        library,
+      ),
+    ).toBe(SKIPPED_STEM_SONG);
+  });
+
+  it('names a skipped single song as a song, not a stem song', () => {
+    expect(
+      arrivalText(
+        {
+          kind: ARRIVAL.gaveUp,
+          serial: SERIAL,
+          skipped: { reason: SKIP.deleted, kind: 'song' },
+        },
+        library,
+      ),
+    ).toBe(SKIPPED_SONG);
+    expect(
+      arrivalText(
+        { ...playing, skipped: { reason: SKIP.unopened, kind: 'song' } },
+        library,
+      ),
+    ).toBe(SKIPPED_UNOPENED_SONG);
   });
 
   it('says it skipped an unopened song once a later one plays', () => {
@@ -66,7 +94,7 @@ describe('what the player says after an advance', () => {
           serial: SERIAL,
           song: { kind: 'stems', id: NIGHT_BUS },
           place: null,
-          skipped: SKIP.unopened,
+          skipped: { reason: SKIP.unopened, kind: 'stems' },
         },
         library,
       ),

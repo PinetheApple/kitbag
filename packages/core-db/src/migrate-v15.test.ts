@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { migrate, MIGRATE_V14_TO_V15, SCHEMA_VERSION } from './migrate';
+import { migrate, SCHEMA_VERSION } from './migrate';
+import { MIGRATE_V14_TO_V15 } from './migrate-stems';
 import {
   buildV14Fixture,
   pragma,

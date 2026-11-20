@@ -12,12 +12,18 @@ import {
 } from '../stemPlayer/songEnd.ts';
 import { stemPlayerStore } from '../stemPlayer/store.ts';
 import { songPlayerStore } from '../songPlayer/store.ts';
-import { ADVANCE, cursorOf, onStageOf, type Advance } from './order.ts';
+import {
+  ADVANCE,
+  cursorOf,
+  isPlayAdvance,
+  onStageOf,
+  songOfPlay,
+  type Advance,
+  type PlayAdvance,
+  type PlayerKind,
+} from './order.ts';
+import { SKIP, type SkippedSong } from './queuedSongText.ts';
 import { playOrderStore, type SkipResult, type Undo } from './store.ts';
-
-export const SKIP = { deleted: 'deleted', unopened: 'unopened' } as const;
-
-export type Skip = (typeof SKIP)[keyof typeof SKIP];
 
 export interface SetlistPlace {
   readonly number: number;
@@ -37,9 +43,9 @@ export type ArrivalEvent =
       readonly kind: typeof ARRIVAL.playing;
       readonly song: QueuedSong;
       readonly place: SetlistPlace | null;
-      readonly skipped: Skip | null;
+      readonly skipped: SkippedSong | null;
     }
-  | { readonly kind: typeof ARRIVAL.gaveUp }
+  | { readonly kind: typeof ARRIVAL.gaveUp; readonly skipped: SkippedSong }
   | { readonly kind: typeof ARRIVAL.metronome };
 
 export type Arrival = ArrivalEvent & { readonly serial: number };
@@ -51,8 +57,6 @@ export interface ArrivalState {
 export const arrivalStore = createStore<ArrivalState>(() => ({
   arrival: null,
 }));
-
-export type PlayerKind = QueuedSong['kind'];
 
 export interface AdvancingPlayer {
   readonly onSongEnd: (listener: AdvanceListener) => () => void;
@@ -80,17 +84,6 @@ export interface AutoAdvanceDeps {
     stands: () => boolean,
   ) => Promise<boolean>;
   readonly arrivals: StoreApi<ArrivalState>;
-}
-
-type PlayAdvance = Extract<
-  Advance,
-  { readonly kind: typeof ADVANCE.play | typeof ADVANCE.song }
->;
-
-function songOf(next: PlayAdvance): QueuedSong {
-  return next.kind === ADVANCE.song
-    ? { kind: 'song', id: next.songId }
-    : { kind: 'stems', id: next.stemSetId };
 }
 
 function onStageNow() {
@@ -132,13 +125,18 @@ const singleSongs = (bars: number): AdvancingPlayer => ({
   },
 });
 
+const advancingPlayers = (bars: WaveformBars): AdvancingPlayers => ({
+  stems: stemSongs(bars.stems),
+  song: singleSongs(bars.song),
+});
+
 export const autoAdvanceDeps = (bars: WaveformBars): AutoAdvanceDeps => ({
-  players: { stems: stemSongs(bars.stems), song: singleSongs(bars.song) },
+  players: advancingPlayers(bars),
   peekNext: () => playOrderStore.getState().peekNext(),
   commitNext: (next, stands) =>
     playOrderStore.getState().commitNext(next, stands),
   placeOf: (advance) => {
-    if (advance.kind !== ADVANCE.play || advance.setlistItemId === null)
+    if (advance.kind !== ADVANCE.stems || advance.setlistItemId === null)
       return null;
     const { stage, cursor } = onStageNow();
     if (cursor === null) return null;
@@ -173,7 +171,23 @@ async function openMetronome(
   arrive({ kind: ARRIVAL.metronome });
 }
 
-// Handing over keeps the card up, as an advance within one player does.
+export function handOver(
+  players: AdvancingPlayers,
+  from: PlayerKind,
+  song: QueuedSong,
+): Promise<AdvanceOutcome> {
+  players[from].handOver();
+  return players[song.kind].takeOver(song.id);
+}
+
+export function handOverQueued(
+  from: PlayerKind,
+  song: QueuedSong,
+  bars: WaveformBars,
+): Promise<AdvanceOutcome> {
+  return handOver(advancingPlayers(bars), from, song);
+}
+
 function startNext(
   players: AdvancingPlayers,
   from: PlayerKind,
@@ -183,8 +197,7 @@ function startNext(
   if (song.kind === from && player.advanceTo !== undefined)
     return player.advanceTo(song.id);
   if (!player.stillEnded()) return Promise.resolve(ADVANCE_OUTCOME.displaced);
-  player.handOver();
-  return players[song.kind].takeOver(song.id);
+  return handOver(players, from, song);
 }
 
 async function play(
@@ -192,11 +205,11 @@ async function play(
   arrive: Arrive,
   from: PlayerKind,
   next: PlayAdvance,
-  skipped: Skip | null,
+  skipped: SkippedSong | null,
 ): Promise<Tried> {
   const undo = await deps.commitNext(next, deps.players[from].stillEnded);
   if (undo === null) return { played: PLAYED.settled, by: from };
-  const song = songOf(next);
+  const song = songOfPlay(next);
   const place = deps.placeOf(next);
   arrive({ kind: ARRIVAL.arriving, song });
   const outcome = await startNext(deps.players, from, song);
@@ -208,36 +221,35 @@ async function play(
     : { played: PLAYED.settled, by: song.kind };
 }
 
-const isPlay = (next: Advance): next is PlayAdvance =>
-  next.kind === ADVANCE.play || next.kind === ADVANCE.song;
-
 async function advance(
   deps: AutoAdvanceDeps,
   arrive: Arrive,
   ended: PlayerKind,
   cause: AdvanceCause,
 ) {
-  let skipped: Skip | null = null;
+  let skipped: SkippedSong | null = null;
   let from = ended;
   for (let left = deps.candidates(); left > 0; left--) {
     const player = deps.players[from];
     if (!player.stillEnded()) return;
     const step = await deps.peekNext();
     if (!player.stillEnded()) return;
-    if (step.skipped) skipped = SKIP.deleted;
+    if (step.skipped !== null)
+      skipped = { reason: SKIP.deleted, kind: step.skipped };
     const next = step.advance;
     if (next.kind === ADVANCE.open && cause === ADVANCE_CAUSE.next) {
       await openMetronome(deps, player, arrive, next.entry);
       return;
     }
-    if (!isPlay(next)) break;
+    if (!isPlayAdvance(next)) break;
     const tried = await play(deps, arrive, from, next, skipped);
     if (tried.played === PLAYED.settled) return;
     from = tried.by;
-    skipped = SKIP.unopened;
+    skipped = { reason: SKIP.unopened, kind: tried.by };
   }
   deps.players[from].stopAdvancing();
-  if (skipped === SKIP.deleted) arrive({ kind: ARRIVAL.gaveUp });
+  if (skipped?.reason === SKIP.deleted)
+    arrive({ kind: ARRIVAL.gaveUp, skipped });
 }
 
 const PLAYER_KINDS: readonly PlayerKind[] = ['stems', 'song'];

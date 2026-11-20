@@ -65,8 +65,8 @@ vi.mock('@kitbag/core-state', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   useSongLibrary: (select: (state: unknown) => unknown) =>
     select({ codes: {}, replacePrompt: null }),
-  useQueueRefresh: (enabled: boolean) => {
-    queue.reads.push(enabled);
+  useQueueRefresh: () => {
+    queue.reads.push(true);
   },
   useQueueSong: () => queue.verbs,
   useIsQueued: (song: QueuedSong | null) =>

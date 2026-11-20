@@ -22,13 +22,13 @@ describe('play order', () => {
     const { order, a, c } = await setup();
     await order.getState().enqueue(stems(c));
     expect(await order.getState().advance()).toEqual({
-      kind: ADVANCE.play,
+      kind: ADVANCE.stems,
       stemSetId: c,
       setlistItemId: null,
     });
     expect(queuedIds(order)).toEqual([]);
     expect(await order.getState().advance()).toMatchObject({
-      kind: ADVANCE.play,
+      kind: ADVANCE.stems,
       stemSetId: a,
     });
   });
@@ -41,7 +41,7 @@ describe('play order', () => {
     expect(await order.getState().advance()).toEqual(stop);
     putOnStage(click.id);
     expect(await order.getState().advance()).toMatchObject({
-      kind: ADVANCE.play,
+      kind: ADVANCE.stems,
       stemSetId: b,
     });
   });
@@ -51,7 +51,7 @@ describe('play order', () => {
     await order.getState().enqueue(stems(c));
     await deleteStemSet(handle.db, c);
     expect(await order.getState().advance()).toMatchObject({
-      kind: ADVANCE.play,
+      kind: ADVANCE.stems,
       stemSetId: a,
       setlistItemId: expect.any(Number) as unknown,
     });
@@ -78,7 +78,7 @@ describe('play order', () => {
     const step = await order.getState().peekNext();
     expect(await order.getState().peekNext()).toEqual(step);
     await order.getState().commitNext(step.advance);
-    expect(step.advance).toMatchObject({ kind: ADVANCE.play, stemSetId: b });
+    expect(step.advance).toMatchObject({ kind: ADVANCE.stems, stemSetId: b });
     expect((await order.getState().peekNext()).advance).toEqual({
       kind: ADVANCE.end,
     });
@@ -112,7 +112,7 @@ describe('play order', () => {
     await order.getState().addToQueue(stems(c));
     await order.getState().addToQueue(song(single));
     expect(await order.getState().advance()).toMatchObject({
-      kind: ADVANCE.play,
+      kind: ADVANCE.stems,
       stemSetId: c,
     });
     expect(await order.getState().advance()).toEqual({
@@ -121,7 +121,7 @@ describe('play order', () => {
     });
     expect(queuedSongs(order)).toEqual([]);
     expect(await order.getState().advance()).toMatchObject({
-      kind: ADVANCE.play,
+      kind: ADVANCE.stems,
       stemSetId: a,
     });
   });
@@ -158,7 +158,7 @@ describe('play order', () => {
     await reload();
     putOnStage(last.id);
     expect(await order.getState().advance()).toEqual({
-      kind: ADVANCE.play,
+      kind: ADVANCE.stems,
       stemSetId: a,
       setlistItemId: again.id,
     });

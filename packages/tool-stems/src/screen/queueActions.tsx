@@ -2,8 +2,9 @@ import {
   SetlistPickerSheet,
   useLeftSetlistNotice,
   useQueueNotices,
+  useQueuePresses,
   type Notice,
-  type QueueAction,
+  type QueueTarget,
   type SetlistPickerSheetProps,
 } from '@kitbag/core-design';
 import {
@@ -16,7 +17,7 @@ import {
   useStemPlayer,
   type QueuedSong,
 } from '@kitbag/core-state';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 type SetlistSheetProps = Pick<
   SetlistPickerSheetProps,
@@ -41,16 +42,13 @@ export function useCarriedSkipNotice(showMessage: (message: string) => void) {
   }, [carried, carrySkip, showMessage]);
 }
 
-function useQueueThisSong(closeSheet: () => void) {
+function useThisSong(): QueueTarget<QueuedSong> | null {
   const setId = useStemPlayer((s) => s.setId);
   const title = useStemPlayer((s) => s.title);
-  return useCallback(
-    (verb: QueueAction<QueuedSong>) => (queued: boolean) => {
-      closeSheet();
-      if (setId !== null)
-        verb({ song: { kind: 'stems', id: setId }, title, queued });
-    },
-    [closeSheet, setId, title],
+  return useMemo(
+    () =>
+      setId === null ? null : { song: { kind: 'stems', id: setId }, title },
+    [setId, title],
   );
 }
 
@@ -60,20 +58,15 @@ export function useQueueActions(
   onOpenSetlist: (setlistId: number) => void,
   onOpenQueue: () => void,
 ) {
-  useQueueRefresh(true);
+  useQueueRefresh();
   const queueSong = useQueueSong();
   const queue = useQueueNotices(notice, queueSong, onOpenSetlist, onOpenQueue);
-  const thisSong = useQueueThisSong(closeSheet);
+  const presses = useQueuePresses(queue, useThisSong(), closeSheet);
   const rejoinSetlist = useLibrary((s) => s.rejoinSetlist);
   const leftSetlist = useLeftSetlistNotice(notice, rejoinSetlist);
   useEndedSetlistNotice(leftSetlist);
   return useMemo(
-    () => ({
-      playNext: thisSong(queue.playNext),
-      addToQueue: thisSong(queue.addToQueue),
-      added: queue.added,
-      leftSetlist,
-    }),
-    [thisSong, queue, leftSetlist],
+    () => ({ presses, added: queue.added, leftSetlist }),
+    [presses, queue.added, leftSetlist],
   );
 }

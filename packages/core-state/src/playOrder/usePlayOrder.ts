@@ -20,14 +20,13 @@ export function usePlayOrder<T>(selector: (state: PlayOrderStore) => T): T {
 const QUEUE_READ_FAILED = '[kitbag] play queue read failed';
 const QUEUE_ADD_FAILED = '[kitbag] play queue add failed';
 
-export function useQueueRefresh(enabled: boolean) {
+export function useQueueRefresh() {
   const refresh = usePlayOrder((s) => s.refresh);
   useEffect(() => {
-    if (!enabled) return;
     refresh().catch((error: unknown) => {
       console.warn(QUEUE_READ_FAILED, error);
     });
-  }, [enabled, refresh]);
+  }, [refresh]);
 }
 
 export type QueueSong = (song: QueuedSong) => Promise<boolean>;

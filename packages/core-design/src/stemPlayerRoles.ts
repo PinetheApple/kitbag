@@ -65,6 +65,11 @@ export const songPlayer = {
   lockGap: 10,
 } as const;
 
+export const playerWaveBars = {
+  stems: stemPlayer.waveBars,
+  song: songPlayer.waveBars,
+} as const;
+
 export const miniPlayer = {
   height: 64,
   progress: 2,

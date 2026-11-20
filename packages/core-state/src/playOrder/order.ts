@@ -42,8 +42,10 @@ export interface PlayOrder {
   readonly cursor: SetlistCursor | null;
 }
 
+export type PlayerKind = QueuedSong['kind'];
+
 export const ADVANCE = {
-  play: 'play',
+  stems: 'stems',
   song: 'song',
   open: 'open',
   end: 'end',
@@ -51,7 +53,7 @@ export const ADVANCE = {
 
 export type Advance =
   | {
-      readonly kind: typeof ADVANCE.play;
+      readonly kind: typeof ADVANCE.stems;
       readonly stemSetId: number;
       readonly setlistItemId: number | null;
     }
@@ -133,17 +135,31 @@ export function upNext({
     : { source: UP_NEXT_SOURCE.setlist, entry };
 }
 
+export type PlayAdvance = Extract<
+  Advance,
+  { readonly kind: typeof ADVANCE.stems | typeof ADVANCE.song }
+>;
+
+export const isPlayAdvance = (next: Advance): next is PlayAdvance =>
+  next.kind === ADVANCE.stems || next.kind === ADVANCE.song;
+
+export function songOfPlay(next: PlayAdvance): QueuedSong {
+  return next.kind === ADVANCE.song
+    ? { kind: 'song', id: next.songId }
+    : { kind: 'stems', id: next.stemSetId };
+}
+
 export function queuedSongOfAdvance(advance: Advance): QueuedSong | null {
   if (advance.kind === ADVANCE.song)
     return { kind: 'song', id: advance.songId };
-  if (advance.kind !== ADVANCE.play || advance.setlistItemId !== null)
+  if (advance.kind !== ADVANCE.stems || advance.setlistItemId !== null)
     return null;
   return { kind: 'stems', id: advance.stemSetId };
 }
 
 function itemIdOf(advance: Advance): number | null {
   if (advance.kind === ADVANCE.open) return advance.entry.item.id;
-  return advance.kind === ADVANCE.play ? advance.setlistItemId : null;
+  return advance.kind === ADVANCE.stems ? advance.setlistItemId : null;
 }
 
 export function advanceSkipped(
@@ -157,18 +173,31 @@ export function advanceSkipped(
   return queued === null || !sameQueuedSong(queued, expected.song);
 }
 
+export function kindOfUpNext(next: UpNext): PlayerKind {
+  return next.source === UP_NEXT_SOURCE.queue ? next.song.kind : 'stems';
+}
+
+export function skippedKindOf(
+  expected: UpNext | undefined,
+  advance: Advance,
+): PlayerKind | null {
+  return expected !== undefined && advanceSkipped(expected, advance)
+    ? kindOfUpNext(expected)
+    : null;
+}
+
 export function advanceOf(next: UpNext | undefined): Advance {
   if (next === undefined) return { kind: ADVANCE.end };
   if (next.source === UP_NEXT_SOURCE.queue) {
     const { song } = next;
     return song.kind === 'song'
       ? { kind: ADVANCE.song, songId: song.id }
-      : { kind: ADVANCE.play, stemSetId: song.id, setlistItemId: null };
+      : { kind: ADVANCE.stems, stemSetId: song.id, setlistItemId: null };
   }
   const { entry } = next;
   if (isPresetEntry(entry)) return { kind: ADVANCE.open, entry };
   return {
-    kind: ADVANCE.play,
+    kind: ADVANCE.stems,
     stemSetId: entry.stemSetId,
     setlistItemId: entry.item.id,
   };

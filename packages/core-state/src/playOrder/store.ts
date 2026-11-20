@@ -16,13 +16,14 @@ import {
 import {
   ADVANCE,
   advanceOf,
-  advanceSkipped,
   cursorOf,
   onStageOf,
   upNext,
   queuedSongOfAdvance,
+  skippedKindOf,
   type Advance,
   type OnStage,
+  type PlayerKind,
   type SetlistCursor,
   type UpNext,
 } from './order.ts';
@@ -34,7 +35,7 @@ export interface PlayOrderState {
 
 export interface SkipResult {
   readonly advance: Advance;
-  readonly skipped: boolean;
+  readonly skipped: PlayerKind | null;
 }
 
 export interface PlayOrderActions {
@@ -222,7 +223,7 @@ function commitOf(
 ) {
   const queued = queuedSongOfAdvance(next);
   if (queued !== null) return queueCommit(deps, get, edits, queued);
-  if (next.kind !== ADVANCE.play || next.setlistItemId === null) return null;
+  if (next.kind !== ADVANCE.stems || next.setlistItemId === null) return null;
   const { setlistId } = deps.stage();
   if (setlistId === null) return null;
   const itemId = next.setlistItemId;
@@ -262,7 +263,7 @@ function orderActions(deps: PlayOrderDeps, get: Get, edits: QueueEdits) {
     const expected = get().upNext();
     await Promise.all([get().refresh(), deps.refreshStage()]);
     const next = advanceOf(get().upNext());
-    return { advance: next, skipped: advanceSkipped(expected, next) };
+    return { advance: next, skipped: skippedKindOf(expected, next) };
   };
   const commitNext = async (next: Advance, stands = ALWAYS) => {
     const commit = commitOf(deps, get, edits, next);

@@ -1,4 +1,4 @@
-import { songPlayer, stemPlayer } from '@kitbag/core-design';
+import { playerWaveBars } from '@kitbag/core-design';
 import { KB_COUNT_IN_OFF } from '@kitbag/core-native';
 import {
   autoAdvanceDeps,
@@ -41,9 +41,7 @@ configureStemPlayer({
   },
 });
 
-startAutoAdvance(
-  autoAdvanceDeps({ stems: stemPlayer.waveBars, song: songPlayer.waveBars }),
-);
+startAutoAdvance(autoAdvanceDeps(playerWaveBars));
 startCardOrder();
 endSessionOnCardStop();
 stopStemSongOnMetronomeLoad();

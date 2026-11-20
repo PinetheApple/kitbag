@@ -22,8 +22,8 @@ const PAUSE = { action: 'pause', frame: null } as const;
 const KEPT: Undo = () => Promise.resolve();
 const NEXT = { action: 'next', frame: null } as const;
 const NEXT_STEP: SkipResult = {
-  advance: { kind: ADVANCE.play, stemSetId: NEXT_SET_ID, setlistItemId: null },
-  skipped: false,
+  advance: { kind: ADVANCE.stems, stemSetId: NEXT_SET_ID, setlistItemId: null },
+  skipped: null,
 };
 const nextSong = record([stem(2)], {
   id: NEXT_SET_ID,

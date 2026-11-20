@@ -30,6 +30,7 @@ import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
 import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
 import { mixerSession, type MixerHold } from './mixerSession.ts';
 import { mixSaver } from './mixSaver.ts';
+import { stemSongAdvance } from './stemSongAdvance.ts';
 import { stemSongHolds } from './stemSongHolds.ts';
 import {
   showCountOnSongCard,
@@ -40,11 +41,8 @@ import { retimeActions, retimeAnchor } from './retimeActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
 import { sortedSections } from './sections.ts';
 import {
-  advanceSong,
   endedOnLastFrame,
   songEnds,
-  startSong,
-  type AdvanceSteps,
   type AdvanceListener,
   type AdvanceOutcome,
 } from './songEnd.ts';
@@ -420,19 +418,15 @@ export function createStemPlayerStore(
       }
     };
 
-    const startSteps = (
-      begin: (setId: number) => number,
-      bars: () => number,
-    ): AdvanceSteps => ({
+    const advancing = stemSongAdvance({
+      mixer,
       ends,
-      begin,
-      load: (opened, id) => loadSession(opened, id, bars()),
-      live,
-      ready: () => get().status === 'ready',
-      play: () => {
-        get().togglePlay();
-        set({ advanceCountEnd: get().countEndFrame });
-      },
+      get,
+      set,
+      runtimeOf,
+      showLoading,
+      loadSession,
+      lastBars: () => waveformBars,
     });
 
     return {
@@ -450,38 +444,10 @@ export function createStemPlayerStore(
         void loadSession(acquired, setId, bars);
         return mixer.hold(acquired);
       },
-      advanceTo: (setId) =>
-        advanceSong(
-          startSteps(
-            (id) => {
-              const opened = mixer.advance();
-              showLoading(id, id);
-              return opened;
-            },
-            () => waveformBars,
-          ),
-          setId,
-        ),
-      takeOver: (setId, bars) =>
-        startSong(
-          startSteps(
-            (id) => {
-              const opened = mixer.begin();
-              showLoading(id);
-              return opened;
-            },
-            () => bars,
-          ),
-          setId,
-        ),
-      handOver: mixer.handOver,
+      ...advancing,
       onSongEnd: ends.subscribe,
       songStillEnded: ends.stands,
       stopAdvancing: holds.gaveUp,
-      handToMetronome: () => {
-        runtimeOf().sharedMetronome.showStopped();
-        mixer.close();
-      },
       close: mixer.close,
       onCardStop: mixer.onCardStop,
       ...mixActions(set, get, runtimeOf, saver),

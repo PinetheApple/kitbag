@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { ANALYSIS_STATUSES } from './analysis-status';
-import { migrate, MIGRATE_V13_TO_V14, SCHEMA_VERSION } from './migrate';
+import { migrate, SCHEMA_VERSION } from './migrate';
+import { MIGRATE_V13_TO_V14 } from './migrate-steps';
 import {
   buildV13Fixture,
   pragma,

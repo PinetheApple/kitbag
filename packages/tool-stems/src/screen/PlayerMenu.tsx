@@ -10,6 +10,8 @@ import {
   stemPlayer,
   textRoles,
   textStyle,
+  useQueueKeys,
+  type QueuePresses,
 } from '@kitbag/core-design';
 import {
   exportBlock,
@@ -131,37 +133,29 @@ function ResetSpeedKeyRow({ onDone }: { readonly onDone: () => void }) {
   );
 }
 
-type QueueVerb = (queued: boolean) => void;
-
 interface QueueRowsProps {
-  readonly onPlayNext: QueueVerb;
-  readonly onAddToQueue: QueueVerb;
+  readonly queue: QueuePresses;
   readonly onAddToSetlist: () => void;
 }
 
-function QueueRows({
-  onPlayNext,
-  onAddToQueue,
-  onAddToSetlist,
-}: QueueRowsProps) {
+function QueueRows({ queue, onAddToSetlist }: QueueRowsProps) {
   const styles = useStyles();
   const setId = useStemPlayer((s) => s.setId);
   const queued = useIsQueued(
     setId === null ? null : { kind: 'stems', id: setId },
   );
-  const playNext = useCallback(() => {
-    onPlayNext(queued);
-  }, [onPlayNext, queued]);
-  const addToQueue = useCallback(() => {
-    onAddToQueue(queued);
-  }, [onAddToQueue, queued]);
+  const keys = useQueueKeys(queue, queued);
   return (
     <View style={styles.divided}>
-      <MenuRow icon="playNext" label={QUEUE_TEXT.playNext} onPress={playNext} />
+      <MenuRow
+        icon="playNext"
+        label={QUEUE_TEXT.playNext}
+        onPress={keys.playNext}
+      />
       <MenuRow
         icon="addToQueue"
-        label={queued ? QUEUE_TEXT.moveToEnd : QUEUE_TEXT.addToQueue}
-        onPress={addToQueue}
+        label={keys.addLabel}
+        onPress={keys.addToQueue}
       />
       <MenuRow
         icon="addToSetlist"
@@ -190,8 +184,7 @@ export function PlayerMenu({
   onMeter,
   onTempo,
   onClick,
-  onPlayNext,
-  onAddToQueue,
+  queue,
   onAddToSetlist,
 }: PlayerMenuProps) {
   const styles = useStyles();
@@ -208,11 +201,7 @@ export function PlayerMenu({
       bottomInset={bottomInset}
       onDismiss={onClose}
     >
-      <QueueRows
-        onPlayNext={onPlayNext}
-        onAddToQueue={onAddToQueue}
-        onAddToSetlist={onAddToSetlist}
-      />
+      <QueueRows queue={queue} onAddToSetlist={onAddToSetlist} />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Reset mix: every level to 0 dB, nothing muted or soloed"

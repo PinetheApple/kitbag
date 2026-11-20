@@ -34,7 +34,7 @@ const keyOf = (song: QueuedSong) =>
     ? eq(playQueue.songId, song.id)
     : eq(playQueue.stemSetId, song.id);
 
-const columnsOf = (song: QueuedSong) =>
+export const queueColumnsOf = (song: QueuedSong) =>
   song.kind === 'song'
     ? { songId: song.id, stemSetId: null }
     : { songId: null, stemSetId: song.id };
@@ -81,7 +81,7 @@ async function addEntry(
   const entry = found(
     await db
       .insert(playQueue)
-      .values({ ...columnsOf(song), position: 0 })
+      .values({ ...queueColumnsOf(song), position: 0 })
       .returning(),
     'Play queue insert',
   );

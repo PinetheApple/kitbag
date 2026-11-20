@@ -728,12 +728,36 @@ describe('a song the queue hands over to', () => {
     });
   });
 
-  it('moves this player onto the next single song', () => {
+  it('moves this player onto the next single song, without going back', () => {
     const own = routes();
     const tree = mount(true, own);
     arriving({ kind: 'song', id: HANDED_TO });
+    display.song = CLOSED_SONG;
+    display.status = 'idle';
+    act(() => {
+      tree.update(screen(true, own));
+    });
     expect(own.onOpenSong).toHaveBeenCalledExactlyOnceWith(HANDED_TO);
     expect(own.onOpenStemSet).not.toHaveBeenCalled();
+    expect(own.onBack).not.toHaveBeenCalled();
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  it('still goes back when the song it moved onto stops', () => {
+    const own = routes();
+    const tree = mount(true, own);
+    arriving({ kind: 'song', id: HANDED_TO });
+    act(() => {
+      tree.update(screen(true, { ...own, songId: HANDED_TO }));
+    });
+    display.song = CLOSED_SONG;
+    display.status = 'idle';
+    act(() => {
+      tree.update(screen(true, { ...own, songId: HANDED_TO }));
+    });
+    expect(own.onBack).toHaveBeenCalledOnce();
     act(() => {
       tree.unmount();
     });

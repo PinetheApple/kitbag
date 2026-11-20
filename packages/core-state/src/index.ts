@@ -292,6 +292,7 @@ export {
   upNext,
   type Advance,
   type OnStage,
+  type PlayerKind,
   type PlayOrder,
   type UpNext,
 } from './playOrder/order.ts';
@@ -313,18 +314,17 @@ export {
   type QueueSongs,
   type Stage,
 } from './playOrder/usePlayOrder.ts';
-export { bindStemSetRemovals } from './playOrder/stemSetRemovals.ts';
+export { bindLibraryRemovals } from './playOrder/libraryRemovals.ts';
 export {
   ARRIVAL,
   arrivalStore,
   autoAdvanceDeps,
-  SKIP,
+  handOverQueued,
   startAutoAdvance,
   type Arrival,
   type ArrivalEvent,
   type ArrivalState,
   type SetlistPlace,
-  type Skip,
   type WaveformBars,
 } from './playOrder/autoAdvance.ts';
 export { startCardOrder } from './playOrder/cardOrder.ts';
@@ -338,21 +338,30 @@ export {
   SKIPPED_STEM_SONG,
   SKIPPED_UNOPENED_STEM_SONG,
   STEMS_BADGE,
-  queuedSongFacts,
-  queuedSongTitle,
   stemSongTitle,
-  UNKNOWN_SONG,
   UNKNOWN_STEM_SONG,
-  upNextTitle,
-  type LibrarySongs,
-  type SingleSongs,
   type StemSongs,
   stemFacts,
   stemSongFacts,
   stemSongListFacts,
   stemSongsById,
 } from './playOrder/stemSongText.ts';
-export { useLibrarySongs, useStemSongs } from './playOrder/useStemSongs.ts';
+export {
+  queuedSongFacts,
+  queuedSongTitle,
+  SKIP,
+  SKIPPED_SONG,
+  SKIPPED_UNOPENED_SONG,
+  skippedText,
+  UNKNOWN_SONG,
+  upNextTitle,
+  type LibrarySongs,
+  type SingleSongs,
+  type Skip,
+  type SkippedSong,
+} from './playOrder/queuedSongText.ts';
+export { useStemSongs } from './playOrder/useStemSongs.ts';
+export { useLibrarySongs } from './playOrder/useLibrarySongs.ts';
 export {
   configurePlayOrder,
   type PlayOrderRepositories,

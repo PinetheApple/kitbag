@@ -6,12 +6,13 @@ import {
   playOrderStore,
   SKIPPED_STEM_SONG,
   songLibraryStore,
+  songPlayerStore,
   type LibrarySongRow,
   type LibraryStemSetRow,
   type PlayOrderRepositories,
   type QueuedSong,
 } from '@kitbag/core-state';
-import { Sheet, Snackbar } from '@kitbag/core-design';
+import { playerWaveBars, Sheet, Snackbar } from '@kitbag/core-design';
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -293,26 +294,45 @@ describe('the Up next row', () => {
 });
 
 describe('a queued single song', () => {
-  it('shows in the Up next row and Next hands over to the song player', async () => {
+  function handOverWatched(p: Player) {
+    p.commands.songTransportHide.mockClear();
+    return vi
+      .spyOn(songPlayerStore.getState(), 'takeOver')
+      .mockResolvedValue('playing');
+  }
+
+  function expectHandedOver(
+    p: Player,
+    takeOver: ReturnType<typeof handOverWatched>,
+  ) {
+    expect(takeOver).toHaveBeenCalledExactlyOnceWith(HUM, playerWaveBars.song);
+    expect(p.store.getState().status).toBe('idle');
+    expect(p.commands.songTransportHide).not.toHaveBeenCalled();
+    expect(p.routes.onOpenSong).toHaveBeenCalledWith(HUM);
+  }
+
+  it('shows in the Up next row and Next hands over to the song player, card kept', async () => {
     const p = await withQueue(single(HUM), TIN_ROOF);
     expect(p.has('Hum')).toBe(true);
+    const takeOver = handOverWatched(p);
     await p.press('Next: Hum');
     await flush();
-    expect(p.routes.onOpenSong).toHaveBeenCalledWith(HUM);
+    expectHandedOver(p, takeOver);
     expect(p.routes.onOpenStemSet).not.toHaveBeenCalled();
     expect(queued).toEqual([stems(TIN_ROOF)]);
   });
 
-  it('plays from its Up next sheet row in the song player', async () => {
+  it('hands over from its Up next sheet row once the sheet has closed', async () => {
     const p = await withQueue(NIGHT_BUS, single(HUM));
     await p.press(UP_NEXT_ROW);
     expect(p.has('3:20 · 90 BPM')).toBe(true);
+    const takeOver = handOverWatched(p);
     await p.press('2. Hum, queued. Plays it now');
     await flush();
     p.frames(0, 4);
     await flush();
     expect(queued).toEqual([]);
-    expect(p.routes.onOpenSong).toHaveBeenCalledWith(HUM);
+    expectHandedOver(p, takeOver);
   });
 });
 

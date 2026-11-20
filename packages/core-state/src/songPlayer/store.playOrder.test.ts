@@ -14,6 +14,7 @@ import {
 } from './store.test-helper.ts';
 
 const NEXT = { action: 'next', frame: null } as const;
+const NEXT_SONG = SONG_ID + 1;
 const SONG_END = secondsToFrames(songRecord().durationSec, RATE);
 
 describe('a single song in the play order', () => {
@@ -77,5 +78,23 @@ describe('a single song in the play order', () => {
     expect(player.getState().songStillEnded()).toBe(true);
     player.getState().stopAdvancing();
     expect(player.getState().status).toBe('idle');
+  });
+
+  it('takes the next single song over from itself, holding the engine before letting go', async () => {
+    const left = await leftPlaying();
+    const { engineHold, engineRelease, songTransportHide } = left.commands;
+    engineHold.mockClear();
+    engineRelease.mockClear();
+    left.player.getState().handOver();
+    expect(await left.player.getState().takeOver(NEXT_SONG, BARS)).toBe(
+      ADVANCE_OUTCOME.playing,
+    );
+    expect(left.player.getState().songId).toBe(NEXT_SONG);
+    expect(engineHold).toHaveBeenCalledOnce();
+    expect(engineRelease).toHaveBeenCalledOnce();
+    expect(engineHold.mock.invocationCallOrder[0]).toBeLessThan(
+      engineRelease.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(songTransportHide).not.toHaveBeenCalled();
   });
 });

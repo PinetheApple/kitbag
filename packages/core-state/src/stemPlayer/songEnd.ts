@@ -102,8 +102,8 @@ export type SongEnds = ReturnType<typeof songEnds>;
 
 export interface AdvanceSteps {
   readonly ends: SongEnds;
-  readonly begin: (setId: number) => number;
-  readonly load: (opened: number, setId: number) => Promise<void>;
+  readonly begin: (id: number) => number;
+  readonly load: (opened: number, id: number) => Promise<void>;
   readonly live: (opened: number) => boolean;
   readonly ready: () => boolean;
   readonly play: () => void;
@@ -111,10 +111,10 @@ export interface AdvanceSteps {
 
 export async function startSong(
   steps: AdvanceSteps,
-  setId: number,
+  id: number,
 ): Promise<AdvanceOutcome> {
-  const opened = steps.begin(setId);
-  await steps.load(opened, setId);
+  const opened = steps.begin(id);
+  await steps.load(opened, id);
   if (!steps.live(opened)) return ADVANCE_OUTCOME.displaced;
   if (!steps.ready()) {
     steps.ends.unopened(opened);
@@ -128,8 +128,8 @@ export async function startSong(
 
 export function advanceSong(
   steps: AdvanceSteps,
-  setId: number,
+  id: number,
 ): Promise<AdvanceOutcome> {
   if (!steps.ends.stands()) return Promise.resolve(ADVANCE_OUTCOME.displaced);
-  return startSong(steps, setId);
+  return startSong(steps, id);
 }

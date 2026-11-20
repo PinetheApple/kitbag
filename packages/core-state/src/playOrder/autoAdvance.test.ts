@@ -10,7 +10,6 @@ import {
 } from '../stemPlayer/songEnd.ts';
 import {
   ARRIVAL,
-  SKIP,
   startAutoAdvance,
   type Arrival,
   type ArrivalState,
@@ -18,6 +17,7 @@ import {
 } from './autoAdvance.ts';
 import { restingPlayer } from './autoAdvance.test-helper.ts';
 import { ADVANCE, type Advance } from './order.ts';
+import { SKIP } from './queuedSongText.ts';
 import type { SkipResult, Undo } from './store.ts';
 
 const NIGHT_BUS = 21;
@@ -26,20 +26,23 @@ const HUM = 41;
 const ITEM = 31;
 const PLACE = { number: 3, of: 5 };
 
-const play = (stemSetId: number, setlistItemId: number | null = ITEM) => ({
-  advance: { kind: ADVANCE.play, stemSetId, setlistItemId },
-  skipped: false,
+const play = (
+  stemSetId: number,
+  setlistItemId: number | null = ITEM,
+): SkipResult => ({
+  advance: { kind: ADVANCE.stems, stemSetId, setlistItemId },
+  skipped: null,
 });
 const single = (songId: number): SkipResult => ({
   advance: { kind: ADVANCE.song, songId },
-  skipped: false,
+  skipped: null,
 });
 const BALLAD_COUNT = {} as never;
 const metronomeNext: SkipResult = {
   advance: { kind: ADVANCE.open, entry: BALLAD_COUNT },
-  skipped: false,
+  skipped: null,
 };
-const end: SkipResult = { advance: { kind: ADVANCE.end }, skipped: false };
+const end: SkipResult = { advance: { kind: ADVANCE.end }, skipped: null };
 
 function harness(
   steps: readonly SkipResult[],
@@ -86,7 +89,7 @@ function harness(
     peekNext,
     commitNext,
     placeOf: (advance: Advance) =>
-      advance.kind === ADVANCE.play && advance.setlistItemId !== null
+      advance.kind === ADVANCE.stems && advance.setlistItemId !== null
         ? PLACE
         : null,
     candidates: () => candidates,
@@ -238,11 +241,11 @@ describe('auto-advance at the end of a stem song', () => {
   });
 
   it('says it skipped a deleted song on the way', async () => {
-    const h = harness([{ ...play(NIGHT_BUS), skipped: true }]);
+    const h = harness([{ ...play(NIGHT_BUS), skipped: 'stems' }]);
     await h.songEnds();
     expect(h.arrivals.getState().arrival).toMatchObject({
       song: { kind: 'stems', id: NIGHT_BUS },
-      skipped: SKIP.deleted,
+      skipped: { reason: SKIP.deleted, kind: 'stems' },
     });
   });
 
@@ -255,7 +258,7 @@ describe('auto-advance at the end of a stem song', () => {
     expect(h.advanceTo.mock.calls).toEqual([[NIGHT_BUS], [TIN_ROOF]]);
     expect(h.arrivals.getState().arrival).toMatchObject({
       song: { kind: 'stems', id: TIN_ROOF },
-      skipped: SKIP.unopened,
+      skipped: { reason: SKIP.unopened, kind: 'stems' },
     });
   });
 
@@ -275,10 +278,11 @@ describe('auto-advance at the end of a stem song', () => {
   });
 
   it('says it skipped a deleted song when nothing after it plays', async () => {
-    const h = harness([{ ...end, skipped: true }]);
+    const h = harness([{ ...end, skipped: 'song' }]);
     await h.songEnds();
     expect(h.arrivals.getState().arrival).toMatchObject({
       kind: ARRIVAL.gaveUp,
+      skipped: { reason: SKIP.deleted, kind: 'song' },
     });
   });
 
@@ -425,11 +429,18 @@ describe('Next from the song card', () => {
 });
 
 describe('a queue that mixes single songs and stem songs', () => {
-  const singleEnds = async (h: ReturnType<typeof harness>) => {
+  const fromSingle = async (
+    h: ReturnType<typeof harness>,
+    cause: AdvanceCause,
+  ) => {
     const [listener] = vi.mocked(h.single.onSongEnd).mock.calls[0] ?? [];
-    listener?.(ADVANCE_CAUSE.ended);
+    listener?.(cause);
     await h.settle();
   };
+  const singleEnds = (h: ReturnType<typeof harness>) =>
+    fromSingle(h, ADVANCE_CAUSE.ended);
+  const singleNext = (h: ReturnType<typeof harness>) =>
+    fromSingle(h, ADVANCE_CAUSE.next);
 
   it('hands a stem song over to a single song, then back to a stem song', async () => {
     const h = harness([single(HUM), play(TIN_ROOF, null)]);
@@ -481,7 +492,7 @@ describe('a queue that mixes single songs and stem songs', () => {
     expect(h.stems.takeOver).toHaveBeenCalledExactlyOnceWith(NIGHT_BUS);
     expect(h.arrivals.getState().arrival).toMatchObject({
       song: { kind: 'stems', id: NIGHT_BUS },
-      skipped: SKIP.unopened,
+      skipped: { reason: SKIP.unopened, kind: 'song' },
     });
   });
 
@@ -493,5 +504,20 @@ describe('a queue that mixes single songs and stem songs', () => {
     await h.songEnds();
     expect(h.single.stopAdvancing).toHaveBeenCalledTimes(1);
     expect(h.stopAdvancing).not.toHaveBeenCalled();
+  });
+
+  it('ignores a stale card press while the other player is still loading', async () => {
+    const h = harness([single(HUM), play(TIN_ROOF, null)]);
+    const loading = Promise.withResolvers<AdvanceOutcome>();
+    vi.mocked(h.single.takeOver).mockReturnValueOnce(loading.promise);
+    h.leave(ADVANCE_CAUSE.ended);
+    await h.settle();
+    h.leave(ADVANCE_CAUSE.next);
+    await singleNext(h);
+    loading.resolve(ADVANCE_OUTCOME.playing);
+    await h.settle();
+    expect(h.peekNext).toHaveBeenCalledOnce();
+    expect(h.single.takeOver).toHaveBeenCalledOnce();
+    expect(h.stems.takeOver).not.toHaveBeenCalled();
   });
 });

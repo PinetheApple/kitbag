@@ -13,6 +13,9 @@ import {
   useQueueNotices,
   type AddedToSetlist,
   type QueueAction,
+  type QueuePresses,
+  useQueueKeys,
+  useQueuePresses,
 } from '@kitbag/core-design';
 import {
   cleanName,
@@ -99,28 +102,14 @@ function sheetNotice(
   return away ? UNAVAILABLE_TEXT : null;
 }
 
-type QueueVerb = (queued: boolean) => void;
-
 interface QueueButtonsProps {
   readonly song: LibraryRow;
-  readonly onPlayNext: QueueVerb;
-  readonly onAddToQueue: QueueVerb;
+  readonly presses: QueuePresses;
   readonly onAddToSetlist: () => void;
 }
 
-function QueueButtons({
-  song,
-  onPlayNext,
-  onAddToQueue,
-  onAddToSetlist,
-}: QueueButtonsProps) {
-  const queued = useIsQueued(song);
-  const playNext = useCallback(() => {
-    onPlayNext(queued);
-  }, [onPlayNext, queued]);
-  const addToQueue = useCallback(() => {
-    onAddToQueue(queued);
-  }, [onAddToQueue, queued]);
+function QueueButtons({ song, presses, onAddToSetlist }: QueueButtonsProps) {
+  const keys = useQueueKeys(presses, useIsQueued(song));
   return (
     <>
       <Button
@@ -129,15 +118,15 @@ function QueueButtons({
         iconSize="sheetButton"
         align="start"
         variant="tonal"
-        onPress={playNext}
+        onPress={keys.playNext}
       />
       <Button
-        label={queued ? QUEUE_TEXT.moveToEnd : QUEUE_TEXT.addToQueue}
+        label={keys.addLabel}
         icon="addToQueue"
         iconSize="sheetButton"
         align="start"
         variant="tonal"
-        onPress={addToQueue}
+        onPress={keys.addToQueue}
       />
       {song.kind === 'stems' ? (
         <Button
@@ -158,29 +147,6 @@ interface ActionsSheetProps extends SheetProps {
   readonly onAddToQueue: QueueAction<QueuedSong>;
 }
 
-function useRowQueue(
-  target: LibraryRow | null,
-  close: () => void,
-  { onPlayNext, onAddToQueue }: Omit<ActionsSheetProps, keyof SheetProps>,
-) {
-  const queueWith = useCallback(
-    (verb: QueueAction<QueuedSong>): QueueVerb =>
-      (queued) => {
-        close();
-        if (target !== null)
-          verb({ song: target, title: target.title, queued });
-      },
-    [close, target],
-  );
-  return useMemo(
-    () => ({
-      playNext: queueWith(onPlayNext),
-      addToQueue: queueWith(onAddToQueue),
-    }),
-    [queueWith, onPlayNext, onAddToQueue],
-  );
-}
-
 function ActionsSheet({
   menu,
   bottomInset,
@@ -197,7 +163,15 @@ function ActionsSheet({
     close();
     if (target?.kind === 'song') void reanalyze(target.id);
   }, [close, reanalyze, target]);
-  const queue = useRowQueue(target, close, { onPlayNext, onAddToQueue });
+  const row = useMemo(
+    () => (target === null ? null : { song: target, title: target.title }),
+    [target],
+  );
+  const actions = useMemo(
+    () => ({ playNext: onPlayNext, addToQueue: onAddToQueue }),
+    [onPlayNext, onAddToQueue],
+  );
+  const presses = useQueuePresses<QueuedSong>(actions, row, close);
   const title = target?.title ?? '';
   return (
     <Sheet
@@ -214,8 +188,7 @@ function ActionsSheet({
         {target === null || away ? null : (
           <QueueButtons
             song={target}
-            onPlayNext={queue.playNext}
-            onAddToQueue={queue.addToQueue}
+            presses={presses}
             onAddToSetlist={openSetlists}
           />
         )}
@@ -398,7 +371,7 @@ interface LibrarySheetsProps extends SheetProps {
 
 export function LibrarySheets({ onOpenSetlist, ...props }: LibrarySheetsProps) {
   const notice = useNotice();
-  useQueueRefresh(true);
+  useQueueRefresh();
   const queueSong = useQueueSong();
   const queue = useQueueNotices(notice, queueSong, onOpenSetlist);
   return (

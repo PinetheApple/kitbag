@@ -54,6 +54,7 @@ import { SongMeter } from './SongMeter.tsx';
 import { SongPlayerMenu } from './SongPlayerMenu.tsx';
 import { SongTempoCorrection } from './SongTempoCorrection.tsx';
 import { SongTransport } from './SongTransport.tsx';
+import { useFollowQueueArrivals } from './useFollowQueueArrivals.ts';
 import { useLeaveOnStop } from './useLeaveOnStop.ts';
 import { useLoopHandles } from './useLoopHandles.ts';
 import { NotReady } from './NotReady.tsx';
@@ -326,7 +327,8 @@ export function SongPlayerScreen({
     () => ({ songId, onOpenStemSet, onOpenSong }),
     [songId, onOpenStemSet, onOpenSong],
   );
-  const leave = useLeaveOnStop(focused, onBack, follow);
+  const { leave, markLeft } = useLeaveOnStop(focused, onBack, songId);
+  useFollowQueueArrivals(focused, follow, markLeft);
   const [menuOpen, setMenuOpen] = useState(false);
   const openMenu = useCallback(() => {
     setMenuOpen(true);

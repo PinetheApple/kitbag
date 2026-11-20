@@ -17,6 +17,7 @@ export {
 } from './client';
 export type { LinkedPresetValues } from './song-preset-repository';
 export {
+  queueColumnsOf,
   queuedSongOf,
   sameQueuedSong,
   type PlayQueueEntry,

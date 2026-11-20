@@ -1,12 +1,14 @@
 import {
   ADVANCE,
+  handOverQueued,
   isPresetEntry,
-  SKIPPED_STEM_SONG,
+  SKIP,
+  skippedText,
   usePlayOrder,
   type QueuedSong,
   type SetlistEntry,
 } from '@kitbag/core-state';
-import { useAfterSheetClosed } from '@kitbag/core-design';
+import { playerWaveBars, useAfterSheetClosed } from '@kitbag/core-design';
 import { useCallback, useMemo } from 'react';
 
 export interface PlayOrderRoutes {
@@ -27,9 +29,14 @@ export function leaveForQueued(song: QueuedSong): Leave {
     : { kind: 'stem', stemSetId: song.id };
 }
 
+function handOverToSong(routes: PlayOrderRoutes, songId: number): void {
+  void handOverQueued('stems', { kind: 'song', id: songId }, playerWaveBars);
+  routes.onOpenSong(songId);
+}
+
 export function followLeave(routes: PlayOrderRoutes, leave: Leave): void {
   if (leave.kind === 'stem') routes.onOpenStemSet(leave.stemSetId);
-  else if (leave.kind === 'song') routes.onOpenSong(leave.songId);
+  else if (leave.kind === 'song') handOverToSong(routes, leave.songId);
   else routes.onOpenMetronome();
 }
 
@@ -57,9 +64,10 @@ export function usePlayOrderNav(routes: PlayOrderRoutes) {
   const openEntry = usePlayOrder((s) => s.openEntry);
   const skip = useCallback(async () => {
     const { advance, skipped } = await skipToNext();
-    if (skipped) routes.onNotice(SKIPPED_STEM_SONG);
-    if (advance.kind === ADVANCE.play) routes.onOpenStemSet(advance.stemSetId);
-    if (advance.kind === ADVANCE.song) routes.onOpenSong(advance.songId);
+    if (skipped !== null)
+      routes.onNotice(skippedText({ reason: SKIP.deleted, kind: skipped }));
+    if (advance.kind === ADVANCE.stems) routes.onOpenStemSet(advance.stemSetId);
+    if (advance.kind === ADVANCE.song) handOverToSong(routes, advance.songId);
     if (advance.kind !== ADVANCE.open) return;
     await openEntry(advance.entry);
     routes.onOpenMetronome();

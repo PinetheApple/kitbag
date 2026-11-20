@@ -14,6 +14,7 @@ import {
   textStyle,
   type AddedToSetlist,
   type Notice,
+  type QueuePresses,
   type SegmentOption,
 } from '@kitbag/core-design';
 import { KB_MAX_TRACKS } from '@kitbag/core-native';
@@ -329,8 +330,7 @@ function useRetimeAsk() {
 
 interface PlayerSheetsProps {
   readonly routes: PlayOrderRoutes;
-  readonly onPlayNext: (queued: boolean) => void;
-  readonly onAddToQueue: (queued: boolean) => void;
+  readonly queue: QueuePresses;
   readonly onAddToSetlist: () => void;
   readonly onAddedToSetlist: (added: AddedToSetlist) => void;
   readonly onLeftSetlist: UpNextSheetProps['onLeftSetlist'];
@@ -372,8 +372,7 @@ function PlayerSheets(props: PlayerSheetsProps) {
         onExport={props.onExport}
         onTempo={props.onTempo}
         onClick={props.onClick}
-        onPlayNext={props.onPlayNext}
-        onAddToQueue={props.onAddToQueue}
+        queue={props.queue}
         onAddToSetlist={props.onAddToSetlist}
       />
       <UpNextSheet
@@ -476,8 +475,7 @@ export function PlayerScreen({
       </View>
       <PlayerSheets
         routes={routes}
-        onPlayNext={queue.playNext}
-        onAddToQueue={queue.addToQueue}
+        queue={queue.presses}
         onAddToSetlist={sheets.openSetlists}
         onAddedToSetlist={queue.added}
         onLeftSetlist={queue.leftSetlist}

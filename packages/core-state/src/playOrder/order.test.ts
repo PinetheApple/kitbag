@@ -140,7 +140,7 @@ describe('advance', () => {
         song: { kind: 'stems', id: 7 },
       }),
     ).toEqual({
-      kind: ADVANCE.play,
+      kind: ADVANCE.stems,
       stemSetId: 7,
       setlistItemId: null,
     });
@@ -158,7 +158,7 @@ describe('advance', () => {
   it('plays a setlist stem song and names its entry', () => {
     expect(
       advanceOf({ source: UP_NEXT_SOURCE.setlist, entry: stem(3, 13) }),
-    ).toEqual({ kind: ADVANCE.play, stemSetId: 13, setlistItemId: 3 });
+    ).toEqual({ kind: ADVANCE.stems, stemSetId: 13, setlistItemId: 3 });
   });
 
   it('stops at a metronome entry and offers it to open, never playing it', () => {

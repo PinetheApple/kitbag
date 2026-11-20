@@ -200,7 +200,7 @@ describe('the player after an auto-advance', () => {
 
   it('says it skipped a song that would not open', async () => {
     const p = await mountTracked();
-    await advanced(p, { skipped: SKIP.unopened });
+    await advanced(p, { skipped: { reason: SKIP.unopened, kind: 'stems' } });
     expect(p.has(SKIPPED_UNOPENED_STEM_SONG)).toBe(true);
   });
 
@@ -218,7 +218,11 @@ describe('the player after an auto-advance', () => {
     await act(async () => {
       await p.store.getState().advanceTo(HARBOUR);
     });
-    arrive(playingNow(HARBOUR, { skipped: SKIP.unopened }));
+    arrive(
+      playingNow(HARBOUR, {
+        skipped: { reason: SKIP.unopened, kind: 'stems' },
+      }),
+    );
     await flush();
     expect(p.texts().some((text) => text.startsWith('Playing'))).toBe(false);
     expect(p.has(SKIPPED_UNOPENED_STEM_SONG)).toBe(true);

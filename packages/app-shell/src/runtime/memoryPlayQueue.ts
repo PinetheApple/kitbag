@@ -1,4 +1,5 @@
 import {
+  queueColumnsOf,
   queuedSongOf,
   sameQueuedSong,
   type PlayQueueEntry,
@@ -30,11 +31,7 @@ export function createMemoryPlayQueue(): PlayQueueRepository {
     list: () => Promise.resolve(entries()),
     add: (song, position) => {
       if (indexOf(song) < 0) {
-        const keyed =
-          song.kind === 'song'
-            ? { songId: song.id, stemSetId: null }
-            : { songId: null, stemSetId: song.id };
-        place({ id: nextId, ...keyed, position: 0 }, position);
+        place({ id: nextId, ...queueColumnsOf(song), position: 0 }, position);
         nextId += 1;
       }
       return Promise.resolve(entryOf(song));
