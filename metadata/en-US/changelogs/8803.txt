@@ -1,0 +1,1 @@
+• Fixed: closing a sheet while its content was animating could crash the app on Android.
