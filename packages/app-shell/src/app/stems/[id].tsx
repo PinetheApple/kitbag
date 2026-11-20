@@ -1,5 +1,5 @@
 import { StemPlayerScreen } from '@kitbag/tool-stems';
-import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
+import { useIsFocused, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -7,17 +7,21 @@ import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
+interface StemRouteNavigation {
+  readonly setParams: (params: { readonly id: string }) => void;
+}
+
 function StemPlayerRoute() {
   const insets = useSafeAreaInsets();
   const routes = useLibraryRoutes();
-  const router = useRouter();
+  const navigation = useNavigation<StemRouteNavigation>();
   const focused = useIsFocused();
   const { id } = useLocalSearchParams<{ id: string }>();
   const follow = useCallback(
     (stemSetId: number) => {
-      router.setParams({ id: String(stemSetId) });
+      navigation.setParams({ id: String(stemSetId) });
     },
-    [router],
+    [navigation],
   );
   return (
     <StemPlayerScreen
