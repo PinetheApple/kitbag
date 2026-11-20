@@ -16,6 +16,9 @@ async function repeating() {
     library: g.library,
     metronome: g.metronome,
     applySettings,
+    reloadCountIn: () => {
+      g.metronome.getState().setCountIn(USER_COUNT_IN);
+    },
   });
   const countIn = () => g.metronome.getState().countIn;
   return { ...g, overlay, applySettings, countIn };

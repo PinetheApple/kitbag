@@ -1,4 +1,5 @@
 import { presetFieldsOfLogged } from '@kitbag/core-db';
+import { KB_COUNT_IN_BARS } from '@kitbag/core-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { applyPreset } from '../library/presetMapping.ts';
@@ -18,6 +19,7 @@ import { createRepeatOverlay } from './repeatOverlay.ts';
 
 const ENGINE_BPM = 120;
 const BPMS = [70, 80, 90] as const;
+const [, , , FOUR_BARS] = KB_COUNT_IN_BARS;
 const USER: Partial<CountInSettings> = {
   scope: COUNT_IN_SCOPE.perSong,
   bars: 1,
@@ -55,6 +57,7 @@ async function perSongGig() {
         metronomeStore.getState(),
       );
     },
+    reloadCountIn: reloadCountInPersistence,
   });
   const plan = repeatPlanOf(g.log(BPMS), library.getState());
   if (plan === null) throw new Error('no plan');
@@ -93,5 +96,55 @@ describe('per-song count-in during a Repeat', () => {
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({ bars: r.second.countInBars }),
     );
+  });
+});
+
+type Repeating = Awaited<ReturnType<typeof perSongGig>>;
+
+describe('leaving a Repeat gives back the user count-in', () => {
+  const OWN = { bars: FOUR_BARS, distinct: false, sound: 0 };
+
+  beforeEach(() => {
+    stored = { ...USER, ...OWN };
+    reloadCountInPersistence();
+    save.mockClear();
+  });
+
+  const leave = (r: Repeating) => r.library.getState().leaveSetlist();
+  const clearSong = (r: Repeating) => {
+    r.library.getState().clearSong();
+    return Promise.resolve();
+  };
+  const atFirst = () => Promise.resolve();
+  const atSecond = async (r: Repeating) => {
+    await r.library.getState().stepSong(SONG_STEP.next);
+  };
+
+  it.each([
+    ['Leave setlist', 'song 2/2', leave, atSecond],
+    ['Leave setlist', 'song 1/2', leave, atFirst],
+    ['Clear song', 'song 2/2', clearSong, atSecond],
+    ['Clear song', 'song 1/2', clearSong, atFirst],
+  ])('%s at %s', async (_, __, end, step) => {
+    const r = await perSongGig();
+    await r.overlay.start(r.plan);
+    await step(r);
+    expect(metronomeStore.getState().countIn).toEqual(COUNT_IN);
+    await end(r);
+    expect(metronomeStore.getState().countIn).toEqual(OWN);
+    expect(save).not.toHaveBeenCalled();
+    expect(stored).toMatchObject(OWN);
+  });
+
+  it('keeps the bars of a song loaded from outside the plan', async () => {
+    const r = await perSongGig();
+    await r.overlay.start(r.plan);
+    await atSecond(r);
+    await r.library.getState().loadSong(r.second.id);
+    expect(r.overlay.state.getState().plan).toBeNull();
+    expect(metronomeStore.getState().countIn).toEqual({
+      ...OWN,
+      bars: r.second.countInBars,
+    });
   });
 });

@@ -1,5 +1,5 @@
 import { presetFieldsOfLogged } from '@kitbag/core-db';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { applyPreset, isLoadedSongUnsaved } from '../library/presetMapping.ts';
 import { SONG_STEP } from '../library/setlistPosition.ts';
@@ -19,6 +19,7 @@ async function repeating() {
     applySettings: (settings) => {
       applyPreset(presetFieldsOfLogged(settings), () => g.metronome.getState());
     },
+    reloadCountIn: vi.fn(),
   });
   const bpm = () => g.metronome.getState().bpm;
   const start = async () => {

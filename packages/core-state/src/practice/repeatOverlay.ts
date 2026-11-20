@@ -16,7 +16,10 @@ import {
   type PresetOverlay,
 } from '../library/store.ts';
 import { isCountInBars, type CountInConfig } from '../metronome/config.ts';
-import { applyCountInTransiently } from '../metronome/countInPersistence.ts';
+import {
+  applyCountInTransiently,
+  reloadCountInPersistence,
+} from '../metronome/countInPersistence.ts';
 import {
   COUNT_IN_SCOPE,
   type CountInScope,
@@ -34,6 +37,7 @@ export interface RepeatPort {
   readonly library: StoreApi<LibraryStore>;
   readonly metronome: StoreApi<MetronomeStore>;
   readonly applySettings: (settings: LoggedSettings) => void;
+  readonly reloadCountIn: () => void;
 }
 
 export interface RepeatOverlayState {
@@ -180,10 +184,9 @@ export function createRepeatOverlay(port: RepeatPort): RepeatOverlay {
   };
   const clear = () => {
     if (state.getState().plan === null) return;
-    const countIn = restore();
     state.setState({ plan: null, userCountIn: null });
     port.library.getState().setPresetOverlay(null);
-    setCountIn(countIn);
+    port.reloadCountIn();
   };
   const session: Session = { port, state, setCountIn, restore, clear };
   followLibrary(session);
@@ -213,6 +216,7 @@ export function configureRepeatOverlay(
     library: libraryStore,
     metronome: metronomeStore,
     applySettings,
+    reloadCountIn: reloadCountInPersistence,
   });
   return configured;
 }
