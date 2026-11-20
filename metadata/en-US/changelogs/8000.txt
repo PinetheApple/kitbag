@@ -1,0 +1,1 @@
+• Setlists can hold stem songs alongside metronome songs. Add them from a setlist's Add song sheet or the stem player's menu. Stem songs can also be queued with Play next. The stem player shows what is up next, and stepping through a setlist moves between the metronome and the stem player.
