@@ -8,7 +8,6 @@ import {
   UP_NEXT_SOURCE,
   type OnStage,
   type SetlistEntry,
-  type SetlistSummary,
   type StemSongs,
   type UpNext,
 } from '@kitbag/core-state';
@@ -72,18 +71,6 @@ export function setlistRowSubtitle(
     ? [METRONOME, `${String(Math.round(entry.preset.bpm))} ${BPM_UNIT}`]
     : [stemFacts(entry.stemSetId, stems)];
   return [setlistName, ...facts].filter((part) => part !== '').join(SEPARATOR);
-}
-
-export function pickerSubtitle(
-  summary: SetlistSummary,
-  entries: readonly SetlistEntry[],
-): string {
-  const stemCount = entries.filter((entry) => !isPresetEntry(entry)).length;
-  const parts = [countLabel(summary.songCount, 'song', 'songs')];
-  if (stemCount > 0)
-    parts.push(countLabel(stemCount, 'stem song', 'stem songs'));
-  if (summary.setlist.active) parts.push('on stage');
-  return parts.join(SEPARATOR);
 }
 
 export function clearQueueBody(queueLength: number, setlistName: string) {

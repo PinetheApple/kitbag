@@ -1,10 +1,11 @@
+import { FACT_SEPARATOR as SEPARATOR } from '@kitbag/core-design';
 import {
   formatClockSeconds,
   type StemDeckServerTrust,
   type StemDeckSong,
 } from '@kitbag/core-state';
 
-export const SEPARATOR = ' · ';
+export { SEPARATOR };
 
 export function plural(count: number, one: string, many: string): string {
   return `${String(count)} ${count === 1 ? one : many}`;

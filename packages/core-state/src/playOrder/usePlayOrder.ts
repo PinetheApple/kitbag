@@ -16,6 +16,12 @@ export function usePlayOrder<T>(selector: (state: PlayOrderStore) => T): T {
   return useStore(playOrderStore, selector);
 }
 
+export function useIsQueued(stemSetId: number | null): boolean {
+  return usePlayOrder((s) =>
+    s.queue.some((entry) => entry.stemSetId === stemSetId),
+  );
+}
+
 export interface Stage {
   readonly stage: OnStage;
   readonly cursor: SetlistCursor | null;

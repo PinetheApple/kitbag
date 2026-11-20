@@ -187,6 +187,7 @@ export {
   type TunerRuntime,
 } from './tuner/runtime.ts';
 export { useLibrary } from './library/useLibrary.ts';
+export { setlistPicks, useSetlistPicker } from './library/setlistPicker.ts';
 export {
   createLibraryStore,
   libraryStore,
@@ -239,6 +240,7 @@ export {
   type SkipResult,
 } from './playOrder/store.ts';
 export {
+  useIsQueued,
   usePlayOrder,
   useStage,
   useUpNext,
