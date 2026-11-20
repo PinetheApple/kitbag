@@ -58,12 +58,7 @@ export {
   withoutSound,
 } from './metronome/config.ts';
 export { beatGroupSizes, groupStartAccents } from './metronome/meterGroups.ts';
-export {
-  layoutBeatLeds,
-  MAX_LEDS_PER_ROW,
-  MIN_LEDS_PER_ROW,
-  type LedRowLayout,
-} from './metronome/ledLayout.ts';
+export { layoutBeatLeds, type LedRowLayout } from './metronome/ledLayout.ts';
 export {
   effectivePolyAgainst,
   normalizePolyAgainst,
@@ -620,7 +615,6 @@ export {
   SOUND_OPTIONS,
   SOUND_ROLE,
   SOUND_ROLE_OPTIONS,
-  SOUND_ROLES,
   soundChipLabel,
   soundLabel,
   soundRoleName,

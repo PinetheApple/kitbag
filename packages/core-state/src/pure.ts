@@ -6,10 +6,16 @@ export * from './songLibrary/badge.ts';
 export * from './songLibrary/replaceText.ts';
 export * from './stemPlayer/beatStep.ts';
 export * from './importText.ts';
-export * from './clickSounds/soundNames.ts';
-export { beatGroupSizes } from './metronome/meterGroups.ts';
-export * from './metronome/ledLayout.ts';
-export * from './clickSounds/soundChoice.ts';
+export { layoutBeatLeds } from './metronome/ledLayout.ts';
+export {
+  customSoundViews,
+  SOUND_OPTIONS,
+  SOUND_ROLE,
+  SOUND_ROLE_OPTIONS,
+  soundLabel,
+  type CustomSoundView,
+  type SoundRole,
+} from './clickSounds/soundChoice.ts';
 export {
   correctedBpm,
   TEMPO_CORRECTION,

@@ -1,4 +1,3 @@
-import { KB_MAX_BEATS } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -7,7 +6,9 @@ import {
   MIN_LEDS_PER_ROW,
 } from './ledLayout.ts';
 
-const MAX_BEATS = KB_MAX_BEATS;
+// The engine's own ceiling on beats per bar is KB_MAX_BEATS (16); the layout is
+// only ever asked for bars inside it.
+const MAX_BEATS = 16;
 
 const sizesOf = (rows: readonly (readonly (readonly number[])[])[]) =>
   rows.map((row) => row.map((group) => group.length));

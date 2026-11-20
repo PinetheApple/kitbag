@@ -6,7 +6,7 @@ import { beatDotSize, MAX_DOTS_PER_LINE } from './ledLayout.ts';
 const sizesOf = (rows: readonly (readonly (readonly number[])[])[]) =>
   rows.map((row) => row.map((group) => group.length));
 
-describe('layoutBeatLeds for beat dots', () => {
+describe('layoutBeatLeds', () => {
   it('lays 12/8 out as the mockup frame draws it', () => {
     expect(sizesOf(layoutBeatLeds(12, MAX_DOTS_PER_LINE))).toEqual([
       [3, 3],
