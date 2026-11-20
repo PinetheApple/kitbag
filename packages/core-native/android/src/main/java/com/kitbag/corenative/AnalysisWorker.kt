@@ -49,7 +49,8 @@ class AnalysisWorker(context: Context, params: WorkerParameters) : Worker(contex
     val song = folder.readable(relativePath)
     if (!song.isFile) throw MissingSongException()
     val output = SongAnalyzer.analyze(song, LibraryStorage.staging(folder)) { staged ->
-      Waveforms.place(folder, waveformRelativeDir, staged, DataFolderMoves.get(applicationContext)::supersede)
+      val moves = DataFolderMoves.get(applicationContext)
+      Waveforms.place(folder, waveformRelativeDir, staged, moves::supersede, { message, cause -> Log.w(TAG, message, cause) })
     }
     return AnalysisResult(
       relativePath = relativePath,

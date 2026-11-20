@@ -194,7 +194,7 @@ class CardReturnTest {
   }
 
   @Test
-  fun `a file gone from a still-mounted card stays away while the rest return`() {
+  fun `a file gone from a still-mounted card is forgotten while the rest return`() {
     var copied = 0
     val losing = fx.runner {
       if (it.phase == MovePhase.COPYING && it.path != null && ++copied == 1) {
@@ -203,7 +203,7 @@ class CardReturnTest {
     }
     assertEquals(MoveOutcome.Done, losing.returnCard(card))
     assertEquals(fx.hashes(away - DRUMS), onInternal())
-    assertEquals(mapOf(CARD_UUID to setOf(DRUMS)), awayList())
+    assertEquals(emptyMap<String, Set<String>>(), awayList())
     assertFalse(fx.journalFile.exists())
   }
 
@@ -281,11 +281,12 @@ class CardReturnTest {
   }
 
   @Test
-  fun `a song already on internal storage blocks the return before anything is copied`() {
+  fun `a song already on internal storage supersedes its card copy`() {
     fx.write(fx.internalRoot, SONG, "clash".toByteArray())
-    assertEquals(MoveOutcome.Failed(MoveFailure.TARGET_OCCUPIED), fx.runner().returnCard(card))
-    assertEquals(mapOf(CARD_UUID to away.keys), awayList())
-    assertNull(fx.runner().pending())
+    assertEquals(MoveOutcome.Done, fx.runner().returnCard(card))
+    assertEquals("clash", File(fx.internalRoot, SONG).readText())
+    assertEquals(emptyMap<String, Set<String>>(), awayList())
+    assertEquals(mapOf(CARD_UUID to setOf(SONG)), fx.leftovers().load())
   }
 
   @Test

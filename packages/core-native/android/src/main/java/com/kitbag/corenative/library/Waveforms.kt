@@ -9,6 +9,7 @@ object Waveforms {
     waveformRelativeDir: String,
     staged: File,
     supersede: (relativePath: String) -> Unit,
+    warn: (message: String, cause: Exception) -> Unit,
     rename: (File, File) -> Boolean = File::renameTo,
   ): String? =
     folder.importing {
@@ -17,7 +18,12 @@ object Waveforms {
       if (!dir.isDirectory && !dir.mkdirs()) throw IOException("Could not prepare the waveform directory")
       val waveform = File(dir, staged.name)
       if (staged.isFile) DurableFiles.move(staged, waveform, rename) else waveform.delete()
-      supersede(LibraryPaths.relativize(root, waveform))
-      waveform.takeIf { it.isFile }?.let { LibraryPaths.relativize(root, it) }
+      val relativePath = LibraryPaths.relativize(root, waveform)
+      try {
+        supersede(relativePath)
+      } catch (e: IOException) {
+        warn("Could not retire the card copy of $relativePath; the next card return supersedes it", e)
+      }
+      relativePath.takeIf { waveform.isFile }
     }
 }

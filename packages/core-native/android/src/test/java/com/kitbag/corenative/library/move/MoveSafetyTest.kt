@@ -105,7 +105,7 @@ class MoveSafetyTest {
     val staged = fx.write(File(temp, "staging"), "a.kwav", "fresh peaks".toByteArray())
     var placed: String? = null
     var started = false
-    val analysis = Thread { placed = Waveforms.place(fx.folder, "songs/a", staged, fx.runner()::supersede) }
+    val analysis = Thread { placed = Waveforms.place(fx.folder, "songs/a", staged, fx.runner()::supersede, { _, _ -> }) }
     val runner = fx.runner {
       if (it.phase == MovePhase.COPYING && it.path == SONG) fx.write(fx.internalRoot, IMPORTED, "new".toByteArray())
       if (it.phase == MovePhase.CATCH_UP && it.path != null && !started) {

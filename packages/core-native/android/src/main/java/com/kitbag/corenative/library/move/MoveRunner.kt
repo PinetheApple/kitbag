@@ -157,11 +157,18 @@ class MoveRunner(
 
   private fun preflight(state: MoveState): MoveState {
     val targetRoot = mountedRoot(state.target) ?: refuse(MoveFailure.TARGET_UNAVAILABLE)
-    if (state.files.any { File(targetRoot, it.path).exists() }) refuse(MoveFailure.TARGET_OCCUPIED)
-    if (state.kind == MoveKind.CARD_RETURN) CardReturn.stagingRoot(targetRoot).deleteRecursively()
+    val planned = if (state.kind == MoveKind.CARD_RETURN) supersedeOccupied(state, targetRoot) else state
+    if (planned.files.any { File(targetRoot, it.path).exists() }) refuse(MoveFailure.TARGET_OCCUPIED)
+    if (planned.kind == MoveKind.CARD_RETURN) CardReturn.stagingRoot(targetRoot).deleteRecursively()
     if (!MoveFiles.canWrite(targetRoot)) refuse(MoveFailure.TARGET_NOT_WRITABLE)
-    if (availableBytes(targetRoot) < state.totalBytes + FREE_SPACE_MARGIN_BYTES) refuse(MoveFailure.NO_SPACE)
-    return save(state.copy(phase = MovePhase.COPYING))
+    if (availableBytes(targetRoot) < planned.totalBytes + FREE_SPACE_MARGIN_BYTES) refuse(MoveFailure.NO_SPACE)
+    return save(planned.copy(phase = MovePhase.COPYING))
+  }
+
+  private fun supersedeOccupied(state: MoveState, targetRoot: File): MoveState {
+    val (occupied, free) = state.files.partition { File(targetRoot, it.path).exists() }
+    occupied.forEach { supersede(it.path) }
+    return state.copy(files = free)
   }
 
   private fun refuse(failure: MoveFailure): Nothing {
@@ -265,7 +272,7 @@ class MoveRunner(
       if (entry.path in away) CardReturn.place(targetRoot, entry.path) else CardReturn.discard(targetRoot, entry.path)
       emit(state, entry.path)
     }
-    folder.forgetAway(card.volumeUuid, state.files.map { it.path })
+    folder.forgetAway(card.volumeUuid, away)
   }
 
   private fun switched(state: MoveState) = folder.storedLocation() == state.target
