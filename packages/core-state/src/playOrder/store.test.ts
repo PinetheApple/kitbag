@@ -125,6 +125,33 @@ describe('play order', () => {
     });
   });
 
+  it('looks ahead without taking a queued song or moving the cursor', async () => {
+    const { order, c, first, putOnStage } = await setup();
+    await order.getState().enqueue(c);
+    const queuedNext = await order.getState().peekNext();
+    expect(await order.getState().peekNext()).toEqual(queuedNext);
+    expect(queuedIds(order)).toEqual([c]);
+    await order.getState().commitNext(queuedNext.advance);
+    expect(queuedIds(order)).toEqual([]);
+    putOnStage(first.id);
+    const setlistNext = await order.getState().peekNext();
+    expect(setlistNext.advance).toMatchObject({ kind: ADVANCE.open });
+    await order.getState().commitNext(setlistNext.advance);
+    expect(await order.getState().peekNext()).toEqual(setlistNext);
+  });
+
+  it('moves the cursor onto a stem entry only when that step is committed', async () => {
+    const { order, b, click, putOnStage } = await setup();
+    putOnStage(click.id);
+    const step = await order.getState().peekNext();
+    expect(await order.getState().peekNext()).toEqual(step);
+    await order.getState().commitNext(step.advance);
+    expect(step.advance).toMatchObject({ kind: ADVANCE.play, stemSetId: b });
+    expect((await order.getState().peekNext()).advance).toEqual({
+      kind: ADVANCE.end,
+    });
+  });
+
   it('ends after the last entry', async () => {
     const { order, last, putOnStage } = await setup();
     putOnStage(last.id);

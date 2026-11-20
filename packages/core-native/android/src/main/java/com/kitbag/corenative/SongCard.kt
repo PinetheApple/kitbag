@@ -16,6 +16,7 @@ import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.SongAction
 import com.kitbag.corenative.transport.SongCommand
 import com.kitbag.corenative.transport.SongControls
+import com.kitbag.corenative.transport.SongEndWatch
 import com.kitbag.corenative.transport.SongEngine
 import com.kitbag.corenative.transport.SongPlayback
 import com.kitbag.corenative.transport.SongProgress
@@ -32,9 +33,11 @@ internal class SongCard(
   private val post: (Notification) -> Unit,
   private val appRequests: () -> ((SongCommand) -> Unit)?,
   fence: CardFence,
+  private val onEnded: () -> Unit,
   private val onStopped: () -> Unit,
 ) {
   private val controls = SongControls(MixerEngine, fence)
+  private val ends = SongEndWatch(EngineTransport::engineEndCount)
   private var cardNumber = CardFence.NONE
   private var countingIn = false
   private var song: Song? = null
@@ -85,6 +88,7 @@ internal class SongCard(
 
   private fun onTick() {
     val songTransport = transport ?: return
+    if (ends.ended()) onEnded()
     if (songTransport.stale(published, progress(), SystemClock.elapsedRealtime())) refresh()
     else clock.postDelayed(tick, TICK_MILLIS)
   }

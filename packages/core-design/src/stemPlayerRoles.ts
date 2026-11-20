@@ -50,6 +50,8 @@ export const stemPlayer = {
   playButton: 68,
   menuRowMinHeight: 56,
   menuRowGap: 12,
+  countPanelPadding: 14,
+  countPanelGap: 8,
 } as const;
 
 export const songPlayer = {
@@ -90,6 +92,7 @@ export const stemPlayerMix = {
   expandedRow: 0.06,
   loopTint: 0.12,
   mutedWave: 0.3,
+  countPanel: 0.88,
 } as const;
 
 export const stemSections = {
