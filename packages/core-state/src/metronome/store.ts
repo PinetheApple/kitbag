@@ -47,6 +47,7 @@ import {
   resetPracticeClock,
   type PracticeClock,
 } from './practice.ts';
+import { guardSongClick } from './songClickGuard.ts';
 
 export {
   BPM_BOUNDS,
@@ -164,7 +165,7 @@ export function initialConfig(): MetronomeConfig {
 }
 
 type Set = StoreApi<MetronomeStore>['setState'];
-type SongClickRelease = Pick<MixerClick, 'release'>;
+type SongClick = Pick<MixerClick, 'active' | 'release'>;
 type Get = StoreApi<MetronomeStore>['getState'];
 
 // Commands queue until the device opens, so a stopped engine's tempo is stale.
@@ -296,7 +297,8 @@ function transportActions(
   commands: MetronomeCommands,
   nowFrame: NowFrame,
   tempo: EngineTempo,
-  songClick: SongClickRelease,
+  songClick: SongClick,
+  restoreStandalone: () => void,
 ): Pick<MetronomeActions, 'setBarMute' | 'start' | 'stop' | 'pause'> {
   return {
     setBarMute: (config) => {
@@ -320,6 +322,7 @@ function transportActions(
     start: () => {
       // Left locked, the song's grid would clock this start and its stop end it.
       songClick.release();
+      restoreStandalone();
       commands.metronomeStart(nowFrame());
       set({ running: true });
     },
@@ -343,17 +346,32 @@ export function createMetronomeStore(
   nowFrame: NowFrame = defaultNowFrame,
   engineBpm: EngineBpm = defaultEngineBpm,
   now: () => number = Date.now,
-  songClick: SongClickRelease = mixerClick,
+  songClick: SongClick = mixerClick,
 ): StoreApi<MetronomeStore> {
   let holds = 0;
+  // A song count keeps the click active after release, and the count's voice is
+  // copied when it arms, so a running standalone takes its pattern at once.
+  const guard = guardSongClick(
+    commands,
+    () => songClick.active() && !store.getState().running,
+    () => store.getState(),
+  );
+  const engine = guard.commands;
   const store = createStore<MetronomeStore>((set, get) => {
     const tempo = engineTempoOf(set, get, engineBpm);
     return {
       ...initialConfig(),
-      ...patternActions(set, get, commands),
-      ...soundActions(set, get, commands, () => holds > 0),
-      ...tempoActions(set, get, commands, tempo),
-      ...transportActions(set, commands, nowFrame, tempo, songClick),
+      ...patternActions(set, get, engine),
+      ...soundActions(set, get, engine, () => holds > 0),
+      ...tempoActions(set, get, engine, tempo),
+      ...transportActions(
+        set,
+        engine,
+        nowFrame,
+        tempo,
+        songClick,
+        guard.restore,
+      ),
       holdEngine: () => {
         const release = acquireEngineHold(commands);
         let held = true;
@@ -376,6 +394,7 @@ export function createMetronomeStore(
   // Every way playback starts or stops, including the notification, goes through running.
   store.subscribe((state, previous) => {
     if (state.running === previous.running) return;
+    if (state.running) guard.restore();
     store.setState({
       practice: practiceAfterRunning(state.practice, state.running, now()),
     });
