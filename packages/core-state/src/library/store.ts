@@ -15,6 +15,7 @@ import {
   adjacentPresetEntry,
   type SongStep,
 } from './setlistPosition.ts';
+import { metronomeSongs } from './metronomeSongs.ts';
 import { takeSnapshot, type LibrarySnapshot } from './snapshot.ts';
 
 export interface LoadedSong {
@@ -99,6 +100,7 @@ const EMPTY: LibraryState = {
   setlists: [],
   entries: {},
   presets: [],
+  songs: [],
   standalone: [],
   loaded: null,
   discarded: null,
@@ -383,7 +385,7 @@ function readActions(deps: LibraryDeps, set: SetState, get: Get) {
         repos.setlists.search(query),
         repos.presets.search(query),
       ]);
-      set({ results: { query, setlists, presets } });
+      set({ results: { query, setlists, presets: metronomeSongs(presets) } });
     },
   };
 }
