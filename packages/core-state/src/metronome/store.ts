@@ -33,6 +33,7 @@ import {
   isBuiltInSoundId,
   isCountInBars,
   isSoundId,
+  mergeSounds,
   normalizeRamp,
   type CountInConfig,
   type PerAccentSounds,
@@ -206,12 +207,8 @@ function soundActions(
 > {
   return {
     setSounds: (normal, accent) => {
-      if (!isSoundId(normal) && !isSoundId(accent)) return;
-      const prev = get().sounds;
-      const sounds = {
-        normal: isSoundId(normal) ? normal : prev.normal,
-        accent: isSoundId(accent) ? accent : prev.accent,
-      };
+      const sounds = mergeSounds(get().sounds, normal, accent);
+      if (sounds === undefined) return;
       set({ sounds });
       commands.setSounds(sounds.normal, sounds.accent);
     },
