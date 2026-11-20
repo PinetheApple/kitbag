@@ -1,0 +1,2 @@
+• Songs show when your library is moving or its SD card is missing, and Home offers to resume a stopped move.
+• Before Kitbag upgrades your data to a new format, it now keeps a copy of the previous version beside it, so an upgrade that goes wrong can be recovered.
