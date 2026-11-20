@@ -9,7 +9,10 @@ import { REANALYZE_LABEL } from '../logic/viewText.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
-const shown = vi.hoisted((): { failure: unknown } => ({ failure: null }));
+const shown = vi.hoisted((): { failure: unknown; files: unknown } => ({
+  failure: null,
+  files: null,
+}));
 
 vi.mock('react-native', () => ({ View: 'View', TextInput: 'TextInput' }));
 
@@ -31,14 +34,18 @@ vi.mock('@kitbag/core-state', async (original) => ({
   useSongLibrary: (select: (state: unknown) => unknown) =>
     select({ codes: {}, replacePrompt: null }),
   analysisFailure: () => shown.failure,
-  rowFilesOf: () => null,
+  rowFilesOf: () => shown.files,
   cleanName: (name: string) => name,
 }));
 
 const { LibrarySheets } = await import('./LibrarySheets.tsx');
 
-function openActions(failure: unknown): ReactTestRenderer {
+function openActions(
+  failure: unknown,
+  files: unknown = null,
+): ReactTestRenderer {
   shown.failure = failure;
+  shown.files = files;
   const menu = {
     kind: 'actions',
     target: { kind: 'song', id: 1, title: 'A song' } as LibrarySongRow,
@@ -58,7 +65,8 @@ function openActions(failure: unknown): ReactTestRenderer {
 function sheet(tree: ReactTestRenderer) {
   const actions = tree.root.findByType('Sheet' as never);
   return {
-    hint: actions.findByType('SheetHint' as never).props.children as unknown,
+    hint: actions.findAllByType('SheetHint' as never)[0]?.props
+      .children as unknown,
     buttons: actions
       .findAllByType('Button' as never)
       .map((button) => button.props.label as unknown),
@@ -94,5 +102,20 @@ describe('the actions sheet of a song whose analysis failed', () => {
       openActions({ kind: 'missingFile', keptGrid: false }),
     );
     expect(actions.buttons).not.toContain(REANALYZE_LABEL);
+  });
+});
+
+describe('the actions sheet of a song on a missing SD card', () => {
+  it('offers neither Re-analyse nor Delete, and says why', () => {
+    const actions = sheet(openActions(null, 'unavailable'));
+    expect(actions.buttons).toEqual(['Rename']);
+    expect(actions.hint).toBe(
+      'This song is on the SD card, so it can’t play until the card is back.',
+    );
+  });
+
+  it('keeps both once the card is back', () => {
+    const actions = sheet(openActions(null, 'present'));
+    expect(actions.buttons).toEqual(['Rename', REANALYZE_LABEL, 'Delete song']);
   });
 });

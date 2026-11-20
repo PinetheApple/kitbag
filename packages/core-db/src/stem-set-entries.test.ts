@@ -5,6 +5,7 @@ vi.mock('@op-engineering/op-sqlite', () => ({}));
 import { bundle } from './backup-stem-songs.test-helper';
 import { connectDatabase } from './client';
 import { memoryClickSoundFiles } from './click-sound-files.test-helper';
+import { unusedMigrationCopyFiles } from './migration-copy-files.test-helper';
 import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 import { createPlayQueueRepository } from './play-queue-repository';
 import { createSetlistRepository } from './setlist-repository';
@@ -57,7 +58,11 @@ function setup({ foreignKeys = true } = {}) {
 
 function connected() {
   const { connection } = fakeOpSqlite();
-  const database = connectDatabase(connection, memoryClickSoundFiles().files);
+  const database = connectDatabase(
+    connection,
+    memoryClickSoundFiles().files,
+    unusedMigrationCopyFiles,
+  );
   return { connection, database };
 }
 

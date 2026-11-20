@@ -18,6 +18,7 @@ import {
   stagePositionOf,
   type SongStep,
 } from './setlistPosition.ts';
+import { metronomeSongsOf } from './metronomeSongs.ts';
 import {
   isPresetEntry,
   takeSnapshot,
@@ -128,6 +129,7 @@ const EMPTY: LibraryState = {
   setlists: [],
   entries: {},
   presets: [],
+  metronomeSongs: [],
   standalone: [],
   loaded: null,
   discarded: null,
@@ -476,7 +478,7 @@ function readActions(deps: LibraryDeps, set: SetState, get: Get) {
         repos.setlists.search(query),
         repos.presets.search(query),
       ]);
-      set({ results: { query, setlists, presets } });
+      set({ results: { query, setlists, presets: metronomeSongsOf(presets) } });
     },
   };
 }

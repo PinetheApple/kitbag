@@ -12,7 +12,6 @@ import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.uimanager.UIManagerHelper
 import com.kitbag.corenative.library.ClickSoundFiles
 import com.kitbag.corenative.library.LibraryErrors
-import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.DataFolder
 import com.kitbag.corenative.library.DataFolderUnavailableException
 import com.kitbag.corenative.library.MixdownExport
@@ -321,7 +320,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   override fun loadTrack(track: Double, relativePath: String, promise: Promise) {
     val file = try {
-      LibraryPaths.resolve(DataFolder.root(reactApplicationContext), relativePath)
+      DataFolder.get(reactApplicationContext).readable(relativePath)
     } catch (e: UnsafeLibraryPathException) {
       promise.reject(E_UNSAFE_PATH, "Track path escapes the library", e)
       return
