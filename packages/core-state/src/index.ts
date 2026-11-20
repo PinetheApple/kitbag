@@ -456,6 +456,13 @@ export {
 export { SKIP_SECONDS } from './stemPlayer/songTransport.ts';
 export { RETIME_PLAYBACK_RATE } from './stemPlayer/retimeSpeed.ts';
 export {
+  isUnitySpeed,
+  SPEED_PRESETS,
+  speedPercent,
+  steppedKey,
+  steppedSpeed,
+} from './stemPlayer/speedKey.ts';
+export {
   countedStart,
   type CountedStart,
   type CountedStartRequest,

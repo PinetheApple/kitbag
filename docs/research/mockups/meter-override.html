@@ -168,7 +168,7 @@ svg.i{fill:currentColor;display:block;flex:none}
 <div class="kicker">Section 0</div><h2>Where the control lives</h2>
 <p>One Meter row in each player's Player sheet, next to Count-in. Its value is the meter, plus "yours" while an override is set. A tap opens the Meter sheet (Section 1).</p>
 <div class="frames">
-<figure><figcaption><b>0a · Single-song player, ⋮ → Player</b>Re-analyse, Meter, Count-in, Stop. Count-in stays muted until count-in under a grid exists (#298), as in the binding file.</figcaption><div data-frame="songMenu"></div></figure>
+<figure><figcaption><b>0a · Single-song player, ⋮ → Player</b>Re-analyse, Meter, Count-in, Stop.</figcaption><div data-frame="songMenu"></div></figure>
 <figure><figcaption><b>0a · Daylight</b></figcaption><div data-frame="songMenu" data-theme="daylight"></div></figure>
 <figure><figcaption><b>0b · Stem player, ⋮ → Player</b>The variant C sheet with Meter added between Reset mix and Count-in. The stem screen behind the scrim is simplified; <code>kitbag-stems.html</code> binds it.</figcaption><div data-frame="stemMenu"></div></figure>
 <figure><figcaption><b>0b · Daylight</b></figcaption><div data-frame="stemMenu" data-theme="daylight"></div></figure>
@@ -293,7 +293,7 @@ const row=({icon,k,sub='',v='',on=false,cls=''})=>`<div class="srow t ${cls}">${
 const sheetWrap=(title,inner)=>`<div class="scrim"></div><div class="sheet"><div class="grab"></div><h4><span class="grow">${title}</span><span class="ib t" style="margin:-8px -10px -8px 0">${ic('close')}</span></h4>${inner}</div>`;
 function songMenu({meter,yours=false}={}){
   const m=meter||{icon:'metronome',k:'Meter',v:yours?'3/4 · yours':'3/4'};
-  return sheetWrap('Player',`<div>${row({icon:'refresh',k:'Re-analyse',sub:'Find the beat again'})}${row(m)}${row({icon:'timer-sand',k:'Count-in',v:'Off',cls:'dis',sub:'Arrives with count-in for songs'})}${row({icon:'stop',k:'Stop',sub:'Ends the song and the mini-player'})}</div>`);
+  return sheetWrap('Player',`<div>${row({icon:'refresh',k:'Re-analyse',sub:'Find the beat again'})}${row(m)}${row({icon:'timer-sand',k:'Count-in',v:'2 bars'})}${row({icon:'stop',k:'Stop',sub:'Ends the song and the mini-player'})}</div>`);
 }
 const yoursBadge=`<span class="badge">${ic('pencil-outline',12)}YOURS</span>`;
 function meterSheet({yours=false}={}){

@@ -34,4 +34,5 @@ export type SongPlayerActions = Pick<
     readonly tempoCorrectionSettled: (songId: number) => void;
     readonly playheadBeatSeconds: () => number | null;
     readonly dismissMeterNotice: () => void;
+    readonly saveForSong: () => Promise<void>;
   };

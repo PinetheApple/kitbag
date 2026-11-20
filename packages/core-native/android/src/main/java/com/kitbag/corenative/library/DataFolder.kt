@@ -122,6 +122,15 @@ class DataFolder(
   fun awayHolders(relativePath: String): Set<String> =
     awayManifest.load().orEmpty().filterValues { relativePath in it }.keys
 
+  fun awayUnder(relativePath: String, folderMatch: Boolean): List<AwayFiles> {
+    val away = awayManifest.load() ?: throw UnreadableStateException(AwayManifest.FILE_NAME)
+    val folderPrefix = "$relativePath/"
+    val under = away.mapValues { (_, paths) ->
+      paths.filterTo(HashSet()) { it == relativePath || folderMatch && it.startsWith(folderPrefix) }
+    }
+    return awayFiles(under.filterValues { it.isNotEmpty() })
+  }
+
   fun awayOn(volumeUuid: String): Set<String>? = awayManifest.load()?.let { it[volumeUuid].orEmpty() }
 
   fun awaySongCounts(volumeUuid: String): AwaySongCounts = AwaySongCounts.of(awayOn(volumeUuid).orEmpty())

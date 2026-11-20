@@ -1,7 +1,9 @@
 // StemDeck's own lane order and split names (app/core/config.py STEM_NAMES, EXTRA_STEM_NAMES).
+export const DRUMS_STEM = 'drums';
+
 const STEMDECK_BASE_STEMS = [
   'vocals',
-  'drums',
+  DRUMS_STEM,
   'bass',
   'guitar',
   'piano',

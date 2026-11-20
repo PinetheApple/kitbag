@@ -1,4 +1,5 @@
 import type {
+  LinkedPresetValues,
   NewSongPreset,
   Setlist,
   SetlistItem,
@@ -316,6 +317,22 @@ function findPreset(store: MemoryStore, id: number): SongPreset {
   return preset;
 }
 
+function linkedPreset(store: MemoryStore, songId: number) {
+  return store.tables.presets.find((p) => p.librarySongId === songId);
+}
+
+function saveLinkedPreset(
+  store: MemoryStore,
+  songId: number,
+  values: LinkedPresetValues,
+): SongPreset {
+  const linked = linkedPreset(store, songId);
+  if (linked === undefined)
+    return insertPreset(store, { ...values, librarySongId: songId });
+  Object.assign(linked, values);
+  return { ...linked };
+}
+
 function deletePreset(store: MemoryStore, id: number): void {
   const { tables } = store;
   tables.presets = tables.presets.filter((p) => p.id !== id);
@@ -347,6 +364,13 @@ export function createMemoryPresets(
     delete: mutating(store, (id: number) => {
       deletePreset(store, id);
     }),
+    forLibrarySong: (songId: number) =>
+      Promise.resolve(linkedPreset(store, songId)),
+    saveForLibrarySong: mutating(
+      store,
+      (songId: number, values: LinkedPresetValues) =>
+        saveLinkedPreset(store, songId, values),
+    ),
   };
 }
 

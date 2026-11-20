@@ -14,11 +14,11 @@ internal object CardReturn {
       LibraryPaths.resolve(cardRoot, path).takeIf { it.isFile }?.let { MoveEntry(path, it.length(), it.lastModified()) }
     }
 
+  fun drop(targetRoot: File, path: String) = MoveFiles.deleteCopy(stagingRoot(targetRoot), path)
+
   fun stagingRoot(targetRoot: File) = File(targetRoot, STAGING_DIR_NAME)
 
   fun stagedPath(path: String) = "$STAGING_DIR_NAME/$path"
-
-  fun discard(targetRoot: File, path: String) = MoveFiles.deleteCopy(stagingRoot(targetRoot), path)
 
   // No staged file: placed by an earlier attempt, or placed and since deleted with its song.
   fun place(targetRoot: File, path: String) {

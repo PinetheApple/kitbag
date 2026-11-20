@@ -13,6 +13,7 @@ import {
 } from '@kitbag/core-state';
 import { useCallback } from 'react';
 
+import { countInOptionLabel } from '../logic/clickChipText.ts';
 import { lockBadgeOf } from '../logic/lockText.ts';
 import { canReanalyze } from '../logic/notices.ts';
 import { METER_FAILED, meterGridState } from '../logic/songMeterText.ts';
@@ -31,9 +32,8 @@ interface SongPlayerMenuProps {
   readonly onBack: () => void;
   readonly onMeter: () => void;
   readonly onTempoCorrection: () => void;
+  readonly onCountIn: () => void;
 }
-
-const doNothing = () => undefined;
 const UNPLAYABLE: ReadonlySet<StemPlayerStatus> = new Set([
   'failed',
   'missing',
@@ -60,6 +60,12 @@ function useGridRowState(): MeterGridState {
 const gridRowReason = (state: MeterGridState) =>
   state === 'failed' ? METER_FAILED : meterCopy.pending;
 
+function useGridGatedRow() {
+  const state = useGridRowState();
+  const disabled = state !== 'ready';
+  return { disabled, detail: disabled ? gridRowReason(state) : undefined };
+}
+
 function SongMeterRow({ onPress }: RowProps) {
   const override = useSongPlayer((s) => s.meterOverride);
   const detected = useSongPlayer((s) => s.detected.meter);
@@ -78,16 +84,30 @@ function SongMeterRow({ onPress }: RowProps) {
 function TempoCorrectionRow({ onPress }: RowProps) {
   const correction = useSongPlayer((s) => s.tempoCorrection);
   const detectedBpm = useSongPlayer((s) => s.detectedBpm);
-  const state = useGridRowState();
-  const disabled = state !== 'ready';
+  const { disabled, detail } = useGridGatedRow();
   const value = tempoCorrectionValue(correction, detectedBpm);
   return (
     <MenuRow
       icon="tempoCorrection"
       label={TEMPO_CORRECTION_COPY.title}
-      detail={disabled ? gridRowReason(state) : undefined}
+      detail={detail}
       value={disabled ? undefined : value.shown}
       spokenValue={disabled ? undefined : value.spoken}
+      disabled={disabled}
+      onPress={onPress}
+    />
+  );
+}
+
+function CountInRow({ onPress }: RowProps) {
+  const bars = useSongPlayer((s) => s.clickSettings.countInBars);
+  const { disabled, detail } = useGridGatedRow();
+  return (
+    <MenuRow
+      icon="countIn"
+      label={PLAYER_MENU_TEXT.countIn}
+      detail={detail}
+      value={disabled ? undefined : countInOptionLabel(bars)}
       disabled={disabled}
       onPress={onPress}
     />
@@ -102,6 +122,7 @@ export function SongPlayerMenu({
   onBack,
   onMeter,
   onTempoCorrection,
+  onCountIn,
 }: SongPlayerMenuProps) {
   const close = useSongPlayer((s) => s.close);
   const reanalyze = useSongLibrary((s) => s.reanalyze);
@@ -123,6 +144,10 @@ export function SongPlayerMenu({
     onDismiss();
     onTempoCorrection();
   }, [onDismiss, onTempoCorrection]);
+  const openCountIn = useCallback(() => {
+    onDismiss();
+    onCountIn();
+  }, [onDismiss, onCountIn]);
   return (
     <Sheet
       visible={visible}
@@ -141,14 +166,7 @@ export function SongPlayerMenu({
       ) : null}
       <SongMeterRow onPress={openMeter} />
       <TempoCorrectionRow onPress={openTempoCorrection} />
-      <MenuRow
-        icon="countIn"
-        label={PLAYER_MENU_TEXT.countIn}
-        value={PLAYER_MENU_TEXT.countInValue}
-        detail={PLAYER_MENU_TEXT.countInDetail}
-        disabled
-        onPress={doNothing}
-      />
+      <CountInRow onPress={openCountIn} />
       <MenuRow
         icon="stop"
         label={PLAYER_MENU_TEXT.stop}

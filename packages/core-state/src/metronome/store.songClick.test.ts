@@ -223,6 +223,36 @@ const EDITS: readonly Edit[] = [
   },
 ];
 
+function owedAfterLending() {
+  const fixture = standalone();
+  fixture.songClick.turnOff();
+  fixture.engine.commands.setSounds(NORMAL_SOUND, ACCENT_SOUND);
+  fixture.store.getState().owePattern();
+  return fixture;
+}
+
+describe('a pattern owed after a song lent its sounds', () => {
+  it('is what the next start plays', () => {
+    const { engine, store, stored } = owedAfterLending();
+    store.getState().start();
+    expect(engine.atStart()).toEqual(stored());
+  });
+
+  it('is sent whole by the next edit with the click inactive', () => {
+    const { engine, store, stored } = owedAfterLending();
+    store.getState().setSubdivision(EDITED_SUBDIVISION);
+    expect(engine.pattern()).toEqual(stored());
+  });
+
+  it('sends nothing until a start or an edit', () => {
+    const { engine, store } = standalone();
+    store.getState().owePattern();
+    Object.values(engine.commands).forEach((command) => {
+      expect(command).not.toHaveBeenCalled();
+    });
+  });
+});
+
 describe("standalone edits while a song's click runs", () => {
   it.each(EDITS)('$name updates the store but not the engine', (edit) => {
     const { engine, store, stored } = standalone();

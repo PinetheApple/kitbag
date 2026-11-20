@@ -70,7 +70,7 @@ interface SongClickContext {
 
 type SongMeter = Pick<SongClickSlice, 'meterOverride' | 'detected'>;
 
-function songMeter({ meterOverride, detected }: SongMeter): number {
+export function songMeter({ meterOverride, detected }: SongMeter): number {
   return meterOverride.meterBeatsPerBar ?? detected.meter;
 }
 
@@ -83,8 +83,12 @@ function settingsChange({ set, get }: SongClickContext) {
   };
 }
 
-export function songClickEngine(context: SongClickContext) {
-  const { get, metronome } = context;
+interface SongClickEngineContext extends SongClickContext {
+  readonly counting: () => boolean;
+}
+
+export function songClickEngine(context: SongClickEngineContext) {
+  const { get, metronome, counting } = context;
   const { commands } = metronome;
   const change = settingsChange(context);
 
@@ -93,6 +97,15 @@ export function songClickEngine(context: SongClickContext) {
     accents.forEach((accent, beat) => {
       commands.setAccent(beat, accent);
     });
+  };
+
+  const owe = () => {
+    metronome.store.getState().owePattern();
+  };
+
+  const giveBack = () => {
+    const { sounds, accents } = metronome.store.getState();
+    push(sounds, accents);
   };
 
   const fittedTo = (song: SongMeter): SongClickSettings => {
@@ -114,10 +127,19 @@ export function songClickEngine(context: SongClickContext) {
       const { sounds, accents } = get().clickSettings;
       push(sounds, accents);
     },
+    countArmed: () => {
+      if (get().click) return;
+      const { sounds } = get().clickSettings;
+      commands.setSounds(sounds.normal, sounds.accent);
+      owe();
+    },
+    countDropped: () => {
+      if (!get().click) giveBack();
+    },
     followSong: (state: SongClickSlice, previous: SongClickSlice) => {
       if (previous.click && !state.click) {
-        const { sounds, accents } = metronome.store.getState();
-        push(sounds, accents);
+        if (counting()) owe();
+        else giveBack();
       }
       const meterChanged = songMeter(state) !== songMeter(previous);
       if (state.songId !== null && meterChanged) fitToMeter(state);

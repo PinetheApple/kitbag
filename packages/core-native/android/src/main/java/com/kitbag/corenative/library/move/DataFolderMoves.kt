@@ -16,7 +16,7 @@ internal const val MOVE_LOG_TAG = "KitbagDataFolderMove"
 class DataFolderMoves(
   val folder: DataFolder,
   journal: MoveJournal,
-  leftovers: AwayManifest,
+  val leftovers: AwayManifest,
   availableBytes: (File) -> Long,
   mixdownRunning: () -> Boolean,
   private val now: () -> Long = System::currentTimeMillis,
