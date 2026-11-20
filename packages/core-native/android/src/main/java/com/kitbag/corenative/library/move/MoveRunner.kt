@@ -6,6 +6,7 @@ import com.kitbag.corenative.library.DataFolderLocation
 import com.kitbag.corenative.library.DurableFiles
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.RootState
+import com.kitbag.corenative.library.SongAnalyzer
 import com.kitbag.corenative.library.UnreadableStateException
 import java.io.File
 import java.io.IOException
@@ -33,6 +34,7 @@ class MoveRunner(
   private val availableBytes: (File) -> Long,
   private val gate: ReleaseGate,
   private val listener: (MoveProgress) -> Unit = {},
+  private val isWaveformSidecar: (relativePath: String) -> Boolean = { SongAnalyzer.isWaveformSidecar(it) },
 ) {
   private class Stop(val outcome: MoveOutcome) : Exception()
 
@@ -157,11 +159,16 @@ class MoveRunner(
 
   private fun preflight(state: MoveState): MoveState {
     val targetRoot = mountedRoot(state.target) ?: refuse(MoveFailure.TARGET_UNAVAILABLE)
-    if (state.files.any { File(targetRoot, it.path).exists() }) refuse(MoveFailure.TARGET_OCCUPIED)
-    if (state.kind == MoveKind.CARD_RETURN) CardReturn.stagingRoot(targetRoot).deleteRecursively()
+    val occupied = state.files.filter { File(targetRoot, it.path).exists() }
+    val cardReturn = state.kind == MoveKind.CARD_RETURN
+    val superseded = if (cardReturn) occupied.filter { isWaveformSidecar(it.path) } else emptyList()
+    if (occupied.size > superseded.size) refuse(MoveFailure.TARGET_OCCUPIED)
+    val planned = state.copy(files = state.files - superseded.toSet())
+    if (cardReturn) CardReturn.stagingRoot(targetRoot).deleteRecursively()
     if (!MoveFiles.canWrite(targetRoot)) refuse(MoveFailure.TARGET_NOT_WRITABLE)
-    if (availableBytes(targetRoot) < state.totalBytes + FREE_SPACE_MARGIN_BYTES) refuse(MoveFailure.NO_SPACE)
-    return save(state.copy(phase = MovePhase.COPYING))
+    if (availableBytes(targetRoot) < planned.totalBytes + FREE_SPACE_MARGIN_BYTES) refuse(MoveFailure.NO_SPACE)
+    superseded.forEach { supersede(it.path) }
+    return save(planned.copy(phase = MovePhase.COPYING))
   }
 
   private fun refuse(failure: MoveFailure): Nothing {
@@ -260,8 +267,9 @@ class MoveRunner(
   private fun placeReturned(state: MoveState) {
     val card = state.source as DataFolderLocation.Card
     val targetRoot = mountedRoot(state.target) ?: throw Stop(MoveOutcome.Failed(MoveFailure.TARGET_UNAVAILABLE))
+    val stillAway = folder.awayOn(card.volumeUuid) ?: throw UnreadableStateException(AwayManifest.FILE_NAME)
     for (entry in state.files) {
-      CardReturn.place(targetRoot, entry.path)
+      if (entry.path in stillAway) CardReturn.place(targetRoot, entry.path) else CardReturn.drop(targetRoot, entry.path)
       emit(state, entry.path)
     }
     folder.forgetAway(card.volumeUuid, state.files.map { it.path })
@@ -280,6 +288,15 @@ class MoveRunner(
   private fun copyPath(state: MoveState, path: String): String =
     if (state.kind == MoveKind.CARD_RETURN) CardReturn.stagedPath(path) else path
 
+  // Parked before it leaves the away list, so the card copy is always in at least one of the two.
+  @Synchronized
+  fun supersede(relativePath: String) {
+    for (volumeUuid in folder.awayHolders(relativePath)) {
+      leftovers.record(volumeUuid, listOf(relativePath))
+      folder.forgetAway(volumeUuid, listOf(relativePath))
+    }
+  }
+
   @Synchronized
   fun finishLeftovers(): Boolean {
     val parked = leftovers.load() ?: return false
@@ -292,6 +309,7 @@ class MoveRunner(
         finished = false
         continue
       }
+      folder.forgetAway(volumeUuid, paths)
       val kept = paths.filterTo(HashSet()) { !deleted(root, it) }
       leftovers.replace(volumeUuid, kept)
       finished = finished && kept.isEmpty()

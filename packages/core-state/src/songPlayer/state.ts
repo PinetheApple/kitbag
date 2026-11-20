@@ -28,6 +28,7 @@ export interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
   readonly detected: DetectedMeter;
   readonly meterNotice: DetectedMeter | null;
   readonly clickSettings: SongClickSettings;
+  readonly countEndFrame: number | null;
 }
 
 export const closedState: SongPlayerState = {
@@ -51,6 +52,7 @@ export const closedState: SongPlayerState = {
   loopFailure: null,
   click: false,
   clickSettings: CLOSED_CLICK_SETTINGS,
+  countEndFrame: null,
 };
 
 type SongFacts = Pick<

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   configureStemPlayer: vi.fn(),
+  startAutoAdvance: vi.fn(),
   native: {
     mixerSetRate: vi.fn(() => Promise.resolve(0)),
     mixerRate: vi.fn(() => Promise.resolve(1)),
@@ -21,6 +22,7 @@ vi.mock('@kitbag/core-native', () => ({
 }));
 vi.mock('@kitbag/core-state', () => ({
   configureStemPlayer: mocks.configureStemPlayer,
+  startAutoAdvance: mocks.startAutoAdvance,
 }));
 vi.mock('./database.ts', () => ({ getDatabase: vi.fn() }));
 vi.mock('./mixdownRuntime.ts', () => ({ mixdownRuntime: {} }));
@@ -37,6 +39,14 @@ const [runtime] = mocks.configureStemPlayer.mock.lastCall as unknown as [
   StemPlayerRuntime,
 ];
 const { commands } = runtime;
+const [configured] = mocks.configureStemPlayer.mock.invocationCallOrder;
+const [advanceStarted] = mocks.startAutoAdvance.mock.invocationCallOrder;
+
+describe('stem player start-up', () => {
+  it('starts auto-advance after the player is configured', () => {
+    expect(advanceStarted).toBeGreaterThan(configured ?? Infinity);
+  });
+});
 
 describe('stem player speed and key commands', () => {
   beforeEach(() => {

@@ -51,6 +51,9 @@ export type StemPlayerCommands = Pick<
   ) => {
     readonly remove: () => void;
   };
+  readonly onSongEnded: (handler: () => void) => {
+    readonly remove: () => void;
+  };
 };
 
 // Synchronous HostObject reads, taken at human speed on the JS thread.
@@ -70,6 +73,7 @@ export type StemPlayerRecords = Pick<
   | 'saveStemSetMeterOverride'
   | 'saveStemSetClick'
   | 'saveStemSetChosenTempoMode'
+  | 'saveStemSetSpeedKey'
 >;
 
 // The metronome tool's transport, running or paused behind its notification;

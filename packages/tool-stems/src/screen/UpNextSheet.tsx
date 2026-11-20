@@ -33,6 +33,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { SEPARATOR } from '../stemDeck/logic/songFacts.ts';
+import { PLAYING } from '../logic/playOrderText.ts';
 import { clearQueueBody, setlistRowSubtitle } from '../logic/upNextText.ts';
 import { UP_NEXT } from './UpNextRow.tsx';
 import {
@@ -66,7 +67,7 @@ function NowPlaying() {
   const setId = useStemPlayer((s) => s.setId);
   const stems = useStemSongs();
   const facts = setId === null ? '' : stemFacts(setId, stems);
-  const subtitle = ['Playing', facts]
+  const subtitle = [PLAYING, facts]
     .filter((part) => part !== '')
     .join(SEPARATOR);
   return (

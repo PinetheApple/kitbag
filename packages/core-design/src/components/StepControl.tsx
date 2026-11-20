@@ -229,6 +229,13 @@ const useStyles = createThemedStyles((theme) => ({
     ...textStyle(textRoles.stepInlineValue),
     color: theme.color.text,
   },
+  inlineClusterAccented: {
+    backgroundColor: theme.activeControlFill,
+    borderColor: theme.color.accentDim,
+  },
+  inlineValueAccented: {
+    color: theme.color[theme.accentInk],
+  },
   largeCluster: {
     minHeight: size.stepInlineLarge,
     paddingVertical: 0,
@@ -355,7 +362,11 @@ export function StepControl({
     <Text
       style={
         inline
-          ? [styles.inlineValue, large && styles.largeValue]
+          ? [
+              styles.inlineValue,
+              large && styles.largeValue,
+              accented && styles.inlineValueAccented,
+            ]
           : [styles.badgeValue, accented && styles.badgeValueAccented]
       }
     >
@@ -385,7 +396,11 @@ export function StepControl({
       onAccessibilityAction={handleAccessibilityAction}
       style={
         inline
-          ? [styles.inlineCluster, large && styles.largeCluster]
+          ? [
+              styles.inlineCluster,
+              large && styles.largeCluster,
+              accented && styles.inlineClusterAccented,
+            ]
           : styles.badgeCluster
       }
     >

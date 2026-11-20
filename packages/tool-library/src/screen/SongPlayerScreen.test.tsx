@@ -14,6 +14,7 @@ import {
 } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { SONG_CLICK_TEXT } from '../logic/clickChipText.ts';
 import { METER_FAILED } from '../logic/songMeterText.ts';
 import {
   LOOP_KEY_TEXT,
@@ -567,8 +568,24 @@ describe('the player menu', () => {
     ]);
   });
 
-  it('keeps Count-in muted until count-in for songs exists', () => {
-    expect(menuButton(openMenu(), 'Count-in').props.disabled).toBe(true);
+  it("shows the song's count-in and opens the click sheet at it", () => {
+    const tree = openMenu();
+    const row = menuButton(tree, 'Count-in');
+    expect(row.props).toMatchObject({ value: 'Off', disabled: false });
+    act(() => {
+      (row.props.onPress as () => void)();
+    });
+    const [sheet] = tree.root.findAllByType('Sheet' as never);
+    expect(sheet?.props.title).toBe(SONG_CLICK_TEXT.title);
+  });
+
+  it('disables Count-in while the beat is found and says why', () => {
+    display.analysis = { analysisStatus: 'analyzing', beats: [] };
+    expect(menuButton(openMenu(), 'Count-in').props).toMatchObject({
+      disabled: true,
+      detail: 'Available once the beat is found',
+      value: undefined,
+    });
   });
 
   it('shows the detected meter, then the override as yours', () => {

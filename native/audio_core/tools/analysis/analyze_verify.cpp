@@ -192,6 +192,12 @@ void TestSidecarRoundTrip(const std::filesystem::path& dir) {
   const std::string kwav =
       kitbag::SidecarPath(dir.string().c_str(), wav.c_str());
   kitbag_test::Check(ReadSidecar(kwav, &sc), "sidecar: file written and read");
+  kitbag_test::Check(kitbag::IsSidecarPath(kwav), "sidecar: path is a sidecar");
+  kitbag_test::Check(!kitbag::IsSidecarPath(wav), "sidecar: song is not");
+  kitbag_test::Check(
+      !kitbag::IsSidecarPath(kwav + ".part"),
+      "sidecar: a partial sidecar is not"
+  );
   CheckSidecarFields(sc, kFrames, expected_chunks);
   std::filesystem::remove(wav);
   std::filesystem::remove(kwav);
@@ -261,7 +267,7 @@ void RunGuardTests() {
 
 }  // namespace
 
-constexpr int kExpectedChecks = 184;
+constexpr int kExpectedChecks = 187;
 
 int Verdict() {
   if (kitbag_test::g_checks != kExpectedChecks) {

@@ -1,7 +1,5 @@
 import {
   meterOverrideOf,
-  NO_CLICK,
-  NO_METER_OVERRIDE,
   type BundleTempo,
   type ClickRate,
   type MeterOverride,
@@ -9,13 +7,13 @@ import {
   type StoredSection,
   type TempoMode,
 } from '@kitbag/core-db';
-import { KB_MAX_TRACKS, KB_RESULT } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { mixActions, transportActions } from './actions.ts';
 import { sameNumbers } from './bars.ts';
 import { clickActions, followNewGrid, releaseClick } from './clickActions.ts';
 import { clickShapeActions } from './clickShape.ts';
+import { closedState } from './closedState.ts';
 import {
   exportActions,
   exportAfterLeaving,
@@ -23,17 +21,11 @@ import {
   type ExportActions,
   type ExportSlice,
 } from './exportActions.ts';
-import { NO_SONG_FACTS, type SongFacts } from './facts.ts';
+import type { SongFacts } from './facts.ts';
 import type { LoopEdge, LoopSeconds } from './loop.ts';
 import { sectionLoopActions } from './loopActions.ts';
-import { FALLBACK_BEATS_PER_BAR } from './barMeter.ts';
 import { overrideDownbeats } from './meterOverride.ts';
-import {
-  NO_LYRICS,
-  songLyrics,
-  type RetimeTap,
-  type SongLyrics,
-} from './lyrics.ts';
+import { songLyrics, type RetimeTap, type SongLyrics } from './lyrics.ts';
 import { UNITY_GAIN } from './mix.ts';
 import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
 import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
@@ -47,7 +39,16 @@ import { renameActions } from './renameActions.ts';
 import { retimeActions, retimeAnchor } from './retimeActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
 import { sortedSections } from './sections.ts';
+import {
+  advanceSong,
+  endedOnLastFrame,
+  songEnds,
+  type AdvanceOutcome,
+} from './songEnd.ts';
 import { countPending, songStart } from './songStart.ts';
+import { loadTracks, loadWaveforms, rowsOf } from './stemTracks.ts';
+import { clampedSpeed, wholeKey } from './speedKey.ts';
+import { speedKeySession } from './speedKeyActions.ts';
 import { songGrid, tempoActions } from './tempoActions.ts';
 import { longestSeconds, tempoModeOf } from './tempoGrid.ts';
 import { framesToSeconds, secondsToFrames } from './time.ts';
@@ -58,6 +59,9 @@ export const SCRUB_SEEK_DELAY_MS = 120;
 export interface StemRow {
   readonly id: number;
   readonly name: string;
+  readonly role: string;
+  readonly transposable: boolean;
+  readonly key: number;
   readonly volume: number;
   readonly muted: boolean;
   readonly soloed: boolean;
@@ -98,6 +102,9 @@ export interface StemPlayerState {
   readonly title: string;
   readonly artist: string | null;
   readonly facts: SongFacts;
+  readonly recordedFacts: SongFacts;
+  readonly speed: number;
+  readonly songKey: number;
   readonly stems: readonly StemRow[];
   readonly overLimit: number;
   readonly masterGain: number;
@@ -117,6 +124,9 @@ export interface StemPlayerState {
   readonly clickGrouping: readonly number[];
   readonly clickRate: ClickRate;
   readonly countEndFrame: number | null;
+  readonly countBeatsPerBar: number;
+  readonly advancedTo: number | null;
+  readonly advanceCountEnd: number | null;
   readonly sections: readonly StoredSection[];
   readonly lyrics: SongLyrics;
   readonly retime: RetimeState;
@@ -126,12 +136,20 @@ export interface StemPlayerState {
 export interface StemPlayerActions {
   readonly open: (setId: number, waveformBars: number) => Promise<void>;
   readonly acquireSong: (setId: number, waveformBars: number) => MixerHold;
+  readonly advanceTo: (setId: number) => Promise<AdvanceOutcome>;
+  readonly onSongEnd: (listener: () => void) => () => void;
+  readonly songStillEnded: () => boolean;
+  readonly stopAdvancing: () => void;
   readonly close: () => void;
   readonly setGain: (index: number, gain: number) => void;
   readonly toggleMute: (index: number) => void;
   readonly solo: (index: number, additive: boolean) => void;
   readonly setMasterGain: (gain: number) => void;
   readonly resetMix: () => void;
+  readonly setSpeed: (speed: number) => Promise<void>;
+  readonly setSongKey: (key: number) => Promise<void>;
+  readonly setStemKey: (index: number, key: number) => Promise<void>;
+  readonly resetSpeedKey: () => Promise<void>;
   readonly togglePlay: () => void;
   readonly scrub: (frame: number) => void;
   readonly cancelScrub: () => void;
@@ -191,76 +209,6 @@ export interface StemPlayerOptions extends Partial<StemPlayerTiming> {
   readonly mixerClick?: MixerClick;
 }
 
-const closedState: StemPlayerState = {
-  status: 'idle',
-  setId: null,
-  title: '',
-  artist: null,
-  facts: NO_SONG_FACTS,
-  stems: [],
-  overLimit: 0,
-  masterGain: UNITY_GAIN,
-  engineRate: 0,
-  durationFrames: 0,
-  beats: [],
-  downbeatIndices: [],
-  meterOverride: NO_METER_OVERRIDE,
-  detectedMeter: FALLBACK_BEATS_PER_BAR,
-  detectedBarOneSeconds: 0,
-  tempo: null,
-  tempoMode: null,
-  loop: { kind: 'off' },
-  loopFailure: null,
-  undoableLoop: null,
-  click: false,
-  ...NO_CLICK,
-  countEndFrame: null,
-  sections: [],
-  lyrics: NO_LYRICS,
-  retime: { kind: 'off' },
-  retimeFailure: null,
-};
-
-function rowsOf(record: StemSetRecord): StemRow[] {
-  const longest = longestSeconds(record);
-  return record.stems.slice(0, KB_MAX_TRACKS).map((stem) => ({
-    id: stem.id,
-    name: stem.name,
-    volume: stem.volume,
-    muted: stem.muted,
-    soloed: stem.soloed,
-    loaded: false,
-    envelope: null,
-    extent: longest > 0 ? stem.durationSec / longest : 1,
-  }));
-}
-
-async function loadTracks(
-  runtime: StemPlayerRuntime,
-  record: StemSetRecord,
-  rows: readonly StemRow[],
-  isLive: () => boolean,
-): Promise<StemRow[]> {
-  const { commands } = runtime;
-  const results = await Promise.all(
-    rows.map((_, track) =>
-      commands
-        .loadTrack(track, record.stems[track]?.filePath ?? '')
-        .catch(() => KB_RESULT.KB_ERROR_INVALID_ARGUMENT),
-    ),
-  );
-  // The mixer ignores mix commands for a track it has not loaded yet.
-  return rows.map((row, track) => {
-    const loaded = results[track] === KB_RESULT.KB_OK;
-    if (loaded && isLive()) {
-      commands.mixerSetGain(track, row.volume);
-      commands.mixerSetMute(track, row.muted);
-      commands.mixerSetSolo(track, row.soloed);
-    }
-    return { ...row, loaded };
-  });
-}
-
 export function createStemPlayerStore(
   runtimeOf: () => StemPlayerRuntime = getStemPlayer,
   options: StemPlayerOptions = {},
@@ -274,6 +222,7 @@ export function createStemPlayerStore(
   let requestedTracks = 0;
   let markedDownbeatIndices: readonly number[] = [];
   let openRecord: StemSetRecord | null = null;
+  let waveformBars = 0;
   const saver = mixSaver(
     (mixes) => runtimeOf().records.saveStemMix(mixes),
     mixSaveDelayMs,
@@ -327,6 +276,11 @@ export function createStemPlayerStore(
     mixer.onScrubSeek(start.afterSeek);
     mixer.onClickReleased(start.endCountNow);
     const card = showCountOnSongCard(store, runtimeOf, start.counting);
+    const ends = songEnds(
+      () => endedOnLastFrame(get(), runtimeOf().engine, start.counting()),
+      mixer.current,
+    );
+    mixer.onSongEnded(ends.reported);
     mixer.onSongStopped(() => {
       card.stopped();
       start.songStopped();
@@ -342,6 +296,7 @@ export function createStemPlayerStore(
         },
       }),
     );
+    const speedKey = speedKeySession(context, start.rateSet, () => openRecord);
     const clickShape = clickShapeActions(context);
     const clicks = clickActions(context, mixer.pendingClick, {
       recountWithClickOff: start.recountWithClickOff,
@@ -359,7 +314,12 @@ export function createStemPlayerStore(
     };
     const applyGrid = (mode: TempoMode) => {
       if (openRecord === null) return;
-      const { marked, state } = songGrid(openRecord, mode, get().meterOverride);
+      const { marked, state } = songGrid(
+        openRecord,
+        mode,
+        get().meterOverride,
+        speedKey.shift(),
+      );
       markedDownbeatIndices = marked;
       set(state);
       void followNewGrid(context, followers);
@@ -369,30 +329,6 @@ export function createStemPlayerStore(
       anchorRetime(frame);
       start.afterSeek(frame);
     };
-    const loadWaveforms = (
-      opened: number,
-      record: StemSetRecord,
-      bars: number,
-    ) => {
-      get().stems.forEach((row, track) => {
-        const path = record.stems[track]?.waveformPath ?? null;
-        if (path === null) return;
-        runtimeOf()
-          .readWaveform(path, bars)
-          .then((envelope) => {
-            if (!live(opened)) return;
-            set((s) => ({
-              stems: s.stems.map((r) =>
-                r.id === row.id ? { ...r, envelope } : r,
-              ),
-            }));
-          })
-          .catch((error: unknown) => {
-            console.warn('[kitbag] stem waveform unreadable', error);
-          });
-      });
-    };
-
     const load = async (opened: number, setId: number, bars: number) => {
       const runtime = runtimeOf();
       const { commands } = runtime;
@@ -405,6 +341,14 @@ export function createStemPlayerStore(
       const engineRate = await mixer.startEngine(opened);
       if (engineRate === null) return;
       if (!(await mixer.clearSessionLeftovers(opened))) return;
+      const speed = await mixer.applyOpeningRate(
+        opened,
+        clampedSpeed(record.speed),
+      );
+      if (speed === null) return;
+      speedKey.persisted.speed = record.speed;
+      start.rateSet(speed);
+      const songKey = wholeKey(record.pitch);
       const rows = rowsOf(record);
       requestedTracks = rows.length;
       const stems = await loadTracks(runtime, record, rows, () => live(opened));
@@ -412,7 +356,10 @@ export function createStemPlayerStore(
       if (!live(opened)) return;
       openRecord = record;
       const override = meterOverrideOf(record);
-      const grid = songGrid(record, tempoModeOf(record), override);
+      const grid = songGrid(record, tempoModeOf(record), override, {
+        speed,
+        key: songKey,
+      });
       markedDownbeatIndices = grid.marked;
       set({
         status: 'ready',
@@ -420,6 +367,8 @@ export function createStemPlayerStore(
         artist: record.artist,
         ...grid.state,
         meterOverride: override,
+        speed,
+        songKey,
         tempo: record.tempo,
         stems,
         overLimit: record.stems.length - rows.length,
@@ -431,21 +380,21 @@ export function createStemPlayerStore(
         sections: sortedSections(record.sections),
         lyrics: songLyrics(record.lyrics, record.lyricsRetimed),
       });
-      loadWaveforms(opened, record, bars);
+      loadWaveforms(context, () => live(opened), record, bars);
     };
 
-    const beginSession = (setId: number) => {
-      const opened = mixer.begin();
+    const showLoading = (setId: number, advancedTo: number | null = null) => {
       set({
         ...closedState,
         exportState: exportAfterLeaving(get().exportState),
         status: 'loading',
         setId,
+        advancedTo,
       });
-      return opened;
     };
 
     const loadSession = async (opened: number, setId: number, bars: number) => {
+      waveformBars = bars;
       try {
         await load(opened, setId, bars);
       } catch (error: unknown) {
@@ -457,15 +406,42 @@ export function createStemPlayerStore(
     return {
       ...closedState,
       exportState: NO_EXPORT,
-      open: async (setId, waveformBars) => {
-        await loadSession(beginSession(setId), setId, waveformBars);
+      open: async (setId, bars) => {
+        const opened = mixer.begin();
+        showLoading(setId);
+        await loadSession(opened, setId, bars);
       },
       // Across an Activity relaunch the new screen can acquire before the old
       // one unmounts, so a release only closes the session it acquired.
-      acquireSong: (setId, waveformBars) => {
-        const acquired = beginSession(setId);
-        void loadSession(acquired, setId, waveformBars);
+      acquireSong: (setId, bars) => {
+        const acquired = mixer.begin();
+        showLoading(setId);
+        void loadSession(acquired, setId, bars);
         return mixer.hold(acquired);
+      },
+      advanceTo: (setId) =>
+        advanceSong(
+          {
+            ends,
+            begin: (id) => {
+              const opened = mixer.advance();
+              showLoading(id, id);
+              return opened;
+            },
+            load: (opened, id) => loadSession(opened, id, waveformBars),
+            live,
+            ready: () => get().status === 'ready',
+            play: () => {
+              get().togglePlay();
+              set({ advanceCountEnd: get().countEndFrame });
+            },
+          },
+          setId,
+        ),
+      onSongEnd: ends.subscribe,
+      songStillEnded: ends.stands,
+      stopAdvancing: () => {
+        if (ends.gaveUp()) runtimeOf().commands.songTransportHide();
       },
       close: mixer.close,
       ...mixActions(set, get, runtimeOf, saver),
@@ -475,7 +451,8 @@ export function createStemPlayerStore(
       ...clickShape.actions,
       ...renameActions(context),
       ...tempoActions(context, applyGrid),
-      ...retimeActions(context, claim.defer, start),
+      ...retimeActions(context, claim.defer, start, speedKey.rates),
+      ...speedKey.actions,
       meterOverrideChanged: (setId, override) => {
         const { status, setId: openSet, beats, downbeatIndices } = get();
         if (status !== 'ready' || openSet !== setId) return;

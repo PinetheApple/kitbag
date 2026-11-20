@@ -137,6 +137,7 @@ class PlaybackService : Service() {
       ::postSong,
       { songRequestListener },
       fences.song,
+      { songEndedListener?.invoke() },
     ) { songStopped() }.also { song = it }
     songCard.show(
       next,
@@ -367,6 +368,8 @@ class PlaybackService : Service() {
     @Volatile var listener: ((TransportChange) -> Unit)? = null
 
     @Volatile var songStoppedListener: (() -> Unit)? = null
+
+    @Volatile var songEndedListener: (() -> Unit)? = null
 
     @Volatile var songRequestListener: ((SongCommand) -> Unit)? = null
 

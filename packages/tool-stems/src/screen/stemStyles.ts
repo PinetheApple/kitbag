@@ -66,6 +66,10 @@ export const useStemStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
   },
   nameQuiet: { color: theme.color.text3 },
+  keyTag: {
+    ...textStyle(textRoles.keyBadge),
+    color: theme.color[theme.accentInk],
+  },
   nameMaster: { color: theme.color.text2 },
   level: {
     minHeight: stemPlayer.levelHeight,

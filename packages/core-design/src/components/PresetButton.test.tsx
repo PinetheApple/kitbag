@@ -4,6 +4,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 
 import { inset, textRoles } from '../roles.ts';
+import { themes } from '../theme.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { PresetButton, type PresetButtonKind } from './PresetButton.tsx';
 
@@ -45,13 +46,22 @@ const GROWN_FONT_SCALE = 2;
 const KINDS: readonly PresetButtonKind[] = ['preset', 'action'];
 const ROLE = { preset: textRoles.preset, action: textRoles.presetAction };
 
-function renderAt(fontScale: number, kind: PresetButtonKind = 'preset') {
+function renderAt(
+  fontScale: number,
+  kind: PresetButtonKind = 'preset',
+  selected = false,
+) {
   display.fontScale = fontScale;
   faces.length = 0;
   fits.length = 0;
   renderToStaticMarkup(
     <ThemeProvider mode="dark">
-      <PresetButton kind={kind} label={LABEL} onPress={vi.fn()} />
+      <PresetButton
+        kind={kind}
+        label={LABEL}
+        selected={selected}
+        onPress={vi.fn()}
+      />
     </ThemeProvider>,
   );
 }
@@ -90,5 +100,20 @@ describe('PresetButton under font scale', () => {
     const style = StyleSheet.flatten(box[0]?.style as StyleProp<ViewStyle>);
     expect(style.alignSelf).toBe('stretch');
     expect(style.paddingHorizontal).toBeUndefined();
+  });
+});
+
+describe('PresetButton selected', () => {
+  it('takes the active fill and border only when selected', () => {
+    const { activeControlFill, color } = themes.dark;
+    const face = () =>
+      StyleSheet.flatten(faces[0]?.style as StyleProp<ViewStyle>);
+    renderAt(1, 'preset', true);
+    expect(face()).toMatchObject({
+      backgroundColor: activeControlFill,
+      borderColor: color.accentDim,
+    });
+    renderAt(1);
+    expect(face().backgroundColor).toBe(color.surface2);
   });
 });

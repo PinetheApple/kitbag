@@ -9,10 +9,11 @@ import {
   type LibraryStemSetRow,
   type PlayOrderRepositories,
 } from '@kitbag/core-state';
-import { Snackbar } from '@kitbag/core-design';
+import { Sheet, Snackbar } from '@kitbag/core-design';
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { SpeedKeySheet } from './SpeedKeySheet.tsx';
 import {
   flush,
   mountTracked,
@@ -326,6 +327,26 @@ describe('opening the next song', () => {
     expect(p.routes.onOpenStemSet).not.toHaveBeenCalled();
     expect(p.records.readStemSet).toHaveBeenCalledTimes(2);
     expect(p.commands.mixerPlay).not.toHaveBeenCalled();
+  });
+
+  it('shows no sheet once the open song opens again', async () => {
+    songLibraryStore.setState({ rows: [song(SET_ID, 'Open song')] });
+    const p = await withQueue(SET_ID);
+    const speed = p.byLabel('Speed').props.onAccessibilityAction as (
+      event: unknown,
+    ) => void;
+    await act(async () => {
+      speed({ nativeEvent: { actionName: 'activate' } });
+      await flush();
+    });
+    expect(p.renderer.root.findByType(SpeedKeySheet).props.visible).toBe(true);
+    await p.press('Next: Open song');
+    await flush();
+    expect(p.records.readStemSet).toHaveBeenCalledTimes(2);
+    const shown = p.renderer.root
+      .findAllByType(Sheet)
+      .filter((sheet) => sheet.props.visible === true);
+    expect(shown).toHaveLength(0);
   });
 
   it('shows a skip carried from the metronome', async () => {

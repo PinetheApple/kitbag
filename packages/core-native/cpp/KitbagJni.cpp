@@ -337,6 +337,11 @@ Java_com_kitbag_corenative_EngineTransport_nativeSampleRate(JNIEnv*, jobject) {
   return static_cast<jdouble>(kb_engine_sample_rate(kitbag::kitbagEngine()));
 }
 
+JNIEXPORT jdouble JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeMixerRate(JNIEnv*, jobject) {
+  return kitbag::commandMixerRate();
+}
+
 JNIEXPORT jobject JNICALL
 Java_com_kitbag_corenative_library_SongAnalyzer_nativeAnalyzeSong(JNIEnv* env, jobject,
                                                                  jstring path,
@@ -391,6 +396,13 @@ Java_com_kitbag_corenative_library_SongAnalyzer_nativeWaveformPath(JNIEnv* env, 
   const JniUtf songUtf(env, songPath);
   if (dirUtf.get() == nullptr || songUtf.get() == nullptr) return nullptr;
   return env->NewStringUTF(kitbag::SidecarPath(dirUtf.get(), songUtf.get()).c_str());
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_kitbag_corenative_library_SongAnalyzer_nativeIsWaveformSidecar(JNIEnv* env, jobject,
+                                                                       jstring path) {
+  const JniUtf pathUtf(env, path);
+  return pathUtf.get() != nullptr && kitbag::IsSidecarPath(pathUtf.get()) ? JNI_TRUE : JNI_FALSE;
 }
 
 }  // extern "C"

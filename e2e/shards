@@ -1,4 +1,4 @@
-mini-player/rename-updates-bar mini-player/pause-and-close-from-bar metronome/ramp-entry-typed-and-clamped song-player/drag-loop-start stems/click-shape-survives-force-stop settings/save-backup-to-downloads
+mini-player/rename-updates-bar mini-player/pause-and-close-from-bar metronome/ramp-entry-typed-and-clamped song-player/drag-loop-start stems/click-shape-survives-force-stop settings/save-backup-to-downloads stems/auto-advance-to-next-song
 metronome/standalone-settings-survive-force-stop mini-player/back-keeps-song-playing metronome/clear-song-becomes-standalone song-player/meter-override-undo settings/restore-stem-songs-count stems/no-grid-disables-meter-and-click
 mini-player/bar-tap-reopens-attached mini-player/delete-playing-song-ends-session mini-player/swap-sheets-while-playing metronome/new-song-from-setlist-stress settings/data-folder-internal-only stems/three-song-stem-setlist
 metronome/setlist-step-keeps-standalone metronome/leave-setlist-becomes-standalone metronome/song-edit-keeps-standalone metronome/custom-click-sound metronome/deleted-loaded-song-edits-persist song-player/tempo-correction-undo

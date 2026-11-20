@@ -15,7 +15,14 @@ data class Song(
 // SystemUI formats the artist into "%1$s by %2$s", so a null would read as "null".
 fun mediaArtist(artist: String?): String = if (artist.isNullOrBlank()) "" else artist
 
-data class SongProgress(val playing: Boolean, val positionFrames: Long, val countingIn: Boolean = false) {
+const val UNITY_PLAYBACK_RATE = 1f
+
+data class SongProgress(
+  val playing: Boolean,
+  val positionFrames: Long,
+  val countingIn: Boolean = false,
+  val rate: Float = UNITY_PLAYBACK_RATE,
+) {
   val shownPlaying: Boolean
     get() = playing || countingIn
 
@@ -89,7 +96,7 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
     SongPlayback(
       state = if (progress.shownPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
       positionMillis = millis(progress.positionFrames.coerceIn(0L, song.durationFrames)),
-      speed = if (progress.playing) PLAYING_SPEED else 0f,
+      speed = if (progress.playing) progress.rate else 0f,
       updatedAt = now,
       actions = SESSION_ACTIONS,
     )
@@ -98,6 +105,7 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
   fun stale(published: SongPlayback?, progress: SongProgress, now: Long): Boolean {
     if (published == null) return true
     if ((published.state == PlaybackStateCompat.STATE_PLAYING) != progress.shownPlaying) return true
+    if (progress.playing && published.speed != progress.rate) return true
     return abs(published.positionAt(now) - millis(progress.positionFrames)) > DRIFT_TOLERANCE_MILLIS
   }
 
@@ -160,7 +168,6 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
   companion object {
     const val DRIFT_TOLERANCE_MILLIS = 300L
     private const val MILLIS_PER_SECOND = 1000.0
-    private const val PLAYING_SPEED = 1f
     private const val SESSION_ACTIONS =
       PlaybackStateCompat.ACTION_PLAY or
         PlaybackStateCompat.ACTION_PAUSE or

@@ -31,7 +31,6 @@ import {
   type ClickGroup,
 } from '../logic/clickChipText.ts';
 
-const SAVE_NOT_BUILT = () => undefined;
 const LEFT_ALIGNED = { alignSelf: 'flex-start' } as const;
 
 export function useSongClickSheet() {
@@ -44,6 +43,8 @@ export function useSongClickSheet() {
   }, []);
   return { group, open, close };
 }
+
+export type SongClickSheetState = ReturnType<typeof useSongClickSheet>;
 
 interface GroupHeaderProps {
   readonly label: string;
@@ -77,7 +78,6 @@ function CountInGroup({ headerRef }: Pick<GroupHeaderProps, 'headerRef'>) {
         selected={String(bars)}
         onSelect={select}
       />
-      <SheetHint>{SONG_CLICK_TEXT.countInNote}</SheetHint>
     </>
   );
 }
@@ -147,6 +147,10 @@ export function SongClickSheet({
   bottomInset,
   onDismiss,
 }: SongClickSheetProps) {
+  const save = useSongPlayer((s) => s.saveForSong);
+  const handleSave = useCallback(() => {
+    void save();
+  }, [save]);
   const countInRef = useRef<View>(null);
   const soundRef = useRef<View>(null);
   const accentsRef = useRef<View>(null);
@@ -171,8 +175,7 @@ export function SongClickSheet({
         variant="primary"
         size="sheet"
         label={SONG_CLICK_TEXT.save}
-        disabled
-        onPress={SAVE_NOT_BUILT}
+        onPress={handleSave}
       />
     </Sheet>
   );

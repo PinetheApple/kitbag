@@ -1,0 +1,64 @@
+appId: com.kitbag.app
+name: '#382: a stem song that plays to its end opens and plays the next one; at a metronome song it stops and offers Open, with no click'
+tags:
+  - issue-382
+env:
+  SETLIST: Advance gig
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- runFlow:
+    file: ../../subflows/import-stem-song.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS}
+- back
+- runFlow:
+    file: ../../subflows/import-stem-song.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS_NO_GRID}
+- runFlow:
+    file: ../../subflows/add-stem-song-to-setlist.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS}
+- runFlow:
+    file: ../../subflows/add-stem-song-to-setlist.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS_NO_GRID}
+- back
+- runFlow: ../../subflows/open-metronome-first-time.yaml
+- runFlow:
+    file: ../../subflows/set-tempo.yaml
+    env:
+      BPM: 120
+- tapOn: 'Setlists'
+- tapOn: '${SETLIST}, .*'
+- runFlow:
+    file: ../../subflows/add-new-song-to-setlist.yaml
+    env:
+      BPM: 120
+- assertVisible: '3\. New song, 120 · .*'
+- tapOn: 'Play from 1'
+- extendedWaitUntil:
+    visible: 'Up next: ${FIXTURE_STEMS_NO_GRID}, ${SETLIST} · 2 of 3'
+    timeout: 20000
+- runFlow:
+    file: ../../subflows/tap-while-playing.yaml
+    env:
+      TARGET: 'Play'
+# Each check reads the screen in about 7 s while a song plays, so only these two run then.
+- extendedWaitUntil:
+    visible: 'Playing ${FIXTURE_STEMS_NO_GRID} · 2 of 3'
+    timeout: 30000
+- assertVisible: 'Pause'
+- extendedWaitUntil:
+    visible: 'Play'
+    timeout: 60000
+- assertVisible: '${FIXTURE_STEMS_NO_GRID}'
+- assertNotVisible: '${FIXTURE_STEMS}'
+- assertVisible: 'Up next: New song, ${SETLIST} · 3 of 3 · metronome'
+- assertVisible: 'Open'
+- tapOn: 'Open'
+- extendedWaitUntil:
+    visible: 'New song, Setlist ${SETLIST}, song 3 of 3'
+    timeout: 10000
+- assertVisible: 'Play'
+- assertNotVisible: 'Stop'

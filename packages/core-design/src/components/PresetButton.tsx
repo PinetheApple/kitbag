@@ -37,6 +37,7 @@ export interface PresetButtonProps {
   readonly onPress: () => void;
   readonly kind?: PresetButtonKind;
   readonly accessibilityLabel?: string;
+  readonly selected?: boolean;
   /** Gaps to the controls above and below, for the 48dp hit box; a number
    * applies to both, an omitted side has no neighbour. */
   readonly neighbourGapDp?: number | NeighbourGaps;
@@ -62,6 +63,13 @@ const useStyles = createThemedStyles((theme) => ({
   presetText: {
     ...textStyle(textRoles.preset),
     color: theme.color.text,
+  },
+  presetSelected: {
+    backgroundColor: theme.activeControlFill,
+    borderColor: theme.color.accentDim,
+  },
+  presetTextSelected: {
+    color: theme.color[theme.accentInk],
   },
   action: {
     flexGrow: 1,
@@ -91,6 +99,7 @@ export function PresetButton({
   onPress,
   kind = 'preset',
   accessibilityLabel,
+  selected = false,
   neighbourGapDp = space.controlGap,
 }: PresetButtonProps) {
   const styles = useStyles();
@@ -100,6 +109,7 @@ export function PresetButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityState={{ selected }}
       style={[
         action ? styles.actionHit : styles.presetHit,
         presetHitBox(neighbourGaps(neighbourGapDp)),
@@ -109,13 +119,17 @@ export function PresetButton({
       <View
         style={[
           action ? styles.action : styles.preset,
+          selected && styles.presetSelected,
           scaled && styles.scaledFace,
         ]}
       >
         <DesignFloorOneLineText
           text={label}
           role={action ? textRoles.presetAction : textRoles.preset}
-          style={action ? styles.actionText : styles.presetText}
+          style={[
+            action ? styles.actionText : styles.presetText,
+            selected && styles.presetTextSelected,
+          ]}
           boxStyle={styles.labelBox}
         />
       </View>

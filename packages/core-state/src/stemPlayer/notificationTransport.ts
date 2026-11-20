@@ -6,10 +6,22 @@ import { countPending } from './songStart.ts';
 import { songTransportShown } from './songTransport.ts';
 import type { StemPlayerStore } from './store.ts';
 
+type TransportPlayer = Pick<StemPlayerStore, 'togglePlay' | 'seek' | 'status'>;
+
+type CountCardState = Pick<
+  StemPlayerStore,
+  | 'status'
+  | 'countEndFrame'
+  | 'title'
+  | 'artist'
+  | 'durationFrames'
+  | 'engineRate'
+>;
+
 type RuntimeOf = () => MixerRuntime;
 
 export interface SongTransportRequestOptions {
-  readonly get: () => StemPlayerStore;
+  readonly get: () => TransportPlayer;
   readonly runtimeOf: RuntimeOf;
   readonly counting: () => boolean;
   readonly stopCount: () => void;
@@ -49,7 +61,7 @@ export interface SongCardCount {
 // cancels and restarts in one call, so only a settled change is shown, and a
 // stop has already ended the card, so its cancel is not shown.
 export function showCountOnSongCard(
-  store: StoreApi<StemPlayerStore>,
+  store: Pick<StoreApi<CountCardState>, 'getState' | 'subscribe'>,
   runtimeOf: RuntimeOf,
   counting: () => boolean,
 ): SongCardCount {

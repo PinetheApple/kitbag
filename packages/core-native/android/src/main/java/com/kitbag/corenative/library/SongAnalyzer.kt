@@ -25,6 +25,10 @@ object SongAnalyzer {
 
   private external fun nativeWaveformPath(waveformDir: String, songPath: String): String
 
+  fun isWaveformSidecar(path: String): Boolean = nativeIsWaveformSidecar(path)
+
+  private external fun nativeIsWaveformSidecar(path: String): Boolean
+
   init {
     System.loadLibrary("kitbag_jsi")
   }

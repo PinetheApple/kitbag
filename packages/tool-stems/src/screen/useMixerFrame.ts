@@ -8,7 +8,7 @@ import {
   type SharedValue,
 } from 'react-native-reanimated';
 
-type HostGlobal = Record<
+export type HostGlobal = Record<
   typeof KITBAG_HOST_OBJECT_KEY,
   KitbagHostObject | undefined
 >;
