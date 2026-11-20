@@ -102,6 +102,7 @@ export interface StemSetRecord
   readonly sampleRate: number | null;
   readonly createdAt: Date;
   readonly speed: number;
+  readonly pitch: number;
   readonly lyricsRetimed: LyricLineTimes | null;
   readonly stems: readonly StoredStem[];
 }
@@ -341,6 +342,7 @@ export async function readStemSet(
     sampleRate: row.sampleRate,
     createdAt: row.createdAt,
     speed: row.speed,
+    pitch: row.pitch,
     ...meterOverrideOf(row),
     ...stemSetClickOf(row),
     ...stemSetTempoOf(row),

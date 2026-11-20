@@ -23,8 +23,10 @@ class SongTransportTest {
   )
   private val transport = SongTransport(song, rate)
 
-  private fun at(seconds: Double, playing: Boolean = true) =
-    SongProgress(playing, (seconds * rate).toLong())
+  private val practiceRate = 0.8f
+
+  private fun at(seconds: Double, playing: Boolean = true, speed: Float = UNITY_PLAYBACK_RATE) =
+    SongProgress(playing, (seconds * rate).toLong(), rate = speed)
 
   @Test
   fun `media artist is the artist given`() {
@@ -90,6 +92,41 @@ class SongTransportTest {
   fun `a pause or resume the app made is republished`() {
     assertTrue(transport.stale(transport.playback(at(10.0), now = 0L), at(10.0, playing = false), now = 0L))
     assertTrue(transport.stale(null, at(10.0), now = 0L))
+  }
+
+  @Test
+  fun `playing slowed publishes the engine rate and the position in song time`() {
+    val playback = transport.playback(at(61.5, speed = practiceRate), now = 1_000L)
+    assertEquals(61_500L, playback.positionMillis)
+    assertEquals(practiceRate, playback.speed)
+    assertEquals(180_000L, transport.durationMillis)
+  }
+
+  @Test
+  fun `a slowed position advances at the engine rate`() {
+    val playback = transport.playback(at(10.0, speed = practiceRate), now = 1_000L)
+    assertEquals(12_000L, playback.positionAt(now = 3_500L))
+  }
+
+  @Test
+  fun `slowed playback is not republished while the song keeps the rate's pace`() {
+    val published = transport.playback(at(10.0, speed = practiceRate), now = 0L)
+    assertFalse(transport.stale(published, at(11.6, speed = practiceRate), now = 2_000L))
+    assertTrue(transport.stale(published, at(12.0, speed = practiceRate), now = 2_000L))
+  }
+
+  @Test
+  fun `a speed change while playing is republished at once`() {
+    val published = transport.playback(at(10.0), now = 0L)
+    assertTrue(transport.stale(published, at(10.0, speed = practiceRate), now = 0L))
+  }
+
+  @Test
+  fun `dragging the bar while slowed seeks to the song time it shows`() {
+    assertEquals(
+      SongRoute(null, listOf(SongCommand.Seek(at(90.0).positionFrames))),
+      transport.seekRoute(at(5.0, speed = practiceRate), 90_000L, appListening = true),
+    )
   }
 
   @Test

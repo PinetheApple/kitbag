@@ -42,6 +42,7 @@ function songFields(mine: LocalStemSong, theirs: StemSongRecord): Field[] {
       mine.barOneSeconds === NO_METER_OVERRIDE.barOneSeconds,
     ),
     field(mine.speed, theirs.speed, mine.speed === stemSets.speed.default),
+    field(mine.pitch, theirs.pitch, mine.pitch === stemSets.pitch.default),
     field(
       mine.lyricsRetimed,
       theirs.lyricsRetimed,
