@@ -1,16 +1,15 @@
-import { songFacts, type SongFacts } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
+import { songFacts, type SongFacts } from './facts.ts';
 import {
   keyHint,
   keyText,
-  perStemSummary,
   resetValue,
   speedHint,
-  speedText,
-  spokenKey,
+  speedPercentText,
+  speedPresetTexts,
   stemKeyStatus,
-} from './speedKeyView.ts';
+} from './speedKeyText.ts';
 
 const SONG = {
   bpm: 123,
@@ -22,24 +21,48 @@ const SONG = {
 const NO_SONG_FACTS: SongFacts = { bpm: null, key: null, tempo: null };
 const RECORDED = songFacts(SONG);
 const PLAYING = songFacts(SONG, { speed: 0.75, key: -2 });
-const vocals = { name: 'vocals', transposable: true, key: -2 };
-const drums = { name: 'drums', transposable: false, key: 0 };
-const bass = { name: 'bass', transposable: true, key: 0 };
 
 describe('speed and key text', () => {
   it('reads speed as a percentage and key in signed semitones', () => {
-    expect([speedText(0.75), speedText(1)]).toEqual(['75%', '100%']);
+    expect([speedPercentText(0.75), speedPercentText(1)]).toEqual([
+      '75%',
+      '100%',
+    ]);
     expect([keyText(-2), keyText(0), keyText(3)]).toEqual([
       '−2 st',
       '0 st',
       '+3 st',
     ]);
-    expect([spokenKey(-2), spokenKey(1), spokenKey(0)]).toEqual([
-      'down 2 semitones',
-      'up 1 semitone',
-      'as recorded',
-    ]);
     expect(resetValue()).toBe('100%, 0 st');
+  });
+
+  it('labels each preset and selects the one playing', () => {
+    expect(speedPresetTexts(0.9)).toEqual([
+      {
+        value: 0.5,
+        label: '50%',
+        accessibilityLabel: 'Speed 50%',
+        selected: false,
+      },
+      {
+        value: 0.75,
+        label: '75%',
+        accessibilityLabel: 'Speed 75%',
+        selected: false,
+      },
+      {
+        value: 0.9,
+        label: '90%',
+        accessibilityLabel: 'Speed 90%',
+        selected: true,
+      },
+      {
+        value: 1,
+        label: '100%',
+        accessibilityLabel: 'Speed 100%',
+        selected: false,
+      },
+    ]);
   });
 
   it('shows the song BPM and what plays', () => {
@@ -62,11 +85,13 @@ describe('speed and key text', () => {
     );
   });
 
-  it('names the stems set apart from the song key', () => {
-    expect(perStemSummary([vocals, drums], -2)).toBe('all follow the song');
-    expect(perStemSummary([vocals, drums, bass], -2)).toBe('bass set apart');
-    expect(perStemSummary([vocals, drums, bass], 3)).toBe('2 stems set apart');
-    expect([vocals, drums, bass].map((row) => stemKeyStatus(row, -2))).toEqual([
+  it('says whether each stem follows the song key', () => {
+    const rows = [
+      { name: 'vocals', transposable: true, key: -2 },
+      { name: 'drums', transposable: false, key: 0 },
+      { name: 'bass', transposable: true, key: 0 },
+    ];
+    expect(rows.map((row) => stemKeyStatus(row, -2))).toEqual([
       'follows the song',
       'not transposed',
       'set apart',

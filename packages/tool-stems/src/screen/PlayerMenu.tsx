@@ -10,13 +10,18 @@ import {
   textRoles,
   textStyle,
 } from '@kitbag/core-design';
-import { exportBlock, usePlayOrder, useStemPlayer } from '@kitbag/core-state';
+import {
+  exportBlock,
+  resetValue,
+  speedKeyCopy,
+  usePlayOrder,
+  useStemPlayer,
+} from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { ClickSection } from '../logic/clickView.ts';
 import { exportRowValue } from '../logic/exportView.ts';
-import { resetValue, speedKeyCopy } from '../logic/speedKeyView.ts';
 import {
   meterGridState,
   NO_GRID_REASON,
