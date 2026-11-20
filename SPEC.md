@@ -2471,7 +2471,8 @@ need a phone check, tracked in #516 and the open feature issues.
 - **Around the tools:** the Home hub (#111) with Arrange (#244); Settings
   (#224, #231) with Rig (#255, #268, #269), Tools (#272), backup and restore
   (#107, #282, #394, #479, #494) and the data folder on internal storage or an
-  SD card (#462, #470, #500, #506, #519); a database that fails to open blocks
+  SD card (#462, #470, #500, #506, #519; the card move is emulator-checked in
+  the #532 and #548 re-checks, phone check pending); a database that fails to open blocks
   on a screen naming the failure (#514), and a copy is kept before a schema
   upgrade (#518). <!-- WAIT #170: Settings status once #170 closes -->
 - **Releases:** every merge to `main` publishes a signed APK as a GitHub

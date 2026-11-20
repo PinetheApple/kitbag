@@ -34,8 +34,9 @@ paywalls, ever.
   song when one ends; background playback with a media notification.
   <!-- WAIT #382: Next/Previous in the notification for stem setlists (#382 c phase 2) -->
 - **Settings** — theme, keep the screen awake, the rig click and per-route
-  latency calibration, turning tools on or off, and backup and restore.
-  <!-- WAIT #170: the data folder on internal storage or an SD card -->
+  latency calibration, turning tools on or off, backup and restore, and moving
+  the data folder to an SD card and back (#500, #519). The card move is checked
+  on the emulator (re-checks for #532 and #548); its phone check is pending.
 - **Not built:** play along (SPEC.md §8).
 
 Some merged features still need a phone check, tracked in #516 and the open

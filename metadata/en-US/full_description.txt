@@ -33,8 +33,8 @@ WAIT #382: Next and Previous in the notification for stem setlists
 Settings
 - Calibrate the output latency per audio route, and back up or restore your
   library through files you choose.
-- Choose a light or dark theme, and keep the screen awake while you practise.
-WAIT #170: keep your songs on an SD card
+- Keep your songs on an SD card, choose a light or dark theme, and keep the
+  screen awake while you practise.
 
 Not in this build: play-along with other apps.
 
