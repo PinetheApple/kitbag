@@ -9,6 +9,10 @@ export interface PlayerScrollState {
   readonly onContentSizeChange: (width: number, height: number) => void;
 }
 
+export function contentOverflows(viewport: number, content: number): boolean {
+  return Math.round(content) > Math.round(viewport);
+}
+
 export function usePlayerScroll(): PlayerScrollState {
   const [viewport, setViewport] = useState(0);
   const [content, setContent] = useState(0);
@@ -19,7 +23,7 @@ export function usePlayerScroll(): PlayerScrollState {
     setContent(height);
   }, []);
   return {
-    scrollEnabled: Math.round(content) > Math.round(viewport),
+    scrollEnabled: contentOverflows(viewport, content),
     onLayout,
     onContentSizeChange,
   };

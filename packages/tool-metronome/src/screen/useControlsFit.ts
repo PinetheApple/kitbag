@@ -1,4 +1,4 @@
-import { metronome } from '@kitbag/core-design';
+import { contentOverflows, metronome } from '@kitbag/core-design';
 import { useCallback, useState } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
 
@@ -19,7 +19,7 @@ export function useControlsFit(windowHeight: number, layoutKey: string) {
   const scrollable =
     bodyHeight > 0 &&
     content.height > 0 &&
-    Math.round(content.height) > Math.round(bodyHeight);
+    contentOverflows(bodyHeight, content.height);
   const density = useScreenDensity(windowHeight, layoutKey, scrollable);
   const tight = useOverflowLatch(
     layoutKey,
