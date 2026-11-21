@@ -1,5 +1,6 @@
 import {
   createThemedStyles,
+  growShrinkToLine,
   Icon,
   isOverridden,
   MenuRow,
@@ -60,7 +61,7 @@ const useStyles = createThemedStyles((theme) => ({
     flexShrink: 1,
     textAlign: 'right',
   },
-  stacked: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
+  stacked: { ...growShrinkToLine, minWidth: 0 },
   valueStacked: { textAlign: 'left' },
   off: { color: theme.color.text3 },
 }));
