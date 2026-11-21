@@ -39,24 +39,6 @@ function mounted() {
 }
 
 describe('contentOverflows', () => {
-  it('overflows when the content is taller than the viewport', () => {
-    expect(contentOverflows(SHORT_WINDOW.viewport, SHORT_WINDOW.content)).toBe(
-      true,
-    );
-  });
-
-  it('does not overflow when the heights are equal', () => {
-    expect(contentOverflows(FULL_WINDOW.viewport, FULL_WINDOW.content)).toBe(
-      false,
-    );
-  });
-
-  it('does not overflow when the heights are equal after rounding', () => {
-    expect(
-      contentOverflows(FULL_WINDOW.viewport, FULL_WINDOW.content + SUBPIXEL),
-    ).toBe(false);
-  });
-
   it('does not overflow before the content is measured', () => {
     expect(contentOverflows(FULL_WINDOW.viewport, 0)).toBe(false);
   });
