@@ -200,7 +200,7 @@ export interface PolyStripCaption {
 }
 
 export function polyStripSentence(caption: PolyStripCaption): string {
-  return `${caption.cycle}, ${caption.span}`;
+  return `${caption.cycle}, across ${caption.span}`;
 }
 
 export function polyStripCaption(

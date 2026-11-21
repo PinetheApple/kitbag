@@ -21,6 +21,7 @@ import {
   polyLastDotRight,
   polyRatioLabel,
   polyStripCaption,
+  polyStripSentence,
   polySpanInArea,
   polySpanPlace,
   polyX,
@@ -325,6 +326,21 @@ describe('one-cycle strip caption', () => {
       cycle: 'one cycle: 3 poly over 4 main',
       span: 'the bar',
     });
+  });
+
+  it.each([
+    [
+      'an explicit cycle',
+      2,
+      'one cycle: 3 poly over 2 main, across 2 of 4 beats',
+    ],
+    [
+      'the bar',
+      KB_POLY_AGAINST_BAR,
+      'one cycle: 3 poly over 4 main, across the bar',
+    ],
+  ])('joins %s into one sentence', (_, against, sentence) => {
+    expect(polyStripSentence(polyStripCaption(3, against, 4))).toBe(sentence);
   });
 });
 
