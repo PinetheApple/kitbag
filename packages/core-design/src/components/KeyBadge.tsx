@@ -1,6 +1,7 @@
 import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { inset, radius, size, textRoles } from '../roles.ts';
+import { TEXT_ICON_SCALE_MAX } from '../textScale.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 
@@ -34,7 +35,9 @@ export function KeyBadge({ label, style }: KeyBadgeProps) {
       style={[styles.badge, style]}
       importantForAccessibility="no-hide-descendants"
     >
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label} maxFontSizeMultiplier={TEXT_ICON_SCALE_MAX}>
+        {label}
+      </Text>
     </View>
   );
 }

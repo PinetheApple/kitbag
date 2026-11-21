@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "analysis/bar_one.h"
 #include "analysis/block_fill.h"
 #include "analysis/meter.h"
 #include "dsp/rateconversion/Decimator.h"
@@ -114,6 +115,7 @@ void DownbeatTracker::Push(const float* mono, size_t count) {
 }
 
 std::vector<int> DownbeatTracker::Finish() {
+  qm_downbeats_.clear();
   if (block_filled_ > 0) {
     std::fill(block_.begin() + block_filled_, block_.end(), 0.0f);
     PushBlock();
@@ -121,10 +123,12 @@ std::vector<int> DownbeatTracker::Finish() {
   }
   if (beats_.size() < 2 || audio_length_ == 0) return {};
   if (next_beat_ + 1 < beats_.size()) return {};
-  if (beats_per_bar_ == kDetectBeatsPerBar) {
-    return PickDownbeats(DetectBeatsPerBar(beat_sd_));
-  }
-  return PickDownbeats(beats_per_bar_);
+  const int timesig = beats_per_bar_ == kDetectBeatsPerBar
+                          ? DetectBeatsPerBar(beat_sd_)
+                          : beats_per_bar_;
+  const int qm_phase = QmPhase(timesig);
+  qm_downbeats_ = BarOnes(qm_phase, timesig);
+  return BarOnes(BarOnePhase(beat_sd_, timesig, qm_phase), timesig);
 }
 
 DownbeatTracker::BeatSpan DownbeatTracker::SpanOf(size_t beat) const {
@@ -193,7 +197,7 @@ void DownbeatTracker::DropBefore(size_t position) {
 
 // DownBeat's phase pick: the bar position whose beat transitions carry the
 // greatest mean spectral change is bar-one.
-std::vector<int> DownbeatTracker::PickDownbeats(int timesig) const {
+int DownbeatTracker::QmPhase(int timesig) const {
   std::vector<double> candidates(timesig, 0.0);
   for (int beat = 0; beat < timesig; ++beat) {
     int count = 0;
@@ -205,8 +209,11 @@ std::vector<int> DownbeatTracker::PickDownbeats(int timesig) const {
     }
     if (count > 0) candidates[beat] /= count;
   }
+  return MathUtilities::getMax(candidates);
+}
+
+std::vector<int> DownbeatTracker::BarOnes(int first, int timesig) const {
   std::vector<int> downbeats;
-  const int first = MathUtilities::getMax(candidates);
   for (int i = first; i < static_cast<int>(beats_.size()); i += timesig) {
     downbeats.push_back(i);
   }

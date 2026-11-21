@@ -498,6 +498,16 @@ a uniform click does not.
 Analysis scores 3 beats per bar against 4 and picks 3 only on a clear lead;
 short or tied songs stay 4. The per-song meter override (§6.2) takes precedence.
 
+**Bar one departs from QM's pick in one case (#435).** QM takes the bar position
+with the greatest mean spectral change into it. One stand-out beat per bar
+raises the change into it and out of it alike, so QM lands on it or on the beat
+after. When QM's pick and the position before it are the two highest, sit
+closer to each other than to the third, and clear the third by more than the
+one-sided 97.5% Student's t bound on the per-bar means, bar one moves to the
+earlier position. A beat-4 pickup that changes more than half as much as the
+downbeat looks the same and moves bar one onto beat 4. The benefit is shown on
+synthetic tones only: no bar one moved on the 42 local real stems.
+
 #### 4.3.1 Why the tracker caps at `KB_MAX_GRID_BEATS`
 
 `beat_tracker.cpp`'s `kMaxTrackedBeats` is deliberately *equal to*
