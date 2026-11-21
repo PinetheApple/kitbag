@@ -425,6 +425,8 @@ describe('readSong', () => {
       speed: 1,
       meterBeatsPerBar: null,
       barOneSeconds: null,
+      tempo: null,
+      chosenTempoMode: null,
     });
   });
 

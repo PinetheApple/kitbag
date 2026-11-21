@@ -4,7 +4,7 @@ import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
 import type { MeterOverride } from './meter-override';
 import { STANDALONE_METRONOME_KEY } from './standalone-metronome-preference';
 import type { LyricLineTimes, LyricsSource } from './stem-lyrics';
-import type { BundleTempo } from './stem-tempo';
+import type { BundleTempo, TempoColumns } from './stem-tempo';
 import { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
 import type { TempoCorrection } from './tempo-correction';
 import type { TempoMode } from './tempo-mode';
@@ -36,7 +36,8 @@ export const DEFAULT_IMPORT_CATEGORIES: readonly Category[] = [
   'stemSongs',
 ];
 
-export interface LibrarySongRecord extends Partial<MeterOverride> {
+export interface LibrarySongRecord
+  extends Partial<MeterOverride>, Partial<TempoColumns> {
   uuid: string;
   title: string;
   artist: string;

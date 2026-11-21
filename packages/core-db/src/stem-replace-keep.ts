@@ -24,7 +24,7 @@ import {
   carriedTempoMode,
   saveChosenTempoMode,
   STEM_SET_TEMPO_COLUMNS,
-  stemSetTempoOf,
+  storedTempoOf,
 } from './stem-tempo';
 import type { TempoMode } from './tempo-mode';
 
@@ -102,7 +102,7 @@ export async function readKept(
     retimed: sameJob ? await retainedRetime(db, id, bundle.lyrics) : null,
     meter: carriedMeter(meterOverrideOf(row), sameJob),
     tempoMode: carriedTempoMode(
-      stemSetTempoOf(row).chosenTempoMode,
+      storedTempoOf(row).chosenTempoMode,
       bundle.tempo,
     ),
     speed: row.speed,
@@ -120,7 +120,7 @@ export async function applyKept(
   await applyUserNames(db, id, kept.names);
   await saveLyricsRetimed(db, id, kept.retimed);
   await saveMeterOverride(db, stemSets, id, kept.meter);
-  await saveChosenTempoMode(db, id, kept.tempoMode);
+  await saveChosenTempoMode(db, stemSets, id, kept.tempoMode);
   await saveStemSetClick(db, id, kept.click);
   await db
     .update(stemSets)

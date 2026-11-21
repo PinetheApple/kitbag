@@ -1,4 +1,4 @@
-import { asc, eq, isNotNull } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull } from 'drizzle-orm';
 
 import { stemSetClickOf, type StemSetClick } from './click-settings';
 import { meterOverrideOf, type MeterOverride } from './meter-override';
@@ -14,9 +14,9 @@ import { parseRetimedLyrics, type LyricLineTimes } from './stem-lyrics';
 import { applyKept, readKept } from './stem-replace-keep';
 import {
   bundleTempoColumns,
-  stemSetTempoOf,
+  storedTempoOf,
   type BundleTempo,
-  type StemSetTempo,
+  type StoredTempo,
 } from './stem-tempo';
 
 const STEM_FORMAT = 'flac';
@@ -94,7 +94,7 @@ export interface StemSetRecord
     >,
     MeterOverride,
     StemSetClick,
-    StemSetTempo {
+    StoredTempo {
   readonly id: number;
   readonly source: StemSetSource;
   readonly jobId: string | null;
@@ -345,7 +345,7 @@ export async function readStemSet(
     pitch: row.pitch,
     ...meterOverrideOf(row),
     ...stemSetClickOf(row),
-    ...stemSetTempoOf(row),
+    ...storedTempoOf(row),
     bpm: row.bpm,
     key: row.key,
     scale: row.scale,
@@ -367,6 +367,48 @@ export async function readStemSet(
     lyricsRetimed: parseRetimedLyrics(row.lyricsRetimed),
     stems: await readStems(db, id),
   };
+}
+
+export interface UntimedStemSet {
+  readonly id: number;
+  readonly beats: readonly number[];
+  readonly bars: readonly BarMark[];
+}
+
+export async function listStemSetsWithoutTempo(
+  db: Database,
+): Promise<UntimedStemSet[]> {
+  const rows = await db
+    .select({
+      id: stemSets.id,
+      beatGrid: stemSets.beatGrid,
+      barMarks: stemSets.barMarks,
+    })
+    .from(stemSets)
+    .where(and(isNotNull(stemSets.beatGrid), isNull(stemSets.tempoMode)))
+    .orderBy(asc(stemSets.id));
+  return rows.flatMap(({ id, beatGrid, barMarks }) =>
+    beatGrid === null
+      ? []
+      : [
+          {
+            id,
+            beats: unpackFloat32(beatGrid),
+            bars: barMarks === null ? [] : unpackBars(barMarks),
+          },
+        ],
+  );
+}
+
+export async function saveStemSetTempo(
+  db: Database,
+  id: number,
+  tempo: BundleTempo,
+): Promise<void> {
+  await db
+    .update(stemSets)
+    .set(bundleTempoColumns(tempo))
+    .where(and(eq(stemSets.id, id), isNull(stemSets.tempoMode)));
 }
 
 export async function saveStemMix(

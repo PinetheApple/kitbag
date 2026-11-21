@@ -75,6 +75,12 @@ export const songs = sqliteTable('songs', {
   // Null is ×1, so a song never corrected and one set back read the same.
   tempoCorrection: text('tempo_correction', { enum: TEMPO_CORRECTIONS }),
   speed: real('speed').notNull().default(1),
+  tempoMode: text('tempo_mode', { enum: TEMPO_MODES }),
+  tempoBpm: real('tempo_bpm'),
+  tempoAnchor: real('tempo_anchor'),
+  tempoBeatsPerBar: integer('tempo_beats_per_bar'),
+  tempoSource: text('tempo_source', { enum: TEMPO_SOURCES }),
+  chosenTempoMode: text('chosen_tempo_mode', { enum: TEMPO_MODES }),
 });
 
 export const songPresets = sqliteTable('song_presets', {

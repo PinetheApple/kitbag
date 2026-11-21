@@ -67,6 +67,7 @@ export type {
   StemSetFiles,
   StemSetRecord,
   StoredLyrics,
+  UntimedStemSet,
   StoredSection,
   StoredStem,
 } from './stem-bundle-repository';
@@ -125,6 +126,8 @@ export {
   bundleTempoViolation,
   canBuildTempoMode,
   type BundleTempo,
+  type FittedTempo,
+  type StoredTempo,
 } from './stem-tempo';
 export type {
   AnalysisResultRecord,
