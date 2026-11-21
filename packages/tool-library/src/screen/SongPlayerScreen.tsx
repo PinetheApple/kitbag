@@ -53,6 +53,7 @@ import {
 import { SongMeter } from './SongMeter.tsx';
 import { SongPlayerMenu } from './SongPlayerMenu.tsx';
 import { SongTempoCorrection } from './SongTempoCorrection.tsx';
+import { SongTempoMode } from './SongTempoMode.tsx';
 import { SongTransport } from './SongTransport.tsx';
 import { useFollowQueueArrivals } from './useFollowQueueArrivals.ts';
 import { useLeaveOnStop } from './useLeaveOnStop.ts';
@@ -241,9 +242,11 @@ interface BodyProps {
   readonly songId: number;
   readonly bottom: number;
   readonly meterOpen: boolean;
+  readonly tempoModeOpen: boolean;
   readonly tempoOpen: boolean;
   readonly onBack: () => void;
   readonly onCloseMeter: () => void;
+  readonly onCloseTempoMode: () => void;
   readonly onCloseTempo: () => void;
   readonly usePlayhead: UsePlayhead;
   readonly clickSheet: SongClickSheetState;
@@ -254,9 +257,11 @@ function Body({
   songId,
   bottom,
   meterOpen,
+  tempoModeOpen,
   tempoOpen,
   onBack,
   onCloseMeter,
+  onCloseTempoMode,
   onCloseTempo,
   usePlayhead,
   clickSheet,
@@ -300,6 +305,11 @@ function Body({
         bottomInset={bottom}
         playheadSeconds={playhead.songSec}
         onClose={onCloseMeter}
+      />
+      <SongTempoMode
+        visible={tempoModeOpen}
+        bottomInset={bottom}
+        onClose={onCloseTempoMode}
       />
       <SongTempoCorrection
         songId={songId}
@@ -353,6 +363,13 @@ export function SongPlayerScreen({
   const closeMeter = useCallback(() => {
     setMeterOpen(false);
   }, []);
+  const [tempoModeOpen, setTempoModeOpen] = useState(false);
+  const openTempoMode = useCallback(() => {
+    setTempoModeOpen(true);
+  }, []);
+  const closeTempoMode = useCallback(() => {
+    setTempoModeOpen(false);
+  }, []);
   const [tempoOpen, setTempoOpen] = useState(false);
   const openTempo = useCallback(() => {
     setTempoOpen(true);
@@ -373,9 +390,11 @@ export function SongPlayerScreen({
         songId={songId}
         bottom={insets.bottom}
         meterOpen={meterOpen}
+        tempoModeOpen={tempoModeOpen}
         tempoOpen={tempoOpen}
         onBack={leave}
         onCloseMeter={closeMeter}
+        onCloseTempoMode={closeTempoMode}
         onCloseTempo={closeTempo}
         usePlayhead={usePlayhead}
         clickSheet={clickSheet}
@@ -388,6 +407,7 @@ export function SongPlayerScreen({
         onDismiss={closeMenu}
         onBack={leave}
         onMeter={openMeter}
+        onTempoMode={openTempoMode}
         onTempoCorrection={openTempo}
         onCountIn={openCountIn}
       />

@@ -4,11 +4,14 @@ import {
   meterCopy,
   MeterRow,
   Sheet,
+  TempoModeRow,
   type MeterGridState,
 } from '@kitbag/core-design';
 import { KB_MIXER_UNITY_RATE } from '@kitbag/core-native';
 import {
   speedPercentText,
+  tempoModeLabel,
+  tempoUnavailable,
   useSongLibrary,
   useSongPlayer,
   type StemPlayerStatus,
@@ -37,6 +40,7 @@ interface SongPlayerMenuProps {
   readonly onDismiss: () => void;
   readonly onBack: () => void;
   readonly onMeter: () => void;
+  readonly onTempoMode: () => void;
   readonly onTempoCorrection: () => void;
   readonly onCountIn: () => void;
 }
@@ -82,6 +86,19 @@ function SongMeterRow({ onPress }: RowProps) {
       yours={isOverridden(override)}
       disabled={state !== 'ready'}
       reason={gridRowReason(state)}
+      onPress={onPress}
+    />
+  );
+}
+
+function SongTempoModeRow({ onPress }: RowProps) {
+  const { disabled, detail } = useGridGatedRow();
+  const reason = useSongPlayer((s) => tempoUnavailable(s.tempo, 'song'));
+  const mode = useSongPlayer((s) => s.tempoMode);
+  return (
+    <TempoModeRow
+      value={mode === null ? '' : tempoModeLabel(mode)}
+      reason={disabled ? (detail ?? null) : reason}
       onPress={onPress}
     />
   );
@@ -143,6 +160,7 @@ export function SongPlayerMenu({
   onDismiss,
   onBack,
   onMeter,
+  onTempoMode,
   onTempoCorrection,
   onCountIn,
 }: SongPlayerMenuProps) {
@@ -162,6 +180,10 @@ export function SongPlayerMenu({
     onDismiss();
     onMeter();
   }, [onDismiss, onMeter]);
+  const openTempoMode = useCallback(() => {
+    onDismiss();
+    onTempoMode();
+  }, [onDismiss, onTempoMode]);
   const openTempoCorrection = useCallback(() => {
     onDismiss();
     onTempoCorrection();
@@ -188,6 +210,7 @@ export function SongPlayerMenu({
         />
       ) : null}
       <SongMeterRow onPress={openMeter} />
+      <SongTempoModeRow onPress={openTempoMode} />
       <TempoCorrectionRow onPress={openTempoCorrection} />
       <CountInRow onPress={openCountIn} />
       <MenuRow
