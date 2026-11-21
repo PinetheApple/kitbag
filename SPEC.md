@@ -502,9 +502,11 @@ short or tied songs stay 4. The per-song meter override (§6.2) takes precedence
 with the greatest mean spectral change into it. One stand-out beat per bar
 raises the change into it and out of it alike, so QM lands on it or on the beat
 after. When QM's pick and the position before it are the two highest, sit
-closer to each other than to the third, and clear the third by more than two
-standard errors of the per-bar means, bar one moves to the earlier position.
-On the 42-stem test set this moved no stem.
+closer to each other than to the third, and clear the third by more than the
+one-sided 97.5% Student's t bound on the per-bar means, bar one moves to the
+earlier position. A beat-4 pickup that changes more than half as much as the
+downbeat looks the same and moves bar one onto beat 4. The benefit is shown on
+synthetic tones only: no bar one moved on the 42 local real stems.
 
 #### 4.3.1 Why the tracker caps at `KB_MAX_GRID_BEATS`
 

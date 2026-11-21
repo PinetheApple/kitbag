@@ -260,8 +260,9 @@ void CheckFixture(const Fixture& fx, const std::filesystem::path& dir) {
   CheckPipeline(fx, dir, ref, ref_db);
   const StreamedDownbeats got = StreamDownbeats(mono, rate, ref.beat_times);
   kitbag_test::Check(
-      got.sd == ref_db.sd && got.qm == ref_db.indices,
-      "equivalence: beat spectral differences identical to QM"
+      got.sd == ref_db.sd && got.qm == ref_db.indices &&
+          got.chosen == ref_db.indices,
+      "equivalence: beat spectral differences and bar-ones identical to QM"
   );
   ReportSdDifference(got.sd, ref_db.sd);
 }
@@ -301,16 +302,15 @@ void CheckIrregularGrid() {
   const RefDownbeats ref = RefFindDownbeats(mono, rate, grid);
   const StreamedDownbeats got = StreamDownbeats(mono, rate, grid);
   kitbag_test::Check(
-      !ref.sd.empty() && got.sd == ref.sd && got.qm == ref.indices,
+      !ref.sd.empty() && got.sd == ref.sd && got.qm == ref.indices &&
+          got.chosen == ref.indices,
       "equivalence: long, empty and past-end beats match QM DownBeat"
   );
   ReportSdDifference(got.sd, ref.sd);
 }
 
-// QM puts bar one a beat late on this stand-out fixture, so the tracker departs
-// from it; its QM-path choice must still be QM's own.
 void CheckStandOutDeparture() {
-  const std::vector<float> mono = MakeStandOutMono(kBeatsPerBar, 0);
+  const std::vector<float> mono = MakePitchAccentMono(kBeatsPerBar, 0);
   const int rate = static_cast<int>(kSampleRate);
   const RefDownbeats ref = RefFindDownbeats(mono, rate, StandOutGrid());
   const StreamedDownbeats got = StreamDownbeats(mono, rate, StandOutGrid());

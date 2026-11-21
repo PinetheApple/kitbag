@@ -115,6 +115,7 @@ void DownbeatTracker::Push(const float* mono, size_t count) {
 }
 
 std::vector<int> DownbeatTracker::Finish() {
+  qm_downbeats_.clear();
   if (block_filled_ > 0) {
     std::fill(block_.begin() + block_filled_, block_.end(), 0.0f);
     PushBlock();

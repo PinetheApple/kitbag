@@ -22,8 +22,13 @@ constexpr float kPlainHz = 250.0f;
 // the change out of it, into the next chord, is whole.
 constexpr float kApproachHz = 220.0f;
 constexpr int kApproachPosition = kCommonBeatsPerBar - 1;
-constexpr int kUnitBars = 8;
+constexpr size_t kUnitBars = 8;
+constexpr size_t kFewBars = 2;
 constexpr double kNoiseAmplitude = 0.5;
+// About four standard errors of clearance over two bars: past a flat 2.0 gate,
+// short of the t value for one degree of freedom.
+constexpr double kFewBarsNoise = 0.017;
+constexpr double kRoundingGap = 1e-12;
 
 struct Beat {
   float hz;
@@ -85,13 +90,17 @@ void CheckApproachNote() {
   Check(found == 0, "accent: an approach note on beat 4 keeps bar one on 1");
 }
 
-// beat_sd[i] is the change into bar position (i + 1) % meter.
-std::vector<double> PhaseSd(const std::vector<double>& phases, double noise) {
+std::vector<double> PhaseSd(
+    const std::vector<double>& phases,
+    double noise,
+    size_t bars = kUnitBars
+) {
   const size_t meter = phases.size();
-  std::vector<double> sd(meter * kUnitBars);
+  std::vector<double> sd(meter * bars);
   for (size_t i = 0; i < sd.size(); ++i) {
     const double sign = (i / meter) % 2 == 0 ? 1.0 : -1.0;
-    sd[i] = phases[(i + 1) % meter] + sign * noise;
+    sd[i] = phases[kitbag::PositionAfter(i, static_cast<int>(meter))] +
+            sign * noise;
   }
   return sd;
 }
@@ -110,11 +119,26 @@ void CheckDecision() {
       kitbag::BarOnePhase(PhaseSd(pair, kNoiseAmplitude), 4, 3) == 3,
       "accent: a pair within the bar-to-bar noise keeps QM's choice"
   );
+  Check(
+      kitbag::BarOnePhase(PhaseSd(pair, kFewBarsNoise, kFewBars), 4, 3) == 3,
+      "accent: a clear pair over two bars keeps QM's choice"
+  );
+  const double level = pair[2];
+  const std::vector<double> rounding =
+      {pair[0], level, level + kRoundingGap, level + kRoundingGap * 1.1};
+  Check(
+      kitbag::BarOnePhase(PhaseSd(rounding, 0.0), 4, 3) == 3,
+      "accent: a pair clearing the rest by a rounding error keeps QM's choice"
+  );
+  Check(
+      kitbag::BarOnePhase(PhaseSd({1.0, 0.2, 0.25, 0.7}, 0.0), 4, 0) == 3,
+      "accent: a beat-4 change over half bar one's reads as a stand-out beat"
+  );
 }
 
 }  // namespace
 
-std::vector<float> MakeStandOutMono(int meter, int phase) {
+std::vector<float> MakePitchAccentMono(int meter, int phase) {
   return MakeMono(AccentBeat, meter, phase);
 }
 
