@@ -32,7 +32,7 @@ import { asPercent } from '../percent.ts';
 import { sliderGeometry } from '../stemPlayerRoles.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
-import { FillBar, ThumbDot } from './FrameCanvas';
+import { FillBar, ThumbDot } from './ProgressSvg.tsx';
 
 const NOT_DRAGGING = -1;
 const A11Y_ACTIONS = [
@@ -160,8 +160,6 @@ export function Slider(props: SliderProps) {
   const styles = useStyles();
   const theme = useTheme();
   const { value, onRelease, step, warnAbove } = props;
-  const fillColor = theme.color.accent;
-  const warnColor = theme.color.red;
   const geometry = GEOMETRY[props.look ?? props.mode];
   const width = useSharedValue(0);
   const { gesture, drag } = useSliderGesture(props, width);
@@ -181,9 +179,7 @@ export function Slider(props: SliderProps) {
   const shown = useDerivedValue(() =>
     drag.value === NOT_DRAGGING ? value.value : drag.value,
   );
-  const shownColor = useDerivedValue(() =>
-    pastWarning(shown.value, warnAbove) ? warnColor : fillColor,
-  );
+  const warned = useDerivedValue(() => pastWarning(shown.value, warnAbove));
   return (
     <GestureDetector gesture={gesture}>
       <View
@@ -199,7 +195,12 @@ export function Slider(props: SliderProps) {
           {props.behindFill}
           <FillBar
             progress={shown}
-            color={shownColor}
+            color={theme.color.accent}
+            warning={
+              warnAbove === undefined
+                ? undefined
+                : { color: theme.color.red, active: warned }
+            }
             radius={geometry.track.borderRadius}
             style={[styles.fill, geometry.track]}
           />

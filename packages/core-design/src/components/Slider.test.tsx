@@ -39,7 +39,6 @@ vi.mock('react-native-reanimated', async () => {
       },
       createAnimatedComponent: <T,>(component: T) => component,
     },
-    useAnimatedStyle: () => ({}),
     useAnimatedProps: live,
     useSharedValue: (value: unknown) => ({ value }),
     useDerivedValue: live,
@@ -179,11 +178,19 @@ describe('Slider drawing', () => {
     expect(liveProps(thumbCircle()).cx).toBe(sliderGeometry.fader.thumb / 2);
   });
 
-  it('turns the fill to the warning colour past the warning point', () => {
+  it('shows the warning colour over the fill past the warning point', () => {
     const value = { value: 0.5 };
     render(value, WARN_ABOVE);
-    expect(liveProps(fillRect()).fill).toBe(DARK.color.accent);
+    const [fill, warning] = drawnAs('Rect');
+    expect(fill?.fill).toBe(DARK.color.accent);
+    expect(warning?.fill).toBe(DARK.color.red);
+    expect(liveProps(warning).opacity).toBe(0);
     value.value = 0.9;
-    expect(liveProps(fillRect()).fill).toBe(DARK.color.red);
+    expect(liveProps(warning).opacity).toBe(1);
+  });
+
+  it('draws no warning layer without a warning point', () => {
+    render({ value: 0.9 });
+    expect(drawnAs('Rect')).toHaveLength(1);
   });
 });

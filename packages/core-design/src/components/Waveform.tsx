@@ -6,7 +6,7 @@ import { clampUnit } from '../clampUnit.ts';
 import { radius, space, waveMinBarFraction } from '../roles.ts';
 import { useTheme } from '../ThemeProvider.tsx';
 import { waveBarHeights, waveBarsPath } from '../waveform.ts';
-import { WaveLayers } from './FrameCanvas';
+import { WaveLayers } from './ProgressSvg.tsx';
 
 export interface WaveformProps {
   readonly envelope: readonly number[] | null;
@@ -47,12 +47,7 @@ export function Waveform({
     setWidth(event.nativeEvent.layout.width);
   }, []);
   return (
-    <View
-      style={[styles.lane, { height }]}
-      onLayout={onLayout}
-      importantForAccessibility="no-hide-descendants"
-      accessibilityElementsHidden
-    >
+    <View style={[styles.lane, { height }]} onLayout={onLayout}>
       <WaveLayers
         path={path}
         width={width}

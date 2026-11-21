@@ -147,12 +147,15 @@ describe('MiniPlayerBar', () => {
     const transforms = animated.map((style) => flat(style).transform);
     expect(transforms.filter((t) => t !== undefined)).toEqual([]);
     expect(drawnAs('Svg')).toHaveLength(1);
-    measureLine();
-    const fill = () => liveProps(drawnAs('Rect')[0]);
-    expect(fill()).toMatchObject({
-      width: LINE_WIDTH * PROGRESS,
-      fill: buildTheme('dark').color.accent,
+    expect(views.find((props) => props.onLayout !== undefined)).toMatchObject({
+      accessible: false,
+      importantForAccessibility: 'no-hide-descendants',
+      accessibilityElementsHidden: true,
     });
+    measureLine();
+    expect(drawnAs('Rect')[0]?.fill).toBe(buildTheme('dark').color.accent);
+    const fill = () => liveProps(drawnAs('Rect')[0]);
+    expect(fill().width).toBe(LINE_WIDTH * PROGRESS);
     progress.value = LATER;
     expect(fill().width).toBe(LINE_WIDTH * LATER);
   });

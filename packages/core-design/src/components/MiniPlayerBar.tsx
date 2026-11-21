@@ -9,7 +9,7 @@ import { textStyle } from '../textStyle.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 import { EllipsizedText } from './EllipsizedText.tsx';
-import { FillBar } from './FrameCanvas';
+import { FillBar } from './ProgressSvg.tsx';
 import { Icon } from './Icon.tsx';
 import { usePlayPauseLayers } from './PrimaryPlayButton.tsx';
 
@@ -148,10 +148,7 @@ export function MiniPlayerBar({
   const inset = useMemo(() => ({ paddingBottom: bottomInset }), [bottomInset]);
   return (
     <View style={[styles.bar, inset]}>
-      <View
-        style={styles.track}
-        importantForAccessibility="no-hide-descendants"
-      >
+      <View style={styles.track}>
         <FillBar
           progress={progress}
           color={theme.color.accent}

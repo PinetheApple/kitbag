@@ -29,7 +29,6 @@ vi.mock('react-native-reanimated', async () => {
       },
       createAnimatedComponent: <T,>(component: T) => component,
     },
-    useAnimatedStyle: (updater: () => object) => updater(),
     useAnimatedProps: live,
   };
 });
