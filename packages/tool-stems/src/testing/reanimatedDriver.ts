@@ -13,9 +13,14 @@ const frameCallbacks = new Set<FrameCallback>();
 const reactions = new Set<Reaction>();
 const FRAME_MS = 16;
 const ANIMATED = Symbol('animated style');
+const ANIMATED_PROPS = Symbol('animated props');
 
 interface AnimatedStyle<T> {
   readonly [ANIMATED]: () => T;
+}
+
+interface AnimatedProps<T> {
+  readonly [ANIMATED_PROPS]: () => T;
 }
 
 export const jsHops = { count: 0 };
@@ -51,17 +56,17 @@ export function animatedStyleOf(style: unknown): Record<string, unknown> {
   return live[ANIMATED]();
 }
 
-export function useAnimatedProps<T extends object>(props: () => T): T {
-  return new Proxy({} as T, {
-    get: (_, key) => Reflect.get(props(), key),
-    has: (_, key) => Reflect.has(props(), key),
-    ownKeys: () => Reflect.ownKeys(props()),
-    getOwnPropertyDescriptor: (_, key) => ({
-      configurable: true,
-      enumerable: true,
-      value: Reflect.get(props(), key),
-    }),
-  });
+export function useAnimatedProps<T>(props: () => T): AnimatedProps<T> {
+  return { [ANIMATED_PROPS]: props };
+}
+
+export function animatedPropsOf(node: {
+  readonly props: Record<string, unknown>;
+}): Record<string, unknown> {
+  const live = node.props.animatedProps;
+  if (typeof live !== 'object' || live === null || !(ANIMATED_PROPS in live))
+    throw new Error('no animated props on this node');
+  return (live as AnimatedProps<Record<string, unknown>>)[ANIMATED_PROPS]();
 }
 
 export function useDerivedValue<T>(value: () => T): { readonly value: T } {
