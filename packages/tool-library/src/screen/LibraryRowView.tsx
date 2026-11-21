@@ -14,6 +14,7 @@ import {
   minTouchTargetDp,
   opacity,
   size,
+  space,
   textIconScale,
   textRoles,
   textStyle,
@@ -57,9 +58,15 @@ const useStyles = createThemedStyles((theme) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: libraryList.rowGap,
+    paddingLeft: space.screenInset,
     paddingRight: libraryList.rowEnd,
-    borderBottomWidth: size.stroke,
-    borderBottomColor: theme.color.line,
+    paddingBottom: size.stroke,
+  },
+  divider: {
+    position: 'absolute',
+    bottom: 0,
+    height: size.stroke,
+    backgroundColor: theme.color.line,
   },
   selected: {
     backgroundColor: withAlpha(theme.color.text, libraryMix.selectedRow),
@@ -179,10 +186,10 @@ export function LibraryRowView({
 }: LibraryRowViewProps) {
   const styles = useStyles();
   const { fontScale, width } = useWindowDimensions();
-  const { rowMargin, rowStart } = listEdges(width);
-  const edges = useMemo(
-    () => ({ marginHorizontal: rowMargin, paddingLeft: rowStart }),
-    [rowMargin, rowStart],
+  const { dividerInset } = listEdges(width);
+  const divider = useMemo(
+    () => [styles.divider, { left: dividerInset, right: dividerInset }],
+    [styles.divider, dividerInset],
   );
   const { titleLines, factsLines, badgesUnderText } = rowLayout(fontScale);
   const status = rowStatus(row);
@@ -241,7 +248,8 @@ export function LibraryRowView({
       </View>
     ) : null;
   return (
-    <View style={[styles.row, edges, selected && styles.selected]}>
+    <View style={[styles.row, selected && styles.selected]}>
+      <View pointerEvents="none" style={divider} />
       <Pressable
         accessible
         accessibilityRole="button"

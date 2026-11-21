@@ -441,3 +441,9 @@ export function barChipRoom(chipHeight: number): number {
 export const layout = {
   maxContentWidth: 600,
 } as const;
+
+export const contentColumnStyle = {
+  width: '100%',
+  maxWidth: layout.maxContentWidth,
+  alignSelf: 'center',
+} as const;

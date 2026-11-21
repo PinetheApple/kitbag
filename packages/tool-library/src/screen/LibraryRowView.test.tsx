@@ -114,13 +114,22 @@ function render(fontScale: number, width = PHONE_WIDTH) {
     factsLines: linesOf(FACTS),
     badgeShown: markup.includes(BADGE_MARK),
     badgeInColumn: column.includes(BADGE_MARK),
-    row: display.boxes[0] ?? {},
   };
+}
+
+function boxesBesideDividerAt(width: number) {
+  render(1, width);
+  return display.boxes.filter((box) => !('left' in box));
+}
+
+function dividerAt(width: number) {
+  render(1, width);
+  return display.boxes.find((box) => 'left' in box) ?? {};
 }
 
 describe('LibraryRowView', () => {
   it('keeps one title line and the badges beside the text at 1.0', () => {
-    expect(render(1)).toMatchObject({
+    expect(render(1)).toEqual({
       titleLines: 1,
       factsLines: 1,
       badgeShown: true,
@@ -129,7 +138,7 @@ describe('LibraryRowView', () => {
   });
 
   it('bounds the title and puts the badges under the text at 2.0', () => {
-    expect(render(2)).toMatchObject({
+    expect(render(2)).toEqual({
       titleLines: 3,
       factsLines: 2,
       badgeShown: true,
@@ -137,17 +146,20 @@ describe('LibraryRowView', () => {
     });
   });
 
-  it('runs the divider to the phone edge and starts text at the inset', () => {
-    expect(render(1, PHONE_WIDTH).row).toMatchObject({
-      marginHorizontal: 0,
-      paddingLeft: space.screenInset,
-    });
+  it('runs the divider to the phone edges', () => {
+    expect(dividerAt(PHONE_WIDTH)).toEqual({ left: 0, right: 0 });
+  });
+
+  it('keeps the actions key and text where the phone row has them when capped', () => {
+    expect(boxesBesideDividerAt(TABLET_WIDTH)).toEqual(
+      boxesBesideDividerAt(PHONE_WIDTH),
+    );
   });
 
   it('ends the divider at the search inset once the column is capped', () => {
-    expect(render(1, TABLET_WIDTH).row).toMatchObject({
-      marginHorizontal: space.screenInset,
-      paddingLeft: 0,
+    expect(dividerAt(TABLET_WIDTH)).toEqual({
+      left: space.screenInset,
+      right: space.screenInset,
     });
   });
 });

@@ -1,6 +1,6 @@
 import { Pressable, useWindowDimensions } from 'react-native';
 
-import { listEdges } from '../contentColumn.ts';
+import { listEdges } from '../listEdges.ts';
 import type { IconName } from '../icons.ts';
 import { libraryList } from '../libraryRoles.ts';
 import { radius, size } from '../roles.ts';
