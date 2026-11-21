@@ -5,6 +5,8 @@ export const metronome = {
   tempoNumeral: 88,
   tempoNumeralCompact: 80,
   tempoNumeralScaledMax: 128,
+  tempoNumeralTight: 56,
+  scrollFade: 28,
   tempoToControls: 20,
   presetRowInset: 16,
   controlsToDots: 14,

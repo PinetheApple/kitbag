@@ -1,15 +1,7 @@
-import {
-  createThemedStyles,
-  metronome,
-  readerHiding,
-  space,
-  textRoles,
-  textStyle,
-} from '@kitbag/core-design';
+import { metronome, readerHiding, space } from '@kitbag/core-design';
 import {
   BPM_BOUNDS,
   getPracticeSessionStore,
-  useLibrary,
   useMetronome,
   useSwipeHint,
 } from '@kitbag/core-state';
@@ -31,29 +23,23 @@ import {
   pinnedStackScrollSlack,
   pinnedViewportOverlap,
 } from '../logic/belowTempo.ts';
-import { noteStrip, type NoteStrip } from '../logic/noteStrip.ts';
 import { endPractice, summarySheetOnMount } from '../logic/practiceSummary.ts';
 import { practiceBadgeCount, restLegend } from '../logic/statusRows.ts';
 import { showSwipeHint } from '../logic/swipeHint.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatDots, BeatLegend } from './BeatDots.tsx';
-import { NumberEntrySheet } from './NumberEntrySheet.tsx';
-import { MeterSheet } from './MeterSheet.tsx';
 import { MetronomeAppBar } from './MetronomeAppBar.tsx';
+import { useMetronomeScreenStyles } from './metronomeScreenStyles.ts';
+import { MetronomeSheets, type OpenSheet } from './MetronomeSheets.tsx';
 import { PickerChips } from './PickerChips.tsx';
 import { PolyLegend } from './PolyLegend.tsx';
 import { PracticePill, usePracticeElapsed } from './PracticePill.tsx';
-import { PracticeSheet } from './PracticeSheet.tsx';
-import {
-  PracticeSummarySheet,
-  usePendingPractice,
-} from './PracticeSummarySheet.tsx';
+import { usePendingPractice } from './PracticeSummarySheet.tsx';
 import { PresetRow } from './PresetRow.tsx';
 import { StatusStack } from './StatusStack.tsx';
 import { EndedSetlistSnackbar } from './EndedSetlistSnackbar.tsx';
 import { SkippedSongSnackbar } from './SkippedSongSnackbar.tsx';
 import { SongClickSnackbar } from './SongClickSnackbar.tsx';
-import { SubdivisionSheet } from './SubdivisionSheet.tsx';
 import { SwipeHint } from './SwipeHint.tsx';
 import { SwipeTempoZone } from './SwipeTempoZone.tsx';
 import { Transport } from './Transport.tsx';
@@ -62,67 +48,16 @@ import { useEndPracticeOnLeave } from './useEndPracticeOnLeave.ts';
 import { useHoldEngine } from './useHoldEngine.ts';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
+import { useNoteStrip, useSkippedNotice } from './useMetronomeNotes.ts';
 import { useScreenDensity } from './useScreenDensity.ts';
+import { useTightTempo } from './useTightTempo.ts';
 import { useStatusRunRows } from './useStatusRunRows.ts';
 import { usePracticeSettings } from './usePracticeSettings.ts';
-
-type OpenSheet =
-  'none' | 'numpad' | 'meter' | 'subdivision' | 'practice' | 'summary';
 
 interface ZoneFrame {
   readonly top: number;
   readonly height: number;
 }
-
-const useStyles = createThemedStyles((theme) => ({
-  screen: {
-    flex: 1,
-    backgroundColor: theme.color.bg,
-    paddingHorizontal: space.screenInset,
-  },
-  readerLayer: {
-    flex: 1,
-  },
-  snackbarLayer: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    pointerEvents: 'box-none',
-  },
-  // A ScrollView clips its content; the poly row's last pulse and cycle
-  // bracket hang past the content edge into the screen inset.
-  bodyClip: {
-    flex: 1,
-    marginHorizontal: -space.screenInset,
-    overflow: 'hidden',
-  },
-  body: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-  },
-  bodyContent: {
-    flexGrow: 1,
-    paddingTop: metronome.belowAppBar,
-    paddingHorizontal: space.screenInset,
-  },
-  notes: {
-    ...textStyle(textRoles.fieldLabel),
-    color: theme.color.text2,
-    textAlign: 'center',
-  },
-  legend: {
-    marginTop: metronome.legendTop,
-    minHeight: metronome.legendRow,
-    justifyContent: 'center',
-  },
-  toolsPush: {
-    flexGrow: 1,
-  },
-}));
 
 export interface ShellMeasuredInsets {
   readonly top: number;
@@ -136,29 +71,6 @@ export interface MetronomeScreenProps {
   readonly onOpenStemSet?: (stemSetId: number) => void;
 }
 
-function useNoteStrip(): NoteStrip | null {
-  const songLoaded = useLibrary((state) => state.loaded !== null);
-  const notes = useLibrary((state) => {
-    const loadedId = state.loaded?.presetId;
-    if (loadedId === undefined) return null;
-    return (
-      state.presets.find((preset) => preset.id === loadedId)?.notes ?? null
-    );
-  });
-  return useMemo(() => noteStrip(songLoaded, notes), [songLoaded, notes]);
-}
-
-function useSkippedNotice() {
-  const [shownAt, setShownAt] = useState<number | null>(null);
-  const show = useCallback(() => {
-    setShownAt(Date.now());
-  }, []);
-  const hide = useCallback(() => {
-    setShownAt(null);
-  }, []);
-  return { shownAt, show, hide };
-}
-
 export function MetronomeScreen({
   insets,
   onBack,
@@ -169,7 +81,7 @@ export function MetronomeScreen({
   useHoldEngine();
   useEndPracticeOnLeave();
   useLibraryRefresh();
-  const styles = useStyles();
+  const styles = useMetronomeScreenStyles();
   const window = useWindowDimensions();
   const bpm = useMetronome((s) => s.bpm);
   const beatsPerBar = useMetronome((s) => s.beatsPerBar);
@@ -276,7 +188,7 @@ export function MetronomeScreen({
     setOpenSheet('summary');
   }, [resetPractice]);
 
-  const handleBodyClipLayout = useCallback((event: LayoutChangeEvent) => {
+  const handleTempoBlockLayout = useCallback((event: LayoutChangeEvent) => {
     setBodyTop(event.nativeEvent.layout.y);
   }, []);
 
@@ -306,6 +218,7 @@ export function MetronomeScreen({
     strip === null,
   ].join('|');
   const density = useScreenDensity(window.height, layoutKey, scrollable);
+  const tight = useTightTempo(layoutKey, scrollable);
   const bodyGap =
     density === 'compact' ? metronome.bodyGapCompact : space.sectionGap;
   const topGap = useMemo(() => ({ marginTop: bodyGap }), [bodyGap]);
@@ -332,9 +245,11 @@ export function MetronomeScreen({
   );
   const scrollSlack = useMemo(
     () => ({
-      paddingBottom: pinnedStackScrollSlack(running, fontScale, bodyGap),
+      paddingBottom:
+        pinnedStackScrollSlack(running, fontScale, bodyGap) +
+        (scrollable ? metronome.scrollFade : 0),
     }),
-    [running, fontScale, bodyGap],
+    [running, fontScale, bodyGap, scrollable],
   );
   const status = (
     <StatusStack
@@ -360,39 +275,46 @@ export function MetronomeScreen({
             onOpenStemSet={onOpenStemSet}
             onSkipped={skipped.show}
           />
-          <View style={styles.bodyClip} onLayout={handleBodyClipLayout}>
+          <View
+            testID="tempo-block"
+            style={styles.tempoBlock}
+            onLayout={handleTempoBlockLayout}
+          >
+            <PracticePill elapsedMs={elapsedMs} onEnd={handleEndPractice} />
+            {strip === null ? null : (
+              <Text
+                accessible={strip.spoken !== null}
+                accessibilityLabel={strip.spoken ?? undefined}
+                numberOfLines={1}
+                style={[styles.notes, topGap]}
+              >
+                {strip.text}
+              </Text>
+            )}
+            <GestureDetector gesture={zoneSwipe}>
+              <View style={topGap} onLayout={handleZoneLayout}>
+                <SwipeTempoZone
+                  bpm={bpm}
+                  density={density}
+                  tight={tight}
+                  currentBpm={frame.currentBpm}
+                  barPhase={frame.barPhase}
+                  onTypeTempo={handleOpenNumpad}
+                  onNudge={handleNudge}
+                />
+              </View>
+            </GestureDetector>
+          </View>
+          <View style={styles.bodyClip}>
             <ScrollView
               style={[styles.body, viewportFrame]}
               contentContainerStyle={[styles.bodyContent, scrollSlack]}
-              requireToFail={zoneSwipe}
               scrollEnabled={scrollable}
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator={scrollable}
+              persistentScrollbar
               onLayout={handleBodyLayout}
               onContentSizeChange={handleContentSize}
             >
-              <PracticePill elapsedMs={elapsedMs} onEnd={handleEndPractice} />
-              {strip === null ? null : (
-                <Text
-                  accessible={strip.spoken !== null}
-                  accessibilityLabel={strip.spoken ?? undefined}
-                  numberOfLines={1}
-                  style={[styles.notes, topGap]}
-                >
-                  {strip.text}
-                </Text>
-              )}
-              <GestureDetector gesture={zoneSwipe}>
-                <View style={topGap} onLayout={handleZoneLayout}>
-                  <SwipeTempoZone
-                    bpm={bpm}
-                    density={density}
-                    currentBpm={frame.currentBpm}
-                    barPhase={frame.barPhase}
-                    onTypeTempo={handleOpenNumpad}
-                    onNudge={handleNudge}
-                  />
-                </View>
-              </GestureDetector>
               <PresetRow onNudge={handleNudge} onTap={handleTap} />
               <PickerChips
                 beatsPerBar={beatsPerBar}
@@ -426,6 +348,9 @@ export function MetronomeScreen({
                 )}
               </View>
             </ScrollView>
+            {scrollable ? (
+              <View testID="scroll-fade" style={styles.fade} />
+            ) : null}
           </View>
           {pinStatus ? (
             <View testID="pinned-status" style={stackGap}>
@@ -463,36 +388,13 @@ export function MetronomeScreen({
           />
         ) : null}
 
-        <NumberEntrySheet
-          visible={openSheet === 'numpad'}
-          title="Tempo"
-          confirmLabel="Set tempo"
-          value={bpm}
-          bounds={BPM_BOUNDS}
-          unit="BPM"
+        <MetronomeSheets
+          openSheet={openSheet}
+          bpm={bpm}
           bottomInset={insets.bottom}
-          onConfirm={handleSwipeOrTypedTempo}
-          onDismiss={handleCloseSheet}
-        />
-        <MeterSheet
-          visible={openSheet === 'meter'}
-          bottomInset={insets.bottom}
-          onDismiss={handleCloseSheet}
-        />
-        <SubdivisionSheet
-          visible={openSheet === 'subdivision'}
-          bottomInset={insets.bottom}
-          onDismiss={handleCloseSheet}
-        />
-        <PracticeSheet
-          visible={openSheet === 'practice'}
-          bottomInset={insets.bottom}
-          onDismiss={handleCloseSheet}
-        />
-        <PracticeSummarySheet
-          visible={openSheet === 'summary'}
-          summary={pendingPractice}
-          bottomInset={insets.bottom}
+          pendingPractice={pendingPractice}
+          onTypedTempo={handleSwipeOrTypedTempo}
+          onClose={handleCloseSheet}
         />
       </View>
     </GestureDetector>
