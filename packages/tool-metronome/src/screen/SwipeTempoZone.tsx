@@ -113,7 +113,7 @@ interface SwipeTempoZoneProps {
 
 interface TempoArrowKeyProps {
   readonly arrow: TempoArrow;
-  readonly hitSlop: Insets;
+  readonly reach: Insets;
   readonly onNudge: (delta: number) => void;
 }
 
@@ -153,7 +153,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-function TempoArrowKey({ arrow, hitSlop, onNudge }: TempoArrowKeyProps) {
+function TempoArrowKey({ arrow, reach, onNudge }: TempoArrowKeyProps) {
   const styles = useStyles();
   const handlePress = useCallback(() => {
     onNudge(tempoArrowDelta(arrow));
@@ -163,7 +163,7 @@ function TempoArrowKey({ arrow, hitSlop, onNudge }: TempoArrowKeyProps) {
       accessibilityRole="button"
       accessibilityLabel={ARROW_LABEL[arrow]}
       style={styles.arrow}
-      hitSlop={hitSlop}
+      hitSlop={reach}
       onPress={handlePress}
     >
       <Icon
@@ -228,13 +228,13 @@ export function SwipeTempoZone({
         <View style={styles.tightRow}>
           <TempoArrowKey
             arrow="down"
-            hitSlop={TIGHT_ARROW_HIT_SLOP}
+            reach={TIGHT_ARROW_HIT_SLOP}
             onNudge={onNudge}
           />
           {reading}
           <TempoArrowKey
             arrow="up"
-            hitSlop={TIGHT_ARROW_HIT_SLOP}
+            reach={TIGHT_ARROW_HIT_SLOP}
             onNudge={onNudge}
           />
         </View>
@@ -247,14 +247,14 @@ export function SwipeTempoZone({
     <View style={[styles.zone, zonePadding]}>
       <TempoArrowKey
         arrow="up"
-        hitSlop={ARROW_HIT_SLOP[density].up}
+        reach={ARROW_HIT_SLOP[density].up}
         onNudge={onNudge}
       />
       {reading}
       <Text style={styles.sub}>BPM · {tempoMarking(bpm)} · SWIPE ANYWHERE</Text>
       <TempoArrowKey
         arrow="down"
-        hitSlop={ARROW_HIT_SLOP[density].down}
+        reach={ARROW_HIT_SLOP[density].down}
         onNudge={onNudge}
       />
       {sweep}
