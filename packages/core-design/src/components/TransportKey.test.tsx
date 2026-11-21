@@ -12,28 +12,27 @@ type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const pressables = vi.hoisted(() => [] as Props[]);
 
+const display = vi.hoisted(() => ({ fontScale: 1 }));
+const texts = vi.hoisted(() => [] as Props[]);
+
 vi.mock('react-native', async (original) => {
   const actual = await original<Record<string, unknown>>();
   const { createElement: h } = await import('react');
   return {
     ...actual,
+    useWindowDimensions: () => ({ fontScale: display.fontScale, scale: 1 }),
     Pressable: (props: Props) => {
       pressables.push(props);
       return h('div', null, props.children);
+    },
+    Text: (props: Props) => {
+      texts.push(props);
+      return h('span', null, props.children);
     },
   };
 });
 
 vi.mock('./IconGlyph.tsx', () => ({ InlineIcon: () => null }));
-
-const faces = vi.hoisted(() => [] as Props[]);
-
-vi.mock('./DesignFloorOneLineText.tsx', () => ({
-  DesignFloorOneLineText: (props: Props) => {
-    faces.push(props);
-    return null;
-  },
-}));
 
 function rendered(muted: boolean, disabled: boolean) {
   pressables.length = 0;
@@ -68,9 +67,12 @@ it('blocks the press when disabled', () => {
   expect(rendered(false, true).pressable).toBe(true);
 });
 
-function dockKey(content: { text: string } | { icon: 'play' }) {
+const GROWN_FONT_SCALE = 2;
+
+function dockKey(content: { text: string } | { icon: 'play' }, fontScale = 1) {
+  display.fontScale = fontScale;
   pressables.length = 0;
-  faces.length = 0;
+  texts.length = 0;
   renderToStaticMarkup(
     <ThemeProvider mode="dark">
       <TransportKey
@@ -81,23 +83,31 @@ function dockKey(content: { text: string } | { icon: 'play' }) {
       />
     </ThemeProvider>,
   );
+  const [face] = texts;
   return {
     shrink: flatStyle(pressables[0]?.style as StyleProp<ViewStyle>).flexShrink,
-    face: faces[0],
+    face,
+    drawnSize:
+      flatStyle(face?.style as StyleProp<TextStyle>).fontSize ?? Number.NaN,
   };
 }
 
-it('hands a text face to the one-line fit with the dock role and lets the key shrink', () => {
-  const { shrink, face } = dockKey({ text: '100%' });
-  expect(shrink).toBe(1);
-  expect(face?.text).toBe('100%');
-  expect(face?.role).toBe(textRoles.dockKey);
+it('draws a text face whole at the design size, as main does, at 100% text', () => {
+  const { shrink, face, drawnSize } = dockKey({ text: '100%' });
+  expect(shrink).toBeUndefined();
+  expect(face?.numberOfLines).toBeUndefined();
+  expect(face?.children).toBe('100%');
+  expect(drawnSize).toBe(textRoles.dockKey.size);
 });
 
-it('draws a text face at the size its fit measures with', () => {
-  const { face } = dockKey({ text: '100%' });
-  const drawn = flatStyle(face?.style as StyleProp<TextStyle>);
-  expect(drawn.fontSize).toBe((face?.role as { size: number }).size);
+it('keeps a text face at its design size and whole at 200% text', () => {
+  const { shrink, face, drawnSize } = dockKey(
+    { text: '100%' },
+    GROWN_FONT_SCALE,
+  );
+  expect(shrink).toBeUndefined();
+  expect(face?.numberOfLines).toBeUndefined();
+  expect(drawnSize * GROWN_FONT_SCALE).toBe(textRoles.dockKey.size);
 });
 
 it('keeps an icon key at its own size', () => {

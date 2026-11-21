@@ -1,4 +1,4 @@
-import { Pressable, View } from 'react-native';
+import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
 import type { TypeRole } from '../tokens.ts';
@@ -13,8 +13,9 @@ import {
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { stemPlayer } from '../stemPlayerRoles.ts';
+import { fittedStyle, oneLineFloor } from '../oneLineFit.ts';
+import { isTextScaled } from '../textScale.ts';
 import { hitSlopFor } from '../touchTarget.ts';
-import { DesignFloorOneLineText } from './DesignFloorOneLineText.tsx';
 import { InlineIcon } from './IconGlyph.tsx';
 import { KeyBadge } from './KeyBadge.tsx';
 
@@ -70,8 +71,6 @@ const useStyles = createThemedStyles((theme) => ({
     minWidth: stemPlayer.transportKey,
     minHeight: stemPlayer.transportKey,
   },
-  textKey: { flexShrink: 1 },
-  textBox: { alignSelf: 'stretch', alignItems: 'center' },
   selected: {
     backgroundColor: theme.activeControlFill,
     borderColor: theme.color.accentDim,
@@ -131,11 +130,17 @@ export function TransportKey({
   const large = keySize === 'large';
   const small = keySize === 'small';
   const dimmed = disabled || muted;
+  const { fontScale } = useWindowDimensions();
+  const role = TEXT_ROLES[keySize];
   const glyphStyle = [
     GLYPH_TEXT[keySize],
     styles.glyph,
     selected && styles.glyphSelected,
   ];
+  // The dock row has no room for grown text, and its icon faces never grow.
+  const designSizeFace = isTextScaled(fontScale)
+    ? fittedStyle(role, oneLineFloor(fontScale, role.size, role.size))
+    : null;
   return (
     <Pressable
       accessibilityRole="button"
@@ -149,18 +154,12 @@ export function TransportKey({
         small && styles.small,
         selected && styles.selected,
         dimmed && styles.disabled,
-        icon === undefined && styles.textKey,
       ]}
       hitSlop={HIT_SLOP[keySize]}
       onPress={onPress}
     >
       {icon === undefined ? (
-        <DesignFloorOneLineText
-          text={text}
-          role={TEXT_ROLES[keySize]}
-          style={glyphStyle}
-          boxStyle={styles.textBox}
-        />
+        <Text style={[glyphStyle, designSizeFace]}>{text}</Text>
       ) : (
         <InlineIcon name={icon} style={glyphStyle} />
       )}
