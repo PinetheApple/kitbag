@@ -6,7 +6,8 @@ import { clampUnit } from '../clampUnit.ts';
 import { asPercent } from '../percent.ts';
 import { radius as radii } from '../roles.ts';
 import {
-  CANVAS_HIDING,
+  READER_HIDDEN,
+  thumbTravel,
   useMeasuredSize,
   type FillBarProps,
   type ThumbDotProps,
@@ -16,40 +17,26 @@ import {
 export type { FillBarProps } from './frameCanvasShared.ts';
 
 const styles = StyleSheet.create({
-  cover: { position: 'absolute', left: 0, top: 0, bottom: 0, right: 0 },
-  fill: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    right: 0,
-    transformOrigin: 'left',
-  },
+  cover: { ...StyleSheet.absoluteFill },
+  fill: { ...StyleSheet.absoluteFill, transformOrigin: 'left' },
   thumb: { position: 'absolute', left: 0, top: 0, borderRadius: radii.circle },
   layer: { position: 'absolute', left: 0, top: 0 },
-  played: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    right: 0,
-    overflow: 'hidden',
-  },
+  played: { ...StyleSheet.absoluteFill, overflow: 'hidden' },
 });
 
 export function FillBar({
-  shown,
+  progress,
   color,
   style,
   radius = 0,
   testID,
 }: FillBarProps) {
   const fillStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: clampUnit(shown.value) }],
+    transform: [{ scaleX: clampUnit(progress.value) }],
     backgroundColor: typeof color === 'string' ? color : color.value,
   }));
   return (
-    <View testID={testID} style={style} pointerEvents="none" {...CANVAS_HIDING}>
+    <View testID={testID} style={style} pointerEvents="none" {...READER_HIDDEN}>
       <Animated.View
         style={[styles.fill, { borderRadius: radius }, fillStyle]}
       />
@@ -57,12 +44,13 @@ export function FillBar({
   );
 }
 
-export function ThumbDot({ shown, color, diameter, style }: ThumbDotProps) {
+export function ThumbDot({ progress, color, diameter, style }: ThumbDotProps) {
   const { size, onLayout } = useMeasuredSize();
   const thumbStyle = useAnimatedStyle(() => ({
     transform: [
       {
-        translateX: clampUnit(shown.value) * (size.value.width - diameter),
+        translateX:
+          clampUnit(progress.value) * thumbTravel(size.value.width, diameter),
       },
     ],
   }));
@@ -71,7 +59,7 @@ export function ThumbDot({ shown, color, diameter, style }: ThumbDotProps) {
       style={style}
       pointerEvents="none"
       onLayout={onLayout}
-      {...CANVAS_HIDING}
+      {...READER_HIDDEN}
     >
       <Animated.View
         style={[
@@ -116,7 +104,7 @@ export function WaveLayers({
     return { transform: [{ translateX: asPercent(hidden) }] };
   });
   return (
-    <>
+    <View style={styles.cover} pointerEvents="none" {...READER_HIDDEN}>
       <Bars path={path} width={width} height={height} color={color} />
       {progress === undefined ? null : (
         <Animated.View style={[styles.played, clipStyle]}>
@@ -130,6 +118,6 @@ export function WaveLayers({
           </Animated.View>
         </Animated.View>
       )}
-    </>
+    </View>
   );
 }

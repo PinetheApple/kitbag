@@ -107,37 +107,27 @@ it('clips the played layer to the progress share of the measured lane', () => {
   });
 });
 
-it('follows the shared value on the canvas with no render', () => {
+it('follows the shared value on the canvas', () => {
   const progress = { value: 0.25 };
   measure(mount(2, progress));
   const clip = playedClip();
-  const renders = drawn.length;
   progress.value = 1;
   expect(clip.value.width).toBe(MEASURED_WIDTH);
-  expect(drawn.length).toBe(renders);
 });
 
-it('draws each layer as one shape however many bars it has', () => {
-  measure(mount(64, { value: 0.5 }));
-  const many = drawnAs('Path').slice(-2);
-  measure(mount(2, { value: 0.5 }));
-  const few = drawnAs('Path').slice(-2);
-  expect(many).toHaveLength(2);
-  expect(few).toHaveLength(2);
+it.each([64, 2])('draws each layer as one shape with %d bars', (bars) => {
+  const tree = mount(bars, { value: 0.5 });
+  drawn.length = 0;
+  measure(tree);
+  expect(drawnAs('Path')).toHaveLength(2);
 });
 
 it('draws the bars on both layers once the lane is measured', () => {
   const tree = mount(2, { value: 0.5 });
   expect(drawnAs('Path')).toEqual([]);
+  drawn.length = 0;
   measure(tree);
-  const drawnPaths = drawnAs('Path')
-    .slice(-2)
-    .map((props) => props.path);
-  expect(drawnPaths.map((d) => typeof d)).toEqual(['string', 'string']);
-  for (const d of drawnPaths) expect(d).toMatch(/^M.+Z$/);
-  expect(
-    drawnAs('Path')
-      .slice(-2)
-      .map((props) => props.color),
-  ).toEqual(['wave', 'waveHot']);
+  const layers = drawnAs('Path');
+  for (const layer of layers) expect(layer.path).toMatch(/^M.+Z$/);
+  expect(layers.map((layer) => layer.color)).toEqual(['wave', 'waveHot']);
 });

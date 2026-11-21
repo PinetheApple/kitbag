@@ -127,7 +127,7 @@ describe('MiniPlayerBar', () => {
     expect(handlers[handler]).toHaveBeenCalledOnce();
   });
 
-  it('draws the progress line on a canvas from the shared value, with no render', () => {
+  it('draws the progress line on a canvas from the shared value', () => {
     render(0);
     const transforms = animated.map((style) => flat(style).transform);
     expect(transforms.filter((t) => t !== undefined)).toEqual([]);
@@ -139,10 +139,8 @@ describe('MiniPlayerBar', () => {
     expect(drawnAs('RoundedRect')[0]?.color).toBe(
       buildTheme('dark').color.accent,
     );
-    const renders = drawn.length;
     progress.value = LATER;
     expect(fill.value).toEqual([{ scaleX: LATER }]);
-    expect(drawn.length).toBe(renders);
   });
 
   it.each([

@@ -10,7 +10,8 @@ import { useDerivedValue } from 'react-native-reanimated';
 
 import { clampUnit } from '../clampUnit.ts';
 import {
-  CANVAS_HIDING,
+  READER_HIDDEN,
+  thumbTravel,
   useMeasuredSize,
   type FillBarProps,
   type ThumbDotProps,
@@ -20,14 +21,16 @@ import {
 export type { FillBarProps } from './frameCanvasShared.ts';
 
 export function FillBar({
-  shown,
+  progress,
   color,
   style,
   radius = 0,
   testID,
 }: FillBarProps) {
   const { size, onLayout } = useMeasuredSize();
-  const transform = useDerivedValue(() => [{ scaleX: clampUnit(shown.value) }]);
+  const transform = useDerivedValue(() => [
+    { scaleX: clampUnit(progress.value) },
+  ]);
   const width = useDerivedValue(() => size.value.width);
   const height = useDerivedValue(() => size.value.height);
   return (
@@ -36,9 +39,9 @@ export function FillBar({
       style={style}
       pointerEvents="none"
       onLayout={onLayout}
-      {...CANVAS_HIDING}
+      {...READER_HIDDEN}
     >
-      <Canvas style={StyleSheet.absoluteFill} {...CANVAS_HIDING}>
+      <Canvas style={StyleSheet.absoluteFill}>
         <Group transform={transform}>
           <RoundedRect
             x={0}
@@ -54,20 +57,22 @@ export function FillBar({
   );
 }
 
-export function ThumbDot({ shown, color, diameter, style }: ThumbDotProps) {
+export function ThumbDot({ progress, color, diameter, style }: ThumbDotProps) {
   const { size, onLayout } = useMeasuredSize();
   const radius = diameter / 2;
   const cx = useDerivedValue(
-    () => radius + clampUnit(shown.value) * (size.value.width - diameter),
+    () =>
+      radius +
+      clampUnit(progress.value) * thumbTravel(size.value.width, diameter),
   );
   return (
     <View
       style={style}
       pointerEvents="none"
       onLayout={onLayout}
-      {...CANVAS_HIDING}
+      {...READER_HIDDEN}
     >
-      <Canvas style={StyleSheet.absoluteFill} {...CANVAS_HIDING}>
+      <Canvas style={StyleSheet.absoluteFill}>
         <Circle cx={cx} cy={radius} r={radius} color={color} />
       </Canvas>
     </View>
@@ -94,7 +99,7 @@ export function WaveLayers({
     <Canvas
       style={StyleSheet.absoluteFill}
       pointerEvents="none"
-      {...CANVAS_HIDING}
+      {...READER_HIDDEN}
     >
       {bars(color)}
       {progress === undefined ? null : (

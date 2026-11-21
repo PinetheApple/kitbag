@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { type SharedValue } from 'react-native-reanimated';
 
 import type { IconName } from '../icons.ts';
@@ -29,13 +29,7 @@ const useStyles = createThemedStyles((theme) => ({
     backgroundColor: theme.color.line,
     overflow: 'hidden',
   },
-  fill: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
+  fill: { ...StyleSheet.absoluteFill },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -159,7 +153,7 @@ export function MiniPlayerBar({
         importantForAccessibility="no-hide-descendants"
       >
         <FillBar
-          shown={progress}
+          progress={progress}
           color={theme.color.accent}
           style={styles.fill}
         />

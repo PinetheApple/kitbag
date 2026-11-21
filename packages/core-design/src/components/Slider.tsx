@@ -1,5 +1,6 @@
 import { useCallback, type ReactNode } from 'react';
 import {
+  StyleSheet,
   View,
   type AccessibilityActionEvent,
   type LayoutChangeEvent,
@@ -65,13 +66,7 @@ const useStyles = createThemedStyles((theme) => ({
     justifyContent: 'center',
   },
   track: { backgroundColor: theme.color.surface3 },
-  fill: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
+  fill: { ...StyleSheet.absoluteFill },
   tick: {
     position: 'absolute',
     top: -sliderGeometry.tickOverhang,
@@ -203,7 +198,7 @@ export function Slider(props: SliderProps) {
         <View style={[styles.track, geometry.track]} onLayout={onLayout}>
           {props.behindFill}
           <FillBar
-            shown={shown}
+            progress={shown}
             color={shownColor}
             radius={geometry.track.borderRadius}
             style={[styles.fill, geometry.track]}
@@ -219,7 +214,7 @@ export function Slider(props: SliderProps) {
             />
           )}
           <ThumbDot
-            shown={shown}
+            progress={shown}
             color={theme.color.text}
             diameter={geometry.diameter}
             style={geometry.thumb}

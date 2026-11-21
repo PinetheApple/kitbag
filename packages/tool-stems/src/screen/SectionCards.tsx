@@ -121,7 +121,7 @@ function CardProgress({
   return (
     <FillBar
       testID="section-progress"
-      shown={shown}
+      progress={shown}
       color={theme.color.onAccent}
       style={styles.progress}
     />

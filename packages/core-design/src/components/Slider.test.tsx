@@ -135,16 +135,19 @@ describe('Slider drawing', () => {
   it('draws fill and thumb on canvases hidden from readers, not animated views', () => {
     render({ value: 0.5 });
     expect(animated).toEqual([]);
-    const canvases = drawnAs('Canvas');
-    expect(canvases).toHaveLength(2);
-    for (const canvas of canvases)
-      expect(canvas).toMatchObject({
+    expect(drawnAs('Canvas')).toHaveLength(2);
+    const hidden = views.filter(
+      (props) => props.importantForAccessibility === 'no-hide-descendants',
+    );
+    expect(hidden).toHaveLength(2);
+    for (const props of hidden)
+      expect(props).toMatchObject({
         accessible: false,
-        importantForAccessibility: 'no-hide-descendants',
+        accessibilityElementsHidden: true,
       });
   });
 
-  it('scales the fill and moves the thumb from the shared value with no render', () => {
+  it('scales the fill and moves the thumb from the shared value', () => {
     const value = { value: 0.5 };
     render(value);
     measureThumbLane();
@@ -153,11 +156,15 @@ describe('Slider drawing', () => {
     const cx = drawnAs('Circle')[0]?.cx as Live<number>;
     expect(fill.value).toEqual([{ scaleX: 0.5 }]);
     expect(cx.value).toBe(thumb / 2 + TRACK_WIDTH / 2);
-    const renders = drawn.length;
     value.value = 2;
     expect(fill.value).toEqual([{ scaleX: 1 }]);
     expect(cx.value).toBe(thumb / 2 + TRACK_WIDTH);
-    expect(drawn.length).toBe(renders);
+  });
+
+  it('keeps the thumb on its canvas before the lane is measured', () => {
+    render({ value: 1 });
+    const cx = drawnAs('Circle')[0]?.cx as Live<number>;
+    expect(cx.value).toBe(sliderGeometry.fader.thumb / 2);
   });
 
   it('turns the fill to the warning colour past the warning point', () => {

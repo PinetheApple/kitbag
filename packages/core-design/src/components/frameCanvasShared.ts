@@ -4,12 +4,12 @@ import { useSharedValue, type DerivedValue } from 'react-native-reanimated';
 
 import { readerHiding } from '../readerHiding.ts';
 
-export const CANVAS_HIDING = { ...readerHiding(true), accessible: false };
+export const READER_HIDDEN = { ...readerHiding(true), accessible: false };
 
 const UNMEASURED = { width: 0, height: 0 };
 
 export interface FillBarProps {
-  readonly shown: DerivedValue<number>;
+  readonly progress: DerivedValue<number>;
   readonly color: string | DerivedValue<string>;
   readonly style: StyleProp<ViewStyle>;
   readonly radius?: number;
@@ -17,7 +17,7 @@ export interface FillBarProps {
 }
 
 export interface ThumbDotProps {
-  readonly shown: DerivedValue<number>;
+  readonly progress: DerivedValue<number>;
   readonly color: string;
   readonly diameter: number;
   readonly style: StyleProp<ViewStyle>;
@@ -30,6 +30,11 @@ export interface WaveLayersProps {
   readonly color: string;
   readonly playedColor: string;
   readonly progress: DerivedValue<number> | undefined;
+}
+
+export function thumbTravel(width: number, diameter: number): number {
+  'worklet';
+  return Math.max(0, width - diameter);
 }
 
 export function useMeasuredSize() {
