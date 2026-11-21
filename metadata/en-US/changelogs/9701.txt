@@ -1,0 +1,1 @@
+• The players and the queue fit large text and short screens. Up next, the queue footer and the stem player menu no longer wrap one letter at a time. The A|B and speed keys stay on screen. On a short window or at large text, the stem player keeps at least two stems and three lyric lines visible and scrolls as one page to reach the transport.
