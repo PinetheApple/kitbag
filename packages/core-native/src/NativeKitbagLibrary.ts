@@ -27,6 +27,12 @@ export type ImportedAudio = Readonly<{
   durationSec: CodegenTypes.Double;
 }>;
 
+export type AnalysisTempo = Readonly<{
+  bpm: CodegenTypes.Double;
+  anchorSec: CodegenTypes.Double;
+  beatsPerBar: CodegenTypes.Int32;
+}>;
+
 export type AnalysisResult = Readonly<{
   relativePath: string;
   ok: boolean;
@@ -37,6 +43,8 @@ export type AnalysisResult = Readonly<{
   waveformRelativePath: string;
   durationSec: CodegenTypes.Double;
   analysisVersion?: CodegenTypes.Int32;
+  // Absent: the analyser predates the tempo fit. Null: the fit found no steady tempo.
+  tempo?: AnalysisTempo | null;
 }>;
 
 export type StemBundleCheck = Readonly<{

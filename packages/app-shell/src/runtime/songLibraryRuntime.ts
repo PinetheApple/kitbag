@@ -1,4 +1,5 @@
 import {
+  getKitbagCommands,
   getKitbagLibrary,
   fileAvailability,
   watchDataFolder,
@@ -10,6 +11,7 @@ import {
   type LibraryFiles,
   type OpenSong,
   type SongLibraryRecords,
+  type TempoFitter,
 } from '@kitbag/core-state';
 import { useEffect } from 'react';
 
@@ -43,7 +45,12 @@ const records: SongLibraryRecords = {
     library().saveSongMeterOverride(id, patch),
   saveSongTempoCorrection: (id, correction) =>
     library().saveSongTempoCorrection(id, correction),
+  listStemSetsWithoutTempo: () => library().listStemSetsWithoutTempo(),
+  saveStemSetTempo: (id, tempo) => library().saveStemSetTempo(id, tempo),
 };
+
+const fitTempo: TempoFitter = (beatTimesSec, downbeatIndices) =>
+  getKitbagCommands().fitConstantTempo(beatTimesSec, downbeatIndices);
 
 // Resolved per call: getKitbagLibrary throws in a build without the module.
 const files: LibraryFiles = {
@@ -97,7 +104,7 @@ const openSong: OpenSong = {
     }),
 };
 
-configureSongLibrary({ records, files, openSong });
+configureSongLibrary({ records, files, openSong, fitTempo });
 
 export function useSongLibraryAnalysis(): void {
   useEffect(() => {

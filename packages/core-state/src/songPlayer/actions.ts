@@ -30,6 +30,7 @@ export type SongPlayerActions = Pick<
   | 'pressPrevious'
   | 'onPrevious'
   | 'playheadSeconds'
+  | 'setTempoMode'
 > &
   SongClickActions & {
     readonly open: (songId: number, waveformBars: number) => SongSession;

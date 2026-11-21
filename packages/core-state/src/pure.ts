@@ -2,6 +2,8 @@ export * from './stemPlayer/facts.ts';
 export * from './text.ts';
 export * from './stemPlayer/mix.ts';
 export * from './stemPlayer/speedKeyText.ts';
+export * from './stemPlayer/tempoText.ts';
+export { TEMPO_MODE, TEMPO_SOURCE } from '@kitbag/core-db/src/tempo-mode';
 export {
   isUnitySpeed,
   SPEED_PRESETS,

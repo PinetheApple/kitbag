@@ -1,8 +1,27 @@
-import type { AnalysisResultRecord } from '@kitbag/core-db';
+import type { AnalysisResultRecord, BundleTempo } from '@kitbag/core-db';
 import type { AnalysisResult } from '@kitbag/core-native';
+
+import { analysedTempo } from './analysedTempo.ts';
 
 function knownLength(durationSec: number) {
   return Number.isFinite(durationSec) && durationSec > 0;
+}
+
+function tempoOf({
+  tempo,
+  beats,
+  downbeats,
+}: AnalysisResult): BundleTempo | null {
+  if (tempo === undefined) return null;
+  const fit =
+    tempo === null
+      ? null
+      : {
+          bpm: tempo.bpm,
+          anchor: tempo.anchorSec,
+          beatsPerBar: tempo.beatsPerBar,
+        };
+  return analysedTempo(fit, { beats, downbeatIndices: downbeats });
 }
 
 export function resultRecord(result: AnalysisResult): AnalysisResultRecord {
@@ -18,5 +37,6 @@ export function resultRecord(result: AnalysisResult): AnalysisResultRecord {
       result.waveformRelativePath === '' ? null : result.waveformRelativePath,
     durationSec: knownLength(result.durationSec) ? result.durationSec : null,
     analysisVersion: result.analysisVersion ?? null,
+    tempo: tempoOf(result),
   };
 }

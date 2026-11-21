@@ -2,6 +2,8 @@ import { createSongLibraryRepository } from '@kitbag/core-db/src/song-library-re
 import { openTestDatabase } from '@kitbag/core-db/src/sqlite.test-helper';
 import {
   KB_BEAT_ANALYSIS_VERSION,
+  KB_RESULT,
+  type ConstantTempoFit,
   type AnalysisResult,
   type ImportedAudio,
   type ImportedStemBundle,
@@ -14,7 +16,7 @@ import { afterEach, vi } from 'vitest';
 
 import { DATA_FOLDER_CODES } from '../dataFolder/codes.test-helper.ts';
 import { songBadge } from './logic.ts';
-import type { LibraryFiles, OpenSong } from './runtime.ts';
+import type { LibraryFiles, OpenSong, TempoFitter } from './runtime.ts';
 import { createSongLibraryStore } from './store.ts';
 
 const handles: ReturnType<typeof openTestDatabase>[] = [];
@@ -294,7 +296,20 @@ export function fakeOpenSong() {
   return { openSong, setOpenSong };
 }
 
-export function setup(fake = fakeFiles()) {
+export function failedFit(): ConstantTempoFit {
+  return {
+    result: KB_RESULT.KB_ERROR_INVALID_ARGUMENT,
+    bpm: 0,
+    anchorSec: 0,
+    beatsPerBar: 0,
+  };
+}
+
+export function fakeFitter(fit: ConstantTempoFit = failedFit()) {
+  return vi.fn<TempoFitter>(() => Promise.resolve(fit));
+}
+
+export function setup(fake = fakeFiles(), fitTempo = fakeFitter()) {
   const handle = openTestDatabase();
   handles.push(handle);
   const records = createSongLibraryRepository(handle);
@@ -305,6 +320,7 @@ export function setup(fake = fakeFiles()) {
     files: () => fake.files,
     newUuid: () => `f${String((uuids += 1))}`,
     openSong: () => player.openSong,
+    fitTempo: () => fitTempo,
   });
   return { store, records, handle, ...player, ...fake };
 }

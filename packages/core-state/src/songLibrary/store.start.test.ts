@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { fakeFiles, fakeOpenSong } from './store.test-helper.ts';
+import { fakeFiles, fakeFitter, fakeOpenSong } from './store.test-helper.ts';
 import { createSongLibraryStore } from './store.ts';
 
 const UNOPENED = new Error('The database could not be opened: newer-version');
@@ -15,6 +15,7 @@ function libraryWithoutDatabase() {
     files: () => fake.files,
     newUuid: () => 'f1',
     openSong: () => player.openSong,
+    fitTempo: () => fakeFitter(),
   });
 }
 

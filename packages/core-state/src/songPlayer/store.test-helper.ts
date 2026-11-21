@@ -38,6 +38,8 @@ export function songRecord(change: Partial<SongRecord> = {}): SongRecord {
     speed: 1,
     meterBeatsPerBar: null,
     barOneSeconds: null,
+    tempo: null,
+    chosenTempoMode: null,
     ...change,
   };
 }
@@ -116,6 +118,7 @@ export function fakeSongRuntime(song: SongRecord = songRecord()) {
   const records = {
     readSong: vi.fn(() => Promise.resolve<SongRecord | undefined>(song)),
     saveSongSpeed: vi.fn(() => Promise.resolve()),
+    saveSongChosenTempoMode: vi.fn(() => Promise.resolve()),
     ...presetShelf(),
   };
   const library = {

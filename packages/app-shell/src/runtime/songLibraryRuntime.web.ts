@@ -25,6 +25,8 @@ configureSongLibrary({
     updateDuration: unavailable,
     saveSongMeterOverride: unavailable,
     saveSongTempoCorrection: unavailable,
+    listStemSetsWithoutTempo: () => Promise.resolve([]),
+    saveStemSetTempo: unavailable,
   },
   files: {
     constants: () => {
@@ -50,6 +52,7 @@ configureSongLibrary({
     onDataFolderChanged: () => () => undefined,
   },
   openSong: { id: () => null, onChange: () => () => undefined },
+  fitTempo: unavailable,
 });
 
 export const useSongLibraryAnalysis = (): void => undefined;

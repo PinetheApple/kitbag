@@ -422,7 +422,17 @@ export {
   type LibraryFiles,
   type OpenSong,
   type SongLibraryRecords,
+  type TempoFitter,
 } from './songLibrary/runtime.ts';
+export {
+  constantLine,
+  tempoHint,
+  tempoModeLabel,
+  tempoOptions,
+  tempoText,
+  tempoUnavailable,
+  type TempoOption,
+} from './stemPlayer/tempoText.ts';
 export {
   analysisFailure,
   filterRows,
