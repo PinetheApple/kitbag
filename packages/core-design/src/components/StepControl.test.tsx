@@ -3,10 +3,11 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 
-import { space } from '../roles.ts';
+import { size, space } from '../roles.ts';
+import { textIconScale } from '../textScale.ts';
 import { themes } from '../theme.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
-import { StepControl } from './StepControl.tsx';
+import { StepControl, type StepControlVariant } from './StepControl.tsx';
 import { flatStyle } from './flatStyle.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
@@ -15,6 +16,7 @@ const SUFFIX = 'bar';
 const display = vi.hoisted(() => ({ fontScale: 1 }));
 const suffixes = vi.hoisted(() => [] as Props[]);
 const views = vi.hoisted(() => [] as Props[]);
+const glyphs = vi.hoisted(() => [] as Props[]);
 
 vi.mock('react-native', async (original) => {
   const actual = await original<Record<string, unknown>>();
@@ -35,7 +37,12 @@ vi.mock('react-native', async (original) => {
   };
 });
 
-vi.mock('./IconGlyph.tsx', () => ({ InlineIcon: () => null }));
+vi.mock('./IconGlyph.tsx', () => ({
+  InlineIcon: (props: Props) => {
+    glyphs.push(props);
+    return null;
+  },
+}));
 
 function suffixGapAt(fontScale: number): unknown {
   display.fontScale = fontScale;
@@ -90,4 +97,41 @@ describe('StepControl accented inline', () => {
     });
     expect(clusterStyle(false).backgroundColor).toBe(color.surface2);
   });
+});
+
+describe('StepControl key glyphs under font scale', () => {
+  function glyphSizeAt(variant: StepControlVariant, fontScale: number) {
+    display.fontScale = fontScale;
+    glyphs.length = 0;
+    renderToStaticMarkup(
+      <ThemeProvider mode="dark">
+        <StepControl
+          variant={variant}
+          label="Ramp to"
+          value="120"
+          onStep={vi.fn()}
+        />
+      </ThemeProvider>,
+    );
+    display.fontScale = 1;
+    return Number(flatStyle(glyphs[0]?.style as StyleProp<TextStyle>).fontSize);
+  }
+
+  it.each(['inline', 'inlineLarge', 'inlineLargeTextGlyph'] as const)(
+    'grows the %s glyphs like other icons beside text',
+    (variant) => {
+      expect(glyphSizeAt(variant, 2)).toBe(
+        glyphSizeAt(variant, 1) * textIconScale(2),
+      );
+    },
+  );
+
+  it.each(['inlineLarge', 'inlineLargeTextGlyph'] as const)(
+    'keeps the grown %s glyph inside its fixed-width key',
+    (variant) => {
+      expect(glyphSizeAt(variant, 2)).toBeLessThanOrEqual(
+        size.stepInlineLargeKey,
+      );
+    },
+  );
 });
