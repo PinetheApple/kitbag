@@ -11,6 +11,7 @@ import { flatStyle } from './flatStyle.test-helper.ts';
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const drawn = vi.hoisted(() => ({
+  presses: [] as Props[],
   faces: [] as Props[],
   icons: [] as Props[],
   labels: [] as Props[],
@@ -20,8 +21,13 @@ vi.mock('react-native', async (original) => {
   const actual = await original<Record<string, unknown>>();
   const View = actual.View as (props: Props) => ReactNode;
   const Text = actual.Text as (props: Props) => ReactNode;
+  const Pressable = actual.Pressable as (props: Props) => ReactNode;
   return {
     ...actual,
+    Pressable: (props: Props) => {
+      drawn.presses.push(props);
+      return createElement(Pressable, props);
+    },
     View: (props: Props) => {
       drawn.faces.push(props);
       return createElement(View, props);
@@ -41,6 +47,7 @@ vi.mock('./IconGlyph.tsx', () => ({
 }));
 
 function drawButton(props: Partial<ButtonProps>) {
+  drawn.presses.length = 0;
   drawn.faces.length = 0;
   drawn.icons.length = 0;
   drawn.labels.length = 0;
@@ -50,6 +57,7 @@ function drawButton(props: Partial<ButtonProps>) {
     </ThemeProvider>,
   );
   return {
+    hit: flatStyle(drawn.presses[0]?.style as StyleProp<ViewStyle>),
     face: flatStyle(drawn.faces[0]?.style as StyleProp<ViewStyle>),
     icon: flatStyle(drawn.icons[0]?.style as StyleProp<TextStyle>),
     label: flatStyle(drawn.labels[0]?.style as StyleProp<TextStyle>),
@@ -82,5 +90,17 @@ describe('Button opt-in looks', () => {
     const plain = drawButton({ disabled: true });
     expect(plain.face.backgroundColor).toBe('transparent');
     expect(plain.face.opacity).toBeUndefined();
+  });
+});
+
+describe('Button hit box', () => {
+  it('takes the whole room to a sheet edge below it', () => {
+    const edge = { bottom: 12 };
+    const { hit } = drawButton({
+      neighbourGapDp: { top: 8 },
+      edgeRoomDp: edge,
+    });
+    expect(hit.paddingBottom).toBe(edge.bottom);
+    expect(hit.marginBottom).toBe(-edge.bottom);
   });
 });

@@ -7,9 +7,13 @@ import { defineConfig } from 'vitest/config';
 // re-exports NativeKitbagCommands, which imports react-native; its Flow-typed
 // entrypoint fails the vitest transform. Same stub as core-state's.
 export default defineConfig({
+  esbuild: { jsx: 'automatic' },
   test: {
-    include: ['src/logic/**/*.test.ts'],
+    include: ['src/logic/**/*.test.ts', 'src/screen/TuningSheet.test.tsx'],
     alias: {
+      '@kitbag/core-design': fileURLToPath(
+        new URL('../core-design/src/pure.ts', import.meta.url),
+      ),
       'react-native': fileURLToPath(
         new URL('./src/testing/reactNativeStub.ts', import.meta.url),
       ),

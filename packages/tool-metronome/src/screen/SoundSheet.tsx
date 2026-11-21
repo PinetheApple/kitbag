@@ -24,10 +24,8 @@ import { CustomSounds, useImportHint } from './CustomSounds.tsx';
 import { useHoldEngine } from './useHoldEngine.ts';
 
 // Heads the sheet; the picker grid below does not reach into the gap.
-const ROLE_GAPS = {
-  top: unshared(SHEET_TOUCH_ROOM),
-  bottom: unshared(space.sectionGap),
-};
+const ROLE_GAPS = { bottom: unshared(space.sectionGap) };
+const ROLE_EDGE = { top: SHEET_TOUCH_ROOM };
 
 const PICKER_HINT =
   'Tap a sound to hear it at the current volume. Accent and normal beats can use different sounds.';
@@ -93,6 +91,7 @@ export function SoundPickerSheet({
           options={SOUND_ROLE_OPTIONS}
           selected={role}
           neighbourGapDp={ROLE_GAPS}
+          edgeRoomDp={ROLE_EDGE}
           onSelect={setRole}
         />
         <PickerGrid
