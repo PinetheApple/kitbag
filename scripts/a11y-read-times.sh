@@ -16,9 +16,13 @@ Usage: scripts/a11y-read-times.sh <run-id | dir>
 
 Prints n, median, p90 and max (ms) of every Maestro "View hierarchy received in N ms"
 line in e2e logcats, by the media session state at read time:
-  stem       a PLAYING session whose custom actions are Back/Forward 10 seconds
+  stem       a PLAYING session whose custom actions include Back 10 seconds
   metronome  a PLAYING session whose custom actions include Tempo down
+  other      any other PLAYING session
   none       no PLAYING session (paused, stopped, destroyed, or never created)
+
+Each session is tracked by its record, so one session ending leaves the others.
+When several play at once, the read takes the first class in the list above.
 
   run-id  CI run id; downloads e2e-results-shard-1..$SHARDS into
           $CACHE_ROOT/<run>/ (kept for re-runs)
@@ -42,9 +46,10 @@ download() {
   for ((n = 1; n <= SHARDS; n++)); do
     shard="$dir/shard-$n"
     [[ -d $shard ]] && continue
-    mkdir -p "$shard"
-    gh run download "$run" --repo "$REPO" -n "e2e-results-shard-$n" -D "$shard" ||
+    rm -rf "$shard.part"
+    gh run download "$run" --repo "$REPO" -n "e2e-results-shard-$n" -D "$shard.part" ||
       die "$EXIT_DOWNLOAD" "gh run download failed: run $run, shard $n"
+    mv "$shard.part" "$shard"
   done
 }
 
@@ -53,35 +58,55 @@ extract() {
   while IFS= read -r -d '' tarball; do
     out="${tarball%.tar.gz}.d"
     [[ -d $out ]] && continue
-    mkdir -p "$out"
-    tar xzf "$tarball" -C "$out" || die "$EXIT_DOWNLOAD" "cannot extract $tarball"
+    rm -rf "$out.part"
+    mkdir -p "$out.part"
+    tar xzf "$tarball" -C "$out.part" || die "$EXIT_DOWNLOAD" "cannot extract $tarball"
+    mv "$out.part" "$out"
   done < <(find "$dir" -name maestro.tar.gz -print0)
 }
 
 readonly CLASSIFY='
-FNR == 1 { cls = "none" }
-/MediaSessionService.*onSessionPlaybackStateChanged/ {
-  if ($0 !~ /state=PLAYING\(3\)/) cls = "none"
-  else if ($0 ~ /Tempo down/) cls = "metronome"
-  else cls = "stem"
+function record(line,   s) {
+  if (!match(line, /record[=:] ?.* \(userId=/)) return ""
+  s = substr(line, RSTART, RLENGTH)
+  sub(/^record[=:] ?/, "", s)
+  sub(/ \(userId=$/, "", s)
+  return s
 }
-/destroySessionLocked|MediaSessionStack.*removeSession/ { cls = "none" }
+function playing(   t, best) {
+  best = "none"
+  for (t in kind) {
+    if (kind[t] == "stem") return "stem"
+    if (kind[t] == "metronome") best = "metronome"
+    else if (best == "none") best = "other"
+  }
+  return best
+}
+FNR == 1 { split("", kind) }
+/MediaSessionService.*onSessionPlaybackStateChanged/ {
+  t = record($0)
+  if ($0 !~ /state=PLAYING\(3\)/) delete kind[t]
+  else if ($0 ~ /mName=.Back 10 seconds/) kind[t] = "stem"
+  else if ($0 ~ /mName=.Tempo down/) kind[t] = "metronome"
+  else kind[t] = "other"
+}
+/destroySessionLocked|MediaSessionStack.*removeSession/ { delete kind[record($0)] }
 /D\/Maestro.*View hierarchy received in [0-9]+ ms/ {
   match($0, /received in [0-9]+/)
-  print cls, substr($0, RSTART + 12, RLENGTH - 12)
+  ms = substr($0, RSTART, RLENGTH)
+  sub(/received in /, "", ms)
+  print playing(), ms
 }'
 
 readonly SUMMARISE='
-{ v[$1, ++n[$1]] = $2 + 0 }
-function pick(c, p,   i, k, a) {
-  for (i = 1; i <= n[c]; i++) a[i] = v[c, i]
-  asort(a)
+{ v[$1, ++n[$1]] = $2 }
+function pick(c, p,   k) {
   k = int(p * n[c]); if (k < p * n[c]) k++
-  return a[k < 1 ? 1 : k]
+  return v[c, k < 1 ? 1 : k]
 }
 END {
-  split("stem metronome none", order, " ")
-  for (i = 1; i <= 3; i++) {
+  count = split("stem metronome other none", order, " ")
+  for (i = 1; i <= count; i++) {
     c = order[i]
     if (n[c] == 0) { printf "%-10s n=0 median=- p90=- max=-\n", c; continue }
     printf "%-10s n=%d median=%d p90=%d max=%d\n", c, n[c], pick(c, 0.5), pick(c, 0.9), pick(c, 1)
@@ -114,7 +139,7 @@ main() {
   reads=$(awk "$CLASSIFY" "${logs[@]}")
   [[ -n $reads ]] || die "$EXIT_NO_READS" "no 'View hierarchy received' lines in ${#logs[@]} logcat file(s)"
   echo "$src: ${#logs[@]} logcat file(s)"
-  awk "$SUMMARISE" <<<"$reads"
+  sort -k1,1 -k2,2n <<<"$reads" | awk "$SUMMARISE"
 }
 
 main "$@"
