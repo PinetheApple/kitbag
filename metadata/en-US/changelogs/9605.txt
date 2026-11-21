@@ -1,0 +1,1 @@
+• Large text fits better: Home tool titles share one size, the Source link in Settings shows the real address and wraps under its label at large text, the queue count no longer covers its icon, and song details keep "F maj" or "81 BPM" together on one line.
