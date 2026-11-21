@@ -1,7 +1,7 @@
 import {
-  asPercent,
   createThemedStyles,
   DesignFloorOneLineText,
+  FillBar,
   Icon,
   radius,
   size,
@@ -30,10 +30,7 @@ import {
   type LayoutChangeEvent,
   type ScrollViewInstance,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  type SharedValue,
-} from 'react-native-reanimated';
+import { useDerivedValue, type SharedValue } from 'react-native-reanimated';
 
 import {
   isSectionLoop,
@@ -102,9 +99,9 @@ const useStyles = createThemedStyles((theme) => ({
   progress: {
     position: 'absolute',
     left: 0,
+    right: 0,
     bottom: 0,
     height: stemSections.progressHeight,
-    backgroundColor: theme.color.onAccent,
   },
 }));
 
@@ -116,15 +113,17 @@ function CardProgress({
   readonly songSec: SharedValue<number>;
 }) {
   const styles = useStyles();
-  const width = useAnimatedStyle(
-    () => ({ width: asPercent(sectionProgress(songSec.value, section)) }),
+  const theme = useTheme();
+  const shown = useDerivedValue(
+    () => sectionProgress(songSec.value, section),
     [section, songSec],
   );
   return (
-    <Animated.View
+    <FillBar
       testID="section-progress"
-      pointerEvents="none"
-      style={[styles.progress, width]}
+      shown={shown}
+      color={theme.color.onAccent}
+      style={styles.progress}
     />
   );
 }

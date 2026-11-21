@@ -123,12 +123,20 @@ describe('the loop note', () => {
 });
 
 describe('the current card', () => {
-  it('fills by how far the playhead is through the section', async () => {
+  it('fills by how far the playhead is through the section, with no render', async () => {
     const p = await open('Lyrics');
     p.frames(5);
-    expect(withTestId(p, 'section-progress')).toHaveLength(1);
-    expect(liveStyle(p, 'section-progress')).toEqual({ width: '25%' });
+    const cards = withTestId(p, 'section-progress');
+    expect(cards).toHaveLength(1);
+    const fill = cards[0]?.findByType('Group' as never).props.transform as {
+      readonly value: object[];
+    };
+    expect(fill.value).toEqual([{ scaleX: 0.25 }]);
+    p.commit.mockClear();
+    p.frames(5.25);
+    expect(p.commit).not.toHaveBeenCalled();
+    expect(fill.value).toEqual([{ scaleX: 0.3125 }]);
     p.frames(7);
-    expect(liveStyle(p, 'section-progress')).toEqual({ width: '75%' });
+    expect(fill.value).toEqual([{ scaleX: 0.75 }]);
   });
 });
