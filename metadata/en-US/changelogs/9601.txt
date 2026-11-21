@@ -1,0 +1,1 @@
+• Kitbag now runs on Expo SDK 58 and React Native 0.88. Nothing should look different.
