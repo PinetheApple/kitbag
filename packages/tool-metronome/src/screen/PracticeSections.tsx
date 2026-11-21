@@ -5,6 +5,7 @@ import {
   metronomeSheet,
   radius,
   SegmentedControl,
+  SHEET_TOUCH_ROOM,
   space,
   StepControl,
   type StepDelta,
@@ -104,7 +105,7 @@ export function PracticeMute({ onType }: TypeProps) {
             neighbourGapDp={{
               top: unshared(metronomeSheet.practiceSectionV),
               bottom: space.controlGap,
-              right: 0,
+              right: unshared(SHEET_TOUCH_ROOM),
             }}
             accessibilityLabel="Mute bars"
             value={enabled}
@@ -248,7 +249,7 @@ export function PracticePoly({ onType }: TypeProps) {
               top: unshared(metronomeSheet.practiceSectionV),
               bottom: space.controlGap,
               left: space.rowGap,
-              right: 0,
+              right: unshared(SHEET_TOUCH_ROOM),
             }}
             accessibilityLabel="Polyrhythm"
             value={polyEnabled}
