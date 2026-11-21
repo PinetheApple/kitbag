@@ -1279,7 +1279,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 
 - **2026-11-21 · Playhead surfaces drawn with animated SVG, not Skia (§13.8, #547)** —
   Supersedes the 2026-11-20 interim. The player progress surfaces (the waveform's
-  played clip, the slider fill and thumb, the mini-player line, the section card
+  played gradient edge, the slider fill and thumb, the mini-player line, the section card
   progress) draw with react-native-svg elements whose props Reanimated animates on
   the UI thread, so no View transform or layout changes per frame. Rationale: such a
   change sends a subtree accessibility event about every 100 ms while a song plays,

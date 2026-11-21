@@ -22,7 +22,6 @@ export const svg = {
   ClipPath: recorded('ClipPath'),
   LinearGradient: recorded('LinearGradient'),
   Stop: recorded('Stop'),
-  G: recorded('G'),
   Path: recorded('Path'),
   Rect: recorded('Rect'),
   Circle: recorded('Circle'),
