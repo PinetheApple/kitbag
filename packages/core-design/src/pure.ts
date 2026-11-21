@@ -15,6 +15,7 @@ export * from './practiceHistoryRoles.ts';
 export * from './swipeDeleteRoles.ts';
 export * from './snackbarTimer.ts';
 export * from './settingsRoles.ts';
+export * from './playerScroll.ts';
 export * from './textScale.ts';
 export * from './touchTarget.ts';
 export * from './editRowGaps.ts';

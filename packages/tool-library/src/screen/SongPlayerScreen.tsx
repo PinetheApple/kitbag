@@ -1,15 +1,13 @@
 import {
-  AppBar,
-  Badge,
   BeatWaveform,
   Card,
   createThemedStyles,
-  screenBar,
+  PlayerScroll,
   ScrubRow,
+  size,
   songPlayer,
   space,
   stemPlayer,
-  type AppBarAction,
   type ScrubFrame,
 } from '@kitbag/core-design';
 import {
@@ -23,13 +21,10 @@ import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { CLICK_GROUP } from '../logic/clickChipText.ts';
-import { barBadge, barStatusOf } from '../logic/lockText.ts';
-import { playedBpm } from '../logic/playedBpm.ts';
-import type { BadgeSpec } from '../logic/rowText.ts';
-import { songTitle } from '../logic/songTitle.ts';
 import { frameAtTap } from '../logic/waveSeek.ts';
 import type { SongPlayhead, UsePlayhead } from './playhead.ts';
 import { EndedSetlistSnackbar } from './EndedSetlistSnackbar.tsx';
+import { SongAppBar } from './SongAppBar.tsx';
 import { SongClickChips } from './SongClickChips.tsx';
 import { SongLockCard } from './SongLockCard.tsx';
 import {
@@ -47,6 +42,13 @@ import { useLeaveOnStop } from './useLeaveOnStop.ts';
 import { useLoopHandles } from './useLoopHandles.ts';
 import { NotReady } from './NotReady.tsx';
 
+export const BODY_SLOT_ID = 'song-body-slot';
+const WAVE_CARD_FLOOR =
+  songPlayer.cardWave +
+  stemPlayer.laneHeight +
+  2 * (space.cardPadding + size.stroke);
+export const SONG_BODY_FLOOR = stemPlayer.bodyTop + WAVE_CARD_FLOOR;
+
 export interface SongPlayerScreenProps {
   readonly songId: number;
   readonly focused: boolean;
@@ -62,75 +64,15 @@ export type RenderUpNext = (songSec: SongPlayhead['songSec']) => ReactNode;
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
-  body: { flex: 1 },
+  body: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+  slot: { flexGrow: 1, minHeight: SONG_BODY_FLOOR },
   bodyContent: {
     paddingTop: stemPlayer.bodyTop,
     paddingHorizontal: space.screenInset,
     paddingBottom: stemPlayer.bodyGap,
     gap: stemPlayer.bodyGap,
   },
-  bpm: { marginRight: screenBar.chipEnd },
 }));
-
-interface SongAppBarProps {
-  readonly onBack: () => void;
-  readonly onMenu: () => void;
-}
-
-interface BarFacts {
-  readonly title: string;
-  readonly artist: string | null;
-  readonly bpm: number | null;
-  readonly status: BadgeSpec | null;
-}
-
-// Stop closes the session while the screen is still animating out.
-function useLastOpenFacts(): BarFacts {
-  const open = useSongPlayer((s) => s.songId !== null);
-  const title = useSongPlayer((s) => s.title);
-  const artist = useSongPlayer((s) => s.artist);
-  const bpm = useSongPlayer((s) => playedBpm(s.bpm, s.speed));
-  const status = useSongPlayer(barStatusOf);
-  const [kept, setKept] = useState<BarFacts>({ title, artist, bpm, status });
-  const changed =
-    kept.title !== title ||
-    kept.artist !== artist ||
-    kept.bpm !== bpm ||
-    kept.status !== status;
-  if (open && changed) setKept({ title, artist, bpm, status });
-  return open ? { title, artist, bpm, status } : kept;
-}
-
-function SongAppBar({ onBack, onMenu }: SongAppBarProps) {
-  const styles = useStyles();
-  const { title, artist, status, bpm } = useLastOpenFacts();
-  const shown = barBadge(status, bpm);
-  const actions: readonly AppBarAction[] = useMemo(
-    () => [{ icon: 'more', label: 'More', onPress: onMenu }],
-    [onMenu],
-  );
-  return (
-    <AppBar
-      flush
-      title={songTitle(title)}
-      subtitle={artist ?? undefined}
-      onBack={onBack}
-      actions={actions}
-      trailing={
-        shown === null ? null : (
-          <View style={styles.bpm}>
-            <Badge
-              label={shown.label}
-              tone={shown.tone}
-              {...(shown.icon === undefined ? {} : { icon: shown.icon })}
-              accessibilityLabel={shown.spoken}
-            />
-          </View>
-        )
-      }
-    />
-  );
-}
 
 function SongWave({ playhead }: { readonly playhead: ScrubFrame }) {
   const envelope = useSongPlayer((s) => s.envelope);
@@ -206,17 +148,27 @@ function Body({
     );
   return (
     <>
-      <ScrollView
-        style={styles.body}
-        contentContainerStyle={styles.bodyContent}
-      >
-        <Card>
-          <SongWave playhead={playhead} />
-          <ScrubRow frame={playhead} {...scrub} loopHandles={handles} />
-        </Card>
-        <SongLockCard songId={songId} />
-        <SongClickChips onOpen={clickSheet.open} />
-      </ScrollView>
+      <PlayerScroll>
+        <View testID={BODY_SLOT_ID} style={styles.slot}>
+          <ScrollView
+            style={styles.body}
+            contentContainerStyle={styles.bodyContent}
+            nestedScrollEnabled
+          >
+            <Card>
+              <SongWave playhead={playhead} />
+              <ScrubRow frame={playhead} {...scrub} loopHandles={handles} />
+            </Card>
+            <SongLockCard songId={songId} />
+            <SongClickChips onOpen={clickSheet.open} />
+          </ScrollView>
+        </View>
+        <SongTransport
+          playing={playhead.playing}
+          bottomInset={bottom}
+          upNext={renderUpNext?.(playhead.songSec)}
+        />
+      </PlayerScroll>
       <SongClickSheet
         group={clickSheet.group}
         bottomInset={bottom}
@@ -239,11 +191,6 @@ function Body({
         visible={tempoOpen}
         bottomInset={bottom}
         onClose={onCloseTempo}
-      />
-      <SongTransport
-        playing={playhead.playing}
-        bottomInset={bottom}
-        upNext={renderUpNext?.(playhead.songSec)}
       />
     </>
   );

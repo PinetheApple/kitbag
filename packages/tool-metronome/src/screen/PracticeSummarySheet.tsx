@@ -1,12 +1,12 @@
 import {
   Button,
+  ButtonRow,
   createThemedStyles,
   EditDivider,
   EditRow,
   EditValue,
   Sheet,
   SheetHint,
-  space,
   textRoles,
   textStyle,
 } from '@kitbag/core-design';
@@ -33,10 +33,6 @@ const useStyles = createThemedStyles((theme) => ({
     ...textStyle(textRoles.sheetNumeral),
     color: theme.color.text,
     textAlign: 'center',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: space.controlGap,
   },
 }));
 
@@ -132,7 +128,7 @@ export function PracticeSummarySheet({
               </SheetHint>
             </View>
           ) : null}
-          <View style={styles.actions}>
+          <ButtonRow>
             <Button
               fill
               variant="ghost"
@@ -150,7 +146,7 @@ export function PracticeSummarySheet({
               disabled={buttons.saveDisabled}
               onPress={handleSave}
             />
-          </View>
+          </ButtonRow>
         </>
       )}
     </Sheet>

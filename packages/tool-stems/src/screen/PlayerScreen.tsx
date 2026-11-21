@@ -1,21 +1,14 @@
 import {
-  Card,
-  countLabel,
   createThemedStyles,
   EmptyState,
-  NoticeSnackbar,
   PlayerDock,
   readerHiding,
   SegmentedControl,
-  snackbar,
   space,
   stemPlayer,
-  textRoles,
-  textStyle,
   type Notice,
   type SegmentOption,
 } from '@kitbag/core-design';
-import { KB_MAX_TRACKS } from '@kitbag/core-native';
 import {
   loopEndFrames,
   useFocusedMixerHold,
@@ -25,13 +18,17 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { AdvanceCountIn } from './AdvanceCountIn.tsx';
 import { useArrivalFollow, useRouteAcquire } from './advanceFollow.ts';
 import { detailTabLabel } from '../logic/detailView.ts';
 import { hasUnsavedRetime } from '../logic/retimeView.ts';
 import { DetailPane } from './DetailPane.tsx';
-import { ExportCancelledSnackbar, ExportNotice } from './ExportNotice.tsx';
-import { LoopUndoSnackbar } from './LoopUndoSnackbar.tsx';
+import {
+  PlayerLayout,
+  PlayerOverlays,
+  RetimeLayout,
+  useDockHeight,
+} from './PlayerLayouts.tsx';
+import { Notices, useNoteStyles } from './PlayerNotices.tsx';
 import { PlayerSheets } from './PlayerSheets.tsx';
 import { useCarriedSkipNotice, useQueueActions } from './queueActions.tsx';
 import { LeaveDialog, ResetDialog, RetimeBar } from './RetimeBar.tsx';
@@ -69,54 +66,13 @@ const useStyles = createThemedStyles((theme) => ({
   main: { flex: 1 },
   bodyFlush: { paddingBottom: 0 },
   body: {
-    flex: 1,
+    flexGrow: 1,
     paddingTop: stemPlayer.bodyTop,
     paddingHorizontal: space.screenInset,
     paddingBottom: stemPlayer.bodyGap,
     gap: stemPlayer.bodyGap,
   },
-  note: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
 }));
-
-function missingNote(unloaded: number, stemCount: number): string {
-  if (unloaded === stemCount)
-    return 'No stem files could be opened. Nothing will play.';
-  return `${countLabel(unloaded, 'stem file', 'stem files')} could not be opened. The others play.`;
-}
-
-function Notices() {
-  const styles = useStyles();
-  const overLimit = useStemPlayer((s) => s.overLimit);
-  const stemCount = useStemPlayer((s) => s.stems.length);
-  const unloaded = useStemPlayer(
-    (s) => s.stems.filter((row) => !row.loaded).length,
-  );
-  return (
-    <>
-      <ExportNotice />
-      {overLimit > 0 ? (
-        <Card
-          emphasis="warning"
-          statusIcon="warning"
-          statusLabel="Too many stems"
-        >
-          <Text style={styles.note}>
-            {`The mixer plays ${String(KB_MAX_TRACKS)} stems at most, so ${String(overLimit)} of this song's stems are left out.`}
-          </Text>
-        </Card>
-      ) : null}
-      {unloaded > 0 ? (
-        <Card
-          emphasis="danger"
-          statusIcon="failure"
-          statusLabel="Stems missing"
-        >
-          <Text style={styles.note}>{missingNote(unloaded, stemCount)}</Text>
-        </Card>
-      ) : null}
-    </>
-  );
-}
 
 interface DockProps {
   readonly frame: MixerFrameValues;
@@ -202,7 +158,7 @@ function NotReady({
   readonly status: StemPlayerStatus;
   readonly onBack: () => void;
 }) {
-  const styles = useStyles();
+  const noteStyles = useNoteStyles();
   if (status === 'failed')
     return (
       <EmptyState
@@ -222,7 +178,7 @@ function NotReady({
       />
     );
   return (
-    <Text accessibilityLiveRegion="polite" style={styles.note}>
+    <Text accessibilityLiveRegion="polite" style={noteStyles.note}>
       Opening the stems…
     </Text>
   );
@@ -257,34 +213,36 @@ function Body({
   const status = useStemPlayer((s) => s.status);
   const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
   const [picked, setPicked] = useState<Tab>(MIX);
+  const { dockHeight, onDockLayout } = useDockHeight();
   if (status !== 'ready')
     return (
       <View style={styles.body}>
         <NotReady status={status} onBack={onBack} />
       </View>
     );
+  const dock = (
+    <Dock
+      frame={frame}
+      bottom={bottom}
+      onOpenUpNext={onOpenUpNext}
+      onSpeedKey={onSpeedKey}
+    />
+  );
   return (
-    <>
-      <View style={styles.main}>
-        {retiming ? (
+    <View style={styles.main}>
+      {retiming ? (
+        <RetimeLayout dock={dock} onDockLayout={onDockLayout}>
           <View style={[styles.body, styles.bodyFlush]}>
             <RetimeBody />
           </View>
-        ) : (
+        </RetimeLayout>
+      ) : (
+        <PlayerLayout dock={dock} onDockLayout={onDockLayout}>
           <PlayerContent frame={frame} picked={picked} onPick={setPicked} />
-        )}
-        <AdvanceCountIn />
-        <LoopUndoSnackbar />
-        <ExportCancelledSnackbar />
-        <NoticeSnackbar notice={notice} bottom={snackbar.aboveDock} />
-      </View>
-      <Dock
-        frame={frame}
-        bottom={bottom}
-        onOpenUpNext={onOpenUpNext}
-        onSpeedKey={onSpeedKey}
-      />
-    </>
+        </PlayerLayout>
+      )}
+      <PlayerOverlays notice={notice} dockHeight={dockHeight} />
+    </View>
   );
 }
 

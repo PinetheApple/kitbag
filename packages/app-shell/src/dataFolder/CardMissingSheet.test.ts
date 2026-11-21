@@ -34,6 +34,7 @@ vi.mock('@kitbag/core-design', async (original) => {
     Sheet: hostMock('Sheet'),
     SheetHint: hostMock('Hint'),
     Button: hostMock('Button'),
+    ButtonRow: hostMock('ButtonRow'),
     useTextScaled: () => false,
     createThemedStyles: () => () => ({}),
   };

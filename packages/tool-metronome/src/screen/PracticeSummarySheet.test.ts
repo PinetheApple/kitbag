@@ -24,6 +24,7 @@ vi.mock('react-native', () => ({ Text: 'Text', View: 'View' }));
 vi.mock('@kitbag/core-design', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   Button: 'Button',
+  ButtonRow: 'ButtonRow',
   EditDivider: 'EditDivider',
   EditRow: 'EditRow',
   EditValue: 'EditValue',
@@ -42,7 +43,36 @@ interface SheetProps {
   readonly onDismiss: () => void;
 }
 
+interface Node {
+  readonly type: unknown;
+  readonly props: { readonly children?: unknown; readonly label?: unknown };
+}
+
+function find(node: unknown, test: (n: Node) => boolean): Node | undefined {
+  if (Array.isArray(node))
+    return node.map((child) => find(child, test)).find((n) => n !== undefined);
+  if (node === null || typeof node !== 'object' || !('props' in node))
+    return undefined;
+  const element = node as Node;
+  return test(element) ? element : find(element.props.children, test);
+}
+
 describe('PracticeSummarySheet', () => {
+  it('sets Discard and Save in a ButtonRow, which stacks them at large text', () => {
+    current.harness = practiceHarness();
+    const h = harness();
+    h.metronome.getState().start();
+    h.advance(MINUTE);
+    h.end();
+    const sheet = PracticeSummarySheet({
+      visible: true,
+      summary: h.sessions.getState().pending[0] ?? null,
+      bottomInset: 0,
+    });
+    const row = find(sheet, (n) => n.type === 'ButtonRow');
+    expect(find(row, (n) => n.props.label === 'Discard')).toBeDefined();
+  });
+
   it('saves the session when dismissed by Back, drag or a tap outside', async () => {
     current.harness = practiceHarness();
     const h = harness();

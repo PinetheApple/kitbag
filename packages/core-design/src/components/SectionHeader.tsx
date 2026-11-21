@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { bodyLineHeight, inset, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
+import { useTextScaled } from '../useTextScaled.ts';
 
 const useStyles = createThemedStyles((theme) => ({
   label: {
@@ -17,6 +18,7 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  wrapping: { flexWrap: 'wrap' },
   shrinking: { flexShrink: 1 },
 }));
 
@@ -27,6 +29,7 @@ export interface SectionHeaderProps {
 
 export function SectionHeader({ label, action }: SectionHeaderProps) {
   const styles = useStyles();
+  const scaled = useTextScaled();
   if (action === undefined)
     return (
       <Text accessibilityRole="header" style={styles.label}>
@@ -34,8 +37,11 @@ export function SectionHeader({ label, action }: SectionHeaderProps) {
       </Text>
     );
   return (
-    <View style={styles.withAction}>
-      <Text accessibilityRole="header" style={[styles.label, styles.shrinking]}>
+    <View style={[styles.withAction, scaled && styles.wrapping]}>
+      <Text
+        accessibilityRole="header"
+        style={[styles.label, !scaled && styles.shrinking]}
+      >
         {label}
       </Text>
       {action}

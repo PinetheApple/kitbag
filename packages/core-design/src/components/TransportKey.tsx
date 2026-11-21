@@ -1,6 +1,7 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
+import type { TypeRole } from '../tokens.ts';
 import {
   iconSizes,
   opacity,
@@ -12,6 +13,8 @@ import {
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { stemPlayer } from '../stemPlayerRoles.ts';
+import { fittedStyle, oneLineFloor } from '../oneLineFit.ts';
+import { isTextScaled } from '../textScale.ts';
 import { hitSlopFor } from '../touchTarget.ts';
 import { InlineIcon } from './IconGlyph.tsx';
 import { KeyBadge } from './KeyBadge.tsx';
@@ -24,6 +27,20 @@ const HIT_SLOP: Readonly<Record<TransportKeySize, number>> = {
   large: hitSlopFor(size.transportKeyLarge, space.transportGapWide),
   small: hitSlopFor(size.transportKeySmall, space.controlGap),
 };
+
+const TEXT_ROLES: Readonly<Record<TransportKeySize, TypeRole>> = {
+  standard: textRoles.transportKey,
+  dock: textRoles.dockKey,
+  large: { ...textRoles.transportKey, size: iconSizes.transportLarge },
+  small: { ...textRoles.transportKey, size: iconSizes.transportSmall },
+};
+
+const GLYPH_TEXT = {
+  standard: textStyle(TEXT_ROLES.standard),
+  dock: textStyle(TEXT_ROLES.dock),
+  large: textStyle(TEXT_ROLES.large),
+  small: textStyle(TEXT_ROLES.small),
+} satisfies Record<TransportKeySize, unknown>;
 
 export type TransportKeyContent =
   | { readonly icon: IconName; readonly text?: never }
@@ -54,7 +71,6 @@ const useStyles = createThemedStyles((theme) => ({
     minWidth: stemPlayer.transportKey,
     minHeight: stemPlayer.transportKey,
   },
-  dockGlyph: textStyle(textRoles.dockKey),
   selected: {
     backgroundColor: theme.activeControlFill,
     borderColor: theme.color.accentDim,
@@ -63,7 +79,6 @@ const useStyles = createThemedStyles((theme) => ({
     opacity: opacity.muted,
   },
   glyph: {
-    ...textStyle(textRoles.transportKey),
     color: theme.color.text,
   },
   glyphSelected: {
@@ -77,9 +92,6 @@ const useStyles = createThemedStyles((theme) => ({
     minWidth: size.transportKeyLarge,
     minHeight: size.transportKeyLarge,
   },
-  glyphLarge: {
-    fontSize: iconSizes.transportLarge,
-  },
   spacerDock: {
     width: stemPlayer.transportKey,
     height: stemPlayer.transportKey,
@@ -91,9 +103,6 @@ const useStyles = createThemedStyles((theme) => ({
   small: {
     minWidth: size.transportKeySmall,
     minHeight: size.transportKeySmall,
-  },
-  glyphSmall: {
-    fontSize: iconSizes.transportSmall,
   },
   spacerSmall: {
     width: size.transportKeySmall,
@@ -121,13 +130,17 @@ export function TransportKey({
   const large = keySize === 'large';
   const small = keySize === 'small';
   const dimmed = disabled || muted;
+  const { fontScale } = useWindowDimensions();
+  const role = TEXT_ROLES[keySize];
   const glyphStyle = [
+    GLYPH_TEXT[keySize],
     styles.glyph,
-    dock && styles.dockGlyph,
-    large && styles.glyphLarge,
-    small && styles.glyphSmall,
     selected && styles.glyphSelected,
   ];
+  // The dock row has no room for grown text, and its icon faces never grow.
+  const designSizeFace = isTextScaled(fontScale)
+    ? fittedStyle(role, oneLineFloor(fontScale, role.size, role.size))
+    : null;
   return (
     <Pressable
       accessibilityRole="button"
@@ -146,7 +159,7 @@ export function TransportKey({
       onPress={onPress}
     >
       {icon === undefined ? (
-        <Text style={glyphStyle}>{text}</Text>
+        <Text style={[glyphStyle, designSizeFace]}>{text}</Text>
       ) : (
         <InlineIcon name={icon} style={glyphStyle} />
       )}

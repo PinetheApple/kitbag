@@ -1,5 +1,6 @@
 import {
   Button,
+  ButtonRow,
   createThemedStyles,
   EmptyState,
   NoticeSnackbar,
@@ -57,7 +58,6 @@ import {
 
 const useStyles = createThemedStyles(() => ({
   list: { gap: space.controlGap },
-  footer: { flexDirection: 'row', gap: space.controlGap },
 }));
 
 interface QueueListProps {
@@ -181,15 +181,14 @@ interface FooterProps {
 }
 
 function Footer({ canPlay, onDone, onPlayQueue }: FooterProps) {
-  const styles = useStyles();
   if (!canPlay)
     return (
-      <View style={styles.footer}>
+      <ButtonRow>
         <Button fill variant="tonal" label={QUEUE_TEXT.done} onPress={onDone} />
-      </View>
+      </ButtonRow>
     );
   return (
-    <View style={styles.footer}>
+    <ButtonRow>
       <Button fill variant="ghost" label={QUEUE_TEXT.done} onPress={onDone} />
       <Button
         fill
@@ -199,7 +198,7 @@ function Footer({ canPlay, onDone, onPlayQueue }: FooterProps) {
         label={QUEUE_TEXT.playQueue}
         onPress={onPlayQueue}
       />
-    </View>
+    </ButtonRow>
   );
 }
 
@@ -214,7 +213,6 @@ function ClearQueueSheet({
   bottomInset,
   onCancel,
 }: ClearQueueSheetProps) {
-  const styles = useStyles();
   const queueLength = usePlayOrder((s) => s.queue.length);
   const clearQueue = usePlayOrder((s) => s.clearQueue);
   const { name } = useStage();
@@ -230,10 +228,10 @@ function ClearQueueSheet({
       onDismiss={onCancel}
     >
       <SheetHint>{clearQueueBody(queueLength, name)}</SheetHint>
-      <View style={styles.footer}>
+      <ButtonRow>
         <Button fill variant="ghost" label="Cancel" onPress={onCancel} />
         <Button fill variant="destructive" label="Clear" onPress={clear} />
-      </View>
+      </ButtonRow>
     </Sheet>
   );
 }

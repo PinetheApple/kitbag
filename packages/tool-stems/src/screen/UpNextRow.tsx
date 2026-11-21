@@ -6,9 +6,11 @@ import {
   nextUpLabel,
   QUEUE_TEXT,
   size,
+  stemPlayer,
   textRoles,
   textStyle,
   TransportKey,
+  useTextScaled,
 } from '@kitbag/core-design';
 import {
   PREVIOUS_RESTARTS_AFTER_SECONDS,
@@ -35,6 +37,7 @@ import {
 import { RepeatChip } from './RepeatChip.tsx';
 
 export const UP_NEXT = 'Up next';
+export const REPEAT_LINE_ID = 'up-next-repeat-line';
 
 const NOTHING_NEXT: UpNextText = {
   title: QUEUE_TEXT.nothingQueued,
@@ -48,8 +51,16 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     gap: miniPlayer.gap,
     minHeight: minTouchTargetDp,
+  },
+  divided: {
     borderBottomWidth: size.stroke,
     borderBottomColor: theme.color.line,
+  },
+  repeatLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: miniPlayer.gap,
+    paddingLeft: stemPlayer.transportKey + miniPlayer.gap,
   },
   text: { flex: 1, minWidth: 0 },
   label: {
@@ -141,8 +152,12 @@ export function UpNextRow({
   const { shown: text, next } = useUpNextRowText();
   const canGoBack = useCanGoBack();
   const pastRestart = usePastRestart(songSec);
-  return (
-    <View style={styles.row}>
+  const scaled = useTextScaled();
+  const nextKey =
+    next === null ? null : <NextKey text={next} onNext={onNext} />;
+  const openOnRepeatLine = scaled && next?.metronome === true;
+  const line = (
+    <View style={[styles.row, !scaled && styles.divided]}>
       <TransportKey
         size="dock"
         icon="previous"
@@ -157,7 +172,9 @@ export function UpNextRow({
         style={styles.text}
         onPress={onOpenSheet}
       >
-        <Text style={styles.label}>{UP_NEXT}</Text>
+        <Text style={styles.label} numberOfLines={1}>
+          {UP_NEXT}
+        </Text>
         <Text style={styles.title} numberOfLines={1}>
           {text.title}
         </Text>
@@ -165,8 +182,18 @@ export function UpNextRow({
           {text.source}
         </Text>
       </Pressable>
-      <RepeatChip />
-      {next === null ? null : <NextKey text={next} onNext={onNext} />}
+      {scaled ? null : <RepeatChip />}
+      {openOnRepeatLine ? null : nextKey}
+    </View>
+  );
+  if (!scaled) return line;
+  return (
+    <View style={styles.divided}>
+      {line}
+      <View testID={REPEAT_LINE_ID} style={styles.repeatLine}>
+        <RepeatChip />
+        {openOnRepeatLine ? nextKey : null}
+      </View>
     </View>
   );
 }

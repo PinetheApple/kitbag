@@ -1,10 +1,11 @@
 import { KB_MIXER_UNITY_RATE } from '@kitbag/core-native';
+import { resetValue, speedKeyCopy } from '@kitbag/core-state';
 import { stem } from '@kitbag/core-state/src/stemPlayer/store.test-helper.ts';
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { display } from '../testing/reactNativeHosts.ts';
-import { PlayerMenu } from './PlayerMenu.tsx';
+import { PlayerMenu, VALUE_STACKED_ID } from './PlayerMenu.tsx';
 import { PER_STEM_STACKED_ID, SpeedKeySheet } from './SpeedKeySheet.tsx';
 import { STACKED_ID } from './StemKeyRows.tsx';
 import {
@@ -180,6 +181,33 @@ describe('resetting speed and key', () => {
       songKey: 0,
     });
     expect(ratesSet(p).at(-1)).toBe(KB_MIXER_UNITY_RATE);
+  });
+});
+
+describe('player menu values under font scale', () => {
+  async function openMenuAt(fontScale: number) {
+    display.fontScale = fontScale;
+    const p = await open();
+    await p.press(MENU);
+    return p;
+  }
+
+  const textIn = (node: { findAll: Player['renderer']['root']['findAll'] }) =>
+    node
+      .findAll((n) => String(n.type) === 'Text')
+      .map((n) => n.props.children as unknown);
+
+  it('keeps each value beside its label at the design size', async () => {
+    const p = await openMenuAt(1);
+    expect(withTestId(p, VALUE_STACKED_ID)).toEqual([]);
+  });
+
+  it('stacks each value under its label at 2.0', async () => {
+    const p = await openMenuAt(2);
+    const stacks = withTestId(p, VALUE_STACKED_ID).map(textIn);
+    expect(stacks).toContainEqual([speedKeyCopy.reset, resetValue()]);
+    expect(stacks).toContainEqual(['Reset mix', 'levels, mutes, solos']);
+    expect(stacks.some(([label]) => label === 'Export mix')).toBe(true);
   });
 });
 

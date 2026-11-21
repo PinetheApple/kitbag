@@ -1,5 +1,5 @@
-import { Button, databaseError, space } from '@kitbag/core-design';
-import { StyleSheet, View } from 'react-native';
+import { Button, ButtonRow, databaseError } from '@kitbag/core-design';
+import { StyleSheet } from 'react-native';
 
 import { DATABASE_ERROR_TEXT } from './databaseErrorCopy.ts';
 
@@ -22,7 +22,7 @@ export function DatabaseErrorActions({
 }: DatabaseErrorActionsProps) {
   const busy = retrying || saving;
   return (
-    <View style={[styles.actions, stacked && styles.stacked]}>
+    <ButtonRow primaryAt="start" stacked={stacked} style={styles.actions}>
       {canRetry ? (
         <Button
           variant="primary"
@@ -45,16 +45,13 @@ export function DatabaseErrorActions({
         fill={!stacked}
         onPress={onSaveCopy}
       />
-    </View>
+    </ButtonRow>
   );
 }
 
 const styles = StyleSheet.create({
   actions: {
     alignSelf: 'stretch',
-    flexDirection: 'row',
-    gap: space.controlGap,
     marginTop: databaseError.actionsTop,
   },
-  stacked: { flexDirection: 'column' },
 });
