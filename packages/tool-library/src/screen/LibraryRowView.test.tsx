@@ -9,7 +9,14 @@ const TITLE = 'A title';
 const FACTS = '0:30';
 const BADGE_MARK = 'badge-mark';
 
-const display = vi.hoisted(() => ({ fontScale: 1 }));
+const PHONE_WIDTH = 360;
+const TABLET_WIDTH = 800;
+
+const display = vi.hoisted(() => ({
+  fontScale: 1,
+  width: 0,
+  boxes: [] as Record<string, unknown>[],
+}));
 
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
@@ -18,6 +25,7 @@ vi.mock('react-native', async () => {
       string,
       unknown
     >;
+    display.boxes.push(flat);
     return h(
       flat.flex === 1 && flat.minWidth === 0 ? 'section' : 'div',
       null,
@@ -28,7 +36,10 @@ vi.mock('react-native', async () => {
     View: box,
     Pressable: box,
     Text: (props: Props) => h('b', null, props.children),
-    useWindowDimensions: () => ({ fontScale: display.fontScale }),
+    useWindowDimensions: () => ({
+      fontScale: display.fontScale,
+      width: display.width,
+    }),
   };
 });
 
@@ -68,6 +79,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
 }));
 
 const { LibraryRowView } = await import('./LibraryRowView.tsx');
+const { space } = await import('@kitbag/core-design');
 
 const ROW = {
   kind: 'song',
@@ -79,8 +91,10 @@ const ROW = {
   tempoCorrection: 'none',
 } as unknown as LibrarySongRow;
 
-function render(fontScale: number) {
+function render(fontScale: number, width = PHONE_WIDTH) {
   display.fontScale = fontScale;
+  display.width = width;
+  display.boxes.length = 0;
   const markup = renderToStaticMarkup(
     createElement(LibraryRowView, {
       row: ROW,
@@ -103,6 +117,16 @@ function render(fontScale: number) {
   };
 }
 
+function boxesBesideDividerAt(width: number) {
+  render(1, width);
+  return display.boxes.filter((box) => !('left' in box));
+}
+
+function dividerAt(width: number) {
+  render(1, width);
+  return display.boxes.find((box) => 'left' in box) ?? {};
+}
+
 describe('LibraryRowView', () => {
   it('keeps one title line and the badges beside the text at 1.0', () => {
     expect(render(1)).toEqual({
@@ -119,6 +143,23 @@ describe('LibraryRowView', () => {
       factsLines: 2,
       badgeShown: true,
       badgeInColumn: true,
+    });
+  });
+
+  it('runs the divider to the phone edges', () => {
+    expect(dividerAt(PHONE_WIDTH)).toEqual({ left: 0, right: 0 });
+  });
+
+  it('keeps the actions key and text where the phone row has them when capped', () => {
+    expect(boxesBesideDividerAt(TABLET_WIDTH)).toEqual(
+      boxesBesideDividerAt(PHONE_WIDTH),
+    );
+  });
+
+  it('ends the divider at the search inset once the column is capped', () => {
+    expect(dividerAt(TABLET_WIDTH)).toEqual({
+      left: space.screenInset,
+      right: space.screenInset,
     });
   });
 });

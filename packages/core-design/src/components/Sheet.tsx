@@ -28,7 +28,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import type { IconName } from '../icons.ts';
 import {
-  layout,
+  contentColumnStyle,
   opacity,
   screenBar,
   size,
@@ -75,9 +75,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   sheetSlot: {
     flexShrink: 1,
-    width: '100%',
-    maxWidth: layout.maxContentWidth,
-    alignSelf: 'center',
+    ...contentColumnStyle,
   },
   grow: { flexGrow: 1 },
   sheet: {

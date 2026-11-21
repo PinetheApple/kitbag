@@ -1,5 +1,6 @@
-import { Pressable } from 'react-native';
+import { Pressable, useWindowDimensions } from 'react-native';
 
+import { listEdges } from '../listEdges.ts';
 import type { IconName } from '../icons.ts';
 import { libraryList } from '../libraryRoles.ts';
 import { radius, size } from '../roles.ts';
@@ -21,7 +22,6 @@ const useStyles = createThemedStyles((theme) => ({
   },
   list: {
     position: 'absolute',
-    right: libraryList.fabEnd,
     width: libraryList.fab,
     height: libraryList.fab,
   },
@@ -44,6 +44,7 @@ export function FloatingActionButton({
 }: FloatingActionButtonProps) {
   const styles = useStyles();
   const list = variant === 'list';
+  const { fabEnd } = listEdges(useWindowDimensions().width);
   return (
     <Pressable
       accessibilityRole="button"
@@ -51,7 +52,7 @@ export function FloatingActionButton({
       style={[
         styles.fab,
         list && styles.list,
-        list && { bottom: bottomInset + libraryList.fabBottom },
+        list && { right: fabEnd, bottom: bottomInset + libraryList.fabBottom },
       ]}
       onPress={onPress}
     >

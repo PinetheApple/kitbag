@@ -4,6 +4,7 @@ import {
   EllipsizedText,
   hitBoxStyle,
   hitExtension,
+  listEdges,
   Icon,
   type IconName,
   isTextScaled,
@@ -28,7 +29,7 @@ import {
   type LibraryRow,
   type SongBadge,
 } from '@kitbag/core-state';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Pressable, useWindowDimensions, View } from 'react-native';
 
 import { failureText } from '../logic/notices.ts';
@@ -59,8 +60,13 @@ const useStyles = createThemedStyles((theme) => ({
     gap: libraryList.rowGap,
     paddingLeft: space.screenInset,
     paddingRight: libraryList.rowEnd,
-    borderBottomWidth: size.stroke,
-    borderBottomColor: theme.color.line,
+    paddingBottom: size.stroke,
+  },
+  divider: {
+    position: 'absolute',
+    bottom: 0,
+    height: size.stroke,
+    backgroundColor: theme.color.line,
   },
   selected: {
     backgroundColor: withAlpha(theme.color.text, libraryMix.selectedRow),
@@ -179,7 +185,12 @@ export function LibraryRowView({
   onUnavailable,
 }: LibraryRowViewProps) {
   const styles = useStyles();
-  const { fontScale } = useWindowDimensions();
+  const { fontScale, width } = useWindowDimensions();
+  const { dividerInset } = listEdges(width);
+  const divider = useMemo(
+    () => [styles.divider, { left: dividerInset, right: dividerInset }],
+    [styles.divider, dividerInset],
+  );
   const { titleLines, factsLines, badgesUnderText } = rowLayout(fontScale);
   const status = rowStatus(row);
   const failure = useRowFailure(row);
@@ -238,6 +249,7 @@ export function LibraryRowView({
     ) : null;
   return (
     <View style={[styles.row, selected && styles.selected]}>
+      <View pointerEvents="none" style={divider} />
       <Pressable
         accessible
         accessibilityRole="button"
