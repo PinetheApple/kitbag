@@ -6,7 +6,7 @@ set -uo pipefail
 readonly EXIT_FAILED=1
 readonly EXIT_USAGE=2
 
-readonly NATIVE_ONLY_MARKERS=('OPSQLite.getConstants')
+readonly NATIVE_ONLY_MARKERS=('OPSQLite.getConstants' 'SkiaPictureView')
 
 usage() {
   cat <<'USAGE'
