@@ -81,6 +81,10 @@ function failWith(failure: unknown) {
   library.failure = failure;
 }
 
+function lockIconOf(tree: ReactTestRenderer) {
+  return tree.root.findByType('RowIcon' as never).props.icon as unknown;
+}
+
 beforeEach(resetScreenState);
 
 describe('the song player layout', () => {
@@ -91,6 +95,10 @@ describe('the song player layout', () => {
   it('stacks the click toggle under the text when scaled', () => {
     display.scaled = true;
     expect(styleAround(mount(), 'Chip').flexDirection).toBe('column');
+  });
+
+  it('draws the metronome icon on a card with a grid', () => {
+    expect(lockIconOf(mount())).toBe('metronome');
   });
 
   it('sets the BPM badge in from the bar end', () => {
@@ -545,6 +553,15 @@ describe('a song with no beat grid', () => {
       );
     },
   );
+
+  it.each([
+    ['analysing', 'analyzing'],
+    ['failed', 'error'],
+    ['noGrid', 'error'],
+  ] as const)('draws the %s card with the %s icon', (state, icon) => {
+    display.analysis = GRIDLESS[state];
+    expect(lockIconOf(mount())).toBe(icon);
+  });
 
   it('re-analyses the song from a failed card', () => {
     display.analysis = GRIDLESS.failed;

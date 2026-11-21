@@ -119,6 +119,8 @@ export async function coreDesignMock(original: <T>() => Promise<T>) {
     BeatWaveform: nothing,
     Card: parent,
     Chip: () => createElement('Chip'),
+    RowIcon: (props: Props) => createElement('RowIcon', props),
+    useTheme: () => ({ accentInk: 'accent' }),
     PickerGrid: nothing,
     BeatLedRow: nothing,
     createThemedStyles: (build: (theme: unknown) => unknown) => () =>

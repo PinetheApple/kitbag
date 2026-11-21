@@ -6,6 +6,7 @@ import {
   Card,
   Chip,
   createThemedStyles,
+  RowIcon,
   screenBar,
   ScrubRow,
   songPlayer,
@@ -14,6 +15,7 @@ import {
   textRoles,
   textStyle,
   useTextScaled,
+  useTheme,
   type AppBarAction,
   type ScrubFrame,
 } from '@kitbag/core-design';
@@ -35,6 +37,7 @@ import {
   barBadge,
   barStatusOf,
   lockBadgeOf,
+  lockIcon,
   lockText,
 } from '../logic/lockText.ts';
 import { playedBpm } from '../logic/playedBpm.ts';
@@ -202,6 +205,7 @@ function LockCard({ songId }: { readonly songId: number }) {
   const onReanalyze = useCallback(() => {
     void reanalyze(songId);
   }, [reanalyze, songId]);
+  const icon = lockIcon(badge, click, useTheme().accentInk);
   const text = lockText({
     badge,
     click,
@@ -211,6 +215,12 @@ function LockCard({ songId }: { readonly songId: number }) {
   });
   const row = (
     <View style={[styles.lock, scaled && styles.lockStacked]}>
+      <RowIcon
+        icon={icon.name}
+        color={icon.color}
+        border={icon.border}
+        size="lockTile"
+      />
       <View style={scaled ? styles.lockTextStacked : styles.lockText}>
         <Text style={styles.lockTitle}>{text.title}</Text>
         <Text style={styles.lockDetail}>{text.detail}</Text>
