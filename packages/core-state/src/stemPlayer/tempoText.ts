@@ -21,6 +21,11 @@ const FINDER: Readonly<Record<TempoSource, string>> = {
   [TEMPO_SOURCE.analysed]: 'Kitbag',
 };
 
+const BEATS_FROM: Readonly<Record<LibraryRow['kind'], string>> = {
+  stems: 'StemDeck',
+  song: 'Kitbag',
+};
+
 export const tempoText = {
   noTempo: 'Re-export from StemDeck to switch tempo.',
   noSongTempo: 'Available once Kitbag analyses this song again.',
@@ -40,7 +45,14 @@ export interface TempoOption {
   readonly disabled?: boolean;
 }
 
-export const tempoModeLabel = (mode: TempoMode) => MODE_LABEL[mode];
+export interface TempoSheetView {
+  readonly options: readonly TempoOption[];
+  readonly constantLine: string | null;
+  readonly hint: string | null;
+}
+
+export const tempoModeLabel = (mode: TempoMode | null) =>
+  mode === null ? '' : MODE_LABEL[mode];
 
 export function tempoUnavailable(
   tempo: BundleTempo | null,
@@ -68,14 +80,30 @@ export function constantLine(tempo: BundleTempo | null): string | null {
   return `Constant: ${bpm.toFixed(BPM_DECIMALS)} ${BPM_UNIT}`;
 }
 
-function modeHint(tempo: BundleTempo, mode: TempoMode): string {
+function modeHint(mode: TempoMode, kind: LibraryRow['kind']): string {
   return mode === TEMPO_MODE.constant
     ? 'One tempo for the whole song. The click and loop snapping hold steady.'
-    : `The beats ${FINDER[tempo.source]} heard. The click and loop snapping speed up and slow down with the band.`;
+    : `The beats ${BEATS_FROM[kind]} heard. The click and loop snapping speed up and slow down with the band.`;
 }
 
-export function tempoHint(tempo: BundleTempo, mode: TempoMode): string {
+export function tempoHint(
+  tempo: BundleTempo,
+  mode: TempoMode,
+  kind: LibraryRow['kind'],
+): string {
   return canBuildTempoMode(tempo, TEMPO_MODE.follow)
-    ? modeHint(tempo, mode)
+    ? modeHint(mode, kind)
     : tempoText.constantOnly;
+}
+
+export function tempoSheetView(
+  tempo: BundleTempo | null,
+  mode: TempoMode | null,
+  kind: LibraryRow['kind'],
+): TempoSheetView {
+  return {
+    options: tempoOptions(tempo),
+    constantLine: constantLine(tempo),
+    hint: tempo === null || mode === null ? null : tempoHint(tempo, mode, kind),
+  };
 }

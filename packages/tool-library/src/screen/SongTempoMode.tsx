@@ -1,8 +1,6 @@
 import { TempoModeSheet } from '@kitbag/core-design';
 import {
-  constantLine,
-  tempoHint,
-  tempoOptions,
+  tempoSheetView,
   useSongPlayer,
   type TempoMode,
 } from '@kitbag/core-state';
@@ -22,7 +20,10 @@ export function SongTempoMode({
   const tempo = useSongPlayer((s) => s.tempo);
   const mode = useSongPlayer((s) => s.tempoMode);
   const setTempoMode = useSongPlayer((s) => s.setTempoMode);
-  const options = useMemo(() => tempoOptions(tempo), [tempo]);
+  const view = useMemo(
+    () => tempoSheetView(tempo, mode, 'song'),
+    [tempo, mode],
+  );
   const pick = useCallback(
     (picked: TempoMode) => {
       void setTempoMode(picked);
@@ -33,10 +34,8 @@ export function SongTempoMode({
     <TempoModeSheet
       visible={visible}
       bottomInset={bottomInset}
-      options={options}
+      {...view}
       selected={mode}
-      constantLine={constantLine(tempo)}
-      hint={tempo === null || mode === null ? null : tempoHint(tempo, mode)}
       onSelect={pick}
       onClose={onClose}
     />

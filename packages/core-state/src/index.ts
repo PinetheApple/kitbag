@@ -425,13 +425,12 @@ export {
   type TempoFitter,
 } from './songLibrary/runtime.ts';
 export {
-  constantLine,
-  tempoHint,
   tempoModeLabel,
-  tempoOptions,
+  tempoSheetView,
   tempoText,
   tempoUnavailable,
   type TempoOption,
+  type TempoSheetView,
 } from './stemPlayer/tempoText.ts';
 export {
   analysisFailure,

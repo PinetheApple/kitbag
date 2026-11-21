@@ -319,6 +319,24 @@ describe('a chosen tempo mode on Replace', () => {
     expect(row?.chosen).toBeNull();
   });
 
+  it('clears the old tempo for a bundle with no tempo and no beats', async () => {
+    const { handle, library } = setup();
+    const old = await library.insertStemBundle(BUNDLE);
+    const outcome = await library.replaceStemBundle(
+      { ...BUNDLE, uuid: 'tempo-uuid-4', tempo: null, beats: [], bars: [] },
+      old,
+    );
+    expect(await library.readStemSet(outcome.id)).toMatchObject({
+      tempo: null,
+      chosenTempoMode: null,
+    });
+    const [row] = await handle.db
+      .select({ mode: stemSets.tempoMode, bpm: stemSets.tempoBpm })
+      .from(stemSets)
+      .where(eq(stemSets.id, outcome.id));
+    expect(row).toEqual({ mode: null, bpm: null });
+  });
+
   it('falls back to the bundle mode when the new bundle cannot build it', async () => {
     expect(await replacedChoice(TEMPO_MODE.follow, CONSTANT)).toBeNull();
     expect(await replacedChoice(TEMPO_MODE.constant, null)).toBeNull();

@@ -1,7 +1,7 @@
 import type { AnalysisResultRecord, BundleTempo } from '@kitbag/core-db';
 import type { AnalysisResult } from '@kitbag/core-native';
 
-import { analysedTempo } from './analysedTempo.ts';
+import { analysedTempo, fittedOf } from './analysedTempo.ts';
 
 function knownLength(durationSec: number) {
   return Number.isFinite(durationSec) && durationSec > 0;
@@ -13,14 +13,7 @@ function tempoOf({
   downbeats,
 }: AnalysisResult): BundleTempo | null {
   if (tempo === undefined) return null;
-  const fit =
-    tempo === null
-      ? null
-      : {
-          bpm: tempo.bpm,
-          anchor: tempo.anchorSec,
-          beatsPerBar: tempo.beatsPerBar,
-        };
+  const fit = tempo === null ? null : fittedOf(tempo);
   return analysedTempo(fit, { beats, downbeatIndices: downbeats });
 }
 

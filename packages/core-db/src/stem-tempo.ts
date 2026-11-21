@@ -1,7 +1,9 @@
-import { eq } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull } from 'drizzle-orm';
 
+import { unpackBars, unpackFloat32 } from './packing';
 import type { Database } from './repository';
 import { songs, stemSets } from './schema';
+import type { BarMark } from './stem-bundle-repository';
 import {
   TEMPO_MAX_BEATS_PER_BAR,
   TEMPO_MAX_BPM,
@@ -154,6 +156,11 @@ const NO_TEMPO_COLUMNS: BundleTempoColumns = {
   tempoSource: null,
 };
 
+export const NO_STORED_TEMPO_COLUMNS: TempoColumns = {
+  ...NO_TEMPO_COLUMNS,
+  chosenTempoMode: null,
+};
+
 export function bundleTempoColumns(
   tempo: BundleTempo | null,
 ): BundleTempoColumns {
@@ -242,4 +249,46 @@ export async function saveChosenTempoMode(
 ): Promise<void> {
   if (mode !== null) await checkedChoice(db, table, id, mode);
   await db.update(table).set({ chosenTempoMode: mode }).where(eq(table.id, id));
+}
+
+export interface UntimedStemSet {
+  readonly id: number;
+  readonly beats: readonly number[];
+  readonly bars: readonly BarMark[];
+}
+
+export async function listStemSetsWithoutTempo(
+  db: Database,
+): Promise<UntimedStemSet[]> {
+  const rows = await db
+    .select({
+      id: stemSets.id,
+      beatGrid: stemSets.beatGrid,
+      barMarks: stemSets.barMarks,
+    })
+    .from(stemSets)
+    .where(and(isNotNull(stemSets.beatGrid), isNull(stemSets.tempoMode)))
+    .orderBy(asc(stemSets.id));
+  return rows.flatMap(({ id, beatGrid, barMarks }) =>
+    beatGrid === null
+      ? []
+      : [
+          {
+            id,
+            beats: unpackFloat32(beatGrid),
+            bars: barMarks === null ? [] : unpackBars(barMarks),
+          },
+        ],
+  );
+}
+
+export async function saveStemSetTempo(
+  db: Database,
+  id: number,
+  tempo: BundleTempo,
+): Promise<void> {
+  await db
+    .update(stemSets)
+    .set(bundleTempoColumns(tempo))
+    .where(and(eq(stemSets.id, id), isNull(stemSets.tempoMode)));
 }

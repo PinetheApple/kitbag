@@ -52,8 +52,7 @@ KB_EXPORT kb_result kb_fit_constant_tempo(
     int32_t* beats_per_bar_out
 );
 
-/* result is KB_OK for a fit, or KB_ERROR_INVALID_ARGUMENT for none; with none,
- * and on any error kb_analyze_song_with_tempo returns, the other fields read 0. */
+/* KB_OK when fitted; otherwise KB_ERROR_INVALID_ARGUMENT and every other field 0. */
 typedef struct kb_tempo_fit {
   kb_result result;
   float bpm;
@@ -61,10 +60,8 @@ typedef struct kb_tempo_fit {
   int32_t beats_per_bar;
 } kb_tempo_fit;
 
-/* kb_analyze_song, plus kb_fit_constant_tempo's fit over every beat and
- * downbeat it found, before beat_times_cap truncates them. There is no fit
- * under KB_CONSTANT_TEMPO_MIN_BEATS beats or for a bpm out of range, and that
- * alone does not fail the call. A null tempo_out is KB_ERROR_INVALID_ARGUMENT. */
+/* kb_analyze_song plus kb_fit_constant_tempo over every beat it found, before
+ * beat_times_cap truncates them; no fit does not fail the call. */
 KB_EXPORT kb_result kb_analyze_song_with_tempo(
     const char* path,
     float* bpm_out,

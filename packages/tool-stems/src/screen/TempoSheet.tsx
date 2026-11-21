@@ -5,10 +5,8 @@ import {
   TempoModeSheet,
 } from '@kitbag/core-design';
 import {
-  constantLine,
-  tempoHint,
   tempoModeLabel,
-  tempoOptions,
+  tempoSheetView,
   tempoUnavailable,
   useStemPlayer,
   type TempoMode,
@@ -30,7 +28,7 @@ export function TempoRow({ onOpen }: { readonly onOpen: () => void }) {
   return (
     <View style={styles.divided}>
       <TempoModeRow
-        value={mode === null ? '' : tempoModeLabel(mode)}
+        value={tempoModeLabel(mode)}
         reason={reason}
         onPress={onOpen}
       />
@@ -48,7 +46,10 @@ export function TempoSheet({ visible, bottomInset, onClose }: TempoSheetProps) {
   const tempo = useStemPlayer((s) => s.tempo);
   const mode = useStemPlayer((s) => s.tempoMode);
   const setTempoMode = useStemPlayer((s) => s.setTempoMode);
-  const options = useMemo(() => tempoOptions(tempo), [tempo]);
+  const view = useMemo(
+    () => tempoSheetView(tempo, mode, 'stems'),
+    [tempo, mode],
+  );
   const pick = useCallback(
     (picked: TempoMode) => {
       void setTempoMode(picked);
@@ -59,10 +60,8 @@ export function TempoSheet({ visible, bottomInset, onClose }: TempoSheetProps) {
     <TempoModeSheet
       visible={visible}
       bottomInset={bottomInset}
-      options={options}
+      {...view}
       selected={mode}
-      constantLine={constantLine(tempo)}
-      hint={tempo === null || mode === null ? null : tempoHint(tempo, mode)}
       onSelect={pick}
       onClose={onClose}
     />

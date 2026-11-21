@@ -173,10 +173,8 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
     speedPercentText,
     speedPresetTexts,
     steppedSpeed,
-    constantLine,
-    tempoHint,
     tempoModeLabel,
-    tempoOptions,
+    tempoSheetView,
     tempoUnavailable,
     TEMPO_MODE,
     TEMPO_SOURCE,
@@ -204,10 +202,8 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
     speedPercentText: unknown;
     speedPresetTexts: unknown;
     steppedSpeed: unknown;
-    constantLine: unknown;
-    tempoHint: unknown;
     tempoModeLabel: unknown;
-    tempoOptions: unknown;
+    tempoSheetView: unknown;
     tempoUnavailable: unknown;
     TEMPO_MODE: unknown;
     TEMPO_SOURCE: unknown;
@@ -257,10 +253,8 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
     speedPercentText,
     speedPresetTexts,
     steppedSpeed,
-    constantLine,
-    tempoHint,
     tempoModeLabel,
-    tempoOptions,
+    tempoSheetView,
     tempoUnavailable,
     TEMPO_MODE,
     TEMPO_SOURCE,

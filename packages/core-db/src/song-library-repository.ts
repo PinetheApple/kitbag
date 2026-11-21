@@ -28,11 +28,9 @@ import {
   insertStemBundle,
   listStemFiles,
   listStemSetFolders,
-  listStemSetsWithoutTempo,
   readStemSet,
   replaceStemBundle,
   saveStemMix,
-  saveStemSetTempo,
   type NewStemBundle,
   type StemMix,
 } from './stem-bundle-repository';
@@ -42,7 +40,9 @@ import { renameStem, renameStemSet } from './stem-rename';
 import { saveStemSetSpeedKey, type StemSetSpeedKey } from './stem-speed-key';
 import {
   bundleTempoColumns,
+  listStemSetsWithoutTempo,
   saveChosenTempoMode,
+  saveStemSetTempo,
   storedTempoOf,
   type BundleTempo,
   type StoredTempo,

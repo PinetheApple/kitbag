@@ -97,7 +97,7 @@ function SongTempoModeRow({ onPress }: RowProps) {
   const mode = useSongPlayer((s) => s.tempoMode);
   return (
     <TempoModeRow
-      value={mode === null ? '' : tempoModeLabel(mode)}
+      value={tempoModeLabel(mode)}
       reason={disabled ? (detail ?? null) : reason}
       onPress={onPress}
     />

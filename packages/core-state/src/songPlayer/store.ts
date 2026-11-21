@@ -66,6 +66,7 @@ import {
   type AnalysedSong,
   type SongGrid,
 } from './songGrid.ts';
+import { heldWhileSaving } from './heldWhileSaving.ts';
 import { songTempo } from './songTempo.ts';
 import {
   closedState,
@@ -110,8 +111,7 @@ export function createSongPlayerStore(
   let masterToRestore: number | null = null;
   let loading: Promise<void> = Promise.resolve();
   let analysed: AnalysedSong = NO_ANALYSIS;
-  // Set while a picked factor is saving, so a re-read cannot bring back an older one.
-  let heldCorrection: TempoCorrection | null = null;
+  const heldCorrection = heldWhileSaving<TempoCorrection>();
 
   const teardownTracks = () => {
     const { commands } = runtimeOf();
@@ -271,10 +271,11 @@ export function createSongPlayerStore(
     };
 
     const followAnalysis = (opened: number, stored: SongRecord) => {
+      const correction = heldCorrection.current();
       const record =
-        heldCorrection === null
+        correction === null
           ? stored
-          : { ...stored, tempoCorrection: heldCorrection };
+          : { ...stored, tempoCorrection: correction };
       const ready = get().status === 'ready';
       const mode = modes.modeFor(record);
       const grid = recordGrid(record, mode);
@@ -333,7 +334,7 @@ export function createSongPlayerStore(
     const begin = (songId: number, bars: number) => {
       const opened = mixer.begin();
       analysed = NO_ANALYSIS;
-      heldCorrection = null;
+      heldCorrection.reset();
       modes.reset();
       waveform.reset(bars);
       set({
@@ -401,7 +402,7 @@ export function createSongPlayerStore(
       },
       tempoCorrectionChanged: (songId, tempoCorrection) => {
         if (!isOpenAndReady(songId)) return;
-        heldCorrection = tempoCorrection;
+        heldCorrection.hold(tempoCorrection);
         const grid = analysedGrid(analysed, get().tempoMode);
         showGrid(songGrid(grid, get().meterOverride, tempoCorrection), {
           tempoCorrection,
@@ -409,7 +410,7 @@ export function createSongPlayerStore(
         });
       },
       tempoCorrectionSettled: (songId) => {
-        if (get().songId === songId) heldCorrection = null;
+        if (get().songId === songId) heldCorrection.settle();
       },
       playheadBeatSeconds: () => playheadBeatSeconds(get(), runtimeOf()),
       playheadSeconds: () =>

@@ -11,6 +11,18 @@ import {
   type DetectedGrid,
 } from '../stemPlayer/meterOverride.ts';
 
+export function fittedOf({
+  bpm,
+  anchorSec,
+  beatsPerBar,
+}: {
+  readonly bpm: number;
+  readonly anchorSec: number;
+  readonly beatsPerBar: number;
+}): FittedTempo {
+  return { bpm, anchor: anchorSec, beatsPerBar };
+}
+
 export function analysedTempo(
   fit: FittedTempo | null,
   grid: DetectedGrid,

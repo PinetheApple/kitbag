@@ -2,7 +2,7 @@ import type { BundleTempo, NewStemBundle } from '@kitbag/core-db';
 import { KB_RESULT } from '@kitbag/core-native';
 
 import { barMarkDownbeats } from '../stemPlayer/bars.ts';
-import { analysedTempo } from './analysedTempo.ts';
+import { analysedTempo, fittedOf } from './analysedTempo.ts';
 import type { SongLibraryDeps } from './store.ts';
 import { warn } from './storeSupport.ts';
 
@@ -17,11 +17,10 @@ async function fittedTempo(
     downbeatIndices: barMarkDownbeats(bars, beats.length),
   };
   const fit = await deps.fitTempo()(grid.beats, grid.downbeatIndices);
-  const fitted =
-    fit.result === KB_RESULT.KB_OK
-      ? { bpm: fit.bpm, anchor: fit.anchorSec, beatsPerBar: fit.beatsPerBar }
-      : null;
-  return analysedTempo(fitted, grid);
+  return analysedTempo(
+    fit.result === KB_RESULT.KB_OK ? fittedOf(fit) : null,
+    grid,
+  );
 }
 
 // A fit that cannot run leaves the tempo empty, so the next start tries again.

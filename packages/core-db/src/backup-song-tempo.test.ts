@@ -123,7 +123,7 @@ describe('a song tempo fit in a backup', () => {
     });
   });
 
-  it('keeps the device fit and mode from a file that predates them', async () => {
+  it('leaves a pre-fit file unchanged on Merge; Replace keeps the chosen mode and drops the fit', async () => {
     const database = openBackupDatabase();
     await insertSong(database);
     const file = withoutTempoFields(await database.backup.export());

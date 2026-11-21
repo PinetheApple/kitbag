@@ -6,6 +6,7 @@ import {
   tempoHint,
   tempoModeLabel,
   tempoOptions,
+  tempoSheetView,
   tempoText,
   tempoUnavailable,
 } from './tempoText.ts';
@@ -29,6 +30,7 @@ describe('the tempo row', () => {
   it("names the grid in StemDeck's words", () => {
     expect(tempoModeLabel(TEMPO_MODE.constant)).toBe('Constant tempo');
     expect(tempoModeLabel(TEMPO_MODE.follow)).toBe('Follow the band');
+    expect(tempoModeLabel(null)).toBe('');
   });
 
   it('is unavailable only for a stem song without tempo', () => {
@@ -74,25 +76,42 @@ describe('the tempo hints', () => {
   });
 
   it('say what the chosen grid does', () => {
-    expect(tempoHint(FOLLOW, TEMPO_MODE.constant)).toBe(
+    expect(tempoHint(FOLLOW, TEMPO_MODE.constant, 'stems')).toBe(
       'One tempo for the whole song. The click and loop snapping hold steady.',
     );
-    expect(tempoHint(FOLLOW, TEMPO_MODE.follow)).toBe(
+    expect(tempoHint(FOLLOW, TEMPO_MODE.follow, 'stems')).toBe(
       'The beats StemDeck heard. The click and loop snapping speed up and slow down with the band.',
     );
   });
 
   it('give the way out for a constant export', () => {
-    expect(tempoHint(CONSTANT_ONLY, TEMPO_MODE.constant)).toBe(
+    expect(tempoHint(CONSTANT_ONLY, TEMPO_MODE.constant, 'stems')).toBe(
       tempoText.constantOnly,
     );
   });
 });
 
+describe('the tempo sheet view', () => {
+  it('has no hint until a tempo and a mode are known', () => {
+    expect(tempoSheetView(FOLLOW, null, 'song').hint).toBeNull();
+    expect(tempoSheetView(null, TEMPO_MODE.follow, 'song')).toEqual({
+      options: tempoOptions(null),
+      constantLine: null,
+      hint: null,
+    });
+  });
+});
+
 describe('the tempo hints for a fit Kitbag made', () => {
-  it('name Kitbag as the one that heard the beats', () => {
-    expect(tempoHint(ANALYSED, TEMPO_MODE.follow)).toBe(
+  it("name Kitbag as the one that heard a song's beats", () => {
+    expect(tempoHint(ANALYSED, TEMPO_MODE.follow, 'song')).toBe(
       'The beats Kitbag heard. The click and loop snapping speed up and slow down with the band.',
+    );
+  });
+
+  it("name StemDeck as the one that heard a stem song's beats", () => {
+    expect(tempoHint(ANALYSED, TEMPO_MODE.follow, 'stems')).toBe(
+      'The beats StemDeck heard. The click and loop snapping speed up and slow down with the band.',
     );
   });
 

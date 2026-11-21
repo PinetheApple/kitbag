@@ -1,4 +1,7 @@
+import type { BarMark } from './stem-bundle-repository';
+
 const BYTES_PER_VALUE = 4;
+const BAR_MARK_FIELDS = 2;
 
 function pack(
   values: readonly number[],
@@ -38,3 +41,15 @@ export const unpackFloat32 = (bytes: Uint8Array) =>
 
 export const unpackInt32 = (bytes: Uint8Array) =>
   unpack(bytes, (view, offset) => view.getInt32(offset, true));
+
+export function packBars(bars: readonly BarMark[]): Uint8Array {
+  return packInt32(bars.flatMap((bar) => [bar.beat, bar.beatsPerBar]));
+}
+
+export function unpackBars(bytes: Uint8Array): BarMark[] {
+  const values = unpackInt32(bytes);
+  const bars: BarMark[] = [];
+  for (let i = 0; i + 1 < values.length; i += BAR_MARK_FIELDS)
+    bars.push({ beat: values[i] ?? 0, beatsPerBar: values[i + 1] ?? 0 });
+  return bars;
+}

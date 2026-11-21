@@ -1,5 +1,6 @@
 import {
   GRID_METER,
+  NO_METER_OVERRIDE,
   TEMPO_CORRECTION,
   TEMPO_MODE,
   TEMPO_SOURCE,
@@ -93,6 +94,32 @@ describe('opening a song Kitbag fitted a tempo to', () => {
   it('opens with no tempo mode for a song with no fit', async () => {
     const { store } = await openedSong({ ...SONG, tempo: null });
     expect(store.getState().tempoMode).toBeNull();
+  });
+});
+
+describe('a meter override on a constant grid', () => {
+  it('re-bars the constant beats at the overridden meter', async () => {
+    const { store } = await openedSong({
+      ...SONG,
+      chosenTempoMode: TEMPO_MODE.constant,
+    });
+    store.getState().meterOverrideChanged(SONG_ID, {
+      ...NO_METER_OVERRIDE,
+      meterBeatsPerBar: GRID_METER.quadruple,
+    });
+    const { beats, downbeatIndices } = store.getState();
+    expect(beats).toEqual(constantGrid().beats);
+    expect(downbeatIndices).not.toEqual(constantGrid().downbeatIndices);
+    expect(
+      downbeatIndices
+        .slice(1)
+        .map((index, i) => index - (downbeatIndices[i] ?? 0)),
+    ).toEqual(
+      Array.from(
+        { length: downbeatIndices.length - 1 },
+        () => GRID_METER.quadruple,
+      ),
+    );
   });
 });
 

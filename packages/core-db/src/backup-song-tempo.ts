@@ -3,20 +3,12 @@ import { isString } from './guards';
 import {
   bundleTempoViolation,
   isTempoMode,
+  NO_STORED_TEMPO_COLUMNS,
   storedTempoColumns,
   storedTempoOf,
   TEMPO_COLUMN_OF,
   type TempoColumns,
 } from './stem-tempo';
-
-const UNSET = {
-  tempoMode: null,
-  tempoBpm: null,
-  tempoAnchor: null,
-  tempoBeatsPerBar: null,
-  tempoSource: null,
-  chosenTempoMode: null,
-};
 
 export function readSongTempo(r: Reader, path: string): Partial<TempoColumns> {
   const fields = {
@@ -28,7 +20,7 @@ export function readSongTempo(r: Reader, path: string): Partial<TempoColumns> {
     ...r.presentNullableMember('chosenTempoMode', isString),
   };
   if (Object.keys(fields).length === 0) return {};
-  const row = { ...UNSET, ...fields };
+  const row = { ...NO_STORED_TEMPO_COLUMNS, ...fields };
   const violation =
     row.tempoMode === null
       ? null

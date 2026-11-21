@@ -1,10 +1,10 @@
-import { and, asc, eq, isNotNull, isNull } from 'drizzle-orm';
+import { asc, eq, isNotNull } from 'drizzle-orm';
 
 import { stemSetClickOf, type StemSetClick } from './click-settings';
 import { meterOverrideOf, type MeterOverride } from './meter-override';
 import { found, type Database } from './repository';
 import { stems, stemSets } from './schema';
-import { packFloat32, packInt32, unpackFloat32, unpackInt32 } from './packing';
+import { packBars, packFloat32, unpackBars, unpackFloat32 } from './packing';
 import {
   deleteStemSetEntries,
   repointStemSetEntries,
@@ -20,7 +20,6 @@ import {
 } from './stem-tempo';
 
 const STEM_FORMAT = 'flac';
-const BAR_MARK_FIELDS = 2;
 
 export interface BundleStem {
   readonly name: string;
@@ -127,18 +126,6 @@ export interface StemMix {
 export interface StemBundleReplacement {
   readonly id: number;
   readonly replaced: StemSetFiles | null;
-}
-
-function packBars(bars: readonly BarMark[]): Uint8Array {
-  return packInt32(bars.flatMap((bar) => [bar.beat, bar.beatsPerBar]));
-}
-
-function unpackBars(bytes: Uint8Array): BarMark[] {
-  const values = unpackInt32(bytes);
-  const bars: BarMark[] = [];
-  for (let i = 0; i + 1 < values.length; i += BAR_MARK_FIELDS)
-    bars.push({ beat: values[i] ?? 0, beatsPerBar: values[i + 1] ?? 0 });
-  return bars;
 }
 
 function isSection(value: unknown): value is StoredSection {
@@ -367,48 +354,6 @@ export async function readStemSet(
     lyricsRetimed: parseRetimedLyrics(row.lyricsRetimed),
     stems: await readStems(db, id),
   };
-}
-
-export interface UntimedStemSet {
-  readonly id: number;
-  readonly beats: readonly number[];
-  readonly bars: readonly BarMark[];
-}
-
-export async function listStemSetsWithoutTempo(
-  db: Database,
-): Promise<UntimedStemSet[]> {
-  const rows = await db
-    .select({
-      id: stemSets.id,
-      beatGrid: stemSets.beatGrid,
-      barMarks: stemSets.barMarks,
-    })
-    .from(stemSets)
-    .where(and(isNotNull(stemSets.beatGrid), isNull(stemSets.tempoMode)))
-    .orderBy(asc(stemSets.id));
-  return rows.flatMap(({ id, beatGrid, barMarks }) =>
-    beatGrid === null
-      ? []
-      : [
-          {
-            id,
-            beats: unpackFloat32(beatGrid),
-            bars: barMarks === null ? [] : unpackBars(barMarks),
-          },
-        ],
-  );
-}
-
-export async function saveStemSetTempo(
-  db: Database,
-  id: number,
-  tempo: BundleTempo,
-): Promise<void> {
-  await db
-    .update(stemSets)
-    .set(bundleTempoColumns(tempo))
-    .where(and(eq(stemSets.id, id), isNull(stemSets.tempoMode)));
 }
 
 export async function saveStemMix(
