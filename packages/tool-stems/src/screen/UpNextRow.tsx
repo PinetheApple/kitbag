@@ -58,6 +58,8 @@ const useStyles = createThemedStyles((theme) => ({
   },
   repeatLine: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: miniPlayer.gap,
     paddingLeft: stemPlayer.transportKey + miniPlayer.gap,
   },
   text: { flex: 1, minWidth: 0 },
@@ -151,6 +153,9 @@ export function UpNextRow({
   const canGoBack = useCanGoBack();
   const pastRestart = usePastRestart(songSec);
   const scaled = useTextScaled();
+  const nextKey =
+    next === null ? null : <NextKey text={next} onNext={onNext} />;
+  const openOnRepeatLine = scaled && next?.metronome === true;
   const line = (
     <View style={[styles.row, !scaled && styles.divided]}>
       <TransportKey
@@ -178,7 +183,7 @@ export function UpNextRow({
         </Text>
       </Pressable>
       {scaled ? null : <RepeatChip />}
-      {next === null ? null : <NextKey text={next} onNext={onNext} />}
+      {openOnRepeatLine ? null : nextKey}
     </View>
   );
   if (!scaled) return line;
@@ -187,6 +192,7 @@ export function UpNextRow({
       {line}
       <View testID={REPEAT_LINE_ID} style={styles.repeatLine}>
         <RepeatChip />
+        {openOnRepeatLine ? nextKey : null}
       </View>
     </View>
   );
