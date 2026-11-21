@@ -21,6 +21,7 @@ const portal = { show: vi.fn(), hide: vi.fn(), topInset: STATUS_BAR };
 const back = vi.hoisted(() => ({ handlers: [] as (() => void)[] }));
 const focusReaderOn = vi.hoisted(() => vi.fn());
 const platform = vi.hoisted(() => ({ OS: 'android' }));
+const display = vi.hoisted(() => ({ fontScale: 1 }));
 const shown = vi.hoisted((): { mode: ThemeMode } => ({ mode: 'dark' }));
 const SURFACE1 = { dark: '#1A1820', light: '#FFFFFF' } as const;
 const SURFACE1_CLEAR = { dark: '#1A182000', light: '#FFFFFF00' } as const;
@@ -43,7 +44,7 @@ vi.mock('react-native', () => ({
   Text: 'Text',
   View: 'View',
   StyleSheet: { create: <T>(styles: T) => styles, absoluteFill: {} },
-  useWindowDimensions: () => ({ height: 0 }),
+  useWindowDimensions: () => ({ height: 0, fontScale: display.fontScale }),
 }));
 vi.mock('react-native-reanimated', () => ({
   default: { View: 'Animated.View' },
@@ -128,6 +129,31 @@ function child(element: ReactElement<Props>, index: number) {
   const kids = element.props.children;
   return (Array.isArray(kids) ? kids : [kids])[index] as ReactElement<Props>;
 }
+
+function titleRowWithAction(fontScale: number) {
+  display.fontScale = fontScale;
+  portal.show.mockClear();
+  Sheet({
+    visible: true,
+    title: 'Queue',
+    titleDetail: '1 up next',
+    titleAction: createElement('Chip'),
+    dismissLabel: 'Close queue',
+    onDismiss: vi.fn(),
+    children: null,
+  });
+  display.fontScale = 1;
+  const frame = portal.show.mock.calls[0]?.[1] as ReactElement<Props>;
+  const header = child(child(child(child(frame, 1), 1), 0), 0);
+  const row = child(header, 1);
+  return { row: flat(row.props.style), title: flat(child(row, 1).props.style) };
+}
+
+it('wraps the title row at scaled text rather than breaking the title mid-word', () => {
+  const { row, title } = titleRowWithAction(2);
+  expect(row.flexWrap).toBe('wrap');
+  expect(title.flexShrink ?? 0).toBe(0);
+});
 
 it('keeps the slide animation off the view that carries the drag transform', () => {
   const frame = openSheet();
