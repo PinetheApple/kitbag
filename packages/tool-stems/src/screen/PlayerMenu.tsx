@@ -11,6 +11,8 @@ import {
   textRoles,
   textStyle,
   useQueueKeys,
+  useTextScaled,
+  type IconName,
   type QueuePresses,
 } from '@kitbag/core-design';
 import {
@@ -34,6 +36,8 @@ import { ClickRows } from './ClickRows.tsx';
 import { TempoRow } from './TempoSheet.tsx';
 import { useMixdownProgress } from './useMixdownProgress.ts';
 
+export const VALUE_STACKED_ID = 'menu-value-stacked';
+
 const useStyles = createThemedStyles((theme) => ({
   row: {
     flexDirection: 'row',
@@ -56,8 +60,70 @@ const useStyles = createThemedStyles((theme) => ({
     flexShrink: 1,
     textAlign: 'right',
   },
+  stacked: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
+  valueStacked: { textAlign: 'left' },
   off: { color: theme.color.text3 },
 }));
+
+interface ActionRowProps {
+  readonly icon: IconName;
+  readonly label: string;
+  readonly value: string;
+  readonly accessibilityLabel: string;
+  readonly onPress: () => void;
+  readonly disabled?: boolean;
+  readonly divided?: boolean;
+}
+
+function ActionRow({
+  icon,
+  label,
+  value,
+  accessibilityLabel,
+  onPress,
+  disabled = false,
+  divided = true,
+}: ActionRowProps) {
+  const styles = useStyles();
+  const scaled = useTextScaled();
+  const labelText = (
+    <Text style={[styles.label, disabled && styles.off]}>{label}</Text>
+  );
+  const valueText = (
+    <Text
+      style={[
+        styles.value,
+        scaled && styles.valueStacked,
+        disabled && styles.off,
+      ]}
+    >
+      {value}
+    </Text>
+  );
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      style={[styles.row, divided && styles.divided]}
+      onPress={onPress}
+    >
+      <Icon name={icon} size="title" color={disabled ? 'decor' : 'text2'} />
+      {scaled ? (
+        <View testID={VALUE_STACKED_ID} style={styles.stacked}>
+          {labelText}
+          {valueText}
+        </View>
+      ) : (
+        <>
+          {labelText}
+          {valueText}
+        </>
+      )}
+    </Pressable>
+  );
+}
 
 interface ExportRowProps {
   readonly visible: boolean;
@@ -65,30 +131,22 @@ interface ExportRowProps {
 }
 
 function ExportRow({ visible, onExport }: ExportRowProps) {
-  const styles = useStyles();
   const block = useStemPlayer(exportBlock);
   const percent = useMixdownProgress(visible && block === 'running');
   const value = exportRowValue(block, percent);
   const disabled = block !== null;
   return (
-    <Pressable
-      accessibilityRole="button"
+    <ActionRow
+      icon="exportMix"
+      label="Export mix"
+      value={value}
       accessibilityLabel={
         disabled ? `Export mix: ${value}` : 'Export mix as a WAV file'
       }
-      accessibilityState={{ disabled }}
       disabled={disabled}
-      style={styles.row}
+      divided={false}
       onPress={onExport}
-    >
-      <Icon
-        name="exportMix"
-        size="title"
-        color={disabled ? 'decor' : 'text2'}
-      />
-      <Text style={[styles.label, disabled && styles.off]}>Export mix</Text>
-      <Text style={[styles.value, disabled && styles.off]}>{value}</Text>
-    </Pressable>
+    />
   );
 }
 
@@ -113,23 +171,19 @@ function StemMeterRow({ onMeter }: { readonly onMeter: () => void }) {
 }
 
 function ResetSpeedKeyRow({ onDone }: { readonly onDone: () => void }) {
-  const styles = useStyles();
   const resetSpeedKey = useStemPlayer((s) => s.resetSpeedKey);
   const reset = useCallback(() => {
     void resetSpeedKey();
     onDone();
   }, [resetSpeedKey, onDone]);
   return (
-    <Pressable
-      accessibilityRole="button"
+    <ActionRow
+      icon="reset"
+      label={speedKeyCopy.reset}
+      value={resetValue()}
       accessibilityLabel={`${speedKeyCopy.reset}: full speed, every stem at the recorded key`}
-      style={[styles.row, styles.divided]}
       onPress={reset}
-    >
-      <Icon name="reset" size="title" color="text2" />
-      <Text style={styles.label}>{speedKeyCopy.reset}</Text>
-      <Text style={styles.value}>{resetValue()}</Text>
-    </Pressable>
+    />
   );
 }
 
@@ -187,7 +241,6 @@ export function PlayerMenu({
   queue,
   onAddToSetlist,
 }: PlayerMenuProps) {
-  const styles = useStyles();
   const resetMix = useStemPlayer((s) => s.resetMix);
   const reset = useCallback(() => {
     resetMix();
@@ -202,16 +255,13 @@ export function PlayerMenu({
       onDismiss={onClose}
     >
       <QueueRows queue={queue} onAddToSetlist={onAddToSetlist} />
-      <Pressable
-        accessibilityRole="button"
+      <ActionRow
+        icon="reset"
+        label="Reset mix"
+        value="levels, mutes, solos"
         accessibilityLabel="Reset mix: every level to 0 dB, nothing muted or soloed"
-        style={[styles.row, styles.divided]}
         onPress={reset}
-      >
-        <Icon name="reset" size="title" color="text2" />
-        <Text style={styles.label}>Reset mix</Text>
-        <Text style={styles.value}>levels, mutes, solos</Text>
-      </Pressable>
+      />
       <ResetSpeedKeyRow onDone={onClose} />
       <StemMeterRow onMeter={onMeter} />
       <TempoRow onOpen={onTempo} />
