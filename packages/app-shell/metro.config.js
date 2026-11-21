@@ -19,7 +19,7 @@ const blockedModules = new Set([
   '@expo-google-fonts/material-symbols',
 ]);
 const baseResolveRequest = config.resolver.resolveRequest;
-config.resolver.resolveRequest = (context, moduleName, platform) => {
+const blockingResolveRequest = (context, moduleName, platform) => {
   if (blockedModules.has(moduleName)) {
     return { type: 'empty' };
   }
@@ -27,6 +27,7 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     ? baseResolveRequest(context, moduleName, platform)
     : context.resolveRequest(context, moduleName, platform);
 };
+config.resolver.resolveRequest = blockingResolveRequest;
 
 const nativewindConfig = withNativewind(config);
 const classNameResolveRequest = nativewindConfig.resolver.resolveRequest;
@@ -36,7 +37,7 @@ const expoAssetDir = `${path.sep}node_modules${path.sep}expo-asset${path.sep}`;
 nativewindConfig.resolver.resolveRequest = (context, moduleName, platform) =>
   moduleName === 'react-native' &&
   context.originModulePath.includes(expoAssetDir)
-    ? config.resolver.resolveRequest(context, moduleName, platform)
+    ? blockingResolveRequest(context, moduleName, platform)
     : classNameResolveRequest(context, moduleName, platform);
 
 module.exports = nativewindConfig;

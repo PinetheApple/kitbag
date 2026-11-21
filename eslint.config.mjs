@@ -193,7 +193,7 @@ export default tseslint.config(
       parserOptions: {
         projectService: true,
         // CI's inferred single-run mode builds an unshared Program per tsconfig;
-        // the project service shares lib and node_modules ASTs across all 13.
+        // the project service shares lib and node_modules ASTs across every tsconfig.
         disallowAutomaticSingleRunInference: true,
       },
     },
