@@ -4,7 +4,7 @@ import type { SharedValue } from 'react-native-reanimated';
 
 import { stemPlayer } from '../stemPlayerRoles.ts';
 import { PlayPauseButton } from './PrimaryPlayButton.tsx';
-import { TransportKey, type TransportKeyContent } from './TransportKey.tsx';
+import { TransportKey } from './TransportKey.tsx';
 
 const styles = StyleSheet.create({
   row: {
@@ -19,7 +19,6 @@ export interface PlayerTransportProps {
   readonly playing: SharedValue<number>;
   readonly loopActive: boolean;
   readonly loopLabel: string;
-  readonly loopText?: string;
   readonly skipSeconds: number;
   readonly onLoop: () => void;
   readonly onSkip: (seconds: number) => void;
@@ -31,7 +30,6 @@ export function PlayerTransport({
   playing,
   loopActive,
   loopLabel,
-  loopText,
   skipSeconds,
   onLoop,
   onSkip,
@@ -44,13 +42,11 @@ export function PlayerTransport({
   const forward = useCallback(() => {
     onSkip(skipSeconds);
   }, [onSkip, skipSeconds]);
-  const loopContent: TransportKeyContent =
-    loopText === undefined ? { icon: 'repeat' } : { text: loopText };
   return (
     <View style={styles.row}>
       <TransportKey
         size="dock"
-        {...loopContent}
+        icon="repeat"
         selected={loopActive}
         accessibilityLabel={loopLabel}
         onPress={onLoop}
