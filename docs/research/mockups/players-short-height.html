@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Players at short height and 200% text (#190, #192)</title>
+<style>
+:root{--bg:#0E0D10;--s1:#1A1820;--s2:#242230;--s3:#2E2C3A;--line:#33303F;--text:#ECEAF0;--text2:#BDBBC6;--text3:#9793A2;--accent:#FFB347;--accentDim:#8A6A35}
+body{background:#050507;color:var(--text);font-family:Inter,system-ui,sans-serif;margin:24px}
+h1{font-size:20px}h2{font-size:15px;margin:0 0 6px}p,li{color:var(--text2);font-size:13px;max-width:760px;line-height:1.45}
+.frames{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;margin:18px 0 32px}
+figure{margin:0;width:360px}figcaption{font-size:12px;color:var(--text2);margin-top:8px;line-height:1.4}
+.phone{width:360px;height:480px;background:var(--bg);border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.bar{height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;flex:none}
+.bar b{font-size:17px;flex:1}.bar small{display:block;color:var(--text2);font-size:12px;font-weight:400}
+.ico{width:24px;height:24px;border-radius:6px;background:var(--s3);flex:none}
+.chips{display:flex;gap:8px;padding:0 16px 8px;flex:none}.chip{border:1px solid var(--line);background:var(--s2);border-radius:12px;padding:6px 12px;font-size:13px;color:var(--text2)}
+.body{flex:1;min-height:0;padding:0 16px 8px;display:flex;flex-direction:column}
+.mixer{background:var(--s1);border:1px solid var(--line);border-radius:14px;overflow:hidden;flex-shrink:1;min-height:0}
+.mixer.floor{min-height:112px;flex:none}
+.stem{display:flex;align-items:center;gap:8px;height:52px;padding:0 12px;border-bottom:1px solid var(--line);font-size:15px}
+.stem span{flex:1}.lvl{border:1px solid var(--line);border-radius:8px;padding:4px 10px;color:var(--text2);font-size:13px}.ms{width:28px;height:28px;border:1px solid var(--line);border-radius:6px;display:grid;place-items:center;font-size:12px}
+.dock{background:var(--s1);border-top:1px solid var(--line);border-radius:20px 20px 0 0;padding:4px 16px 12px;display:flex;flex-direction:column;gap:10px;flex:none}
+.upn{display:flex;align-items:center;gap:10px;min-height:48px;border-bottom:1px solid var(--line);padding-bottom:6px}
+.upn .tl{flex:1;min-width:0}.lab{color:var(--accent);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase}
+.upn b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.upn i{display:block;font-style:normal;color:var(--text2);font-size:12px}
+.upn.one .tl{display:flex;gap:8px;align-items:baseline;white-space:nowrap;overflow:hidden}.upn.one b{display:inline}
+.key{width:48px;height:48px;border-radius:50%;background:var(--s2);border:1px solid var(--line);flex:none}
+.key.play{width:64px;height:64px;background:var(--accent);border:0}
+.rep{border:1px solid var(--line);background:var(--s2);border-radius:14px;padding:5px 10px;font-size:12px;color:var(--text2)}
+.scrub{display:flex;align-items:center;gap:10px;font-size:13px}.scrub div{flex:1;height:6px;background:var(--s3);border-radius:3px}
+.sk{display:flex;justify-content:space-between}.step{border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:14px}
+.trans{display:flex;justify-content:center;align-items:center;gap:18px}
+.scroll{flex:1;min-height:0;overflow:hidden;position:relative}
+.rail{position:absolute;right:3px;top:6px;width:3px;height:140px;background:var(--text3);border-radius:2px;opacity:.7}
+.bad{outline:2px dashed #E5484D;outline-offset:-2px}
+table{border-collapse:collapse;font-size:12px;color:var(--text2);margin-top:8px}td,th{border:1px solid var(--line);padding:5px 8px;text-align:left}
+</style>
+</head>
+<body>
+<h1>Stem player at 360 x 480 dp (and 360 x 800 at 200% text)</h1>
+<p>Issues #190 and #192. The dock (Up next, scrubber, speed and key, transport) is content-sized and pinned. The mixer takes what is left and has no floor, so on a short screen, or at 200% text, it shrinks to a sliver and no stem row can be reached. The text-level fixes on this branch (Up next label, repeat chip on its own line at large text, menu values, queue footer, transport text keys) do not give the mixer its room back. Neither design file draws the player when the dock does not fit, so this needs an owner decision.</p>
+
+<div class="frames">
+<figure>
+<div class="phone">
+  <div class="bar"><span class="ico"></span><b>Bare Song<small>Charity Gayle</small></b><span class="ico"></span><span class="ico"></span></div>
+  <div class="chips"><span class="chip">123 BPM</span><span class="chip">F maj</span></div>
+  <div class="body"><div class="mixer bad" style="height:26px"></div></div>
+  <div class="dock">
+    <div class="upn"><span class="key"></span><div class="tl"><span class="lab">Up next</span><b>Backbeat Study</b><i>Next in queue</i></div><span class="rep">Repeat off</span><span class="key"></span></div>
+    <div class="scrub">0:00<div></div>1:00</div>
+    <div class="sk"><span class="step">− 100% +</span><span class="step">− 0 st +</span></div>
+    <div class="trans"><span class="key"></span><span class="key"></span><span class="key play"></span><span class="key"></span><span class="key"></span></div>
+  </div>
+</div>
+<figcaption><b>Today.</b> The mixer is about 25 dp tall (red). No stem can be reached.</figcaption>
+</figure>
+
+<figure>
+<div class="phone">
+  <div class="bar"><span class="ico"></span><b>Bare Song<small>Charity Gayle</small></b><span class="ico"></span><span class="ico"></span></div>
+  <div class="scroll">
+    <div class="chips"><span class="chip">123 BPM</span><span class="chip">F maj</span></div>
+    <div class="body" style="flex:none"><div class="mixer floor">
+      <div class="stem"><span>vocals</span><span class="lvl">0 dB</span><span class="ms">M</span><span class="ms">S</span></div>
+      <div class="stem"><span>drums</span><span class="lvl">0 dB</span><span class="ms">M</span><span class="ms">S</span></div>
+    </div></div>
+    <div class="dock">
+      <div class="upn"><span class="key"></span><div class="tl"><span class="lab">Up next</span><b>Backbeat Study</b><i>Next in queue</i></div><span class="rep">Repeat off</span><span class="key"></span></div>
+      <div class="scrub">0:00<div></div>1:00</div>
+    </div>
+    <span class="rail"></span>
+  </div>
+</div>
+<figcaption><b>Option 1 (recommended): the screen scrolls as one.</b> The mixer keeps a floor of two stem rows, which it scrolls inside as it does today. When the floor and the dock together do not fit, everything below the app bar scrolls as one, and the dock scrolls up into view. Where the dock fits, which covers every phone at 100% text, nothing changes. Every control stays the size the design gives it, and nothing is hidden. The cost: on a short screen the transport is one scroll away.</figcaption>
+</figure>
+
+<figure>
+<div class="phone">
+  <div class="bar"><span class="ico"></span><b>Bare Song<small>Charity Gayle</small></b><span class="ico"></span><span class="ico"></span></div>
+  <div class="chips"><span class="chip">123 BPM</span><span class="chip">F maj</span></div>
+  <div class="body"><div class="mixer" style="height:60px">
+    <div class="stem"><span>vocals</span><span class="lvl">0 dB</span><span class="ms">M</span><span class="ms">S</span></div>
+  </div></div>
+  <div class="dock">
+    <div class="upn one"><span class="key"></span><div class="tl"><span class="lab">Up next</span><b>Backbeat Study</b></div><span class="key"></span></div>
+    <div class="scrub">0:00<div></div>1:00</div>
+    <div class="sk"><span class="step">− 100% +</span><span class="step">− 0 st +</span></div>
+    <div class="trans"><span class="key"></span><span class="key"></span><span class="key play"></span><span class="key"></span><span class="key"></span></div>
+  </div>
+</div>
+<figcaption><b>Option 2: Up next folds to one line.</b> Below a height threshold the Up next row drops its source line and its repeat chip. Repeat stays in the queue sheet header. This saves about 30 dp, which is still not enough at 480 dp: about one stem row shows. It also adds a new state to the row, and at 200% text it saves less than Option 1 needs. On its own it does not fix #190, so it would still need Option 1's scroll.</figcaption>
+</figure>
+</div>
+
+<h2>Recommendation</h2>
+<p>Option 1. It is a reflow, not a new state: no control changes or disappears, and the 100% layouts are unchanged. It gives one rule for both players. The single-song player's body already scrolls above its dock, so the same fallback (the dock joins the scroll when the body would have less than one card of room) covers #190 item 7 and #192 item 4's chip row.</p>
+<table>
+<tr><th>Value</th><th>Option 1</th><th>Source</th></tr>
+<tr><td>Mixer floor</td><td>2 stem rows (StemRowView row pitch x 2)</td><td>new; owner to confirm the count</td></tr>
+<tr><td>When the floor applies</td><td>window height &lt; app bar + body top + chips + floor + measured dock</td><td>measured dock height, no constant</td></tr>
+<tr><td>Dock radius, padding, gaps</td><td>unchanged</td><td><code>stemPlayer.dock*</code></td></tr>
+</table>
+</body>
+</html>
