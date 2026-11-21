@@ -52,6 +52,29 @@ KB_EXPORT kb_result kb_fit_constant_tempo(
     int32_t* beats_per_bar_out
 );
 
+/* KB_OK when fitted; otherwise KB_ERROR_INVALID_ARGUMENT and every other field 0. */
+typedef struct kb_tempo_fit {
+  kb_result result;
+  float bpm;
+  double anchor_sec;
+  int32_t beats_per_bar;
+} kb_tempo_fit;
+
+/* kb_analyze_song plus kb_fit_constant_tempo over every beat it found, before
+ * beat_times_cap truncates them; no fit does not fail the call. */
+KB_EXPORT kb_result kb_analyze_song_with_tempo(
+    const char* path,
+    float* bpm_out,
+    float* beat_times_buf,
+    int32_t beat_times_cap,
+    int32_t* beat_count_out,
+    int32_t* downbeat_indices_out,
+    int32_t* downbeat_count_out,
+    double* duration_sec_out,
+    const char* waveform_dir,
+    kb_tempo_fit* tempo_out
+);
+
 #ifdef __cplusplus
 }
 #endif

@@ -83,6 +83,17 @@ describe('the Tempo sheet', () => {
     });
   });
 
+  it("names StemDeck's beats under a fit Kitbag made", async () => {
+    const p = await openTempoSheet({
+      tempo: { ...FOLLOW_TEMPO, source: TEMPO_SOURCE.analysed },
+    });
+    expect(
+      p.has(
+        'The beats StemDeck heard. The click and loop snapping speed up and slow down with the band.',
+      ),
+    ).toBe(true);
+  });
+
   it('switches and stores the grid at once', async () => {
     const p = await openTempoSheet();
     await p.press(CONSTANT);

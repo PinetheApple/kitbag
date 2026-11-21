@@ -11,6 +11,7 @@ export const TEMPO_MODES = Object.values(TEMPO_MODE) as [
 export const TEMPO_SOURCE = {
   detected: 'detected',
   user: 'user',
+  analysed: 'analysed',
 } as const;
 export type TempoSource = (typeof TEMPO_SOURCE)[keyof typeof TEMPO_SOURCE];
 export const TEMPO_SOURCES = Object.values(TEMPO_SOURCE) as [

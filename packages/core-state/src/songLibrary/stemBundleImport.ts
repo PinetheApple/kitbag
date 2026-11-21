@@ -19,6 +19,7 @@ import {
   type ReplaceChoice,
 } from './stemBundleLogic.ts';
 import type { ImportTracker } from './stemFolderSweep.ts';
+import { withFittedTempo } from './stemTempoFit.ts';
 import type { LibraryNotice, ReplaceMatch, SongLibraryDeps } from './store.ts';
 import {
   deleteLeftovers,
@@ -155,7 +156,10 @@ async function persistBundle(
   imported: ImportedStemBundle,
   targetId: number | null,
 ): Promise<StemSetFiles | null> {
-  const bundle = newStemBundle(imported, deps.newUuid());
+  const bundle = await withFittedTempo(
+    deps,
+    newStemBundle(imported, deps.newUuid()),
+  );
   const records = deps.records();
   if (targetId === null) {
     await records.insertStemBundle(bundle);

@@ -1,7 +1,9 @@
-import { eq } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull } from 'drizzle-orm';
 
+import { unpackBars, unpackFloat32 } from './packing';
 import type { Database } from './repository';
-import { stemSets } from './schema';
+import { songs, stemSets } from './schema';
+import type { BarMark } from './stem-bundle-repository';
 import {
   TEMPO_MAX_BEATS_PER_BAR,
   TEMPO_MAX_BPM,
@@ -23,7 +25,13 @@ export interface BundleTempo {
   readonly source: TempoSource;
 }
 
-export interface StemSetTempo {
+export interface FittedTempo {
+  readonly bpm: number;
+  readonly anchor: number;
+  readonly beatsPerBar: number;
+}
+
+export interface StoredTempo {
   readonly tempo: BundleTempo | null;
   readonly chosenTempoMode: TempoMode | null;
 }
@@ -119,8 +127,44 @@ export function carriedTempoMode(
   return chosen !== null && canBuildTempoMode(tempo, chosen) ? chosen : null;
 }
 
-export function bundleTempoColumns(tempo: BundleTempo | null) {
-  if (tempo === null) return {};
+export interface TempoColumns {
+  readonly tempoMode: TempoMode | null;
+  readonly tempoBpm: number | null;
+  readonly tempoAnchor: number | null;
+  readonly tempoBeatsPerBar: number | null;
+  readonly tempoSource: TempoSource | null;
+  readonly chosenTempoMode: TempoMode | null;
+}
+
+export type BundleTempoColumns = Omit<TempoColumns, 'chosenTempoMode'>;
+
+export const TEMPO_COLUMN_OF: Readonly<
+  Record<keyof BundleTempo, keyof BundleTempoColumns>
+> = {
+  mode: 'tempoMode',
+  bpm: 'tempoBpm',
+  anchor: 'tempoAnchor',
+  beatsPerBar: 'tempoBeatsPerBar',
+  source: 'tempoSource',
+};
+
+const NO_TEMPO_COLUMNS: BundleTempoColumns = {
+  tempoMode: null,
+  tempoBpm: null,
+  tempoAnchor: null,
+  tempoBeatsPerBar: null,
+  tempoSource: null,
+};
+
+export const NO_STORED_TEMPO_COLUMNS: TempoColumns = {
+  ...NO_TEMPO_COLUMNS,
+  chosenTempoMode: null,
+};
+
+export function bundleTempoColumns(
+  tempo: BundleTempo | null,
+): BundleTempoColumns {
+  if (tempo === null) return NO_TEMPO_COLUMNS;
   const violation = bundleTempoViolation(tempo);
   if (violation) throw new RangeError(violation.reason);
   return {
@@ -132,23 +176,29 @@ export function bundleTempoColumns(tempo: BundleTempo | null) {
   };
 }
 
-export const STEM_SET_TEMPO_COLUMNS = {
-  tempoMode: stemSets.tempoMode,
-  tempoBpm: stemSets.tempoBpm,
-  tempoAnchor: stemSets.tempoAnchor,
-  tempoBeatsPerBar: stemSets.tempoBeatsPerBar,
-  tempoSource: stemSets.tempoSource,
-  chosenTempoMode: stemSets.chosenTempoMode,
-};
+type TempoTable = typeof songs | typeof stemSets;
 
-export function stemSetTempoOf(row: {
+export function tempoColumnsOf(table: TempoTable) {
+  return {
+    tempoMode: table.tempoMode,
+    tempoBpm: table.tempoBpm,
+    tempoAnchor: table.tempoAnchor,
+    tempoBeatsPerBar: table.tempoBeatsPerBar,
+    tempoSource: table.tempoSource,
+    chosenTempoMode: table.chosenTempoMode,
+  };
+}
+
+export const STEM_SET_TEMPO_COLUMNS = tempoColumnsOf(stemSets);
+
+export function storedTempoOf(row: {
   readonly tempoMode: string | null;
   readonly tempoBpm: number | null;
   readonly tempoAnchor: number | null;
   readonly tempoBeatsPerBar: number | null;
   readonly tempoSource: string | null;
   readonly chosenTempoMode: string | null;
-}): StemSetTempo {
+}): StoredTempo {
   const tempo = bundleTempoOf({
     mode: row.tempoMode,
     bpm: row.tempoBpm,
@@ -160,33 +210,85 @@ export function stemSetTempoOf(row: {
   return { tempo, chosenTempoMode: carriedTempoMode(chosen, tempo) };
 }
 
-async function rowTempo(db: Database, id: number): Promise<BundleTempo | null> {
+export function storedTempoColumns({
+  tempo,
+  chosenTempoMode,
+}: StoredTempo): TempoColumns {
+  return { ...bundleTempoColumns(tempo), chosenTempoMode };
+}
+
+async function rowTempo(
+  db: Database,
+  table: TempoTable,
+  id: number,
+): Promise<BundleTempo | null> {
   const [row] = await db
-    .select(STEM_SET_TEMPO_COLUMNS)
-    .from(stemSets)
-    .where(eq(stemSets.id, id));
-  return row === undefined ? null : stemSetTempoOf(row).tempo;
+    .select(tempoColumnsOf(table))
+    .from(table)
+    .where(eq(table.id, id));
+  return row === undefined ? null : storedTempoOf(row).tempo;
 }
 
 async function checkedChoice(
   db: Database,
+  table: TempoTable,
   id: number,
   mode: TempoMode,
 ): Promise<void> {
   if (!isTempoMode(mode))
     throw new RangeError(`Unknown tempo mode ${String(mode)}`);
-  if (!canBuildTempoMode(await rowTempo(db, id), mode))
-    throw new RangeError(`Stem set ${String(id)} cannot build ${mode} tempo`);
+  if (!canBuildTempoMode(await rowTempo(db, table, id), mode))
+    throw new RangeError(`Row ${String(id)} cannot build ${mode} tempo`);
 }
 
 export async function saveChosenTempoMode(
   db: Database,
+  table: TempoTable,
   id: number,
   mode: TempoMode | null,
 ): Promise<void> {
-  if (mode !== null) await checkedChoice(db, id, mode);
+  if (mode !== null) await checkedChoice(db, table, id, mode);
+  await db.update(table).set({ chosenTempoMode: mode }).where(eq(table.id, id));
+}
+
+export interface UntimedStemSet {
+  readonly id: number;
+  readonly beats: readonly number[];
+  readonly bars: readonly BarMark[];
+}
+
+export async function listStemSetsWithoutTempo(
+  db: Database,
+): Promise<UntimedStemSet[]> {
+  const rows = await db
+    .select({
+      id: stemSets.id,
+      beatGrid: stemSets.beatGrid,
+      barMarks: stemSets.barMarks,
+    })
+    .from(stemSets)
+    .where(and(isNotNull(stemSets.beatGrid), isNull(stemSets.tempoMode)))
+    .orderBy(asc(stemSets.id));
+  return rows.flatMap(({ id, beatGrid, barMarks }) =>
+    beatGrid === null
+      ? []
+      : [
+          {
+            id,
+            beats: unpackFloat32(beatGrid),
+            bars: barMarks === null ? [] : unpackBars(barMarks),
+          },
+        ],
+  );
+}
+
+export async function saveStemSetTempo(
+  db: Database,
+  id: number,
+  tempo: BundleTempo,
+): Promise<void> {
   await db
     .update(stemSets)
-    .set({ chosenTempoMode: mode })
-    .where(eq(stemSets.id, id));
+    .set(bundleTempoColumns(tempo))
+    .where(and(eq(stemSets.id, id), isNull(stemSets.tempoMode)));
 }

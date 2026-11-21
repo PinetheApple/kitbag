@@ -1,7 +1,10 @@
 #ifndef KITBAG_ANALYSIS_BEAT_TRACKER_H
 #define KITBAG_ANALYSIS_BEAT_TRACKER_H
 
+#include <optional>
 #include <vector>
+
+#include "analysis/constant_tempo.h"
 
 namespace kitbag {
 
@@ -14,6 +17,7 @@ struct BeatResult {
   std::vector<int>
       downbeat_indices;  // indices into beat_times that are bar-ones
   double duration_sec = 0.0;
+  std::optional<ConstantTempo> tempo;
 };
 
 /// Tempo the beats keep; 0 for fewer than two beats.

@@ -33,6 +33,11 @@ export const commands = {
   dismissMeterNotice: vi.fn(),
 };
 export const tempo = { correction: 'none' };
+export const songTempo: {
+  tempo: unknown;
+  mode: unknown;
+  setTempoMode: ReturnType<typeof vi.fn>;
+} = { tempo: null, mode: null, setTempoMode: vi.fn() };
 export const meter: { override: unknown; notice: unknown } = {
   override: { meterBeatsPerBar: null, barOneSeconds: null },
   notice: null,
@@ -66,6 +71,8 @@ export function resetScreenState() {
   meter.override = { meterBeatsPerBar: null, barOneSeconds: null };
   meter.notice = null;
   tempo.correction = 'none';
+  songTempo.tempo = null;
+  songTempo.mode = null;
   Object.assign(mixer, { session: 0, opens: 0, displaced: 0, releases: 0 });
 }
 
@@ -116,6 +123,9 @@ export async function coreDesignMock(original: <T>() => Promise<T>) {
     MenuRow: (props: Props) => createElement('MenuRow', props),
     MeterRow: (props: Props) => createElement('MeterRow', props),
     MeterSheet: (props: Props) => createElement('MeterSheet', props),
+    TempoModeRow: (props: Props) => createElement('TempoModeRow', props),
+    TempoModeSheet: (props: Props) =>
+      props.visible === true ? createElement('TempoModeSheet', props) : null,
     BeatWaveform: nothing,
     Card: parent,
     Chip: () => createElement('Chip'),
@@ -165,6 +175,11 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
     speedPercentText,
     speedPresetTexts,
     steppedSpeed,
+    tempoModeLabel,
+    tempoSheetView,
+    tempoUnavailable,
+    TEMPO_MODE,
+    TEMPO_SOURCE,
   } = await original<{
     useFocusedMixerHold: unknown;
     playerSongBadge: unknown;
@@ -189,6 +204,11 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
     speedPercentText: unknown;
     speedPresetTexts: unknown;
     steppedSpeed: unknown;
+    tempoModeLabel: unknown;
+    tempoSheetView: unknown;
+    tempoUnavailable: unknown;
+    TEMPO_MODE: unknown;
+    TEMPO_SOURCE: unknown;
   }>();
   const open = () => {
     const mine = ++mixer.session;
@@ -235,6 +255,11 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
     speedPercentText,
     speedPresetTexts,
     steppedSpeed,
+    tempoModeLabel,
+    tempoSheetView,
+    tempoUnavailable,
+    TEMPO_MODE,
+    TEMPO_SOURCE,
     bpmFact: (bpm: number | null) =>
       bpm === null
         ? null
@@ -275,6 +300,9 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
         dismissMeterNotice: commands.dismissMeterNotice,
         meterOverrideChanged: vi.fn(),
         tempoCorrection: tempo.correction,
+        tempo: songTempo.tempo,
+        tempoMode: songTempo.mode,
+        setTempoMode: songTempo.setTempoMode,
         detectedBpm: 104,
         tempoCorrectionChanged: vi.fn(),
         tempoCorrectionSettled: vi.fn(),

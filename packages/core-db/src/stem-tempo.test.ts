@@ -10,7 +10,7 @@ import {
   bundleTempoOf,
   bundleTempoViolation,
   canBuildTempoMode,
-  stemSetTempoOf,
+  storedTempoOf,
   type BundleTempo,
 } from './stem-tempo';
 import {
@@ -182,7 +182,7 @@ describe('which modes a bundle can build', () => {
 
 describe('a stored tempo', () => {
   it('reads a whole row back as the bundle tempo', () => {
-    expect(stemSetTempoOf(ROW)).toEqual({
+    expect(storedTempoOf(ROW)).toEqual({
       tempo: FOLLOW,
       chosenTempoMode: null,
     });
@@ -190,18 +190,18 @@ describe('a stored tempo', () => {
 
   it('reads a row with any unreadable tempo field as no tempo', () => {
     const constantRow = { ...ROW, tempoMode: TEMPO_MODE.constant };
-    expect(stemSetTempoOf({ ...constantRow, tempoBpm: null }).tempo).toBeNull();
-    expect(stemSetTempoOf({ ...ROW, tempoSource: 'x' }).tempo).toBeNull();
+    expect(storedTempoOf({ ...constantRow, tempoBpm: null }).tempo).toBeNull();
+    expect(storedTempoOf({ ...ROW, tempoSource: 'x' }).tempo).toBeNull();
   });
 
   it('reads a chosen mode the bundle cannot build as the bundle mode', () => {
     const constantRow = { ...ROW, tempoMode: TEMPO_MODE.constant };
     expect(
-      stemSetTempoOf({ ...constantRow, chosenTempoMode: TEMPO_MODE.follow })
+      storedTempoOf({ ...constantRow, chosenTempoMode: TEMPO_MODE.follow })
         .chosenTempoMode,
     ).toBeNull();
     expect(
-      stemSetTempoOf({ ...ROW, chosenTempoMode: 'steady' }).chosenTempoMode,
+      storedTempoOf({ ...ROW, chosenTempoMode: 'steady' }).chosenTempoMode,
     ).toBeNull();
   });
 });
@@ -317,6 +317,24 @@ describe('a chosen tempo mode on Replace', () => {
       .from(stemSets)
       .where(eq(stemSets.id, outcome.id));
     expect(row?.chosen).toBeNull();
+  });
+
+  it('clears the old tempo for a bundle with no tempo and no beats', async () => {
+    const { handle, library } = setup();
+    const old = await library.insertStemBundle(BUNDLE);
+    const outcome = await library.replaceStemBundle(
+      { ...BUNDLE, uuid: 'tempo-uuid-4', tempo: null, beats: [], bars: [] },
+      old,
+    );
+    expect(await library.readStemSet(outcome.id)).toMatchObject({
+      tempo: null,
+      chosenTempoMode: null,
+    });
+    const [row] = await handle.db
+      .select({ mode: stemSets.tempoMode, bpm: stemSets.tempoBpm })
+      .from(stemSets)
+      .where(eq(stemSets.id, outcome.id));
+    expect(row).toEqual({ mode: null, bpm: null });
   });
 
   it('falls back to the bundle mode when the new bundle cannot build it', async () => {

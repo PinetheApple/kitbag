@@ -29,6 +29,7 @@ import {
   reader,
   type Reader,
 } from './backup-reader';
+import { readSongTempo } from './backup-song-tempo';
 import { readStemSong } from './backup-stem-song-read';
 import { decodeBase64, presetBytes } from './base64';
 import { isClickSoundSlot } from './click-sound-repository';
@@ -90,6 +91,7 @@ function readLibrarySong(value: unknown, path: string): LibrarySongRecord {
     bpm: r.nullableNumber('bpm'),
     waveformPath: r.nullableString('waveformPath'),
     ...readSongGrid(r, path),
+    ...readSongTempo(r, path),
   };
   if (
     record.beatGrid !== null &&

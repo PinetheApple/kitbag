@@ -4,7 +4,7 @@ import { stemSetClickOf, type StemSetClick } from './click-settings';
 import { meterOverrideOf, type MeterOverride } from './meter-override';
 import { found, type Database } from './repository';
 import { stems, stemSets } from './schema';
-import { packFloat32, packInt32, unpackFloat32, unpackInt32 } from './packing';
+import { packBars, packFloat32, unpackBars, unpackFloat32 } from './packing';
 import {
   deleteStemSetEntries,
   repointStemSetEntries,
@@ -14,13 +14,12 @@ import { parseRetimedLyrics, type LyricLineTimes } from './stem-lyrics';
 import { applyKept, readKept } from './stem-replace-keep';
 import {
   bundleTempoColumns,
-  stemSetTempoOf,
+  storedTempoOf,
   type BundleTempo,
-  type StemSetTempo,
+  type StoredTempo,
 } from './stem-tempo';
 
 const STEM_FORMAT = 'flac';
-const BAR_MARK_FIELDS = 2;
 
 export interface BundleStem {
   readonly name: string;
@@ -94,7 +93,7 @@ export interface StemSetRecord
     >,
     MeterOverride,
     StemSetClick,
-    StemSetTempo {
+    StoredTempo {
   readonly id: number;
   readonly source: StemSetSource;
   readonly jobId: string | null;
@@ -127,18 +126,6 @@ export interface StemMix {
 export interface StemBundleReplacement {
   readonly id: number;
   readonly replaced: StemSetFiles | null;
-}
-
-function packBars(bars: readonly BarMark[]): Uint8Array {
-  return packInt32(bars.flatMap((bar) => [bar.beat, bar.beatsPerBar]));
-}
-
-function unpackBars(bytes: Uint8Array): BarMark[] {
-  const values = unpackInt32(bytes);
-  const bars: BarMark[] = [];
-  for (let i = 0; i + 1 < values.length; i += BAR_MARK_FIELDS)
-    bars.push({ beat: values[i] ?? 0, beatsPerBar: values[i + 1] ?? 0 });
-  return bars;
 }
 
 function isSection(value: unknown): value is StoredSection {
@@ -345,7 +332,7 @@ export async function readStemSet(
     pitch: row.pitch,
     ...meterOverrideOf(row),
     ...stemSetClickOf(row),
-    ...stemSetTempoOf(row),
+    ...storedTempoOf(row),
     bpm: row.bpm,
     key: row.key,
     scale: row.scale,

@@ -6,6 +6,7 @@ import { createSongLibraryStore } from './store.ts';
 import {
   badges,
   failedResult,
+  fakeFitter,
   fakeOpenSong,
   result,
   settle,
@@ -117,6 +118,7 @@ describe('re-analysing grids from an older analyser', () => {
       files: () => library.files,
       newUuid: () => 'unused',
       openSong: () => fakeOpenSong().openSong,
+      fitTempo: () => fakeFitter(),
     });
     await relaunched.getState().start();
     expect(queued(library)).toEqual([path('Broken')]);

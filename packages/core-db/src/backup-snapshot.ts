@@ -16,6 +16,7 @@ import { encodeBase64, nullableBase64, presetBase64 } from './base64';
 import { loadStemSongs } from './backup-stem-songs';
 import { meterOverrideOf } from './meter-override';
 import type { Database } from './repository';
+import { storedTempoColumns, storedTempoOf } from './stem-tempo';
 import { storedTempoCorrection, tempoCorrectionOf } from './tempo-correction';
 import { MS_PER_SECOND } from './units';
 import {
@@ -73,6 +74,7 @@ function librarySongRecord(row: SongRow): LibrarySongRecord {
   return {
     ...portableSong(row),
     ...meterOverrideOf(row),
+    ...storedTempoColumns(storedTempoOf(row)),
     tempoCorrection: storedTempoCorrection(
       tempoCorrectionOf(row.tempoCorrection),
     ),

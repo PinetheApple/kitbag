@@ -6,10 +6,12 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "analysis/constant_tempo.h"
 #include "analysis/downbeat.h"
 #include "analysis/onset_envelope.h"
 #include "analysis/sidecar_path.h"
@@ -144,6 +146,38 @@ void WriteWaveformSidecar(
   WriteKwav(kwav_path.c_str(), peaks);
 }
 
+kb_result RunSecondPass(
+    SourceReader& reader,
+    uint64_t frames,
+    int channels,
+    const char* path,
+    const char* waveform_dir,
+    BeatResult* out
+) {
+  const int rate = static_cast<int>(reader.sample_rate());
+  SecondPass second =
+      PlanSecondPass(*out, frames, channels, rate, waveform_dir);
+  if (second.downbeats == nullptr && second.peaks == nullptr) return KB_OK;
+
+  const kb_result rescanned = ReadSecondPass(reader, frames, &second);
+  if (rescanned != KB_OK) return rescanned;
+  if (second.downbeats != nullptr) {
+    out->downbeat_indices = second.downbeats->Finish();
+  }
+  if (second.peaks != nullptr) {
+    WriteWaveformSidecar(path, waveform_dir, second.peaks->peaks());
+  }
+  return KB_OK;
+}
+
+std::optional<ConstantTempo> FitTempo(const BeatResult& beats) {
+  ConstantTempo fit;
+  if (!FitConstantTempo(beats.beat_times, beats.downbeat_indices, &fit)) {
+    return std::nullopt;
+  }
+  return fit;
+}
+
 }  // namespace
 
 bool WithinFrameCap(uint64_t frames) {
@@ -176,18 +210,10 @@ kb_result AnalyzeSong(
   const int rate = static_cast<int>(reader.sample_rate());
   *out = BeatTracker().AnalyzeFlux(std::move(first.flux), rate);
   out->duration_sec = static_cast<double>(first.frames) / rate;
-  SecondPass second =
-      PlanSecondPass(*out, first.frames, channels, rate, waveform_dir);
-  if (second.downbeats == nullptr && second.peaks == nullptr) return KB_OK;
-
-  const kb_result rescanned = ReadSecondPass(reader, first.frames, &second);
+  const kb_result rescanned =
+      RunSecondPass(reader, first.frames, channels, path, waveform_dir, out);
   if (rescanned != KB_OK) return rescanned;
-  if (second.downbeats != nullptr) {
-    out->downbeat_indices = second.downbeats->Finish();
-  }
-  if (second.peaks != nullptr) {
-    WriteWaveformSidecar(path, waveform_dir, second.peaks->peaks());
-  }
+  out->tempo = FitTempo(*out);
   return KB_OK;
 }
 

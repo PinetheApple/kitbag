@@ -3,6 +3,7 @@
 import {
   meterCopy,
   screenBar,
+  tempoSheetCopy,
   space,
   type LoopHandles,
 } from '@kitbag/core-design';
@@ -64,6 +65,10 @@ vi.mock('@kitbag/core-state', async (original) =>
   ),
 );
 
+const ROW_TITLES: Readonly<Record<string, unknown>> = {
+  MeterRow: meterCopy.title,
+  TempoModeRow: tempoSheetCopy.row,
+};
 const CLOSED_SONG = { songId: null, title: '', artist: null, bpm: null };
 const DROPPED_FRACTION = 0.25;
 
@@ -250,11 +255,12 @@ describe('the player menu', () => {
   function menuLabels(tree: ReactTestRenderer) {
     return tree.root
       .findByType('Sheet' as never)
-      .findAll((node) => ['MenuRow', 'MeterRow'].includes(String(node.type)))
-      .map((node) =>
-        String(node.type) === 'MeterRow'
-          ? meterCopy.title
-          : (node.props.label as unknown),
+      .findAll((node) =>
+        ['MenuRow', 'MeterRow', 'TempoModeRow'].includes(String(node.type)),
+      )
+      .map(
+        (node): unknown =>
+          ROW_TITLES[String(node.type)] ?? (node.props.label as unknown),
       );
   }
 
@@ -326,6 +332,7 @@ describe('the player menu', () => {
     expect(menuLabels(openMenu())).toEqual([
       SONG_SPEED_TEXT.reset,
       'Meter',
+      'Tempo',
       'Tempo correction',
       'Count-in',
       'Stop',
@@ -337,6 +344,7 @@ describe('the player menu', () => {
       SONG_SPEED_TEXT.reset,
       REANALYZE_LABEL,
       'Meter',
+      'Tempo',
       'Tempo correction',
       'Count-in',
       'Stop',

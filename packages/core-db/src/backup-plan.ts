@@ -21,6 +21,7 @@ import {
 import type { Snapshot } from './backup-snapshot';
 import { fittedToDevice, stemSongChange } from './backup-stem-song-plan';
 import { meterOverrideOf, NO_METER_OVERRIDE } from './meter-override';
+import { TEMPO_COLUMN_OF } from './stem-tempo';
 
 export interface ImportOptions {
   mode?: ImportMode;
@@ -55,9 +56,13 @@ export interface Write {
 
 export type Writes = Partial<Record<Category, Write[]>>;
 
-// A version travels with its grid: it only differs from the device's when the grid
-// does, and a version-only difference is not one the user can judge.
-const MERGE_IGNORED_FIELDS = new Set(['active', 'analysisVersion']);
+// A version and a tempo fit travel with their grid: a difference in them alone is
+// not one the user can judge.
+const MERGE_IGNORED_FIELDS = new Set<string>([
+  'active',
+  'analysisVersion',
+  ...Object.values(TEMPO_COLUMN_OF),
+]);
 
 function canonical(record: object): string {
   const fields = Object.keys(record).filter(
@@ -287,6 +292,7 @@ function fillMissingOverrideFromDevice(
     return {
       ...meterOverrideOf({ ...NO_METER_OVERRIDE, ...local }),
       tempoCorrection: local?.tempoCorrection ?? null,
+      chosenTempoMode: local?.chosenTempoMode ?? null,
       ...(local?.speed === undefined ? {} : { speed: local.speed }),
       ...song,
     };

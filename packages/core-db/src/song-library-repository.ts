@@ -38,7 +38,15 @@ import { saveLyricsRetimed, type LyricLineTimes } from './stem-lyrics';
 import { findStemSetMatches, type StemSetIdentity } from './stem-set-match';
 import { renameStem, renameStemSet } from './stem-rename';
 import { saveStemSetSpeedKey, type StemSetSpeedKey } from './stem-speed-key';
-import { saveChosenTempoMode } from './stem-tempo';
+import {
+  bundleTempoColumns,
+  listStemSetsWithoutTempo,
+  saveChosenTempoMode,
+  saveStemSetTempo,
+  storedTempoOf,
+  type BundleTempo,
+  type StoredTempo,
+} from './stem-tempo';
 import { saveSongSpeed } from './song-speed';
 import { saveTempoCorrection } from './song-tempo-correction';
 import { tempoCorrectionOf, type TempoCorrection } from './tempo-correction';
@@ -85,7 +93,7 @@ export interface NewLibrarySong {
   readonly format: string;
 }
 
-export interface SongRecord extends MeterOverride {
+export interface SongRecord extends MeterOverride, StoredTempo {
   readonly id: number;
   readonly title: string;
   readonly artist: string;
@@ -124,6 +132,7 @@ export interface StoredAnalysis {
   readonly beats: readonly number[];
   readonly downbeats: readonly number[];
   readonly waveformPath: string | null;
+  readonly tempo?: BundleTempo | null;
 }
 
 export interface AnalysisOutcome {
@@ -245,6 +254,7 @@ function analysisFields(result: AnalysisResultRecord) {
     beatGrid: gridded ? packFloat32(result.beats) : null,
     downbeatIndices: gridded ? packInt32(result.downbeats) : null,
     waveformPath: result.waveformPath,
+    ...bundleTempoColumns(result.tempo ?? null),
     analysisStatus: ANALYSIS_STATUS.done,
     analysisError: null,
     analysisVersion: result.analysisVersion,
@@ -374,6 +384,7 @@ async function readSong(
     tempoCorrection: tempoCorrectionOf(row.tempoCorrection),
     speed: row.speed,
     ...meterOverrideOf(row),
+    ...storedTempoOf(row),
   };
 }
 
@@ -430,8 +441,13 @@ export function createSongLibraryRepository({
       serial(() => saveMeterOverride(db, stemSets, id, patch)),
     saveStemSetClick: (id: number, patch: StemSetClickPatch) =>
       serial(() => saveStemSetClick(db, id, patch)),
+    saveSongChosenTempoMode: (id: number, mode: TempoMode | null) =>
+      serial(() => saveChosenTempoMode(db, songs, id, mode)),
     saveStemSetChosenTempoMode: (id: number, mode: TempoMode | null) =>
-      serial(() => saveChosenTempoMode(db, id, mode)),
+      serial(() => saveChosenTempoMode(db, stemSets, id, mode)),
+    listStemSetsWithoutTempo: () => serial(() => listStemSetsWithoutTempo(db)),
+    saveStemSetTempo: (id: number, tempo: BundleTempo) =>
+      serial(() => saveStemSetTempo(db, id, tempo)),
     saveStemSetSpeedKey: (id: number, change: StemSetSpeedKey) =>
       transaction(() => saveStemSetSpeedKey(db, id, change)),
     renameStemSet: (id: number, title: string) =>

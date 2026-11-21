@@ -13,7 +13,7 @@ import { stems, stemSets } from './schema';
 import { parseRetimedLyrics, saveLyricsRetimed } from './stem-lyrics';
 import { renameStemSet } from './stem-rename';
 import { STEM_SET_SOURCE } from './stem-set-source';
-import { saveChosenTempoMode, stemSetTempoOf } from './stem-tempo';
+import { saveChosenTempoMode, storedTempoOf } from './stem-tempo';
 
 type StemSetRow = typeof stemSets.$inferSelect;
 type StemRow = typeof stems.$inferSelect;
@@ -57,10 +57,10 @@ function stemSongRecord(
     pitch: row.pitch,
     lyricsRetimed: parseRetimedLyrics(row.lyricsRetimed),
     ...stemSetClickOf(row),
-    chosenTempoMode: stemSetTempoOf(row).chosenTempoMode,
+    chosenTempoMode: storedTempoOf(row).chosenTempoMode,
     stems: mixes.map(mixRecord),
     lyrics: lyricsOf(row),
-    tempo: stemSetTempoOf(row).tempo,
+    tempo: storedTempoOf(row).tempo,
   };
 }
 
@@ -117,7 +117,7 @@ export async function restoreStemSong(
   });
   await saveLyricsRetimed(db, localId, record.lyricsRetimed);
   await saveStemSetClick(db, localId, { clickGrouping, clickRate });
-  await saveChosenTempoMode(db, localId, record.chosenTempoMode);
+  await saveChosenTempoMode(db, stemSets, localId, record.chosenTempoMode);
   await db
     .update(stemSets)
     .set({ speed: record.speed, pitch: record.pitch })

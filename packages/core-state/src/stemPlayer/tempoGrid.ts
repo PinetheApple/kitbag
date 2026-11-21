@@ -1,6 +1,8 @@
 import {
   TEMPO_MODE,
   type BarMark,
+  type BundleTempo,
+  type FittedTempo,
   type StemSetRecord,
   type TempoMode,
 } from '@kitbag/core-db';
@@ -17,12 +19,6 @@ export type TempoSong = Pick<
   StemSetRecord,
   'beats' | 'bars' | 'tempo' | 'chosenTempoMode' | 'stems'
 >;
-
-interface FittedTempo {
-  readonly bpm: number;
-  readonly anchor: number;
-  readonly beatsPerBar: number;
-}
 
 export interface ConstantBeats {
   readonly beats: readonly number[];
@@ -82,6 +78,19 @@ function rebuiltGrid(
   return { beats, downbeatIndices: barMarkDownbeats(bars, beats.length) };
 }
 
+export function tempoGrid(
+  stored: DetectedGrid,
+  tempo: BundleTempo | null,
+  mode: TempoMode | null,
+  durationSec: number,
+): DetectedGrid {
+  if (mode !== TEMPO_MODE.constant || tempo?.mode !== TEMPO_MODE.follow)
+    return stored;
+  const { bpm, anchor, beatsPerBar } = tempo;
+  if (bpm === null || anchor === null) return stored;
+  return rebuiltGrid({ bpm, anchor, beatsPerBar }, durationSec);
+}
+
 export function effectiveGrid(
   song: TempoSong,
   mode: TempoMode | null = tempoModeOf(song),
@@ -90,10 +99,5 @@ export function effectiveGrid(
     beats: song.beats,
     downbeatIndices: barMarkDownbeats(song.bars, song.beats.length),
   };
-  const { tempo } = song;
-  if (mode !== TEMPO_MODE.constant || tempo?.mode !== TEMPO_MODE.follow)
-    return stored;
-  const { bpm, anchor, beatsPerBar } = tempo;
-  if (bpm === null || anchor === null) return stored;
-  return rebuiltGrid({ bpm, anchor, beatsPerBar }, longestSeconds(song));
+  return tempoGrid(stored, song.tempo, mode, longestSeconds(song));
 }

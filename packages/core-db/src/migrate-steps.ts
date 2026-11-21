@@ -364,6 +364,15 @@ export const MIGRATE_V28_TO_V29: readonly string[] = [
   'ALTER TABLE play_queue_next RENAME TO play_queue',
 ];
 
+export const MIGRATE_V29_TO_V30: readonly string[] = [
+  'ALTER TABLE songs ADD COLUMN tempo_mode TEXT',
+  'ALTER TABLE songs ADD COLUMN tempo_bpm REAL',
+  'ALTER TABLE songs ADD COLUMN tempo_anchor REAL',
+  'ALTER TABLE songs ADD COLUMN tempo_beats_per_bar INTEGER',
+  'ALTER TABLE songs ADD COLUMN tempo_source TEXT',
+  'ALTER TABLE songs ADD COLUMN chosen_tempo_mode TEXT',
+];
+
 export const BASELINE: readonly string[] = [
   ...V11_BASELINE,
   ...MIGRATE_V11_TO_V12,
@@ -384,6 +393,7 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V26_TO_V27,
   ...MIGRATE_V27_TO_V28,
   ...MIGRATE_V28_TO_V29,
+  ...MIGRATE_V29_TO_V30,
 ];
 
 export const MIGRATE_V7_TO_V8: readonly string[] = [

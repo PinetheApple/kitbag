@@ -125,6 +125,9 @@ export {
   bundleTempoViolation,
   canBuildTempoMode,
   type BundleTempo,
+  type FittedTempo,
+  type StoredTempo,
+  type UntimedStemSet,
 } from './stem-tempo';
 export type {
   AnalysisResultRecord,

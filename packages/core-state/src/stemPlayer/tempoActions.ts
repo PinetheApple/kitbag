@@ -1,5 +1,6 @@
 import {
   canBuildTempoMode,
+  type BundleTempo,
   type MeterOverride,
   type StemSetRecord,
   type TempoMode,
@@ -56,25 +57,57 @@ export function songGrid(
   };
 }
 
+export interface TempoSwitchTarget {
+  readonly id: number | null;
+  readonly ready: boolean;
+  readonly tempo: BundleTempo | null;
+  readonly tempoMode: TempoMode | null;
+}
+
+export interface TempoSwitchContext {
+  readonly target: () => TempoSwitchTarget;
+  readonly session: () => number;
+  readonly save: (id: number, mode: TempoMode) => Promise<void>;
+  readonly applyGrid: (mode: TempoMode) => void;
+}
+
+export function tempoModeSwitch({
+  target,
+  session,
+  save,
+  applyGrid,
+}: TempoSwitchContext): (mode: TempoMode) => Promise<void> {
+  let switches = 0;
+  return async (mode) => {
+    const { ready, id, tempo, tempoMode: previous } = target();
+    if (!ready || id === null || previous === null) return;
+    if (mode === previous || !canBuildTempoMode(tempo, mode)) return;
+    const opened = session();
+    const switched = ++switches;
+    applyGrid(mode);
+    try {
+      await save(id, mode);
+    } catch (error: unknown) {
+      warn('tempo mode not stored', error);
+      if (opened === session() && switched === switches) applyGrid(previous);
+    }
+  };
+}
+
 export function tempoActions(
   { get, runtimeOf, session }: ActionContext,
   applyGrid: (mode: TempoMode) => void,
 ): Pick<StemPlayerActions, 'setTempoMode'> {
-  let switches = 0;
   return {
-    setTempoMode: async (mode) => {
-      const { status, setId, tempo, tempoMode: previous } = get();
-      if (status !== 'ready' || setId === null || previous === null) return;
-      if (mode === previous || !canBuildTempoMode(tempo, mode)) return;
-      const opened = session();
-      const switched = ++switches;
-      applyGrid(mode);
-      try {
-        await runtimeOf().records.saveStemSetChosenTempoMode(setId, mode);
-      } catch (error: unknown) {
-        warn('tempo mode not stored', error);
-        if (opened === session() && switched === switches) applyGrid(previous);
-      }
-    },
+    setTempoMode: tempoModeSwitch({
+      target: () => {
+        const { status, setId, tempo, tempoMode } = get();
+        return { ready: status === 'ready', id: setId, tempo, tempoMode };
+      },
+      session,
+      save: (id, mode) =>
+        runtimeOf().records.saveStemSetChosenTempoMode(id, mode),
+      applyGrid,
+    }),
   };
 }

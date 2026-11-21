@@ -5,6 +5,7 @@ import {
   type LibrarySongRow,
   type SongRecord,
   type TempoCorrection,
+  type TempoMode,
 } from '@kitbag/core-db';
 import { KB_RESULT } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
@@ -56,18 +57,23 @@ import {
   type SongClickMetronome,
 } from './songClick.ts';
 import {
-  NO_GRID,
+  analysedGrid,
+  NO_ANALYSIS,
   overrideDisagrees,
   recordGrid,
   sameGrid,
   songGrid,
+  type AnalysedSong,
   type SongGrid,
 } from './songGrid.ts';
+import { heldWhileSaving } from './heldWhileSaving.ts';
+import { songTempo } from './songTempo.ts';
 import {
   closedState,
   factsOf,
   namesOf,
   shownGrid,
+  tempoFacts,
   type SongPlayerState,
 } from './state.ts';
 
@@ -104,9 +110,8 @@ export function createSongPlayerStore(
   let trackRequested = false;
   let masterToRestore: number | null = null;
   let loading: Promise<void> = Promise.resolve();
-  let detectedGrid = NO_GRID;
-  // Set while a picked factor is saving, so a re-read cannot bring back an older one.
-  let heldCorrection: TempoCorrection | null = null;
+  let analysed: AnalysedSong = NO_ANALYSIS;
+  const heldCorrection = heldWhileSaving<TempoCorrection>();
 
   const teardownTracks = () => {
     const { commands } = runtimeOf();
@@ -185,7 +190,7 @@ export function createSongPlayerStore(
     };
 
     const becomeReady = async (opened: number, loaded: LoadedSong) => {
-      detectedGrid = loaded.record;
+      analysed = loaded.record;
       set(readyState(loaded, get().clickSettings));
       waveform.show(opened, loaded.record.waveformPath);
       if (loaded.preset !== undefined && !get().click)
@@ -204,7 +209,7 @@ export function createSongPlayerStore(
         set({ status: 'missing' });
         return;
       }
-      set(factsOf(record));
+      set(factsOf(record, modes.modeFor(record)));
       const engineRate = await mixer.startEngine(opened);
       if (engineRate === null) return;
       if (!(await mixer.clearSessionLeftovers(opened))) return;
@@ -251,24 +256,35 @@ export function createSongPlayerStore(
       if (regrid) void followNewGrid(context, gridFollowers);
     };
 
+    const applyTempoMode = (mode: TempoMode) => {
+      const { meterOverride, tempoCorrection } = get();
+      showGrid(
+        songGrid(analysedGrid(analysed, mode), meterOverride, tempoCorrection),
+        tempoFacts(analysed, mode, tempoCorrection),
+      );
+    };
+    const modes = songTempo(context, applyTempoMode);
+
     const endAsGone = () => {
       mixer.close();
       set({ status: 'missing' });
     };
 
     const followAnalysis = (opened: number, stored: SongRecord) => {
+      const correction = heldCorrection.current();
       const record =
-        heldCorrection === null
+        correction === null
           ? stored
-          : { ...stored, tempoCorrection: heldCorrection };
+          : { ...stored, tempoCorrection: correction };
       const ready = get().status === 'ready';
-      const grid = recordGrid(record);
+      const mode = modes.modeFor(record);
+      const grid = recordGrid(record, mode);
       const regrid = ready && !sameGrid(get(), grid);
-      const reanalysed = ready && !sameGrid(detectedGrid, record);
-      if (ready) detectedGrid = record;
-      const notice = reanalysed && overrideDisagrees(record);
+      const reanalysed = ready && !sameGrid(analysed, record);
+      if (ready) analysed = record;
+      const notice = reanalysed && overrideDisagrees(record, mode);
       set({
-        ...factsOf(record),
+        ...factsOf(record, mode),
         ...(ready
           ? { meterOverride: meterOverrideOf(record), detected: grid.detected }
           : {}),
@@ -317,8 +333,9 @@ export function createSongPlayerStore(
 
     const begin = (songId: number, bars: number) => {
       const opened = mixer.begin();
-      detectedGrid = NO_GRID;
-      heldCorrection = null;
+      analysed = NO_ANALYSIS;
+      heldCorrection.reset();
+      modes.reset();
       waveform.reset(bars);
       set({
         ...closedState,
@@ -377,21 +394,23 @@ export function createSongPlayerStore(
       meterOverrideChanged: (songId, override) => {
         if (!isOpenAndReady(songId)) return;
         const meterOverride = meterOverrideOf(override);
-        showGrid(songGrid(detectedGrid, meterOverride, get().tempoCorrection), {
+        const grid = analysedGrid(analysed, get().tempoMode);
+        showGrid(songGrid(grid, meterOverride, get().tempoCorrection), {
           meterOverride,
           meterNotice: null,
         });
       },
       tempoCorrectionChanged: (songId, tempoCorrection) => {
         if (!isOpenAndReady(songId)) return;
-        heldCorrection = tempoCorrection;
-        showGrid(songGrid(detectedGrid, get().meterOverride, tempoCorrection), {
+        heldCorrection.hold(tempoCorrection);
+        const grid = analysedGrid(analysed, get().tempoMode);
+        showGrid(songGrid(grid, get().meterOverride, tempoCorrection), {
           tempoCorrection,
           bpm: correctedBpm(get().detectedBpm, tempoCorrection),
         });
       },
       tempoCorrectionSettled: (songId) => {
-        if (get().songId === songId) heldCorrection = null;
+        if (get().songId === songId) heldCorrection.settle();
       },
       playheadBeatSeconds: () => playheadBeatSeconds(get(), runtimeOf()),
       playheadSeconds: () =>
@@ -415,6 +434,7 @@ export function createSongPlayerStore(
       }),
       ...clickSettings.actions,
       saveForSong: presets.saveForSong,
+      setTempoMode: modes.setTempoMode,
       ...speed.actions,
     };
   });

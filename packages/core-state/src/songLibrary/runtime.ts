@@ -1,6 +1,7 @@
 import type { SongLibraryRepository } from '@kitbag/core-db';
 import type {
   AnalysisResult,
+  ConstantTempoFit,
   ImportedAudio,
   ImportedStemBundle,
   LibraryAvailability,
@@ -70,7 +71,14 @@ export type SongLibraryRecords = Pick<
   | 'renameStemSet'
   | 'saveSongMeterOverride'
   | 'saveSongTempoCorrection'
+  | 'listStemSetsWithoutTempo'
+  | 'saveStemSetTempo'
 >;
+
+export type TempoFitter = (
+  beatTimesSec: readonly number[],
+  downbeatIndices: readonly number[],
+) => Promise<ConstantTempoFit>;
 
 export interface OpenSong {
   readonly id: () => number | null;
@@ -81,6 +89,7 @@ export interface SongLibraryRuntime {
   readonly records: SongLibraryRecords;
   readonly files: LibraryFiles;
   readonly openSong: OpenSong;
+  readonly fitTempo: TempoFitter;
 }
 
 let configured: SongLibraryRuntime | undefined;

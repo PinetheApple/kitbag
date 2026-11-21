@@ -294,8 +294,8 @@ describe('collectConstants (real engine source)', () => {
       { name: 'KB_GRID_RATE_DOUBLE', value: 1 },
       { name: 'KB_GRID_RATE_HALF', value: 2 },
     ]);
-    expect(c.beatAnalysisVersion).toBe(6);
-    expect(renderConstants(c)).toContain('KB_BEAT_ANALYSIS_VERSION = 6;');
+    expect(c.beatAnalysisVersion).toBe(7);
+    expect(renderConstants(c)).toContain('KB_BEAT_ANALYSIS_VERSION = 7;');
     expect(c.maxTracks).toBe(16);
     expect(c.maxBeats).toBe(16);
     expect(c.maxRampBars).toBe(64);

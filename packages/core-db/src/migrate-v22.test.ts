@@ -5,6 +5,7 @@ import { CLICK_RATE } from './click-rate';
 import { migrate, SCHEMA_VERSION } from './migrate';
 import {
   buildV21Fixture,
+  buildV22Fixture,
   pragma,
   rows,
   V22_TEMPO_COLUMNS,
@@ -37,9 +38,16 @@ describe('migrate v21 to v22', () => {
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
   });
 
-  it('gives a fresh database the tempo columns on stem songs only', () => {
+  it('gives a fresh database the tempo columns on stem songs', () => {
     const db = new DatabaseSync(':memory:');
     migrate(nodeSqliteDriver(db));
+    expect(columns(db, 'stem_sets')).toEqual(
+      expect.arrayContaining(Object.keys(V22_TEMPO_COLUMNS)),
+    );
+  });
+
+  it('adds the tempo columns to stem songs only', () => {
+    const db = buildV22Fixture();
     expect(columns(db, 'stem_sets')).toEqual(
       expect.arrayContaining(Object.keys(V22_TEMPO_COLUMNS)),
     );

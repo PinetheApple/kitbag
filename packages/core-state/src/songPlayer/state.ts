@@ -5,15 +5,18 @@ import {
   NO_METER_OVERRIDE,
   TEMPO_CORRECTION,
   type AnalysisStatus,
+  type BundleTempo,
   type MeterOverride,
   type SongRecord,
   type TempoCorrection,
+  type TempoMode,
 } from '@kitbag/core-db';
 
 import type { TransportSlice } from '../stemPlayer/actions.ts';
 import { FALLBACK_BEATS_PER_BAR } from '../stemPlayer/barMeter.ts';
 import type { ClickSlice } from '../stemPlayer/clickActions.ts';
 import type { LoopSlice } from '../stemPlayer/loopActions.ts';
+import { gridBpm } from '../stemPlayer/tempoGrid.ts';
 import type { DetectedMeter } from '../stemPlayer/meterOverride.ts';
 import { CLOSED_CLICK_SETTINGS, type SongClickSettings } from './songClick.ts';
 import type { SongGrid } from './songGrid.ts';
@@ -23,6 +26,8 @@ export interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
   readonly bpm: number | null;
   readonly detectedBpm: number | null;
   readonly tempoCorrection: TempoCorrection;
+  readonly tempo: BundleTempo | null;
+  readonly tempoMode: TempoMode | null;
   readonly analysisStatus: AnalysisStatus;
   readonly envelope: readonly number[] | null;
   readonly meterOverride: MeterOverride;
@@ -41,6 +46,8 @@ export const closedState: SongPlayerState = {
   bpm: null,
   detectedBpm: null,
   tempoCorrection: TEMPO_CORRECTION.none,
+  tempo: null,
+  tempoMode: null,
   analysisStatus: ANALYSIS_STATUS.pending,
   durationFrames: 0,
   engineRate: 0,
@@ -60,7 +67,7 @@ export const closedState: SongPlayerState = {
 
 type SongFacts = Pick<
   SongRecord,
-  'title' | 'artist' | 'bpm' | 'analysisStatus' | 'tempoCorrection'
+  'title' | 'artist' | 'bpm' | 'tempo' | 'analysisStatus' | 'tempoCorrection'
 >;
 
 export function namesOf(record: Pick<SongFacts, 'title' | 'artist'>) {
@@ -70,11 +77,27 @@ export function namesOf(record: Pick<SongFacts, 'title' | 'artist'>) {
   };
 }
 
-export function factsOf(record: SongFacts): Partial<SongPlayerState> {
+export function tempoFacts(
+  record: Pick<SongFacts, 'bpm' | 'tempo'>,
+  mode: TempoMode | null,
+  correction: TempoCorrection,
+): Pick<SongPlayerState, 'bpm' | 'detectedBpm' | 'tempoMode'> {
+  const detectedBpm = gridBpm(record, mode);
+  return {
+    bpm: correctedBpm(detectedBpm, correction),
+    detectedBpm,
+    tempoMode: mode,
+  };
+}
+
+export function factsOf(
+  record: SongFacts,
+  mode: TempoMode | null,
+): Partial<SongPlayerState> {
   return {
     ...namesOf(record),
-    bpm: correctedBpm(record.bpm, record.tempoCorrection),
-    detectedBpm: record.bpm,
+    ...tempoFacts(record, mode, record.tempoCorrection),
+    tempo: record.tempo,
     tempoCorrection: record.tempoCorrection,
     analysisStatus: record.analysisStatus,
   };

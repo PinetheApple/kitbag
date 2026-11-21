@@ -13,6 +13,7 @@ export type { Spec as KitbagCommandsSpec } from './NativeKitbagCommands';
 export { getKitbagLibrary } from './NativeKitbagLibrary';
 export type {
   AnalysisResult,
+  AnalysisTempo,
   DatabaseUsage,
   ImportedAudio,
   LibraryAudioUsage,

@@ -24,6 +24,7 @@ import {
   MIGRATE_V26_TO_V27,
   MIGRATE_V27_TO_V28,
   MIGRATE_V28_TO_V29,
+  MIGRATE_V29_TO_V30,
   BASELINE,
   MIGRATE_V7_TO_V8,
 } from './migrate-steps';
@@ -50,7 +51,8 @@ export const V25_SCHEMA_VERSION = V24_SCHEMA_VERSION + 1;
 export const V26_SCHEMA_VERSION = V25_SCHEMA_VERSION + 1;
 export const V27_SCHEMA_VERSION = V26_SCHEMA_VERSION + 1;
 export const V28_SCHEMA_VERSION = V27_SCHEMA_VERSION + 1;
-export const SCHEMA_VERSION = V28_SCHEMA_VERSION + 1;
+export const V29_SCHEMA_VERSION = V28_SCHEMA_VERSION + 1;
+export const SCHEMA_VERSION = V29_SCHEMA_VERSION + 1;
 
 export const OLDEST_UPGRADABLE_VERSION = V7_SCHEMA_VERSION;
 
@@ -111,7 +113,8 @@ const UPGRADES: readonly {
   { to: V26_SCHEMA_VERSION, steps: MIGRATE_V25_TO_V26 },
   { to: V27_SCHEMA_VERSION, steps: MIGRATE_V26_TO_V27 },
   { to: V28_SCHEMA_VERSION, steps: MIGRATE_V27_TO_V28 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V28_TO_V29 },
+  { to: V29_SCHEMA_VERSION, steps: MIGRATE_V28_TO_V29 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V29_TO_V30 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {

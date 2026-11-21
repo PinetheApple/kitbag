@@ -38,9 +38,11 @@ import {
   type LibraryFiles,
   type OpenSong,
   type SongLibraryRecords,
+  type TempoFitter,
 } from './runtime.ts';
 import { songGridSaves } from './songGridSaves.ts';
 import { stemBundleActions, type BundleSource } from './stemBundleImport.ts';
+import { fitUntimedStemSets } from './stemTempoFit.ts';
 import {
   stemSetRemovals,
   type BundleAddOutcome,
@@ -139,6 +141,7 @@ export interface SongLibraryDeps {
   readonly files: () => LibraryFiles;
   readonly newUuid: () => string;
   readonly openSong: () => OpenSong;
+  readonly fitTempo: () => TempoFitter;
 }
 
 const defaultDeps: SongLibraryDeps = {
@@ -146,6 +149,7 @@ const defaultDeps: SongLibraryDeps = {
   files: () => getSongLibrary().files,
   newUuid: () => crypto.randomUUID(),
   openSong: () => getSongLibrary().openSong,
+  fitTempo: () => getSongLibrary().fitTempo,
 };
 
 const INITIAL: SongLibraryState = {
@@ -364,6 +368,7 @@ function analysisActions(
     await refreshAvailability();
     await queue.resume();
     await sweepOrphanedStemFolders(deps, get, imports);
+    await fitUntimedStemSets(deps);
     return () => {
       stopResults();
       stopWatchingPlayer();
