@@ -16,10 +16,15 @@ import { LevelChip } from './LevelChip.tsx';
 import { StemRowView } from './StemRowView.tsx';
 import { useStemStyles } from './stemStyles.ts';
 
+export const MIXER_SLOT_ID = 'mixer-slot';
+const MIN_VISIBLE_STEMS = 2;
+const MIXER_FLOOR = MIN_VISIBLE_STEMS * stemPlayer.rowHeight + 2 * size.stroke;
+
 const MASTER = 'master';
 type Expanded = number | typeof MASTER | null;
 
 const useStyles = createThemedStyles((theme) => ({
+  slot: { flexGrow: 1, flexShrink: 0, flexBasis: MIXER_FLOOR },
   card: {
     flexShrink: 1,
     backgroundColor: theme.color.surface1,
@@ -105,23 +110,26 @@ export function StemList({
     [count],
   );
   return (
-    <View style={styles.card}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-        {indexes.map((index) => (
-          <StemRowView
-            key={index}
-            index={index}
-            progress={progress}
-            expanded={expanded === index}
-            onExpand={expand}
-          />
-        ))}
-        <MasterRow expanded={expanded === MASTER} onExpand={expandMaster} />
-      </ScrollView>
+    <View testID={MIXER_SLOT_ID} style={styles.slot}>
+      <View style={styles.card}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+        >
+          {indexes.map((index) => (
+            <StemRowView
+              key={index}
+              index={index}
+              progress={progress}
+              expanded={expanded === index}
+              onExpand={expand}
+            />
+          ))}
+          <MasterRow expanded={expanded === MASTER} onExpand={expandMaster} />
+        </ScrollView>
+      </View>
     </View>
   );
 }

@@ -1,10 +1,9 @@
 import {
-  Card,
-  countLabel,
   createThemedStyles,
   EmptyState,
   NoticeSnackbar,
   PlayerDock,
+  PlayerScroll,
   readerHiding,
   SegmentedControl,
   snackbar,
@@ -15,7 +14,6 @@ import {
   type Notice,
   type SegmentOption,
 } from '@kitbag/core-design';
-import { KB_MAX_TRACKS } from '@kitbag/core-native';
 import {
   loopEndFrames,
   useFocusedMixerHold,
@@ -30,8 +28,9 @@ import { useArrivalFollow, useRouteAcquire } from './advanceFollow.ts';
 import { detailTabLabel } from '../logic/detailView.ts';
 import { hasUnsavedRetime } from '../logic/retimeView.ts';
 import { DetailPane } from './DetailPane.tsx';
-import { ExportCancelledSnackbar, ExportNotice } from './ExportNotice.tsx';
+import { ExportCancelledSnackbar } from './ExportNotice.tsx';
 import { LoopUndoSnackbar } from './LoopUndoSnackbar.tsx';
+import { Notices } from './PlayerNotices.tsx';
 import { PlayerSheets } from './PlayerSheets.tsx';
 import { useCarriedSkipNotice, useQueueActions } from './queueActions.tsx';
 import { LeaveDialog, ResetDialog, RetimeBar } from './RetimeBar.tsx';
@@ -67,9 +66,10 @@ type RetimeAsk = 'reset' | 'leave';
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
   main: { flex: 1 },
+  area: { flexGrow: 1 },
   bodyFlush: { paddingBottom: 0 },
   body: {
-    flex: 1,
+    flexGrow: 1,
     paddingTop: stemPlayer.bodyTop,
     paddingHorizontal: space.screenInset,
     paddingBottom: stemPlayer.bodyGap,
@@ -77,46 +77,6 @@ const useStyles = createThemedStyles((theme) => ({
   },
   note: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
 }));
-
-function missingNote(unloaded: number, stemCount: number): string {
-  if (unloaded === stemCount)
-    return 'No stem files could be opened. Nothing will play.';
-  return `${countLabel(unloaded, 'stem file', 'stem files')} could not be opened. The others play.`;
-}
-
-function Notices() {
-  const styles = useStyles();
-  const overLimit = useStemPlayer((s) => s.overLimit);
-  const stemCount = useStemPlayer((s) => s.stems.length);
-  const unloaded = useStemPlayer(
-    (s) => s.stems.filter((row) => !row.loaded).length,
-  );
-  return (
-    <>
-      <ExportNotice />
-      {overLimit > 0 ? (
-        <Card
-          emphasis="warning"
-          statusIcon="warning"
-          statusLabel="Too many stems"
-        >
-          <Text style={styles.note}>
-            {`The mixer plays ${String(KB_MAX_TRACKS)} stems at most, so ${String(overLimit)} of this song's stems are left out.`}
-          </Text>
-        </Card>
-      ) : null}
-      {unloaded > 0 ? (
-        <Card
-          emphasis="danger"
-          statusIcon="failure"
-          statusLabel="Stems missing"
-        >
-          <Text style={styles.note}>{missingNote(unloaded, stemCount)}</Text>
-        </Card>
-      ) : null}
-    </>
-  );
-}
 
 interface DockProps {
   readonly frame: MixerFrameValues;
@@ -263,28 +223,42 @@ function Body({
         <NotReady status={status} onBack={onBack} />
       </View>
     );
+  const area = (
+    <View style={retiming ? styles.main : styles.area}>
+      {retiming ? (
+        <View style={[styles.body, styles.bodyFlush]}>
+          <RetimeBody />
+        </View>
+      ) : (
+        <PlayerContent frame={frame} picked={picked} onPick={setPicked} />
+      )}
+      <AdvanceCountIn />
+      <LoopUndoSnackbar />
+      <ExportCancelledSnackbar />
+      <NoticeSnackbar notice={notice} bottom={snackbar.aboveDock} />
+    </View>
+  );
+  const dock = (
+    <Dock
+      frame={frame}
+      bottom={bottom}
+      onOpenUpNext={onOpenUpNext}
+      onSpeedKey={onSpeedKey}
+    />
+  );
+  // Retiming pins its tap pad; a scroll around it would let the pad move.
+  if (retiming)
+    return (
+      <>
+        {area}
+        {dock}
+      </>
+    );
   return (
-    <>
-      <View style={styles.main}>
-        {retiming ? (
-          <View style={[styles.body, styles.bodyFlush]}>
-            <RetimeBody />
-          </View>
-        ) : (
-          <PlayerContent frame={frame} picked={picked} onPick={setPicked} />
-        )}
-        <AdvanceCountIn />
-        <LoopUndoSnackbar />
-        <ExportCancelledSnackbar />
-        <NoticeSnackbar notice={notice} bottom={snackbar.aboveDock} />
-      </View>
-      <Dock
-        frame={frame}
-        bottom={bottom}
-        onOpenUpNext={onOpenUpNext}
-        onSpeedKey={onSpeedKey}
-      />
-    </>
+    <PlayerScroll>
+      {area}
+      {dock}
+    </PlayerScroll>
   );
 }
 

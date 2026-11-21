@@ -11,7 +11,7 @@ const BAR_USERS = [
   'app-shell/src/settings/CalibrationScreen.tsx',
   'app-shell/src/settings/SettingsFrame.tsx',
   'tool-library/src/screen/LibraryScreen.tsx',
-  'tool-library/src/screen/SongPlayerScreen.tsx',
+  'tool-library/src/screen/SongAppBar.tsx',
   'tool-metronome/src/library/AllSongsScreen.tsx',
   'tool-metronome/src/library/PresetEditorScreen.tsx',
   'tool-metronome/src/library/SetlistDetailScreen.tsx',

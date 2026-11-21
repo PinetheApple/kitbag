@@ -2,13 +2,19 @@
 /* eslint-disable @typescript-eslint/no-deprecated */
 import {
   meterCopy,
+  PLAYER_SCROLL_ID,
   screenBar,
+  songPlayer,
   space,
+  stemPlayer,
   type LoopHandles,
 } from '@kitbag/core-design';
 import { ARRIVAL, arrivalStore, type QueuedSong } from '@kitbag/core-state';
 import { act } from 'react';
-import type { ReactTestRenderer } from 'react-test-renderer';
+import type {
+  ReactTestInstance,
+  ReactTestRenderer,
+} from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SONG_CLICK_TEXT } from '../logic/clickChipText.ts';
@@ -18,6 +24,7 @@ import {
   REANALYZE_LABEL,
   SONG_SPEED_TEXT,
 } from '../logic/viewText.ts';
+import { BODY_SLOT_ID } from './SongPlayerScreen.tsx';
 import {
   mount,
   onBack,
@@ -82,6 +89,60 @@ function failWith(failure: unknown) {
 }
 
 beforeEach(resetScreenState);
+
+describe('the song player in a short window', () => {
+  const SHORT_WINDOW = { viewport: 380, content: 520 };
+  const PHONE_WINDOW = { viewport: 690, content: 690 };
+
+  const byTestId = (tree: ReactTestRenderer, testID: string) =>
+    tree.root.find(
+      (node) => typeof node.type === 'string' && node.props.testID === testID,
+    );
+
+  const styleOf = (node: ReactTestInstance) =>
+    Object.assign(
+      {},
+      ...([node.props.style].flat(Infinity) as object[]),
+    ) as Record<string, unknown>;
+
+  function measured(window: { viewport: number; content: number }) {
+    const scroll = byTestId(mount(), PLAYER_SCROLL_ID);
+    act(() => {
+      (scroll.props.onLayout as (event: unknown) => void)({
+        nativeEvent: { layout: { height: window.viewport } },
+      });
+      (scroll.props.onContentSizeChange as (w: number, h: number) => void)(
+        0,
+        window.content,
+      );
+    });
+    return scroll;
+  }
+
+  it('holds the body and the transport in one scroll', () => {
+    const scroll = byTestId(mount(), PLAYER_SCROLL_ID);
+    expect(scroll.findAllByType('PlayerTransport' as never)).toHaveLength(1);
+    expect(
+      scroll.findAll((node) => node.props.testID === BODY_SLOT_ID),
+    ).not.toEqual([]);
+  });
+
+  it('keeps room for the waveform and its scrub row', () => {
+    const slot = styleOf(byTestId(mount(), BODY_SLOT_ID));
+    expect(slot.flexShrink).toBe(0);
+    expect(slot.flexBasis).toBeGreaterThanOrEqual(
+      songPlayer.cardWave + stemPlayer.laneHeight,
+    );
+  });
+
+  it('scrolls as one when the body floor and the transport overflow', () => {
+    expect(measured(SHORT_WINDOW).props.scrollEnabled).toBe(true);
+  });
+
+  it('stays put when everything fits', () => {
+    expect(measured(PHONE_WINDOW).props.scrollEnabled).toBe(false);
+  });
+});
 
 describe('the song player layout', () => {
   it('keeps the click toggle beside the text at the default size', () => {

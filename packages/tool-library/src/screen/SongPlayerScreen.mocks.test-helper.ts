@@ -89,6 +89,16 @@ export const reanimatedMock = () => ({
 export async function coreDesignMock(original: <T>() => Promise<T>) {
   const parent = (props: Props) => props.children;
   const nothing = () => null;
+  const actual = await original<{
+    PLAYER_SCROLL_ID: string;
+    usePlayerScroll: () => Record<string, unknown>;
+  }>();
+  const PlayerScroll = (props: Props) =>
+    createElement(
+      'ScrollView',
+      { testID: actual.PLAYER_SCROLL_ID, ...actual.usePlayerScroll() },
+      props.children,
+    );
   return {
     ...(await original<Record<string, unknown>>()),
     AppBar: (props: Props) =>
@@ -126,6 +136,7 @@ export async function coreDesignMock(original: <T>() => Promise<T>) {
     EmptyState: (props: Props) =>
       createElement('EmptyState', { title: props.title, reason: props.reason }),
     PlayerDock: parent,
+    PlayerScroll,
     PlayerTransport: (props: Props) =>
       createElement('PlayerTransport', props, props.extraKey as ReactNode),
     Snackbar: (props: Props) => createElement('Snackbar', props),
