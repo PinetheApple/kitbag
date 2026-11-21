@@ -1,16 +1,11 @@
 import {
   createThemedStyles,
   EmptyState,
-  NoticeSnackbar,
   PlayerDock,
-  PlayerScroll,
   readerHiding,
   SegmentedControl,
-  snackbar,
   space,
   stemPlayer,
-  textRoles,
-  textStyle,
   type Notice,
   type SegmentOption,
 } from '@kitbag/core-design';
@@ -23,14 +18,17 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { AdvanceCountIn } from './AdvanceCountIn.tsx';
 import { useArrivalFollow, useRouteAcquire } from './advanceFollow.ts';
 import { detailTabLabel } from '../logic/detailView.ts';
 import { hasUnsavedRetime } from '../logic/retimeView.ts';
 import { DetailPane } from './DetailPane.tsx';
-import { ExportCancelledSnackbar } from './ExportNotice.tsx';
-import { LoopUndoSnackbar } from './LoopUndoSnackbar.tsx';
-import { Notices } from './PlayerNotices.tsx';
+import {
+  PlayerLayout,
+  PlayerOverlays,
+  RetimeLayout,
+  useDockHeight,
+} from './PlayerLayouts.tsx';
+import { Notices, useNoteStyles } from './PlayerNotices.tsx';
 import { PlayerSheets } from './PlayerSheets.tsx';
 import { useCarriedSkipNotice, useQueueActions } from './queueActions.tsx';
 import { LeaveDialog, ResetDialog, RetimeBar } from './RetimeBar.tsx';
@@ -66,7 +64,6 @@ type RetimeAsk = 'reset' | 'leave';
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
   main: { flex: 1 },
-  area: { flexGrow: 1 },
   bodyFlush: { paddingBottom: 0 },
   body: {
     flexGrow: 1,
@@ -75,7 +72,6 @@ const useStyles = createThemedStyles((theme) => ({
     paddingBottom: stemPlayer.bodyGap,
     gap: stemPlayer.bodyGap,
   },
-  note: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
 }));
 
 interface DockProps {
@@ -162,7 +158,7 @@ function NotReady({
   readonly status: StemPlayerStatus;
   readonly onBack: () => void;
 }) {
-  const styles = useStyles();
+  const noteStyles = useNoteStyles();
   if (status === 'failed')
     return (
       <EmptyState
@@ -182,7 +178,7 @@ function NotReady({
       />
     );
   return (
-    <Text accessibilityLiveRegion="polite" style={styles.note}>
+    <Text accessibilityLiveRegion="polite" style={noteStyles.note}>
       Opening the stems…
     </Text>
   );
@@ -217,27 +213,13 @@ function Body({
   const status = useStemPlayer((s) => s.status);
   const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
   const [picked, setPicked] = useState<Tab>(MIX);
+  const { dockHeight, onDockLayout } = useDockHeight();
   if (status !== 'ready')
     return (
       <View style={styles.body}>
         <NotReady status={status} onBack={onBack} />
       </View>
     );
-  const area = (
-    <View style={retiming ? styles.main : styles.area}>
-      {retiming ? (
-        <View style={[styles.body, styles.bodyFlush]}>
-          <RetimeBody />
-        </View>
-      ) : (
-        <PlayerContent frame={frame} picked={picked} onPick={setPicked} />
-      )}
-      <AdvanceCountIn />
-      <LoopUndoSnackbar />
-      <ExportCancelledSnackbar />
-      <NoticeSnackbar notice={notice} bottom={snackbar.aboveDock} />
-    </View>
-  );
   const dock = (
     <Dock
       frame={frame}
@@ -246,19 +228,21 @@ function Body({
       onSpeedKey={onSpeedKey}
     />
   );
-  // Retiming pins its tap pad; a scroll around it would let the pad move.
-  if (retiming)
-    return (
-      <>
-        {area}
-        {dock}
-      </>
-    );
   return (
-    <PlayerScroll>
-      {area}
-      {dock}
-    </PlayerScroll>
+    <View style={styles.main}>
+      {retiming ? (
+        <RetimeLayout dock={dock} onDockLayout={onDockLayout}>
+          <View style={[styles.body, styles.bodyFlush]}>
+            <RetimeBody />
+          </View>
+        </RetimeLayout>
+      ) : (
+        <PlayerLayout dock={dock} onDockLayout={onDockLayout}>
+          <PlayerContent frame={frame} picked={picked} onPick={setPicked} />
+        </PlayerLayout>
+      )}
+      <PlayerOverlays notice={notice} dockHeight={dockHeight} />
+    </View>
   );
 }
 

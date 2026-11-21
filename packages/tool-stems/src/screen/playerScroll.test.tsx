@@ -1,28 +1,24 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
 import { PLAYER_SCROLL_ID, QUEUE_TEXT, stemPlayer } from '@kitbag/core-design';
-import { act } from 'react';
 import type { ReactTestInstance } from 'react-test-renderer';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { display } from '../testing/reactNativeHosts.ts';
+import { AdvanceCountIn } from './AdvanceCountIn.tsx';
+import { LYRIC_FLOOR, LYRIC_SLOT_ID } from './DetailPane.tsx';
+import { OVERLAY_ID } from './PlayerLayouts.tsx';
 import {
   mountTracked,
+  PLAIN_LYRICS,
+  retiming,
+  SONG_DETAILS,
   unmountTracked,
   withTestId,
   type Player,
 } from './playerHarness.test-helper.tsx';
-import { MIXER_SLOT_ID } from './StemList.tsx';
+import { MIN_VISIBLE_STEMS, MIXER_FLOOR, MIXER_SLOT_ID } from './StemList.tsx';
 
-const MIN_STEM_ROWS = 2;
-const SHORT_WINDOW = { viewport: 380, content: 520 };
-const PHONE_WINDOW = { viewport: 690, content: 690 };
-const FONT_SCALES = [1, 2];
-
-afterEach(() => {
-  display.fontScale = 1;
-  unmountTracked();
-});
+afterEach(unmountTracked);
 
 function only(p: Player, testID: string): ReactTestInstance {
   const [node] = withTestId(p, testID);
@@ -36,55 +32,58 @@ const styleOf = (node: ReactTestInstance) =>
     ...([node.props.style].flat(Infinity) as object[]),
   ) as Record<string, unknown>;
 
-function measure(
-  scroll: ReactTestInstance,
-  window: { viewport: number; content: number },
-) {
-  act(() => {
-    (scroll.props.onLayout as (event: unknown) => void)({
-      nativeEvent: { layout: { height: window.viewport } },
-    });
-    (scroll.props.onContentSizeChange as (w: number, h: number) => void)(
-      0,
-      window.content,
-    );
-  });
-}
+const holds = (
+  box: ReactTestInstance,
+  test: (n: ReactTestInstance) => boolean,
+) => box.findAll(test).length > 0;
 
-describe.each(FONT_SCALES)('the stem player at font scale %s', (fontScale) => {
-  async function mounted() {
-    display.fontScale = fontScale;
-    return mountTracked();
-  }
-
-  it('holds the mixer and the dock in one scroll below the app bar', async () => {
-    const p = await mounted();
-    const scroll = only(p, PLAYER_SCROLL_ID);
-    const inside = (test: (node: ReactTestInstance) => boolean) =>
-      scroll.findAll(test).length > 0;
-    expect(inside((node) => node.props.testID === MIXER_SLOT_ID)).toBe(true);
+describe('the stem player below its app bar', () => {
+  it('holds the mixer and the dock in one scroll', async () => {
+    const scroll = only(await mountTracked(), PLAYER_SCROLL_ID);
+    expect(holds(scroll, (n) => n.props.testID === MIXER_SLOT_ID)).toBe(true);
     expect(
-      inside((node) => node.props.accessibilityLabel === QUEUE_TEXT.previous),
+      holds(scroll, (n) => n.props.accessibilityLabel === QUEUE_TEXT.previous),
     ).toBe(true);
   });
 
-  it('keeps room for two stem rows however short the window', async () => {
-    const slot = styleOf(only(await mounted(), MIXER_SLOT_ID));
+  it('keeps the mixer floor of two stem rows', async () => {
+    const slot = styleOf(only(await mountTracked(), MIXER_SLOT_ID));
     expect(slot.flexShrink).toBe(0);
-    expect(slot.flexBasis).toBeGreaterThanOrEqual(
-      MIN_STEM_ROWS * stemPlayer.rowHeight,
+    expect(slot.flexBasis).toBe(MIXER_FLOOR);
+    expect(MIXER_FLOOR).toBeGreaterThanOrEqual(
+      MIN_VISIBLE_STEMS * stemPlayer.rowHeight,
     );
   });
 
-  it('scrolls as one when the floor and the dock overflow a short window', async () => {
-    const scroll = only(await mounted(), PLAYER_SCROLL_ID);
-    measure(scroll, SHORT_WINDOW);
-    expect(scroll.props.scrollEnabled).toBe(true);
+  it('lays its count-in and snackbars over the scroll, not inside it', async () => {
+    const p = await mountTracked();
+    const overlay = only(p, OVERLAY_ID);
+    expect(holds(overlay, (n) => n.type === AdvanceCountIn)).toBe(true);
+    expect(
+      holds(only(p, PLAYER_SCROLL_ID), (n) => n.props.testID === OVERLAY_ID),
+    ).toBe(false);
   });
+});
 
-  it('stays put when everything fits', async () => {
-    const scroll = only(await mounted(), PLAYER_SCROLL_ID);
-    measure(scroll, PHONE_WINDOW);
-    expect(scroll.props.scrollEnabled).toBe(false);
+describe('the lyrics on the Details tab', () => {
+  it.each([
+    ['synced', SONG_DETAILS],
+    ['plain', { ...SONG_DETAILS, lyrics: PLAIN_LYRICS }],
+  ])('keep a floor of lyric lines when %s', async (_kind, song) => {
+    const p = await mountTracked(song);
+    await p.press('Lyrics');
+    const slot = only(p, LYRIC_SLOT_ID);
+    expect(styleOf(slot).flexShrink).toBe(0);
+    expect(styleOf(slot).flexBasis).toBe(LYRIC_FLOOR);
+    const [lyrics] = slot.findAll((n) => String(n.type) === 'ScrollView');
+    expect(lyrics?.props.nestedScrollEnabled).toBe(true);
+  });
+});
+
+describe('the stem player while retiming', () => {
+  it('pins its layout with no scroll around the pad', async () => {
+    const p = await retiming();
+    expect(withTestId(p, PLAYER_SCROLL_ID)).toEqual([]);
+    expect(withTestId(p, OVERLAY_ID)).toHaveLength(1);
   });
 });

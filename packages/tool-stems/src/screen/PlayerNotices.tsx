@@ -11,7 +11,7 @@ import { Text } from 'react-native';
 
 import { ExportNotice } from './ExportNotice.tsx';
 
-const useStyles = createThemedStyles((theme) => ({
+export const useNoteStyles = createThemedStyles((theme) => ({
   note: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
 }));
 
@@ -22,7 +22,7 @@ function missingNote(unloaded: number, stemCount: number): string {
 }
 
 export function Notices() {
-  const styles = useStyles();
+  const styles = useNoteStyles();
   const overLimit = useStemPlayer((s) => s.overLimit);
   const stemCount = useStemPlayer((s) => s.stems.length);
   const unloaded = useStemPlayer(

@@ -122,6 +122,7 @@ export function StageLyrics({
       testID="stage-lyrics"
       style={styles.view}
       contentContainerStyle={styles.content}
+      nestedScrollEnabled
       onLayout={onViewport}
     >
       {rows.map((row) =>

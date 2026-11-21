@@ -19,11 +19,16 @@ import { detailPaneKind } from '../logic/detailView.ts';
 import { SectionCards } from './SectionCards.tsx';
 import { StageLyrics, useLyricStyles } from './StageLyrics.tsx';
 
+export const LYRIC_SLOT_ID = 'lyric-slot';
+const MIN_LYRIC_LINES = 3;
+export const LYRIC_FLOOR = MIN_LYRIC_LINES * stemSections.stageLineHeight;
+
 const CHIP_HIT_BOX = hitBoxStyle(
   hitExtension(minTouchTargetDp, stemSections.chipHeight, {}),
 );
 
 const useStyles = createThemedStyles((theme) => ({
+  lyricSlot: { flexGrow: 1, flexShrink: 0, flexBasis: LYRIC_FLOOR },
   head: {
     minHeight: stemSections.headMinHeight,
     marginBottom: stemSections.headBottom,
@@ -120,6 +125,7 @@ function PlainLyrics() {
     <ScrollView
       style={lyricStyles.view}
       contentContainerStyle={lyricStyles.content}
+      nestedScrollEnabled
     >
       <Text style={styles.noSync}>Not synced · plain text from the bundle</Text>
       <Text style={styles.plain}>{plain}</Text>
@@ -145,6 +151,7 @@ export function DetailPane({
 }: {
   readonly songSec: SharedValue<number>;
 }) {
+  const styles = useStyles();
   const hasSections = useStemPlayer((s) => s.sections.length > 0);
   const pane = useStemPlayer((s) => detailPaneKind(s.lyrics));
   return (
@@ -153,8 +160,15 @@ export function DetailPane({
       {pane === 'stage' || pane === 'plain' ? (
         <LyricsHead synced={pane === 'stage'} />
       ) : null}
-      {pane === 'stage' ? <StageLyrics songSec={songSec} /> : null}
-      {pane === 'plain' ? <PlainLyrics /> : null}
+      {pane === 'stage' || pane === 'plain' ? (
+        <View testID={LYRIC_SLOT_ID} style={styles.lyricSlot}>
+          {pane === 'stage' ? (
+            <StageLyrics songSec={songSec} />
+          ) : (
+            <PlainLyrics />
+          )}
+        </View>
+      ) : null}
       {pane === 'instrumental' ? <Instrumental /> : null}
     </>
   );

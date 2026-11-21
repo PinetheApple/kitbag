@@ -17,8 +17,9 @@ import { StemRowView } from './StemRowView.tsx';
 import { useStemStyles } from './stemStyles.ts';
 
 export const MIXER_SLOT_ID = 'mixer-slot';
-const MIN_VISIBLE_STEMS = 2;
-const MIXER_FLOOR = MIN_VISIBLE_STEMS * stemPlayer.rowHeight + 2 * size.stroke;
+export const MIN_VISIBLE_STEMS = 2;
+export const MIXER_FLOOR =
+  MIN_VISIBLE_STEMS * stemPlayer.rowHeight + 2 * size.stroke;
 
 const MASTER = 'master';
 type Expanded = number | typeof MASTER | null;
