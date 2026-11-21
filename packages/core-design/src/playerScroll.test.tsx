@@ -4,7 +4,11 @@ import { act, createElement } from 'react';
 import { create } from 'react-test-renderer';
 import { describe, expect, it } from 'vitest';
 
-import { usePlayerScroll, type PlayerScrollState } from './playerScroll.ts';
+import {
+  contentOverflows,
+  usePlayerScroll,
+  type PlayerScrollState,
+} from './playerScroll.ts';
 
 const SHORT_WINDOW = { viewport: 380, content: 520 };
 const FULL_WINDOW = { viewport: 690, content: 690 };
@@ -33,6 +37,34 @@ function mounted() {
   };
   return { measure, enabled };
 }
+
+describe('contentOverflows', () => {
+  it('overflows when the content is taller than the viewport', () => {
+    expect(contentOverflows(SHORT_WINDOW.viewport, SHORT_WINDOW.content)).toBe(
+      true,
+    );
+  });
+
+  it('does not overflow when the heights are equal', () => {
+    expect(contentOverflows(FULL_WINDOW.viewport, FULL_WINDOW.content)).toBe(
+      false,
+    );
+  });
+
+  it('does not overflow when the heights are equal after rounding', () => {
+    expect(
+      contentOverflows(FULL_WINDOW.viewport, FULL_WINDOW.content + SUBPIXEL),
+    ).toBe(false);
+  });
+
+  it('does not overflow before the content is measured', () => {
+    expect(contentOverflows(FULL_WINDOW.viewport, 0)).toBe(false);
+  });
+
+  it('overflows measured content against an unmeasured viewport', () => {
+    expect(contentOverflows(0, FULL_WINDOW.content)).toBe(true);
+  });
+});
 
 describe('usePlayerScroll', () => {
   it('stays put before anything is measured', () => {
