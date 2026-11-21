@@ -7,7 +7,6 @@ import {
 } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
-import { FACT_SEPARATOR } from '@kitbag/core-design';
 import {
   formatLength,
   NO_BREAK_SPACE,
@@ -106,10 +105,10 @@ describe('row facts line', () => {
     expect(spokenRow(SONG, 'grid', null)).toContain('Foo Fighters');
   });
 
-  it('breaks only between facts, so a key never splits across lines', () => {
-    expect(rowSubtitle(STEMS, 'grid', null).split(FACT_SEPARATOR)).toEqual([
-      '5:26',
-      `81${NO_BREAK_SPACE}BPM`,
+  it('breaks only after a separator, so a key never splits and no line starts with one', () => {
+    expect(rowSubtitle(STEMS, 'grid', null).split(' ')).toEqual([
+      `5:26${NO_BREAK_SPACE}·`,
+      `81${NO_BREAK_SPACE}BPM${NO_BREAK_SPACE}·`,
       `F${NO_BREAK_SPACE}maj`,
     ]);
   });
