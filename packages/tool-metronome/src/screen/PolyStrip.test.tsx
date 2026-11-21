@@ -40,7 +40,7 @@ function captionAt(scaled: boolean): readonly string[] {
 describe('the poly strip caption', () => {
   it('reads as one wrapped sentence at scaled text', () => {
     expect(captionAt(true)).toEqual([
-      'one cycle: 3 poly over 4 main, 4 of 4 beats',
+      'one cycle: 3 poly over 4 main, across 4 of 4 beats',
     ]);
   });
 
