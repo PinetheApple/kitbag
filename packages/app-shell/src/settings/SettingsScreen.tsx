@@ -15,15 +15,10 @@ import {
 import { backupFilesAvailable, getAppVersion } from '@kitbag/core-native';
 import { useAppearance, useTools, type ThemeChoice } from '@kitbag/core-state';
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
-import { Linking, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  LICENCE_NAME,
-  LICENCE_URL,
-  SOURCE_LABEL,
-  SOURCE_URL,
-} from './about.ts';
+import { LICENCE_NAME, LICENCE_URL } from './about.ts';
 import { formatAppVersion } from './appVersion.ts';
 import { BackUpRow, RestoreRow } from './BackupRows.tsx';
 import { DataFolderRow, ReturnedCardRow } from './DataFolderRow.tsx';
@@ -35,7 +30,9 @@ import {
 } from './notificationText.ts';
 import { formatPracticeSummary } from './practiceText.ts';
 import { RigSection } from './RigSection.tsx';
+import { openUrl } from './openUrl.ts';
 import { SettingsFrame } from './SettingsFrame.tsx';
+import { SourceRow } from './SourceRow.tsx';
 import { StorageSheets } from './StorageSheet.tsx';
 import { SwipeDirectionRow } from './SwipeDirectionRow.tsx';
 import {
@@ -58,14 +55,6 @@ const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
 const THEME_CONTROL_GAPS = { bottom: EDIT_ROW_PRESSABLE_GAP };
 
 const LICENCE_LABEL = 'Licence';
-
-const SOURCE_ROW_LABEL = 'Source & issues';
-
-function openUrl(url: string): void {
-  Linking.openURL(url).catch((error: unknown) => {
-    console.warn('[kitbag] could not open link', error);
-  });
-}
 
 function PracticeValue() {
   const stats = usePracticeStats();
@@ -254,9 +243,6 @@ function AboutSection({
   const openLicence = useCallback(() => {
     openUrl(LICENCE_URL);
   }, []);
-  const openSource = useCallback(() => {
-    openUrl(SOURCE_URL);
-  }, []);
   return (
     <>
       <SectionHeader label="About" />
@@ -270,14 +256,7 @@ function AboutSection({
         >
           <EditValue>{LICENCE_NAME}</EditValue>
         </EditRow>
-        <EditRow
-          label={SOURCE_ROW_LABEL}
-          accessibilityRole="link"
-          accessibilityLabel={`${SOURCE_ROW_LABEL}, ${SOURCE_URL}`}
-          onPress={openSource}
-        >
-          <EditValue muted>{SOURCE_LABEL}</EditValue>
-        </EditRow>
+        <SourceRow />
         <EditRow label="Attributions" onPress={onOpenAttributions} />
       </EditGroup>
     </>
