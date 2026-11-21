@@ -1268,3 +1268,12 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   `KB_BEAT_ANALYSIS_VERSION` goes to 6 because the returned downbeats can
   change. `DownbeatTracker::qm_downbeats()` keeps QM's own pick for the
   equivalence check. **[recorded]**
+
+- **2026-11-21 · Calibration tap area on short screens (§12.5.1, #190)** — When
+  Calibrate latency does not fit and its lower part scrolls, only the area above
+  the scroll region (route row, tap count, prompt) takes calibration taps; the
+  scatter, result and actions scroll and do not count taps. When the screen fits,
+  taps below the prompt still count. Whether they count is fixed when a run's first
+  tap lands and stays so until Start over or the run ends. Rationale: §12.5.1 says
+  "anywhere on screen", but a tap counts on touch-down, so a scroll gesture on a
+  tappable area would add a tap. **[recorded]**

@@ -12,11 +12,13 @@ import {
   space,
   textRoles,
   textStyle,
+  usePlayerScroll,
 } from '@kitbag/core-design';
 import { CALIBRATION, routeTitle, useCalibration } from '@kitbag/core-state';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Pressable,
+  ScrollView,
   Text,
   View,
   type GestureResponderEvent,
@@ -45,7 +47,10 @@ const useStyles = createThemedStyles((theme) => ({
     backgroundColor: theme.color.bg,
     paddingHorizontal: space.screenInset,
   },
-  body: { flex: 1, gap: space.sectionGap },
+  body: { flex: 1 },
+  tapPad: { gap: space.sectionGap, paddingBottom: space.sectionGap },
+  scroll: { flex: 1 },
+  stack: { flexGrow: 1, gap: space.sectionGap },
   tapZone: {
     borderRadius: radius.tempoZone,
     paddingVertical: calibration.tapZoneV,
@@ -139,6 +144,12 @@ function ResultRow({ result }: { readonly result: CalibrationResultView }) {
   );
 }
 
+function useHeldWhile<T>(value: T, hold: boolean): T {
+  const [held, setHeld] = useState(value);
+  if (!hold && held !== value) setHeld(value);
+  return hold ? held : value;
+}
+
 export interface CalibrationScreenProps {
   readonly onBack: () => void;
 }
@@ -187,6 +198,11 @@ export function CalibrationScreen({ onBack }: CalibrationScreenProps) {
       );
   }, [session, onBack]);
 
+  const scroll = usePlayerScroll();
+  const tapsBelowPrompt = useHeldWhile(
+    !scroll.scrollEnabled,
+    phase === 'running' && deviations.length > 0,
+  );
   const useLabel =
     view.result?.kind === 'measured' ? view.result.useLabel : USE;
 
@@ -195,7 +211,7 @@ export function CalibrationScreen({ onBack }: CalibrationScreenProps) {
       <AppBar title={CALIBRATE_LATENCY} onBack={onBack} />
       <View style={styles.body}>
         <Pressable
-          style={styles.body}
+          style={styles.tapPad}
           onPressIn={handleTap}
           accessibilityRole="button"
           accessibilityLabel={TAP_PROMPT}
@@ -210,37 +226,52 @@ export function CalibrationScreen({ onBack }: CalibrationScreenProps) {
           )}
           <TapZone count={view.count} progress={view.progress} />
           <Text style={styles.prompt}>{TAP_PROMPT}</Text>
-          <CalibrationScatter
-            dots={view.dots}
-            meanX={view.meanX}
-            axisMs={view.axisMs}
-          />
-          {view.result === null ? null : <ResultRow result={view.result} />}
-          <View style={styles.spacer} />
         </Pressable>
-        <View style={styles.actions}>
-          <Button
-            label={START_OVER}
-            variant="ghost"
-            fill
-            onPress={handleStartOver}
-          />
-          {!view.showUse ? null : (
-            <Button
-              label={useLabel}
-              variant="primary"
-              fill
-              disabled={!view.canUse}
-              disabledLook="outlined"
-              onPress={handleUse}
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.stack}
+          scrollEnabled={scroll.scrollEnabled}
+          onLayout={scroll.onLayout}
+          onContentSizeChange={scroll.onContentSizeChange}
+        >
+          <Pressable
+            style={styles.stack}
+            onPressIn={handleTap}
+            disabled={!tapsBelowPrompt}
+            accessible={false}
+          >
+            <CalibrationScatter
+              dots={view.dots}
+              meanX={view.meanX}
+              axisMs={view.axisMs}
             />
+            {view.result === null ? null : <ResultRow result={view.result} />}
+            <View style={styles.spacer} />
+          </Pressable>
+          <View style={styles.actions}>
+            <Button
+              label={START_OVER}
+              variant="ghost"
+              fill
+              onPress={handleStartOver}
+            />
+            {!view.showUse ? null : (
+              <Button
+                label={useLabel}
+                variant="primary"
+                fill
+                disabled={!view.canUse}
+                disabledLook="outlined"
+                onPress={handleUse}
+              />
+            )}
+          </View>
+          {route === null ? null : (
+            <Text style={styles.footnote}>
+              {`Saved for ${routeTitle(route)} only`}
+            </Text>
           )}
-        </View>
-        {route === null ? null : (
-          <Text style={styles.footnote}>
-            {`Saved for ${routeTitle(route)} only`}
-          </Text>
-        )}
+        </ScrollView>
       </View>
     </View>
   );
