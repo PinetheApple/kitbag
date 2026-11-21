@@ -1,6 +1,7 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
 import {
+  BUTTONS_STACKED_ID,
   Button,
   DragListRow,
   iconSizes,
@@ -51,11 +52,7 @@ import {
   stemRow,
   stems,
 } from './playQueue.test-helper.ts';
-import {
-  FOOTER_STACKED_ID,
-  QueueSheet,
-  type QueueSheetProps,
-} from './QueueSheet.tsx';
+import { QueueSheet, type QueueSheetProps } from './QueueSheet.tsx';
 
 const NIGHT_BUS = 21;
 const TIN_ROOF = 22;
@@ -154,7 +151,7 @@ describe('the queue sheet footer under font scale', () => {
       .findAll(
         (node) =>
           typeof node.type === 'string' &&
-          node.props.testID === FOOTER_STACKED_ID,
+          node.props.testID === BUTTONS_STACKED_ID,
       )
       .map((node) =>
         node

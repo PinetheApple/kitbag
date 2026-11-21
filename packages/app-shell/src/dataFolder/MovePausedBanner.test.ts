@@ -25,6 +25,7 @@ vi.mock('@kitbag/core-design', async (original) => {
     Icon: () => null,
     RowIcon: () => null,
     Button: hostMock('Button'),
+    ButtonRow: hostMock('ButtonRow'),
     useTextScaled: () => false,
     useTheme: () => ({ accentInk: 'accent' }),
     createThemedStyles: () => () => ({}),

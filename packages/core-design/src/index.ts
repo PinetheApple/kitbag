@@ -43,6 +43,7 @@ export * from './components/CountSquare.tsx';
 export * from './components/countSquareState.ts';
 export * from './components/ClickBeatStrip.tsx';
 export * from './components/Button.tsx';
+export * from './components/ButtonRow.tsx';
 export * from './components/Card.tsx';
 export * from './components/CheckListRow.tsx';
 export * from './components/Chip.tsx';

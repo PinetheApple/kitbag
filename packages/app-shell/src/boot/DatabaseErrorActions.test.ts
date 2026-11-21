@@ -18,6 +18,7 @@ vi.mock('react-native', () => ({
 }));
 vi.mock('@kitbag/core-design', async (original) => ({
   ...(await original<Record<string, unknown>>()),
+  ButtonRow: ({ children }: { readonly children?: ReactNode }) => children,
   Button: ({
     label,
     disabled: off,

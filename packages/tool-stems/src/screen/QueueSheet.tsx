@@ -1,5 +1,6 @@
 import {
   Button,
+  ButtonRow,
   createThemedStyles,
   EmptyState,
   NoticeSnackbar,
@@ -12,7 +13,6 @@ import {
   SheetHint,
   space,
   upNextCountLabel,
-  useTextScaled,
   type Notice,
 } from '@kitbag/core-design';
 import {
@@ -37,7 +37,7 @@ import {
   type QueuedSong,
   type SetlistEntry,
 } from '@kitbag/core-state';
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
 import { clearQueueBody } from '../logic/upNextText.ts';
@@ -56,35 +56,10 @@ import {
   type PlayOrderRoutes,
 } from './usePlayOrderNav.ts';
 
-export const FOOTER_STACKED_ID = 'queue-footer-stacked';
-
 const useStyles = createThemedStyles(() => ({
   list: { gap: space.controlGap },
   footer: { flexDirection: 'row', gap: space.controlGap },
-  footerStacked: { gap: space.controlGap },
 }));
-
-interface ButtonPairProps {
-  readonly secondary: ReactNode;
-  readonly primary: ReactNode;
-}
-
-function ButtonPair({ secondary, primary }: ButtonPairProps) {
-  const styles = useStyles();
-  if (useTextScaled())
-    return (
-      <View testID={FOOTER_STACKED_ID} style={styles.footerStacked}>
-        {primary}
-        {secondary}
-      </View>
-    );
-  return (
-    <View style={styles.footer}>
-      {secondary}
-      {primary}
-    </View>
-  );
-}
 
 interface QueueListProps {
   readonly onPlay: (song: QueuedSong) => void;
@@ -215,21 +190,17 @@ function Footer({ canPlay, onDone, onPlayQueue }: FooterProps) {
       </View>
     );
   return (
-    <ButtonPair
-      secondary={
-        <Button fill variant="ghost" label={QUEUE_TEXT.done} onPress={onDone} />
-      }
-      primary={
-        <Button
-          fill
-          variant="primary"
-          icon="play"
-          iconSize="sheetButton"
-          label={QUEUE_TEXT.playQueue}
-          onPress={onPlayQueue}
-        />
-      }
-    />
+    <ButtonRow>
+      <Button fill variant="ghost" label={QUEUE_TEXT.done} onPress={onDone} />
+      <Button
+        fill
+        variant="primary"
+        icon="play"
+        iconSize="sheetButton"
+        label={QUEUE_TEXT.playQueue}
+        onPress={onPlayQueue}
+      />
+    </ButtonRow>
   );
 }
 
@@ -259,14 +230,10 @@ function ClearQueueSheet({
       onDismiss={onCancel}
     >
       <SheetHint>{clearQueueBody(queueLength, name)}</SheetHint>
-      <ButtonPair
-        secondary={
-          <Button fill variant="ghost" label="Cancel" onPress={onCancel} />
-        }
-        primary={
-          <Button fill variant="destructive" label="Clear" onPress={clear} />
-        }
-      />
+      <ButtonRow>
+        <Button fill variant="ghost" label="Cancel" onPress={onCancel} />
+        <Button fill variant="destructive" label="Clear" onPress={clear} />
+      </ButtonRow>
     </Sheet>
   );
 }
