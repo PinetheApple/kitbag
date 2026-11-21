@@ -168,7 +168,9 @@ describe('ProgressSvg', () => {
         {lane}
       </>,
     );
-    const ids = drawnAs('LinearGradient').map((gradient) => String(gradient.id));
+    const ids = drawnAs('LinearGradient').map((gradient) =>
+      String(gradient.id),
+    );
     expect(ids).toHaveLength(2);
     expect(new Set(ids).size).toBe(2);
     for (const id of ids) expect(id).toMatch(/^[A-Za-z_][\w-]*$/);
