@@ -470,6 +470,9 @@ KB_EXPORT kb_result kb_analyze_song(const char* path,
 The beat grid BLOB schema gains a downbeat index list. Existing grids remain
 valid — no destructive migration.
 
+`kb_analyze_song_with_tempo` also returns `kb_fit_constant_tempo`'s fit (bpm,
+anchor, beats per bar) over the beats and downbeats it found; under two beats there is none.
+
 **Under a grid, the click's bars are the song's.** `kb_metronome_set_grid`
 takes the downbeat indices (analysed downbeats, or StemDeck bar marks expanded
 to indices); each bar runs to the next downbeat, and the last bar's length

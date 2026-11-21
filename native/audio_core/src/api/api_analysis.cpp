@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 #include "analysis/beat_tracker.h"
@@ -60,6 +61,7 @@ struct AnalysisOutputs {
   int32_t* downbeat_indices;
   int32_t* downbeat_count;
   double* duration_sec;
+  kb_tempo_fit* tempo;
 
   bool Valid() const {
     return bpm != nullptr && beat_times != nullptr && beat_count != nullptr &&
@@ -72,8 +74,22 @@ struct AnalysisOutputs {
     *beat_count = 0;
     *downbeat_count = 0;
     *duration_sec = 0.0;
+    if (tempo != nullptr) *tempo = {KB_ERROR_INVALID_ARGUMENT, 0.0f, 0.0, 0};
   }
 };
+
+void CopyTempo(
+    const std::optional<kitbag::ConstantTempo>& fit,
+    kb_tempo_fit* out
+) {
+  if (out == nullptr || !fit.has_value()) return;
+  *out = {
+      KB_OK,
+      static_cast<float>(fit->bpm),
+      fit->anchor_sec,
+      fit->beats_per_bar
+  };
+}
 
 kb_result AnalyzeInto(
     const char* path,
@@ -97,7 +113,25 @@ kb_result AnalyzeInto(
       out.downbeat_indices,
       out.beat_times_cap
   );
+  CopyTempo(result.tempo, out.tempo);
   return KB_OK;
+}
+
+kb_result AnalyzeChecked(
+    const char* path,
+    const char* waveform_dir,
+    const AnalysisOutputs& out
+) {
+  if (path == nullptr || !out.Valid()) return KB_ERROR_INVALID_ARGUMENT;
+  out.Clear();
+  // An exception must not cross the C ABI: an allocation failure has to fail
+  // the call, not terminate the app.
+  try {
+    return AnalyzeInto(path, waveform_dir, out);
+  } catch (...) {
+    out.Clear();
+    return KB_ERROR_INTERNAL;
+  }
 }
 
 }  // namespace
@@ -123,17 +157,35 @@ kb_result kb_analyze_song(
       downbeat_indices_out,
       downbeat_count_out,
       duration_sec_out,
+      nullptr,
   };
-  if (path == nullptr || !out.Valid()) return KB_ERROR_INVALID_ARGUMENT;
-  out.Clear();
-  // An exception must not cross the C ABI: an allocation failure has to fail
-  // the call, not terminate the app.
-  try {
-    return AnalyzeInto(path, waveform_dir, out);
-  } catch (...) {
-    out.Clear();
-    return KB_ERROR_INTERNAL;
-  }
+  return AnalyzeChecked(path, waveform_dir, out);
+}
+
+kb_result kb_analyze_song_with_tempo(
+    const char* path,
+    float* bpm_out,
+    float* beat_times_buf,
+    int32_t beat_times_cap,
+    int32_t* beat_count_out,
+    int32_t* downbeat_indices_out,
+    int32_t* downbeat_count_out,
+    double* duration_sec_out,
+    const char* waveform_dir,
+    kb_tempo_fit* tempo_out
+) {
+  if (tempo_out == nullptr) return KB_ERROR_INVALID_ARGUMENT;
+  const AnalysisOutputs out = {
+      bpm_out,
+      beat_times_buf,
+      beat_times_cap,
+      beat_count_out,
+      downbeat_indices_out,
+      downbeat_count_out,
+      duration_sec_out,
+      tempo_out,
+  };
+  return AnalyzeChecked(path, waveform_dir, out);
 }
 
 kb_result kb_waveform_write_peaks(

@@ -313,8 +313,8 @@ KB_EXPORT int32_t kb_player_is_playing(const kb_engine* engine);
 /* --- Beat Analysis ------------------------------------------------------- */
 
 /* Version of the beat tracker behind kb_analyze_song. Bump it on any change
- * that alters the bpm, grids or downbeats it returns. */
-#define KB_BEAT_ANALYSIS_VERSION 5
+ * that alters the bpm, grids, downbeats or tempo fit it returns. */
+#define KB_BEAT_ANALYSIS_VERSION 6
 
 /* Analyze beats in an audio file and fill caller-provided output buffers.
  * The file is opened and decoded internally — no need to call kb_decoder_open
