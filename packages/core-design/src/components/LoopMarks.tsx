@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { Text, View, type AccessibilityActionEvent } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
@@ -250,24 +250,25 @@ function useHandlePan({ at, edge, low, high, geometry, handles }: HandleProps) {
     },
     [settle],
   );
-  return Gesture.Pan()
-    .activeOffsetX([-DRAG_SLOP, DRAG_SLOP])
-    .failOffsetY([-DRAG_SLOP, DRAG_SLOP])
-    .onUpdate((event) => {
+  return usePanGesture({
+    activeOffsetX: [-DRAG_SLOP, DRAG_SLOP],
+    failOffsetY: [-DRAG_SLOP, DRAG_SLOP],
+    onUpdate: (event) => {
       const { width } = bar.value;
       if (width <= 0) return;
       drag.value = Math.min(
         high,
         Math.max(low, at + event.translationX / width),
       );
-    })
-    .onEnd((_, success) => {
-      if (success && drag.value !== NOT_DRAGGING)
+    },
+    onDeactivate: (event) => {
+      if (!event.canceled && drag.value !== NOT_DRAGGING)
         scheduleOnRN(commit, drag.value);
-    })
-    .onFinalize((_, success) => {
-      if (!success) drag.value = NOT_DRAGGING;
-    });
+    },
+    onFinalize: (event) => {
+      if (event.canceled) drag.value = NOT_DRAGGING;
+    },
+  });
 }
 
 function Handle(props: HandleProps) {

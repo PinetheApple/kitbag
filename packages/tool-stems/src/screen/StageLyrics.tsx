@@ -7,7 +7,13 @@ import {
 } from '@kitbag/core-design';
 import { lyricLineAt, NO_LINE, useStemPlayer } from '@kitbag/core-state';
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
-import { ScrollView, Text, View, type LayoutChangeEvent } from 'react-native';
+import {
+  type LayoutChangeEvent,
+  ScrollView,
+  type ScrollViewInstance,
+  Text,
+  View,
+} from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
 import { followedLine, lyricRows } from '../logic/lyricRows.ts';
@@ -81,7 +87,7 @@ export function StageLyrics({
   const rows = useMemo(() => lyricRows(lines, sections), [lines, sections]);
   const current = useCrossedIndex(songSec, lines, lyricLineAt, NO_LINE);
   const followed = followedLine(lines, current);
-  const list = useRef<ScrollView>(null);
+  const list = useRef<ScrollViewInstance>(null);
   const viewport = useRef(0);
   const rowTops = useRef(new Map<number, number>());
   const onViewport = useCallback((event: LayoutChangeEvent) => {

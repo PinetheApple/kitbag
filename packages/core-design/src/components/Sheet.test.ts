@@ -25,11 +25,6 @@ const shown = vi.hoisted((): { mode: ThemeMode } => ({ mode: 'dark' }));
 const SURFACE1 = { dark: '#1A1820', light: '#FFFFFF' } as const;
 const SURFACE1_CLEAR = { dark: '#1A182000', light: '#FFFFFF00' } as const;
 const THEME_MODES = ['dark', 'light'] as const;
-const chain = {
-  activeOffsetY: () => chain,
-  onUpdate: () => chain,
-  onEnd: () => chain,
-};
 
 vi.mock('react', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react')>()),
@@ -59,7 +54,7 @@ vi.mock('react-native-reanimated', () => ({
   withTiming: vi.fn(),
 }));
 vi.mock('react-native-gesture-handler', () => ({
-  Gesture: { Pan: () => chain },
+  usePanGesture: () => ({}),
   GestureDetector: 'GestureDetector',
 }));
 vi.mock('react-native-keyboard-controller', () => ({

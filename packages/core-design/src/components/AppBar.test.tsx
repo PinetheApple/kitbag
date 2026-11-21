@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from 'react';
+import type { StyleProp, TextStyle } from 'react-native';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -44,7 +45,7 @@ vi.mock('react-native', async (importOriginal) => {
             ellipsis: ellipsizeMode,
             a11y: importantForAccessibility,
             measures: onLayout !== undefined,
-            style: rn.StyleSheet.flatten(style as never),
+            style: rn.StyleSheet.flatten(style as StyleProp<TextStyle>),
           })}
         >
           {children}

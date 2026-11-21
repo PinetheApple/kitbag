@@ -4,6 +4,10 @@ import { expect, it, vi } from 'vitest';
 const WAVEFORM_WIDTH = 359;
 
 type TapEnd = (event: { readonly x: number }, success: boolean) => void;
+interface TapDeactivate {
+  readonly x: number;
+  readonly canceled: boolean;
+}
 
 const harness = vi.hoisted(() => ({
   width: 0,
@@ -23,16 +27,15 @@ vi.mock('react', async (importOriginal) => ({
 }));
 vi.mock('react-native', () => ({ View: 'View' }));
 vi.mock('react-native-svg', () => ({ default: 'Svg', Path: 'Path' }));
-vi.mock('react-native-gesture-handler', () => {
-  const chain = {
-    runOnJS: () => chain,
-    onEnd: (handler: TapEnd) => {
-      harness.tapEnd = handler;
-      return chain;
-    },
-  };
-  return { Gesture: { Tap: () => chain }, GestureDetector: 'GestureDetector' };
-});
+vi.mock('react-native-gesture-handler', () => ({
+  useTapGesture: (config: { onDeactivate: (event: TapDeactivate) => void }) => {
+    harness.tapEnd = (event, success) => {
+      config.onDeactivate({ ...event, canceled: !success });
+    };
+    return {};
+  },
+  GestureDetector: 'GestureDetector',
+}));
 vi.mock('../ThemeProvider.tsx', () => ({
   createThemedStyles: () => () => ({ lane: {}, ticks: {} }),
   useTheme: () => ({ color: { text: 'tall', text3: 'short' } }),

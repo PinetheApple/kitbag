@@ -1,12 +1,7 @@
 // Paths crossing this boundary are relative; only the native side resolves them.
 
-import type { TurboModule } from 'react-native';
+import type { CodegenTypes, TurboModule } from 'react-native';
 import { TurboModuleRegistry } from 'react-native';
-import type {
-  Double,
-  EventEmitter,
-  Int32,
-} from 'react-native/Libraries/Types/CodegenTypes';
 
 export type PickedDocument = Readonly<{
   uri: string;
@@ -16,7 +11,7 @@ export type PickedDocument = Readonly<{
 
 export type PickedBackup = Readonly<{
   name: string;
-  bytes: Double;
+  bytes: CodegenTypes.Double;
   contents: string;
 }>;
 
@@ -29,32 +24,32 @@ export type ImportedAudio = Readonly<{
   relativePath: string;
   title: string;
   artist: string;
-  durationSec: Double;
+  durationSec: CodegenTypes.Double;
 }>;
 
 export type AnalysisResult = Readonly<{
   relativePath: string;
   ok: boolean;
   error: string;
-  bpm: Double;
-  beats: readonly Double[];
-  downbeats: readonly Int32[];
+  bpm: CodegenTypes.Double;
+  beats: readonly CodegenTypes.Double[];
+  downbeats: readonly CodegenTypes.Int32[];
   waveformRelativePath: string;
-  durationSec: Double;
-  analysisVersion?: Int32;
+  durationSec: CodegenTypes.Double;
+  analysisVersion?: CodegenTypes.Int32;
 }>;
 
 export type StemBundleCheck = Readonly<{
   refusal: string | null;
   format: string;
-  version: Int32;
-  supportedVersion: Int32;
+  version: CodegenTypes.Int32;
+  supportedVersion: CodegenTypes.Int32;
   jobId: string;
   title: string;
   artist: string | null;
-  durationSec: Double | null;
-  stemCount: Int32;
-  maxStems: Int32;
+  durationSec: CodegenTypes.Double | null;
+  stemCount: CodegenTypes.Int32;
+  maxStems: CodegenTypes.Int32;
   stemFormat: string;
   supportedStemFormat: string;
 }>;
@@ -63,38 +58,38 @@ export type ImportedStem = Readonly<{
   name: string;
   relativePath: string;
   waveformRelativePath: string | null;
-  frames: Double;
-  volume: Double;
+  frames: CodegenTypes.Double;
+  volume: CodegenTypes.Double;
   muted: boolean;
   soloed: boolean;
-  pitch: Double;
+  pitch: CodegenTypes.Double;
 }>;
 
 export type StemBundleSection = Readonly<{
   name: string;
   kind: string;
   color: string;
-  startSec: Double;
-  endSec: Double;
+  startSec: CodegenTypes.Double;
+  endSec: CodegenTypes.Double;
 }>;
 
 export type StemBundleBar = Readonly<{
-  beat: Int32;
-  beatsPerBar: Int32;
+  beat: CodegenTypes.Int32;
+  beatsPerBar: CodegenTypes.Int32;
 }>;
 
 export type StemBundleLyrics = Readonly<{
   synced: string | null;
   plain: string | null;
-  offsetSec: Double;
+  offsetSec: CodegenTypes.Double;
   instrumental: boolean;
 }>;
 
 export type StemBundleTempo = Readonly<{
   mode: string;
-  bpm: Double | null;
-  anchor: Double | null;
-  beatsPerBar: Int32;
+  bpm: CodegenTypes.Double | null;
+  anchor: CodegenTypes.Double | null;
+  beatsPerBar: CodegenTypes.Int32;
   source: string;
 }>;
 
@@ -104,36 +99,36 @@ export type ImportedStemBundle = Readonly<{
   songTitle: string | null;
   artist: string | null;
   relativeDir: string;
-  durationSec: Double;
-  sampleRate: Int32;
-  channels: Int32;
+  durationSec: CodegenTypes.Double;
+  sampleRate: CodegenTypes.Int32;
+  channels: CodegenTypes.Int32;
   stems: readonly ImportedStem[];
   hasMix: boolean;
-  bpm: Double | null;
+  bpm: CodegenTypes.Double | null;
   key: string | null;
   scale: string | null;
-  keyConfidence: Double | null;
-  loudnessLufs: Double | null;
-  tempoStability: Double | null;
+  keyConfidence: CodegenTypes.Double | null;
+  loudnessLufs: CodegenTypes.Double | null;
+  tempoStability: CodegenTypes.Double | null;
   sections: readonly StemBundleSection[];
-  beats: readonly Double[];
+  beats: readonly CodegenTypes.Double[];
   bars: readonly StemBundleBar[];
   lyrics: StemBundleLyrics | null;
   tempo?: StemBundleTempo | null;
 }>;
 
 export type LibraryAudioUsage = Readonly<{
-  songs: Int32;
-  bytes: Double;
+  songs: CodegenTypes.Int32;
+  bytes: CodegenTypes.Double;
 }>;
 
 export type StemSetUsage = Readonly<{
-  count: Int32;
-  bytes: Double;
+  count: CodegenTypes.Int32;
+  bytes: CodegenTypes.Double;
 }>;
 
 export type DatabaseUsage = Readonly<{
-  bytes: Double;
+  bytes: CodegenTypes.Double;
 }>;
 
 export type StorageReport = Readonly<{
@@ -156,23 +151,23 @@ export type DataFolderVolume = Readonly<{
   name: string | null;
   state: string;
   inUse: boolean;
-  freeBytes: Double;
-  totalBytes: Double;
+  freeBytes: CodegenTypes.Double;
+  totalBytes: CodegenTypes.Double;
   /** Files of songs left on this card when the folder moved off it; 0 while it is unmounted. */
-  awayFiles: Int32;
-  awayBytes: Double;
+  awayFiles: CodegenTypes.Int32;
+  awayBytes: CodegenTypes.Double;
   /** awayBytes plus the free space a move keeps in reserve. */
-  awayRequiredBytes: Double;
+  awayRequiredBytes: CodegenTypes.Double;
   /** Counted from the away list, so they hold while the card is out. */
-  awaySongs: Int32;
-  awayStemSongs: Int32;
+  awaySongs: CodegenTypes.Int32;
+  awayStemSongs: CodegenTypes.Int32;
 }>;
 
 export type DataFolderVolumes = Readonly<{
   currentVolumeUuid: string | null;
   currentAvailable: boolean;
   /** The current folder's media plus the move's free-space margin; null while it is unmounted. */
-  requiredBytes: Double | null;
+  requiredBytes: CodegenTypes.Double | null;
   volumes: readonly DataFolderVolume[];
 }>;
 
@@ -180,10 +175,10 @@ export type MoveStatus = Readonly<{
   phase: string;
   sourceVolumeUuid: string | null;
   targetVolumeUuid: string | null;
-  doneBytes: Double;
-  totalBytes: Double;
-  doneFiles: Int32;
-  totalFiles: Int32;
+  doneBytes: CodegenTypes.Double;
+  totalBytes: CodegenTypes.Double;
+  doneFiles: CodegenTypes.Int32;
+  totalFiles: CodegenTypes.Int32;
   path: string | null;
   running: boolean;
   switched: boolean;
@@ -268,7 +263,7 @@ export type LibraryConstants = Readonly<{
   exportNoActivity: string;
   exportNoShareTarget: string;
   exportShareFailed: string;
-  exportMaxBaseNameBytes: Int32;
+  exportMaxBaseNameBytes: CodegenTypes.Int32;
   /** Reject codes of saveDatabaseCopy when an unfinished journal could not be settled in a private copy. */
   databaseCopyNoSpace: string;
   databaseCopyUnreadable: string;
@@ -317,7 +312,7 @@ export interface Spec extends TurboModule {
   // Results stay stored until acknowledged, so one finished while JS was gone is not lost.
   pendingAnalyses(): Promise<readonly AnalysisResult[]>;
   acknowledgeAnalysis(relativePath: string): void;
-  readonly onAnalysis: EventEmitter<AnalysisResult>;
+  readonly onAnalysis: CodegenTypes.EventEmitter<AnalysisResult>;
   deleteLibraryFile(relativePath: string): Promise<void>;
   deleteSongFolder(folderName: string): Promise<void>;
   checkStemBundle(uri: string, isFolder: boolean): Promise<StemBundleCheck>;
@@ -326,13 +321,13 @@ export interface Spec extends TurboModule {
   deleteStemFolder(folderName: string): Promise<void>;
   readWaveform(
     relativePath: string,
-    buckets: Int32,
-  ): Promise<readonly Double[]>;
+    buckets: CodegenTypes.Int32,
+  ): Promise<readonly CodegenTypes.Double[]>;
   storageReport(databaseName: string): Promise<StorageReport>;
   fileAvailability(
     relativePaths: readonly string[],
   ): Promise<LibraryAvailability>;
-  readonly onDataFolderChanged: EventEmitter<void>;
+  readonly onDataFolderChanged: CodegenTypes.EventEmitter<void>;
   listVolumes(): Promise<DataFolderVolumes>;
   /** Null moves to internal storage. Resolves once the move is handed to its service. */
   startMove(volumeUuid: string | null): Promise<void>;
@@ -347,10 +342,10 @@ export interface Spec extends TurboModule {
   useInternalStorage(awayPaths: readonly string[]): Promise<void>;
   /** Call once no player holds a track loaded before the switch. */
   releaseOldCopies(): void;
-  readonly onMoveProgress: EventEmitter<MoveStatus>;
-  readonly onMoveFinished: EventEmitter<MoveFinished>;
+  readonly onMoveProgress: CodegenTypes.EventEmitter<MoveStatus>;
+  readonly onMoveFinished: CodegenTypes.EventEmitter<MoveFinished>;
   /** Free bytes on the database's volume; negative when they cannot be measured. */
-  databaseFreeBytes(databaseName: string): Double;
+  databaseFreeBytes(databaseName: string): CodegenTypes.Double;
   /** False when refused or failed. */
   removeDatabaseCopy(databaseName: string, fileName: string): boolean;
   /** Syncs partName and renames it over fileName; false when refused or failed. */

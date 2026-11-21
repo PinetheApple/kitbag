@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { opacity, size } from '../roles.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { GroupKeys, GroupTiles, groupSumText } from './GroupTiles.tsx';
+import { flatStyle } from './flatStyle.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -30,10 +31,7 @@ vi.mock('react-native', async (original) => {
 
 vi.mock('./IconGlyph.tsx', () => ({ InlineIcon: () => null }));
 
-const { StyleSheet } = await import('react-native');
-
-const flat = (props: Props) =>
-  StyleSheet.flatten(props.style as StyleProp<ViewStyle>);
+const flat = (props: Props) => flatStyle(props.style as StyleProp<ViewStyle>);
 
 function render(node: ReactNode) {
   views.length = 0;

@@ -9,6 +9,7 @@ import {
   space,
   StepControl,
   type StepDelta,
+  useTextScaled,
 } from '@kitbag/core-design';
 import { KB_STOPPED_BEAT, KB_SUBDIVISION_BOUNDS } from '@kitbag/core-native';
 import { BPM_BOUNDS } from '@kitbag/core-state';
@@ -61,9 +62,10 @@ function useIdentitySetters(editor: PresetEditor) {
 export function IdentityGroup({ editor }: { readonly editor: PresetEditor }) {
   const { setName, setNotes } = useIdentitySetters(editor);
   const { draft } = editor;
+  const singleLine = !useTextScaled();
   return (
     <EditGroup>
-      <EditRow label="Name">
+      <EditRow label="Name" singleLine={singleLine}>
         <EditTextInput
           value={draft.name}
           onChangeText={setName}
@@ -71,7 +73,7 @@ export function IdentityGroup({ editor }: { readonly editor: PresetEditor }) {
           accessibilityLabel="Name"
         />
       </EditRow>
-      <EditRow label="Notes">
+      <EditRow label="Notes" singleLine={singleLine}>
         <EditTextInput
           value={draft.notes}
           onChangeText={setNotes}

@@ -223,14 +223,12 @@ export function MetronomeScreen({
     [dismissHint, setTempoEndingTapSeries],
   );
 
-  const scrollRef = useRef<ScrollView>(null);
   const scrollable = Math.round(contentHeight) > Math.round(bodyHeight);
   const screenSwipe = useTempoSwipe(frame.currentBpm, handleSwipeOrTypedTempo, {
     enabled: !scrollable,
   });
   const zoneSwipe = useTempoSwipe(frame.currentBpm, handleSwipeOrTypedTempo, {
     enabled: true,
-    blocks: scrollRef,
   });
 
   const handleNudge = useCallback(
@@ -366,7 +364,7 @@ export function MetronomeScreen({
             <ScrollView
               style={[styles.body, viewportFrame]}
               contentContainerStyle={[styles.bodyContent, scrollSlack]}
-              ref={scrollRef}
+              requireToFail={zoneSwipe}
               scrollEnabled={scrollable}
               showsVerticalScrollIndicator={false}
               onLayout={handleBodyLayout}

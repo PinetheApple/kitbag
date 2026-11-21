@@ -14,6 +14,7 @@ import {
   groupStarts,
   type ClickBeatLevel,
 } from './ClickBeatStrip.tsx';
+import { flatStyle } from './flatStyle.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -37,11 +38,8 @@ vi.mock('react-native', async (original) => {
   };
 });
 
-const { StyleSheet } = await import('react-native');
-
 const color = themes.dark.color;
-const flat = (props: Props) =>
-  StyleSheet.flatten(props.style as StyleProp<ViewStyle>);
+const flat = (props: Props) => flatStyle(props.style as StyleProp<ViewStyle>);
 
 const THREE_TWO_TWO: readonly (readonly ClickBeatLevel[])[] = [
   ['bar', 'click', 'click'],

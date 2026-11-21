@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 import { MiniPlayerBar } from './MiniPlayerBar.tsx';
+import { flatStyle } from './flatStyle.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -41,8 +42,6 @@ vi.mock('react-native-reanimated', async () => {
 vi.mock('react-native-worklets', () => ({ scheduleOnRN: vi.fn() }));
 
 vi.mock('./IconGlyph.tsx', () => ({ IconGlyph: () => null }));
-
-const { StyleSheet } = await import('react-native');
 
 const PROGRESS = 0.42;
 const handlers = {
@@ -81,8 +80,7 @@ function pressable(label: string): Props {
   return found;
 }
 
-const flat = (style: unknown) =>
-  StyleSheet.flatten(style as StyleProp<ViewStyle>);
+const flat = (style: unknown) => flatStyle(style as StyleProp<ViewStyle>);
 
 beforeEach(() => {
   vi.clearAllMocks();

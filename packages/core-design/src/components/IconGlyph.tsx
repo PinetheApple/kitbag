@@ -29,12 +29,13 @@ export interface InlineIconProps {
 export function InlineIcon({ name, style }: InlineIconProps) {
   const theme = useTheme();
   const flat = StyleSheet.flatten(style);
-  const color = typeof flat.color === 'string' ? flat.color : theme.color.text2;
+  const color =
+    typeof flat?.color === 'string' ? flat.color : theme.color.text2;
   return (
     <View importantForAccessibility="no-hide-descendants" style={styles.inline}>
       <IconGlyph
         name={name}
-        px={flat.fontSize ?? iconSizes.action}
+        px={flat?.fontSize ?? iconSizes.action}
         color={color}
       />
     </View>

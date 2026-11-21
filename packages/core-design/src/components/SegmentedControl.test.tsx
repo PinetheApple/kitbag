@@ -11,6 +11,7 @@ import {
   SegmentedControl,
   type SegmentedControlSize,
 } from './SegmentedControl.tsx';
+import { flatStyle } from './flatStyle.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -37,8 +38,6 @@ vi.mock('react-native', async (original) => {
   };
 });
 
-const { StyleSheet } = await import('react-native');
-
 const OPTIONS = [
   { value: 'same', label: 'Same' },
   { value: 'distinct', label: 'Distinct' },
@@ -62,7 +61,7 @@ const CONTENT_SIZES: readonly SegmentedControlSize[] = [
 ];
 
 function flat(props: Props | undefined): ViewStyle {
-  return StyleSheet.flatten(props?.style as StyleProp<ViewStyle>);
+  return flatStyle(props?.style as StyleProp<ViewStyle>);
 }
 
 function renderAt(

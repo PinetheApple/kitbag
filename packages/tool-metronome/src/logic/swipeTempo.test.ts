@@ -124,7 +124,7 @@ describe('useTempoSwipe', () => {
       ),
       'utf8',
     );
-    expect(hook).not.toMatch(/\.on(End|Finalize|TouchesUp)\(/);
-    expect(hook).toMatch(/\.onUpdate\(/);
+    expect(hook).not.toMatch(/\bon(Deactivate|Finalize|TouchesUp):/);
+    expect(hook).toMatch(/\bonUpdate:/);
   });
 });

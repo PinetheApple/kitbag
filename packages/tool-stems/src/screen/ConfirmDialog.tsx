@@ -10,7 +10,13 @@ import {
   withAlpha,
 } from '@kitbag/core-design';
 import { useEffect, useRef } from 'react';
-import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
+import {
+  AccessibilityInfo,
+  StyleSheet,
+  Text,
+  type TextInstance,
+  View,
+} from 'react-native';
 
 const useStyles = createThemedStyles((theme) => ({
   scrim: {
@@ -63,7 +69,7 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const styles = useStyles();
-  const heading = useRef<Text>(null);
+  const heading = useRef<TextInstance>(null);
   useEffect(() => onHardwareBack(onCancel), [onCancel]);
   useEffect(() => {
     if (heading.current !== null)

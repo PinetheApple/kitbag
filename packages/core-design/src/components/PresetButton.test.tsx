@@ -7,6 +7,7 @@ import { inset, textRoles } from '../roles.ts';
 import { themes } from '../theme.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { PresetButton, type PresetButtonKind } from './PresetButton.tsx';
+import { flatStyle } from './flatStyle.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -39,8 +40,6 @@ vi.mock('../useOneLineFit.tsx', async (original) => {
   };
 });
 
-const { StyleSheet } = await import('react-native');
-
 const LABEL = '−10';
 const GROWN_FONT_SCALE = 2;
 const KINDS: readonly PresetButtonKind[] = ['preset', 'action'];
@@ -71,7 +70,7 @@ function faceAt(
   kind: PresetButtonKind = 'preset',
 ): ViewStyle {
   renderAt(fontScale, kind);
-  return StyleSheet.flatten(faces[0]?.style as StyleProp<ViewStyle>);
+  return flatStyle(faces[0]?.style as StyleProp<ViewStyle>);
 }
 
 describe('PresetButton under font scale', () => {
@@ -97,7 +96,7 @@ describe('PresetButton under font scale', () => {
     const box = faces.filter((face) => face.onLayout !== undefined);
     expect(faces[0]?.onLayout).toBeUndefined();
     expect(box).toHaveLength(1);
-    const style = StyleSheet.flatten(box[0]?.style as StyleProp<ViewStyle>);
+    const style = flatStyle(box[0]?.style as StyleProp<ViewStyle>);
     expect(style.alignSelf).toBe('stretch');
     expect(style.paddingHorizontal).toBeUndefined();
   });
@@ -106,8 +105,7 @@ describe('PresetButton under font scale', () => {
 describe('PresetButton selected', () => {
   it('takes the active fill and border only when selected', () => {
     const { activeControlFill, color } = themes.dark;
-    const face = () =>
-      StyleSheet.flatten(faces[0]?.style as StyleProp<ViewStyle>);
+    const face = () => flatStyle(faces[0]?.style as StyleProp<ViewStyle>);
     renderAt(1, 'preset', true);
     expect(face()).toMatchObject({
       backgroundColor: activeControlFill,

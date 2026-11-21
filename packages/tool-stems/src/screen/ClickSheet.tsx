@@ -23,7 +23,7 @@ import {
   type ClickRate,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState, type RefObject } from 'react';
-import { Text, View } from 'react-native';
+import { Text, View, type ViewInstance } from 'react-native';
 
 import {
   barCounts,
@@ -241,7 +241,7 @@ function GroupingSection({ customOpen, onCustom }: CustomState) {
   );
 }
 
-type HeadingRef = RefObject<View | null>;
+type HeadingRef = RefObject<ViewInstance | null>;
 
 function RateHeading({ headingRef }: { readonly headingRef: HeadingRef }) {
   return (
@@ -299,7 +299,7 @@ export function ClickSheet({
   onClose,
 }: ClickSheetProps) {
   const styles = useStyles();
-  const rateHeading = useRef<View>(null);
+  const rateHeading = useRef<ViewInstance>(null);
   const [customOpen, setCustomOpen] = useState(false);
   const close = useCallback(() => {
     setCustomOpen(false);

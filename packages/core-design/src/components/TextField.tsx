@@ -1,5 +1,10 @@
 import type { Ref } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import {
+  Pressable,
+  TextInput,
+  type TextInputInstance,
+  View,
+} from 'react-native';
 
 import type { IconName } from '../icons.ts';
 import { libraryList } from '../libraryRoles.ts';
@@ -78,7 +83,7 @@ export interface TextFieldProps {
   readonly icon?: IconName;
   readonly autoFocus?: boolean;
   readonly editable?: boolean;
-  readonly ref?: Ref<TextInput>;
+  readonly ref?: Ref<TextInputInstance>;
   readonly onSubmitEditing?: () => void;
   readonly onClear?: () => void;
   readonly variant?: TextFieldVariant;

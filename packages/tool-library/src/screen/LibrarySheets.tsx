@@ -30,7 +30,7 @@ import {
   type QueuedSong,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { View, type TextInput } from 'react-native';
+import { View, type TextInputInstance } from 'react-native';
 
 import {
   canReanalyze,
@@ -216,7 +216,7 @@ function RenameSheet({ menu, bottomInset }: SheetProps) {
   const { target, close } = menu;
   const title = target?.title ?? '';
   const [draft, setDraft] = useState(title);
-  const field = useRef<TextInput>(null);
+  const field = useRef<TextInputInstance>(null);
   const blank = cleanName(draft) === null;
   const prefill = useCallback(() => {
     setDraft(title);

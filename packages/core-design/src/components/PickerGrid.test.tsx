@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { PickerGrid } from './PickerGrid.tsx';
+import { flatStyle } from './flatStyle.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -29,8 +30,6 @@ vi.mock('react-native', async (original) => {
   };
 });
 
-const { StyleSheet } = await import('react-native');
-
 const OPTIONS = ['Beep', 'Woodblock', 'Click', 'Tom'].map((label) => ({
   value: label,
   label,
@@ -50,9 +49,7 @@ function itemStylesAt(fontScale: number): ViewStyle[] {
       />
     </ThemeProvider>,
   );
-  return items.map((item) =>
-    StyleSheet.flatten(item.style as StyleProp<ViewStyle>),
-  );
+  return items.map((item) => flatStyle(item.style as StyleProp<ViewStyle>));
 }
 
 describe('PickerGrid under font scale', () => {
@@ -69,7 +66,7 @@ describe('PickerGrid under font scale', () => {
 
   it('wraps items onto further rows once the text grows', () => {
     itemStylesAt(2);
-    const group = StyleSheet.flatten(groups[0]?.style as StyleProp<ViewStyle>);
+    const group = flatStyle(groups[0]?.style as StyleProp<ViewStyle>);
     expect(group.flexWrap).toBe('wrap');
   });
 });

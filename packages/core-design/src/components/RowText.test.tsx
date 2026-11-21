@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { StyleProp, TextStyle } from 'react-native';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -24,7 +25,7 @@ vi.mock('react-native', async (importOriginal) => {
       <div
         data-node={JSON.stringify({
           lines: numberOfLines,
-          style: rn.StyleSheet.flatten(style as never),
+          style: rn.StyleSheet.flatten(style as StyleProp<TextStyle>),
         })}
       >
         {children}

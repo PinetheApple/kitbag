@@ -11,7 +11,7 @@ import {
   useTheme,
 } from '@kitbag/core-design';
 import type { Ref } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Text, TextInput, type TextInputInstance, View } from 'react-native';
 
 import { ADDRESS_PLACEHOLDER } from './logic/failureText.ts';
 
@@ -45,7 +45,7 @@ export interface AddressFieldProps {
   readonly value: string;
   readonly error: string | null;
   readonly editable: boolean;
-  readonly ref: Ref<TextInput>;
+  readonly ref: Ref<TextInputInstance>;
   readonly onChangeText: (text: string) => void;
   readonly onSubmit: () => void;
 }

@@ -9,6 +9,7 @@ import { ThemeProvider } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 import { MeterRow } from './MeterRow.tsx';
 import { MeterSheet } from './MeterSheet.tsx';
+import { flatStyle } from './flatStyle.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -70,8 +71,6 @@ vi.mock('./IconGlyph.tsx', () => ({
   IconGlyph: () => null,
   InlineIcon: () => null,
 }));
-
-const { StyleSheet } = await import('react-native');
 
 const METERS = [3, 4];
 const DETECTED = { meterBeatsPerBar: null, barOneSeconds: null };
@@ -145,8 +144,7 @@ const press = (label: string) => {
   (pressable(label).onPress as () => void)();
 };
 
-const flat = (style: unknown) =>
-  StyleSheet.flatten(style as StyleProp<ViewStyle>);
+const flat = (style: unknown) => flatStyle(style as StyleProp<ViewStyle>);
 
 beforeEach(() => {
   vi.clearAllMocks();

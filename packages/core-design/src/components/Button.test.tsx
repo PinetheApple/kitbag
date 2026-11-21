@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { iconSizes, opacity } from '../roles.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { Button, type ButtonProps } from './Button.tsx';
+import { flatStyle } from './flatStyle.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -39,8 +40,6 @@ vi.mock('./IconGlyph.tsx', () => ({
   },
 }));
 
-const { StyleSheet } = await import('react-native');
-
 function drawButton(props: Partial<ButtonProps>) {
   drawn.faces.length = 0;
   drawn.icons.length = 0;
@@ -51,9 +50,9 @@ function drawButton(props: Partial<ButtonProps>) {
     </ThemeProvider>,
   );
   return {
-    face: StyleSheet.flatten(drawn.faces[0]?.style as StyleProp<ViewStyle>),
-    icon: StyleSheet.flatten(drawn.icons[0]?.style as StyleProp<TextStyle>),
-    label: StyleSheet.flatten(drawn.labels[0]?.style as StyleProp<TextStyle>),
+    face: flatStyle(drawn.faces[0]?.style as StyleProp<ViewStyle>),
+    icon: flatStyle(drawn.icons[0]?.style as StyleProp<TextStyle>),
+    label: flatStyle(drawn.labels[0]?.style as StyleProp<TextStyle>),
   };
 }
 

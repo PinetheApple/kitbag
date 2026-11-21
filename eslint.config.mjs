@@ -191,8 +191,10 @@ export default tseslint.config(
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       parserOptions: {
-        // Type-aware linting for the whole workspace.
         projectService: true,
+        // CI's inferred single-run mode builds an unshared Program per tsconfig;
+        // the project service shares lib and node_modules ASTs across every tsconfig.
+        disallowAutomaticSingleRunInference: true,
       },
     },
     plugins: {

@@ -28,6 +28,7 @@ import {
   useWindowDimensions,
   View,
   type LayoutChangeEvent,
+  type ScrollViewInstance,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -216,7 +217,7 @@ export function SectionCards({
   const reduceMotion = useReduceMotion();
   const current = useCrossedIndex(songSec, sections, sectionAt, NO_SECTION);
   const width = sectionCardWidth(fontScale);
-  const list = useRef<ScrollView>(null);
+  const list = useRef<ScrollViewInstance>(null);
   const [viewport, setViewport] = useState(0);
   const onLayout = useCallback((event: LayoutChangeEvent) => {
     setViewport(event.nativeEvent.layout.width);

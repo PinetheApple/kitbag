@@ -46,11 +46,7 @@ target_include_directories(kitbag_jsi PRIVATE
   # Header-only kitbag::SidecarPath, so the .kwav name has one owner.
   "${KITBAG_CORE_DIR}/src")
 
-# RN 0.83 publishes jsi and the merged `reactnative` artifact via prefab, and
-# fbjni via its own prefab package. The app module must set
-# `buildFeatures { prefab true }` for these to resolve — without a Gradle build
-# providing them there is no jsi/jsi.h on the include path, which is why the
-# glue has compiled nowhere until now.
+# Resolved through prefab: the Gradle module must set `buildFeatures { prefab true }`.
 find_package(ReactAndroid REQUIRED CONFIG)
 find_package(fbjni REQUIRED CONFIG)
 

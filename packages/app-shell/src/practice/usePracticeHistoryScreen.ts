@@ -7,13 +7,13 @@ import {
 } from '@kitbag/core-state';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { LayoutChangeEvent, ScrollView } from 'react-native';
+import type { LayoutChangeEvent, ScrollViewInstance } from 'react-native';
 
 import { deletedMessage, sessionRowText } from './historyText.ts';
 import { useSessionNames } from './useSessionNames.ts';
 
 function useScrollToGroup() {
-  const scroll = useRef<ScrollView>(null);
+  const scroll = useRef<ScrollViewInstance>(null);
   const listTop = useRef(0);
   const groupTops = useRef(new Map<number, number>());
   const onListLayout = useCallback((event: LayoutChangeEvent) => {

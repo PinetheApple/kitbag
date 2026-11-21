@@ -2,7 +2,7 @@ import { useStemPlayer, type RetimeState } from '@kitbag/core-state';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   LayoutChangeEvent,
-  ScrollView,
+  ScrollViewInstance,
   TextLayoutEvent,
 } from 'react-native';
 
@@ -78,7 +78,7 @@ export function useRetimeLayout() {
 
 export function useRetimeScroll(retime: Recording, followsLine: boolean) {
   const failure = useStemPlayer((s) => s.retimeFailure);
-  const list = useRef<ScrollView>(null);
+  const list = useRef<ScrollViewInstance>(null);
   const tops = useRef({ lines: 0, row: 0 });
   const holdingCard = useRef(false);
   const scrollToLineToTap = useCallback(() => {
