@@ -80,10 +80,20 @@ const SUBSETS: [string, Category[]][] = Array.from(
   },
 );
 
+const EMPTY_COUNTS = Object.fromEntries(
+  CATEGORIES.map((category) => [category, 0]),
+);
+
 describe('export is always importable', () => {
   describe.each(STATES)('%s', (_name, prepare) => {
-    let source: BackupDatabase;
-    let target: BackupDatabase;
+    let source: BackupDatabase | undefined;
+    let target: BackupDatabase | undefined;
+
+    function prepared() {
+      if (source === undefined || target === undefined)
+        throw new Error('state databases not open');
+      return { source, target };
+    }
 
     beforeAll(async () => {
       source = backupDatabase(openTestDatabase());
@@ -91,13 +101,15 @@ describe('export is always importable', () => {
       await prepare(source);
     });
 
-    afterAll(() => {
-      source.handle.connection.close();
-      target.handle.connection.close();
+    afterAll(async () => {
+      const counts = await target?.backup.summary();
+      source?.handle.connection.close();
+      target?.handle.connection.close();
+      if (counts !== undefined) expect(counts).toEqual(EMPTY_COUNTS);
     });
 
-    // One target serves every subset: plan only reads the snapshot.
     it.each(SUBSETS)('%s parses and plans', async (_label, subset) => {
+      const { source, target } = prepared();
       const text = await source.backup.export(subset);
       const file = parseBackup(text);
       const plan = await target.backup.plan(text, {
