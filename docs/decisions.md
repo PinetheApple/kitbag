@@ -1209,9 +1209,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   menu works the same way. **[REC TAKEN, owner may overturn]**
 - **2026-11-20 · Waveform drawn as SVG paths until Skia lands (§13.8, #547)** — Interim:
   the shared `Waveform` draws each bar layer as one react-native-svg path, not one View per
-  bar, so the playing players stop taking 4–7 s per accessibility read. Skia stays §13.8's
-  target; it is not added now because this run takes no new dependency, and react-native-svg
-  is already one. **[coordinator, 2026-11-20]** Superseded by the 2026-11-21 Skia entry.
+  bar, so the playing players stop taking 4–7 s per accessibility read. Skia was then
+  the §13.8 target; it was not added because this run took no new dependency. **[coordinator, 2026-11-20]** Superseded by the 2026-11-21 SVG entry.
 - **2026-11-20 · Song queue (#574, SPEC §7.9, D17)** — Owner decisions on the
   queue mockup, all recommendations taken: (1) one queue shared by single songs
   and stem songs; (2) a Queue key on the mini-player, a Queue icon on the stem
@@ -1278,15 +1277,19 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   "anywhere on screen", but a tap counts on touch-down, so a scroll gesture on a
   tappable area would add a tap. **[recorded]**
 
-- **2026-11-21 · Skia draws the playhead surfaces (§13.8, #547)** — Supersedes the
-  2026-11-20 interim. `@shopify/react-native-skia` is added at 2.14.0, the version
-  Expo SDK 58 bundles, as §13.8 names it. The waveform's played layer, the slider fill
-  and thumb, the mini-player progress line and the current section card's progress
-  draw on fixed-bounds canvases from shared values. Rationale: a View whose transform
-  or layout changes every frame sends a subtree accessibility event, which flushes the
-  Android accessibility cache about every 100 ms while a song plays, so every
-  accessibility read refetches the screen. Native and web split: web keeps the
-  Animated/SVG drawing, so the web export needs no CanvasKit. F-Droid: the npm package
-  ships prebuilt `react-native-skia-android` binaries, while the precedent recipe in
-  `docs/fdroid-expo-research.md` builds Skia from source (`srclibs` and
-  `build-skia`), so an F-Droid build needs that step. **[owner, 2026-11-21]**
+- **2026-11-21 · Playhead surfaces drawn with animated SVG, not Skia (§13.8, #547)** —
+  Supersedes the 2026-11-20 interim. The player progress surfaces (the waveform's
+  played clip, the slider fill and thumb, the mini-player line, the section card
+  progress) draw with react-native-svg elements whose props Reanimated animates on
+  the UI thread, so no View transform or layout changes per frame. Rationale: such a
+  change sends a subtree accessibility event about every 100 ms while a song plays,
+  which makes every accessibility read refetch the screen. Skia was built and
+  measured (PR #606) on the same emulator and not taken. Dump ms while playing and
+  UI-thread CPU: stem player SVG 3.0 s at about 29% against Skia 9.6 s at 92–95%;
+  song player 3.0 against 3.1 s; Songs with the mini-player 2.1 against 3.3 s;
+  paused 2.0 s for both. Accessibility content-change events per 10 s: 0–11 for
+  both, against 56–98 on the old View transforms. Skia added about 30 MB to the
+  release APK and needs a from-source build for F-Droid. The remaining gap of about
+  1 s, playing against paused, is the scrubber's spoken position, which updates once
+  a second while any accessibility service is on (one node), plus per-frame drawing
+  under software GL. **[owner, 2026-11-21]**
