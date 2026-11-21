@@ -223,7 +223,7 @@ it.each(SIDES)(
 );
 
 async function titleGapStyle(os: string, mode: ThemeMode) {
-  const { SHEET_TOUCH_ROOM } = await import('./Sheet.tsx');
+  const { SHEET_TOUCH_ROOM } = await import('../sheetRoom.ts');
   platform.OS = os;
   shown.mode = mode;
   const sheet = child(child(openSheet(), 1), 1);

@@ -17,6 +17,8 @@ export * from './snackbarTimer.ts';
 export * from './settingsRoles.ts';
 export * from './textScale.ts';
 export * from './touchTarget.ts';
+export * from './sheetRoom.ts';
+export * from './switch.ts';
 export * from './editRowGaps.ts';
 export * from './stemPlayerRoles.ts';
 export * from './fontFaces.ts';

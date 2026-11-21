@@ -55,16 +55,14 @@ import { SheetHint } from './SheetHint.tsx';
 import { useSheetPortal } from './SheetHost.tsx';
 import { useSheetCardStyle } from './useSheetCardStyle.ts';
 import { useSheetExit } from './useSheetExit.ts';
+import { SHEET_TOUCH_ROOM } from '../sheetRoom.ts';
 
-// A scroll view drops touches outside its frame, so the frame reaches into the
-// sheet's padding on every side, and the scroll indicator sits in the padding.
 export {
   SheetHint,
   type SheetHintProps,
   type SheetHintSize,
 } from './SheetHint.tsx';
 
-export const SHEET_TOUCH_ROOM = space.sectionGap;
 const INDICATOR_INSETS = { top: SHEET_TOUCH_ROOM, bottom: SHEET_TOUCH_ROOM };
 const SCRIM = withAlpha(palette.bg.dark, opacity.sheetScrim);
 const FADED_OUT = 0;
