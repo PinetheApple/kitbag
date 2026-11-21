@@ -1,0 +1,1 @@
+• The song player's metronome card shows an icon for its state: the metronome when the beat grid is ready, a refresh icon while the beat is being found, and a red alert when there is no grid.
