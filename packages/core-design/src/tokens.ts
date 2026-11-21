@@ -2,9 +2,9 @@
 //
 // This file is the ONE owner of §12.2's palette, type, radii and shadow
 // (SPEC §13.7). The Tailwind theme is GENERATED from it by
-// `scripts/generate-tailwind.ts`; Skia reads it directly (§13.8.1). A hex
-// literal must never be hand-authored anywhere downstream — if it is, it is a
-// second source of truth and the §13.7 duplication failure has returned.
+// `scripts/generate-tailwind.ts`. A hex literal must never be hand-authored
+// anywhere downstream — if it is, it is a second source of truth and the §13.7
+// duplication failure has returned.
 //
 // Every value below is transcribed verbatim from SPEC §12.2. Dark ("Stage") is
 // primary; Light ("Daylight") ships from day one (§12.2, §12.5). Do not add a
@@ -143,7 +143,7 @@ export const shadow: Readonly<Record<'sheet', ColorPair>> = {
 
 // --- Theme resolution -------------------------------------------------------
 // Everything below is DERIVED from the tokens above — never a second copy of a
-// value (SPEC §13.7). Skia and RN StyleSheet read `resolveTheme`; NativeWind's
+// value. RN StyleSheet and react-native-svg read `resolveTheme`; NativeWind's
 // vars() reads `themeVars`; the generator reads `renderTailwindConfig` and
 // `renderThemeCss`. Change a token above and all four follow automatically.
 
@@ -157,8 +157,6 @@ export function colorVarName(token: ColorToken): string {
 
 export const SHADOW_VAR_NAME = '--shadow-sheet';
 
-/** Flat hex map for one theme — what Skia and RN StyleSheet consume directly
- * (SPEC §13.8.1: "Skia reads tokens from the TS export directly"). */
 export function resolveTheme(mode: ThemeMode): Record<ColorToken, string> {
   const out = {} as Record<ColorToken, string>;
   for (const token of COLOR_TOKENS) {

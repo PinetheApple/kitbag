@@ -7,6 +7,10 @@ export interface WaveLane {
   readonly radius: number;
 }
 
+function finiteOrZero(value: number): number {
+  return Number.isFinite(value) ? value : 0;
+}
+
 export function waveBarHeights(
   envelope: readonly number[] | null,
   bars: number,
@@ -17,7 +21,7 @@ export function waveBarHeights(
       envelope === null || envelope.length === 0
         ? 0
         : (envelope[Math.floor((i * envelope.length) / bars)] ?? 0);
-    return Math.min(1, Math.max(minFraction, value));
+    return Math.min(1, Math.max(minFraction, finiteOrZero(value)));
   });
 }
 
@@ -43,10 +47,10 @@ export function waveBarsPath(
   const bars = heights.length;
   if (bars === 0) return '';
   const barWidth = (lane.width - lane.gap * (bars - 1)) / bars;
-  if (barWidth <= 0) return '';
+  if (!Number.isFinite(barWidth + lane.height) || barWidth <= 0) return '';
   return heights
     .map((fraction, i) => {
-      const h = fraction * lane.height;
+      const h = finiteOrZero(fraction) * lane.height;
       const r = Math.min(lane.radius, barWidth / 2, h / 2);
       const x = i * (barWidth + lane.gap);
       return roundedBar(x, (lane.height - h) / 2, barWidth, h, r);

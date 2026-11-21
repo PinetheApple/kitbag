@@ -1,18 +1,15 @@
 import { useMemo } from 'react';
-import { Pressable, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  type SharedValue,
-} from 'react-native-reanimated';
+import { Pressable, StyleSheet, View } from 'react-native';
+import Animated, { type SharedValue } from 'react-native-reanimated';
 
-import { clampUnit } from '../clampUnit.ts';
 import type { IconName } from '../icons.ts';
 import { size } from '../roles.ts';
 import { miniPlayer, miniPlayerText } from '../stemPlayerRoles.ts';
 import { textStyle } from '../textStyle.ts';
-import { createThemedStyles } from '../ThemeProvider.tsx';
+import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 import { EllipsizedText } from './EllipsizedText.tsx';
+import { FillBar } from './ProgressSvg.tsx';
 import { Icon } from './Icon.tsx';
 import { usePlayPauseLayers } from './PrimaryPlayButton.tsx';
 
@@ -32,15 +29,7 @@ const useStyles = createThemedStyles((theme) => ({
     backgroundColor: theme.color.line,
     overflow: 'hidden',
   },
-  fill: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    transformOrigin: 'left',
-    backgroundColor: theme.color.accent,
-  },
+  fill: { ...StyleSheet.absoluteFill },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -155,17 +144,16 @@ export function MiniPlayerBar({
   onClose,
 }: MiniPlayerBarProps) {
   const styles = useStyles();
-  const fillStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: clampUnit(progress.value) }],
-  }));
+  const theme = useTheme();
   const inset = useMemo(() => ({ paddingBottom: bottomInset }), [bottomInset]);
   return (
     <View style={[styles.bar, inset]}>
-      <View
-        style={styles.track}
-        importantForAccessibility="no-hide-descendants"
-      >
-        <Animated.View style={[styles.fill, fillStyle]} />
+      <View style={styles.track}>
+        <FillBar
+          progress={progress}
+          color={theme.color.accent}
+          style={styles.fill}
+        />
       </View>
       <View style={styles.row}>
         <Pressable

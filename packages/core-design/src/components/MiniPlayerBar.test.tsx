@@ -3,14 +3,17 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { buildTheme } from '../theme.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 import { MiniPlayerBar } from './MiniPlayerBar.tsx';
 import { flatStyle } from './flatStyle.test-helper.ts';
+import { drawn, drawnAs, liveProps } from './svgRecorder.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const pressables = vi.hoisted(() => [] as Props[]);
+const views = vi.hoisted(() => [] as Props[]);
 const animated = vi.hoisted(() => [] as StyleProp<ViewStyle>[]);
 
 vi.mock('react-native', async (original) => {
@@ -22,28 +25,44 @@ vi.mock('react-native', async (original) => {
       pressables.push(props);
       return h('div', null, props.children);
     },
+    View: (props: Props) => {
+      views.push(props);
+      return h('div', null, props.children);
+    },
   };
 });
 
 vi.mock('react-native-reanimated', async () => {
   const { createElement: h } = await import('react');
+  const { live } = await import('./svgRecorder.test-helper.ts');
   return {
     default: {
       View: (props: Props) => {
         animated.push(props.style as StyleProp<ViewStyle>);
         return h('div', null, props.children);
       },
+      createAnimatedComponent: <T,>(component: T) => component,
     },
     useAnimatedStyle: (updater: () => ViewStyle) => updater(),
+    useAnimatedProps: live,
     useAnimatedReaction: vi.fn(),
+    useDerivedValue: live,
+    useSharedValue: (value: unknown) => ({ value }),
   };
 });
 
 vi.mock('react-native-worklets', () => ({ scheduleOnRN: vi.fn() }));
 
 vi.mock('./IconGlyph.tsx', () => ({ IconGlyph: () => null }));
+vi.mock(
+  'react-native-svg',
+  async () => (await import('./svgRecorder.test-helper.ts')).svg,
+);
 
 const PROGRESS = 0.42;
+const LATER = 0.6;
+const LINE_WIDTH = 320;
+const progress = { value: PROGRESS };
 const handlers = {
   onOpen: vi.fn(),
   onQueue: vi.fn(),
@@ -53,14 +72,17 @@ const handlers = {
 
 function render(playing: number) {
   pressables.length = 0;
+  views.length = 0;
   animated.length = 0;
+  drawn.length = 0;
+  progress.value = PROGRESS;
   renderToStaticMarkup(
     <ThemeProvider mode="dark">
       <MiniPlayerBar
         tile="song"
         title="Everlong"
         detail="Foo Fighters · Click on"
-        progress={{ value: PROGRESS } as never}
+        progress={progress as never}
         playing={{ value: playing } as never}
         openLabel="Open Everlong"
         playLabel="Play Everlong"
@@ -78,6 +100,13 @@ function pressable(label: string): Props {
   const found = pressables.find((p) => p.accessibilityLabel === label);
   if (found === undefined) throw new Error(`no control labelled ${label}`);
   return found;
+}
+
+function measureLine() {
+  const line = views.find((props) => props.onLayout !== undefined);
+  (line?.onLayout as (event: object) => void)({
+    nativeEvent: { layout: { width: LINE_WIDTH, height: 2 } },
+  });
 }
 
 const flat = (style: unknown) => flatStyle(style as StyleProp<ViewStyle>);
@@ -113,12 +142,22 @@ describe('MiniPlayerBar', () => {
     expect(handlers[handler]).toHaveBeenCalledOnce();
   });
 
-  it('draws the progress line from the shared value', () => {
+  it('draws the progress line on an svg from the shared value', () => {
     render(0);
-    const scales = animated.map(
-      (style) => flat(style).transform?.[0] as { scaleX?: number } | undefined,
-    );
-    expect(scales).toContainEqual({ scaleX: PROGRESS });
+    const transforms = animated.map((style) => flat(style).transform);
+    expect(transforms.filter((t) => t !== undefined)).toEqual([]);
+    expect(drawnAs('Svg')).toHaveLength(1);
+    expect(views.find((props) => props.onLayout !== undefined)).toMatchObject({
+      accessible: false,
+      importantForAccessibility: 'no-hide-descendants',
+      accessibilityElementsHidden: true,
+    });
+    measureLine();
+    expect(drawnAs('Rect')[0]?.fill).toBe(buildTheme('dark').color.accent);
+    const fill = () => liveProps(drawnAs('Rect')[0]);
+    expect(fill().width).toBe(LINE_WIDTH * PROGRESS);
+    progress.value = LATER;
+    expect(fill().width).toBe(LINE_WIDTH * LATER);
   });
 
   it.each([

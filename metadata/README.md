@@ -54,10 +54,10 @@ Grounded in `packages/app-shell/package.json` and `pnpm-lock.yaml`:
   CSS compiler for NativeWind; never ships. `scandelete: node_modules`
   covers it. This rests on the WAFRN precedent, **not** on a confirmed
   maintainer ruling — see the research doc's §4 and open question 2.
-- **Skia is not currently a dependency** (SPEC §13.8 names it for waveform
-  rendering, but no package is installed yet). If/when it lands, the recipe
-  will need a `srclibs` build-from-source step like WAFRN's — recorded here
-  so the future change does not silently inherit a prebuilt-`.so` assumption.
+- **Skia is not a dependency.** It was considered for waveform rendering and
+  not taken (`docs/decisions.md`, 2026-11-21); the progress surfaces draw with
+  `react-native-svg`. Skia would have needed a `srclibs` build-from-source
+  step like WAFRN's instead of its prebuilt `.so`.
 
 ## Open policy questions (questions, not answers)
 

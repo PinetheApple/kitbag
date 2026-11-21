@@ -1,53 +1,56 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
-import { act, type ReactNode } from 'react';
-import {
-  create,
-  type ReactTestRenderer,
-  type ReactTestRendererJSON,
-} from 'react-test-renderer';
-import { expect, it, vi } from 'vitest';
+import { act } from 'react';
+import { create, type ReactTestRenderer } from 'react-test-renderer';
+import { beforeEach, expect, it, vi } from 'vitest';
 
+import { drawn, drawnAs, liveProps } from './svgRecorder.test-helper.ts';
 import { Waveform } from './Waveform.tsx';
 
-type Props = Record<string, unknown> & { readonly children?: ReactNode };
-
 const MEASURED_WIDTH = 300;
+const HEIGHT = 10;
 
-const animated = vi.hoisted(() => [] as object[]);
+const animated = vi.hoisted(() => [] as unknown[]);
 
 vi.mock('react-native', () => ({
   View: 'View',
-  StyleSheet: { create: <T,>(styles: T) => styles },
+  StyleSheet: { create: <T,>(styles: T) => styles, absoluteFill: {} },
 }));
-vi.mock('react-native-svg', () => ({ default: 'Svg', Path: 'Path' }));
 vi.mock('../ThemeProvider.tsx', () => ({
   useTheme: () => ({ color: { wave: 'wave', waveHot: 'waveHot' } }),
 }));
 vi.mock('react-native-reanimated', async () => {
-  const { createElement: h } = await import('react');
+  const { live } = await import('./svgRecorder.test-helper.ts');
   return {
     default: {
-      View: (props: Props) => {
-        const [, shift] = props.style as [object, object];
-        animated.push(shift);
-        return h('AnimatedView', null, props.children);
+      View: (props: unknown) => {
+        animated.push(props);
+        return null;
       },
+      createAnimatedComponent: <T,>(component: T) => component,
     },
-    useAnimatedStyle: (updater: () => object) => updater(),
+    useAnimatedProps: live,
   };
 });
+vi.mock(
+  'react-native-svg',
+  async () => (await import('./svgRecorder.test-helper.ts')).svg,
+);
 
-function mount(bars: number, progress: number) {
+beforeEach(() => {
   animated.length = 0;
+  drawn.length = 0;
+});
+
+function mount(bars: number, progress: { value: number }) {
   let tree: ReactTestRenderer | undefined;
   act(() => {
     tree = create(
       <Waveform
         envelope={[1, 0.5]}
         bars={bars}
-        height={10}
-        progress={{ value: progress } as never}
+        height={HEIGHT}
+        progress={progress as never}
       />,
     );
   });
@@ -55,48 +58,70 @@ function mount(bars: number, progress: number) {
   return tree;
 }
 
-function shifts(progress: number) {
-  mount(2, progress);
-  return animated.map(
-    (style) => (style as { transform: object[] }).transform[0],
-  );
-}
-
-function hostCount(node: ReactTestRendererJSON | string): number {
-  if (typeof node === 'string') return 0;
-  return 1 + (node.children ?? []).reduce((sum, c) => sum + hostCount(c), 0);
-}
-
-function paths(tree: ReactTestRenderer): unknown[] {
-  return tree.root
-    .findAll((node) => node.type === ('Path' as never))
-    .map((node) => node.props.d as unknown);
-}
-
-it('draws nothing played on a paused remount before the lane is measured', () => {
-  expect(shifts(0)).toEqual([{ translateX: '-100%' }, { translateX: '100%' }]);
-});
-
-it('draws the played share of the lane from the first frame', () => {
-  expect(shifts(0.25)).toEqual([{ translateX: '-75%' }, { translateX: '75%' }]);
-  expect(shifts(1)).toEqual([{ translateX: '0%' }, { translateX: '0%' }]);
-});
-
-it('draws each layer as one shape however many bars it has', () => {
-  const many = mount(64, 0.5).toJSON() as ReactTestRendererJSON;
-  const few = mount(2, 0.5).toJSON() as ReactTestRendererJSON;
-  expect(hostCount(many)).toBe(hostCount(few));
-});
-
-it('draws the bars on both layers once the lane is measured', () => {
-  const tree = mount(2, 0.5);
+function measure(tree: ReactTestRenderer) {
   const lane = tree.root.find((node) => node.props.onLayout !== undefined);
   act(() => {
     (lane.props.onLayout as (event: object) => void)({
       nativeEvent: { layout: { width: MEASURED_WIDTH } },
     });
   });
-  const drawn = paths(tree);
-  expect(drawn).toHaveLength(2);
-  for (const d of drawn) expect(d).toMatch(/^M.+Z$/);
+}
+
+function playhead() {
+  const gradient = drawnAs('LinearGradient').at(-1);
+  if (gradient === undefined) throw new Error('no played edge was drawn');
+  return liveProps(gradient).x1;
+}
+
+it('draws the lane on one svg hidden from readers, with no animated view', () => {
+  const tree = mount(2, { value: 0.5 });
+  drawn.length = 0;
+  measure(tree);
+  expect(animated).toEqual([]);
+  expect(drawnAs('Svg')).toEqual([
+    expect.objectContaining({
+      accessible: false,
+      importantForAccessibility: 'no-hide-descendants',
+      accessibilityElementsHidden: true,
+    }),
+  ]);
+});
+
+it('puts the played edge at the left on a paused remount before the lane is measured', () => {
+  mount(2, { value: 0 });
+  expect(playhead()).toBe(0);
+});
+
+it('puts the played edge at the progress share of the measured lane', () => {
+  measure(mount(2, { value: 0.25 }));
+  expect(playhead()).toBe(MEASURED_WIDTH / 4);
+});
+
+it('follows the shared value through the animated edge props', () => {
+  const progress = { value: 0.25 };
+  measure(mount(2, progress));
+  progress.value = 1;
+  expect(playhead()).toBe(MEASURED_WIDTH);
+});
+
+it.each([64, 2])('draws the lane as one shape with %d bars', (bars) => {
+  const tree = mount(bars, { value: 0.5 });
+  drawn.length = 0;
+  measure(tree);
+  expect(drawnAs('Path')).toHaveLength(1);
+});
+
+it('fills the bars from the played edge once the lane is measured', () => {
+  const tree = mount(2, { value: 0.5 });
+  expect(drawnAs('Path')).toEqual([]);
+  drawn.length = 0;
+  measure(tree);
+  const [bars] = drawnAs('Path');
+  const gradient = drawnAs('LinearGradient').at(-1);
+  expect(bars?.d).toMatch(/^M.+Z$/);
+  expect(bars?.fill).toBe(`url(#${String(gradient?.id)})`);
+  expect(drawnAs('Stop').slice(-2)).toEqual([
+    { offset: 0, stopColor: 'waveHot' },
+    { offset: 1, stopColor: 'wave' },
+  ]);
 });

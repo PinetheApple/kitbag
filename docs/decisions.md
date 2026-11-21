@@ -1218,9 +1218,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   menu works the same way. **[REC TAKEN, owner may overturn]**
 - **2026-11-20 · Waveform drawn as SVG paths until Skia lands (§13.8, #547)** — Interim:
   the shared `Waveform` draws each bar layer as one react-native-svg path, not one View per
-  bar, so the playing players stop taking 4–7 s per accessibility read. Skia stays §13.8's
-  target; it is not added now because this run takes no new dependency, and react-native-svg
-  is already one. **[coordinator, 2026-11-20]**
+  bar, so the playing players stop taking 4–7 s per accessibility read. Skia was then
+  the §13.8 target; it was not added because this run took no new dependency. **[coordinator, 2026-11-20]** Superseded by the 2026-11-21 SVG entry.
 - **2026-11-20 · Song queue (#574, SPEC §7.9, D17)** — Owner decisions on the
   queue mockup, all recommendations taken: (1) one queue shared by single songs
   and stem songs; (2) a Queue key on the mini-player, a Queue icon on the stem
@@ -1286,3 +1285,23 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   tap lands and stays so until Start over or the run ends. Rationale: §12.5.1 says
   "anywhere on screen", but a tap counts on touch-down, so a scroll gesture on a
   tappable area would add a tap. **[recorded]**
+
+- **2026-11-21 · Playhead surfaces drawn with animated SVG, not Skia (§13.8, #547)** —
+  Supersedes the 2026-11-20 interim. The player progress surfaces (the waveform's
+  played gradient edge, the slider fill and thumb, the mini-player line, the section card
+  progress) draw with react-native-svg elements whose props Reanimated animates on
+  the UI thread, so no View transform or layout changes per frame. Rationale: such a
+  change sends a subtree accessibility event about every 100 ms while a song plays,
+  which makes every accessibility read refetch the screen. Skia was built and
+  measured (PR #606) on the same emulator and not taken. Dump ms while playing and
+  UI-thread CPU: stem player SVG 3.0 s at about 29% against Skia 9.6 s at 92–95%;
+  song player 3.0 against 3.1 s; Songs with the mini-player 2.1 against 3.3 s;
+  paused 2.0 s for both. Accessibility content-change events per 10 s: 0–11 for
+  both, against 56–98 on the old View transforms. Skia added about 30 MB to the
+  release APK and needs a from-source build for F-Droid. Skia was the owner's first
+  call, and the switch to SVG is the owner's call on these numbers
+  **[owner, 2026-11-21]**. Each frame still costs a UI-thread Fabric commit plus an
+  SvgView bitmap redraw. The remaining gap of about 1 s, playing against paused, is
+  not isolated. Measured while playing: one single-node spoken-position event a
+  second from the scrubber while any accessibility service is on, and about 20–29%
+  UI-thread CPU. The hypothesis is that these two account for it.

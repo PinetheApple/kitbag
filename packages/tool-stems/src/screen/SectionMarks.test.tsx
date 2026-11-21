@@ -6,13 +6,18 @@ import {
 import { aboveFlagsPadding } from '@kitbag/core-design/src/loopNotePlacement.ts';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { animatedStyleOf } from '../testing/reanimatedDriver.ts';
+import {
+  animatedPropsOf,
+  animatedStyleOf,
+} from '../testing/reanimatedDriver.ts';
 import {
   fireLayout,
   mountPlayer,
   withTestId,
   type Player,
 } from './playerHarness.test-helper.tsx';
+
+const CARD_WIDTH = 160;
 
 let player: Player | undefined;
 
@@ -123,12 +128,21 @@ describe('the loop note', () => {
 });
 
 describe('the current card', () => {
-  it('fills by how far the playhead is through the section', async () => {
+  it('fills by how far the playhead is through the section, with no render', async () => {
     const p = await open('Lyrics');
     p.frames(5);
-    expect(withTestId(p, 'section-progress')).toHaveLength(1);
-    expect(liveStyle(p, 'section-progress')).toEqual({ width: '25%' });
+    const cards = withTestId(p, 'section-progress');
+    expect(cards).toHaveLength(1);
+    fireLayout(cards[0], { width: CARD_WIDTH, height: 2 });
+    const rect = cards[0]?.findByType('Rect' as never);
+    if (rect === undefined) throw new Error('no card progress drawn');
+    const width = () => animatedPropsOf(rect).width;
+    expect(width()).toBe(CARD_WIDTH * 0.25);
+    p.commit.mockClear();
+    p.frames(5.25);
+    expect(p.commit).not.toHaveBeenCalled();
+    expect(width()).toBe(CARD_WIDTH * 0.3125);
     p.frames(7);
-    expect(liveStyle(p, 'section-progress')).toEqual({ width: '75%' });
+    expect(width()).toBe(CARD_WIDTH * 0.75);
   });
 });

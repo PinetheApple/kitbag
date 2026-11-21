@@ -2308,8 +2308,8 @@ retype them.
 | Router | Expo Router (file-based), wrapping React Navigation. Plugin routes register through §9.1's `RouteDescriptor`. |
 | Native build | The existing CMake for `native/audio_core` is consumed by the Android Gradle `externalNativeBuild` and an iOS podspec. **The C++ does not move.** |
 | Styling | **NativeWind 5 (preview) + Tailwind v4**, consuming §12.2's tokens. NativeWind 5 has not shipped GA — the reference pin is `nativewind@5.0.0-preview.3` with `tailwindcss@^4`, `@tailwindcss/postcss`, and `lightningcss` held at `1.30.1`. A pre-release dependency is a material fact on the F-Droid path, where the whole argument rests on one precedent's recipe. The tokens stay the single source of truth — §13.8.1. |
-| Waveform rendering | React Native Skia. This is the `CustomPainter` replacement and the only reasonable one. |
-| Animation | Reanimated 3 (§13.3) + Gesture Handler for swipe-anywhere. |
+| Waveform rendering | `react-native-svg` elements with Reanimated animated props (UI thread). Skia was measured and not taken: see the 2026-11-21 entry in `docs/decisions.md`. |
+| Animation | Reanimated 4 (§13.3) + Gesture Handler for swipe-anywhere. |
 | DB | Drizzle + op-sqlite (§11.1). |
 
 #### 13.8.1 Styling — NativeWind, on §12.2's terms
@@ -2346,8 +2346,8 @@ decision to adopt NativeWind accepts, and §13.6 is where the bill comes due.
   variant plus OS preference gives two-and-a-half; the explicit override is
   driven through NativeWind's `colorScheme` API and CSS variables (`vars()`),
   with the theme layer — not the variant — as the authority.
-- **Skia ignores all of this.** The waveform renderer (§13.8, above) reads tokens
-  from the TS export directly. Tailwind has no reach into a Skia canvas.
+- **SVG ignores all of this.** The waveform renderer (§13.8, above) reads tokens
+  from the TS export directly. Tailwind has no reach into an SVG element's animated props.
 
 `react-native-css` and lightningcss come along as NativeWind's transitive deps.
 They are build-time only — lightningcss ships a prebuilt native binary, which is

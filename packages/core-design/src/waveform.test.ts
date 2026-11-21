@@ -15,6 +15,10 @@ describe('waveBarHeights', () => {
   it('draws the floor everywhere before the envelope arrives', () => {
     expect(waveBarHeights(null, 2, 0.08)).toEqual([0.08, 0.08]);
   });
+
+  it('floors a sample that is not a number', () => {
+    expect(waveBarHeights([Number.NaN, 0.5], 2, 0.1)).toEqual([0.1, 0.5]);
+  });
 });
 
 describe('waveBarsPath', () => {
@@ -36,5 +40,17 @@ describe('waveBarsPath', () => {
   it('draws nothing before the lane is measured or when the gaps fill it', () => {
     expect(waveBarsPath([1, 1], { ...lane, width: 0 })).toBe('');
     expect(waveBarsPath([1, 1], { ...lane, width: 2 })).toBe('');
+  });
+
+  it.each([
+    ['width', { ...lane, width: Number.NaN }],
+    ['width', { ...lane, width: Number.POSITIVE_INFINITY }],
+    ['height', { ...lane, height: Number.NaN }],
+  ])('draws nothing for a lane %s that is not finite', (_, bad) => {
+    expect(waveBarsPath([1, 0.5], bad)).toBe('');
+  });
+
+  it('never writes a coordinate that is not a number', () => {
+    expect(waveBarsPath([Number.NaN, 1], lane)).not.toMatch(/NaN|Infinity/);
   });
 });

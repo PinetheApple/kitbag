@@ -1,5 +1,6 @@
 import { useCallback, type ReactNode } from 'react';
 import {
+  StyleSheet,
   View,
   type AccessibilityActionEvent,
   type LayoutChangeEvent,
@@ -10,8 +11,8 @@ import {
   usePanGesture,
   useTapGesture,
 } from 'react-native-gesture-handler';
-import Animated, {
-  useAnimatedStyle,
+import {
+  useDerivedValue,
   useSharedValue,
   type SharedValue,
 } from 'react-native-reanimated';
@@ -28,10 +29,10 @@ import {
   type SliderMode,
 } from '../sliderMath.ts';
 import { asPercent } from '../percent.ts';
-import { radius } from '../roles.ts';
 import { sliderGeometry } from '../stemPlayerRoles.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
+import { FillBar, ThumbDot } from './ProgressSvg.tsx';
 
 const NOT_DRAGGING = -1;
 const A11Y_ACTIONS = [
@@ -65,20 +66,7 @@ const useStyles = createThemedStyles((theme) => ({
     justifyContent: 'center',
   },
   track: { backgroundColor: theme.color.surface3 },
-  fill: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    transformOrigin: 'left',
-    backgroundColor: theme.color.accent,
-  },
-  thumb: {
-    position: 'absolute',
-    borderRadius: radius.circle,
-    backgroundColor: theme.color.text,
-  },
+  fill: { ...StyleSheet.absoluteFill },
   tick: {
     position: 'absolute',
     top: -sliderGeometry.tickOverhang,
@@ -100,12 +88,14 @@ function geometryStyles(look: SliderMode | SliderLook) {
   return {
     track: { height: track, borderRadius: track / 2 },
     thumb: {
-      width: thumb,
-      height: thumb,
+      position: 'absolute',
       left: -thumb / 2,
+      right: -thumb / 2,
       top: (track - thumb) / 2,
+      height: thumb,
     },
-  };
+    diameter: thumb,
+  } as const;
 }
 
 const GEOMETRY = {
@@ -170,8 +160,6 @@ export function Slider(props: SliderProps) {
   const styles = useStyles();
   const theme = useTheme();
   const { value, onRelease, step, warnAbove } = props;
-  const fillColor = theme.color.accent;
-  const warnColor = theme.color.red;
   const geometry = GEOMETRY[props.look ?? props.mode];
   const width = useSharedValue(0);
   const { gesture, drag } = useSliderGesture(props, width);
@@ -188,17 +176,10 @@ export function Slider(props: SliderProps) {
     },
     [onRelease, step, value],
   );
-  const fillStyle = useAnimatedStyle(() => {
-    const shown = drag.value === NOT_DRAGGING ? value.value : drag.value;
-    return {
-      transform: [{ scaleX: clampUnit(shown) }],
-      backgroundColor: pastWarning(shown, warnAbove) ? warnColor : fillColor,
-    };
-  });
-  const thumbStyle = useAnimatedStyle(() => {
-    const shown = drag.value === NOT_DRAGGING ? value.value : drag.value;
-    return { transform: [{ translateX: clampUnit(shown) * width.value }] };
-  });
+  const shown = useDerivedValue(() =>
+    drag.value === NOT_DRAGGING ? value.value : drag.value,
+  );
+  const warned = useDerivedValue(() => pastWarning(shown.value, warnAbove));
   return (
     <GestureDetector gesture={gesture}>
       <View
@@ -212,7 +193,17 @@ export function Slider(props: SliderProps) {
       >
         <View style={[styles.track, geometry.track]} onLayout={onLayout}>
           {props.behindFill}
-          <Animated.View style={[styles.fill, geometry.track, fillStyle]} />
+          <FillBar
+            progress={shown}
+            color={theme.color.accent}
+            warning={
+              warnAbove === undefined
+                ? undefined
+                : { color: theme.color.red, active: warned }
+            }
+            radius={geometry.track.borderRadius}
+            style={[styles.fill, geometry.track]}
+          />
           {props.overFill}
           {props.tick === undefined ? null : (
             <View
@@ -223,7 +214,12 @@ export function Slider(props: SliderProps) {
               ]}
             />
           )}
-          <Animated.View style={[styles.thumb, geometry.thumb, thumbStyle]} />
+          <ThumbDot
+            progress={shown}
+            color={theme.color.text}
+            diameter={geometry.diameter}
+            style={geometry.thumb}
+          />
         </View>
       </View>
     </GestureDetector>
