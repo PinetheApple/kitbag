@@ -14,11 +14,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SONG_CLICK_TEXT } from '../logic/clickChipText.ts';
 import { METER_FAILED } from '../logic/songMeterText.ts';
-import {
-  LOOP_KEY_TEXT,
-  REANALYZE_LABEL,
-  SONG_SPEED_TEXT,
-} from '../logic/viewText.ts';
+import { REANALYZE_LABEL, SONG_SPEED_TEXT } from '../logic/viewText.ts';
 import {
   mount,
   onBack,
@@ -630,9 +626,8 @@ describe('a song with no beat grid', () => {
 });
 
 describe('the loop key on the transport', () => {
-  it('labels the loop key A|B and marks the loop with it', () => {
+  it('marks the loop from the loop key', () => {
     const dock = mount().root.findByType('PlayerTransport' as never);
-    expect(dock.props.loopText).toBe(LOOP_KEY_TEXT);
     act(() => {
       (dock.props.onLoop as () => void)();
     });

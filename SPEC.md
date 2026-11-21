@@ -1017,8 +1017,9 @@ working. Changes:
 - **`.kwav` load off the UI thread.** Flutter does synchronous file I/O in
   `waveform_painter.dart:53`.
 - Optional beat-snapped scrub.
-- **A-B loop**, beat-snapped, equal-power crossfade 5–20ms. The A|B key marks
-  A then B at the playhead, a third tap clears; the A and B handles on the
+- **A-B loop**, beat-snapped, equal-power crossfade 5–20ms. The loop key, drawn
+  with the loop icon (owner decision 2026-11-21), marks A then B at the
+  playhead, a third tap clears; the A and B handles on the
   scrub bar drag, beat-snapped.
 - Speed control in the transport, driven by the same stretch stage as the stem
   player (§7.6): the stem player's range, steps and presets, saved per song and

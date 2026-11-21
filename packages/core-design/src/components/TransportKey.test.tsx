@@ -92,12 +92,12 @@ function dockKey(content: { text: string } | { icon: 'play' }, fontScale = 1) {
   };
 }
 
-it('draws a text face whole at the design size, as main does, at 100% text', () => {
+it('draws a text face whole at the label size at 100% text', () => {
   const { shrink, face, drawnSize } = dockKey({ text: '100%' });
   expect(shrink).toBeUndefined();
   expect(face?.numberOfLines).toBeUndefined();
   expect(face?.children).toBe('100%');
-  expect(drawnSize).toBe(textRoles.dockKey.size);
+  expect(drawnSize).toBe(textRoles.transportKeyLabel.size);
 });
 
 it('keeps a text face at its design size and whole at 200% text', () => {
@@ -107,7 +107,7 @@ it('keeps a text face at its design size and whole at 200% text', () => {
   );
   expect(shrink).toBeUndefined();
   expect(face?.numberOfLines).toBeUndefined();
-  expect(drawnSize * GROWN_FONT_SCALE).toBe(textRoles.dockKey.size);
+  expect(drawnSize * GROWN_FONT_SCALE).toBe(textRoles.transportKeyLabel.size);
 });
 
 it('keeps an icon key at its own size', () => {

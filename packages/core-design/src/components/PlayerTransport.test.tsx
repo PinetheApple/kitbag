@@ -19,7 +19,7 @@ vi.mock('./PrimaryPlayButton.tsx', () => ({ PlayPauseButton: () => null }));
 
 const LOOP_LABEL = 'Set loop start';
 
-function loopKey(loopText?: string) {
+function loopKey() {
   keys.length = 0;
   renderToStaticMarkup(
     <ThemeProvider mode="dark">
@@ -27,7 +27,6 @@ function loopKey(loopText?: string) {
         playing={{ value: 0 } as SharedValue<number>}
         loopActive={false}
         loopLabel={LOOP_LABEL}
-        {...(loopText === undefined ? {} : { loopText })}
         skipSeconds={10}
         onLoop={vi.fn()}
         onSkip={vi.fn()}
@@ -38,14 +37,8 @@ function loopKey(loopText?: string) {
   return keys.find((key) => key.accessibilityLabel === LOOP_LABEL);
 }
 
-it('draws the loop key as a repeat icon by default', () => {
+it('draws the loop key as a repeat icon', () => {
   const key = loopKey();
   expect(key?.icon).toBe('repeat');
   expect(key?.text).toBeUndefined();
-});
-
-it('draws the loop key as text when given one', () => {
-  const key = loopKey('A|B');
-  expect(key?.text).toBe('A|B');
-  expect(key?.icon).toBeUndefined();
 });

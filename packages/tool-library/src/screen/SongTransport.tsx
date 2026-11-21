@@ -14,7 +14,6 @@ import {
 } from '@kitbag/core-state';
 import { useCallback, useState, type ReactNode } from 'react';
 
-import { LOOP_KEY_TEXT } from '../logic/viewText.ts';
 import { SongSpeedSheet } from './SongSpeedSheet.tsx';
 
 export interface SongTransportProps {
@@ -52,7 +51,6 @@ export function SongTransport({
           playing={playing}
           loopActive={loop.kind !== 'off'}
           loopLabel={loopKeyLabel(loop)}
-          loopText={LOOP_KEY_TEXT}
           skipSeconds={SKIP_SECONDS}
           onLoop={onLoop}
           onSkip={skip}

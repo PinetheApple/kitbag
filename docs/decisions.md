@@ -1305,3 +1305,5 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   not isolated. Measured while playing: one single-node spoken-position event a
   second from the scrubber while any accessibility service is on, and about 20–29%
   UI-thread CPU. The hypothesis is that these two account for it.
+
+- **2026-11-21 · Loop key icon (§6.3, #610)** — The song player's loop key shows the loop icon the stem player uses, not `design/kitbag-song-player.html`'s "A|B" text. **[owner, 2026-11-21]**

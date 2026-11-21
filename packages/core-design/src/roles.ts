@@ -289,6 +289,7 @@ export const textRoles = {
   stepInlineValue: { family: display, weight: 500, size: 12.5, tabular: true },
   transportKey: { family: display, weight: 400, size: iconSizes.transport },
   dockKey: { family: display, weight: 400, size: iconSizes.dockKey },
+  transportKeyLabel: { family: display, weight: 500, size: 13 },
   sheetTitle: { family: display, weight: 500, size: 14 },
   sheetTitleLarge: { family: display, weight: 500, size: 16 },
   sheetNumeral: {
