@@ -1284,12 +1284,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   the UI thread, so no View transform or layout changes per frame. Rationale: such a
   change sends a subtree accessibility event about every 100 ms while a song plays,
   which makes every accessibility read refetch the screen. Skia was built and
-  measured (PR #606) on the same emulator and not taken. Dump ms while playing and
+  measured (PR #606) on the same emulator and is recommended against. Dump ms while playing and
   UI-thread CPU: stem player SVG 3.0 s at about 29% against Skia 9.6 s at 92–95%;
   song player 3.0 against 3.1 s; Songs with the mini-player 2.1 against 3.3 s;
   paused 2.0 s for both. Accessibility content-change events per 10 s: 0–11 for
   both, against 56–98 on the old View transforms. Skia added about 30 MB to the
-  release APK and needs a from-source build for F-Droid. The remaining gap of about
-  1 s, playing against paused, is the scrubber's spoken position, which updates once
-  a second while any accessibility service is on (one node), plus per-frame drawing
-  under software GL. **[owner, 2026-11-21]**
+  release APK and needs a from-source build for F-Droid. Choosing Skia was the
+  owner's call **[owner, 2026-11-21]**; the switch to SVG is a recommendation
+  **[REC, pending owner]**. Each frame still costs a UI-thread Fabric commit plus an
+  SvgView bitmap redraw. The remaining gap of about 1 s, playing against paused, is
+  not isolated. Measured while playing: one single-node spoken-position event a
+  second from the scrubber while any accessibility service is on, and about 20–29%
+  UI-thread CPU. The hypothesis is that these two account for it.

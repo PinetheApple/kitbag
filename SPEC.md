@@ -2309,7 +2309,7 @@ retype them.
 | Native build | The existing CMake for `native/audio_core` is consumed by the Android Gradle `externalNativeBuild` and an iOS podspec. **The C++ does not move.** |
 | Styling | **NativeWind 5 (preview) + Tailwind v4**, consuming §12.2's tokens. NativeWind 5 has not shipped GA — the reference pin is `nativewind@5.0.0-preview.3` with `tailwindcss@^4`, `@tailwindcss/postcss`, and `lightningcss` held at `1.30.1`. A pre-release dependency is a material fact on the F-Droid path, where the whole argument rests on one precedent's recipe. The tokens stay the single source of truth — §13.8.1. |
 | Waveform rendering | `react-native-svg` elements with Reanimated animated props (UI thread). Skia was measured and not taken: see the 2026-11-21 entry in `docs/decisions.md`. |
-| Animation | Reanimated 3 (§13.3) + Gesture Handler for swipe-anywhere. |
+| Animation | Reanimated 4 (§13.3) + Gesture Handler for swipe-anywhere. |
 | DB | Drizzle + op-sqlite (§11.1). |
 
 #### 13.8.1 Styling — NativeWind, on §12.2's terms
