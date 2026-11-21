@@ -27,11 +27,13 @@ const display = vi.hoisted(() => ({
   running: false,
   hintSeen: true,
   runRows: 2,
+  windowHeight: 800,
 }));
 const INITIAL_DISPLAY = { ...display };
 const hint = vi.hoisted(() => ({ props: null as Props | null }));
 const scroll = vi.hoisted(() => ({ props: null as Props | null }));
 const zone = vi.hoisted(() => ({ props: null as Props | null }));
+const swipes = vi.hoisted(() => [] as { readonly enabled: boolean }[]);
 
 vi.mock('./EndedSetlistSnackbar.tsx', () => ({
   EndedSetlistSnackbar: () => null,
@@ -46,10 +48,9 @@ vi.mock('react-native', async () => {
         props.children,
       ),
     Text: (props: Props) => h('div', null, props.children),
-    Platform: { OS: 'android' },
     useWindowDimensions: () => ({
       width: 360,
-      height: 800,
+      height: display.windowHeight,
       fontScale: display.fontScale,
     }),
   };
@@ -72,7 +73,7 @@ vi.mock('@kitbag/core-design', async (original) => ({
     build({ color: {} }),
   textRoles: {},
   textStyle: () => ({}),
-  withAlpha: () => '',
+  fadeToClear: () => ({}),
 }));
 
 vi.mock('@kitbag/core-state', () => ({
@@ -86,6 +87,10 @@ vi.mock('@kitbag/core-state', () => ({
     select({ seen: display.hintSeen, dismiss: () => undefined }),
 }));
 
+vi.mock('../logic/belowTempo.ts', async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  belowTempoReserve: () => 0,
+}));
 vi.mock('../library/useLibraryRefresh.ts', () => ({
   useLibraryRefresh: () => undefined,
 }));
@@ -102,7 +107,16 @@ vi.mock('./usePracticeSettings.ts', () => ({
 vi.mock('./useStatusRunRows.ts', () => ({
   useStatusRunRows: () => display.runRows,
 }));
-vi.mock('./useTempoSwipe.ts', () => ({ useTempoSwipe: () => ({}) }));
+vi.mock('./useTempoSwipe.ts', () => ({
+  useTempoSwipe: (
+    _bpm: unknown,
+    _onTempo: unknown,
+    options: { readonly enabled: boolean },
+  ) => {
+    swipes.push(options);
+    return {};
+  },
+}));
 vi.mock('../logic/statusRows.ts', () => ({
   practiceBadgeCount: () => 0,
   restLegend: () => null,
@@ -341,12 +355,16 @@ describe('MetronomeScreen body that does not fit', () => {
   const BODY = 300;
   const OVERFLOWING = 400;
   const FITTING = 250;
+  const ROOMY_WINDOW = metronome.compactBelowHeight;
 
-  function measure(body: number, content: number) {
+  function layOutBody(body: number) {
     const onLayout = scroll.props?.onLayout as (event: unknown) => void;
     act(() => {
       onLayout({ nativeEvent: { layout: { y: 0, height: body } } });
     });
+  }
+
+  function sizeContent(content: number) {
     const onSize = scroll.props?.onContentSizeChange as (
       width: number,
       height: number,
@@ -355,6 +373,13 @@ describe('MetronomeScreen body that does not fit', () => {
       onSize(0, content);
     });
   }
+
+  function measure(body: number, content: number) {
+    layOutBody(body);
+    sizeContent(content);
+  }
+
+  const screenSwipeEnabled = () => swipes.at(-2)?.enabled;
 
   function inScroll(screen: ReactTestRenderer, type: ElementType): number {
     return screen.root.findByType(ScrollView).findAllByType(type).length;
@@ -372,18 +397,70 @@ describe('MetronomeScreen body that does not fit', () => {
     const screen = mountScreen();
     measure(BODY, FITTING);
     expect(zone.props?.tight).toBe(false);
+    expect(zone.props?.swipeAnywhere).toBe(true);
+    expect(screenSwipeEnabled()).toBe(true);
     expect(scroll.props?.showsVerticalScrollIndicator).toBe(false);
+    expect(flatStyle(scroll.props?.contentContainerStyle).paddingBottom).toBe(
+      pinnedStackScrollSlack(false, 1, COMPACT_GAP),
+    );
     expect(screen.root.findAllByProps({ testID: 'scroll-fade' })).toHaveLength(
       0,
     );
   });
 
-  it('tightens the tempo block once the controls overflow, and keeps it', () => {
+  it('judges nothing from a content size that lands before the body is laid out', () => {
+    mountScreen();
+    sizeContent(OVERFLOWING);
+    expect(zone.props?.tight).toBe(false);
+    expect(scroll.props?.scrollEnabled).toBe(false);
+  });
+
+  it('tightens the tempo block once the compact controls overflow, and keeps it', () => {
     mountScreen();
     measure(BODY, OVERFLOWING);
     expect(zone.props?.tight).toBe(true);
-    measure(BODY, FITTING);
+    sizeContent(FITTING);
     expect(zone.props?.tight).toBe(true);
+  });
+
+  it('leaves a roomy window that fits once compact with the full tempo block', () => {
+    display.windowHeight = ROOMY_WINDOW;
+    mountScreen();
+    measure(BODY, OVERFLOWING);
+    expect(zone.props?.tight).toBe(false);
+    sizeContent(FITTING);
+    expect(zone.props?.tight).toBe(false);
+  });
+
+  it('tightens a roomy window only when it still overflows once compact', () => {
+    display.windowHeight = ROOMY_WINDOW;
+    mountScreen();
+    measure(BODY, OVERFLOWING);
+    expect(zone.props?.tight).toBe(false);
+    sizeContent(OVERFLOWING);
+    expect(zone.props?.tight).toBe(true);
+  });
+
+  it('decides overflow without counting its own fade padding', () => {
+    mountScreen();
+    const justOver = BODY + 1;
+    const justUnder = BODY - 1;
+    measure(BODY, justOver);
+    expect(scroll.props?.scrollEnabled).toBe(true);
+    sizeContent(justUnder + metronome.scrollFade);
+    expect(scroll.props?.scrollEnabled).toBe(false);
+    sizeContent(justOver);
+    expect(scroll.props?.scrollEnabled).toBe(true);
+  });
+
+  it('says swipe anywhere again once a tight block fits and the gesture is back', () => {
+    mountScreen();
+    measure(BODY, OVERFLOWING);
+    expect(zone.props?.swipeAnywhere).toBe(false);
+    sizeContent(FITTING);
+    expect(zone.props?.tight).toBe(true);
+    expect(screenSwipeEnabled()).toBe(true);
+    expect(zone.props?.swipeAnywhere).toBe(true);
   });
 
   it('cues overflowing controls with a drawn scroll bar and a bottom fade', () => {

@@ -1,14 +1,11 @@
 import {
   createThemedStyles,
+  fadeToClear,
   metronome,
   space,
   textRoles,
   textStyle,
-  withAlpha,
 } from '@kitbag/core-design';
-import { Platform } from 'react-native';
-
-const FADED_OUT = 0;
 
 export const useMetronomeScreenStyles = createThemedStyles((theme) => ({
   screen: {
@@ -54,11 +51,7 @@ export const useMetronomeScreenStyles = createThemedStyles((theme) => ({
     bottom: 0,
     height: metronome.scrollFade,
     pointerEvents: 'none',
-    ...(Platform.OS === 'web'
-      ? { backgroundColor: theme.color.bg }
-      : {
-          experimental_backgroundImage: `linear-gradient(to top, ${theme.color.bg}, ${withAlpha(theme.color.bg, FADED_OUT)})`,
-        }),
+    ...fadeToClear(theme.color.bg, 'to top'),
   },
   notes: {
     ...textStyle(textRoles.fieldLabel),

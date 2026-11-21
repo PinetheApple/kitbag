@@ -1,5 +1,6 @@
 import { Snackbar } from '@kitbag/core-design';
 import { SKIPPED_STEM_SONG } from '@kitbag/core-state';
+import { useCallback, useState } from 'react';
 
 import { ABOVE_TRANSPORT } from './snackbarPlacement.ts';
 
@@ -23,4 +24,15 @@ export function SkippedSongSnackbar({
       onTimeout={onDone}
     />
   );
+}
+
+export function useSkippedNotice() {
+  const [shownAt, setShownAt] = useState<number | null>(null);
+  const show = useCallback(() => {
+    setShownAt(Date.now());
+  }, []);
+  const hide = useCallback(() => {
+    setShownAt(null);
+  }, []);
+  return { shownAt, show, hide };
 }

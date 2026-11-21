@@ -32,6 +32,7 @@ export default defineConfig({
       'src/screen/PracticeSections.test.tsx',
       'src/screen/MeterSheet.test.tsx',
       'src/screen/PolyStrip.test.tsx',
+      'src/screen/SwipeTempoZone.test.tsx',
     ],
     alias: {
       '@kitbag/core-native': stub('../core-native/src/pure.ts'),

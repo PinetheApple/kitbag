@@ -38,19 +38,21 @@ import { usePendingPractice } from './PracticeSummarySheet.tsx';
 import { PresetRow } from './PresetRow.tsx';
 import { StatusStack } from './StatusStack.tsx';
 import { EndedSetlistSnackbar } from './EndedSetlistSnackbar.tsx';
-import { SkippedSongSnackbar } from './SkippedSongSnackbar.tsx';
+import {
+  SkippedSongSnackbar,
+  useSkippedNotice,
+} from './SkippedSongSnackbar.tsx';
 import { SongClickSnackbar } from './SongClickSnackbar.tsx';
 import { SwipeHint } from './SwipeHint.tsx';
 import { SwipeTempoZone } from './SwipeTempoZone.tsx';
 import { Transport } from './Transport.tsx';
 import { UnsavedSnackbar } from './UnsavedSnackbar.tsx';
 import { useEndPracticeOnLeave } from './useEndPracticeOnLeave.ts';
+import { useControlsFit } from './useControlsFit.ts';
 import { useHoldEngine } from './useHoldEngine.ts';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
-import { useNoteStrip, useSkippedNotice } from './useMetronomeNotes.ts';
-import { useScreenDensity } from './useScreenDensity.ts';
-import { useTightTempo } from './useTightTempo.ts';
+import { useNoteStrip } from './useMetronomeNotes.ts';
 import { useStatusRunRows } from './useStatusRunRows.ts';
 import { usePracticeSettings } from './usePracticeSettings.ts';
 
@@ -115,8 +117,6 @@ export function MetronomeScreen({
   const [bodyTop, setBodyTop] = useState(0);
   const [zone, setZone] = useState<ZoneFrame>({ top: 0, height: 0 });
   const hintShown = showSwipeHint(hintSeen, zone.height, summaryShown);
-  const [bodyHeight, setBodyHeight] = useState(0);
-  const [contentHeight, setContentHeight] = useState(0);
   const tapTimes = useRef<readonly number[]>([]);
 
   const setTempoEndingTapSeries = useCallback(
@@ -135,7 +135,20 @@ export function MetronomeScreen({
     [dismissHint, setTempoEndingTapSeries],
   );
 
-  const scrollable = Math.round(contentHeight) > Math.round(bodyHeight);
+  const layoutKey = [
+    window.width,
+    window.height,
+    window.fontScale,
+    strip === null,
+  ].join('|');
+  const {
+    scrollable,
+    density,
+    tight,
+    fadePadding,
+    handleBodyLayout,
+    handleContentSize,
+  } = useControlsFit(window.height, layoutKey);
   const screenSwipe = useTempoSwipe(frame.currentBpm, handleSwipeOrTypedTempo, {
     enabled: !scrollable,
   });
@@ -192,14 +205,6 @@ export function MetronomeScreen({
     setBodyTop(event.nativeEvent.layout.y);
   }, []);
 
-  const handleBodyLayout = useCallback((event: LayoutChangeEvent) => {
-    setBodyHeight(event.nativeEvent.layout.height);
-  }, []);
-
-  const handleContentSize = useCallback((_width: number, height: number) => {
-    setContentHeight(height);
-  }, []);
-
   const handleZoneLayout = useCallback((event: LayoutChangeEvent) => {
     const { y, height } = event.nativeEvent.layout;
     setZone({ top: y, height });
@@ -211,14 +216,6 @@ export function MetronomeScreen({
   );
 
   const dotsWidth = window.width - space.screenInset * 2;
-  const layoutKey = [
-    window.width,
-    window.height,
-    window.fontScale,
-    strip === null,
-  ].join('|');
-  const density = useScreenDensity(window.height, layoutKey, scrollable);
-  const tight = useTightTempo(layoutKey, scrollable);
   const bodyGap =
     density === 'compact' ? metronome.bodyGapCompact : space.sectionGap;
   const topGap = useMemo(() => ({ marginTop: bodyGap }), [bodyGap]);
@@ -246,10 +243,9 @@ export function MetronomeScreen({
   const scrollSlack = useMemo(
     () => ({
       paddingBottom:
-        pinnedStackScrollSlack(running, fontScale, bodyGap) +
-        (scrollable ? metronome.scrollFade : 0),
+        pinnedStackScrollSlack(running, fontScale, bodyGap) + fadePadding,
     }),
-    [running, fontScale, bodyGap, scrollable],
+    [running, fontScale, bodyGap, fadePadding],
   );
   const status = (
     <StatusStack
@@ -297,6 +293,7 @@ export function MetronomeScreen({
                   bpm={bpm}
                   density={density}
                   tight={tight}
+                  swipeAnywhere={!scrollable}
                   currentBpm={frame.currentBpm}
                   barPhase={frame.barPhase}
                   onTypeTempo={handleOpenNumpad}

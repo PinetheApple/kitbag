@@ -1,5 +1,5 @@
 import { useLibrary } from '@kitbag/core-state';
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import { noteStrip, type NoteStrip } from '../logic/noteStrip.ts';
 
@@ -13,15 +13,4 @@ export function useNoteStrip(): NoteStrip | null {
     );
   });
   return useMemo(() => noteStrip(songLoaded, notes), [songLoaded, notes]);
-}
-
-export function useSkippedNotice() {
-  const [shownAt, setShownAt] = useState<number | null>(null);
-  const show = useCallback(() => {
-    setShownAt(Date.now());
-  }, []);
-  const hide = useCallback(() => {
-    setShownAt(null);
-  }, []);
-  return { shownAt, show, hide };
 }

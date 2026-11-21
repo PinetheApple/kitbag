@@ -12,9 +12,11 @@ import {
   textStyle,
   typography,
 } from '@kitbag/core-design';
+import { BPM_BOUNDS } from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
 import {
   Pressable,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -61,17 +63,17 @@ const NUMERAL_MAX_SCALE: Readonly<Record<ScreenDensity, number | undefined>> = {
 const ARROW_SHORTFALL = minTouchTargetDp - iconSizes.chevron;
 
 const TIGHT_NUMERAL = { fontSize: metronome.tempoNumeralTight };
-// Grows with the text no larger than the compact numeral it stands in for.
 const TIGHT_NUMERAL_MAX_SCALE =
   metronome.tempoNumeralCompact / metronome.tempoNumeralTight;
-const TIGHT_ARROW_HIT_SLOP: Readonly<Insets> = {
+const WIDEST_BPM = String(BPM_BOUNDS.max);
+const TIGHT_ARROW_REACH: Readonly<Insets> = {
   top: ARROW_SHORTFALL / 2,
   bottom: ARROW_SHORTFALL / 2,
 };
 
 // Each 13dp chevron's 48dp target takes the zone padding beside it; the rest
 // overlaps the readout or caption, and zIndex lets the arrow win there.
-function arrowHitSlop(
+function arrowReach(
   density: ScreenDensity,
 ): Readonly<Record<TempoArrow, Insets>> {
   const roomAboveUp = ZONE_PADDING[density].top;
@@ -89,11 +91,11 @@ function arrowHitSlop(
   };
 }
 
-const ARROW_HIT_SLOP: Readonly<
+const ARROW_REACH: Readonly<
   Record<ScreenDensity, Readonly<Record<TempoArrow, Insets>>>
 > = {
-  roomy: arrowHitSlop('roomy'),
-  compact: arrowHitSlop('compact'),
+  roomy: arrowReach('roomy'),
+  compact: arrowReach('compact'),
 };
 
 const ARROW_LABEL: Readonly<Record<TempoArrow, string>> = {
@@ -105,6 +107,7 @@ interface SwipeTempoZoneProps {
   readonly bpm: number;
   readonly density: ScreenDensity;
   readonly tight: boolean;
+  readonly swipeAnywhere: boolean;
   readonly currentBpm: SharedValue<number>;
   readonly barPhase: SharedValue<number>;
   readonly onTypeTempo: () => void;
@@ -114,6 +117,7 @@ interface SwipeTempoZoneProps {
 interface TempoArrowKeyProps {
   readonly arrow: TempoArrow;
   readonly reach: Insets;
+  readonly tight?: boolean;
   readonly onNudge: (delta: number) => void;
 }
 
@@ -131,6 +135,12 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     minWidth: minTouchTargetDp,
     zIndex: 1,
+  },
+  tightArrow: {
+    width: minTouchTargetDp,
+  },
+  ghost: {
+    opacity: 0,
   },
   // A TextInput claims every touch that lands on it natively, ignoring its own
   // pointerEvents, and that claim cancels the screen's tempo pan (#125).
@@ -153,7 +163,12 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-function TempoArrowKey({ arrow, reach, onNudge }: TempoArrowKeyProps) {
+function TempoArrowKey({
+  arrow,
+  reach,
+  tight = false,
+  onNudge,
+}: TempoArrowKeyProps) {
   const styles = useStyles();
   const handlePress = useCallback(() => {
     onNudge(tempoArrowDelta(arrow));
@@ -162,7 +177,7 @@ function TempoArrowKey({ arrow, reach, onNudge }: TempoArrowKeyProps) {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={ARROW_LABEL[arrow]}
-      style={styles.arrow}
+      style={[styles.arrow, tight && styles.tightArrow]}
       hitSlop={reach}
       onPress={handlePress}
     >
@@ -175,10 +190,16 @@ function TempoArrowKey({ arrow, reach, onNudge }: TempoArrowKeyProps) {
   );
 }
 
+function tempoCaption(bpm: number, swipeAnywhere: boolean): string {
+  const caption = `BPM · ${tempoMarking(bpm)}`;
+  return swipeAnywhere ? `${caption} · SWIPE ANYWHERE` : caption;
+}
+
 export function SwipeTempoZone({
   bpm,
   density,
   tight,
+  swipeAnywhere,
   currentBpm,
   barPhase,
   onTypeTempo,
@@ -196,11 +217,21 @@ export function SwipeTempoZone({
     () => (tight ? TIGHT_NUMERAL : { fontSize: NUMERAL_SIZE[density] }),
     [tight, density],
   );
+  const maxScale = tight ? TIGHT_NUMERAL_MAX_SCALE : NUMERAL_MAX_SCALE[density];
   // `text` is the channel an animated TextInput redraws from without a render.
   const readout = useAnimatedProps(() => {
     const text = Math.round(currentBpm.value).toString();
     return { text, defaultValue: text } as unknown as Partial<TextInputProps>;
   });
+  const input = (
+    <AnimatedTextInput
+      editable={false}
+      underlineColorAndroid="transparent"
+      maxFontSizeMultiplier={maxScale}
+      style={[styles.bpm, numeral, tight && StyleSheet.absoluteFill]}
+      animatedProps={readout}
+    />
+  );
   const reading = (
     <Pressable
       style={styles.readout}
@@ -210,16 +241,21 @@ export function SwipeTempoZone({
       accessibilityValue={{ text: `${String(bpm)} BPM` }}
       onPress={onTypeTempo}
     >
-      <AnimatedTextInput
-        editable={false}
-        underlineColorAndroid="transparent"
-        maxFontSizeMultiplier={
-          tight ? TIGHT_NUMERAL_MAX_SCALE : NUMERAL_MAX_SCALE[density]
-        }
-        style={[styles.bpm, numeral]}
-        animatedProps={readout}
-      />
+      {tight ? (
+        <Text
+          maxFontSizeMultiplier={maxScale}
+          style={[styles.bpm, numeral, styles.ghost]}
+          importantForAccessibility="no"
+          accessibilityElementsHidden
+        >
+          {WIDEST_BPM}
+        </Text>
+      ) : null}
+      {input}
     </Pressable>
+  );
+  const caption = (
+    <Text style={styles.sub}>{tempoCaption(bpm, swipeAnywhere)}</Text>
   );
   const sweep = <BarSweep barPhase={barPhase} gap={SWEEP_GAP[density]} />;
   if (tight) {
@@ -228,17 +264,19 @@ export function SwipeTempoZone({
         <View style={styles.tightRow}>
           <TempoArrowKey
             arrow="down"
-            reach={TIGHT_ARROW_HIT_SLOP}
+            reach={TIGHT_ARROW_REACH}
+            tight
             onNudge={onNudge}
           />
           {reading}
           <TempoArrowKey
             arrow="up"
-            reach={TIGHT_ARROW_HIT_SLOP}
+            reach={TIGHT_ARROW_REACH}
+            tight
             onNudge={onNudge}
           />
         </View>
-        <Text style={styles.sub}>BPM · {tempoMarking(bpm)}</Text>
+        {caption}
         {sweep}
       </View>
     );
@@ -247,14 +285,14 @@ export function SwipeTempoZone({
     <View style={[styles.zone, zonePadding]}>
       <TempoArrowKey
         arrow="up"
-        reach={ARROW_HIT_SLOP[density].up}
+        reach={ARROW_REACH[density].up}
         onNudge={onNudge}
       />
       {reading}
-      <Text style={styles.sub}>BPM · {tempoMarking(bpm)} · SWIPE ANYWHERE</Text>
+      {caption}
       <TempoArrowKey
         arrow="down"
-        reach={ARROW_HIT_SLOP[density].down}
+        reach={ARROW_REACH[density].down}
         onNudge={onNudge}
       />
       {sweep}
