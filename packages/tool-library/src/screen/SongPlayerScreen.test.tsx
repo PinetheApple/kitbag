@@ -97,6 +97,11 @@ describe('the song player layout', () => {
     expect(styleAround(mount(), 'Chip').flexDirection).toBe('column');
   });
 
+  it('keeps the icon beside the text when scaled', () => {
+    display.scaled = true;
+    expect(styleAround(mount(), 'RowIcon').flexDirection).toBe('row');
+  });
+
   it('draws the metronome icon on a card with a grid', () => {
     expect(lockIconOf(mount())).toBe('metronome');
   });

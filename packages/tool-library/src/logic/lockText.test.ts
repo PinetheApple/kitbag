@@ -135,7 +135,7 @@ describe('lockIcon', () => {
     (badge) => {
       expect(iconOf(badge)).toEqual({
         name: 'error',
-        color: 'red',
+        color: 'redInk',
         border: 'line',
       });
     },

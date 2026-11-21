@@ -103,7 +103,7 @@ export interface LockIcon {
   readonly border: ColorToken;
 }
 
-const REST_ICON = { color: 'text', border: 'line' } as const;
+const PLAIN_TILE = { color: 'text', border: 'line' } as const;
 
 export function lockIcon(
   badge: SongBadge,
@@ -113,14 +113,14 @@ export function lockIcon(
   switch (badge) {
     case 'pending':
     case 'analyzing':
-      return { name: 'analyzing', ...REST_ICON };
+      return { name: 'analyzing', ...PLAIN_TILE };
     case 'failed':
     case 'noGrid':
-      return { name: 'error', color: 'red', border: 'line' };
+      return { ...PLAIN_TILE, name: 'error', color: 'redInk' };
     case 'grid':
       return click
         ? { name: 'metronome', color: accentInk, border: 'accentDim' }
-        : { name: 'metronome', ...REST_ICON };
+        : { name: 'metronome', ...PLAIN_TILE };
   }
 }
 
