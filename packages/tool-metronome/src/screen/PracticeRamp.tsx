@@ -3,6 +3,7 @@ import {
   metronomeSheet,
   SegmentedControl,
   SheetHint,
+  SHEET_TOUCH_ROOM,
   space,
   StepControl,
   Switch,
@@ -141,7 +142,7 @@ export function PracticeRamp({ onType }: PracticeRampProps) {
             neighbourGapDp={{
               top: unshared(metronomeSheet.practiceSectionV),
               bottom: space.controlGap,
-              right: 0,
+              right: unshared(SHEET_TOUCH_ROOM),
             }}
             accessibilityLabel="Tempo ramp"
             value={enabled}

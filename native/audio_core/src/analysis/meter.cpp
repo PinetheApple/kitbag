@@ -27,7 +27,7 @@ double PhaseContrast(
   double off = 0.0;
   size_t on_count = 0;
   for (size_t i = 0; i < beat_sd.size(); ++i) {
-    if (static_cast<int>((i + 1) % beats_per_bar) == phase) {
+    if (PositionAfter(i, beats_per_bar) == phase) {
       on += beat_sd[i];
       ++on_count;
     } else {

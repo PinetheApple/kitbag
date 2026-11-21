@@ -102,6 +102,7 @@ type Props = Readonly<{
   ref?: unknown;
   entering?: unknown;
   style?: unknown;
+  contentContainerStyle?: unknown;
   children?: ReactNode;
 }>;
 
@@ -159,6 +160,35 @@ it('caps the sheet below the status bar so tall content scrolls inside it', () =
   expect(slot.marginTop).toBe(STATUS_BAR);
 });
 
+const SIDES = [
+  { side: 'Top', axis: 'Vertical' },
+  { side: 'Bottom', axis: 'Vertical' },
+  { side: 'Left', axis: 'Horizontal' },
+  { side: 'Right', axis: 'Horizontal' },
+] as const;
+
+function inset(
+  style: Record<string, unknown>,
+  prop: 'margin' | 'padding',
+  { side, axis }: (typeof SIDES)[number],
+) {
+  return Number(style[prop + side] ?? style[prop + axis] ?? style[prop] ?? 0);
+}
+
+it.each(SIDES)(
+  'insets the content by as much as the scroll frame reaches out on the $side',
+  (edge) => {
+    const sheet = child(child(openSheet(), 1), 1);
+    const scrollFrame = child(sheet, 1);
+    const scroll = child(scrollFrame, 0);
+    const reach = -inset(flat(scrollFrame.props.style), 'margin', edge);
+    expect(reach).toBeGreaterThan(0);
+    expect(
+      inset(flat(scroll.props.contentContainerStyle), 'padding', edge),
+    ).toBe(reach);
+  },
+);
+
 async function titleGapStyle(os: string, mode: ThemeMode) {
   const { SHEET_TOUCH_ROOM } = await import('./Sheet.tsx');
   platform.OS = os;
@@ -168,7 +198,12 @@ async function titleGapStyle(os: string, mode: ThemeMode) {
   shown.mode = 'dark';
   const scrollFrame = child(sheet, 1);
   const [scroll, cover] = [child(scrollFrame, 0), child(scrollFrame, 1)];
-  expect(flat(scrollFrame.props.style).marginVertical).toBe(-SHEET_TOUCH_ROOM);
+  expect(
+    inset(flat(scrollFrame.props.style), 'margin', {
+      side: 'Top',
+      axis: 'Vertical',
+    }),
+  ).toBe(-SHEET_TOUCH_ROOM);
   expect(scroll.type).toBe('ScrollView');
   const style = flat(cover.props.style);
   expect(style).toMatchObject({

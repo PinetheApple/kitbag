@@ -158,18 +158,26 @@ std::vector<float> StreamedFlux(const std::vector<float>& mono) {
   return onset.TakeFlux();
 }
 
-std::vector<double> StreamedBeatSd(
+struct StreamedDownbeats {
+  std::vector<double> sd;
+  std::vector<int> qm;
+  std::vector<int> chosen;
+};
+
+StreamedDownbeats StreamDownbeats(
     const std::vector<float>& mono,
     int rate,
-    const std::vector<float>& beat_times,
-    std::vector<int>* downbeats
+    const std::vector<float>& beat_times
 ) {
   kitbag::DownbeatTracker tracker(rate, beat_times, mono.size(), kBeatsPerBar);
   for (size_t off = 0; off < mono.size(); off += kOddPiece) {
     tracker.Push(mono.data() + off, std::min(kOddPiece, mono.size() - off));
   }
-  *downbeats = tracker.Finish();
-  return tracker.beat_sd();
+  StreamedDownbeats out;
+  out.chosen = tracker.Finish();
+  out.qm = tracker.qm_downbeats();
+  out.sd = tracker.beat_sd();
+  return out;
 }
 
 kitbag::BeatResult AnalyzeStreamed(const Fixture& fx, const std::string& dir) {
@@ -250,14 +258,13 @@ void CheckFixture(const Fixture& fx, const std::filesystem::path& dir) {
   );
 
   CheckPipeline(fx, dir, ref, ref_db);
-  std::vector<int> streamed_db;
-  const std::vector<double> sd =
-      StreamedBeatSd(mono, rate, ref.beat_times, &streamed_db);
+  const StreamedDownbeats got = StreamDownbeats(mono, rate, ref.beat_times);
   kitbag_test::Check(
-      sd == ref_db.sd && streamed_db == ref_db.indices,
-      "equivalence: beat spectral differences identical to QM"
+      got.sd == ref_db.sd && got.qm == ref_db.indices &&
+          got.chosen == ref_db.indices,
+      "equivalence: beat spectral differences and bar-ones identical to QM"
   );
-  ReportSdDifference(sd, ref_db.sd);
+  ReportSdDifference(got.sd, ref_db.sd);
 }
 
 // 48 kHz, a length off every block size, and 1.3 s of leading silence so the
@@ -293,13 +300,28 @@ void CheckIrregularGrid() {
       {0.05f, 0.5f, 2.3f, 2.3f, 2.9f, 3.4f, 3.9f, 4.4f, 4.9f, 5.4f, past_end};
   const int rate = static_cast<int>(kSampleRate);
   const RefDownbeats ref = RefFindDownbeats(mono, rate, grid);
-  std::vector<int> streamed_db;
-  const std::vector<double> sd = StreamedBeatSd(mono, rate, grid, &streamed_db);
+  const StreamedDownbeats got = StreamDownbeats(mono, rate, grid);
   kitbag_test::Check(
-      !ref.sd.empty() && sd == ref.sd && streamed_db == ref.indices,
+      !ref.sd.empty() && got.sd == ref.sd && got.qm == ref.indices &&
+          got.chosen == ref.indices,
       "equivalence: long, empty and past-end beats match QM DownBeat"
   );
-  ReportSdDifference(sd, ref.sd);
+  ReportSdDifference(got.sd, ref.sd);
+}
+
+void CheckStandOutDeparture() {
+  const std::vector<float> mono = MakePitchAccentMono(kBeatsPerBar, 0);
+  const int rate = static_cast<int>(kSampleRate);
+  const RefDownbeats ref = RefFindDownbeats(mono, rate, StandOutGrid());
+  const StreamedDownbeats got = StreamDownbeats(mono, rate, StandOutGrid());
+  kitbag_test::Check(
+      !ref.indices.empty() && got.qm == ref.indices,
+      "equivalence: the QM-path bar-ones match QM DownBeat under a departure"
+  );
+  kitbag_test::Check(
+      !got.chosen.empty() && got.chosen != got.qm && got.chosen[0] == 0,
+      "equivalence: the stand-out fixture departs from QM onto its accent"
+  );
 }
 
 }  // namespace
@@ -310,6 +332,7 @@ void RunEquivalenceTests(const std::filesystem::path& dir) {
   CheckFixture({"equiv_control", MakeBarToneTrack(false), 2, kSampleRate}, dir);
   CheckFixture(MakeOddFixture(), dir);
   CheckIrregularGrid();
+  CheckStandOutDeparture();
 }
 
 }  // namespace analyze_test

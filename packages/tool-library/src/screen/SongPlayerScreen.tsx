@@ -2,49 +2,36 @@ import {
   AppBar,
   Badge,
   BeatWaveform,
-  Button,
   Card,
-  Chip,
   createThemedStyles,
   screenBar,
   ScrubRow,
   songPlayer,
   space,
   stemPlayer,
-  textRoles,
-  textStyle,
-  useTextScaled,
   type AppBarAction,
   type ScrubFrame,
 } from '@kitbag/core-design';
 import {
-  bpmFact,
-  clickKeyLabel,
   framesToSeconds,
   loopEndFrames,
   useFocusedMixerHold,
   useLoopScrub,
-  useSongLibrary,
   useSongPlayer,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { CLICK_GROUP } from '../logic/clickChipText.ts';
-import {
-  barBadge,
-  barStatusOf,
-  lockBadgeOf,
-  lockText,
-} from '../logic/lockText.ts';
+import { barBadge, barStatusOf } from '../logic/lockText.ts';
 import { playedBpm } from '../logic/playedBpm.ts';
 import type { BadgeSpec } from '../logic/rowText.ts';
 import { songTitle } from '../logic/songTitle.ts';
-import { REANALYZE_LABEL } from '../logic/viewText.ts';
 import { frameAtTap } from '../logic/waveSeek.ts';
 import type { SongPlayhead, UsePlayhead } from './playhead.ts';
 import { EndedSetlistSnackbar } from './EndedSetlistSnackbar.tsx';
 import { SongClickChips } from './SongClickChips.tsx';
+import { SongLockCard } from './SongLockCard.tsx';
 import {
   SongClickSheet,
   useSongClickSheet,
@@ -59,9 +46,6 @@ import { useFollowQueueArrivals } from './useFollowQueueArrivals.ts';
 import { useLeaveOnStop } from './useLeaveOnStop.ts';
 import { useLoopHandles } from './useLoopHandles.ts';
 import { NotReady } from './NotReady.tsx';
-import { useSongFailure } from './rowFailureHooks.ts';
-
-const NO_NEIGHBOURS = {};
 
 export interface SongPlayerScreenProps {
   readonly songId: number;
@@ -85,17 +69,7 @@ const useStyles = createThemedStyles((theme) => ({
     paddingBottom: stemPlayer.bodyGap,
     gap: stemPlayer.bodyGap,
   },
-  lock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: songPlayer.lockGap,
-  },
-  lockStacked: { flexDirection: 'column', alignItems: 'flex-start' },
-  lockText: { flex: 1, minWidth: 0 },
-  lockTextStacked: { alignSelf: 'stretch' },
   bpm: { marginRight: screenBar.chipEnd },
-  lockTitle: { ...textStyle(textRoles.listTitle), color: theme.color.text },
-  lockDetail: { ...textStyle(textRoles.listFacts), color: theme.color.text2 },
 }));
 
 interface SongAppBarProps {
@@ -187,57 +161,6 @@ function SongWave({ playhead }: { readonly playhead: ScrubFrame }) {
   );
 }
 
-function LockCard({ songId }: { readonly songId: number }) {
-  const styles = useStyles();
-  const scaled = useTextScaled();
-  const click = useSongPlayer((s) => s.click);
-  const badge = useSongPlayer(lockBadgeOf);
-  const speed = useSongPlayer((s) => s.speed);
-  const bpm = bpmFact(useSongPlayer((s) => playedBpm(s.bpm, s.speed)));
-  const toggleClick = useSongPlayer((s) => s.toggleClick);
-  const reanalyze = useSongLibrary((s) => s.reanalyze);
-  const failure = useSongFailure(songId);
-  const onToggle = useCallback(() => {
-    void toggleClick();
-  }, [toggleClick]);
-  const onReanalyze = useCallback(() => {
-    void reanalyze(songId);
-  }, [reanalyze, songId]);
-  const text = lockText({
-    badge,
-    click,
-    bpmText: bpm?.text ?? null,
-    failure,
-    speed,
-  });
-  const row = (
-    <View style={[styles.lock, scaled && styles.lockStacked]}>
-      <View style={scaled ? styles.lockTextStacked : styles.lockText}>
-        <Text style={styles.lockTitle}>{text.title}</Text>
-        <Text style={styles.lockDetail}>{text.detail}</Text>
-      </View>
-      {text.action === 'click' ? (
-        <Chip
-          label={click ? 'CLICK ON' : 'CLICK OFF'}
-          active={click}
-          accessibilityLabel={clickKeyLabel(click)}
-          neighbourGapDp={NO_NEIGHBOURS}
-          onPress={onToggle}
-        />
-      ) : null}
-      {text.action === 'reanalyze' ? (
-        <Button
-          label={REANALYZE_LABEL}
-          variant="tonal"
-          size="small"
-          onPress={onReanalyze}
-        />
-      ) : null}
-    </View>
-  );
-  return click ? <Card emphasis="activeGroup">{row}</Card> : <Card>{row}</Card>;
-}
-
 interface BodyProps {
   readonly songId: number;
   readonly bottom: number;
@@ -291,7 +214,7 @@ function Body({
           <SongWave playhead={playhead} />
           <ScrubRow frame={playhead} {...scrub} loopHandles={handles} />
         </Card>
-        <LockCard songId={songId} />
+        <SongLockCard songId={songId} />
         <SongClickChips onOpen={clickSheet.open} />
       </ScrollView>
       <SongClickSheet

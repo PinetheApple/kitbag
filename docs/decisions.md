@@ -1250,3 +1250,21 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   row's label and no longer reads the stem count. Rationale: the two stacked pills
   took a column on every row and looked heavy. `design/kitbag-library.html` variant B
   draws the icon. **[owner, 2026-11-20]**
+
+- **2026-11-21 · Stand-out beat as bar one (§4.3, #435)** — The downbeat tracker
+  keeps QM-DSP's `DownBeat` phase pick, then moves bar one one beat earlier
+  when QM's pick and the position before it form a pair of the two highest
+  mean spectral changes, the pair is tighter than its clearance over the third
+  position, and that clearance exceeds the one-sided 97.5% Student's t bound
+  (degrees of freedom from the fewer-counted position; 1.96 at large counts).
+  Rationale: a beat that differs from its bar raises the change into and out
+  of it equally, so QM's maximum fell on that beat or the next by noise. The
+  earlier rule (#433) compared only against the beat after the winner and
+  moved a beat-4 approach note to bar one. A beat-4 pickup that changes more
+  than half as much as the downbeat still reads as a stand-out beat and moves
+  bar one onto beat 4. 97.5% rather than 95%: at 95% Glorious bass (1.87
+  standard errors) would move with no ground truth. No bar one moved on the 42
+  local real stems, so the benefit is shown on synthetic tones only;
+  `KB_BEAT_ANALYSIS_VERSION` goes to 6 because the returned downbeats can
+  change. `DownbeatTracker::qm_downbeats()` keeps QM's own pick for the
+  equivalence check. **[recorded]**
