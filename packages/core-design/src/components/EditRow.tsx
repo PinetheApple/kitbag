@@ -30,6 +30,7 @@ import { Icon } from './Icon.tsx';
 import { SwitchTrack } from './Switch.tsx';
 
 const LINE_BREAK_RUN = /\s*\r?\n\s*/g;
+const ONE_LINE_TAIL = { numberOfLines: 1, ellipsizeMode: 'tail' } as const;
 
 const useStyles = createThemedStyles((theme) => ({
   group: {
@@ -82,6 +83,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   muted: { color: theme.color.text3 },
   path: { flexShrink: 1 },
+  oneLine: { flexShrink: 1 },
   checkLabel: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -163,7 +165,9 @@ export function EditRow({
     return (
       <View style={[styles.row, singleLine && styles.singleLine, fixed]}>
         <Text style={styles.label}>{label}</Text>
-        <View style={styles.value}>{children}</View>
+        <View style={[styles.value, singleLine && styles.singleLine]}>
+          {children}
+        </View>
       </View>
     );
   }
@@ -175,7 +179,7 @@ export function EditRow({
       onPress={onPress}
     >
       <Text style={styles.label}>{label}</Text>
-      <View style={styles.value}>
+      <View style={[styles.value, singleLine && styles.singleLine]}>
         {children}
         <Icon name="forward" size="control" color="decor" />
       </View>
@@ -222,12 +226,21 @@ export function EditSwitchRow({
 export function EditValue({
   children,
   muted = false,
+  oneLine = false,
 }: {
   readonly children: ReactNode;
   readonly muted?: boolean;
+  readonly oneLine?: boolean;
 }) {
   const styles = useStyles();
-  return <Text style={[styles.text, muted && styles.muted]}>{children}</Text>;
+  return (
+    <Text
+      style={[styles.text, muted && styles.muted, oneLine && styles.oneLine]}
+      {...(oneLine ? ONE_LINE_TAIL : {})}
+    >
+      {children}
+    </Text>
+  );
 }
 
 export function EditPath({ children }: { readonly children: string }) {

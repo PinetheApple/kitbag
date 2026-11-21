@@ -275,8 +275,11 @@ function AboutSection({
           accessibilityRole="link"
           accessibilityLabel={`${SOURCE_ROW_LABEL}, ${SOURCE_URL}`}
           onPress={openSource}
+          singleLine
         >
-          <EditValue muted>{SOURCE_LABEL}</EditValue>
+          <EditValue muted oneLine>
+            {SOURCE_LABEL}
+          </EditValue>
         </EditRow>
         <EditRow label="Attributions" onPress={onOpenAttributions} />
       </EditGroup>
