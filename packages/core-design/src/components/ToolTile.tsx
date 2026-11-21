@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   Text,
@@ -20,6 +21,7 @@ import {
   textRoles,
 } from '../roles.ts';
 import { rowLabel } from '../rowLabel.ts';
+import { fittedStyle } from '../oneLineFit.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { packTileRows, type ToolTileSize } from '../toolGrid.ts';
@@ -146,6 +148,8 @@ export interface ToolTileProps {
   readonly status: ToolStatus;
   readonly onPress?: (() => void) | undefined;
   readonly onLongPress?: (() => void) | undefined;
+  readonly titleSizeCap?: number | undefined;
+  readonly onTitleFit?: ((size: number) => void) | undefined;
 }
 
 export function ToolTile({
@@ -155,6 +159,8 @@ export function ToolTile({
   status,
   onPress,
   onLongPress,
+  titleSizeCap,
+  onTitleFit,
 }: ToolTileProps) {
   const styles = useStyles();
   const titleFit = useOneLineFit({
@@ -163,6 +169,14 @@ export function ToolTile({
     floor: TILE_TITLE_FLOOR,
     style: styles.tileTitle,
   });
+  const fitted = titleFit.style.fontSize;
+  useEffect(() => {
+    if (fitted !== undefined) onTitleFit?.(fitted);
+  }, [fitted, onTitleFit]);
+  const titleStyle =
+    fitted === undefined || titleSizeCap === undefined || titleSizeCap >= fitted
+      ? titleFit.style
+      : fittedStyle(textRoles.tileTitle, titleSizeCap);
   const upcoming = status === 'upcoming';
   return (
     <Pressable
@@ -178,7 +192,7 @@ export function ToolTile({
       <View style={styles.tileTitleBox} onLayout={titleFit.onAvailableLayout}>
         {titleFit.measurer}
         <Text
-          style={[styles.tileTitle, titleFit.style]}
+          style={[styles.tileTitle, titleStyle]}
           numberOfLines={1}
           ellipsizeMode="tail"
         >
@@ -199,21 +213,68 @@ export interface ToolGridProps {
   readonly tiles: readonly ToolGridItem[];
 }
 
+type TitleFits = Readonly<Record<string, number>>;
+
+function sharedTitleSize(
+  fits: TitleFits,
+  tiles: readonly ToolGridItem[],
+): number | undefined {
+  const sizes = tiles
+    .map((tile) => fits[tile.id])
+    .filter((size) => size !== undefined);
+  return sizes.length === 0 ? undefined : Math.min(...sizes);
+}
+
+interface GridTileProps {
+  readonly tile: ToolGridItem;
+  readonly titleSizeCap: number | undefined;
+  readonly onTitleFit: (id: string, size: number) => void;
+}
+
+function GridTile({ tile, titleSizeCap, onTitleFit }: GridTileProps) {
+  const { id } = tile;
+  const reportFit = useCallback(
+    (size: number) => {
+      onTitleFit(id, size);
+    },
+    [id, onTitleFit],
+  );
+  return (
+    <ToolTile
+      icon={tile.icon}
+      title={tile.title}
+      subtext={tile.subtext}
+      status={tile.status}
+      onPress={tile.onPress}
+      onLongPress={tile.onLongPress}
+      titleSizeCap={titleSizeCap}
+      onTitleFit={reportFit}
+    />
+  );
+}
+
 export function ToolGrid({ tiles }: ToolGridProps) {
   const styles = useStyles();
+  const [fits, setFits] = useState<TitleFits>({});
+  const recordFit = useCallback((id: string, size: number) => {
+    setFits((current) =>
+      current[id] === size ? current : { ...current, [id]: size },
+    );
+  }, []);
+  const titleSizeCap = useMemo(
+    () => sharedTitleSize(fits, tiles),
+    [fits, tiles],
+  );
   return (
     <View style={styles.grid}>
       {packTileRows(tiles).map((row) => (
         <View key={row.map((t) => t.id).join('|')} style={styles.gridRow}>
           {row.map((tile) => (
             <View key={tile.id} style={styles.gridCell}>
-              <ToolTile
-                icon={tile.icon}
-                title={tile.title}
-                subtext={tile.subtext}
-                status={tile.status}
-                onPress={tile.onPress}
-                onLongPress={tile.onLongPress}
+              <GridTile
+                tile={tile}
+                titleSizeCap={titleSizeCap}
+                onTitleFit={recordFit}
               />
             </View>
           ))}
