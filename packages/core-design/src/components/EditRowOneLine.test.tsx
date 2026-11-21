@@ -1,6 +1,12 @@
-import type { ReactNode } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
+// react-test-renderer is deprecated, but it alone exposes host props with no DOM.
+/* eslint-disable @typescript-eslint/no-deprecated */
+import { act, type ReactNode } from 'react';
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
+import {
+  create,
+  type ReactTestInstance,
+  type ReactTestRenderer,
+} from 'react-test-renderer';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ThemeProvider } from '../ThemeProvider.tsx';
@@ -8,51 +14,52 @@ import { flatStyle } from './flatStyle.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
-const views = vi.hoisted(() => [] as Props[]);
-const texts = vi.hoisted(() => [] as Props[]);
-
 vi.mock('react-native', async (importOriginal) => {
   const { createElement: h } = await import('react');
   return {
     ...(await importOriginal<typeof import('react-native')>()),
-    View: (props: Props) => {
-      views.push(props);
-      return h('div', null, props.children);
-    },
-    Text: (props: Props) => {
-      texts.push(props);
-      return h('span', null, props.children);
-    },
+    View: (props: Props) => h('View', props),
+    Text: (props: Props) => h('Text', props),
+    Pressable: (props: Props) => h('Pressable', props),
   };
 });
 
-vi.mock('./IconGlyph.tsx', () => ({ IconGlyph: () => 'chevron' }));
+vi.mock('./IconGlyph.tsx', () => ({ IconGlyph: () => null }));
 
 const { EditRow, EditValue } = await import('./EditRow.tsx');
 
 const VALUE = 'github.com/owner/repository';
 const noop = () => undefined;
 
+function hostParent(node: ReactTestInstance): ReactTestInstance | null {
+  let parent = node.parent;
+  while (parent !== null && String(parent.type) !== 'View')
+    parent = parent.parent;
+  return parent;
+}
+
 function render(singleLine: boolean) {
-  views.length = 0;
-  texts.length = 0;
-  renderToStaticMarkup(
-    <ThemeProvider mode="dark">
-      <EditRow label="Source" singleLine={singleLine} onPress={noop}>
-        <EditValue oneLine>{VALUE}</EditValue>
-      </EditRow>
-    </ThemeProvider>,
+  let renderer: ReactTestRenderer | undefined;
+  act(() => {
+    renderer = create(
+      <ThemeProvider mode="dark">
+        <EditRow label="Source" singleLine={singleLine} onPress={noop}>
+          <EditValue oneLine ellipsizeMode="middle">
+            {VALUE}
+          </EditValue>
+        </EditRow>
+      </ThemeProvider>,
+    );
+  });
+  const value = renderer?.root.find(
+    (node) => String(node.type) === 'Text' && node.props.children === VALUE,
   );
-  const valueBox = views.find(
-    (view) =>
-      flatStyle(view.style as StyleProp<ViewStyle>).justifyContent ===
-      'flex-end',
-  );
-  const value = texts.find((text) => text.children === VALUE);
+  if (value === undefined) throw new Error('value not rendered');
+  const box = hostParent(value);
   return {
-    box: flatStyle(valueBox?.style as StyleProp<ViewStyle>),
-    value,
-    valueStyle: flatStyle(value?.style as StyleProp<TextStyle>),
+    box: flatStyle(box?.props.style as StyleProp<ViewStyle>),
+    value: value.props as Props,
+    valueStyle: flatStyle(value.props.style as StyleProp<TextStyle>),
   };
 }
 
@@ -65,9 +72,9 @@ describe('a one-line value in a pressable row', () => {
     expect(render(false).box.flexWrap).toBe('wrap');
   });
 
-  it('shrinks the value to the room left and ends it with an ellipsis', () => {
+  it('shrinks the value to the room left and cuts it where asked', () => {
     const { value, valueStyle } = render(true);
-    expect(value).toMatchObject({ numberOfLines: 1, ellipsizeMode: 'tail' });
+    expect(value).toMatchObject({ numberOfLines: 1, ellipsizeMode: 'middle' });
     expect(valueStyle.flexShrink).toBe(1);
   });
 });

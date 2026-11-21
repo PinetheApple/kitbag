@@ -12,6 +12,7 @@ import {
   View,
   type AccessibilityRole,
   type PressableStateCallbackType,
+  type TextProps,
 } from 'react-native';
 
 import {
@@ -30,7 +31,6 @@ import { Icon } from './Icon.tsx';
 import { SwitchTrack } from './Switch.tsx';
 
 const LINE_BREAK_RUN = /\s*\r?\n\s*/g;
-const ONE_LINE_TAIL = { numberOfLines: 1, ellipsizeMode: 'tail' } as const;
 
 const useStyles = createThemedStyles((theme) => ({
   group: {
@@ -82,8 +82,7 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
   },
   muted: { color: theme.color.text3 },
-  path: { flexShrink: 1 },
-  oneLine: { flexShrink: 1 },
+  shrink: { flexShrink: 1 },
   checkLabel: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -227,16 +226,18 @@ export function EditValue({
   children,
   muted = false,
   oneLine = false,
+  ellipsizeMode = 'tail',
 }: {
   readonly children: ReactNode;
   readonly muted?: boolean;
   readonly oneLine?: boolean;
+  readonly ellipsizeMode?: TextProps['ellipsizeMode'];
 }) {
   const styles = useStyles();
   return (
     <Text
-      style={[styles.text, muted && styles.muted, oneLine && styles.oneLine]}
-      {...(oneLine ? ONE_LINE_TAIL : {})}
+      style={[styles.text, muted && styles.muted, oneLine && styles.shrink]}
+      {...(oneLine ? { numberOfLines: 1, ellipsizeMode } : {})}
     >
       {children}
     </Text>
@@ -247,7 +248,7 @@ export function EditPath({ children }: { readonly children: string }) {
   const styles = useStyles();
   return (
     <Text
-      style={[styles.text, styles.path]}
+      style={[styles.text, styles.shrink]}
       numberOfLines={1}
       ellipsizeMode="head"
     >
