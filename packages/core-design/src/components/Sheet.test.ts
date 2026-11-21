@@ -170,22 +170,21 @@ const SIDES = [
 function inset(
   style: Record<string, unknown>,
   prop: 'margin' | 'padding',
-  side: (typeof SIDES)[number]['side'],
+  { side, axis }: (typeof SIDES)[number],
 ) {
-  const axis = SIDES.find((entry) => entry.side === side)?.axis ?? '';
   return Number(style[prop + side] ?? style[prop + axis] ?? style[prop] ?? 0);
 }
 
 it.each(SIDES)(
   'insets the content by as much as the scroll frame reaches out on the $side',
-  ({ side }) => {
+  (edge) => {
     const sheet = child(child(openSheet(), 1), 1);
     const scrollFrame = child(sheet, 1);
     const scroll = child(scrollFrame, 0);
-    const reach = -inset(flat(scrollFrame.props.style), 'margin', side);
+    const reach = -inset(flat(scrollFrame.props.style), 'margin', edge);
     expect(reach).toBeGreaterThan(0);
     expect(
-      inset(flat(scroll.props.contentContainerStyle), 'padding', side),
+      inset(flat(scroll.props.contentContainerStyle), 'padding', edge),
     ).toBe(reach);
   },
 );
@@ -199,9 +198,12 @@ async function titleGapStyle(os: string, mode: ThemeMode) {
   shown.mode = 'dark';
   const scrollFrame = child(sheet, 1);
   const [scroll, cover] = [child(scrollFrame, 0), child(scrollFrame, 1)];
-  expect(inset(flat(scrollFrame.props.style), 'margin', 'Top')).toBe(
-    -SHEET_TOUCH_ROOM,
-  );
+  expect(
+    inset(flat(scrollFrame.props.style), 'margin', {
+      side: 'Top',
+      axis: 'Vertical',
+    }),
+  ).toBe(-SHEET_TOUCH_ROOM);
   expect(scroll.type).toBe('ScrollView');
   const style = flat(cover.props.style);
   expect(style).toMatchObject({

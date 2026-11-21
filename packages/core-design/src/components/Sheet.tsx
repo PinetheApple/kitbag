@@ -54,8 +54,8 @@ import { useSheetPortal } from './SheetHost.tsx';
 import { useSheetCardStyle } from './useSheetCardStyle.ts';
 import { useSheetExit } from './useSheetExit.ts';
 
-// A scroll view drops every touch outside its frame, so the frame reaches this
-// far into the sheet's padding on every side, the indicator's included.
+// A scroll view drops touches outside its frame, so the frame reaches into the
+// sheet's padding on every side, and the scroll indicator sits in the padding.
 export const SHEET_TOUCH_ROOM = space.sectionGap;
 const INDICATOR_INSETS = { top: SHEET_TOUCH_ROOM, bottom: SHEET_TOUCH_ROOM };
 const SCRIM = withAlpha(palette.bg.dark, opacity.sheetScrim);
