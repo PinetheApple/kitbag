@@ -101,6 +101,13 @@ const STATUS_NOTES: Readonly<Partial<Record<SongBadge, string>>> = {
 
 const KEPT_GRID_NOTE = 're-analysis failed';
 
+export const NO_BREAK_SPACE = '\u00A0';
+const WORD_GAP = / /g;
+
+function unbroken(part: string): string {
+  return part.replace(WORD_GAP, NO_BREAK_SPACE);
+}
+
 export function songStatusBadge(badge: SongBadge): BadgeSpec {
   return STATUS_BADGES[badge];
 }
@@ -157,7 +164,7 @@ export function rowSubtitle(
     ...facts,
     ...(failure?.keptGrid === true ? [KEPT_GRID_NOTE] : []),
   ];
-  return parts.join(' · ');
+  return parts.map(unbroken).join(FACT_SEPARATOR);
 }
 
 export function playingSubtitle(row: LibraryRow, subtitle: string): string {

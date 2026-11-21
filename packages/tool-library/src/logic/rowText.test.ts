@@ -7,8 +7,10 @@ import {
 } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
+import { FACT_SEPARATOR } from '@kitbag/core-design';
 import {
   formatLength,
+  NO_BREAK_SPACE,
   playingSubtitle,
   rowBadges,
   rowSubtitle,
@@ -48,6 +50,9 @@ const STEMS: LibraryStemSetRow = {
   createdAt: new Date(0),
 };
 
+const shownSubtitle = (...args: Parameters<typeof rowSubtitle>) =>
+  rowSubtitle(...args).replaceAll(NO_BREAK_SPACE, ' ');
+
 const BARE_STEMS: LibraryStemSetRow = {
   ...STEMS,
   bpm: null,
@@ -83,8 +88,8 @@ const labels = (row: LibraryRow, status: SongBadge) =>
 
 describe('row facts line', () => {
   it('reads length · BPM for a song and length · BPM · key for a stem song', () => {
-    expect(rowSubtitle(SONG, 'grid', null)).toBe('4:10 · 158 BPM');
-    expect(rowSubtitle(STEMS, 'grid', null)).toBe('5:26 · 81 BPM · F maj');
+    expect(shownSubtitle(SONG, 'grid', null)).toBe('4:10 · 158 BPM');
+    expect(shownSubtitle(STEMS, 'grid', null)).toBe('5:26 · 81 BPM · F maj');
   });
 
   it("reads a corrected song's tempo, as the player's badge does", () => {
@@ -93,17 +98,25 @@ describe('row facts line', () => {
       bpm: 185,
       tempoCorrection: TEMPO_CORRECTION.half,
     };
-    expect(rowSubtitle(halved, 'grid', null)).toBe('4:10 · 93 BPM');
+    expect(shownSubtitle(halved, 'grid', null)).toBe('4:10 · 93 BPM');
   });
 
   it('leaves out the artist, which stays in search and speech', () => {
-    expect(rowSubtitle(SONG, 'grid', null)).not.toContain('Foo Fighters');
+    expect(shownSubtitle(SONG, 'grid', null)).not.toContain('Foo Fighters');
     expect(spokenRow(SONG, 'grid', null)).toContain('Foo Fighters');
   });
 
+  it('breaks only between facts, so a key never splits across lines', () => {
+    expect(rowSubtitle(STEMS, 'grid', null).split(FACT_SEPARATOR)).toEqual([
+      '5:26',
+      `81${NO_BREAK_SPACE}BPM`,
+      `F${NO_BREAK_SPACE}maj`,
+    ]);
+  });
+
   it('says analyzing or no beat grid instead of facts there are none of yet', () => {
-    expect(rowSubtitle(SONG, 'analyzing', null)).toBe('4:10 · analyzing…');
-    expect(rowSubtitle({ ...SONG, bpm: null }, 'failed', null)).toBe(
+    expect(shownSubtitle(SONG, 'analyzing', null)).toBe('4:10 · analyzing…');
+    expect(shownSubtitle({ ...SONG, bpm: null }, 'failed', null)).toBe(
       '4:10 · no beat grid',
     );
   });
@@ -111,23 +124,23 @@ describe('row facts line', () => {
   it('keeps the BPM and grid of a song whose re-analysis failed, and says so', () => {
     const kept: LibrarySongRow = { ...SONG, analysisStatus: 'failed' };
     const failure = { kind: 'other', keptGrid: true } as const;
-    expect(rowSubtitle(kept, 'grid', failure)).toBe(
+    expect(shownSubtitle(kept, 'grid', failure)).toBe(
       '4:10 · 158 BPM · re-analysis failed',
     );
     expect(labels(kept, 'grid')).toEqual([['GRID', 'check', 'success']]);
-    expect(rowSubtitle(SONG, 'grid', null)).not.toContain('failed');
+    expect(shownSubtitle(SONG, 'grid', null)).not.toContain('failed');
   });
 
   it('drops what is unknown', () => {
     expect(
-      rowSubtitle({ ...SONG, durationSec: 0, bpm: null }, 'pending', null),
+      shownSubtitle({ ...SONG, durationSec: 0, bpm: null }, 'pending', null),
     ).toBe('');
-    expect(rowSubtitle(BARE_STEMS, 'noGrid', null)).toBe('5:26');
+    expect(shownSubtitle(BARE_STEMS, 'noGrid', null)).toBe('5:26');
   });
 
   it('names a StemDeck key once', () => {
     expect(
-      rowSubtitle({ ...STEMS, key: 'F maj', scale: 'Major' }, 'grid', null),
+      shownSubtitle({ ...STEMS, key: 'F maj', scale: 'Major' }, 'grid', null),
     ).toBe('5:26 · 81 BPM · F maj');
   });
 });
@@ -177,7 +190,7 @@ describe('spoken row', () => {
     expect(spokenRow(named, 'grid', null)).toBe(
       'Redbone, Childish Gambino, 5 minutes 26 seconds, 81 beats per minute, key F major, Beat grid ready',
     );
-    expect(rowSubtitle(named, 'grid', null)).toBe('5:26 · 81 BPM · F maj');
+    expect(shownSubtitle(named, 'grid', null)).toBe('5:26 · 81 BPM · F maj');
   });
 
   it('speaks why analysis failed, and no BPM while analyzing', () => {
