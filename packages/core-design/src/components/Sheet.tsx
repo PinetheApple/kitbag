@@ -55,7 +55,7 @@ import { useSheetCardStyle } from './useSheetCardStyle.ts';
 import { useSheetExit } from './useSheetExit.ts';
 
 // A scroll view drops every touch outside its frame, so the frame reaches this
-// far into the sheet's padding. The right side stays put: the indicator is there.
+// far into the sheet's padding on every side, the indicator's included.
 export const SHEET_TOUCH_ROOM = space.sectionGap;
 const INDICATOR_INSETS = { top: SHEET_TOUCH_ROOM, bottom: SHEET_TOUCH_ROOM };
 const SCRIM = withAlpha(palette.bg.dark, opacity.sheetScrim);
@@ -122,8 +122,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   scrollFrame: {
     flexShrink: 1,
-    marginVertical: -SHEET_TOUCH_ROOM,
-    marginLeft: -SHEET_TOUCH_ROOM,
+    margin: -SHEET_TOUCH_ROOM,
   },
   scroll: {
     flexGrow: 0,
@@ -143,8 +142,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   content: {
     gap: space.sectionGap,
-    paddingVertical: SHEET_TOUCH_ROOM,
-    paddingLeft: SHEET_TOUCH_ROOM,
+    padding: SHEET_TOUCH_ROOM,
   },
   hint: {
     ...textStyle(textRoles.hint),

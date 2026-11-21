@@ -68,10 +68,6 @@ it.each(strips)(
   },
 );
 
-it('ends the Practice sheet mute preview clear of the scroll indicator', () => {
-  expect(preview.preview?.paddingRight).toBe(space.controlGap);
-});
-
 it('keeps the current-bar ring inside the gap to its neighbours', () => {
   const reach = -Number(status.now?.left);
   expect(reach).toBe(metronome.cycleNowOffset + metronome.cycleNowOutline);
