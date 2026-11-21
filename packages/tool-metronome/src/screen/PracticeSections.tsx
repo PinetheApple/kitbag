@@ -40,6 +40,7 @@ const usePreviewStyles = createThemedStyles((theme) => ({
   preview: {
     flexDirection: 'row',
     gap: space.barPreviewGap,
+    paddingRight: space.controlGap,
   },
   cell: {
     flex: 1,
