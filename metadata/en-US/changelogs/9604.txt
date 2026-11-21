@@ -1,0 +1,1 @@
+• Bar one now lands on the right beat in songs where one beat in each bar stands out, such as an accent or a different note.
