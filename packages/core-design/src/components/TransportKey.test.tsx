@@ -3,7 +3,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it, vi } from 'vitest';
 
-import { opacity } from '../roles.ts';
+import { opacity, textRoles } from '../roles.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { TransportKey } from './TransportKey.tsx';
 import { flatStyle } from './flatStyle.test-helper.ts';
@@ -25,6 +25,15 @@ vi.mock('react-native', async (original) => {
 });
 
 vi.mock('./IconGlyph.tsx', () => ({ InlineIcon: () => null }));
+
+const faces = vi.hoisted(() => [] as Props[]);
+
+vi.mock('./DesignFloorOneLineText.tsx', () => ({
+  DesignFloorOneLineText: (props: Props) => {
+    faces.push(props);
+    return null;
+  },
+}));
 
 function rendered(muted: boolean, disabled: boolean) {
   pressables.length = 0;
@@ -57,4 +66,36 @@ it('looks and reads disabled when muted but still takes a press', () => {
 
 it('blocks the press when disabled', () => {
   expect(rendered(false, true).pressable).toBe(true);
+});
+
+function dockKey(content: { text: string } | { icon: 'play' }) {
+  pressables.length = 0;
+  faces.length = 0;
+  renderToStaticMarkup(
+    <ThemeProvider mode="dark">
+      <TransportKey
+        size="dock"
+        {...content}
+        accessibilityLabel="Key"
+        onPress={vi.fn()}
+      />
+    </ThemeProvider>,
+  );
+  return {
+    shrink: flatStyle(pressables[0]?.style as StyleProp<ViewStyle>).flexShrink,
+    face: faces[0],
+  };
+}
+
+it('fits a text face into the room the row leaves, down to its design size', () => {
+  const { shrink, face } = dockKey({ text: '100%' });
+  expect(shrink).toBe(1);
+  expect(face?.text).toBe('100%');
+  expect(face?.role).toBe(textRoles.dockKey);
+});
+
+it('keeps an icon key at its own size', () => {
+  const { shrink, face } = dockKey({ icon: 'play' });
+  expect(shrink).toBeUndefined();
+  expect(face).toBeUndefined();
 });

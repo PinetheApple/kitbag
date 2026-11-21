@@ -1,6 +1,7 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
+import type { TypeRole } from '../tokens.ts';
 import {
   iconSizes,
   opacity,
@@ -13,6 +14,7 @@ import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { stemPlayer } from '../stemPlayerRoles.ts';
 import { hitSlopFor } from '../touchTarget.ts';
+import { DesignFloorOneLineText } from './DesignFloorOneLineText.tsx';
 import { InlineIcon } from './IconGlyph.tsx';
 import { KeyBadge } from './KeyBadge.tsx';
 
@@ -23,6 +25,13 @@ const HIT_SLOP: Readonly<Record<TransportKeySize, number>> = {
   dock: 0,
   large: hitSlopFor(size.transportKeyLarge, space.transportGapWide),
   small: hitSlopFor(size.transportKeySmall, space.controlGap),
+};
+
+const TEXT_ROLES: Readonly<Record<TransportKeySize, TypeRole>> = {
+  standard: textRoles.transportKey,
+  dock: textRoles.dockKey,
+  large: { ...textRoles.transportKey, size: iconSizes.transportLarge },
+  small: { ...textRoles.transportKey, size: iconSizes.transportSmall },
 };
 
 export type TransportKeyContent =
@@ -55,6 +64,8 @@ const useStyles = createThemedStyles((theme) => ({
     minHeight: stemPlayer.transportKey,
   },
   dockGlyph: textStyle(textRoles.dockKey),
+  textKey: { flexShrink: 1 },
+  textBox: { alignSelf: 'stretch', alignItems: 'center' },
   selected: {
     backgroundColor: theme.activeControlFill,
     borderColor: theme.color.accentDim,
@@ -141,12 +152,18 @@ export function TransportKey({
         small && styles.small,
         selected && styles.selected,
         dimmed && styles.disabled,
+        icon === undefined && styles.textKey,
       ]}
       hitSlop={HIT_SLOP[keySize]}
       onPress={onPress}
     >
       {icon === undefined ? (
-        <Text style={glyphStyle}>{text}</Text>
+        <DesignFloorOneLineText
+          text={text}
+          role={TEXT_ROLES[keySize]}
+          style={glyphStyle}
+          boxStyle={styles.textBox}
+        />
       ) : (
         <InlineIcon name={icon} style={glyphStyle} />
       )}
