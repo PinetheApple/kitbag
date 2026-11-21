@@ -11,7 +11,14 @@ import Animated, {
   useSharedValue,
   type DerivedValue,
 } from 'react-native-reanimated';
-import Svg, { Circle, ClipPath, Defs, G, Path, Rect } from 'react-native-svg';
+import Svg, {
+  Circle,
+  Defs,
+  LinearGradient,
+  Path,
+  Rect,
+  Stop,
+} from 'react-native-svg';
 
 import { clampUnit } from '../clampUnit.ts';
 import { readerHiding } from '../readerHiding.ts';
@@ -40,7 +47,6 @@ export interface ThumbDotProps {
 export interface WaveLayersProps {
   readonly path: string;
   readonly width: number;
-  readonly height: number;
   readonly color: string;
   readonly playedColor: string;
   readonly progress: DerivedValue<number> | undefined;
@@ -48,10 +54,12 @@ export interface WaveLayersProps {
 
 const AnimatedRect = Animated.createAnimatedComponent(Rect);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient);
 
 const READER_HIDDEN = { ...readerHiding(true), accessible: false };
 const UNMEASURED = { width: 0, height: 0 };
 const FULL = '100%';
+const PLAYHEAD_EDGE = 0.01;
 
 function thumbTravel(width: number, diameter: number): number {
   'worklet';
@@ -154,33 +162,40 @@ export function ThumbDot({ progress, color, diameter, style }: ThumbDotProps) {
 export function WaveLayers({
   path,
   width,
-  height,
   color,
   playedColor,
   progress,
 }: WaveLayersProps) {
-  const clipId = svgSafeId('played', useId());
-  const clipProps = useAnimatedProps(() => ({
-    width: clampUnit(progress?.value ?? 0) * width,
-  }));
-  const bars = (fill: string) =>
-    path === '' ? null : <Path d={path} fill={fill} />;
+  const playedId = svgSafeId('played', useId());
+  const edgeProps = useAnimatedProps(() => {
+    const playhead = clampUnit(progress?.value ?? 0) * width;
+    return { x1: playhead, x2: playhead + PLAYHEAD_EDGE };
+  });
   return (
     <Svg
       style={StyleSheet.absoluteFill}
       pointerEvents="none"
       {...READER_HIDDEN}
     >
-      {bars(color)}
       {progress === undefined ? null : (
-        <>
-          <Defs>
-            <ClipPath id={clipId}>
-              <AnimatedRect height={height} animatedProps={clipProps} />
-            </ClipPath>
-          </Defs>
-          <G clipPath={`url(#${clipId})`}>{bars(playedColor)}</G>
-        </>
+        <Defs>
+          <AnimatedGradient
+            id={playedId}
+            gradientUnits="userSpaceOnUse"
+            y1={0}
+            y2={0}
+            animatedProps={edgeProps}
+          >
+            <Stop offset={0} stopColor={playedColor} />
+            <Stop offset={1} stopColor={color} />
+          </AnimatedGradient>
+        </Defs>
+      )}
+      {path === '' ? null : (
+        <Path
+          d={path}
+          fill={progress === undefined ? color : `url(#${playedId})`}
+        />
       )}
     </Svg>
   );

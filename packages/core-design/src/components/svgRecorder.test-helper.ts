@@ -20,6 +20,8 @@ export const svg = {
   default: recorded('Svg'),
   Defs: recorded('Defs'),
   ClipPath: recorded('ClipPath'),
+  LinearGradient: recorded('LinearGradient'),
+  Stop: recorded('Stop'),
   G: recorded('G'),
   Path: recorded('Path'),
   Rect: recorded('Rect'),

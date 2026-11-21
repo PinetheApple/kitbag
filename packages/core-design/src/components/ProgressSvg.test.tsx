@@ -112,28 +112,51 @@ describe('ProgressSvg', () => {
     expect(cx()).toBe(DIAMETER / 2 + TRACK / 2);
   });
 
-  it('clips the played layer to the progress share of the lane', () => {
+  it('paints the played bars through a gradient edge at the playhead, not a clip', () => {
     mount(
       <WaveLayers
         path="M0 0Z"
         width={TRACK}
-        height={DIAMETER}
         color="wave"
         playedColor="waveHot"
         progress={{ value: 0.25 } as never}
       />,
     );
-    const [clip] = drawnAs('ClipPath');
-    expect(drawnAs('G')[0]?.clipPath).toBe(`url(#${String(clip?.id)})`);
-    expect(liveProps(drawnAs('Rect')[0])).toEqual({ width: TRACK / 4 });
+    const [gradient] = drawnAs('LinearGradient');
+    expect(drawnAs('ClipPath')).toEqual([]);
+    expect(drawnAs('Path')).toEqual([
+      { d: 'M0 0Z', fill: `url(#${String(gradient?.id)})` },
+    ]);
+    expect(gradient?.gradientUnits).toBe('userSpaceOnUse');
+    expect(drawnAs('Stop')).toEqual([
+      { offset: 0, stopColor: 'waveHot' },
+      { offset: 1, stopColor: 'wave' },
+    ]);
+    const { x1, x2 } = liveProps(gradient) as { x1: number; x2: number };
+    expect(x1).toBe(TRACK / 4);
+    expect(x2 - x1).toBeGreaterThan(0);
+    expect(x2 - x1).toBeLessThan(1);
   });
 
-  it('gives each played clip its own svg-safe id', () => {
+  it('paints the bars in the base colour with no played layer when progress is absent', () => {
+    mount(
+      <WaveLayers
+        path="M0 0Z"
+        width={TRACK}
+        color="wave"
+        playedColor="waveHot"
+        progress={undefined}
+      />,
+    );
+    expect(drawnAs('LinearGradient')).toEqual([]);
+    expect(drawnAs('Path')).toEqual([{ d: 'M0 0Z', fill: 'wave' }]);
+  });
+
+  it('gives each played gradient its own svg-safe id', () => {
     const lane = (
       <WaveLayers
         path="M0 0Z"
         width={TRACK}
-        height={DIAMETER}
         color="wave"
         playedColor="waveHot"
         progress={{ value: 0 } as never}
@@ -145,7 +168,7 @@ describe('ProgressSvg', () => {
         {lane}
       </>,
     );
-    const ids = drawnAs('ClipPath').map((clip) => String(clip.id));
+    const ids = drawnAs('LinearGradient').map((gradient) => String(gradient.id));
     expect(ids).toHaveLength(2);
     expect(new Set(ids).size).toBe(2);
     for (const id of ids) expect(id).toMatch(/^[A-Za-z_][\w-]*$/);

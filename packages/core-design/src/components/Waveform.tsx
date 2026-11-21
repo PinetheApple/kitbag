@@ -51,7 +51,6 @@ export function Waveform({
       <WaveLayers
         path={path}
         width={width}
-        height={height}
         color={theme.color.wave}
         playedColor={theme.color.waveHot}
         progress={progress}

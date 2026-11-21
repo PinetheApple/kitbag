@@ -67,14 +67,10 @@ function measure(tree: ReactTestRenderer) {
   });
 }
 
-function playedClip() {
-  const clip = drawnAs('ClipPath').at(-1);
-  const played = drawnAs('G').at(-1);
-  if (clip === undefined || played === undefined)
-    throw new Error('no played layer was drawn');
-  expect(played.clipPath).toBe(`url(#${String(clip.id)})`);
-  const rect = drawnAs('Rect').at(-1);
-  return { width: liveProps(rect).width, height: rect?.height };
+function playhead() {
+  const gradient = drawnAs('LinearGradient').at(-1);
+  if (gradient === undefined) throw new Error('no played edge was drawn');
+  return liveProps(gradient).x1;
 }
 
 it('draws the lane on one svg hidden from readers, with no animated view', () => {
@@ -91,39 +87,41 @@ it('draws the lane on one svg hidden from readers, with no animated view', () =>
   ]);
 });
 
-it('draws nothing played on a paused remount before the lane is measured', () => {
+it('puts the played edge at the left on a paused remount before the lane is measured', () => {
   mount(2, { value: 0 });
-  expect(playedClip().width).toBe(0);
+  expect(playhead()).toBe(0);
 });
 
-it('clips the played layer to the progress share of the measured lane', () => {
+it('puts the played edge at the progress share of the measured lane', () => {
   measure(mount(2, { value: 0.25 }));
-  expect(playedClip()).toEqual({
-    width: MEASURED_WIDTH / 4,
-    height: HEIGHT,
-  });
+  expect(playhead()).toBe(MEASURED_WIDTH / 4);
 });
 
-it('follows the shared value through the animated clip props', () => {
+it('follows the shared value through the animated edge props', () => {
   const progress = { value: 0.25 };
   measure(mount(2, progress));
   progress.value = 1;
-  expect(playedClip().width).toBe(MEASURED_WIDTH);
+  expect(playhead()).toBe(MEASURED_WIDTH);
 });
 
-it.each([64, 2])('draws each layer as one shape with %d bars', (bars) => {
+it.each([64, 2])('draws the lane as one shape with %d bars', (bars) => {
   const tree = mount(bars, { value: 0.5 });
   drawn.length = 0;
   measure(tree);
-  expect(drawnAs('Path')).toHaveLength(2);
+  expect(drawnAs('Path')).toHaveLength(1);
 });
 
-it('draws the bars on both layers once the lane is measured', () => {
+it('fills the bars from the played edge once the lane is measured', () => {
   const tree = mount(2, { value: 0.5 });
   expect(drawnAs('Path')).toEqual([]);
   drawn.length = 0;
   measure(tree);
-  const layers = drawnAs('Path');
-  for (const layer of layers) expect(layer.d).toMatch(/^M.+Z$/);
-  expect(layers.map((layer) => layer.fill)).toEqual(['wave', 'waveHot']);
+  const [bars] = drawnAs('Path');
+  const gradient = drawnAs('LinearGradient').at(-1);
+  expect(bars?.d).toMatch(/^M.+Z$/);
+  expect(bars?.fill).toBe(`url(#${String(gradient?.id)})`);
+  expect(drawnAs('Stop').slice(-2)).toEqual([
+    { offset: 0, stopColor: 'waveHot' },
+    { offset: 1, stopColor: 'wave' },
+  ]);
 });
