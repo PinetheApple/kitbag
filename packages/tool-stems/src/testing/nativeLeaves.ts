@@ -23,3 +23,6 @@ export const Stop = 'Stop';
 export const G = 'G';
 export const Line = 'Line';
 export const Text = 'SvgText';
+export const Canvas = 'Canvas';
+export const Group = 'Group';
+export const RoundedRect = 'RoundedRect';

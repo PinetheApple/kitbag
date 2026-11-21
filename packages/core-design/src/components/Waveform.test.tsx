@@ -1,53 +1,61 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
-import { act, type ReactNode } from 'react';
-import {
-  create,
-  type ReactTestRenderer,
-  type ReactTestRendererJSON,
-} from 'react-test-renderer';
-import { expect, it, vi } from 'vitest';
+import { act } from 'react';
+import { create, type ReactTestRenderer } from 'react-test-renderer';
+import { beforeEach, expect, it, vi } from 'vitest';
 
+import { drawn, drawnAs } from './skiaRecorder.test-helper.ts';
 import { Waveform } from './Waveform.tsx';
 
-type Props = Record<string, unknown> & { readonly children?: ReactNode };
-
 const MEASURED_WIDTH = 300;
+const HEIGHT = 10;
 
-const animated = vi.hoisted(() => [] as object[]);
+const animated = vi.hoisted(() => [] as unknown[]);
 
 vi.mock('react-native', () => ({
   View: 'View',
-  StyleSheet: { create: <T,>(styles: T) => styles },
+  StyleSheet: { create: <T,>(styles: T) => styles, absoluteFill: {} },
 }));
-vi.mock('react-native-svg', () => ({ default: 'Svg', Path: 'Path' }));
 vi.mock('../ThemeProvider.tsx', () => ({
   useTheme: () => ({ color: { wave: 'wave', waveHot: 'waveHot' } }),
 }));
 vi.mock('react-native-reanimated', async () => {
-  const { createElement: h } = await import('react');
+  const { derived } = await import('./skiaRecorder.test-helper.ts');
   return {
     default: {
-      View: (props: Props) => {
-        const [, shift] = props.style as [object, object];
-        animated.push(shift);
-        return h('AnimatedView', null, props.children);
+      View: (props: unknown) => {
+        animated.push(props);
+        return null;
       },
     },
     useAnimatedStyle: (updater: () => object) => updater(),
+    useDerivedValue: derived,
   };
 });
+vi.mock(
+  '@shopify/react-native-skia',
+  async () => (await import('./skiaRecorder.test-helper.ts')).skia,
+);
+vi.mock('./FrameCanvas', async () => await import('./FrameCanvas.tsx'));
 
-function mount(bars: number, progress: number) {
+interface Clip {
+  readonly value: { readonly width: number; readonly height: number };
+}
+
+beforeEach(() => {
   animated.length = 0;
+  drawn.length = 0;
+});
+
+function mount(bars: number, progress: { value: number }) {
   let tree: ReactTestRenderer | undefined;
   act(() => {
     tree = create(
       <Waveform
         envelope={[1, 0.5]}
         bars={bars}
-        height={10}
-        progress={{ value: progress } as never}
+        height={HEIGHT}
+        progress={progress as never}
       />,
     );
   });
@@ -55,48 +63,81 @@ function mount(bars: number, progress: number) {
   return tree;
 }
 
-function shifts(progress: number) {
-  mount(2, progress);
-  return animated.map(
-    (style) => (style as { transform: object[] }).transform[0],
-  );
-}
-
-function hostCount(node: ReactTestRendererJSON | string): number {
-  if (typeof node === 'string') return 0;
-  return 1 + (node.children ?? []).reduce((sum, c) => sum + hostCount(c), 0);
-}
-
-function paths(tree: ReactTestRenderer): unknown[] {
-  return tree.root
-    .findAll((node) => node.type === ('Path' as never))
-    .map((node) => node.props.d as unknown);
-}
-
-it('draws nothing played on a paused remount before the lane is measured', () => {
-  expect(shifts(0)).toEqual([{ translateX: '-100%' }, { translateX: '100%' }]);
-});
-
-it('draws the played share of the lane from the first frame', () => {
-  expect(shifts(0.25)).toEqual([{ translateX: '-75%' }, { translateX: '75%' }]);
-  expect(shifts(1)).toEqual([{ translateX: '0%' }, { translateX: '0%' }]);
-});
-
-it('draws each layer as one shape however many bars it has', () => {
-  const many = mount(64, 0.5).toJSON() as ReactTestRendererJSON;
-  const few = mount(2, 0.5).toJSON() as ReactTestRendererJSON;
-  expect(hostCount(many)).toBe(hostCount(few));
-});
-
-it('draws the bars on both layers once the lane is measured', () => {
-  const tree = mount(2, 0.5);
+function measure(tree: ReactTestRenderer) {
   const lane = tree.root.find((node) => node.props.onLayout !== undefined);
   act(() => {
     (lane.props.onLayout as (event: object) => void)({
       nativeEvent: { layout: { width: MEASURED_WIDTH } },
     });
   });
-  const drawn = paths(tree);
-  expect(drawn).toHaveLength(2);
-  for (const d of drawn) expect(d).toMatch(/^M.+Z$/);
+}
+
+function playedClip(): Clip {
+  const clip = drawnAs('Group').at(-1)?.clip as Clip | undefined;
+  if (clip === undefined) throw new Error('no played layer was drawn');
+  return clip;
+}
+
+it('draws the lane on one canvas hidden from readers, with no animated view', () => {
+  const tree = mount(2, { value: 0.5 });
+  drawn.length = 0;
+  measure(tree);
+  expect(animated).toEqual([]);
+  expect(drawnAs('Canvas')).toEqual([
+    expect.objectContaining({
+      accessible: false,
+      importantForAccessibility: 'no-hide-descendants',
+      accessibilityElementsHidden: true,
+    }),
+  ]);
+});
+
+it('draws nothing played on a paused remount before the lane is measured', () => {
+  mount(2, { value: 0 });
+  expect(playedClip().value.width).toBe(0);
+});
+
+it('clips the played layer to the progress share of the measured lane', () => {
+  measure(mount(2, { value: 0.25 }));
+  expect(playedClip().value).toEqual({
+    x: 0,
+    y: 0,
+    width: MEASURED_WIDTH / 4,
+    height: HEIGHT,
+  });
+});
+
+it('follows the shared value on the canvas with no render', () => {
+  const progress = { value: 0.25 };
+  measure(mount(2, progress));
+  const clip = playedClip();
+  const renders = drawn.length;
+  progress.value = 1;
+  expect(clip.value.width).toBe(MEASURED_WIDTH);
+  expect(drawn.length).toBe(renders);
+});
+
+it('draws each layer as one shape however many bars it has', () => {
+  measure(mount(64, { value: 0.5 }));
+  const many = drawnAs('Path').slice(-2);
+  measure(mount(2, { value: 0.5 }));
+  const few = drawnAs('Path').slice(-2);
+  expect(many).toHaveLength(2);
+  expect(few).toHaveLength(2);
+});
+
+it('draws the bars on both layers once the lane is measured', () => {
+  const tree = mount(2, { value: 0.5 });
+  expect(drawnAs('Path')).toEqual([]);
+  measure(tree);
+  const drawnPaths = drawnAs('Path')
+    .slice(-2)
+    .map((props) => props.path);
+  expect(drawnPaths.map((d) => typeof d)).toEqual(['string', 'string']);
+  for (const d of drawnPaths) expect(d).toMatch(/^M.+Z$/);
+  expect(
+    drawnAs('Path')
+      .slice(-2)
+      .map((props) => props.color),
+  ).toEqual(['wave', 'waveHot']);
 });
