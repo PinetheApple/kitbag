@@ -104,6 +104,7 @@ type Props = Readonly<{
   entering?: unknown;
   style?: unknown;
   contentContainerStyle?: unknown;
+  persistentScrollbar?: boolean;
   children?: ReactNode;
 }>;
 
@@ -173,6 +174,12 @@ it('draws the notice in the portal above the sheet, sliding with its drag', () =
   expect([noticeView.props.style].flat()).toContain(DRAG);
   expect([sheet.props.style].flat()).toContain(DRAG);
   expect(child(openSheet(), 1).props.children).toContain(null);
+});
+
+it('keeps its scroll bar drawn so content below the fold is cued at rest', () => {
+  const sheet = child(child(openSheet(), 1), 1);
+  const scroll = child(child(sheet, 1), 0);
+  expect(scroll.props.persistentScrollbar).toBe(true);
 });
 
 it('caps the sheet below the status bar so tall content scrolls inside it', () => {

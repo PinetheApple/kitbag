@@ -345,6 +345,7 @@ export function Sheet({
               style={styles.scroll}
               contentContainerStyle={styles.content}
               bounces={false}
+              persistentScrollbar
               scrollEnabled={scrollEnabled}
               keyboardShouldPersistTaps="handled"
               scrollIndicatorInsets={INDICATOR_INSETS}
