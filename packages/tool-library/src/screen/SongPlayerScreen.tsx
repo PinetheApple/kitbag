@@ -58,8 +58,8 @@ export const BODY_SLOT_ID = 'song-body-slot';
 const WAVE_CARD_FLOOR =
   songPlayer.cardWave +
   stemPlayer.laneHeight +
-  space.rowGap +
   2 * (space.cardPadding + size.stroke);
+export const SONG_BODY_FLOOR = stemPlayer.bodyTop + WAVE_CARD_FLOOR;
 
 export interface SongPlayerScreenProps {
   readonly songId: number;
@@ -80,7 +80,7 @@ const useStyles = createThemedStyles((theme) => ({
   slot: {
     flexGrow: 1,
     flexShrink: 0,
-    flexBasis: stemPlayer.bodyTop + WAVE_CARD_FLOOR,
+    flexBasis: SONG_BODY_FLOOR,
   },
   bodyContent: {
     paddingTop: stemPlayer.bodyTop,
