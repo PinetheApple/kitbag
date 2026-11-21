@@ -34,6 +34,13 @@ const TEXT_ROLES: Readonly<Record<TransportKeySize, TypeRole>> = {
   small: { ...textRoles.transportKey, size: iconSizes.transportSmall },
 };
 
+const GLYPH_TEXT = {
+  standard: textStyle(TEXT_ROLES.standard),
+  dock: textStyle(TEXT_ROLES.dock),
+  large: textStyle(TEXT_ROLES.large),
+  small: textStyle(TEXT_ROLES.small),
+} satisfies Record<TransportKeySize, unknown>;
+
 export type TransportKeyContent =
   | { readonly icon: IconName; readonly text?: never }
   | { readonly text: string; readonly icon?: never };
@@ -63,7 +70,6 @@ const useStyles = createThemedStyles((theme) => ({
     minWidth: stemPlayer.transportKey,
     minHeight: stemPlayer.transportKey,
   },
-  dockGlyph: textStyle(textRoles.dockKey),
   textKey: { flexShrink: 1 },
   textBox: { alignSelf: 'stretch', alignItems: 'center' },
   selected: {
@@ -74,7 +80,6 @@ const useStyles = createThemedStyles((theme) => ({
     opacity: opacity.muted,
   },
   glyph: {
-    ...textStyle(textRoles.transportKey),
     color: theme.color.text,
   },
   glyphSelected: {
@@ -88,9 +93,6 @@ const useStyles = createThemedStyles((theme) => ({
     minWidth: size.transportKeyLarge,
     minHeight: size.transportKeyLarge,
   },
-  glyphLarge: {
-    fontSize: iconSizes.transportLarge,
-  },
   spacerDock: {
     width: stemPlayer.transportKey,
     height: stemPlayer.transportKey,
@@ -102,9 +104,6 @@ const useStyles = createThemedStyles((theme) => ({
   small: {
     minWidth: size.transportKeySmall,
     minHeight: size.transportKeySmall,
-  },
-  glyphSmall: {
-    fontSize: iconSizes.transportSmall,
   },
   spacerSmall: {
     width: size.transportKeySmall,
@@ -133,10 +132,8 @@ export function TransportKey({
   const small = keySize === 'small';
   const dimmed = disabled || muted;
   const glyphStyle = [
+    GLYPH_TEXT[keySize],
     styles.glyph,
-    dock && styles.dockGlyph,
-    large && styles.glyphLarge,
-    small && styles.glyphSmall,
     selected && styles.glyphSelected,
   ];
   return (

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
+import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it, vi } from 'vitest';
 
@@ -87,11 +87,17 @@ function dockKey(content: { text: string } | { icon: 'play' }) {
   };
 }
 
-it('fits a text face into the room the row leaves, down to its design size', () => {
+it('hands a text face to the one-line fit with the dock role and lets the key shrink', () => {
   const { shrink, face } = dockKey({ text: '100%' });
   expect(shrink).toBe(1);
   expect(face?.text).toBe('100%');
   expect(face?.role).toBe(textRoles.dockKey);
+});
+
+it('draws a text face at the size its fit measures with', () => {
+  const { face } = dockKey({ text: '100%' });
+  const drawn = flatStyle(face?.style as StyleProp<TextStyle>);
+  expect(drawn.fontSize).toBe((face?.role as { size: number }).size);
 });
 
 it('keeps an icon key at its own size', () => {
