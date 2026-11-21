@@ -16,22 +16,30 @@ function recorded(name: string) {
   };
 }
 
-export const skia = {
-  Canvas: recorded('Canvas'),
-  Group: recorded('Group'),
+export const svg = {
+  default: recorded('Svg'),
+  Defs: recorded('Defs'),
+  ClipPath: recorded('ClipPath'),
+  G: recorded('G'),
   Path: recorded('Path'),
-  RoundedRect: recorded('RoundedRect'),
+  Rect: recorded('Rect'),
   Circle: recorded('Circle'),
 };
 
-export function drawnAs(name: keyof typeof skia): Props[] {
+export function drawnAs(name: string): Props[] {
   return drawn.filter((d) => d.name === name).map((d) => d.props);
 }
 
-export function derived<T>(updater: () => T): { readonly value: T } {
+export function live<T>(updater: () => T): { readonly value: T } {
   return {
     get value() {
       return updater();
     },
   };
+}
+
+export function liveProps(props: Props | undefined): Record<string, unknown> {
+  const animated = props?.animatedProps as { value: object } | undefined;
+  if (animated === undefined) throw new Error('no animated props drawn');
+  return { ...animated.value };
 }

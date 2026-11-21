@@ -51,8 +51,17 @@ export function animatedStyleOf(style: unknown): Record<string, unknown> {
   return live[ANIMATED]();
 }
 
-export function useAnimatedProps<T>(props: () => T): T {
-  return props();
+export function useAnimatedProps<T extends object>(props: () => T): T {
+  return new Proxy({} as T, {
+    get: (_, key) => Reflect.get(props(), key),
+    has: (_, key) => Reflect.has(props(), key),
+    ownKeys: () => Reflect.ownKeys(props()),
+    getOwnPropertyDescriptor: (_, key) => ({
+      configurable: true,
+      enumerable: true,
+      value: Reflect.get(props(), key),
+    }),
+  });
 }
 
 export function useDerivedValue<T>(value: () => T): { readonly value: T } {

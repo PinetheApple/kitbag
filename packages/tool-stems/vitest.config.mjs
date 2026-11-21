@@ -16,7 +16,6 @@ export default defineConfig({
       'react-native-gesture-handler': local('src/testing/nativeLeaves.ts'),
       'react-native-keyboard-controller': local('src/testing/nativeLeaves.ts'),
       'react-native-svg': local('src/testing/nativeLeaves.ts'),
-      '@shopify/react-native-skia': local('src/testing/nativeLeaves.ts'),
       '@expo/vector-icons/MaterialCommunityIcons': local(
         'src/testing/iconLeaf.ts',
       ),

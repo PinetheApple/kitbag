@@ -4,7 +4,7 @@ import { act } from 'react';
 import { create, type ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { drawn, drawnAs } from './skiaRecorder.test-helper.ts';
+import { drawn, drawnAs, liveProps } from './svgRecorder.test-helper.ts';
 import { Waveform } from './Waveform.tsx';
 
 const MEASURED_WIDTH = 300;
@@ -20,27 +20,23 @@ vi.mock('../ThemeProvider.tsx', () => ({
   useTheme: () => ({ color: { wave: 'wave', waveHot: 'waveHot' } }),
 }));
 vi.mock('react-native-reanimated', async () => {
-  const { derived } = await import('./skiaRecorder.test-helper.ts');
+  const { live } = await import('./svgRecorder.test-helper.ts');
   return {
     default: {
       View: (props: unknown) => {
         animated.push(props);
         return null;
       },
+      createAnimatedComponent: <T,>(component: T) => component,
     },
     useAnimatedStyle: (updater: () => object) => updater(),
-    useDerivedValue: derived,
+    useAnimatedProps: live,
   };
 });
 vi.mock(
-  '@shopify/react-native-skia',
-  async () => (await import('./skiaRecorder.test-helper.ts')).skia,
+  'react-native-svg',
+  async () => (await import('./svgRecorder.test-helper.ts')).svg,
 );
-vi.mock('./FrameCanvas', async () => await import('./FrameCanvas.tsx'));
-
-interface Clip {
-  readonly value: { readonly width: number; readonly height: number };
-}
 
 beforeEach(() => {
   animated.length = 0;
@@ -72,18 +68,22 @@ function measure(tree: ReactTestRenderer) {
   });
 }
 
-function playedClip(): Clip {
-  const clip = drawnAs('Group').at(-1)?.clip as Clip | undefined;
-  if (clip === undefined) throw new Error('no played layer was drawn');
-  return clip;
+function playedClip() {
+  const clip = drawnAs('ClipPath').at(-1);
+  const played = drawnAs('G').at(-1);
+  if (clip === undefined || played === undefined)
+    throw new Error('no played layer was drawn');
+  expect(played.clipPath).toBe(`url(#${String(clip.id)})`);
+  const rect = drawnAs('Rect').at(-1);
+  return { width: liveProps(rect).width, height: rect?.height };
 }
 
-it('draws the lane on one canvas hidden from readers, with no animated view', () => {
+it('draws the lane on one svg hidden from readers, with no animated view', () => {
   const tree = mount(2, { value: 0.5 });
   drawn.length = 0;
   measure(tree);
   expect(animated).toEqual([]);
-  expect(drawnAs('Canvas')).toEqual([
+  expect(drawnAs('Svg')).toEqual([
     expect.objectContaining({
       accessible: false,
       importantForAccessibility: 'no-hide-descendants',
@@ -94,25 +94,22 @@ it('draws the lane on one canvas hidden from readers, with no animated view', ()
 
 it('draws nothing played on a paused remount before the lane is measured', () => {
   mount(2, { value: 0 });
-  expect(playedClip().value.width).toBe(0);
+  expect(playedClip().width).toBe(0);
 });
 
 it('clips the played layer to the progress share of the measured lane', () => {
   measure(mount(2, { value: 0.25 }));
-  expect(playedClip().value).toEqual({
-    x: 0,
-    y: 0,
+  expect(playedClip()).toEqual({
     width: MEASURED_WIDTH / 4,
     height: HEIGHT,
   });
 });
 
-it('follows the shared value on the canvas', () => {
+it('follows the shared value through the animated clip props', () => {
   const progress = { value: 0.25 };
   measure(mount(2, progress));
-  const clip = playedClip();
   progress.value = 1;
-  expect(clip.value.width).toBe(MEASURED_WIDTH);
+  expect(playedClip().width).toBe(MEASURED_WIDTH);
 });
 
 it.each([64, 2])('draws each layer as one shape with %d bars', (bars) => {
@@ -128,6 +125,6 @@ it('draws the bars on both layers once the lane is measured', () => {
   drawn.length = 0;
   measure(tree);
   const layers = drawnAs('Path');
-  for (const layer of layers) expect(layer.path).toMatch(/^M.+Z$/);
-  expect(layers.map((layer) => layer.color)).toEqual(['wave', 'waveHot']);
+  for (const layer of layers) expect(layer.d).toMatch(/^M.+Z$/);
+  expect(layers.map((layer) => layer.fill)).toEqual(['wave', 'waveHot']);
 });

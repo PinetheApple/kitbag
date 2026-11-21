@@ -14,6 +14,8 @@ import {
   type Player,
 } from './playerHarness.test-helper.tsx';
 
+const CARD_WIDTH = 160;
+
 let player: Player | undefined;
 
 async function open(tab: string | null = null) {
@@ -128,15 +130,16 @@ describe('the current card', () => {
     p.frames(5);
     const cards = withTestId(p, 'section-progress');
     expect(cards).toHaveLength(1);
-    const fill = cards[0]?.findByType('Group' as never).props.transform as {
-      readonly value: object[];
+    fireLayout(cards[0], { width: CARD_WIDTH, height: 2 });
+    const fill = cards[0]?.findByType('Rect' as never).props.animatedProps as {
+      readonly width: number;
     };
-    expect(fill.value).toEqual([{ scaleX: 0.25 }]);
+    expect(fill.width).toBe(CARD_WIDTH * 0.25);
     p.commit.mockClear();
     p.frames(5.25);
     expect(p.commit).not.toHaveBeenCalled();
-    expect(fill.value).toEqual([{ scaleX: 0.3125 }]);
+    expect(fill.width).toBe(CARD_WIDTH * 0.3125);
     p.frames(7);
-    expect(fill.value).toEqual([{ scaleX: 0.75 }]);
+    expect(fill.width).toBe(CARD_WIDTH * 0.75);
   });
 });

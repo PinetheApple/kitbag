@@ -8,11 +8,12 @@ import { ThemeProvider } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 import { MiniPlayerBar } from './MiniPlayerBar.tsx';
 import { flatStyle } from './flatStyle.test-helper.ts';
-import { drawn, drawnAs } from './skiaRecorder.test-helper.ts';
+import { drawn, drawnAs, liveProps } from './svgRecorder.test-helper.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const pressables = vi.hoisted(() => [] as Props[]);
+const views = vi.hoisted(() => [] as Props[]);
 const animated = vi.hoisted(() => [] as StyleProp<ViewStyle>[]);
 
 vi.mock('react-native', async (original) => {
@@ -24,22 +25,28 @@ vi.mock('react-native', async (original) => {
       pressables.push(props);
       return h('div', null, props.children);
     },
+    View: (props: Props) => {
+      views.push(props);
+      return h('div', null, props.children);
+    },
   };
 });
 
 vi.mock('react-native-reanimated', async () => {
   const { createElement: h } = await import('react');
-  const { derived } = await import('./skiaRecorder.test-helper.ts');
+  const { live } = await import('./svgRecorder.test-helper.ts');
   return {
     default: {
       View: (props: Props) => {
         animated.push(props.style as StyleProp<ViewStyle>);
         return h('div', null, props.children);
       },
+      createAnimatedComponent: <T,>(component: T) => component,
     },
     useAnimatedStyle: (updater: () => ViewStyle) => updater(),
+    useAnimatedProps: live,
     useAnimatedReaction: vi.fn(),
-    useDerivedValue: derived,
+    useDerivedValue: live,
     useSharedValue: (value: unknown) => ({ value }),
   };
 });
@@ -48,13 +55,13 @@ vi.mock('react-native-worklets', () => ({ scheduleOnRN: vi.fn() }));
 
 vi.mock('./IconGlyph.tsx', () => ({ IconGlyph: () => null }));
 vi.mock(
-  '@shopify/react-native-skia',
-  async () => (await import('./skiaRecorder.test-helper.ts')).skia,
+  'react-native-svg',
+  async () => (await import('./svgRecorder.test-helper.ts')).svg,
 );
-vi.mock('./FrameCanvas', async () => await import('./FrameCanvas.tsx'));
 
 const PROGRESS = 0.42;
 const LATER = 0.6;
+const LINE_WIDTH = 320;
 const progress = { value: PROGRESS };
 const handlers = {
   onOpen: vi.fn(),
@@ -65,6 +72,7 @@ const handlers = {
 
 function render(playing: number) {
   pressables.length = 0;
+  views.length = 0;
   animated.length = 0;
   drawn.length = 0;
   progress.value = PROGRESS;
@@ -92,6 +100,13 @@ function pressable(label: string): Props {
   const found = pressables.find((p) => p.accessibilityLabel === label);
   if (found === undefined) throw new Error(`no control labelled ${label}`);
   return found;
+}
+
+function measureLine() {
+  const line = views.find((props) => props.onLayout !== undefined);
+  (line?.onLayout as (event: object) => void)({
+    nativeEvent: { layout: { width: LINE_WIDTH, height: 2 } },
+  });
 }
 
 const flat = (style: unknown) => flatStyle(style as StyleProp<ViewStyle>);
@@ -127,20 +142,19 @@ describe('MiniPlayerBar', () => {
     expect(handlers[handler]).toHaveBeenCalledOnce();
   });
 
-  it('draws the progress line on a canvas from the shared value', () => {
+  it('draws the progress line on an svg from the shared value', () => {
     render(0);
     const transforms = animated.map((style) => flat(style).transform);
     expect(transforms.filter((t) => t !== undefined)).toEqual([]);
-    expect(drawnAs('Canvas')).toHaveLength(1);
-    const fill = drawnAs('Group')[0]?.transform as {
-      readonly value: object[];
-    };
-    expect(fill.value).toEqual([{ scaleX: PROGRESS }]);
-    expect(drawnAs('RoundedRect')[0]?.color).toBe(
-      buildTheme('dark').color.accent,
-    );
+    expect(drawnAs('Svg')).toHaveLength(1);
+    measureLine();
+    const fill = () => liveProps(drawnAs('Rect')[0]);
+    expect(fill()).toMatchObject({
+      width: LINE_WIDTH * PROGRESS,
+      fill: buildTheme('dark').color.accent,
+    });
     progress.value = LATER;
-    expect(fill.value).toEqual([{ scaleX: LATER }]);
+    expect(fill().width).toBe(LINE_WIDTH * LATER);
   });
 
   it.each([
