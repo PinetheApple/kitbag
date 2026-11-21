@@ -79,26 +79,27 @@ function verticalGaps(input: SegmentHitBoxInput): NeighbourGaps {
   return wrappedLineGaps(lineTop, lineTops, outer, rowGap);
 }
 
-// Option widths are flex, so only the vertical axis is grown to 48dp; sideways
-// every option takes the same half of the gap between options.
-// Only an option on the track's first or last row faces the edge beyond it.
 function edgeRoom(input: SegmentHitBoxInput): NeighbourGaps {
   const { edges = {}, wrapped } = input;
   const edge = trackEdge(input);
   const lineTop = wrapped?.lineTop;
-  const first =
+  const facesTopEdge =
     wrapped === undefined ||
     (lineTop !== undefined && lineTop === Math.min(...wrapped.lineTops));
-  const last =
+  const facesBottomEdge =
     wrapped === undefined ||
     (lineTop !== undefined && lineTop === Math.max(...wrapped.lineTops));
   return {
-    top: first && edges.top !== undefined ? edge + edges.top : undefined,
+    top: facesTopEdge && edges.top !== undefined ? edge + edges.top : undefined,
     bottom:
-      last && edges.bottom !== undefined ? edge + edges.bottom : undefined,
+      facesBottomEdge && edges.bottom !== undefined
+        ? edge + edges.bottom
+        : undefined,
   };
 }
 
+// Option widths are flex, so only the vertical axis is grown to 48dp; sideways
+// every option takes the same half of the gap between options.
 export function segmentHitBox(input: SegmentHitBoxInput) {
   const height = OPTION_HEIGHTS[input.controlSize];
   const vertical = reachEdges(

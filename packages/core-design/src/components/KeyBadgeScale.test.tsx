@@ -67,8 +67,7 @@ function drawBarBadge(fontScale: number) {
   };
 }
 
-// The badge's overlap with the icon, as shares of the icon's size.
-function overlapShares(fontScale: number) {
+function badgeShareOfIcon(fontScale: number) {
   const { iconScale, box } = drawBarBadge(fontScale);
   const iconPx = iconSizes.bar * iconScale;
   const iconInset = (screenBar.iconButton - iconPx) / 2;
@@ -88,8 +87,8 @@ describe('the bar key badge under font scale', () => {
   });
 
   it('covers the same share of the grown icon as of the design icon', () => {
-    const design = overlapShares(1);
-    const grown = overlapShares(GROWN_FONT_SCALE);
+    const design = badgeShareOfIcon(1);
+    const grown = badgeShareOfIcon(GROWN_FONT_SCALE);
     expect(grown.down).toBeCloseTo(design.down);
     expect(grown.across).toBeCloseTo(design.across);
   });
