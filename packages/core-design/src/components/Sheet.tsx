@@ -7,7 +7,6 @@ import {
   type RefObject,
 } from 'react';
 import {
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -53,6 +52,7 @@ import { InlineIcon } from './IconGlyph.tsx';
 import { SheetContentLiveContext } from './sheetContentLive.ts';
 import { SheetHint } from './SheetHint.tsx';
 import { useSheetPortal } from './SheetHost.tsx';
+import { fadeToClear } from './fadeToClear.ts';
 import { useSheetCardStyle } from './useSheetCardStyle.ts';
 import { useSheetExit } from './useSheetExit.ts';
 import { SHEET_TOUCH_ROOM } from '../sheetRoom.ts';
@@ -65,7 +65,6 @@ export {
 
 const INDICATOR_INSETS = { top: SHEET_TOUCH_ROOM, bottom: SHEET_TOUCH_ROOM };
 const SCRIM = withAlpha(palette.bg.dark, opacity.sheetScrim);
-const FADED_OUT = 0;
 const READER_CLOSE_ACTION = 'dismiss';
 const BACKDROP_READER_HIDING = readerHiding(true);
 
@@ -147,11 +146,7 @@ const useStyles = createThemedStyles((theme) => ({
     left: 0,
     right: 0,
     height: SHEET_TOUCH_ROOM,
-    ...(Platform.OS === 'web'
-      ? { backgroundColor: theme.color.surface1 }
-      : {
-          experimental_backgroundImage: `linear-gradient(to bottom, ${theme.color.surface1}, ${withAlpha(theme.color.surface1, FADED_OUT)})`,
-        }),
+    ...fadeToClear(theme.color.surface1, 'to bottom'),
     pointerEvents: 'none',
   },
   content: {
@@ -210,15 +205,16 @@ export function Sheet({
 }: SheetProps) {
   const styles = useStyles();
   const scaled = useTextScaled();
+  const besideAction = titleAction !== undefined && !scaled;
   const titleStyle = [
     styles.title,
     titleSize === 'large' && styles.titleLarge,
     titleSize === 'screen' && styles.titleScreen,
-    titleAction !== undefined && !scaled && styles.titleBesideAction,
+    besideAction && styles.titleBesideAction,
   ];
   const titleGroupStyle = [
     styles.titleGroup,
-    titleAction !== undefined && !scaled && styles.titleBesideAction,
+    besideAction && styles.titleBesideAction,
   ];
   const motion = useReduceMotionMode();
   const titleRef = useRef<TextInstance>(null);
