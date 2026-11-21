@@ -2,11 +2,21 @@ import { isValidElement, type ReactElement, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const scroll = vi.hoisted(() => ({ enabled: false }));
+const run = vi.hoisted(() => ({ deviations: [] as number[] }));
+const hooks = vi.hoisted(() => ({ slots: [] as unknown[], next: 0 }));
 
 vi.mock('react', async (original) => ({
   ...(await original<typeof import('react')>()),
   useMemo: <T>(make: () => T) => make(),
   useCallback: <T>(fn: T) => fn,
+  useState: <T>(initial: T) => {
+    const slot = hooks.next++;
+    if (!(slot in hooks.slots)) hooks.slots[slot] = initial;
+    const set = (next: T) => {
+      hooks.slots[slot] = next;
+    };
+    return [hooks.slots[slot] as T, set];
+  },
 }));
 
 vi.mock('react-native', () => ({
@@ -41,7 +51,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
     select({
       phase: 'running',
       route: { id: 'speaker', name: '', kind: 'speaker', certain: true },
-      deviations: [],
+      deviations: run.deviations,
       outcome: null,
       notice: null,
     }),
@@ -72,6 +82,7 @@ function walk(node: Node, inScroll: boolean): Placed[] {
 }
 
 function render(): Placed[] {
+  hooks.next = 0;
   return walk(CalibrationScreen({ onBack: () => undefined }) as Node, false);
 }
 
@@ -80,6 +91,14 @@ const isTapTarget = ({ node }: Placed) =>
 
 const buttonNamed = (label: string) => (placed: Placed) =>
   placed.node.type === 'Button' && placed.node.props.label === label;
+
+beforeEach(() => {
+  hooks.slots = [];
+  run.deviations = [];
+});
+
+const tapsInScroll = (tree: Placed[]) =>
+  tree.filter(isTapTarget).some((placed) => placed.inScroll);
 
 describe('calibration screen on a short window', () => {
   beforeEach(() => {
@@ -114,8 +133,22 @@ describe('calibration screen when everything fits', () => {
     const tree = render();
     const region = tree.find(({ node }) => node.type === 'ScrollView');
     expect(region?.node.props.scrollEnabled).toBe(false);
-    expect(tree.filter(isTapTarget).some((placed) => placed.inScroll)).toBe(
-      true,
-    );
+    expect(tapsInScroll(tree)).toBe(true);
+  });
+
+  it('keeps taps below the prompt counting when the region overflows mid-run', () => {
+    render();
+    run.deviations = [12, 15, 9];
+    scroll.enabled = true;
+    expect(tapsInScroll(render())).toBe(true);
+  });
+
+  it('lets the next run see that the region now scrolls', () => {
+    render();
+    run.deviations = [12, 15, 9];
+    scroll.enabled = true;
+    render();
+    run.deviations = [];
+    expect(tapsInScroll(render())).toBe(false);
   });
 });
