@@ -57,6 +57,7 @@ export const usePracticeStyles = createThemedStyles((theme) => ({
     gap: space.controlGap,
   },
   ownLine: {
+    flexDirection: 'row',
     width: '100%',
   },
   headingFill: {

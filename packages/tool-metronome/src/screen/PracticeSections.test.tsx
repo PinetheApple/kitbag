@@ -149,6 +149,10 @@ describe.each(OWN_LINE_CONTROLS)('the %s control', (label, Section) => {
     expect(parentStyle(true).width).toBe('100%');
   });
 
+  it('grows its track across its own line, not down past the row', () => {
+    expect(parentStyle(true).flexDirection).toBe('row');
+  });
+
   it('stays in its labelled row at the default text size', () => {
     expect(parentStyle(false).flexWrap).toBe('wrap');
   });
