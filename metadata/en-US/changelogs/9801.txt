@@ -1,0 +1,1 @@
+• At large text, the Practice sheet's Loop back and Count in chips no longer overlap the controls above them, and the poly caption reads as one sentence: "one cycle: 3 poly over 4 main, across the bar".
