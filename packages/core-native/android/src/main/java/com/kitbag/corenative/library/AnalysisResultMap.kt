@@ -14,4 +14,16 @@ fun AnalysisResult.toMap(): WritableMap =
     putString("waveformRelativePath", waveformRelativePath)
     putDouble("durationSec", durationSec)
     analysisVersion?.let { putInt("analysisVersion", it) }
+    when (val fit = tempo) {
+      null -> Unit
+      AnalysedTempo.Unsteady -> putNull("tempo")
+      is AnalysedTempo.Steady -> putMap("tempo", fit.toMap())
+    }
+  }
+
+private fun AnalysedTempo.Steady.toMap(): WritableMap =
+  Arguments.createMap().apply {
+    putDouble("bpm", bpm)
+    putDouble("anchorSec", anchorSec)
+    putInt("beatsPerBar", beatsPerBar)
   }

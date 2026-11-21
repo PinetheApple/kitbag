@@ -356,9 +356,10 @@ Java_com_kitbag_corenative_library_SongAnalyzer_nativeAnalyzeSong(JNIEnv* env, j
   int32_t beatCount = 0;
   int32_t downbeatCount = 0;
   double durationSec = 0.0;
-  const kb_result result =
-      kb_analyze_song(pathUtf.get(), &bpm, beats.data(), KB_MAX_GRID_BEATS, &beatCount,
-                      downbeats.data(), &downbeatCount, &durationSec, dirUtf.get());
+  kb_tempo_fit tempo{};
+  const kb_result result = kb_analyze_song_with_tempo(
+      pathUtf.get(), &bpm, beats.data(), KB_MAX_GRID_BEATS, &beatCount, downbeats.data(),
+      &downbeatCount, &durationSec, dirUtf.get(), &tempo);
   if (result == KB_ERROR_INVALID_ARGUMENT) {
     ThrowNoArgs(env, "com/kitbag/corenative/library/UnsupportedAudioException");
     return nullptr;
@@ -381,11 +382,14 @@ Java_com_kitbag_corenative_library_SongAnalyzer_nativeAnalyzeSong(JNIEnv* env, j
 
   jclass analysisClass = env->FindClass("com/kitbag/corenative/library/NativeSongAnalysis");
   if (analysisClass == nullptr) return nullptr;
-  jmethodID ctor = env->GetMethodID(analysisClass, "<init>", "(F[F[IDI)V");
+  jmethodID ctor = env->GetMethodID(analysisClass, "<init>", "(F[F[IDIZFDI)V");
   if (ctor == nullptr) return nullptr;
   return env->NewObject(analysisClass, ctor, static_cast<jfloat>(bpm), beatsOut, downbeatsOut,
                         static_cast<jdouble>(durationSec),
-                        static_cast<jint>(KB_BEAT_ANALYSIS_VERSION));
+                        static_cast<jint>(KB_BEAT_ANALYSIS_VERSION),
+                        tempo.result == KB_OK ? JNI_TRUE : JNI_FALSE,
+                        static_cast<jfloat>(tempo.bpm), static_cast<jdouble>(tempo.anchor_sec),
+                        static_cast<jint>(tempo.beats_per_bar));
 }
 
 JNIEXPORT jstring JNICALL

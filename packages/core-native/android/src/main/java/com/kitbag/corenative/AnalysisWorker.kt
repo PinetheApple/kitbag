@@ -62,6 +62,7 @@ class AnalysisWorker(context: Context, params: WorkerParameters) : Worker(contex
       waveformRelativePath = output.waveformRelativePath.orEmpty(),
       durationSec = output.result.durationSec,
       analysisVersion = output.result.analysisVersion,
+      tempo = output.result.tempo,
     )
   }
 

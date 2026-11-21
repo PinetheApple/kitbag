@@ -32,7 +32,7 @@ class AnalysisStoreTest {
   private fun analysed(path: String) =
     AnalysisResult(
       path, true, "", 121.5f, floatArrayOf(0.25f, 0.75f, 1.25f), intArrayOf(0, 2), "waves/a.kwav", DURATION_SEC,
-      ANALYSIS_VERSION,
+      ANALYSIS_VERSION, STEADY,
     )
 
   private fun writeLegacyResult(path: String, format: Int) {
@@ -50,6 +50,10 @@ class AnalysisStoreTest {
       out.writeInt(0)
       out.writeUTF("waves/a.kwav")
       if (format >= FORMAT_NO_ANALYSIS_VERSION) out.writeDouble(DURATION_SEC)
+      if (format >= FORMAT_NO_TEMPO) {
+        out.writeBoolean(true)
+        out.writeInt(ANALYSIS_VERSION)
+      }
     }
   }
 
@@ -66,6 +70,27 @@ class AnalysisStoreTest {
     assertEquals("waves/a.kwav", read.waveformRelativePath)
     assertEquals(DURATION_SEC, read.durationSec, 0.0)
     assertEquals(ANALYSIS_VERSION, read.analysisVersion)
+    assertEquals(STEADY, read.tempo)
+  }
+
+  @Test
+  fun `a fit that found no steady tempo reads back as unsteady, not absent`() {
+    store.save(
+      AnalysisResult(
+        "a.mp3", true, "", 0f, floatArrayOf(), intArrayOf(), "", DURATION_SEC, ANALYSIS_VERSION, AnalysedTempo.Unsteady,
+      ),
+    )
+    assertEquals(AnalysedTempo.Unsteady, store.pending().single().tempo)
+  }
+
+  @Test
+  fun `a result stored before tempo fits reads back with no tempo`() {
+    writeLegacyResult("songs/1/a.mp3", FORMAT_NO_TEMPO)
+    val read = store.pending().single()
+    assertTrue(read.ok)
+    assertEquals(DURATION_SEC, read.durationSec, 0.0)
+    assertEquals(ANALYSIS_VERSION, read.analysisVersion)
+    assertNull(read.tempo)
   }
 
   @Test
@@ -102,6 +127,7 @@ class AnalysisStoreTest {
     assertEquals(0, read.beats.size)
     assertEquals(AnalysisResult.UNKNOWN_DURATION_SEC, read.durationSec, 0.0)
     assertNull(read.analysisVersion)
+    assertNull(read.tempo)
   }
 
   @Test
@@ -206,5 +232,7 @@ class AnalysisStoreTest {
     const val ANALYSIS_VERSION = 7
     const val FORMAT_NO_DURATION = 1
     const val FORMAT_NO_ANALYSIS_VERSION = 2
+    const val FORMAT_NO_TEMPO = 3
+    val STEADY = AnalysedTempo.Steady(117.33, 0.37, 3)
   }
 }
