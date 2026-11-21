@@ -1211,7 +1211,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   the shared `Waveform` draws each bar layer as one react-native-svg path, not one View per
   bar, so the playing players stop taking 4–7 s per accessibility read. Skia stays §13.8's
   target; it is not added now because this run takes no new dependency, and react-native-svg
-  is already one. **[coordinator, 2026-11-20]**
+  is already one. **[coordinator, 2026-11-20]** Superseded by the 2026-11-21 Skia entry.
 - **2026-11-20 · Song queue (#574, SPEC §7.9, D17)** — Owner decisions on the
   queue mockup, all recommendations taken: (1) one queue shared by single songs
   and stem songs; (2) a Queue key on the mini-player, a Queue icon on the stem
@@ -1277,3 +1277,16 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   tap lands and stays so until Start over or the run ends. Rationale: §12.5.1 says
   "anywhere on screen", but a tap counts on touch-down, so a scroll gesture on a
   tappable area would add a tap. **[recorded]**
+
+- **2026-11-21 · Skia draws the playhead surfaces (§13.8, #547)** — Supersedes the
+  2026-11-20 interim. `@shopify/react-native-skia` is added at 2.14.0, the version
+  Expo SDK 58 bundles, as §13.8 names it. The waveform's played layer, the slider fill
+  and thumb, the mini-player progress line and the current section card's progress
+  draw on fixed-bounds canvases from shared values. Rationale: a View whose transform
+  or layout changes every frame sends a subtree accessibility event, which flushes the
+  Android accessibility cache about every 100 ms while a song plays, so every
+  accessibility read refetches the screen. Native and web split: web keeps the
+  Animated/SVG drawing, so the web export needs no CanvasKit. F-Droid: the npm package
+  ships prebuilt `react-native-skia-android` binaries, while the precedent recipe in
+  `docs/fdroid-expo-research.md` builds Skia from source (`srclibs` and
+  `build-skia`), so an F-Droid build needs that step. **[owner, 2026-11-21]**
