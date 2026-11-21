@@ -29,7 +29,7 @@ export default defineConfig({
       'src/screen/SetlistSongsSheet.test.tsx',
       'src/screen/MetronomeAppBar.test.tsx',
       'src/library/songLists.test.tsx',
-      'src/screen/PracticeSwitches.test.tsx',
+      'src/screen/PracticeSections.test.tsx',
       'src/screen/MeterSheet.test.tsx',
     ],
     alias: {

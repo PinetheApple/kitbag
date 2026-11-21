@@ -7,6 +7,7 @@ import {
   StepControl,
   Switch,
   unshared,
+  useTextScaled,
 } from '@kitbag/core-design';
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
@@ -44,27 +45,31 @@ function TempoRow({ editor, onType }: RowsProps) {
   }, [onType]);
   return (
     <View style={styles.row}>
-      <Text style={styles.label}>From</Text>
-      <StepControl
-        variant="inlineLarge"
-        label="Ramp from"
-        value={String(startBpm)}
-        accessibilityValue={bpm(startBpm)}
-        neighbourGapDp={space.controlGap}
-        onStep={editor.stepFrom}
-        onValuePress={handleTypeFrom}
-      />
+      <View style={styles.pair}>
+        <Text style={styles.label}>From</Text>
+        <StepControl
+          variant="inlineLarge"
+          label="Ramp from"
+          value={String(startBpm)}
+          accessibilityValue={bpm(startBpm)}
+          neighbourGapDp={space.controlGap}
+          onStep={editor.stepFrom}
+          onValuePress={handleTypeFrom}
+        />
+      </View>
       <View style={styles.grow} />
-      <Text style={styles.label}>To</Text>
-      <StepControl
-        variant="inlineLarge"
-        label="Ramp to"
-        value={String(targetBpm)}
-        accessibilityValue={bpm(targetBpm)}
-        neighbourGapDp={space.controlGap}
-        onStep={editor.stepTo}
-        onValuePress={handleTypeTo}
-      />
+      <View style={styles.pair}>
+        <Text style={styles.label}>To</Text>
+        <StepControl
+          variant="inlineLarge"
+          label="Ramp to"
+          value={String(targetBpm)}
+          accessibilityValue={bpm(targetBpm)}
+          neighbourGapDp={space.controlGap}
+          onStep={editor.stepTo}
+          onValuePress={handleTypeTo}
+        />
+      </View>
     </View>
   );
 }
@@ -73,6 +78,7 @@ function CadenceRows({ editor, onType }: RowsProps) {
   const styles = usePracticeStyles();
   const { stepBpm, startBpm, targetBpm, interval, unit } = editor.ramp;
   const { setUnit } = editor;
+  const scaled = useTextScaled();
   const handleTypeStep = useCallback(() => {
     onType('stepBpm');
   }, [onType]);
@@ -85,42 +91,53 @@ function CadenceRows({ editor, onType }: RowsProps) {
     },
     [setUnit],
   );
+  const unitControl = (
+    <SegmentedControl
+      fill
+      size="large"
+      accessibilityLabel="Ramp interval unit"
+      options={RAMP_UNIT_OPTIONS}
+      selected={rampUnitOption(unit)}
+      neighbourGapDp={space.controlGap}
+      onSelect={handleUnit}
+    />
+  );
   return (
     <>
       <View style={styles.row}>
-        <Text style={styles.label}>Step</Text>
-        <StepControl
-          variant="inlineLarge"
-          label="Ramp step"
-          value={rampStepText(stepBpm, startBpm, targetBpm)}
-          accessibilityValue={rampStepSpoken(stepBpm, startBpm, targetBpm)}
-          neighbourGapDp={space.controlGap}
-          onStep={editor.stepStepSize}
-          onValuePress={handleTypeStep}
-        />
+        <View style={styles.pair}>
+          <Text style={styles.label}>Step</Text>
+          <StepControl
+            variant="inlineLarge"
+            label="Ramp step"
+            value={rampStepText(stepBpm, startBpm, targetBpm)}
+            accessibilityValue={rampStepSpoken(stepBpm, startBpm, targetBpm)}
+            neighbourGapDp={space.controlGap}
+            onStep={editor.stepStepSize}
+            onValuePress={handleTypeStep}
+          />
+        </View>
         <View style={styles.grow} />
         <SheetHint size="large">BPM per step</SheetHint>
       </View>
       <View style={styles.row}>
-        <Text style={styles.label}>Every</Text>
-        <StepControl
-          variant="inlineLarge"
-          label="Ramp every"
-          value={String(interval)}
-          accessibilityValue={`${String(interval)} ${rampUnitLabel(unit)}`}
-          neighbourGapDp={space.controlGap}
-          onStep={editor.stepInterval}
-          onValuePress={handleTypeInterval}
-        />
-        <SegmentedControl
-          fill
-          size="large"
-          accessibilityLabel="Ramp interval unit"
-          options={RAMP_UNIT_OPTIONS}
-          selected={rampUnitOption(unit)}
-          neighbourGapDp={space.controlGap}
-          onSelect={handleUnit}
-        />
+        <View style={styles.pair}>
+          <Text style={styles.label}>Every</Text>
+          <StepControl
+            variant="inlineLarge"
+            label="Ramp every"
+            value={String(interval)}
+            accessibilityValue={`${String(interval)} ${rampUnitLabel(unit)}`}
+            neighbourGapDp={space.controlGap}
+            onStep={editor.stepInterval}
+            onValuePress={handleTypeInterval}
+          />
+        </View>
+        {scaled ? (
+          <View style={styles.ownLine}>{unitControl}</View>
+        ) : (
+          unitControl
+        )}
       </View>
     </>
   );

@@ -118,27 +118,31 @@ export function PracticeMute({ onType }: TypeProps) {
       }
     >
       <View style={styles.row}>
-        <Text style={styles.label}>Play</Text>
-        <StepControl
-          variant="inlineLarge"
-          label="Play bars"
-          value={String(playBars)}
-          accessibilityValue={bars(playBars)}
-          neighbourGapDp={space.controlGap}
-          onStep={editor.stepPlay}
-          onValuePress={handleTypePlay}
-        />
+        <View style={styles.pair}>
+          <Text style={styles.label}>Play</Text>
+          <StepControl
+            variant="inlineLarge"
+            label="Play bars"
+            value={String(playBars)}
+            accessibilityValue={bars(playBars)}
+            neighbourGapDp={space.controlGap}
+            onStep={editor.stepPlay}
+            onValuePress={handleTypePlay}
+          />
+        </View>
         <View style={styles.grow} />
-        <Text style={styles.label}>Mute</Text>
-        <StepControl
-          variant="inlineLarge"
-          label="Mute bars"
-          value={String(muteBars)}
-          accessibilityValue={bars(muteBars)}
-          neighbourGapDp={space.controlGap}
-          onStep={editor.stepMute}
-          onValuePress={handleTypeMute}
-        />
+        <View style={styles.pair}>
+          <Text style={styles.label}>Mute</Text>
+          <StepControl
+            variant="inlineLarge"
+            label="Mute bars"
+            value={String(muteBars)}
+            accessibilityValue={bars(muteBars)}
+            neighbourGapDp={space.controlGap}
+            onStep={editor.stepMute}
+            onValuePress={handleTypeMute}
+          />
+        </View>
       </View>
       <MutePreview preview={editor.preview} />
     </PracticeSection>
@@ -262,27 +266,31 @@ export function PracticePoly({ onType }: TypeProps) {
       }
     >
       <View style={styles.row}>
-        <Text style={styles.label}>Poly</Text>
-        <StepControl
-          variant="inlineLargeTextGlyph"
-          label="Poly count"
-          value={String(polyBeats)}
-          accessibilityValue={countLabel(polyBeats, 'beat', 'beats')}
-          neighbourGapDp={space.controlGap}
-          onStep={handleStep}
-          onValuePress={handleTypeCount}
-        />
-        <Text style={[styles.label, styles.pushRight]}>against</Text>
-        <StepControl
-          variant="inlineLargeTextGlyph"
-          label="Against"
-          value={againstLabel.value}
-          suffix={againstLabel.suffix}
-          accessibilityValue={againstLabel.spoken}
-          neighbourGapDp={space.controlGap}
-          onStep={stepAgainst}
-          onValuePress={handleTypeAgainst}
-        />
+        <View style={styles.pair}>
+          <Text style={styles.label}>Poly</Text>
+          <StepControl
+            variant="inlineLargeTextGlyph"
+            label="Poly count"
+            value={String(polyBeats)}
+            accessibilityValue={countLabel(polyBeats, 'beat', 'beats')}
+            neighbourGapDp={space.controlGap}
+            onStep={handleStep}
+            onValuePress={handleTypeCount}
+          />
+        </View>
+        <View style={[styles.pair, styles.pushRight]}>
+          <Text style={styles.label}>against</Text>
+          <StepControl
+            variant="inlineLargeTextGlyph"
+            label="Against"
+            value={againstLabel.value}
+            suffix={againstLabel.suffix}
+            accessibilityValue={againstLabel.spoken}
+            neighbourGapDp={space.controlGap}
+            onStep={stepAgainst}
+            onValuePress={handleTypeAgainst}
+          />
+        </View>
       </View>
       <PolyStrip
         polyBeats={polyBeats}

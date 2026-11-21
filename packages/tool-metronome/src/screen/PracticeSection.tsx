@@ -51,6 +51,14 @@ export const usePracticeStyles = createThemedStyles((theme) => ({
   pushRight: {
     marginLeft: 'auto',
   },
+  pair: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.controlGap,
+  },
+  ownLine: {
+    width: '100%',
+  },
   headingFill: {
     flex: 1,
     marginLeft: space.controlGap,
