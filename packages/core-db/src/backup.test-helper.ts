@@ -48,9 +48,7 @@ export const SEEDED_PRACTICE_LOG: PracticeLog = {
   ],
 };
 
-export function openBackupDatabase() {
-  const handle = openTestDatabase();
-  open.push(handle);
+export function backupDatabase(handle: ReturnType<typeof openTestDatabase>) {
   const clickSoundFiles = memoryClickSoundFiles();
   return {
     handle,
@@ -64,6 +62,12 @@ export function openBackupDatabase() {
       handle.transactor,
     ),
   };
+}
+
+export function openBackupDatabase() {
+  const handle = openTestDatabase();
+  open.push(handle);
+  return backupDatabase(handle);
 }
 
 export const UNRELATED_PREFERENCE = 'appearance_theme';
