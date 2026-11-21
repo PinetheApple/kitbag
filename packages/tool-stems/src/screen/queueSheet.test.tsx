@@ -35,6 +35,7 @@ import {
 } from 'react-test-renderer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { display } from '../testing/reactNativeHosts.ts';
 import { flush, textsOf } from './playerHarness.test-helper.tsx';
 import {
   BALLAD_ITEM,
@@ -50,7 +51,11 @@ import {
   stemRow,
   stems,
 } from './playQueue.test-helper.ts';
-import { QueueSheet, type QueueSheetProps } from './QueueSheet.tsx';
+import {
+  FOOTER_STACKED_ID,
+  QueueSheet,
+  type QueueSheetProps,
+} from './QueueSheet.tsx';
 
 const NIGHT_BUS = 21;
 const TIN_ROOF = 22;
@@ -138,6 +143,45 @@ async function openOnList(...songs: QueuedSong[]) {
 
 const stemTakeOver = () =>
   vi.spyOn(stemPlayerStore.getState(), 'takeOver').mockResolvedValue('playing');
+
+describe('the queue sheet footer under font scale', () => {
+  afterEach(() => {
+    display.fontScale = 1;
+  });
+
+  const footerTexts = (renderer: ReactTestRenderer) =>
+    renderer.root
+      .findAll(
+        (node) =>
+          typeof node.type === 'string' &&
+          node.props.testID === FOOTER_STACKED_ID,
+      )
+      .map((node) =>
+        node
+          .findAll((n) => String(n.type) === 'Text')
+          .map((n) => n.props.children as unknown),
+      );
+
+  it('sets Done and Play queue side by side at the design size', async () => {
+    const sheet = await openOnList(stems(NIGHT_BUS));
+    expect(footerTexts(sheet.renderer)).toEqual([]);
+  });
+
+  it('stacks Play queue above Done at 2.0', async () => {
+    display.fontScale = 2;
+    const sheet = await openOnList(stems(NIGHT_BUS));
+    expect(footerTexts(sheet.renderer)).toEqual([
+      [QUEUE_TEXT.playQueue, QUEUE_TEXT.done],
+    ]);
+  });
+
+  it('stacks Clear above Cancel in the confirm sheet at 2.0', async () => {
+    display.fontScale = 2;
+    const sheet = await openOnList(stems(NIGHT_BUS));
+    await sheet.press(QUEUE_TEXT.clearQueue);
+    expect(footerTexts(sheet.renderer)).toContainEqual(['Clear', 'Cancel']);
+  });
+});
 
 describe('the queue sheet over a list, with nothing playing', () => {
   it('has no Now playing, and Play queue starts the first queued song here', async () => {

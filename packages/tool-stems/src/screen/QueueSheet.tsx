@@ -12,6 +12,7 @@ import {
   SheetHint,
   space,
   upNextCountLabel,
+  useTextScaled,
   type Notice,
 } from '@kitbag/core-design';
 import {
@@ -36,7 +37,7 @@ import {
   type QueuedSong,
   type SetlistEntry,
 } from '@kitbag/core-state';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { clearQueueBody } from '../logic/upNextText.ts';
@@ -55,10 +56,35 @@ import {
   type PlayOrderRoutes,
 } from './usePlayOrderNav.ts';
 
+export const FOOTER_STACKED_ID = 'queue-footer-stacked';
+
 const useStyles = createThemedStyles(() => ({
   list: { gap: space.controlGap },
   footer: { flexDirection: 'row', gap: space.controlGap },
+  footerStacked: { gap: space.controlGap },
 }));
+
+interface ButtonPairProps {
+  readonly secondary: ReactNode;
+  readonly primary: ReactNode;
+}
+
+function ButtonPair({ secondary, primary }: ButtonPairProps) {
+  const styles = useStyles();
+  if (useTextScaled())
+    return (
+      <View testID={FOOTER_STACKED_ID} style={styles.footerStacked}>
+        {primary}
+        {secondary}
+      </View>
+    );
+  return (
+    <View style={styles.footer}>
+      {secondary}
+      {primary}
+    </View>
+  );
+}
 
 interface QueueListProps {
   readonly onPlay: (song: QueuedSong) => void;
@@ -189,17 +215,21 @@ function Footer({ canPlay, onDone, onPlayQueue }: FooterProps) {
       </View>
     );
   return (
-    <View style={styles.footer}>
-      <Button fill variant="ghost" label={QUEUE_TEXT.done} onPress={onDone} />
-      <Button
-        fill
-        variant="primary"
-        icon="play"
-        iconSize="sheetButton"
-        label={QUEUE_TEXT.playQueue}
-        onPress={onPlayQueue}
-      />
-    </View>
+    <ButtonPair
+      secondary={
+        <Button fill variant="ghost" label={QUEUE_TEXT.done} onPress={onDone} />
+      }
+      primary={
+        <Button
+          fill
+          variant="primary"
+          icon="play"
+          iconSize="sheetButton"
+          label={QUEUE_TEXT.playQueue}
+          onPress={onPlayQueue}
+        />
+      }
+    />
   );
 }
 
@@ -214,7 +244,6 @@ function ClearQueueSheet({
   bottomInset,
   onCancel,
 }: ClearQueueSheetProps) {
-  const styles = useStyles();
   const queueLength = usePlayOrder((s) => s.queue.length);
   const clearQueue = usePlayOrder((s) => s.clearQueue);
   const { name } = useStage();
@@ -230,10 +259,14 @@ function ClearQueueSheet({
       onDismiss={onCancel}
     >
       <SheetHint>{clearQueueBody(queueLength, name)}</SheetHint>
-      <View style={styles.footer}>
-        <Button fill variant="ghost" label="Cancel" onPress={onCancel} />
-        <Button fill variant="destructive" label="Clear" onPress={clear} />
-      </View>
+      <ButtonPair
+        secondary={
+          <Button fill variant="ghost" label="Cancel" onPress={onCancel} />
+        }
+        primary={
+          <Button fill variant="destructive" label="Clear" onPress={clear} />
+        }
+      />
     </Sheet>
   );
 }
