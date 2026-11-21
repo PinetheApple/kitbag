@@ -865,11 +865,13 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   **[coord — the owner may overturn]**
 
 - **2026-11-21 · Tablet width keeps the capped phone column (§12, #598)** — The owner
-  confirmed the cap above in place of a tablet layout: at 600 dp and wider every screen
+  confirmed the cap above in place of a tablet layout: wider than 600 dp, every screen
   and sheet stays one centred column of `layout.maxContentWidth`, with no per-screen
-  tablet layout, and phones are unchanged. The column's edge is invisible on the shared
-  background, so once the cap applies the list add button and full-bleed list-row
-  dividers pull in to the `space.screenInset` header and search inset. **[owner]**
+  tablet layout, and phones are unchanged. That includes the stem player, the song
+  player, the queue sheet and the metronome, which keep the centred column as they are.
+  The column's edge is invisible on the shared background, so once the cap applies the
+  list add button and list-row dividers pull in to the `space.screenInset` search
+  inset. In-screen scrims at tablet width are tracked in #602. **[owner]**
 
 - **2026-11-02 · APK size target re-set to 30.6 MB (#49)** — The release APK target is
   30.6 MB (30,648,062 bytes, arm64-v8a release), the size measured after the font cut,
