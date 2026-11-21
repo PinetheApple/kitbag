@@ -138,19 +138,20 @@ const OWN_LINE_CONTROLS = [
 ] as const;
 
 describe.each(OWN_LINE_CONTROLS)('the %s control', (label, Section) => {
-  const parentStyle = (scaled: boolean) =>
-    flat(
-      render(Section as Section, scaled).find(
-        (node) => node.props.accessibilityLabel === label,
-      ).parent?.props.style,
+  const control = (scaled: boolean) =>
+    render(Section as Section, scaled).find(
+      (node) => node.props.accessibilityLabel === label,
     );
+  const parentStyle = (scaled: boolean) =>
+    flat(control(scaled).parent?.props.style);
 
   it('takes its own line at scaled text', () => {
     expect(parentStyle(true).width).toBe('100%');
   });
 
-  it('grows its track across its own line, not down past the row', () => {
+  it('lays its own line out as a row for its filling track at scaled text', () => {
     expect(parentStyle(true).flexDirection).toBe('row');
+    expect(control(true).props.fill).toBe(true);
   });
 
   it('stays in its labelled row at the default text size', () => {

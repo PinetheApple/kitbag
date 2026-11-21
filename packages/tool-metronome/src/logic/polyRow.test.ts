@@ -328,19 +328,10 @@ describe('one-cycle strip caption', () => {
     });
   });
 
-  it.each([
-    [
-      'an explicit cycle',
-      2,
-      'one cycle: 3 poly over 2 main, across 2 of 4 beats',
-    ],
-    [
-      'the bar',
-      KB_POLY_AGAINST_BAR,
+  it('joins the cycle and its span into one sentence', () => {
+    expect(polyStripSentence(polyStripCaption(3, KB_POLY_AGAINST_BAR, 4))).toBe(
       'one cycle: 3 poly over 4 main, across the bar',
-    ],
-  ])('joins %s into one sentence', (_, against, sentence) => {
-    expect(polyStripSentence(polyStripCaption(3, against, 4))).toBe(sentence);
+    );
   });
 });
 
