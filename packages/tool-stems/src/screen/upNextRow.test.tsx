@@ -1,4 +1,4 @@
-import { playerWaveBars } from '@kitbag/core-design';
+import { playerWaveBars, QUEUE_TEXT } from '@kitbag/core-design';
 import {
   autoAdvanceDeps,
   configurePlayOrder,
@@ -19,14 +19,17 @@ import {
   stems,
   withQueue,
 } from './playQueue.test-helper.ts';
+import { display } from '../testing/reactNativeHosts.ts';
 import {
   at,
   flush,
   mountTracked,
   SET_ID,
   unmountTracked,
+  withTestId,
   type Player,
 } from './playerHarness.test-helper.tsx';
+import { REPEAT_LINE_ID, UP_NEXT } from './UpNextRow.tsx';
 
 const NIGHT_BUS = 21;
 const TIN_ROOF = 22;
@@ -49,6 +52,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  display.fontScale = 1;
   unmountTracked();
   libraryStore.setState(libraryBefore, true);
 });
@@ -82,6 +86,35 @@ describe('the Up next row', () => {
     await flush();
     expect(p.routes.onOpenStemSet).toHaveBeenCalledWith(NIGHT_BUS);
     expect(queued).toEqual([stems(TIN_ROOF)]);
+  });
+});
+
+describe('the Up next row under font scale', () => {
+  const repeatChips = (p: Player) => p.labelled(QUEUE_TEXT.repeatOff);
+  const labelLines = (p: Player) =>
+    p.renderer.root.find(
+      (node) =>
+        String(node.type) === 'Text' && node.props.children === UP_NEXT,
+    ).props.numberOfLines as unknown;
+
+  it('keeps the repeat chip in the row beside the text at the design size', async () => {
+    const p = await withQueue(NIGHT_BUS);
+    expect(withTestId(p, REPEAT_LINE_ID)).toEqual([]);
+    expect(repeatChips(p)).toHaveLength(1);
+  });
+
+  it('gives the repeat chip its own line at 2.0 and keeps the label on one', async () => {
+    display.fontScale = 2;
+    const p = await withQueue(NIGHT_BUS);
+    const [line] = withTestId(p, REPEAT_LINE_ID);
+    const inLine = line?.findAll(
+      (node) =>
+        typeof node.type === 'string' &&
+        node.props.accessibilityLabel === QUEUE_TEXT.repeatOff,
+    );
+    expect(repeatChips(p)).toHaveLength(1);
+    expect(inLine).toHaveLength(1);
+    expect(labelLines(p)).toBe(1);
   });
 });
 
