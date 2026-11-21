@@ -30,6 +30,7 @@ export default defineConfig({
       'src/screen/MetronomeAppBar.test.tsx',
       'src/library/songLists.test.tsx',
       'src/screen/PracticeSwitches.test.tsx',
+      'src/screen/MeterSheet.test.tsx',
     ],
     alias: {
       '@kitbag/core-native': stub('../core-native/src/pure.ts'),
