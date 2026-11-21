@@ -8,7 +8,7 @@ readonly EXIT_NO_READS=5
 
 readonly REPO=PinetheApple/kitbag
 readonly SHARDS=4
-readonly CACHE_ROOT="${A11Y_READS_CACHE:-$HOME/.cache/agent-scratch/a11y-reads}"
+readonly CACHE_ROOT="${A11Y_READS_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/kitbag/a11y-reads}"
 
 usage() {
   cat <<USAGE

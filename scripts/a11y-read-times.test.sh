@@ -4,9 +4,9 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 readonly SCRIPT=scripts/a11y-read-times.sh
-readonly SCRATCH_ROOT="$HOME/.cache/agent-scratch"
+readonly SCRATCH_ROOT="$HOME/.cache/kitbag"
 mkdir -p "$SCRATCH_ROOT"
-SCRATCH=$(mktemp -d -p "$SCRATCH_ROOT") || exit 1
+SCRATCH=$(mktemp -d -p "$SCRATCH_ROOT" a11y-read-times.test.XXXXXX) || exit 1
 readonly SCRATCH
 trap 'rm -rf "$SCRATCH"' EXIT
 
@@ -25,6 +25,16 @@ check() {
     FAIL=$((FAIL + 1))
     echo "FAIL $name: wanted '$want' in:" >&2
     echo "$got" >&2
+  fi
+}
+
+check_exit() {
+  local name=$1 want=$2 got=$3
+  if [[ $got == "$want" ]]; then
+    PASS=$((PASS + 1))
+  else
+    FAIL=$((FAIL + 1))
+    echo "FAIL $name: wanted exit $want, got $got" >&2
   fi
 }
 
@@ -101,15 +111,15 @@ check negative-control 'stem       n=0' "$out"
 
 mkdir "$SCRATCH/empty"
 bash "$SCRIPT" "$SCRATCH/empty" >/dev/null 2>&1
-check no-logcat "$EXIT_NO_LOGCAT" "$?"
+check_exit no-logcat "$EXIT_NO_LOGCAT" "$?"
 
 mkdir "$SCRATCH/quiet"
 echo 'nothing' >"$SCRATCH/quiet/logcat.txt"
 bash "$SCRIPT" "$SCRATCH/quiet" >/dev/null 2>&1
-check no-reads "$EXIT_NO_READS" "$?"
+check_exit no-reads "$EXIT_NO_READS" "$?"
 
 bash "$SCRIPT" >/dev/null 2>&1
-check usage "$EXIT_USAGE" "$?"
+check_exit usage "$EXIT_USAGE" "$?"
 
 echo "a11y-read-times.test: $PASS passed, $FAIL failed"
 ((FAIL == 0))
