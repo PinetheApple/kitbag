@@ -1,0 +1,1 @@
+• Songs whose beats Kitbag finds itself can now switch between a constant tempo and following the band, from the new Tempo row in the song player. Stem songs without a tempo from StemDeck get the same choice. Songs are analysed once more after updating.
