@@ -1,4 +1,4 @@
-import { Children, type ReactNode } from 'react';
+import { Children, cloneElement, isValidElement, type ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { space } from '../roles.ts';
@@ -30,9 +30,14 @@ export function ButtonRow({
   const stack = stacked ?? scaled;
   const buttons = Children.toArray(children);
   if (!stack) return <View style={[styles.row, style]}>{buttons}</View>;
+  const natural = buttons.map((button) =>
+    isValidElement<{ fill?: boolean }>(button)
+      ? cloneElement(button, { fill: false })
+      : button,
+  );
   return (
     <View testID={BUTTONS_STACKED_ID} style={[styles.stacked, style]}>
-      {primaryAt === 'end' ? buttons.reverse() : buttons}
+      {primaryAt === 'end' ? natural.reverse() : natural}
     </View>
   );
 }

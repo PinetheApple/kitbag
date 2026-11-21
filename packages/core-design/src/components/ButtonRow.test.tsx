@@ -49,7 +49,36 @@ function laidOut(scaled: boolean, props: Partial<ButtonRowProps> = {}) {
   };
 }
 
+const fills = vi.hoisted(() => [] as (boolean | undefined)[]);
+
+function FillProbe({ fill }: { readonly fill?: boolean }) {
+  fills.push(fill);
+  return null;
+}
+
+function fillsAt(scaled: boolean) {
+  scale.scaled = scaled;
+  fills.length = 0;
+  renderToStaticMarkup(
+    <ThemeProvider mode="dark">
+      <ButtonRow>
+        <FillProbe fill />
+        <FillProbe fill />
+      </ButtonRow>
+    </ThemeProvider>,
+  );
+  return [...fills];
+}
+
 describe('ButtonRow', () => {
+  it('lets fill buttons share the row at the design size', () => {
+    expect(fillsAt(false)).toEqual([true, true]);
+  });
+
+  it('drops fill from stacked buttons, so none flexes from zero height in the column', () => {
+    expect(fillsAt(true)).toEqual([false, false]);
+  });
+
   it('sets the buttons side by side in the given order at the design size', () => {
     expect(laidOut(false)).toEqual({
       order: ['first', 'last'],
