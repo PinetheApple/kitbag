@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const root = vi.hoisted(() => ({
   databaseError: undefined as DatabaseOpenError | undefined,
   rendered: [] as string[],
+  stackOptions: undefined as { readonly contentStyle?: unknown } | undefined,
   passThrough: ({ children }: { readonly children?: ReactNode }) => children,
 }));
 
@@ -35,7 +36,7 @@ vi.mock('@/settings/toolsRuntime', () => ({}));
 vi.mock('@/global.css', () => ({}));
 
 vi.mock('@kitbag/core-design', () => ({
-  layout: { maxContentWidth: 0 },
+  contentColumnStyle: { maxWidth: 'column cap' },
   SheetHost: root.passThrough,
   ThemeProvider: root.passThrough,
   themeVars: () => ({}),
@@ -47,8 +48,9 @@ vi.mock('@kitbag/core-state', () => ({
 }));
 vi.mock('expo-font', () => ({ useFonts: () => [true, null] }));
 vi.mock('expo-router', () => ({
-  Stack: () => {
+  Stack: (props: { readonly screenOptions?: { contentStyle?: unknown } }) => {
     root.rendered.push('Stack');
+    root.stackOptions = props.screenOptions;
     return null;
   },
 }));
@@ -119,5 +121,13 @@ describe('root layout', () => {
 
   it('renders the app, library analysis included, when the database opened', () => {
     expect(renderRoot()).toEqual(['library analysis', 'Stack']);
+  });
+
+  it('lays every screen out in the shared capped content column', () => {
+    renderRoot();
+
+    expect(root.stackOptions?.contentStyle).toContainEqual({
+      maxWidth: 'column cap',
+    });
   });
 });

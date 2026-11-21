@@ -26,15 +26,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { contentColumnStyle } from '../contentColumn.ts';
 import type { IconName } from '../icons.ts';
-import {
-  layout,
-  opacity,
-  screenBar,
-  size,
-  space,
-  textRoles,
-} from '../roles.ts';
+import { opacity, screenBar, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { withAlpha } from '../theme.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
@@ -75,9 +69,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   sheetSlot: {
     flexShrink: 1,
-    width: '100%',
-    maxWidth: layout.maxContentWidth,
-    alignSelf: 'center',
+    ...contentColumnStyle,
   },
   grow: { flexGrow: 1 },
   sheet: {

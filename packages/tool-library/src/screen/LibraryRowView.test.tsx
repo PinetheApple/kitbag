@@ -9,7 +9,14 @@ const TITLE = 'A title';
 const FACTS = '0:30';
 const BADGE_MARK = 'badge-mark';
 
-const display = vi.hoisted(() => ({ fontScale: 1 }));
+const PHONE_WIDTH = 360;
+const TABLET_WIDTH = 800;
+
+const display = vi.hoisted(() => ({
+  fontScale: 1,
+  width: 0,
+  boxes: [] as Record<string, unknown>[],
+}));
 
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
@@ -18,6 +25,7 @@ vi.mock('react-native', async () => {
       string,
       unknown
     >;
+    display.boxes.push(flat);
     return h(
       flat.flex === 1 && flat.minWidth === 0 ? 'section' : 'div',
       null,
@@ -28,7 +36,10 @@ vi.mock('react-native', async () => {
     View: box,
     Pressable: box,
     Text: (props: Props) => h('b', null, props.children),
-    useWindowDimensions: () => ({ fontScale: display.fontScale }),
+    useWindowDimensions: () => ({
+      fontScale: display.fontScale,
+      width: display.width,
+    }),
   };
 });
 
@@ -68,6 +79,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
 }));
 
 const { LibraryRowView } = await import('./LibraryRowView.tsx');
+const { space } = await import('@kitbag/core-design');
 
 const ROW = {
   kind: 'song',
@@ -79,8 +91,10 @@ const ROW = {
   tempoCorrection: 'none',
 } as unknown as LibrarySongRow;
 
-function render(fontScale: number) {
+function render(fontScale: number, width = PHONE_WIDTH) {
   display.fontScale = fontScale;
+  display.width = width;
+  display.boxes.length = 0;
   const markup = renderToStaticMarkup(
     createElement(LibraryRowView, {
       row: ROW,
@@ -100,12 +114,13 @@ function render(fontScale: number) {
     factsLines: linesOf(FACTS),
     badgeShown: markup.includes(BADGE_MARK),
     badgeInColumn: column.includes(BADGE_MARK),
+    row: display.boxes[0] ?? {},
   };
 }
 
 describe('LibraryRowView', () => {
   it('keeps one title line and the badges beside the text at 1.0', () => {
-    expect(render(1)).toEqual({
+    expect(render(1)).toMatchObject({
       titleLines: 1,
       factsLines: 1,
       badgeShown: true,
@@ -114,11 +129,25 @@ describe('LibraryRowView', () => {
   });
 
   it('bounds the title and puts the badges under the text at 2.0', () => {
-    expect(render(2)).toEqual({
+    expect(render(2)).toMatchObject({
       titleLines: 3,
       factsLines: 2,
       badgeShown: true,
       badgeInColumn: true,
+    });
+  });
+
+  it('runs the divider to the phone edge and starts text at the inset', () => {
+    expect(render(1, PHONE_WIDTH).row).toMatchObject({
+      marginHorizontal: 0,
+      paddingLeft: space.screenInset,
+    });
+  });
+
+  it('ends the divider at the search inset once the column is capped', () => {
+    expect(render(1, TABLET_WIDTH).row).toMatchObject({
+      marginHorizontal: space.screenInset,
+      paddingLeft: 0,
     });
   });
 });

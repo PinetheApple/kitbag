@@ -28,7 +28,7 @@ import '@/global.css';
 
 import type { DatabaseOpenError } from '@kitbag/core-db';
 import {
-  layout,
+  contentColumnStyle,
   SheetHost,
   ThemeProvider,
   themeVars,
@@ -155,9 +155,5 @@ function InsetSheetHost({ children }: { readonly children: ReactNode }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: {
-    width: '100%',
-    maxWidth: layout.maxContentWidth,
-    alignSelf: 'center',
-  },
+  content: contentColumnStyle,
 });

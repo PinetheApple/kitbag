@@ -6,6 +6,7 @@ export * from './textStyle.ts';
 export { TRANSPARENT, UNSCALED_TEXT } from './styleConstants.ts';
 export * from './textScale.ts';
 export * from './playerScroll.ts';
+export * from './contentColumn.ts';
 export * from './touchTarget.ts';
 export * from './editRowGaps.ts';
 export * from './icons.ts';
