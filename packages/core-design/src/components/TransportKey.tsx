@@ -42,6 +42,9 @@ const GLYPH_TEXT = {
   small: textStyle(TEXT_ROLES.small),
 } satisfies Record<TransportKeySize, unknown>;
 
+const LABEL_ROLE = textRoles.transportKeyLabel;
+const LABEL_TEXT = textStyle(LABEL_ROLE);
+
 export type TransportKeyContent =
   | { readonly icon: IconName; readonly text?: never }
   | { readonly text: string; readonly icon?: never };
@@ -131,15 +134,13 @@ export function TransportKey({
   const small = keySize === 'small';
   const dimmed = disabled || muted;
   const { fontScale } = useWindowDimensions();
-  const role = TEXT_ROLES[keySize];
-  const glyphStyle = [
-    GLYPH_TEXT[keySize],
-    styles.glyph,
-    selected && styles.glyphSelected,
-  ];
+  const inkStyle = [styles.glyph, selected && styles.glyphSelected];
   // The dock row has no room for grown text, and its icon faces never grow.
-  const designSizeFace = isTextScaled(fontScale)
-    ? fittedStyle(role, oneLineFloor(fontScale, role.size, role.size))
+  const designSizeLabel = isTextScaled(fontScale)
+    ? fittedStyle(
+        LABEL_ROLE,
+        oneLineFloor(fontScale, LABEL_ROLE.size, LABEL_ROLE.size),
+      )
     : null;
   return (
     <Pressable
@@ -159,9 +160,9 @@ export function TransportKey({
       onPress={onPress}
     >
       {icon === undefined ? (
-        <Text style={[glyphStyle, designSizeFace]}>{text}</Text>
+        <Text style={[LABEL_TEXT, inkStyle, designSizeLabel]}>{text}</Text>
       ) : (
-        <InlineIcon name={icon} style={glyphStyle} />
+        <InlineIcon name={icon} style={[GLYPH_TEXT[keySize], inkStyle]} />
       )}
       {badge === undefined ? null : (
         <KeyBadge label={badge} style={styles.badge} />
