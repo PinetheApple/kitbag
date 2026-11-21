@@ -1,9 +1,11 @@
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Pressable, useWindowDimensions, View } from 'react-native';
 
+import { barBadgePlace } from '../barBadge.ts';
 import type { IconName } from '../icons.ts';
 import {
   appBarTitleMinSize,
+  iconSizes,
   lineRatio,
   radius,
   screenBar,
@@ -76,10 +78,6 @@ const useStyles = createThemedStyles((theme) => ({
     lineHeight: textRoles.appBarTitle.size * lineRatio.appBarTitle,
     color: theme.color.text,
   },
-  badge: {
-    top: screenBar.badgeTop,
-    right: screenBar.badgeEnd,
-  },
   wordmark: textStyle(textRoles.wordmark),
   subtitle: {
     ...textStyle(textRoles.appBarSubtitle),
@@ -110,6 +108,10 @@ export function BarIconButton({
 }: BarIconButtonProps) {
   const styles = useStyles();
   const iconScale = useTextIconScale();
+  const badgePlace = useMemo(
+    () => barBadgePlace(iconSizes[iconSize], iconScale),
+    [iconSize, iconScale],
+  );
   return (
     <Pressable
       accessibilityRole="button"
@@ -126,7 +128,7 @@ export function BarIconButton({
         scale={iconScale}
       />
       {badge === undefined ? null : (
-        <KeyBadge label={badge} style={styles.badge} />
+        <KeyBadge label={badge} style={badgePlace} scale={iconScale} />
       )}
     </Pressable>
   );

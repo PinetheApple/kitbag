@@ -7,7 +7,6 @@ import {
   type RefObject,
 } from 'react';
 import {
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -45,21 +44,27 @@ import {
 } from '../sheetDismiss.ts';
 import { palette, radii } from '../tokens.ts';
 import { useReduceMotionMode } from '../useReduceMotion.ts';
+import { useTextScaled } from '../useTextScaled.ts';
 import { focusReaderOn } from '../readerFocus';
 import { readerHiding } from '../readerHiding.ts';
 import { onHardwareBack } from './hardwareBack';
 import { InlineIcon } from './IconGlyph.tsx';
 import { SheetContentLiveContext } from './sheetContentLive.ts';
+import { SheetHint } from './SheetHint.tsx';
 import { useSheetPortal } from './SheetHost.tsx';
+import { fadeToClear } from './fadeToClear.ts';
 import { useSheetCardStyle } from './useSheetCardStyle.ts';
 import { useSheetExit } from './useSheetExit.ts';
+import { SHEET_TOUCH_ROOM } from '../sheetRoom.ts';
 
-// A scroll view drops touches outside its frame, so the frame reaches into the
-// sheet's padding on every side, and the scroll indicator sits in the padding.
-export const SHEET_TOUCH_ROOM = space.sectionGap;
+export {
+  SheetHint,
+  type SheetHintProps,
+  type SheetHintSize,
+} from './SheetHint.tsx';
+
 const INDICATOR_INSETS = { top: SHEET_TOUCH_ROOM, bottom: SHEET_TOUCH_ROOM };
 const SCRIM = withAlpha(palette.bg.dark, opacity.sheetScrim);
-const FADED_OUT = 0;
 const READER_CLOSE_ACTION = 'dismiss';
 const BACKDROP_READER_HIDING = readerHiding(true);
 
@@ -116,6 +121,14 @@ const useStyles = createThemedStyles((theme) => ({
   titleBesideAction: {
     flexShrink: 1,
   },
+  titleRowWrapped: {
+    flexWrap: 'wrap',
+  },
+  titleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.chipGap,
+  },
   titleDetail: {
     ...textStyle(textRoles.rowSubtitle),
     color: theme.color.text2,
@@ -133,57 +146,19 @@ const useStyles = createThemedStyles((theme) => ({
     left: 0,
     right: 0,
     height: SHEET_TOUCH_ROOM,
-    ...(Platform.OS === 'web'
-      ? { backgroundColor: theme.color.surface1 }
-      : {
-          experimental_backgroundImage: `linear-gradient(to bottom, ${theme.color.surface1}, ${withAlpha(theme.color.surface1, FADED_OUT)})`,
-        }),
+    ...fadeToClear(theme.color.surface1, 'to bottom'),
     pointerEvents: 'none',
   },
   content: {
     gap: space.sectionGap,
     padding: SHEET_TOUCH_ROOM,
   },
-  hint: {
-    ...textStyle(textRoles.hint),
-    color: theme.color.text3,
-  },
-  centered: {
-    textAlign: 'center',
-  },
-  hintLarge: textStyle(textRoles.sheetHint),
   scrim: {
     backgroundColor: SCRIM,
   },
 }));
 
-export type SheetHintSize = 'default' | 'large';
 export type SheetTitleSize = 'default' | 'large' | 'screen';
-
-export interface SheetHintProps {
-  readonly centered?: boolean;
-  readonly size?: SheetHintSize;
-  readonly children: ReactNode;
-}
-
-export function SheetHint({
-  centered = false,
-  size: hintSize = 'default',
-  children,
-}: SheetHintProps) {
-  const styles = useStyles();
-  return (
-    <Text
-      style={[
-        styles.hint,
-        hintSize === 'large' && styles.hintLarge,
-        centered && styles.centered,
-      ]}
-    >
-      {children}
-    </Text>
-  );
-}
 
 export interface SheetProps {
   readonly visible: boolean;
@@ -229,11 +204,17 @@ export function Sheet({
   children,
 }: SheetProps) {
   const styles = useStyles();
+  const scaled = useTextScaled();
+  const besideAction = titleAction !== undefined && !scaled;
   const titleStyle = [
     styles.title,
     titleSize === 'large' && styles.titleLarge,
     titleSize === 'screen' && styles.titleScreen,
-    titleAction !== undefined && styles.titleBesideAction,
+    besideAction && styles.titleBesideAction,
+  ];
+  const titleGroupStyle = [
+    styles.titleGroup,
+    besideAction && styles.titleBesideAction,
   ];
   const motion = useReduceMotionMode();
   const titleRef = useRef<TextInstance>(null);
@@ -340,19 +321,21 @@ export function Sheet({
           <GestureDetector gesture={dragToDismiss}>
             <View style={styles.header}>
               <View style={styles.grab} />
-              <View style={styles.titleRow}>
-                {titleIcon === undefined ? null : (
-                  <InlineIcon name={titleIcon} style={titleStyle} />
-                )}
-                <Text
-                  ref={titleRef}
-                  accessibilityRole="header"
-                  accessibilityActions={readerActions}
-                  onAccessibilityAction={handleReaderAction}
-                  style={titleStyle}
-                >
-                  {title}
-                </Text>
+              <View style={[styles.titleRow, scaled && styles.titleRowWrapped]}>
+                <View style={titleGroupStyle}>
+                  {titleIcon === undefined ? null : (
+                    <InlineIcon name={titleIcon} style={titleStyle} />
+                  )}
+                  <Text
+                    ref={titleRef}
+                    accessibilityRole="header"
+                    accessibilityActions={readerActions}
+                    onAccessibilityAction={handleReaderAction}
+                    style={titleStyle}
+                  >
+                    {title}
+                  </Text>
+                </View>
                 {titleDetail === undefined ? null : (
                   <Text style={styles.titleDetail}>{titleDetail}</Text>
                 )}
@@ -367,6 +350,7 @@ export function Sheet({
               style={styles.scroll}
               contentContainerStyle={styles.content}
               bounces={false}
+              persistentScrollbar
               scrollEnabled={scrollEnabled}
               keyboardShouldPersistTaps="handled"
               scrollIndicatorInsets={INDICATOR_INSETS}

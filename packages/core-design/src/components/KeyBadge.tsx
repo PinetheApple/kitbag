@@ -1,17 +1,15 @@
+import { useMemo } from 'react';
 import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { inset, radius, size, textRoles } from '../roles.ts';
-import { TEXT_ICON_SCALE_MAX } from '../textScale.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
+
+const DESIGN_SCALE = 1;
 
 const useStyles = createThemedStyles((theme) => ({
   badge: {
     position: 'absolute',
-    minWidth: size.keyBadge,
-    minHeight: size.keyBadge,
-    paddingHorizontal: inset.keyBadgeH,
-    borderRadius: radius.keyBadge,
     backgroundColor: theme.accentTextFill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -26,16 +24,30 @@ const useStyles = createThemedStyles((theme) => ({
 export interface KeyBadgeProps {
   readonly label: string;
   readonly style: StyleProp<ViewStyle>;
+  readonly scale?: number;
 }
 
-export function KeyBadge({ label, style }: KeyBadgeProps) {
+export function KeyBadge({
+  label,
+  style,
+  scale = DESIGN_SCALE,
+}: KeyBadgeProps) {
   const styles = useStyles();
+  const box = useMemo(
+    () => ({
+      minWidth: size.keyBadge * scale,
+      minHeight: size.keyBadge * scale,
+      paddingHorizontal: inset.keyBadgeH * scale,
+      borderRadius: radius.keyBadge * scale,
+    }),
+    [scale],
+  );
   return (
     <View
-      style={[styles.badge, style]}
+      style={[styles.badge, box, style]}
       importantForAccessibility="no-hide-descendants"
     >
-      <Text style={styles.label} maxFontSizeMultiplier={TEXT_ICON_SCALE_MAX}>
+      <Text style={styles.label} maxFontSizeMultiplier={scale}>
         {label}
       </Text>
     </View>

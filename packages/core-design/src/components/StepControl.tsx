@@ -9,17 +9,22 @@ import {
 
 import type { IconName } from '../icons.ts';
 import { iconSizes, inset, radius, size, space, textRoles } from '../roles.ts';
+import {
+  inlineValueHitBox,
+  LARGE_KEY_HEIGHT,
+  largeInlineKeyHitBoxes,
+  stepKeyHitBoxes,
+} from '../stepHitBoxes.ts';
 import { createStepRepeat, STEP_REPEAT } from '../stepRepeat.ts';
 import { grownTextScale } from '../textScale.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import {
   hitBoxStyle,
-  hitExtension,
   neighbourGaps,
-  unshared,
   type NeighbourGaps,
 } from '../touchTarget.ts';
+import { useTextIconScale } from '../useTextIconScale.ts';
 import { InlineIcon } from './IconGlyph.tsx';
 
 export type StepDelta = -1 | 1;
@@ -29,21 +34,13 @@ export type StepControlVariant =
 const STEP_DOWN: StepDelta = -1;
 const STEP_UP: StepDelta = 1;
 
-// With an inert value badge between them, the keys are at least the badge's
-// padding and border apart as well as two gaps; with a tappable one, only the
-// gap separates key from badge.
-const INERT_BADGE_GAP = 2 * (space.stepKeyGap + inset.badgeH + size.stroke);
-
-// The inline key's width leaves out its glyph, so the box is a lower bound. An
-// inert value lets the two keys meet at its midpoint.
-const INLINE_KEY_WIDTH = inset.stepInlineKeyH * 2;
-const INLINE_KEY_HEIGHT = textRoles.stepInline.size + inset.stepInlineKeyV * 2;
-const INLINE_INNER_GAP = space.inlineKeyGap * 2 + size.stepValueMinWidth;
-const INLINE_EDGE_H = inset.stepInlineH + size.stroke;
-const INLINE_EDGE_V = inset.stepInlineV + size.stroke;
-
-const LARGE_KEY_HEIGHT = size.stepInlineLarge - size.stroke * 2;
-const LARGE_EDGE_H = inset.stepInlineLargeH + size.stroke;
+const INLINE_GLYPH: Readonly<
+  Record<Exclude<StepControlVariant, 'badge'>, number>
+> = {
+  inline: textRoles.stepInline.size,
+  inlineLarge: iconSizes.stepInlineLargeKey,
+  inlineLargeTextGlyph: iconSizes.stepTextGlyphKey,
+};
 
 const A11Y_ACTIONS = [{ name: 'increment' }, { name: 'decrement' }] as const;
 const A11Y_ACTIONS_WITH_ACTIVATE = [...A11Y_ACTIONS, { name: 'activate' }];
@@ -65,92 +62,6 @@ export interface StepControlProps {
 }
 
 type HitBox = ReturnType<typeof hitBoxStyle>;
-
-interface KeyGeometry {
-  readonly width: number;
-  readonly height: number;
-  readonly inner: number;
-  readonly gaps: NeighbourGaps;
-}
-
-function keyHitBoxes({ width, height, inner, gaps }: KeyGeometry) {
-  const vertical = { top: gaps.top, bottom: gaps.bottom };
-  return {
-    decrement: hitBoxStyle(
-      hitExtension(width, height, {
-        ...vertical,
-        left: gaps.left,
-        right: inner,
-      }),
-    ),
-    increment: hitBoxStyle(
-      hitExtension(width, height, {
-        ...vertical,
-        left: inner,
-        right: gaps.right,
-      }),
-    ),
-  };
-}
-
-const plus = (edge: number, gap: number | undefined) =>
-  unshared(edge) + (gap ?? Number.POSITIVE_INFINITY);
-
-function largeInlineKeyHitBoxes(gaps: NeighbourGaps, valueTappable: boolean) {
-  return keyHitBoxes({
-    width: size.stepInlineLargeKey,
-    height: LARGE_KEY_HEIGHT,
-    inner: valueTappable ? space.inlineKeyGap : INLINE_INNER_GAP,
-    gaps: {
-      top: plus(size.stroke, gaps.top),
-      bottom: plus(size.stroke, gaps.bottom),
-      left: plus(LARGE_EDGE_H, gaps.left),
-      right: plus(LARGE_EDGE_H, gaps.right),
-    },
-  });
-}
-
-// Padding counts toward minWidth, so the box grows by what it reaches sideways.
-function inlineValueHitBox(gaps: NeighbourGaps, large: boolean) {
-  const height = large ? LARGE_KEY_HEIGHT : INLINE_KEY_HEIGHT;
-  const edgeV = large ? size.stroke : INLINE_EDGE_V;
-  const reach = hitExtension(size.stepValueMinWidth, height, {
-    top: plus(edgeV, gaps.top),
-    bottom: plus(edgeV, gaps.bottom),
-    left: space.inlineKeyGap,
-    right: space.inlineKeyGap,
-  });
-  return {
-    ...hitBoxStyle(reach),
-    minWidth: size.stepValueMinWidth + reach.left + reach.right,
-  };
-}
-
-function stepKeyHitBoxes(
-  gaps: NeighbourGaps,
-  inline: boolean,
-  valueTappable: boolean,
-) {
-  if (!inline) {
-    return keyHitBoxes({
-      width: size.stepKey,
-      height: size.stepKey,
-      inner: valueTappable ? space.stepKeyGap : INERT_BADGE_GAP,
-      gaps,
-    });
-  }
-  return keyHitBoxes({
-    width: INLINE_KEY_WIDTH,
-    height: INLINE_KEY_HEIGHT,
-    inner: valueTappable ? space.inlineKeyGap : INLINE_INNER_GAP,
-    gaps: {
-      top: plus(INLINE_EDGE_V, gaps.top),
-      bottom: plus(INLINE_EDGE_V, gaps.bottom),
-      left: plus(INLINE_EDGE_H, gaps.left),
-      right: plus(INLINE_EDGE_H, gaps.right),
-    },
-  });
-}
 
 const useStyles = createThemedStyles((theme) => ({
   badgeCluster: {
@@ -250,12 +161,6 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  largeKeyText: {
-    fontSize: iconSizes.stepInlineLargeKey,
-  },
-  textGlyphKey: {
-    fontSize: iconSizes.stepTextGlyphKey,
-  },
   largeValue: textStyle(textRoles.stepInlineLargeValue),
   suffixed: {
     flexDirection: 'row',
@@ -282,6 +187,7 @@ export function StepControl({
 }: StepControlProps) {
   const styles = useStyles();
   const textScale = grownTextScale(useWindowDimensions().fontScale);
+  const iconScale = useTextIconScale();
   const suffixGap = useMemo(
     () => ({ marginLeft: space.stepSuffixGap * textScale }),
     [textScale],
@@ -290,6 +196,13 @@ export function StepControl({
   const textGlyph = variant === 'inlineLargeTextGlyph';
   const large = variant === 'inlineLarge' || textGlyph;
   const inline = variant === 'inline' || large;
+  const glyphSize = useMemo(
+    () =>
+      variant === 'badge'
+        ? undefined
+        : { fontSize: INLINE_GLYPH[variant] * iconScale },
+    [variant, iconScale],
+  );
   const gaps = neighbourGaps(neighbourGapDp);
   const hitBoxes = large
     ? largeInlineKeyHitBoxes(gaps, valueTappable)
@@ -337,14 +250,7 @@ export function StepControl({
     inline ? (
       <Pressable style={hitBox} onPress={onPress} {...repeatProps(onHold)}>
         <View style={[styles.inlineKey, large && styles.largeKey]}>
-          <InlineIcon
-            name={glyph}
-            style={[
-              styles.inlineKeyText,
-              large && styles.largeKeyText,
-              textGlyph && styles.textGlyphKey,
-            ]}
-          />
+          <InlineIcon name={glyph} style={[styles.inlineKeyText, glyphSize]} />
         </View>
       </Pressable>
     ) : (

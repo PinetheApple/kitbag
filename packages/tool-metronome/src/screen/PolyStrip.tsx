@@ -7,12 +7,13 @@ import {
   textRoles,
   textStyle,
   TRANSPARENT,
+  useTextScaled,
 } from '@kitbag/core-design';
 import { effectivePolyAgainst } from '@kitbag/core-state';
 import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 
-import { polyStripCaption } from '../logic/polyRow.ts';
+import { polyStripCaption, polyStripSentence } from '../logic/polyRow.ts';
 
 const useStripStyles = createThemedStyles((theme) => ({
   strip: {
@@ -73,6 +74,8 @@ export function PolyStrip({ polyBeats, against, beatsPerBar }: PolyStripProps) {
   const styles = useStripStyles();
   const mainBeats = effectivePolyAgainst(against, beatsPerBar);
   const caption = polyStripCaption(polyBeats, against, beatsPerBar);
+  const sentence = polyStripSentence(caption);
+  const scaled = useTextScaled();
   const pulses = useMemo(
     () =>
       Array.from({ length: polyBeats }, (_u, k) => ({
@@ -81,11 +84,7 @@ export function PolyStrip({ polyBeats, against, beatsPerBar }: PolyStripProps) {
     [polyBeats],
   );
   return (
-    <View
-      style={styles.strip}
-      accessible
-      accessibilityLabel={`${caption.cycle}, ${caption.span}`}
-    >
+    <View style={styles.strip} accessible accessibilityLabel={sentence}>
       <View style={styles.beatLane}>
         {Array.from({ length: mainBeats }, (_u, beat) => (
           <View key={beat} style={styles.beat} />
@@ -99,10 +98,14 @@ export function PolyStrip({ polyBeats, against, beatsPerBar }: PolyStripProps) {
           />
         ))}
       </View>
-      <View style={styles.caption}>
-        <Text style={styles.captionText}>{caption.cycle}</Text>
-        <Text style={[styles.captionText, styles.span]}>{caption.span}</Text>
-      </View>
+      {scaled ? (
+        <Text style={styles.captionText}>{sentence}</Text>
+      ) : (
+        <View style={styles.caption}>
+          <Text style={styles.captionText}>{caption.cycle}</Text>
+          <Text style={[styles.captionText, styles.span]}>{caption.span}</Text>
+        </View>
+      )}
     </View>
   );
 }

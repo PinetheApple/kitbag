@@ -20,6 +20,7 @@ import {
   hitBoxStyle,
   hitExtension,
   neighbourGaps,
+  reachEdges,
   type NeighbourGaps,
 } from '../touchTarget.ts';
 import { InlineIcon } from './IconGlyph.tsx';
@@ -42,13 +43,22 @@ const BUTTON_HEIGHTS: Readonly<Record<ButtonSize, number>> = {
     (homeArrange.smallButtonV + size.stroke) * 2,
 };
 
+const NO_EDGES: NeighbourGaps = {};
+
 // A labelled button is wider than 48dp, so only the vertical axis is grown.
-function buttonHitBox(gaps: NeighbourGaps, height: number) {
+function buttonHitBox(
+  gaps: NeighbourGaps,
+  height: number,
+  edges: NeighbourGaps,
+) {
   return hitBoxStyle(
-    hitExtension(minTouchTargetDp, height, {
-      top: gaps.top,
-      bottom: gaps.bottom,
-    }),
+    reachEdges(
+      hitExtension(minTouchTargetDp, height, {
+        top: gaps.top,
+        bottom: gaps.bottom,
+      }),
+      { top: edges.top, bottom: edges.bottom },
+    ),
   );
 }
 
@@ -67,6 +77,7 @@ export interface ButtonProps {
   /** Gaps to the controls above and below, for the 48dp hit box; a number
    * applies to both, an omitted side has no neighbour. */
   readonly neighbourGapDp?: number | NeighbourGaps;
+  readonly edgeRoomDp?: NeighbourGaps;
   readonly size?: ButtonSize;
 }
 
@@ -188,6 +199,7 @@ export function Button({
   fill = false,
   accessibilityLabel,
   neighbourGapDp = space.controlGap,
+  edgeRoomDp = NO_EDGES,
   size: buttonSize = 'default',
 }: ButtonProps) {
   const styles = useStyles();
@@ -201,7 +213,11 @@ export function Button({
       accessibilityState={{ disabled }}
       disabled={disabled}
       style={[
-        buttonHitBox(neighbourGaps(neighbourGapDp), BUTTON_HEIGHTS[buttonSize]),
+        buttonHitBox(
+          neighbourGaps(neighbourGapDp),
+          BUTTON_HEIGHTS[buttonSize],
+          edgeRoomDp,
+        ),
         fill && styles.fill,
       ]}
       onPress={onPress}

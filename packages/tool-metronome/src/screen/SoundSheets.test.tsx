@@ -1,12 +1,16 @@
 import type { PerAccentSounds } from '@kitbag/core-state';
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { SHEET_TOUCH_ROOM } from '@kitbag/core-design';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 type Updater = (sounds: PerAccentSounds) => PerAccentSounds;
 
-const seen = vi.hoisted(() => ({ block: null as Props | null }));
+const seen = vi.hoisted(() => ({
+  block: null as Props | null,
+  roles: null as Props | null,
+}));
 const metro = vi.hoisted(() => {
   const setSounds: (normal: number, accent: number) => void = () => undefined;
   return {
@@ -34,14 +38,16 @@ vi.mock('@kitbag/core-design', async (original) => {
     createThemedStyles: () => () => ({}),
     Sheet: (props: Props) => h('section', null, props.children),
     PickerGrid: () => null,
-    SegmentedControl: () => null,
+    SegmentedControl: (props: Props) => {
+      seen.roles = props;
+      return null;
+    },
     Icon: () => null,
     TransportKey: () => null,
     hitBoxStyle: () => ({}),
     hitExtension: () => ({}),
     textStyle: () => ({}),
     unshared: (gap: number) => gap,
-    SHEET_TOUCH_ROOM: 0,
   };
 });
 
@@ -108,5 +114,23 @@ describe('a sound imported while the other role changes', () => {
     metro.state.sounds = { normal: 3, accent: 4 };
     imported()(IMPORTED);
     expect(setSounds).toHaveBeenCalledExactlyOnceWith(3, IMPORTED);
+  });
+});
+
+describe('the beat level control heading the sound sheet', () => {
+  it('takes the room to the sheet edge above it whole', () => {
+    renderToStaticMarkup(
+      createElement(SoundPickerSheet, {
+        visible: true,
+        bottomInset: 0,
+        onDismiss: () => undefined,
+        sounds: { normal: 1, accent: 4 },
+        onChange: vi.fn(),
+      }),
+    );
+    expect(seen.roles?.edgeRoomDp).toEqual({ top: SHEET_TOUCH_ROOM });
+    expect(
+      (seen.roles?.neighbourGapDp as { top?: number }).top,
+    ).toBeUndefined();
   });
 });

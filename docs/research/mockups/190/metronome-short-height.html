@@ -1,0 +1,93 @@
+<!doctype html><html><head><meta charset="utf-8"><title>#190 metronome at short heights — options</title><style>
+:root{--bg:#0E0D10;--s1:#1A1820;--s2:#242230;--s3:#2E2C3A;--line:#33303F;--tx:#ECEAF0;--tx2:#BDBBC6;--tx3:#9793A2;--decor:#6C6878;--acc:#FFB347;--accDim:#8A6A35;--onAcc:#221600}
+body{margin:0;padding:24px;background:#000;color:var(--tx);font:14px system-ui,sans-serif}
+h1{font-size:20px;margin:0 0 6px}h2{font-size:15px;margin:0 0 6px}
+p,li{color:var(--tx2);max-width:1100px;line-height:1.5}
+.row{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;margin:18px 0}
+.opt{width:360px}
+.phone{position:relative;width:360px;height:480px;background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.sb{height:24px;flex:none;font-size:11px;color:var(--tx2);padding:4px 14px;box-sizing:border-box}
+.ab{height:56px;flex:none;display:flex;align-items:center;gap:8px;padding:0 8px}
+.ib{width:40px;height:40px;border-radius:50%;background:var(--s2);flex:none}
+.chip{flex:1;height:44px;border-radius:14px;background:#3a2f24;border:1px solid var(--accDim);padding:4px 12px;box-sizing:border-box;font-size:13px}
+.chip small{display:block;color:var(--acc)}
+.pill{align-self:center;margin:4px 0 6px;padding:6px 14px;border-radius:99px;background:var(--s2);font-size:13px;flex:none}
+.zone{text-align:center;flex:none}
+.car{color:var(--decor);font-size:12px;line-height:14px}
+.bpm{font-weight:700;letter-spacing:-2px;line-height:1}
+.cap{font-size:10px;letter-spacing:2.4px;color:var(--tx2)}
+.sweep{height:3px;background:var(--s3);margin:6px 26px 0;border-radius:2px}
+.presets{display:flex;gap:8px;justify-content:center;margin:10px 0 0;flex:none}
+.presets span{padding:9px 0;width:52px;text-align:center;border-radius:11px;background:var(--s2);border:1px solid var(--line);font-size:13px}
+.pick{display:flex;gap:8px;justify-content:center;margin:8px 0 0;flex:none}
+.pick span{padding:10px 14px;border-radius:12px;background:var(--s2);border:1px solid var(--line);font-size:13px}
+.dots{display:flex;gap:12px;justify-content:center;margin:12px 0 0;flex:none}
+.dots i{width:40px;height:40px;border-radius:50%;background:var(--s3);border:2px solid #4a475a;box-sizing:border-box}
+.dots i.a{border:5px solid var(--acc);background:transparent}
+.legend{display:flex;gap:14px;justify-content:center;font-size:12px;color:var(--tx2);margin:8px 0 0;flex:none}
+.status{margin:10px 16px 0;padding:10px 12px;border-radius:12px;border:1px solid var(--line);font-size:13px;color:var(--tx2);flex:none}
+.spacer{flex:1}
+.transport{display:flex;justify-content:center;align-items:center;gap:28px;padding:8px 0 14px;flex:none;background:var(--bg)}
+.transport i{width:44px;height:44px;border-radius:50%;background:var(--s2)}
+.transport b{width:58px;height:58px;border-radius:50%;background:var(--acc)}
+.fold{position:absolute;left:0;right:0;border-top:2px dashed #ff5c5c;}
+.fold span{position:absolute;right:6px;top:-18px;font-size:10px;color:#ff5c5c}
+.fade{height:28px;margin-top:-28px;position:relative;background:linear-gradient(to bottom,rgba(14,13,16,0),var(--bg));flex:none;pointer-events:none}
+.scrollbar{position:absolute;right:3px;width:3px;border-radius:2px;background:var(--decor)}
+.region{position:relative;flex:1;overflow:hidden;display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.inner{display:flex;flex-direction:column}
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--s2);color:var(--tx2);margin-bottom:6px}
+.rec{background:#3a2f24;color:var(--acc)}
+.tempoRow{display:flex;align-items:center;justify-content:center;gap:18px}
+table{border-collapse:collapse;font-size:12px;color:var(--tx2)}td,th{border:1px solid var(--line);padding:3px 8px;text-align:right}th{color:var(--tx)}td:first-child,th:first-child{text-align:left}
+</style></head><body>
+<h1>Metronome at 360×480 dp (#190, item B) — layout options</h1>
+<p>Today the body below the app bar is one scroll view, but a vertical drag on the BPM block is the tempo swipe and wins. At 480 dp the BPM block fills most of the visible body, so the scroll only starts from a drag on the −10…+10 row, nothing cues it, and once scrolled the BPM is off screen. The same overflow hides the poly row under the pinned status card at 200% font while playing (item 8). The binding designs draw no short-height layout, so this needs a decision.</p>
+<p>Heights in the table are estimates from the design roles (compact density), not measurements.</p>
+<div class="row">
+<div class="opt"><span class="tag">Now (main)</span>
+<div class="phone"><div class="sb">7:12</div><div class="ab"><span class="car">‹</span><span class="ib"></span><div class="chip">Gig<small>2 songs</small></div><span class="ib"></span></div><div class="pill">⏱ 0:00</div><div class="zone"><div class="car">⌃</div><div class="bpm" style="font-size:80px">132</div><div class="cap">BPM · ALLEGRO · SWIPE ANYWHERE</div><div class="car">⌄</div><div class="sweep"></div></div><div class="presets"><span>−10</span><span>−5</span><span>TAP</span><span>+5</span><span>+10</span></div>
+<div class="pick"><span>4/4 ⌄</span><span>♩ Quarters ⌄</span></div>
+<div class="dots"><i class="a"></i><i></i><i></i><i></i></div>
+<div class="legend"><span>● accent</span><span>● normal</span><span>◌ muted</span></div>
+<div class="status">Practice tools are off</div><div class="fold" style="top:398px"><span>transport covers from here</span></div><div class="spacer"></div><div style="position:absolute;left:0;right:0;bottom:0"><div class="transport"><i></i><b></b><i></i></div></div></div>
+<p>Time signature, subdivision, dots, legend and status sit under the transport. Scrolls only from a drag on the −10…+10 row; no cue.</p></div>
+
+<div class="opt"><span class="tag">A — compact tempo block, no scroll</span>
+<div class="phone"><div class="sb">7:12</div><div class="ab"><span class="car">‹</span><span class="ib"></span><div class="chip">Gig<small>2 songs</small></div><span class="ib"></span></div><div class="pill">⏱ 0:00</div><div class="zone"><div class="tempoRow"><span class="car">⌄</span><span class="bpm" style="font-size:56px">132</span><span class="car">⌃</span></div><div class="cap">BPM · ALLEGRO</div><div class="sweep"></div></div><div class="presets"><span>−10</span><span>−5</span><span>TAP</span><span>+5</span><span>+10</span></div>
+<div class="pick"><span>4/4 ⌄</span><span>♩ Quarters ⌄</span></div>
+<div class="dots"><i class="a"></i><i></i><i></i><i></i></div>
+
+<div class="status">Practice tools are off</div><div class="spacer"></div><div class="transport"><i></i><b></b><i></i></div></div>
+<p>Below a height threshold the arrows sit beside a 56 dp numeral, the caption drops “SWIPE ANYWHERE” and the legend is hidden. By estimate it is still about 30 dp over at 480 dp for 4/4 with no song loaded, and a second dot line, a loaded song's note line or 200% font add more, so it needs B or C as a fallback anyway.</p></div>
+
+<div class="opt"><span class="tag">B — scroll wins when the body overflows</span>
+<div class="phone"><div class="sb">7:12</div><div class="ab"><span class="car">‹</span><span class="ib"></span><div class="chip">Gig<small>2 songs</small></div><span class="ib"></span></div><div class="region"><div class="inner"><div class="pill">⏱ 0:00</div><div class="zone"><div class="car">⌃</div><div class="bpm" style="font-size:80px">132</div><div class="cap">BPM · ALLEGRO · SWIPE ANYWHERE</div><div class="car">⌄</div><div class="sweep"></div></div><div class="presets"><span>−10</span><span>−5</span><span>TAP</span><span>+5</span><span>+10</span></div>
+<div class="pick"><span>4/4 ⌄</span><span>♩ Quarters ⌄</span></div>
+<div class="dots"><i class="a"></i><i></i><i></i><i></i></div>
+<div class="legend"><span>● accent</span><span>● normal</span><span>◌ muted</span></div>
+<div class="status">Practice tools are off</div></div><div class="scrollbar" style="top:6px;height:120px"></div></div><div class="fade"></div><div class="transport"><i></i><b></b><i></i></div></div>
+<p>When the body overflows, vertical drags anywhere scroll it; the tempo swipe is off (arrows, −10…+10, TAP and the numpad still set tempo). A persistent scroll bar and a bottom fade cue the content below. The BPM still scrolls away.</p></div>
+
+<div class="opt"><span class="tag rec">C — pinned tempo, controls scroll (recommended)</span>
+<div class="phone"><div class="sb">7:12</div><div class="ab"><span class="car">‹</span><span class="ib"></span><div class="chip">Gig<small>2 songs</small></div><span class="ib"></span></div><div class="pill">⏱ 0:00</div><div class="zone"><div class="tempoRow"><span class="car">⌄</span><span class="bpm" style="font-size:56px">132</span><span class="car">⌃</span></div><div class="cap">BPM · ALLEGRO</div><div class="sweep"></div></div><div class="region"><div class="inner"><div class="presets"><span>−10</span><span>−5</span><span>TAP</span><span>+5</span><span>+10</span></div>
+<div class="pick"><span>4/4 ⌄</span><span>♩ Quarters ⌄</span></div>
+<div class="dots"><i class="a"></i><i></i><i></i><i></i></div>
+<div class="legend"><span>● accent</span><span>● normal</span><span>◌ muted</span></div>
+<div class="status">Practice tools are off</div></div><div class="scrollbar" style="top:6px;height:70px"></div></div><div class="fade"></div><div class="transport"><i></i><b></b><i></i></div></div>
+<p>BPM block (compact below the threshold) and transport stay put; the controls between them scroll in their own region with a persistent scroll bar and a bottom fade. The tempo swipe keeps working on the BPM block, an ordinary drag anywhere in the region scrolls it, the BPM never leaves the screen, and the same region holds the poly row at 200% font while playing.</p></div>
+</div>
+<h2>Estimated heights at 480 dp (dp)</h2>
+<table><tr><th>Block</th><th>Now</th><th>A</th><th>C</th></tr>
+<tr><td>Status bar + gesture inset</td><td>40</td><td>40</td><td>40</td></tr>
+<tr><td>App bar</td><td>56</td><td>56</td><td>56</td></tr>
+<tr><td>Practice pill</td><td>42</td><td>42</td><td>42</td></tr>
+<tr><td>Tempo block</td><td>~170</td><td>~90</td><td>~90</td></tr>
+<tr><td>−10…+10 + pickers</td><td>~100</td><td>~100</td><td rowspan="4">scrolls in ~186</td></tr>
+<tr><td>Dots + markers</td><td>~70</td><td>~70</td></tr>
+<tr><td>Legend</td><td>26</td><td>0</td></tr>
+<tr><td>Status row</td><td>46</td><td>46</td></tr>
+<tr><td>Transport</td><td>66</td><td>66</td><td>66</td></tr>
+<tr><th>Total</th><th>~616</th><th>~510</th><th>480</th></tr></table>
+<p><b>Recommendation: C.</b> It is the only option that keeps every control reachable with an ordinary drag, keeps the BPM visible, and leaves the swipe-anywhere gesture on the tempo block. A alone does not fit at 480 dp by estimate, and falls further short with a song note line, a second dot line or scaled text. Open question for the owner: the height threshold for the compact tempo block (suggest the existing compact density, below 860 dp, applying only when the body overflows).</p>
+</body></html>

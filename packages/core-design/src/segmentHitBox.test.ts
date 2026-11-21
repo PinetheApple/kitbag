@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { space } from './roles.ts';
+import { size, space } from './roles.ts';
 import {
   OPTION_HEIGHTS,
   segmentHitBox,
@@ -92,5 +92,31 @@ describe('segmentHitBox sideways', () => {
         expect(box.paddingRight).toBeLessThanOrEqual(space.controlGap / 2);
       }
     }
+  });
+});
+
+describe('segmentHitBox beside a sheet edge', () => {
+  const ROOM = 12;
+  const TRACK_EDGE = space.segmentInset + size.stroke;
+
+  it('reaches from the option through the track edge to the sheet edge', () => {
+    const box = segmentHitBox({
+      controlSize: 'default',
+      compact: false,
+      outer: { bottom: space.sectionGap },
+      edges: { top: ROOM },
+    });
+    expect(box.paddingTop).toBe(TRACK_EDGE + ROOM);
+  });
+
+  it('gives the edge only to the row that faces it once options wrap', () => {
+    const box = segmentHitBox({
+      controlSize: 'large',
+      compact: false,
+      outer: {},
+      edges: { top: ROOM },
+      wrapped: { lineTop: ROW_TOPS[1], lineTops: ROW_TOPS },
+    });
+    expect(box.paddingTop).toBeLessThan(TRACK_EDGE + ROOM);
   });
 });

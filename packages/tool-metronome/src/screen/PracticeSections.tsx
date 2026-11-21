@@ -5,7 +5,6 @@ import {
   metronomeSheet,
   radius,
   SegmentedControl,
-  SHEET_TOUCH_ROOM,
   space,
   StepControl,
   type StepDelta,
@@ -31,7 +30,11 @@ import {
 import { polyAgainstLabel } from '../logic/polyRow.ts';
 import type { PracticeField } from '../logic/practiceEntry.ts';
 import { PolyStrip } from './PolyStrip.tsx';
-import { PracticeSection, usePracticeStyles } from './PracticeSection.tsx';
+import {
+  PracticeSection,
+  SWITCH_EDGE_ROOM,
+  usePracticeStyles,
+} from './PracticeSection.tsx';
 import { mutedCellStyles } from './mutedCellStyles.ts';
 import { useBarMuteEditor } from './useBarMuteEditor.ts';
 
@@ -105,8 +108,8 @@ export function PracticeMute({ onType }: TypeProps) {
             neighbourGapDp={{
               top: unshared(metronomeSheet.practiceSectionV),
               bottom: space.controlGap,
-              right: unshared(SHEET_TOUCH_ROOM),
             }}
+            edgeRoomDp={SWITCH_EDGE_ROOM}
             accessibilityLabel="Mute bars"
             value={enabled}
             onValueChange={editor.toggle}
@@ -115,27 +118,31 @@ export function PracticeMute({ onType }: TypeProps) {
       }
     >
       <View style={styles.row}>
-        <Text style={styles.label}>Play</Text>
-        <StepControl
-          variant="inlineLarge"
-          label="Play bars"
-          value={String(playBars)}
-          accessibilityValue={bars(playBars)}
-          neighbourGapDp={space.controlGap}
-          onStep={editor.stepPlay}
-          onValuePress={handleTypePlay}
-        />
+        <View style={styles.pair}>
+          <Text style={styles.label}>Play</Text>
+          <StepControl
+            variant="inlineLarge"
+            label="Play bars"
+            value={String(playBars)}
+            accessibilityValue={bars(playBars)}
+            neighbourGapDp={space.controlGap}
+            onStep={editor.stepPlay}
+            onValuePress={handleTypePlay}
+          />
+        </View>
         <View style={styles.grow} />
-        <Text style={styles.label}>Mute</Text>
-        <StepControl
-          variant="inlineLarge"
-          label="Mute bars"
-          value={String(muteBars)}
-          accessibilityValue={bars(muteBars)}
-          neighbourGapDp={space.controlGap}
-          onStep={editor.stepMute}
-          onValuePress={handleTypeMute}
-        />
+        <View style={styles.pair}>
+          <Text style={styles.label}>Mute</Text>
+          <StepControl
+            variant="inlineLarge"
+            label="Mute bars"
+            value={String(muteBars)}
+            accessibilityValue={bars(muteBars)}
+            neighbourGapDp={space.controlGap}
+            onStep={editor.stepMute}
+            onValuePress={handleTypeMute}
+          />
+        </View>
       </View>
       <MutePreview preview={editor.preview} />
     </PracticeSection>
@@ -166,6 +173,17 @@ export function PracticeCountIn() {
     },
     [countIn, setCountIn],
   );
+  const soundControl = (
+    <SegmentedControl
+      size="large"
+      fill
+      accessibilityLabel="Count-in sound"
+      options={COUNT_IN_MODE_OPTIONS}
+      selected={countInMode(countIn.distinct)}
+      neighbourGapDp={space.controlGap}
+      onSelect={handleMode}
+    />
+  );
   return (
     <PracticeSection
       icon="countIn"
@@ -185,15 +203,11 @@ export function PracticeCountIn() {
     >
       <View style={styles.row}>
         <Text style={styles.label}>Count sound</Text>
-        <SegmentedControl
-          size="large"
-          fill
-          accessibilityLabel="Count-in sound"
-          options={COUNT_IN_MODE_OPTIONS}
-          selected={countInMode(countIn.distinct)}
-          neighbourGapDp={space.controlGap}
-          onSelect={handleMode}
-        />
+        {scaled ? (
+          <View style={styles.ownLine}>{soundControl}</View>
+        ) : (
+          soundControl
+        )}
       </View>
       <Chip
         icon="repeat"
@@ -249,8 +263,8 @@ export function PracticePoly({ onType }: TypeProps) {
               top: unshared(metronomeSheet.practiceSectionV),
               bottom: space.controlGap,
               left: space.rowGap,
-              right: unshared(SHEET_TOUCH_ROOM),
             }}
+            edgeRoomDp={SWITCH_EDGE_ROOM}
             accessibilityLabel="Polyrhythm"
             value={polyEnabled}
             onValueChange={handleToggle}
@@ -259,27 +273,31 @@ export function PracticePoly({ onType }: TypeProps) {
       }
     >
       <View style={styles.row}>
-        <Text style={styles.label}>Poly</Text>
-        <StepControl
-          variant="inlineLargeTextGlyph"
-          label="Poly count"
-          value={String(polyBeats)}
-          accessibilityValue={countLabel(polyBeats, 'beat', 'beats')}
-          neighbourGapDp={space.controlGap}
-          onStep={handleStep}
-          onValuePress={handleTypeCount}
-        />
-        <Text style={[styles.label, styles.pushRight]}>against</Text>
-        <StepControl
-          variant="inlineLargeTextGlyph"
-          label="Against"
-          value={againstLabel.value}
-          suffix={againstLabel.suffix}
-          accessibilityValue={againstLabel.spoken}
-          neighbourGapDp={space.controlGap}
-          onStep={stepAgainst}
-          onValuePress={handleTypeAgainst}
-        />
+        <View style={styles.pair}>
+          <Text style={styles.label}>Poly</Text>
+          <StepControl
+            variant="inlineLargeTextGlyph"
+            label="Poly count"
+            value={String(polyBeats)}
+            accessibilityValue={countLabel(polyBeats, 'beat', 'beats')}
+            neighbourGapDp={space.controlGap}
+            onStep={handleStep}
+            onValuePress={handleTypeCount}
+          />
+        </View>
+        <View style={[styles.pair, styles.pushRight]}>
+          <Text style={styles.label}>against</Text>
+          <StepControl
+            variant="inlineLargeTextGlyph"
+            label="Against"
+            value={againstLabel.value}
+            suffix={againstLabel.suffix}
+            accessibilityValue={againstLabel.spoken}
+            neighbourGapDp={space.controlGap}
+            onStep={stepAgainst}
+            onValuePress={handleTypeAgainst}
+          />
+        </View>
       </View>
       <PolyStrip
         polyBeats={polyBeats}

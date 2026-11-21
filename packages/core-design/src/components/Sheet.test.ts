@@ -21,6 +21,7 @@ const portal = { show: vi.fn(), hide: vi.fn(), topInset: STATUS_BAR };
 const back = vi.hoisted(() => ({ handlers: [] as (() => void)[] }));
 const focusReaderOn = vi.hoisted(() => vi.fn());
 const platform = vi.hoisted(() => ({ OS: 'android' }));
+const display = vi.hoisted(() => ({ fontScale: 1 }));
 const shown = vi.hoisted((): { mode: ThemeMode } => ({ mode: 'dark' }));
 const SURFACE1 = { dark: '#1A1820', light: '#FFFFFF' } as const;
 const SURFACE1_CLEAR = { dark: '#1A182000', light: '#FFFFFF00' } as const;
@@ -43,7 +44,7 @@ vi.mock('react-native', () => ({
   Text: 'Text',
   View: 'View',
   StyleSheet: { create: <T>(styles: T) => styles, absoluteFill: {} },
-  useWindowDimensions: () => ({ height: 0 }),
+  useWindowDimensions: () => ({ height: 0, fontScale: display.fontScale }),
 }));
 vi.mock('react-native-reanimated', () => ({
   default: { View: 'Animated.View' },
@@ -103,6 +104,7 @@ type Props = Readonly<{
   entering?: unknown;
   style?: unknown;
   contentContainerStyle?: unknown;
+  persistentScrollbar?: boolean;
   children?: ReactNode;
 }>;
 
@@ -129,6 +131,57 @@ function child(element: ReactElement<Props>, index: number) {
   return (Array.isArray(kids) ? kids : [kids])[index] as ReactElement<Props>;
 }
 
+const LONG_TITLE = 'Trust this StemDeck server';
+
+function titleRow(fontScale: number) {
+  display.fontScale = fontScale;
+  portal.show.mockClear();
+  Sheet({
+    visible: true,
+    title: LONG_TITLE,
+    titleIcon: 'trusted',
+    titleDetail: '1 up next',
+    titleAction: createElement('Chip'),
+    dismissLabel: 'Close',
+    onDismiss: vi.fn(),
+    children: null,
+  });
+  display.fontScale = 1;
+  const frame = portal.show.mock.calls[0]?.[1] as ReactElement<Props>;
+  const header = child(child(child(child(frame, 1), 1), 0), 0);
+  const row = child(header, 1);
+  const group = child(row, 0);
+  const [icon, title] = [child(group, 0), child(group, 1)];
+  return {
+    row: flat(row.props.style),
+    group: flat(group.props.style),
+    icon: icon.type,
+    title: { text: title.props.children, style: flat(title.props.style) },
+  };
+}
+
+it('wraps the title row at scaled text rather than breaking the title mid-word', () => {
+  const { row, group, title } = titleRow(2);
+  expect(row.flexWrap).toBe('wrap');
+  expect(group.flexShrink ?? 0).toBe(0);
+  expect(title.style.flexShrink ?? 0).toBe(0);
+});
+
+it('keeps the title icon on the line of its title when the row wraps', () => {
+  const { group, icon, title } = titleRow(2);
+  expect(icon).toBe('InlineIcon');
+  expect(title.text).toBe(LONG_TITLE);
+  expect(group.flexDirection).toBe('row');
+  expect(group.flexWrap).toBeUndefined();
+});
+
+it('keeps one shrinking title line beside its action at the default size', () => {
+  const { row, group, title } = titleRow(1);
+  expect(row.flexWrap).toBeUndefined();
+  expect(group.flexShrink).toBe(1);
+  expect(title.style.flexShrink).toBe(1);
+});
+
 it('keeps the slide animation off the view that carries the drag transform', () => {
   const frame = openSheet();
   const outer = child(frame, 1);
@@ -147,6 +200,12 @@ it('draws the notice in the portal above the sheet, sliding with its drag', () =
   expect([noticeView.props.style].flat()).toContain(DRAG);
   expect([sheet.props.style].flat()).toContain(DRAG);
   expect(child(openSheet(), 1).props.children).toContain(null);
+});
+
+it('keeps its scroll bar drawn so content below the fold is cued at rest', () => {
+  const sheet = child(child(openSheet(), 1), 1);
+  const scroll = child(child(sheet, 1), 0);
+  expect(scroll.props.persistentScrollbar).toBe(true);
 });
 
 it('caps the sheet below the status bar so tall content scrolls inside it', () => {
@@ -190,7 +249,7 @@ it.each(SIDES)(
 );
 
 async function titleGapStyle(os: string, mode: ThemeMode) {
-  const { SHEET_TOUCH_ROOM } = await import('./Sheet.tsx');
+  const { SHEET_TOUCH_ROOM } = await import('../sheetRoom.ts');
   platform.OS = os;
   shown.mode = mode;
   const sheet = child(child(openSheet(), 1), 1);

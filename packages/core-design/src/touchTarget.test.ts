@@ -6,6 +6,7 @@ import {
   hitExtension,
   hitSlopFor,
   hitSlopForPadded,
+  reachEdges,
   unshared,
   wrappedLineGaps,
 } from './touchTarget.ts';
@@ -129,5 +130,18 @@ describe('wrappedLineGaps', () => {
       top: 8,
       bottom: 8,
     });
+  });
+});
+
+describe('reachEdges', () => {
+  it('takes the whole room to an edge past what the minimum target needs', () => {
+    const ext = hitExtension(38, 22, {});
+    expect(ext.right).toBeLessThan(12);
+    expect(reachEdges(ext, { right: 12 })).toEqual({ ...ext, right: 12 });
+  });
+
+  it('never gives back reach the target already took', () => {
+    const ext = hitExtension(10, 10, {});
+    expect(reachEdges(ext, { left: 2 })).toEqual(ext);
   });
 });

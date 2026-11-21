@@ -27,10 +27,13 @@ const display = vi.hoisted(() => ({
   running: false,
   hintSeen: true,
   runRows: 2,
+  windowHeight: 800,
 }));
 const INITIAL_DISPLAY = { ...display };
 const hint = vi.hoisted(() => ({ props: null as Props | null }));
 const scroll = vi.hoisted(() => ({ props: null as Props | null }));
+const zone = vi.hoisted(() => ({ props: null as Props | null }));
+const swipes = vi.hoisted(() => [] as { readonly enabled: boolean }[]);
 
 vi.mock('./EndedSetlistSnackbar.tsx', () => ({
   EndedSetlistSnackbar: () => null,
@@ -47,7 +50,7 @@ vi.mock('react-native', async () => {
     Text: (props: Props) => h('div', null, props.children),
     useWindowDimensions: () => ({
       width: 360,
-      height: 800,
+      height: display.windowHeight,
       fontScale: display.fontScale,
     }),
   };
@@ -70,6 +73,7 @@ vi.mock('@kitbag/core-design', async (original) => ({
     build({ color: {} }),
   textRoles: {},
   textStyle: () => ({}),
+  fadeToClear: () => ({}),
 }));
 
 vi.mock('@kitbag/core-state', () => ({
@@ -83,6 +87,10 @@ vi.mock('@kitbag/core-state', () => ({
     select({ seen: display.hintSeen, dismiss: () => undefined }),
 }));
 
+vi.mock('../logic/belowTempo.ts', async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  belowTempoReserve: () => 0,
+}));
 vi.mock('../library/useLibraryRefresh.ts', () => ({
   useLibraryRefresh: () => undefined,
 }));
@@ -99,7 +107,16 @@ vi.mock('./usePracticeSettings.ts', () => ({
 vi.mock('./useStatusRunRows.ts', () => ({
   useStatusRunRows: () => display.runRows,
 }));
-vi.mock('./useTempoSwipe.ts', () => ({ useTempoSwipe: () => ({}) }));
+vi.mock('./useTempoSwipe.ts', () => ({
+  useTempoSwipe: (
+    _bpm: unknown,
+    _onTempo: unknown,
+    options: { readonly enabled: boolean },
+  ) => {
+    swipes.push(options);
+    return {};
+  },
+}));
 vi.mock('../logic/statusRows.ts', () => ({
   practiceBadgeCount: () => 0,
   restLegend: () => null,
@@ -131,7 +148,12 @@ vi.mock('./SwipeHint.tsx', () => ({
     return null;
   },
 }));
-vi.mock('./SwipeTempoZone.tsx', () => ({ SwipeTempoZone: () => null }));
+vi.mock('./SwipeTempoZone.tsx', () => ({
+  SwipeTempoZone: (props: Props) => {
+    zone.props = props;
+    return null;
+  },
+}));
 vi.mock('./Transport.tsx', () => ({ Transport: () => null }));
 vi.mock('./UnsavedSnackbar.tsx', () => ({ UnsavedSnackbar: () => null }));
 vi.mock('./SongClickSnackbar.tsx', () => ({ SongClickSnackbar: () => null }));
@@ -140,6 +162,10 @@ const { MetronomeScreen } = await import('./MetronomeScreen.tsx');
 const { MetronomeAppBar } = await import('./MetronomeAppBar.tsx');
 const { SwipeHint } = await import('./SwipeHint.tsx');
 const { Transport } = await import('./Transport.tsx');
+const { SwipeTempoZone } = await import('./SwipeTempoZone.tsx');
+const { PresetRow } = await import('./PresetRow.tsx');
+const { BeatDots } = await import('./BeatDots.tsx');
+const { ScrollView } = await import('react-native-gesture-handler');
 const { UnsavedSnackbar } = await import('./UnsavedSnackbar.tsx');
 const { SongClickSnackbar } = await import('./SongClickSnackbar.tsx');
 
@@ -183,17 +209,12 @@ function mountScreen(): ReactTestRenderer {
 }
 
 function laidOutViews(screen: ReactTestRenderer) {
-  const laidOut = screen.root
+  const block = screen.root.findByProps({ testID: 'tempo-block' });
+  const zoneView = screen.root
     .findAllByType(View)
-    .filter((view) => view.props.onLayout !== undefined);
-  const isClip = (view: { readonly props: Props }) =>
-    flatStyle(view.props.style).overflow === 'hidden';
-  const clip = laidOut.find(isClip);
-  const zone = laidOut.find((view) => !isClip(view));
-  if (clip === undefined || zone === undefined) {
-    throw new Error('clip or tempo zone has no onLayout');
-  }
-  return { clip, zone };
+    .find((view) => view.props.onLayout !== undefined && view !== block);
+  if (zoneView === undefined) throw new Error('tempo zone has no onLayout');
+  return { block, zone: zoneView };
 }
 
 afterEach(() => {
@@ -250,15 +271,15 @@ describe('MetronomeScreen scroll body', () => {
     );
   });
 
-  it('places the swipe hint from the clip, the scroll view sitting at its top', () => {
-    const CLIP_TOP = 50;
+  it('places the swipe hint from the tempo block it sits in', () => {
+    const BLOCK_TOP = 50;
     const ZONE_TOP = 20;
     const ZONE_HEIGHT = 100;
     display.hintSeen = false;
-    const { clip, zone } = laidOutViews(mountScreen());
-    layOut(clip, CLIP_TOP, ZONE_HEIGHT);
-    layOut(zone, ZONE_TOP, ZONE_HEIGHT);
-    expect(hint.props?.zoneTop).toBe(CLIP_TOP + ZONE_TOP);
+    const views = laidOutViews(mountScreen());
+    layOut(views.block, BLOCK_TOP, ZONE_HEIGHT);
+    layOut(views.zone, ZONE_TOP, ZONE_HEIGHT);
+    expect(hint.props?.zoneTop).toBe(BLOCK_TOP + ZONE_TOP);
   });
 });
 
@@ -327,5 +348,144 @@ describe('MetronomeScreen swipe hint', () => {
   it('keeps each reader layer as its own native view', () => {
     for (const layer of readerLayers(hintShown()).layers)
       expect(layer.props.collapsable).toBe(false);
+  });
+});
+
+describe('MetronomeScreen body that does not fit', () => {
+  const BODY = 300;
+  const OVERFLOWING = 400;
+  const FITTING = 250;
+  const ROOMY_WINDOW = metronome.compactBelowHeight;
+
+  function layOutBody(body: number) {
+    const onLayout = scroll.props?.onLayout as (event: unknown) => void;
+    act(() => {
+      onLayout({ nativeEvent: { layout: { y: 0, height: body } } });
+    });
+  }
+
+  function sizeContent(content: number) {
+    const onSize = scroll.props?.onContentSizeChange as (
+      width: number,
+      height: number,
+    ) => void;
+    act(() => {
+      onSize(0, content);
+    });
+  }
+
+  function measure(body: number, content: number) {
+    layOutBody(body);
+    sizeContent(content);
+  }
+
+  const screenSwipeEnabled = () => swipes.at(-2)?.enabled;
+
+  function inScroll(screen: ReactTestRenderer, type: ElementType): number {
+    return screen.root.findByType(ScrollView).findAllByType(type).length;
+  }
+
+  it('keeps the tempo block and the transport out of the scrolling controls', () => {
+    const screen = mountScreen();
+    expect(inScroll(screen, SwipeTempoZone)).toBe(0);
+    expect(inScroll(screen, Transport)).toBe(0);
+    expect(inScroll(screen, PresetRow)).toBe(1);
+    expect(inScroll(screen, BeatDots)).toBe(1);
+  });
+
+  it('changes nothing while every control fits', () => {
+    const screen = mountScreen();
+    measure(BODY, FITTING);
+    expect(zone.props?.tight).toBe(false);
+    expect(zone.props?.swipeAnywhere).toBe(true);
+    expect(screenSwipeEnabled()).toBe(true);
+    expect(scroll.props?.showsVerticalScrollIndicator).toBe(false);
+    expect(flatStyle(scroll.props?.contentContainerStyle).paddingBottom).toBe(
+      pinnedStackScrollSlack(false, 1, COMPACT_GAP),
+    );
+    expect(screen.root.findAllByProps({ testID: 'scroll-fade' })).toHaveLength(
+      0,
+    );
+  });
+
+  it('judges nothing from a content size that lands before the body is laid out', () => {
+    mountScreen();
+    sizeContent(OVERFLOWING);
+    expect(zone.props?.tight).toBe(false);
+    expect(scroll.props?.scrollEnabled).toBe(false);
+  });
+
+  it('tightens the tempo block once the compact controls overflow, and keeps it', () => {
+    mountScreen();
+    measure(BODY, OVERFLOWING);
+    expect(zone.props?.tight).toBe(true);
+    sizeContent(FITTING);
+    expect(zone.props?.tight).toBe(true);
+  });
+
+  it('leaves a roomy window that fits once compact with the full tempo block', () => {
+    display.windowHeight = ROOMY_WINDOW;
+    mountScreen();
+    measure(BODY, OVERFLOWING);
+    expect(zone.props?.tight).toBe(false);
+    sizeContent(FITTING);
+    expect(zone.props?.tight).toBe(false);
+  });
+
+  it('tightens a roomy window only when it still overflows once compact', () => {
+    display.windowHeight = ROOMY_WINDOW;
+    mountScreen();
+    measure(BODY, OVERFLOWING);
+    expect(zone.props?.tight).toBe(false);
+    sizeContent(OVERFLOWING);
+    expect(zone.props?.tight).toBe(true);
+  });
+
+  it('decides overflow without counting its own fade padding', () => {
+    mountScreen();
+    const justOver = BODY + 1;
+    const justUnder = BODY - 1;
+    measure(BODY, justOver);
+    expect(scroll.props?.scrollEnabled).toBe(true);
+    sizeContent(justUnder + metronome.scrollFade);
+    expect(scroll.props?.scrollEnabled).toBe(false);
+    sizeContent(justOver);
+    expect(scroll.props?.scrollEnabled).toBe(true);
+  });
+
+  it('says swipe anywhere again once a tight block fits and the gesture is back', () => {
+    mountScreen();
+    measure(BODY, OVERFLOWING);
+    expect(zone.props?.swipeAnywhere).toBe(false);
+    sizeContent(FITTING);
+    expect(zone.props?.tight).toBe(true);
+    expect(screenSwipeEnabled()).toBe(true);
+    expect(zone.props?.swipeAnywhere).toBe(true);
+  });
+
+  it('cues overflowing controls with a drawn scroll bar and a bottom fade', () => {
+    const screen = mountScreen();
+    measure(BODY, OVERFLOWING);
+    expect(scroll.props?.scrollEnabled).toBe(true);
+    expect(scroll.props?.showsVerticalScrollIndicator).toBe(true);
+    expect(scroll.props?.persistentScrollbar).toBe(true);
+    expect(screen.root.findAllByProps({ testID: 'scroll-fade' })).toHaveLength(
+      1,
+    );
+    expect(flatStyle(scroll.props?.contentContainerStyle).paddingBottom).toBe(
+      metronome.scrollFade,
+    );
+  });
+
+  it('scrolls the poly row into view under a pinned stack at 2.0 while playing', () => {
+    display.fontScale = 2;
+    display.running = true;
+    const screen = mountScreen();
+    measure(BODY, OVERFLOWING);
+    expect(inScroll(screen, BeatDots)).toBe(1);
+    expect(scroll.props?.scrollEnabled).toBe(true);
+    expect(flatStyle(scroll.props?.contentContainerStyle).paddingBottom).toBe(
+      pinnedStackScrollSlack(true, 2, COMPACT_GAP) + metronome.scrollFade,
+    );
   });
 });

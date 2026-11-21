@@ -50,6 +50,7 @@ export interface SegmentedControlProps<T extends string> {
   /** Gaps to the controls around the track; a number applies to every side,
    * an omitted side has no neighbour. */
   readonly neighbourGapDp?: number | NeighbourGaps;
+  readonly edgeRoomDp?: NeighbourGaps;
   readonly size?: SegmentedControlSize;
 }
 
@@ -268,6 +269,7 @@ export function SegmentedControl<T extends string>({
   selectedTone = 'neutral',
   fill = false,
   neighbourGapDp = space.segmentInset,
+  edgeRoomDp,
   size: controlSize = 'default',
 }: SegmentedControlProps<T>) {
   const styles = useStyles();
@@ -309,6 +311,7 @@ export function SegmentedControl<T extends string>({
       controlSize,
       compact,
       outer,
+      edges: edgeRoomDp,
       wrapped: byLabel
         ? { lineTop: lineTops[value], lineTops: tops }
         : undefined,

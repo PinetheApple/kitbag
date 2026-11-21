@@ -149,6 +149,25 @@ export function MeterSheet({
       dim
       onShow={reset}
       onDismiss={onDismiss}
+      footer={
+        <View style={styles.actions}>
+          <Button
+            fill
+            size="sheet"
+            variant="ghost"
+            label="Cancel"
+            onPress={onDismiss}
+          />
+          <Button
+            fill
+            size="sheet"
+            variant="primary"
+            label={`Set ${meterLabel(draft)}`}
+            accessibilityLabel={`Set ${spokenMeter(draft)}`}
+            onPress={handleSet}
+          />
+        </View>
+      }
     >
       <View style={styles.wheels}>
         <WheelPicker
@@ -183,23 +202,6 @@ export function MeterSheet({
             onPick={setDraft}
           />
         ))}
-      </View>
-      <View style={styles.actions}>
-        <Button
-          fill
-          size="sheet"
-          variant="ghost"
-          label="Cancel"
-          onPress={onDismiss}
-        />
-        <Button
-          fill
-          size="sheet"
-          variant="primary"
-          label={`Set ${meterLabel(draft)}`}
-          accessibilityLabel={`Set ${spokenMeter(draft)}`}
-          onPress={handleSet}
-        />
       </View>
     </Sheet>
   );

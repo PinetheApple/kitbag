@@ -4,6 +4,7 @@ import { minTouchTargetDp } from './tokens.ts';
 import {
   hitBoxStyle,
   hitExtension,
+  reachEdges,
   unshared,
   wrappedLineGaps,
   type NeighbourGaps,
@@ -45,6 +46,7 @@ export interface SegmentHitBoxInput {
   readonly controlSize: SegmentedControlSize;
   readonly compact: boolean;
   readonly outer: NeighbourGaps;
+  readonly edges?: NeighbourGaps | undefined;
   /** Present once options may wrap: this option's row top and every row's. */
   readonly wrapped?:
     | {
@@ -77,11 +79,33 @@ function verticalGaps(input: SegmentHitBoxInput): NeighbourGaps {
   return wrappedLineGaps(lineTop, lineTops, outer, rowGap);
 }
 
+function edgeRoom(input: SegmentHitBoxInput): NeighbourGaps {
+  const { edges = {}, wrapped } = input;
+  const edge = trackEdge(input);
+  const lineTop = wrapped?.lineTop;
+  const facesTopEdge =
+    wrapped === undefined ||
+    (lineTop !== undefined && lineTop === Math.min(...wrapped.lineTops));
+  const facesBottomEdge =
+    wrapped === undefined ||
+    (lineTop !== undefined && lineTop === Math.max(...wrapped.lineTops));
+  return {
+    top: facesTopEdge && edges.top !== undefined ? edge + edges.top : undefined,
+    bottom:
+      facesBottomEdge && edges.bottom !== undefined
+        ? edge + edges.bottom
+        : undefined,
+  };
+}
+
 // Option widths are flex, so only the vertical axis is grown to 48dp; sideways
 // every option takes the same half of the gap between options.
 export function segmentHitBox(input: SegmentHitBoxInput) {
   const height = OPTION_HEIGHTS[input.controlSize];
-  const vertical = hitExtension(height, height, verticalGaps(input));
+  const vertical = reachEdges(
+    hitExtension(height, height, verticalGaps(input)),
+    edgeRoom(input),
+  );
   const side = space.segmentInset / 2;
   return hitBoxStyle({
     top: vertical.top,

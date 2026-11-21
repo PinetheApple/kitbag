@@ -199,6 +199,10 @@ export interface PolyStripCaption {
   readonly span: string;
 }
 
+export function polyStripSentence(caption: PolyStripCaption): string {
+  return `${caption.cycle}, ${caption.span}`;
+}
+
 export function polyStripCaption(
   polyBeats: number,
   against: number,

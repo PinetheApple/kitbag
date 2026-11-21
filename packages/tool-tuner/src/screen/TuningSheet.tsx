@@ -31,10 +31,8 @@ import {
 
 // Tuning rows are already 48dp tall and claim none of the gaps around them.
 const EDIT_GAPS = { top: unshared(space.controlGap), bottom: space.controlGap };
-const NEW_GAPS = {
-  top: space.controlGap,
-  bottom: unshared(SHEET_TOUCH_ROOM),
-};
+const NEW_GAPS = { top: space.controlGap };
+const NEW_EDGE = { bottom: SHEET_TOUCH_ROOM };
 
 const useStyles = createThemedStyles((theme) => ({
   section: {
@@ -215,6 +213,7 @@ export function TuningSheet({
           label="New tuning"
           variant="tonal"
           neighbourGapDp={NEW_GAPS}
+          edgeRoomDp={NEW_EDGE}
           onPress={onNew}
         />
       </View>
