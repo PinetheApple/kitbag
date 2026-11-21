@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { CATEGORIES, type Category } from './backup-format';
 import { parseBackup } from './backup-parse';
 import {
+  backupDatabase,
   openBackupDatabase,
   presetValues,
   seed,
@@ -11,6 +12,7 @@ import {
 } from './backup.test-helper';
 import { MAX_BEATS, MAX_POLY_BEATS, SOUND_COUNT } from './preset-rules';
 import { practiceSessions } from './schema';
+import { openTestDatabase } from './sqlite.test-helper';
 
 const PRESET_COUNT = 12;
 const SPLIT_SECOND_MS = 400;
@@ -68,30 +70,54 @@ const STATES: [string, (database: BackupDatabase) => Promise<unknown>][] = [
   ['two sessions in one second', seedSameSecondSessions],
 ];
 
-const SUBSETS: Category[][] = Array.from(
+const SUBSETS: [string, Category[]][] = Array.from(
   { length: 2 ** CATEGORIES.length - 1 },
-  (_, mask) => CATEGORIES.filter((_category, bit) => ((mask + 1) >> bit) & 1),
+  (_, mask) => {
+    const subset = CATEGORIES.filter(
+      (_category, bit) => ((mask + 1) >> bit) & 1,
+    );
+    return [subset.join('+'), subset];
+  },
 );
 
-const EVERY_SUBSET_TIMEOUT_MS = 30_000;
+const EMPTY_COUNTS = Object.fromEntries(
+  CATEGORIES.map((category) => [category, 0]),
+);
 
 describe('export is always importable', () => {
-  it.each(STATES)(
-    '%s: every category subset parses and plans',
-    async (_name, prepare) => {
-      const source = openBackupDatabase();
+  describe.each(STATES)('%s', (_name, prepare) => {
+    let source: BackupDatabase | undefined;
+    let target: BackupDatabase | undefined;
+
+    function prepared() {
+      if (source === undefined || target === undefined)
+        throw new Error('state databases not open');
+      return { source, target };
+    }
+
+    beforeAll(async () => {
+      source = backupDatabase(openTestDatabase());
+      target = backupDatabase(openTestDatabase());
       await prepare(source);
-      for (const subset of SUBSETS) {
-        const text = await source.backup.export(subset);
-        const file = parseBackup(text);
-        const plan = await openBackupDatabase().backup.plan(text, {
-          categories: file.categories,
-        });
-        expect(plan.ok, subset.join('+')).toBe(true);
-      }
-    },
-    EVERY_SUBSET_TIMEOUT_MS,
-  );
+    });
+
+    afterAll(async () => {
+      const counts = await target?.backup.summary();
+      source?.handle.connection.close();
+      target?.handle.connection.close();
+      if (counts !== undefined) expect(counts).toEqual(EMPTY_COUNTS);
+    });
+
+    it.each(SUBSETS)('%s parses and plans', async (_label, subset) => {
+      const { source, target } = prepared();
+      const text = await source.backup.export(subset);
+      const file = parseBackup(text);
+      const plan = await target.backup.plan(text, {
+        categories: file.categories,
+      });
+      expect(plan.ok).toBe(true);
+    });
+  });
 
   it('exporting setlists carries the presets they list', async () => {
     const source = openBackupDatabase();
