@@ -1,0 +1,1 @@
+• On short screens, Calibrate latency no longer draws Start over and Use over the tap scatter: everything below the tap prompt scrolls, and scrolling never counts as a tap.
