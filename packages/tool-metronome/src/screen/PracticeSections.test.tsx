@@ -23,6 +23,10 @@ const store = vi.hoisted(() => ({
   polyAgainst: 4,
   setPoly: () => undefined,
   stepPolyAgainst: () => undefined,
+  countIn: { bars: 0, distinct: false },
+  countInScope: 0,
+  setCountIn: () => undefined,
+  setCountInScope: () => undefined,
 }));
 
 vi.mock('react-native', () => ({
@@ -74,7 +78,8 @@ vi.mock('./useBarMuteEditor.ts', () => ({
 vi.mock('./PolyStrip.tsx', () => ({ PolyStrip: () => null }));
 
 const { PracticeRamp } = await import('./PracticeRamp.tsx');
-const { PracticeMute, PracticePoly } = await import('./PracticeSections.tsx');
+const { PracticeCountIn, PracticeMute, PracticePoly } =
+  await import('./PracticeSections.tsx');
 
 type Section = ComponentType<{ onType: () => void }>;
 
@@ -127,9 +132,24 @@ describe.each(SECTIONS)('the %s section', (label, Section) => {
   });
 });
 
-it('gives the ramp interval unit its own line at scaled text', () => {
-  const unit = render(PracticeRamp, true).find(
-    (node) => node.props.accessibilityLabel === 'Ramp interval unit',
-  );
-  expect(flat(unit.parent?.props.style).width).toBe('100%');
+const OWN_LINE_CONTROLS = [
+  ['Ramp interval unit', PracticeRamp],
+  ['Count-in sound', PracticeCountIn],
+] as const;
+
+describe.each(OWN_LINE_CONTROLS)('the %s control', (label, Section) => {
+  const parentStyle = (scaled: boolean) =>
+    flat(
+      render(Section as Section, scaled).find(
+        (node) => node.props.accessibilityLabel === label,
+      ).parent?.props.style,
+    );
+
+  it('takes its own line at scaled text', () => {
+    expect(parentStyle(true).width).toBe('100%');
+  });
+
+  it('stays in its labelled row at the default text size', () => {
+    expect(parentStyle(false).flexWrap).toBe('wrap');
+  });
 });

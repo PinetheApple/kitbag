@@ -173,6 +173,17 @@ export function PracticeCountIn() {
     },
     [countIn, setCountIn],
   );
+  const soundControl = (
+    <SegmentedControl
+      size="large"
+      fill
+      accessibilityLabel="Count-in sound"
+      options={COUNT_IN_MODE_OPTIONS}
+      selected={countInMode(countIn.distinct)}
+      neighbourGapDp={space.controlGap}
+      onSelect={handleMode}
+    />
+  );
   return (
     <PracticeSection
       icon="countIn"
@@ -192,15 +203,11 @@ export function PracticeCountIn() {
     >
       <View style={styles.row}>
         <Text style={styles.label}>Count sound</Text>
-        <SegmentedControl
-          size="large"
-          fill
-          accessibilityLabel="Count-in sound"
-          options={COUNT_IN_MODE_OPTIONS}
-          selected={countInMode(countIn.distinct)}
-          neighbourGapDp={space.controlGap}
-          onSelect={handleMode}
-        />
+        {scaled ? (
+          <View style={styles.ownLine}>{soundControl}</View>
+        ) : (
+          soundControl
+        )}
       </View>
       <Chip
         icon="repeat"
