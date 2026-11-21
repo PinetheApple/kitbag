@@ -1,0 +1,1 @@
+• On tablets and other wide screens, the Songs and Stem songs lists line up with their search field: row dividers and the add button no longer run past the centred column.
