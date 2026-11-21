@@ -864,6 +864,13 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   uncapped screens stretched their tempo rows, sheets and transports across the width.
   **[coord — the owner may overturn]**
 
+- **2026-11-21 · Tablet width keeps the capped phone column (§12, #598)** — The owner
+  confirmed the cap above in place of a tablet layout: at 600 dp and wider every screen
+  and sheet stays one centred column of `layout.maxContentWidth`, with no per-screen
+  tablet layout, and phones are unchanged. The column's edge is invisible on the shared
+  background, so once the cap applies the list add button and full-bleed list-row
+  dividers pull in to the `space.screenInset` header and search inset. **[owner]**
+
 - **2026-11-02 · APK size target re-set to 30.6 MB (#49)** — The release APK target is
   30.6 MB (30,648,062 bytes, arm64-v8a release), the size measured after the font cut,
   replacing the earlier 25 MB; the baseline is release v0.26.2 at 33,411,826 bytes. The
