@@ -3,7 +3,6 @@ import {
   metronomeSheet,
   SegmentedControl,
   SheetHint,
-  SHEET_TOUCH_ROOM,
   space,
   StepControl,
   Switch,
@@ -20,7 +19,11 @@ import {
   rampUnitLabel,
   rampUnitOption,
 } from '../logic/rampUnit.ts';
-import { PracticeSection, usePracticeStyles } from './PracticeSection.tsx';
+import {
+  PracticeSection,
+  SWITCH_EDGE_ROOM,
+  usePracticeStyles,
+} from './PracticeSection.tsx';
 import { useRampEditor, type RampEditor } from './useRampEditor.ts';
 
 const bpm = (value: number) => `${String(value)} BPM`;
@@ -142,8 +145,8 @@ export function PracticeRamp({ onType }: PracticeRampProps) {
             neighbourGapDp={{
               top: unshared(metronomeSheet.practiceSectionV),
               bottom: space.controlGap,
-              right: unshared(SHEET_TOUCH_ROOM),
             }}
+            edgeRoomDp={SWITCH_EDGE_ROOM}
             accessibilityLabel="Tempo ramp"
             value={enabled}
             onValueChange={editor.toggle}

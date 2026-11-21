@@ -4,6 +4,7 @@ import {
   hitBoxStyle,
   hitExtension,
   neighbourGaps,
+  reachEdges,
   type NeighbourGaps,
 } from './touchTarget.ts';
 
@@ -46,8 +47,14 @@ export function switchA11y(value: boolean) {
   };
 }
 
-export function switchHitBox(gaps: number | NeighbourGaps = space.controlGap) {
+export function switchHitBox(
+  gaps: number | NeighbourGaps = space.controlGap,
+  edges: NeighbourGaps = {},
+) {
   return hitBoxStyle(
-    hitExtension(size.switchWidth, size.switchHeight, neighbourGaps(gaps)),
+    reachEdges(
+      hitExtension(size.switchWidth, size.switchHeight, neighbourGaps(gaps)),
+      edges,
+    ),
   );
 }

@@ -4,6 +4,7 @@ import {
   Icon,
   type IconName,
   metronomeSheet,
+  SHEET_TOUCH_ROOM,
   size,
   space,
   textRoles,
@@ -11,6 +12,8 @@ import {
 } from '@kitbag/core-design';
 import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
+
+export const SWITCH_EDGE_ROOM = { right: SHEET_TOUCH_ROOM } as const;
 
 export const usePracticeStyles = createThemedStyles((theme) => ({
   section: {

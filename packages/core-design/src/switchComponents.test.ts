@@ -40,15 +40,17 @@ function childTypes(element: ReactElement<Props>): unknown[] {
 describe.each([true, false])('switch components, checked=%s', (value) => {
   it('Switch spreads the a11y state and the hit box for its gaps', () => {
     const gaps = { top: 4, left: 6 };
+    const edges = { right: 12 };
     const element = Switch({
       value,
       onValueChange: vi.fn(),
       accessibilityLabel: 'Tempo ramp',
       neighbourGapDp: gaps,
+      edgeRoomDp: edges,
     }) as ReactElement<Props>;
     expect(element.type).toBe('Pressable');
     expect(element.props).toMatchObject(switchA11y(value));
-    expect(element.props.style).toEqual(switchHitBox(gaps));
+    expect(element.props.style).toEqual(switchHitBox(gaps, edges));
     expect(childTypes(element)).toEqual([SwitchTrack]);
   });
 

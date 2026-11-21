@@ -83,6 +83,20 @@ export function hitExtension(
   return { top, right, bottom, left };
 }
 
+// Nothing past a scroll or sheet edge competes for the touch, so a side facing
+// one takes all the room to it, even past the minimum target.
+export function reachEdges(
+  ext: HitExtension,
+  edges: NeighbourGaps,
+): HitExtension {
+  return {
+    top: Math.max(ext.top, edges.top ?? 0),
+    right: Math.max(ext.right, edges.right ?? 0),
+    bottom: Math.max(ext.bottom, edges.bottom ?? 0),
+    left: Math.max(ext.left, edges.left ?? 0),
+  };
+}
+
 // Grows a box by `ext` and hands it back as negative margin, so nothing moves.
 // A scrolling or clipping ancestor still cuts it off, as does any later sibling
 // that forms a native view over it.

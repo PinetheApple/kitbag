@@ -12,6 +12,7 @@ export interface SwitchProps {
   readonly onValueChange: (value: boolean) => void;
   readonly accessibilityLabel: string;
   readonly neighbourGapDp?: number | NeighbourGaps;
+  readonly edgeRoomDp?: NeighbourGaps;
 }
 
 export function SwitchTrack({ value }: { readonly value: boolean }) {
@@ -28,8 +29,9 @@ export function Switch({
   onValueChange,
   accessibilityLabel,
   neighbourGapDp,
+  edgeRoomDp,
 }: SwitchProps) {
-  const hitBox = switchHitBox(neighbourGapDp);
+  const hitBox = switchHitBox(neighbourGapDp, edgeRoomDp);
   const handlePress = useCallback(() => {
     onValueChange(!value);
   }, [onValueChange, value]);

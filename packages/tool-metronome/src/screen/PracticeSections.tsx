@@ -5,7 +5,6 @@ import {
   metronomeSheet,
   radius,
   SegmentedControl,
-  SHEET_TOUCH_ROOM,
   space,
   StepControl,
   type StepDelta,
@@ -31,7 +30,11 @@ import {
 import { polyAgainstLabel } from '../logic/polyRow.ts';
 import type { PracticeField } from '../logic/practiceEntry.ts';
 import { PolyStrip } from './PolyStrip.tsx';
-import { PracticeSection, usePracticeStyles } from './PracticeSection.tsx';
+import {
+  PracticeSection,
+  SWITCH_EDGE_ROOM,
+  usePracticeStyles,
+} from './PracticeSection.tsx';
 import { mutedCellStyles } from './mutedCellStyles.ts';
 import { useBarMuteEditor } from './useBarMuteEditor.ts';
 
@@ -105,8 +108,8 @@ export function PracticeMute({ onType }: TypeProps) {
             neighbourGapDp={{
               top: unshared(metronomeSheet.practiceSectionV),
               bottom: space.controlGap,
-              right: unshared(SHEET_TOUCH_ROOM),
             }}
+            edgeRoomDp={SWITCH_EDGE_ROOM}
             accessibilityLabel="Mute bars"
             value={enabled}
             onValueChange={editor.toggle}
@@ -249,8 +252,8 @@ export function PracticePoly({ onType }: TypeProps) {
               top: unshared(metronomeSheet.practiceSectionV),
               bottom: space.controlGap,
               left: space.rowGap,
-              right: unshared(SHEET_TOUCH_ROOM),
             }}
+            edgeRoomDp={SWITCH_EDGE_ROOM}
             accessibilityLabel="Polyrhythm"
             value={polyEnabled}
             onValueChange={handleToggle}
