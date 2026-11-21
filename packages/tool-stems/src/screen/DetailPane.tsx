@@ -28,7 +28,8 @@ const CHIP_HIT_BOX = hitBoxStyle(
 );
 
 const useStyles = createThemedStyles((theme) => ({
-  lyricSlot: { flexGrow: 1, flexShrink: 0, flexBasis: LYRIC_FLOOR },
+  lyricSlot: { flexGrow: 1, minHeight: LYRIC_FLOOR },
+  lyricFrame: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   head: {
     minHeight: stemSections.headMinHeight,
     marginBottom: stemSections.headBottom,
@@ -162,11 +163,13 @@ export function DetailPane({
       ) : null}
       {pane === 'stage' || pane === 'plain' ? (
         <View testID={LYRIC_SLOT_ID} style={styles.lyricSlot}>
-          {pane === 'stage' ? (
-            <StageLyrics songSec={songSec} />
-          ) : (
-            <PlainLyrics />
-          )}
+          <View style={styles.lyricFrame}>
+            {pane === 'stage' ? (
+              <StageLyrics songSec={songSec} />
+            ) : (
+              <PlainLyrics />
+            )}
+          </View>
         </View>
       ) : null}
       {pane === 'instrumental' ? <Instrumental /> : null}

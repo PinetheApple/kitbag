@@ -32,6 +32,14 @@ const styleOf = (node: ReactTestInstance) =>
     ...([node.props.style].flat(Infinity) as object[]),
   ) as Record<string, unknown>;
 
+// Yoga measures a slot's content when the page height is open, so only an
+// out-of-flow child keeps a long list from growing the page.
+const inFlowChildren = (slot: ReactTestInstance) =>
+  slot.children.filter(
+    (child) =>
+      typeof child !== 'string' && styleOf(child).position !== 'absolute',
+  );
+
 const holds = (
   box: ReactTestInstance,
   test: (n: ReactTestInstance) => boolean,
@@ -48,11 +56,15 @@ describe('the stem player below its app bar', () => {
 
   it('keeps the mixer floor of two stem rows', async () => {
     const slot = styleOf(only(await mountTracked(), MIXER_SLOT_ID));
-    expect(slot.flexShrink).toBe(0);
-    expect(slot.flexBasis).toBe(MIXER_FLOOR);
+    expect(slot.minHeight).toBe(MIXER_FLOOR);
     expect(MIXER_FLOOR).toBeGreaterThanOrEqual(
       MIN_VISIBLE_STEMS * stemPlayer.rowHeight,
     );
+  });
+
+  it('keeps a long mixer out of the page height, so a roomy window does not scroll', async () => {
+    const slot = only(await mountTracked(), MIXER_SLOT_ID);
+    expect(inFlowChildren(slot)).toEqual([]);
   });
 
   it('lays its count-in and snackbars over the scroll, not inside it', async () => {
@@ -73,8 +85,8 @@ describe('the lyrics on the Details tab', () => {
     const p = await mountTracked(song);
     await p.press('Lyrics');
     const slot = only(p, LYRIC_SLOT_ID);
-    expect(styleOf(slot).flexShrink).toBe(0);
-    expect(styleOf(slot).flexBasis).toBe(LYRIC_FLOOR);
+    expect(styleOf(slot).minHeight).toBe(LYRIC_FLOOR);
+    expect(inFlowChildren(slot)).toEqual([]);
     const [lyrics] = slot.findAll((n) => String(n.type) === 'ScrollView');
     expect(lyrics?.props.nestedScrollEnabled).toBe(true);
   });

@@ -25,9 +25,13 @@ const MASTER = 'master';
 type Expanded = number | typeof MASTER | null;
 
 const useStyles = createThemedStyles((theme) => ({
-  slot: { flexGrow: 1, flexShrink: 0, flexBasis: MIXER_FLOOR },
+  slot: { flexGrow: 1, minHeight: MIXER_FLOOR },
   card: {
-    flexShrink: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    maxHeight: '100%',
     backgroundColor: theme.color.surface1,
     borderWidth: size.stroke,
     borderColor: theme.color.line,

@@ -63,12 +63,8 @@ export type RenderUpNext = (songSec: SongPlayhead['songSec']) => ReactNode;
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
-  body: { flex: 1 },
-  slot: {
-    flexGrow: 1,
-    flexShrink: 0,
-    flexBasis: SONG_BODY_FLOOR,
-  },
+  body: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+  slot: { flexGrow: 1, minHeight: SONG_BODY_FLOOR },
   bodyContent: {
     paddingTop: stemPlayer.bodyTop,
     paddingHorizontal: space.screenInset,

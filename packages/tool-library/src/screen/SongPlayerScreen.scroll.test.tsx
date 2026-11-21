@@ -54,8 +54,13 @@ describe('the song player below its app bar', () => {
   });
 
   it('keeps the body floor of one waveform card', () => {
-    const slot = styleOf(byTestId(mount(), BODY_SLOT_ID));
-    expect(slot.flexShrink).toBe(0);
-    expect(slot.flexBasis).toBe(SONG_BODY_FLOOR);
+    const slot = byTestId(mount(), BODY_SLOT_ID);
+    expect(styleOf(slot).minHeight).toBe(SONG_BODY_FLOOR);
+    expect(
+      slot.children.filter(
+        (child) =>
+          typeof child !== 'string' && styleOf(child).position !== 'absolute',
+      ),
+    ).toEqual([]);
   });
 });
