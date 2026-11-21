@@ -2,7 +2,14 @@ import { useCallback, useMemo, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
-import { radius, rowLineHeight, size, space, textRoles } from '../roles.ts';
+import {
+  radius,
+  rowLineHeight,
+  size,
+  space,
+  textRoles,
+  type IconSize,
+} from '../roles.ts';
 import { rowLabel } from '../rowLabel.ts';
 import { switchA11y } from '../switch.ts';
 import { textStyle } from '../textStyle.ts';
@@ -77,12 +84,14 @@ export interface RowIconProps {
   readonly icon: IconName;
   readonly color?: ColorToken;
   readonly border?: ColorToken;
+  readonly size?: IconSize;
 }
 
 export function RowIcon({
   icon,
   color = 'text',
   border = 'line',
+  size: glyph = 'tile',
 }: RowIconProps) {
   const styles = useStyles();
   const theme = useTheme();
@@ -92,7 +101,7 @@ export function RowIcon({
   );
   return (
     <View style={[styles.tile, edge]}>
-      <Icon name={icon} size="tile" color={color} />
+      <Icon name={icon} size={glyph} color={color} />
     </View>
   );
 }

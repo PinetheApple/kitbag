@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   barBadge,
   barStatusOf,
+  lockIcon,
   lockText,
   type LockTextInput,
   playerStatusBadge,
@@ -95,6 +96,50 @@ describe('lockText', () => {
       action: 'reanalyze',
     });
   });
+});
+
+describe('lockIcon', () => {
+  const ACCENT_INK = 'accentDeep';
+  const iconOf = (badge: LockTextInput['badge'], click = false) =>
+    lockIcon(badge, click, ACCENT_INK);
+
+  it('draws the metronome in accent while the click runs', () => {
+    expect(iconOf('grid', true)).toEqual({
+      name: 'metronome',
+      color: ACCENT_INK,
+      border: 'accentDim',
+    });
+  });
+
+  it('draws the metronome at rest while the click is off', () => {
+    expect(iconOf('grid')).toEqual({
+      name: 'metronome',
+      color: 'text',
+      border: 'line',
+    });
+  });
+
+  it.each(['pending', 'analyzing'] as const)(
+    'draws the refresh glyph while %s',
+    (badge) => {
+      expect(iconOf(badge)).toEqual({
+        name: 'analyzing',
+        color: 'text',
+        border: 'line',
+      });
+    },
+  );
+
+  it.each(['failed', 'noGrid'] as const)(
+    'draws the alert in red when there is no grid: %s',
+    (badge) => {
+      expect(iconOf(badge)).toEqual({
+        name: 'error',
+        color: 'redInk',
+        border: 'line',
+      });
+    },
+  );
 });
 
 describe('playerStatusBadge', () => {

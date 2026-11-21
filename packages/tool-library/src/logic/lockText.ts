@@ -1,3 +1,4 @@
+import type { ColorToken, IconName } from '@kitbag/core-design';
 import {
   bpmFact,
   isUnitySpeed,
@@ -94,6 +95,33 @@ export function barBadge(
   return fact === null
     ? null
     : { label: fact.text, spoken: fact.spoken, tone: 'default' };
+}
+
+export interface LockIcon {
+  readonly name: IconName;
+  readonly color: ColorToken;
+  readonly border: ColorToken;
+}
+
+const PLAIN_TILE = { color: 'text', border: 'line' } as const;
+
+export function lockIcon(
+  badge: SongBadge,
+  click: boolean,
+  accentInk: ColorToken,
+): LockIcon {
+  switch (badge) {
+    case 'pending':
+    case 'analyzing':
+      return { name: 'analyzing', ...PLAIN_TILE };
+    case 'failed':
+    case 'noGrid':
+      return { ...PLAIN_TILE, name: 'error', color: 'redInk' };
+    case 'grid':
+      return click
+        ? { name: 'metronome', color: accentInk, border: 'accentDim' }
+        : { name: 'metronome', ...PLAIN_TILE };
+  }
 }
 
 export interface LockTextInput {
