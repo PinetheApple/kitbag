@@ -131,15 +131,18 @@ function child(element: ReactElement<Props>, index: number) {
   return (Array.isArray(kids) ? kids : [kids])[index] as ReactElement<Props>;
 }
 
-function titleRowWithAction(fontScale: number) {
+const LONG_TITLE = 'Trust this StemDeck server';
+
+function titleRow(fontScale: number) {
   display.fontScale = fontScale;
   portal.show.mockClear();
   Sheet({
     visible: true,
-    title: 'Queue',
+    title: LONG_TITLE,
+    titleIcon: 'trusted',
     titleDetail: '1 up next',
     titleAction: createElement('Chip'),
-    dismissLabel: 'Close queue',
+    dismissLabel: 'Close',
     onDismiss: vi.fn(),
     children: null,
   });
@@ -147,13 +150,36 @@ function titleRowWithAction(fontScale: number) {
   const frame = portal.show.mock.calls[0]?.[1] as ReactElement<Props>;
   const header = child(child(child(child(frame, 1), 1), 0), 0);
   const row = child(header, 1);
-  return { row: flat(row.props.style), title: flat(child(row, 1).props.style) };
+  const group = child(row, 0);
+  const [icon, title] = [child(group, 0), child(group, 1)];
+  return {
+    row: flat(row.props.style),
+    group: flat(group.props.style),
+    icon: icon.type,
+    title: { text: title.props.children, style: flat(title.props.style) },
+  };
 }
 
 it('wraps the title row at scaled text rather than breaking the title mid-word', () => {
-  const { row, title } = titleRowWithAction(2);
+  const { row, group, title } = titleRow(2);
   expect(row.flexWrap).toBe('wrap');
-  expect(title.flexShrink ?? 0).toBe(0);
+  expect(group.flexShrink ?? 0).toBe(0);
+  expect(title.style.flexShrink ?? 0).toBe(0);
+});
+
+it('keeps the title icon on the line of its title when the row wraps', () => {
+  const { group, icon, title } = titleRow(2);
+  expect(icon).toBe('InlineIcon');
+  expect(title.text).toBe(LONG_TITLE);
+  expect(group.flexDirection).toBe('row');
+  expect(group.flexWrap).toBeUndefined();
+});
+
+it('keeps one shrinking title line beside its action at the default size', () => {
+  const { row, group, title } = titleRow(1);
+  expect(row.flexWrap).toBeUndefined();
+  expect(group.flexShrink).toBe(1);
+  expect(title.style.flexShrink).toBe(1);
 });
 
 it('keeps the slide animation off the view that carries the drag transform', () => {

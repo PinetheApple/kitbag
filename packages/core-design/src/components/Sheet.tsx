@@ -125,6 +125,11 @@ const useStyles = createThemedStyles((theme) => ({
   titleRowWrapped: {
     flexWrap: 'wrap',
   },
+  titleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.chipGap,
+  },
   titleDetail: {
     ...textStyle(textRoles.rowSubtitle),
     color: theme.color.text2,
@@ -209,6 +214,10 @@ export function Sheet({
     styles.title,
     titleSize === 'large' && styles.titleLarge,
     titleSize === 'screen' && styles.titleScreen,
+    titleAction !== undefined && !scaled && styles.titleBesideAction,
+  ];
+  const titleGroupStyle = [
+    styles.titleGroup,
     titleAction !== undefined && !scaled && styles.titleBesideAction,
   ];
   const motion = useReduceMotionMode();
@@ -317,18 +326,20 @@ export function Sheet({
             <View style={styles.header}>
               <View style={styles.grab} />
               <View style={[styles.titleRow, scaled && styles.titleRowWrapped]}>
-                {titleIcon === undefined ? null : (
-                  <InlineIcon name={titleIcon} style={titleStyle} />
-                )}
-                <Text
-                  ref={titleRef}
-                  accessibilityRole="header"
-                  accessibilityActions={readerActions}
-                  onAccessibilityAction={handleReaderAction}
-                  style={titleStyle}
-                >
-                  {title}
-                </Text>
+                <View style={titleGroupStyle}>
+                  {titleIcon === undefined ? null : (
+                    <InlineIcon name={titleIcon} style={titleStyle} />
+                  )}
+                  <Text
+                    ref={titleRef}
+                    accessibilityRole="header"
+                    accessibilityActions={readerActions}
+                    onAccessibilityAction={handleReaderAction}
+                    style={titleStyle}
+                  >
+                    {title}
+                  </Text>
+                </View>
                 {titleDetail === undefined ? null : (
                   <Text style={styles.titleDetail}>{titleDetail}</Text>
                 )}
