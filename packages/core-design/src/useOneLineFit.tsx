@@ -13,6 +13,7 @@ import {
   measureOneLine,
   resizeOneLine,
   startOneLine,
+  UNMEASURED_STYLE,
   type OneLineMeasurement,
   type OneLineParams,
 } from './oneLineFit.ts';
@@ -29,7 +30,6 @@ const measureRow = {
   opacity: 0,
 } as const;
 const measureText = { position: 'absolute' } as const;
-const unmeasured = { opacity: 0 } as const;
 
 interface OneLineMeasurerProps {
   readonly text: string;
@@ -111,7 +111,9 @@ export function useOneLineFit({
   );
   const fitStyle = useMemo<TextStyle>(
     () =>
-      state.shown === undefined ? unmeasured : fittedStyle(role, state.shown),
+      state.shown === undefined
+        ? UNMEASURED_STYLE
+        : fittedStyle(role, state.shown),
     [role, state.shown],
   );
   const measurer = (

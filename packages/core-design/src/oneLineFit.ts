@@ -72,6 +72,8 @@ export function ellipsisPaintSize(fontSize: number, fontScale: number): number {
   return fontSize * fontScale * ELLIPSIS_FACE_RATIO;
 }
 
+export const UNMEASURED_STYLE = { opacity: 0 } as const;
+
 export interface FittedStyle {
   readonly fontSize: number;
   readonly letterSpacing?: number;

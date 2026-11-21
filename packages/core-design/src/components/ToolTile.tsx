@@ -21,8 +21,12 @@ import {
   textRoles,
 } from '../roles.ts';
 import { rowLabel } from '../rowLabel.ts';
-import { fittedStyle } from '../oneLineFit.ts';
 import { textStyle } from '../textStyle.ts';
+import {
+  cappedTitleStyle,
+  sharedTitleSize,
+  type TitleFits,
+} from '../tileTitle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { packTileRows, type ToolTileSize } from '../toolGrid.ts';
 import { radii } from '../tokens.ts';
@@ -174,9 +178,9 @@ export function ToolTile({
     if (fitted !== undefined) onTitleFit?.(fitted);
   }, [fitted, onTitleFit]);
   const titleStyle =
-    fitted === undefined || titleSizeCap === undefined || titleSizeCap >= fitted
+    onTitleFit === undefined
       ? titleFit.style
-      : fittedStyle(textRoles.tileTitle, titleSizeCap);
+      : cappedTitleStyle(titleFit.style, titleSizeCap);
   const upcoming = status === 'upcoming';
   return (
     <Pressable
@@ -211,18 +215,6 @@ export interface ToolGridItem extends ToolTileProps {
 
 export interface ToolGridProps {
   readonly tiles: readonly ToolGridItem[];
-}
-
-type TitleFits = Readonly<Record<string, number>>;
-
-function sharedTitleSize(
-  fits: TitleFits,
-  tiles: readonly ToolGridItem[],
-): number | undefined {
-  const sizes = tiles
-    .map((tile) => fits[tile.id])
-    .filter((size) => size !== undefined);
-  return sizes.length === 0 ? undefined : Math.min(...sizes);
 }
 
 interface GridTileProps {
@@ -262,7 +254,11 @@ export function ToolGrid({ tiles }: ToolGridProps) {
     );
   }, []);
   const titleSizeCap = useMemo(
-    () => sharedTitleSize(fits, tiles),
+    () =>
+      sharedTitleSize(
+        fits,
+        tiles.map((tile) => tile.id),
+      ),
     [fits, tiles],
   );
   return (

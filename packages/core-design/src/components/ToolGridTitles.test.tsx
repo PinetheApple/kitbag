@@ -3,7 +3,7 @@
 import { act, type ReactNode } from 'react';
 import type { StyleProp, TextStyle } from 'react-native';
 import { create, type ReactTestRenderer } from 'react-test-renderer';
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { flatStyle } from './flatStyle.test-helper.ts';
@@ -16,6 +16,10 @@ const FITS: Readonly<Record<string, number>> = {
   Songs: 14,
   'Stem songs': 9,
 };
+const TIGHTEST = Math.min(...Object.values(FITS));
+const HIDDEN = 0;
+
+const measured = vi.hoisted(() => new Set<string>());
 
 vi.mock('react-native', async (importOriginal) => {
   const { createElement: h } = await import('react');
@@ -27,13 +31,16 @@ vi.mock('react-native', async (importOriginal) => {
   };
 });
 
-vi.mock('../useOneLineFit.tsx', () => ({
-  useOneLineFit: ({ text }: { text: string }) => ({
-    style: { fontSize: FITS[text] },
-    onAvailableLayout: () => undefined,
-    measurer: null,
-  }),
-}));
+vi.mock('../useOneLineFit.tsx', async () => {
+  const { UNMEASURED_STYLE } = await import('../oneLineFit.ts');
+  return {
+    useOneLineFit: ({ text }: { text: string }) => ({
+      style: measured.has(text) ? { fontSize: FITS[text] } : UNMEASURED_STYLE,
+      onAvailableLayout: () => undefined,
+      measurer: null,
+    }),
+  };
+});
 
 vi.mock('./IconGlyph.tsx', () => ({ InlineIcon: () => null }));
 
@@ -48,22 +55,55 @@ const tiles = Object.keys(FITS).map((title) => ({
   size: '1x1' as const,
 }));
 
-it('shows every tile title at the size of the tightest fit', () => {
-  let renderer: ReactTestRenderer | undefined;
+const grid = () => (
+  <ThemeProvider mode="dark">
+    <ToolGrid tiles={tiles} />
+  </ThemeProvider>
+);
+
+let renderer: ReactTestRenderer | undefined;
+
+function shownTitles(): TextStyle[] {
+  return (
+    renderer?.root
+      .findAll(
+        (node) =>
+          String(node.type) === 'Text' && node.props.numberOfLines === 1,
+      )
+      .map((node) => flatStyle(node.props.style as StyleProp<TextStyle>)) ?? []
+  );
+}
+
+function measure(...titles: readonly string[]) {
+  for (const title of titles) measured.add(title);
   act(() => {
-    renderer = create(
-      <ThemeProvider mode="dark">
-        <ToolGrid tiles={tiles} />
-      </ThemeProvider>,
-    );
+    renderer?.update(grid());
   });
-  const sizes = renderer?.root
-    .findAll(
-      (node) => String(node.type) === 'Text' && node.props.numberOfLines === 1,
-    )
-    .map(
-      (node) =>
-        flatStyle(node.props.style as StyleProp<TextStyle>).fontSize ?? null,
+}
+
+beforeEach(() => {
+  measured.clear();
+  act(() => {
+    renderer = create(grid());
+  });
+});
+
+it('shows every tile title at the size of the tightest fit', () => {
+  measure(...Object.keys(FITS));
+  expect(shownTitles().map((style) => style.fontSize)).toEqual(
+    tiles.map(() => TIGHTEST),
+  );
+});
+
+it('keeps every title hidden until the last tile has fitted, so none shrinks in view', () => {
+  for (const title of Object.keys(FITS).slice(0, -1)) {
+    measure(title);
+    expect(shownTitles().map((style) => style.opacity)).toEqual(
+      tiles.map(() => HIDDEN),
     );
-  expect(sizes).toEqual(tiles.map(() => Math.min(...Object.values(FITS))));
+  }
+  measure(...Object.keys(FITS));
+  expect(shownTitles().map((style) => style.opacity)).toEqual(
+    tiles.map(() => undefined),
+  );
 });
