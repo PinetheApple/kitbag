@@ -1,0 +1,1 @@
+• Sheets keep their scroll bar in the margin, so it no longer covers switches, steppers or the muted-bar preview at the right edge. Switches at the right edge of a sheet react to taps just past them again.
