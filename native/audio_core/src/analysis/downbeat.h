@@ -14,7 +14,7 @@ namespace kitbag {
 constexpr int kDetectBeatsPerBar = 0;
 
 /// Streaming port of QM-DSP DownBeat::findDownBeats, holding one beat of
-/// decimated audio. Beats must ascend; beats_per_bar <= 0 picks 3 or 4 from
+/// decimated audio; bar one then goes through BarOnePhase. Beats must ascend; beats_per_bar <= 0 picks 3 or 4 from
 /// the audio (DetectBeatsPerBar), defaulting to 4.
 class DownbeatTracker {
  public:
@@ -39,6 +39,12 @@ class DownbeatTracker {
     return beat_sd_;
   }
 
+  /// QM DownBeat's own bar-ones, before BarOnePhase's stand-out departure;
+  /// valid after Finish.
+  const std::vector<int>& qm_downbeats() const {
+    return qm_downbeats_;
+  }
+
  private:
   struct BeatSpan {
     size_t start = 0;
@@ -50,7 +56,8 @@ class DownbeatTracker {
   void ProcessReadyBeats();
   void ProcessBeat(const BeatSpan& span);
   void DropBefore(size_t position);
-  std::vector<int> PickDownbeats(int timesig) const;
+  int QmPhase(int timesig) const;
+  std::vector<int> BarOnes(int first, int timesig) const;
 
   std::vector<double> beats_;
   int beats_per_bar_;
@@ -71,6 +78,7 @@ class DownbeatTracker {
   std::vector<double> old_spec_;
   // beat_sd_[i] is the spectral difference into beat i + 1.
   std::vector<double> beat_sd_;
+  std::vector<int> qm_downbeats_;
 };
 
 }  // namespace kitbag

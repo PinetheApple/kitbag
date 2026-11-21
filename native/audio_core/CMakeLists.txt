@@ -47,6 +47,7 @@ set(KITBAG_CORE_SOURCES
   src/analysis/beat_grid_fit.cpp
   src/analysis/beat_tracker.cpp
   src/analysis/constant_tempo.cpp
+  src/analysis/bar_one.cpp
   src/analysis/downbeat.cpp
   src/analysis/meter.cpp
   src/analysis/onset_envelope.cpp
@@ -475,9 +476,11 @@ if(KITBAG_BUILD_TOOLS)
     tools/analysis/analyze_test_sustained.cpp
     tools/analysis/analyze_test_meter.cpp
     tools/analysis/analyze_test_stems.cpp
+    tools/analysis/analyze_test_accent.cpp
     src/api/api_analysis.cpp
     src/analysis/wav_declared_length.cpp
     src/analysis/song_analysis.cpp
+    src/analysis/bar_one.cpp
     src/analysis/downbeat.cpp
     src/analysis/meter.cpp
     src/analysis/waveform_peaks.cpp
@@ -498,6 +501,7 @@ if(KITBAG_BUILD_TOOLS)
   add_executable(analyze_memory_verify
     tools/analysis/analyze_memory_verify.cpp
     src/analysis/song_analysis.cpp
+    src/analysis/bar_one.cpp
     src/analysis/downbeat.cpp
     src/analysis/meter.cpp
     src/analysis/waveform_peaks.cpp

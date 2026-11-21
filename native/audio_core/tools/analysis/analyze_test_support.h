@@ -93,6 +93,10 @@ inline std::vector<float> MakeClickTrack() {
 // The downbeat suite's per-bar tone fixture; accented=false is its control.
 std::vector<float> MakeBarToneTrack(bool accented);
 
+// One beat per bar differs in pitch; the beat-time grid it is played on.
+std::vector<float> MakeStandOutMono(int meter, int phase);
+std::vector<float> StandOutGrid();
+
 inline kitbag::DecoderInfo StereoInfo(uint64_t frames, uint32_t channels) {
   kitbag::DecoderInfo info;
   info.channels = channels;

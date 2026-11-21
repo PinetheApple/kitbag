@@ -1250,3 +1250,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   row's label and no longer reads the stem count. Rationale: the two stacked pills
   took a column on every row and looked heavy. `design/kitbag-library.html` variant B
   draws the icon. **[owner, 2026-11-20]**
+
+- **2026-11-21 · Stand-out beat as bar one (§4.3, #435)** — The downbeat tracker
+  keeps QM-DSP's `DownBeat` phase pick, then moves bar one one beat earlier
+  when QM's pick and the position before it form a pair of the two highest
+  mean spectral changes, the pair is tighter than its clearance over the third
+  position, and that clearance exceeds two standard errors. Rationale: a beat
+  that differs from its bar raises the change into and out of it equally, so
+  QM's maximum fell on that beat or the next by noise. The earlier rule (#433)
+  compared only against the beat after the winner and moved a beat-4 approach
+  note to bar one. Over 42 real stems nothing moved, so
+  `KB_BEAT_ANALYSIS_VERSION` stays. `DownbeatTracker::qm_downbeats()` keeps
+  QM's own pick for the equivalence check. **[recorded]**
