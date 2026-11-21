@@ -58,7 +58,6 @@ import {
 
 const useStyles = createThemedStyles(() => ({
   list: { gap: space.controlGap },
-  footer: { flexDirection: 'row', gap: space.controlGap },
 }));
 
 interface QueueListProps {
@@ -182,12 +181,11 @@ interface FooterProps {
 }
 
 function Footer({ canPlay, onDone, onPlayQueue }: FooterProps) {
-  const styles = useStyles();
   if (!canPlay)
     return (
-      <View style={styles.footer}>
+      <ButtonRow>
         <Button fill variant="tonal" label={QUEUE_TEXT.done} onPress={onDone} />
-      </View>
+      </ButtonRow>
     );
   return (
     <ButtonRow>

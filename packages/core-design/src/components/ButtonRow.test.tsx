@@ -36,8 +36,8 @@ function laidOut(scaled: boolean, props: Partial<ButtonRowProps> = {}) {
   const html = renderToStaticMarkup(
     <ThemeProvider mode="dark">
       <ButtonRow {...props}>
-        <i>secondary</i>
-        <b>primary</b>
+        <i>first</i>
+        <b>last</b>
       </ButtonRow>
     </ThemeProvider>,
   );
@@ -52,15 +52,15 @@ function laidOut(scaled: boolean, props: Partial<ButtonRowProps> = {}) {
 describe('ButtonRow', () => {
   it('sets the buttons side by side in the given order at the design size', () => {
     expect(laidOut(false)).toEqual({
-      order: ['secondary', 'primary'],
+      order: ['first', 'last'],
       direction: 'row',
       stackedId: undefined,
     });
   });
 
-  it('stacks the primary first when text is scaled', () => {
+  it('stacks a trailing primary first when text is scaled', () => {
     expect(laidOut(true)).toEqual({
-      order: ['primary', 'secondary'],
+      order: ['last', 'first'],
       direction: undefined,
       stackedId: BUTTONS_STACKED_ID,
     });
@@ -68,8 +68,8 @@ describe('ButtonRow', () => {
 
   it('keeps a leading primary first when it stacks', () => {
     expect(laidOut(true, { primaryAt: 'start' }).order).toEqual([
-      'secondary',
-      'primary',
+      'first',
+      'last',
     ]);
   });
 
