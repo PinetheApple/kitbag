@@ -1,4 +1,5 @@
 import {
+  FillBar,
   Icon,
   IconGlyph,
   iconSizes,
@@ -11,7 +12,7 @@ import {
 import { KB_COUNT_IN_BARS } from '@kitbag/core-native';
 import { BPM_BOUNDS, type RampConfig } from '@kitbag/core-state';
 import { useMemo } from 'react';
-import { Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
@@ -80,23 +81,20 @@ function RampStatus({ rows, frame, ramp }: RampStatusProps) {
   const { rampNextBpm, rampRemaining, rampStepProgress } = frame;
   const { unit, interval } = ramp;
   const still = useReduceMotionValue();
+  const { color } = useTheme();
   const next = useDerivedValue(() => rampNextText(rampNextBpm.value));
   const remaining = useDerivedValue(() =>
     rampRemainingText(rampRemaining.value, unit),
   );
-  const progress = useAnimatedStyle(() => ({
-    transform: [
-      {
-        scaleX: rampProgressFill(
-          rampStepProgress.value,
-          rampRemaining.value,
-          interval,
-          unit,
-          still.value,
-        ),
-      },
-    ],
-  }));
+  const progress = useDerivedValue(() =>
+    rampProgressFill(
+      rampStepProgress.value,
+      rampRemaining.value,
+      interval,
+      unit,
+      still.value,
+    ),
+  );
   const track = useAnimatedStyle(() => ({
     opacity: trackOpacity(rampTrackShown(interval, unit, still.value)),
   }));
@@ -119,7 +117,11 @@ function RampStatus({ rows, frame, ramp }: RampStatusProps) {
         {`target ${String(ramp.targetBpm)}`}
       </Text>
       <Animated.View style={[styles.progressTrack, track]}>
-        <Animated.View style={[styles.progress, progress]} />
+        <FillBar
+          progress={progress}
+          color={color.accent}
+          style={StyleSheet.absoluteFill}
+        />
       </Animated.View>
     </StatusVariant>
   );
