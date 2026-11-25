@@ -1,0 +1,1 @@
+• Rename and name sheets always slide fully into view before the keyboard opens. Before, a rename sheet could sometimes show only the dimmed background and the keyboard, with no card to type in.
