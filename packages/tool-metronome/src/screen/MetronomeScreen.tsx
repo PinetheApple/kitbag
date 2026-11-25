@@ -5,13 +5,18 @@ import {
   useMetronome,
   useSwipeHint,
 } from '@kitbag/core-state';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentRef,
+} from 'react';
 import { GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import {
   Text,
   useWindowDimensions,
   View,
-  type LayoutChangeEvent,
 } from 'react-native';
 
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
@@ -114,8 +119,8 @@ export function MetronomeScreen({
   // The summary can open on mount, before the hint's first layout; the hint
   // would then stack over it and take Back first.
   const summaryShown = openSheet === 'summary' && pendingPractice !== null;
-  const [bodyTop, setBodyTop] = useState(0);
   const [zone, setZone] = useState<ZoneFrame>({ top: 0, height: 0 });
+  const zoneRef = useRef<ComponentRef<typeof View>>(null);
   const hintShown = showSwipeHint(hintSeen, zone.height, summaryShown);
   const tapTimes = useRef<readonly number[]>([]);
 
@@ -204,13 +209,12 @@ export function MetronomeScreen({
     setOpenSheet('summary');
   }, [resetPractice]);
 
-  const handleTempoBlockLayout = useCallback((event: LayoutChangeEvent) => {
-    setBodyTop(event.nativeEvent.layout.y);
-  }, []);
-
-  const handleZoneLayout = useCallback((event: LayoutChangeEvent) => {
-    const { y, height } = event.nativeEvent.layout;
-    setZone({ top: y, height });
+  // The hint draws over the whole window, so the zone is placed in window
+  // coordinates; the block's layout moves the zone without a zone layout.
+  const measureZone = useCallback(() => {
+    zoneRef.current?.measureInWindow((_x, y, _width, height) => {
+      setZone({ top: y, height });
+    });
   }, []);
 
   const edgeToEdgePadding = useMemo(
@@ -277,7 +281,7 @@ export function MetronomeScreen({
           <View
             testID="tempo-block"
             style={styles.tempoBlock}
-            onLayout={handleTempoBlockLayout}
+            onLayout={measureZone}
           >
             <PracticePill elapsedMs={elapsedMs} onEnd={handleEndPractice} />
             {strip === null ? null : (
@@ -291,7 +295,7 @@ export function MetronomeScreen({
               </Text>
             )}
             <GestureDetector gesture={zoneSwipe}>
-              <View style={topGap} onLayout={handleZoneLayout}>
+              <View ref={zoneRef} style={topGap} onLayout={measureZone}>
                 <SwipeTempoZone
                   bpm={bpm}
                   density={density}
@@ -382,7 +386,7 @@ export function MetronomeScreen({
         </View>
         {hintShown ? (
           <SwipeHint
-            zoneTop={bodyTop + zone.top}
+            zoneTop={zone.top}
             zoneHeight={zone.height}
             gesture={hintSwipe}
             onDismiss={dismissHint}

@@ -196,10 +196,17 @@ function renderBody(fontScale: number, running: boolean): string {
   return renderToStaticMarkup(screenElement());
 }
 
-function layOut(view: { readonly props: Props }, y: number, height: number) {
+type MeasureDone = (x: number, y: number, width: number, height: number) => void;
+
+const zoneInWindow = { top: 0, height: 0 };
+const LOCAL_ZONE_Y = 20;
+
+function layOut(view: { readonly props: Props }, top: number, height: number) {
+  zoneInWindow.top = top;
+  zoneInWindow.height = height;
   const onLayout = view.props.onLayout as (event: unknown) => void;
   act(() => {
-    onLayout({ nativeEvent: { layout: { y, height } } });
+    onLayout({ nativeEvent: { layout: { y: LOCAL_ZONE_Y, height } } });
   });
 }
 
@@ -229,6 +236,13 @@ function laidOutViews(screen: ReactTestRenderer) {
     .findAllByType(View)
     .find((view) => view.props.onLayout !== undefined && view !== block);
   if (zoneView === undefined) throw new Error('tempo zone has no onLayout');
+  const zoneRef = zoneView.props.ref as { current: unknown } | undefined;
+  if (zoneRef !== undefined)
+    zoneRef.current = {
+      measureInWindow: (done: MeasureDone) => {
+        done(0, zoneInWindow.top, 0, zoneInWindow.height);
+      },
+    };
   return { block, zone: zoneView };
 }
 
@@ -288,15 +302,24 @@ describe('MetronomeScreen scroll body', () => {
     );
   });
 
-  it('places the swipe hint from the tempo block it sits in', () => {
-    const BLOCK_TOP = 50;
-    const ZONE_TOP = 20;
+  it('places the swipe hint at the zone in window coordinates', () => {
+    const ZONE_WINDOW_TOP = 180;
     const ZONE_HEIGHT = 100;
     display.hintSeen = false;
+    layOut(laidOutViews(mountScreen()).zone, ZONE_WINDOW_TOP, ZONE_HEIGHT);
+    expect(hint.props?.zoneTop).toBe(ZONE_WINDOW_TOP);
+    expect(hint.props?.zoneHeight).toBe(ZONE_HEIGHT);
+  });
+
+  it('moves the swipe hint with the zone when the tempo block lays out again', () => {
+    const ZONE_HEIGHT = 100;
+    const FIRST_TOP = 180;
+    const MOVED_TOP = 240;
+    display.hintSeen = false;
     const views = laidOutViews(mountScreen());
-    layOut(views.block, BLOCK_TOP, ZONE_HEIGHT);
-    layOut(views.zone, ZONE_TOP, ZONE_HEIGHT);
-    expect(hint.props?.zoneTop).toBe(BLOCK_TOP + ZONE_TOP);
+    layOut(views.zone, FIRST_TOP, ZONE_HEIGHT);
+    layOut(views.block, MOVED_TOP, ZONE_HEIGHT);
+    expect(hint.props?.zoneTop).toBe(MOVED_TOP);
   });
 });
 
