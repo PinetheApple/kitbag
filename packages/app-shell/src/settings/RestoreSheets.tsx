@@ -12,8 +12,8 @@ import {
   type SegmentOption,
 } from '@kitbag/core-design';
 import { isReplaceConfirmed, REPLACE_CONFIRMATION } from '@kitbag/core-state';
-import { useCallback, useState } from 'react';
-import { View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { View, type TextInputInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -109,6 +109,10 @@ export function ReplaceSheet(props: ReplaceSheetProps) {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
   const [typed, setTyped] = useState('');
+  const field = useRef<TextInputInstance>(null);
+  const focusField = useCallback(() => {
+    field.current?.focus();
+  }, []);
   const { onConfirm, onDismiss } = props;
   const confirm = useCallback(() => {
     onConfirm(typed);
@@ -124,16 +128,17 @@ export function ReplaceSheet(props: ReplaceSheetProps) {
       title={REPLACE_TITLE}
       dismissLabel={CLOSE}
       bottomInset={insets.bottom}
+      onShown={focusField}
       onDismiss={dismiss}
     >
       <View style={styles.stack}>
         <SheetHint>{props.body}</SheetHint>
         <TextField
+          ref={field}
           value={typed}
           onChangeText={setTyped}
           placeholder={REPLACE_CONFIRMATION}
           accessibilityLabel={`Type ${REPLACE_CONFIRMATION} to confirm`}
-          autoFocus
         />
         <Button
           label={props.confirmLabel}

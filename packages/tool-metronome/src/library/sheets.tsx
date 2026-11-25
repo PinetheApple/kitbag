@@ -7,8 +7,8 @@ import {
   TextField,
   type ButtonVariant,
 } from '@kitbag/core-design';
-import { useCallback, useState } from 'react';
-import { View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { View, type TextInputInstance } from 'react-native';
 
 const useStyles = createThemedStyles(() => ({
   stack: { gap: space.controlGap },
@@ -154,6 +154,10 @@ function useNameDraft(
 
 export function NameSheet(props: NameSheetProps) {
   const draft = useNameDraft(props.initial, props.onSubmit);
+  const field = useRef<TextInputInstance>(null);
+  const focusField = useCallback(() => {
+    field.current?.focus();
+  }, []);
   return (
     <Sheet
       visible={props.visible}
@@ -161,10 +165,11 @@ export function NameSheet(props: NameSheetProps) {
       dismissLabel={`Close ${props.title}`}
       bottomInset={props.bottomInset}
       onShow={draft.reset}
+      onShown={focusField}
       onDismiss={props.onDismiss}
     >
       <TextField
-        autoFocus
+        ref={field}
         value={draft.name}
         onChangeText={draft.setName}
         placeholder="Name"
