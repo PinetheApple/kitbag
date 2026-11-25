@@ -111,6 +111,7 @@ export interface AdvanceSteps {
   readonly live: (opened: number) => boolean;
   readonly ready: () => boolean;
   readonly play: () => void;
+  readonly prepare?: () => Promise<void>;
 }
 
 export async function startSong(
@@ -123,6 +124,10 @@ export async function startSong(
   if (!steps.ready()) {
     steps.ends.unopened(opened);
     return ADVANCE_OUTCOME.unplayable;
+  }
+  if (steps.prepare !== undefined) {
+    await steps.prepare();
+    if (!steps.live(opened)) return ADVANCE_OUTCOME.displaced;
   }
   steps.ends.advanced();
   if (steps.ends.stoppedSince(opened)) return ADVANCE_OUTCOME.stopped;

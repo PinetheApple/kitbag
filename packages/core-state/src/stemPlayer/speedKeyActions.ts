@@ -1,4 +1,4 @@
-import type { StemSetRecord } from '@kitbag/core-db';
+import type { StemSetRecord, StemSetSpeedKey } from '@kitbag/core-db';
 import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
 
 import { warn } from '../songLibrary/storeSupport.ts';
@@ -15,6 +15,36 @@ type SpeedKeyActions = Pick<
 >;
 
 type KeyOf = (row: StemRow, track: number) => number;
+
+export const songKeyOf =
+  (previous: number, songKey: number): KeyOf =>
+  (row) =>
+    row.key === previous ? songKey : row.key;
+
+export const stemKeyOf =
+  (index: number, key: number): KeyOf =>
+  (row, track) =>
+    track === index ? key : row.key;
+
+export const unshiftedKey: KeyOf = () => UNSHIFTED_KEY;
+
+export function keyedRows(rows: readonly StemRow[], keyOf: KeyOf): StemRow[] {
+  return rows.map((row, track) =>
+    row.transposable ? { ...row, key: keyOf(row, track) } : row,
+  );
+}
+
+export function speedKeyChange(
+  speed: number,
+  songKey: number,
+  stems: readonly StemRow[],
+): StemSetSpeedKey {
+  return {
+    speed,
+    pitch: songKey,
+    stems: stems.map(({ id, key }) => ({ id, pitch: key })),
+  };
+}
 
 interface KeyPlan {
   readonly songKey: number;
@@ -38,11 +68,10 @@ export function speedKeyActions(
     const { setId, songKey, stems } = get();
     if (setId === null) return;
     runtimeOf()
-      .records.saveStemSetSpeedKey(setId, {
-        speed: persisted.speed,
-        pitch: songKey,
-        stems: stems.map(({ id, key }) => ({ id, pitch: key })),
-      })
+      .records.saveStemSetSpeedKey(
+        setId,
+        speedKeyChange(persisted.speed, songKey, stems),
+      )
       .catch((error: unknown) => {
         warn('speed and key not stored', error);
       });
@@ -79,9 +108,7 @@ export function speedKeyActions(
     const { songKey, keyOf } = plan;
     const opened = session();
     const { stems: before, songKey: previous } = get();
-    const stems = before.map((row, track) =>
-      row.transposable ? { ...row, key: keyOf(row, track) } : row,
-    );
+    const stems = keyedRows(before, keyOf);
     set({ songKey, stems });
     refreshFacts();
     const { sent, failed } = await sendKeys(stems, before);
@@ -148,26 +175,20 @@ export function speedKeyActions(
       await changeKeys(() => {
         const previous = get().songKey;
         if (songKey === previous) return null;
-        return {
-          songKey,
-          keyOf: (row) => (row.key === previous ? songKey : row.key),
-        };
+        return { songKey, keyOf: songKeyOf(previous, songKey) };
       });
     },
     setStemKey: async (index, requested) => {
       const key = wholeKey(requested);
       await changeKeys(() => ({
         songKey: get().songKey,
-        keyOf: (row, track) => (track === index ? key : row.key),
+        keyOf: stemKeyOf(index, key),
       }));
     },
     resetSpeedKey: async () => {
       await Promise.all([
         setSpeed(KB_MIXER_UNITY_RATE),
-        changeKeys(() => ({
-          songKey: UNSHIFTED_KEY,
-          keyOf: () => UNSHIFTED_KEY,
-        })),
+        changeKeys(() => ({ songKey: UNSHIFTED_KEY, keyOf: unshiftedKey })),
       ]);
     },
   };

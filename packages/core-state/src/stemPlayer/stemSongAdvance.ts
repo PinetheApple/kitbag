@@ -1,3 +1,4 @@
+import type { HeldStart } from './loop.ts';
 import type { MixerSession } from './mixerSession.ts';
 import type { MixerRuntime } from './runtime.ts';
 import {
@@ -24,6 +25,7 @@ interface StemSongAdvanceContext {
     bars: number,
   ) => Promise<void>;
   readonly lastBars: () => number;
+  readonly applyHeld: (held: HeldStart) => Promise<void>;
 }
 
 type StemSongAdvance = Pick<
@@ -40,10 +42,12 @@ export function stemSongAdvance({
   showLoading,
   loadSession,
   lastBars,
+  applyHeld,
 }: StemSongAdvanceContext): StemSongAdvance {
   const steps = (
     begin: (setId: number) => number,
     bars: () => number,
+    held?: HeldStart,
   ): AdvanceSteps => ({
     ends,
     begin,
@@ -54,6 +58,7 @@ export function stemSongAdvance({
       get().togglePlay();
       set({ advanceCountEnd: get().countEndFrame });
     },
+    ...(held === undefined ? {} : { prepare: () => applyHeld(held) }),
   });
   const advancing = steps((id) => {
     const opened = mixer.advance();
@@ -63,7 +68,7 @@ export function stemSongAdvance({
   return {
     advanceTo: (setId) => advanceSong(advancing, setId),
     playNow: (setId) => startSong(advancing, setId),
-    takeOver: (setId, bars) =>
+    takeOver: (setId, bars, held) =>
       startSong(
         steps(
           (id) => {
@@ -72,6 +77,7 @@ export function stemSongAdvance({
             return opened;
           },
           () => bars,
+          held,
         ),
         setId,
       ),

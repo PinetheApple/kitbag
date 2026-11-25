@@ -4,6 +4,7 @@ import {
   loopBetween,
   movedEdge,
   snapToBeat,
+  type HeldStart,
   type LoopEdge,
   type LoopSeconds,
 } from './loop.ts';
@@ -144,16 +145,26 @@ function loopControls(
   return { busy, clear, setLoop, markLoop, moveLoopEdge };
 }
 
-export function loopActions(
-  context: MixerSessionContext<LoopSlice>,
-): Pick<StemPlayerActions, 'markLoop' | 'moveLoopEdge'> {
-  const { markLoop, moveLoopEdge } = loopControls(context);
-  return { markLoop, moveLoopEdge };
+type SetLoop = (bounds: LoopSeconds) => Promise<boolean>;
+
+export async function applyHeldStart(
+  { startSec, loop }: HeldStart,
+  setLoop: SetLoop,
+  get: () => Pick<StemPlayerActions, 'seek'> & Pick<LoopSlice, 'engineRate'>,
+): Promise<void> {
+  if (loop !== null) await setLoop(loop);
+  get().seek(secondsToFrames(startSec, get().engineRate));
 }
 
-export function sectionLoopActions(
-  context: ActionContext,
-): Pick<
+export function loopActions(context: MixerSessionContext<LoopSlice>): {
+  readonly actions: Pick<StemPlayerActions, 'markLoop' | 'moveLoopEdge'>;
+  readonly setLoop: SetLoop;
+} {
+  const { markLoop, moveLoopEdge, setLoop } = loopControls(context);
+  return { actions: { markLoop, moveLoopEdge }, setLoop };
+}
+
+type SectionLoopActions = Pick<
   StemPlayerActions,
   | 'markLoop'
   | 'moveLoopEdge'
@@ -161,7 +172,12 @@ export function sectionLoopActions(
   | 'dismissLoopUndo'
   | 'jumpToSection'
   | 'loopSection'
-> {
+>;
+
+export function sectionLoopActions(context: ActionContext): {
+  readonly actions: SectionLoopActions;
+  readonly setLoop: SetLoop;
+} {
   const { set, get } = context;
   const { busy, clear, setLoop, markLoop, moveLoopEdge } = loopControls(
     context,
@@ -169,7 +185,7 @@ export function sectionLoopActions(
       set({ undoableLoop });
     },
   );
-  return {
+  const actions: SectionLoopActions = {
     markLoop,
     moveLoopEdge,
     undoLoop: async () => {
@@ -201,4 +217,5 @@ export function sectionLoopActions(
       get().seek(secondsToFrames(section.startSec, get().engineRate));
     },
   };
+  return { actions, setLoop };
 }

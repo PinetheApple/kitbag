@@ -40,6 +40,11 @@ export function loopBetween(
 
 export type LoopEdge = 'start' | 'end';
 
+export interface HeldStart {
+  readonly startSec: number;
+  readonly loop: LoopSeconds | null;
+}
+
 export function movedEdge(
   loop: LoopSeconds,
   edge: LoopEdge,

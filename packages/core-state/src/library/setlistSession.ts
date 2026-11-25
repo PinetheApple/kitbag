@@ -1,6 +1,8 @@
+import type { QueuedSong } from '@kitbag/core-db';
 import type { StoreApi } from 'zustand/vanilla';
 
 import { activeSetlistOf } from './setlistPosition.ts';
+import { isPresetEntry, type SetlistEntry } from './snapshot.ts';
 import type {
   DiscardedChanges,
   LibraryState,
@@ -75,6 +77,21 @@ function playsFromSession(
     loaded.stemSetId === stemSetId &&
     loaded.setlistId === session.setlistId
   );
+}
+
+function entryIs(song: QueuedSong) {
+  return (entry: SetlistEntry) =>
+    isPresetEntry(entry)
+      ? song.kind === 'song' && entry.preset.librarySongId === song.id
+      : song.kind === 'stems' && entry.stemSetId === song.id;
+}
+
+export function isSessionEntry(
+  { session, entries }: Pick<LibraryState, 'session' | 'entries'>,
+  song: QueuedSong,
+): boolean {
+  if (session === null) return false;
+  return (entries[session.setlistId] ?? []).some(entryIs(song));
 }
 
 export function startSession(

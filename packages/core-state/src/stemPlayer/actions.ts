@@ -2,23 +2,26 @@ import type { Debounced } from './debounce.ts';
 import { clamp } from '../metronome/config.ts';
 import { soloAfter, UNITY_GAIN } from './mix.ts';
 import type { MixSaver } from './mixSaver.ts';
-import type { MixerRuntime, StemPlayerRuntime } from './runtime.ts';
+import type { MixerRuntime, StemPlayerCommands } from './runtime.ts';
 import type { SongStart } from './songStart.ts';
 import {
   restartFromFrame,
   songTransportShown,
   type SongCardOwner,
 } from './songTransport.ts';
-import type {
-  Get,
-  SetState,
-  StemPlayerActions,
-  StemPlayerState,
-  StemRow,
-} from './store.ts';
+import type { StemPlayerActions, StemPlayerState, StemRow } from './store.ts';
 import { secondsToFrames } from './time.ts';
 
-type RuntimeOf = () => StemPlayerRuntime;
+type MixSlice = Pick<StemPlayerState, 'stems' | 'masterGain'>;
+
+type MixSet = (
+  change: Partial<MixSlice> | ((state: MixSlice) => Partial<MixSlice>),
+) => void;
+
+export type MixCommands = Pick<
+  StemPlayerCommands,
+  'mixerSetGain' | 'mixerSetMute' | 'mixerSetSolo' | 'mixerSetMasterGain'
+>;
 
 function saveRow(saver: MixSaver, row: StemRow) {
   saver.queue({
@@ -30,9 +33,9 @@ function saveRow(saver: MixSaver, row: StemRow) {
 }
 
 export function mixActions(
-  set: SetState,
-  get: Get,
-  runtimeOf: RuntimeOf,
+  set: MixSet,
+  get: () => MixSlice,
+  commandsOf: () => MixCommands,
   saver: MixSaver,
 ): Pick<
   StemPlayerActions,
@@ -49,12 +52,12 @@ export function mixActions(
   return {
     setGain: (index, gain) => {
       if (update(index, { volume: gain }) === undefined) return;
-      runtimeOf().commands.mixerSetGain(index, gain);
+      commandsOf().mixerSetGain(index, gain);
     },
     toggleMute: (index) => {
       const row = get().stems[index];
       if (row === undefined) return;
-      const { commands } = runtimeOf();
+      const commands = commandsOf();
       const muted = !row.muted;
       const unsolo = muted && row.soloed;
       update(index, unsolo ? { muted, soloed: false } : { muted });
@@ -69,7 +72,7 @@ export function mixActions(
         index,
         additive,
       );
-      const { commands } = runtimeOf();
+      const commands = commandsOf();
       stems.forEach((row, track) => {
         const on = soloed[track] ?? false;
         if (on === row.soloed) return;
@@ -81,10 +84,10 @@ export function mixActions(
     },
     setMasterGain: (gain) => {
       set({ masterGain: gain });
-      runtimeOf().commands.mixerSetMasterGain(gain);
+      commandsOf().mixerSetMasterGain(gain);
     },
     resetMix: () => {
-      const { commands } = runtimeOf();
+      const commands = commandsOf();
       get().stems.forEach((row, track) => {
         update(track, { volume: UNITY_GAIN, muted: false, soloed: false });
         commands.mixerSetGain(track, UNITY_GAIN);
