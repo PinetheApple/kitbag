@@ -43,8 +43,10 @@ import {
 import {
   continueTarget,
   HOME_TOOLS,
+  hasHomeTile,
   TOOL_ID,
   toolStatus,
+  type BuiltTool,
   type HomeToolEntry,
   type ToolOnTest,
 } from './registry.ts';
@@ -148,10 +150,12 @@ export function HomeScreen() {
   const closeMore = useCallback(() => {
     setMoreOpen(false);
   }, []);
-  const practiceShown = visibleTiles(arrangement).some(
-    (tile) => tile.toolId === TOOL_ID.practiceHistory,
-  );
-  const liveText = useLiveText(usePracticeTileText(practiceShown || moreOpen));
+  const more = moreTools(arrangement);
+  const practiceListed = [
+    ...visibleTiles(arrangement).map((tile) => tile.toolId),
+    ...more.map((tool) => tool.id),
+  ].includes(TOOL_ID.practiceHistory);
+  const liveText = useLiveText(usePracticeTileText(practiceListed));
   const docked = useMiniPlayerDocked();
   const queue = useQueueSheet(insets.bottom);
   const movePaused = useDataFolder((s) => pausedMove(s) !== null);
@@ -174,8 +178,7 @@ export function HomeScreen() {
     [scrollBottomInset],
   );
 
-  const open = (tool: HomeToolEntry) => {
-    if (tool.homeTile === undefined) return undefined;
+  const openBuilt = (tool: BuiltTool) => {
     // The registry's route is a plain string (§9.1); typed routes cannot see
     // that it names a file under app/.
     const href = tool.homeTile.route as Href;
@@ -183,6 +186,8 @@ export function HomeScreen() {
       router.push(href);
     };
   };
+  const open = (tool: HomeToolEntry) =>
+    hasHomeTile(tool) ? openBuilt(tool) : undefined;
 
   const subtextOf = (tool: HomeToolEntry) =>
     liveText[tool.id]?.tile ?? UPCOMING_SUBTEXT;
@@ -218,10 +223,10 @@ export function HomeScreen() {
     ];
   });
   const rows = HOME_TOOLS.filter((tool) => tool.layout === 'row');
-  const moreItems: MoreToolsItem[] = moreTools(arrangement).map((tool) => ({
+  const moreItems: MoreToolsItem[] = more.map((tool) => ({
     tool,
     subtitle: subtextOf(tool),
-    onPress: open(tool),
+    onPress: openBuilt(tool),
   }));
 
   return (

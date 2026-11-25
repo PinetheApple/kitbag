@@ -1,8 +1,13 @@
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { HOME_TOOLS, TOOL_ID, type HomeToolEntry } from './registry.ts';
+import {
+  hasHomeTile,
+  HOME_TOOLS,
+  TOOL_ID,
+  type BuiltTool,
+} from './registry.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -33,35 +38,50 @@ vi.mock('@kitbag/core-design', async (original) => {
 
 const { MoreToolsSheet } = await import('./MoreToolsSheet.tsx');
 
-function tool(id: string): HomeToolEntry {
+function tool(id: string): BuiltTool {
   const found = HOME_TOOLS.find((t) => t.id === id);
-  if (found === undefined) throw new Error(id);
+  if (found === undefined || !hasHomeTile(found)) throw new Error(id);
   return found;
 }
+
+const tap = (index: number) => {
+  (recorded.rows[index]?.onPress as () => void)();
+};
+
+const closed = () => {
+  (recorded.sheets[0]?.onClosed as () => void)();
+};
 
 describe('MoreToolsSheet', () => {
   const openStems = vi.fn();
   const openPractice = vi.fn();
   const onDismiss = vi.fn();
-  renderToStaticMarkup(
-    createElement(MoreToolsSheet, {
-      visible: true,
-      bottomInset: 0,
-      onDismiss,
-      items: [
-        {
-          tool: tool(TOOL_ID.stems),
-          subtitle: '6 stem songs',
-          onPress: openStems,
-        },
-        {
-          tool: tool(TOOL_ID.practiceHistory),
-          subtitle: 'Yesterday · 42:10',
-          onPress: openPractice,
-        },
-      ],
-    }),
-  );
+
+  beforeEach(() => {
+    recorded.sheets.length = 0;
+    recorded.rows.length = 0;
+    recorded.hints.length = 0;
+    vi.clearAllMocks();
+    renderToStaticMarkup(
+      createElement(MoreToolsSheet, {
+        visible: true,
+        bottomInset: 0,
+        onDismiss,
+        items: [
+          {
+            tool: tool(TOOL_ID.stems),
+            subtitle: '6 stem songs',
+            onPress: openStems,
+          },
+          {
+            tool: tool(TOOL_ID.practiceHistory),
+            subtitle: 'Yesterday · 42:10',
+            onPress: openPractice,
+          },
+        ],
+      }),
+    );
+  });
 
   it('is titled More tools and points to Edit for Home tiles', () => {
     expect(recorded.sheets[0]?.title).toBe('More tools');
@@ -79,10 +99,19 @@ describe('MoreToolsSheet', () => {
     ]);
   });
 
-  it('opens only the tapped tool and closes the sheet', () => {
-    (recorded.rows[1]?.onPress as () => void)();
+  it('closes the sheet and opens the tapped tool only once it has closed', () => {
+    tap(1);
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(openPractice).not.toHaveBeenCalled();
+    closed();
     expect(openPractice).toHaveBeenCalledTimes(1);
     expect(openStems).not.toHaveBeenCalled();
-    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens one tool when a row is tapped twice while the sheet leaves', () => {
+    tap(1);
+    tap(1);
+    closed();
+    expect(openPractice).toHaveBeenCalledTimes(1);
   });
 });

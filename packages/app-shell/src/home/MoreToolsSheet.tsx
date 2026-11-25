@@ -1,32 +1,36 @@
-import { Sheet, SheetHint, ToolRow } from '@kitbag/core-design';
+import {
+  Sheet,
+  SheetHint,
+  ToolRow,
+  useAfterSheetClosed,
+} from '@kitbag/core-design';
 import { useCallback } from 'react';
 
-import { toolStatus, type HomeToolEntry } from './registry.ts';
+import type { BuiltTool } from './registry.ts';
 import { MORE_TOOLS_HINT, MORE_TOOLS_TITLE } from './subtext.ts';
 
 export interface MoreToolsItem {
-  readonly tool: HomeToolEntry;
+  readonly tool: BuiltTool;
   readonly subtitle: string;
-  readonly onPress: (() => void) | undefined;
+  readonly onPress: () => void;
 }
 
 interface MoreToolsItemRowProps {
   readonly item: MoreToolsItem;
-  readonly onDismiss: () => void;
+  readonly onPress: (open: () => void) => void;
 }
 
-function MoreToolsItemRow({ item, onDismiss }: MoreToolsItemRowProps) {
-  const { tool, subtitle, onPress } = item;
+function MoreToolsItemRow({ item, onPress }: MoreToolsItemRowProps) {
+  const { tool, subtitle } = item;
   const handlePress = useCallback(() => {
-    onDismiss();
-    onPress?.();
-  }, [onDismiss, onPress]);
+    onPress(item.onPress);
+  }, [onPress, item.onPress]);
   return (
     <ToolRow
       icon={tool.icon}
       title={tool.name}
       subtitle={subtitle}
-      status={toolStatus(tool)}
+      status="ready"
       onPress={handlePress}
     />
   );
@@ -45,6 +49,14 @@ export function MoreToolsSheet({
   bottomInset,
   onDismiss,
 }: MoreToolsSheetProps) {
+  const { after, closed } = useAfterSheetClosed(visible);
+  const openAfterClose = useCallback(
+    (open: () => void) => {
+      onDismiss();
+      after(open);
+    },
+    [onDismiss, after],
+  );
   return (
     <Sheet
       visible={visible}
@@ -52,13 +64,14 @@ export function MoreToolsSheet({
       dismissLabel={`Close ${MORE_TOOLS_TITLE}`}
       bottomInset={bottomInset}
       onDismiss={onDismiss}
+      onClosed={closed}
       dim
     >
       {items.map((item) => (
         <MoreToolsItemRow
           key={item.tool.id}
           item={item}
-          onDismiss={onDismiss}
+          onPress={openAfterClose}
         />
       ))}
       <SheetHint>{MORE_TOOLS_HINT}</SheetHint>

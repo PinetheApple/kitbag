@@ -82,6 +82,10 @@ export const BUILT_TOOLS: readonly BuiltTool[] = HOME_TOOLS.filter(
 
 export const BUILT_TOOL_IDS: readonly string[] = BUILT_TOOLS.map((t) => t.id);
 
+export function hasHomeTile(tool: HomeToolEntry): tool is BuiltTool {
+  return tool.homeTile !== undefined;
+}
+
 export function toolStatus(tool: HomeToolEntry): ToolStatus {
   return tool.homeTile === undefined ? 'upcoming' : 'ready';
 }

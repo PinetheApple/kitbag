@@ -1,6 +1,6 @@
 import { space } from '@kitbag/core-design';
 import { createElement } from 'react';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import {
   contentStyle,
@@ -9,10 +9,16 @@ import {
   renderRecorded,
 } from '../safeAreaInsets.test-helper.ts';
 
+interface MoreItem {
+  readonly tool: { readonly id: string };
+  readonly onPress: () => void;
+}
+
 const home = vi.hoisted(() => ({
   tiles: [] as { readonly id: string }[][],
   moreCounts: [] as number[],
-  moreItems: [] as { readonly tool: { readonly id: string } }[][],
+  moreItems: [] as MoreItem[][],
+  push: vi.fn<(href: string) => void>(),
 }));
 
 const dock = vi.hoisted(() => ({
@@ -85,7 +91,7 @@ vi.mock('@kitbag/tool-tuner', () => ({
 }));
 
 vi.mock('expo-router', () => ({
-  useRouter: () => ({ push: () => undefined }),
+  useRouter: () => ({ push: home.push }),
   useFocusEffect: () => undefined,
 }));
 
@@ -116,9 +122,7 @@ vi.mock('./MoreToolsRow.tsx', () => ({
   },
 }));
 vi.mock('./MoreToolsSheet.tsx', () => ({
-  MoreToolsSheet: (props: {
-    readonly items: { readonly tool: { readonly id: string } }[];
-  }) => {
+  MoreToolsSheet: (props: { readonly items: MoreItem[] }) => {
     home.moreItems.push(props.items);
     return null;
   },
@@ -160,6 +164,10 @@ describe('HomeScreen with the mini-player docked', () => {
 });
 
 describe('HomeScreen tiles and More tools', () => {
+  afterEach(() => {
+    storeState.off = [];
+  });
+
   const listed = (off: string[]) => {
     storeState.off = off;
     home.tiles.length = 0;
@@ -172,6 +180,13 @@ describe('HomeScreen tiles and More tools', () => {
       more: home.moreItems[0]?.map((item) => item.tool.id),
     };
   };
+
+  it('opens each More tools row on its tool route', () => {
+    listed([]);
+    home.push.mockClear();
+    for (const item of home.moreItems[0] ?? []) item.onPress();
+    expect(home.push.mock.calls).toEqual([['/practice']]);
+  });
 
   it('on a fresh install puts only Practice history under More tools', () => {
     expect(listed([])).toEqual({

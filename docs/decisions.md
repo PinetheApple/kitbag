@@ -656,6 +656,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   switching Stem songs Off closes an open stem song, which stops it and hides its
   notification. Coordinator call; the owner may overturn it. **[recorded]**
 
+- **2026-11-01 · More tools opens Tools (§9.3, §12.4, #170)** — Home's "More tools" row
+  opens Settings → Tools. Coordinator call; the owner may overturn it. **[recorded]**
+  **Superseded 2026-11-26 (#617):** More tools lists hidden tools.
+
 - **2026-11-01 · Poly ratio label goes right first (§5.2, #243)** — The label follows the
   last poly dot at 18 dp, then sits 8 dp left of the row, then above it. It follows the
   owner-approved round 2 frame (`design/kitbag-metronome.html` §02) rather than the poly

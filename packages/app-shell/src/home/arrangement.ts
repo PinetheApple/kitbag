@@ -14,7 +14,13 @@ import {
   type SavedArrangement,
 } from '@kitbag/core-state';
 
-import { HOME_TOOLS, type HomeToolEntry, type ToolOnTest } from './registry.ts';
+import {
+  hasHomeTile,
+  HOME_TOOLS,
+  type BuiltTool,
+  type HomeToolEntry,
+  type ToolOnTest,
+} from './registry.ts';
 
 export type HomeArrangement = Arrangement<ToolTileSize>;
 export type HomeTile = ArrangedTile<ToolTileSize>;
@@ -57,8 +63,10 @@ export function toolFor(tile: HomeTile): HomeToolEntry | undefined {
   return HOME_TOOLS.find((tool) => tool.id === tile.toolId);
 }
 
-export function moreTools(arrangement: HomeArrangement): HomeToolEntry[] {
-  return hiddenTiles(arrangement).flatMap((tile) => toolFor(tile) ?? []);
+export function moreTools(arrangement: HomeArrangement): BuiltTool[] {
+  return hiddenTiles(arrangement)
+    .flatMap((tile) => toolFor(tile) ?? [])
+    .filter(hasHomeTile);
 }
 
 export const ARRANGE_ACTION = {
