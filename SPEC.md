@@ -1026,7 +1026,8 @@ working. Changes:
   restored on open. Reset speed sits in the overflow menu (#528).
 - **Up next row** — the stem player's Previous · Up next · Repeat · Next row
   (§7.9), built from the same parts; `design/kitbag-queue.html` §e binds it
-  here too, with no separate mockup.
+  here too, with no separate mockup. The app bar carries the same Queue icon as
+  the stem player, before ⋮ (#613).
 - Tapping the Songs row of the song the mini-player is showing opens the player
   on that song as it is, still playing if it was. Any other row tap on Songs
   opens the player paused.
@@ -1277,7 +1278,7 @@ phone. That page defines the format; this spec does not copy it.
   the user's order), then Next from: <setlist>. `play_queue` holds a
   `stem_set_id` or a `song_id`, never both (§11.2, schema v29).
 - **Entry points:** a Queue key on the mini-player (§6.3), a Queue icon on the
-  stem player, and a Queue icon in the Stem songs app bar, badged with the
+  stem player and the single-song player, and a Queue icon in the Stem songs app bar, badged with the
   count up next (no badge at 0). Each opens the same queue sheet, as does the
   Up next row of either player.
 - **Play next** puts a song first in Next in queue; **Add to queue** puts it
@@ -1313,7 +1314,10 @@ phone. That page defines the format; this spec does not copy it.
   shows in the queue sheet once per install (owner, 2026-11-20). An active A-B
   loop wins over Repeat one, which acts only once the loop is cleared.
 - **Previous and Next** sit beside the Up next row, on the stem player and the
-  single-song player (§6.3). Past 3 s Previous restarts the song; otherwise it
+  single-song player (§6.3). With nothing up next (no queued song, no next
+  entry of a started setlist, no song Repeat all brings back) the row keeps
+  only Previous and the Repeat chip, with no label or text, at the same height;
+  this holds under Repeat one too (owner, #613). Past 3 s Previous restarts the song; otherwise it
   goes to the song played before it in this session, or the setlist entry
   before it. Next plays the next entry. On the Metronome Previous always goes
   back an entry (§5.4).

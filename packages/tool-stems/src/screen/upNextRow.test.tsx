@@ -4,7 +4,10 @@ import {
   configurePlayOrder,
   heardStore,
   libraryStore,
+  playOrderStore,
   PREVIOUS_RESTARTS_AFTER_SECONDS,
+  REPEAT,
+  repeatStore,
   songLibraryStore,
   startAutoAdvance,
 } from '@kitbag/core-state';
@@ -56,11 +59,30 @@ afterEach(() => {
   display.fontScale = 1;
   unmountTracked();
   libraryStore.setState(libraryBefore, true);
+  repeatStore.setState({ mode: REPEAT.off, played: [], restart: null });
 });
 
 const previousOff = (p: Player) =>
   (p.byLabel(PREVIOUS).props.accessibilityState as { disabled: boolean })
     .disabled;
+
+const upNextLabels = (p: Player) =>
+  p.renderer.root.findAll(
+    (node) => String(node.type) === 'Text' && node.props.children === UP_NEXT,
+  );
+
+const nextKeys = (p: Player) =>
+  p.renderer.root.findAll(
+    (node) =>
+      typeof node.type === 'string' &&
+      String(node.props.accessibilityLabel).startsWith('Next:'),
+  );
+
+async function queueNow(...ids: number[]) {
+  setQueued(ids.map(stems));
+  await playOrderStore.getState().refresh();
+  await flush();
+}
 
 function playedTo(p: Player, songSeconds: number) {
   p.engine.position = at(songSeconds);
@@ -68,15 +90,52 @@ function playedTo(p: Player, songSeconds: number) {
 }
 
 describe('the Up next row', () => {
-  it('says playback stops, with no Next, when nothing is up next', async () => {
+  it('keeps only Previous and Repeat, with no text, when nothing is up next', async () => {
     const p = await withQueue();
-    expect(p.has('Nothing queued')).toBe(true);
-    expect(p.has('Playback stops when this song ends')).toBe(true);
+    expect(upNextLabels(p)).toEqual([]);
+    expect(p.has('Nothing queued')).toBe(false);
+    expect(p.has('Playback stops when this song ends')).toBe(false);
+    expect(p.labelled(PREVIOUS)).toHaveLength(1);
+    expect(p.labelled(QUEUE_TEXT.repeatOff)).toHaveLength(1);
     expect(p.labelled('Open')).toEqual([]);
-    const nextKeys = p.renderer.root.findAll((node) =>
-      String(node.props.accessibilityLabel).startsWith('Next:'),
-    );
-    expect(nextKeys).toEqual([]);
+    expect(nextKeys(p)).toEqual([]);
+  });
+
+  it('shows its text once a song is queued, and drops it when the queue empties', async () => {
+    const p = await withQueue();
+    await queueNow(NIGHT_BUS);
+    expect(upNextLabels(p)).toHaveLength(1);
+    expect(p.has('Night Bus')).toBe(true);
+    expect(nextKeys(p)).toHaveLength(1);
+    await queueNow();
+    expect(upNextLabels(p)).toEqual([]);
+    expect(p.has('Night Bus')).toBe(false);
+    expect(p.labelled(PREVIOUS)).toHaveLength(1);
+    expect(p.labelled(QUEUE_TEXT.repeatOff)).toHaveLength(1);
+  });
+
+  it("shows a started setlist's next entry with nothing queued", async () => {
+    metronomeEntryOnStage();
+    const p = await withQueue();
+    expect(upNextLabels(p)).toHaveLength(1);
+    expect(p.has('Ballad')).toBe(true);
+  });
+
+  it('keeps only Previous and Repeat one under Repeat one with nothing up next', async () => {
+    repeatStore.setState({ mode: REPEAT.one });
+    const p = await withQueue();
+    expect(upNextLabels(p)).toEqual([]);
+    expect(p.has(QUEUE_TEXT.playsAgain)).toBe(false);
+    expect(p.labelled(PREVIOUS)).toHaveLength(1);
+    expect(p.labelled(QUEUE_TEXT.repeatOne)).toHaveLength(1);
+  });
+
+  it('says the song plays again under Repeat one while a song is queued', async () => {
+    repeatStore.setState({ mode: REPEAT.one });
+    const p = await withQueue(NIGHT_BUS);
+    expect(upNextLabels(p)).toHaveLength(1);
+    expect(p.has(QUEUE_TEXT.playsAgain)).toBe(true);
+    expect(nextKeys(p)).toHaveLength(1);
   });
 
   it('names the first queued song and skips to it, dropping it from the queue', async () => {
@@ -115,6 +174,14 @@ describe('the Up next row under font scale', () => {
     expect(repeatChips(p)).toHaveLength(1);
     expect(inLine).toHaveLength(1);
     expect(labelLines(p)).toBe(1);
+  });
+
+  it('keeps Previous and the repeat chip on one line at 2.0 with nothing up next', async () => {
+    display.fontScale = 2;
+    const p = await withQueue();
+    expect(withTestId(p, REPEAT_LINE_ID)).toEqual([]);
+    expect(repeatChips(p)).toHaveLength(1);
+    expect(p.labelled(PREVIOUS)).toHaveLength(1);
   });
 
   it("moves a metronome entry's Open beside the repeat chip at 2.0", async () => {

@@ -1307,3 +1307,5 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   UI-thread CPU. The hypothesis is that these two account for it.
 
 - **2026-11-21 · Loop key icon (§6.3, #610)** — The song player's loop key shows the loop icon the stem player uses, not `design/kitbag-song-player.html`'s "A|B" text. **[owner, 2026-11-21]**
+
+- **2026-11-26 · Up next row with nothing up next (§6.3, §7.9, #613)** — With nothing up next the players' Up next row keeps only Previous and the Repeat chip: no "Up next" label, no "Nothing queued", no "Playback stops" caption, same 48 dp height. A started setlist's next entry or a song Repeat all brings back still shows the row; Repeat one with nothing else up next shows the bare row. The song player gains the stem player's Queue icon before ⋮, since the row was its only way into the queue. Drawn in `docs/research/mockups/613-up-next-states.html`, option A. **[owner, 2026-11-26]**

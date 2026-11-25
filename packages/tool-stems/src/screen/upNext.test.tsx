@@ -368,7 +368,7 @@ describe('the setlist part of Up next', () => {
     libraryStore.setState({ session: null });
     const p = await withQueue();
     expect(p.has('Ballad')).toBe(false);
-    expect(p.has('Nothing queued')).toBe(true);
+    expect(p.has('Up next')).toBe(false);
   });
 
   it('skips an entry this time from the sheet', async () => {

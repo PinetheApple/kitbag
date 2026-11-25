@@ -88,6 +88,41 @@ function lockIconOf(tree: ReactTestRenderer) {
 
 beforeEach(resetScreenState);
 
+interface BarAction {
+  readonly label: string;
+  readonly onPress: () => void;
+}
+
+function barActions(tree: ReactTestRenderer): readonly BarAction[] {
+  return tree.root.findByType('AppBar' as never).props
+    .actions as readonly BarAction[];
+}
+
+function barAction(tree: ReactTestRenderer, label: string) {
+  return barActions(tree).find((action) => action.label === label);
+}
+
+describe('the Queue key on the app bar', () => {
+  it('sits before More and opens the queue', () => {
+    const onOpenQueue = vi.fn();
+    const tree = mount(true, { onOpenQueue });
+    expect(barActions(tree).map((action) => action.label)).toEqual([
+      'Queue',
+      'More',
+    ]);
+    act(() => {
+      barAction(tree, 'Queue')?.onPress();
+    });
+    expect(onOpenQueue).toHaveBeenCalledOnce();
+  });
+
+  it('names the count up next', () => {
+    display.upNextCount = 2;
+    const tree = mount(true, { onOpenQueue: vi.fn() });
+    expect(barAction(tree, 'Queue, 2 up next')).toBeDefined();
+  });
+});
+
 describe('the song player layout', () => {
   it('keeps the click toggle beside the text at the default size', () => {
     expect(styleAround(mount(), 'Chip').flexDirection).toBe('row');
@@ -270,10 +305,8 @@ describe('the player menu', () => {
 
   function openMenu(): ReactTestRenderer {
     const tree = mount();
-    const [more] = tree.root.findByType('AppBar' as never).props
-      .actions as readonly { onPress: () => void }[];
     act(() => {
-      more?.onPress();
+      barAction(tree, 'More')?.onPress();
     });
     return tree;
   }

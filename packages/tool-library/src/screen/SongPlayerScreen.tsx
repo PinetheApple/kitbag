@@ -58,6 +58,7 @@ export interface SongPlayerScreenProps {
   readonly onOpenSong: (songId: number) => void;
   readonly usePlayhead: UsePlayhead;
   readonly renderUpNext?: RenderUpNext;
+  readonly onOpenQueue?: () => void;
 }
 
 export type RenderUpNext = (songSec: SongPlayhead['songSec']) => ReactNode;
@@ -205,6 +206,7 @@ export function SongPlayerScreen({
   onOpenSong,
   usePlayhead,
   renderUpNext,
+  onOpenQueue,
 }: SongPlayerScreenProps) {
   const styles = useStyles();
   const open = useSongPlayer((s) => s.open);
@@ -255,7 +257,7 @@ export function SongPlayerScreen({
   const padding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
   return (
     <View style={[styles.screen, padding]}>
-      <SongAppBar onBack={leave} onMenu={openMenu} />
+      <SongAppBar onBack={leave} onQueue={onOpenQueue} onMenu={openMenu} />
       <Body
         songId={songId}
         bottom={insets.bottom}
