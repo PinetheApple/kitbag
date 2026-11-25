@@ -12,6 +12,7 @@ export interface SongSession {
 export type SongPlayerActions = Pick<
   StemPlayerActions,
   | 'togglePlay'
+  | 'playFrom'
   | 'scrub'
   | 'cancelScrub'
   | 'seek'

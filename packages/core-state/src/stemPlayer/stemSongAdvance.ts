@@ -1,3 +1,4 @@
+import type { HeldStart } from './loop.ts';
 import type { MixerSession } from './mixerSession.ts';
 import type { MixerRuntime } from './runtime.ts';
 import {
@@ -13,7 +14,7 @@ interface StemSongAdvanceContext {
   readonly ends: SongEnds;
   readonly get: () => Pick<
     StemPlayerStore,
-    'status' | 'togglePlay' | 'countEndFrame'
+    'status' | 'togglePlay' | 'playFrom' | 'countEndFrame'
   >;
   readonly set: (change: Pick<StemPlayerStore, 'advanceCountEnd'>) => void;
   readonly runtimeOf: () => MixerRuntime;
@@ -24,6 +25,7 @@ interface StemSongAdvanceContext {
     bars: number,
   ) => Promise<void>;
   readonly lastBars: () => number;
+  readonly applyHeld: (held: HeldStart) => Promise<number>;
 }
 
 type StemSongAdvance = Pick<
@@ -40,20 +42,24 @@ export function stemSongAdvance({
   showLoading,
   loadSession,
   lastBars,
+  applyHeld,
 }: StemSongAdvanceContext): StemSongAdvance {
   const steps = (
     begin: (setId: number) => number,
     bars: () => number,
+    held?: HeldStart,
   ): AdvanceSteps => ({
     ends,
     begin,
     load: (opened, id) => loadSession(opened, id, bars()),
     live: mixer.live,
     ready: () => get().status === 'ready',
-    play: () => {
-      get().togglePlay();
+    play: (head) => {
+      if (head === undefined) get().togglePlay();
+      else get().playFrom(head);
       set({ advanceCountEnd: get().countEndFrame });
     },
+    ...(held === undefined ? {} : { prepare: () => applyHeld(held) }),
   });
   const advancing = steps((id) => {
     const opened = mixer.advance();
@@ -63,7 +69,7 @@ export function stemSongAdvance({
   return {
     advanceTo: (setId) => advanceSong(advancing, setId),
     playNow: (setId) => startSong(advancing, setId),
-    takeOver: (setId, bars) =>
+    takeOver: (setId, bars, held) =>
       startSong(
         steps(
           (id) => {
@@ -72,6 +78,7 @@ export function stemSongAdvance({
             return opened;
           },
           () => bars,
+          held,
         ),
         setId,
       ),

@@ -22,14 +22,15 @@ import {
   type ExportSlice,
 } from './exportActions.ts';
 import type { SongFacts } from './facts.ts';
-import type { LoopEdge, LoopSeconds } from './loop.ts';
-import { sectionLoopActions } from './loopActions.ts';
+import type { HeldStart, LoopEdge, LoopSeconds } from './loop.ts';
+import { applyHeldStart, sectionLoopActions } from './loopActions.ts';
 import { overrideDownbeats } from './meterOverride.ts';
-import { songLyrics, type RetimeTap, type SongLyrics } from './lyrics.ts';
+import type { RetimeTap, SongLyrics } from './lyrics.ts';
 import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
 import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
 import { mixerSession, type MixerHold } from './mixerSession.ts';
 import { mixSaver } from './mixSaver.ts';
+import { openedStemState } from './openedState.ts';
 import { cardPresses, type CardPressActions } from './cardPresses.ts';
 import { stemSongAdvance } from './stemSongAdvance.ts';
 import { stemSongHolds } from './stemSongHolds.ts';
@@ -40,7 +41,6 @@ import {
 import { renameActions } from './renameActions.ts';
 import { retimeActions, retimeAnchor } from './retimeActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
-import { sortedSections } from './sections.ts';
 import {
   endedOnLastFrame,
   songEnds,
@@ -54,13 +54,12 @@ import {
   rowsOf,
   unloadTracks,
 } from './stemTracks.ts';
-import { clampedSpeed, wholeKey } from './speedKey.ts';
+import { clampedSpeed } from './speedKey.ts';
 import { speedKeySession } from './speedKeyActions.ts';
 import { songGrid, tempoActions } from './tempoActions.ts';
-import { longestSeconds, tempoModeOf } from './tempoGrid.ts';
-import { framesToSeconds, secondsToFrames } from './time.ts';
+import { framesToSeconds } from './time.ts';
 
-const MIX_SAVE_DELAY_MS = 600;
+export const MIX_SAVE_DELAY_MS = 600;
 export const SCRUB_SEEK_DELAY_MS = 120;
 
 export interface StemRow {
@@ -148,6 +147,7 @@ export interface StemPlayerActions extends CardPressActions {
   readonly takeOver: (
     setId: number,
     waveformBars: number,
+    held?: HeldStart,
   ) => Promise<AdvanceOutcome>;
   readonly handOver: () => void;
   readonly onSongEnd: (listener: AdvanceListener) => () => void;
@@ -166,6 +166,7 @@ export interface StemPlayerActions extends CardPressActions {
   readonly setStemKey: (index: number, key: number) => Promise<void>;
   readonly resetSpeedKey: () => Promise<void>;
   readonly togglePlay: () => void;
+  readonly playFrom: (frame: number) => void;
   readonly scrub: (frame: number) => void;
   readonly cancelScrub: () => void;
   readonly seek: (frame: number) => void;
@@ -366,38 +367,16 @@ export function createStemPlayerStore(
       if (speed === null) return;
       speedKey.persisted.speed = record.speed;
       start.rateSet(speed);
-      const songKey = wholeKey(record.pitch);
       const rows = rowsOf(record);
       requestedTracks = rows.length;
       const stems = await loadTracks(runtime, record, rows, () => live(opened));
       const masterGain = await commands.mixerMasterGain();
       if (!live(opened)) return;
       openRecord = record;
-      const override = meterOverrideOf(record);
-      const grid = songGrid(record, tempoModeOf(record), override, {
-        speed,
-        key: songKey,
-      });
-      markedDownbeatIndices = grid.marked;
-      set({
-        status: 'ready',
-        title: record.songTitle ?? record.title,
-        artist: record.artist,
-        ...grid.state,
-        meterOverride: override,
-        speed,
-        songKey,
-        tempo: record.tempo,
-        stems,
-        overLimit: record.stems.length - rows.length,
-        masterGain,
-        engineRate,
-        durationFrames: secondsToFrames(longestSeconds(record), engineRate),
-        clickGrouping: record.clickGrouping,
-        clickRate: record.clickRate,
-        sections: sortedSections(record.sections),
-        lyrics: songLyrics(record.lyrics, record.lyricsRetimed),
-      });
+      const opening = { engineRate, speed, stems, masterGain };
+      const { marked, state } = openedStemState(record, opening);
+      markedDownbeatIndices = marked;
+      set(state);
       loadWaveforms(context, () => live(opened), record, bars);
     };
 
@@ -421,6 +400,7 @@ export function createStemPlayerStore(
       }
     };
 
+    const loops = sectionLoopActions(context);
     const advancing = stemSongAdvance({
       mixer,
       ends,
@@ -430,6 +410,7 @@ export function createStemPlayerStore(
       showLoading,
       loadSession,
       lastBars: () => waveformBars,
+      applyHeld: (held) => applyHeldStart(held, loops.setLoop, get),
     });
 
     return {
@@ -454,7 +435,7 @@ export function createStemPlayerStore(
       stopAdvancing: holds.gaveUp,
       close: mixer.close,
       onCardStop: mixer.onCardStop,
-      ...mixActions(set, get, runtimeOf, saver),
+      ...mixActions(set, get, () => runtimeOf().commands, saver),
       ...transportActions(
         get,
         runtimeOf,
@@ -463,7 +444,7 @@ export function createStemPlayerStore(
         afterSeek,
         start,
       ),
-      ...sectionLoopActions(context),
+      ...loops.actions,
       ...clicks,
       ...clickShape.actions,
       ...renameActions(context),

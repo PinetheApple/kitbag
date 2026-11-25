@@ -2,23 +2,29 @@ import type { Debounced } from './debounce.ts';
 import { clamp } from '../metronome/config.ts';
 import { soloAfter, UNITY_GAIN } from './mix.ts';
 import type { MixSaver } from './mixSaver.ts';
-import type { MixerRuntime, StemPlayerRuntime } from './runtime.ts';
+import type { MixerRuntime, StemPlayerCommands } from './runtime.ts';
 import type { SongStart } from './songStart.ts';
 import {
   restartFromFrame,
   songTransportShown,
   type SongCardOwner,
 } from './songTransport.ts';
-import type {
-  Get,
-  SetState,
-  StemPlayerActions,
-  StemPlayerState,
-  StemRow,
-} from './store.ts';
+import type { StemPlayerActions, StemPlayerState, StemRow } from './store.ts';
 import { secondsToFrames } from './time.ts';
 
-type RuntimeOf = () => StemPlayerRuntime;
+type MixSlice = Pick<StemPlayerState, 'stems' | 'masterGain'>;
+
+type MixSet = (
+  change: Partial<MixSlice> | ((state: MixSlice) => Partial<MixSlice>),
+) => void;
+
+export type StemMixCommands = Pick<
+  StemPlayerCommands,
+  'mixerSetGain' | 'mixerSetMute' | 'mixerSetSolo'
+>;
+
+type MixCommands = StemMixCommands &
+  Pick<StemPlayerCommands, 'mixerSetMasterGain'>;
 
 function saveRow(saver: MixSaver, row: StemRow) {
   saver.queue({
@@ -29,15 +35,12 @@ function saveRow(saver: MixSaver, row: StemRow) {
   });
 }
 
-export function mixActions(
-  set: SetState,
-  get: Get,
-  runtimeOf: RuntimeOf,
+export function stemMixActions(
+  set: MixSet,
+  get: () => MixSlice,
+  commandsOf: () => StemMixCommands,
   saver: MixSaver,
-): Pick<
-  StemPlayerActions,
-  'setGain' | 'toggleMute' | 'solo' | 'setMasterGain' | 'resetMix'
-> {
+): Pick<StemPlayerActions, 'setGain' | 'toggleMute' | 'solo' | 'resetMix'> {
   const update = (index: number, change: Partial<StemRow>) => {
     const row = get().stems[index];
     if (row === undefined) return undefined;
@@ -49,12 +52,12 @@ export function mixActions(
   return {
     setGain: (index, gain) => {
       if (update(index, { volume: gain }) === undefined) return;
-      runtimeOf().commands.mixerSetGain(index, gain);
+      commandsOf().mixerSetGain(index, gain);
     },
     toggleMute: (index) => {
       const row = get().stems[index];
       if (row === undefined) return;
-      const { commands } = runtimeOf();
+      const commands = commandsOf();
       const muted = !row.muted;
       const unsolo = muted && row.soloed;
       update(index, unsolo ? { muted, soloed: false } : { muted });
@@ -69,7 +72,7 @@ export function mixActions(
         index,
         additive,
       );
-      const { commands } = runtimeOf();
+      const commands = commandsOf();
       stems.forEach((row, track) => {
         const on = soloed[track] ?? false;
         if (on === row.soloed) return;
@@ -79,20 +82,38 @@ export function mixActions(
         commands.mixerSetSolo(track, on);
       });
     },
-    setMasterGain: (gain) => {
-      set({ masterGain: gain });
-      runtimeOf().commands.mixerSetMasterGain(gain);
-    },
     resetMix: () => {
-      const { commands } = runtimeOf();
+      const commands = commandsOf();
       get().stems.forEach((row, track) => {
         update(track, { volume: UNITY_GAIN, muted: false, soloed: false });
         commands.mixerSetGain(track, UNITY_GAIN);
         commands.mixerSetMute(track, false);
         commands.mixerSetSolo(track, false);
       });
-      set({ masterGain: UNITY_GAIN });
-      commands.mixerSetMasterGain(UNITY_GAIN);
+    },
+  };
+}
+
+export function mixActions(
+  set: MixSet,
+  get: () => MixSlice,
+  commandsOf: () => MixCommands,
+  saver: MixSaver,
+): Pick<
+  StemPlayerActions,
+  'setGain' | 'toggleMute' | 'solo' | 'setMasterGain' | 'resetMix'
+> {
+  const stems = stemMixActions(set, get, commandsOf, saver);
+  const setMasterGain = (gain: number) => {
+    set({ masterGain: gain });
+    commandsOf().mixerSetMasterGain(gain);
+  };
+  return {
+    ...stems,
+    setMasterGain,
+    resetMix: () => {
+      stems.resetMix();
+      setMasterGain(UNITY_GAIN);
     },
   };
 }
@@ -122,13 +143,24 @@ export function transportActions(
   start: Pick<SongStart, 'play' | 'cancel'> = plainStart(runtimeOf),
 ): Pick<
   StemPlayerActions,
-  'togglePlay' | 'scrub' | 'cancelScrub' | 'seek' | 'skip'
+  'togglePlay' | 'playFrom' | 'scrub' | 'cancelScrub' | 'seek' | 'skip'
 > {
   const seek = (frame: number) => {
     scrubSeek.cancel();
     const clamped = clamp(frame, 0, get().durationFrames);
     runtimeOf().commands.mixerSeek(clamped);
     afterSeek?.(clamped);
+  };
+  const playFrom = (frame: number) => {
+    const { durationFrames, engineRate, status } = get();
+    if (status !== 'ready') return;
+    let head = frame;
+    if (head >= restartFromFrame(durationFrames, engineRate)) {
+      head = 0;
+      seek(head);
+    }
+    start.play(head);
+    runtimeOf().commands.songTransportShow(songTransportShown(get(), card()));
   };
   return {
     togglePlay: () => {
@@ -138,16 +170,9 @@ export function transportActions(
         return;
       }
       if (start.cancel()) return;
-      const { durationFrames, engineRate, status } = get();
-      if (status !== 'ready') return;
-      let head = engine.position();
-      if (head >= restartFromFrame(durationFrames, engineRate)) {
-        head = 0;
-        seek(head);
-      }
-      start.play(head);
-      commands.songTransportShow(songTransportShown(get(), card()));
+      playFrom(engine.position());
     },
+    playFrom,
     scrub: (frame) => {
       scrubSeek(frame);
     },

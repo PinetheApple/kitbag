@@ -12,7 +12,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { transportActions } from '../stemPlayer/actions.ts';
 import { clickActions, followNewGrid } from '../stemPlayer/clickActions.ts';
-import { loopActions } from '../stemPlayer/loopActions.ts';
+import { applyHeldStart, loopActions } from '../stemPlayer/loopActions.ts';
 import { UNITY_GAIN, UNSHIFTED_KEY } from '../stemPlayer/mix.ts';
 import {
   createMixerClaim,
@@ -264,6 +264,7 @@ export function createSongPlayerStore(
       );
     };
     const modes = songTempo(context, applyTempoMode);
+    const loops = loopActions(context);
 
     const endAsGone = () => {
       mixer.close();
@@ -362,7 +363,7 @@ export function createSongPlayerStore(
         const opened = begin(songId, bars);
         return { hold: mixer.hold(opened), loaded: loading };
       },
-      takeOver: (songId, bars) =>
+      takeOver: (songId, bars, held) =>
         startSong(
           {
             ends,
@@ -370,9 +371,13 @@ export function createSongPlayerStore(
             load: () => loading,
             live,
             ready: () => get().status === 'ready',
-            play: () => {
-              get().togglePlay();
+            play: (head) => {
+              if (head === undefined) get().togglePlay();
+              else get().playFrom(head);
             },
+            ...(held === undefined
+              ? {}
+              : { prepare: () => applyHeldStart(held, loops.setLoop, get) }),
           },
           songId,
         ),
@@ -426,7 +431,7 @@ export function createSongPlayerStore(
         count.afterSeek,
         card.start,
       ),
-      ...loopActions(context),
+      ...loops.actions,
       ...clickActions(context, mixer.pendingClick, {
         recountWithClickOff: count.recountWithClickOff,
         recountWithClickOn: count.recountWithClickOn,

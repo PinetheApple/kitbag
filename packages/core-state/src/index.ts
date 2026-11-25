@@ -685,6 +685,12 @@ export { useFocusedMixerHold } from './stemPlayer/screenHold.ts';
 export { useSongPlayer } from './songPlayer/useSongPlayer.ts';
 export { songPlayerStore, type SongPlayerStore } from './songPlayer/store.ts';
 export { configureSongPlayer } from './songPlayer/runtime.ts';
+export { ROW_TAP, rowTap, type RowTap } from './songView/rowTap.ts';
+export { songViewStore, type SongViewStore } from './songView/songView.ts';
+export { stemViewStore, type StemViewStore } from './songView/stemView.ts';
+export { useSongView } from './songView/useSongView.ts';
+export { useStemView } from './songView/useStemView.ts';
+export type { HeldStart } from './stemPlayer/loop.ts';
 export {
   createMixerClick,
   mixerClick,

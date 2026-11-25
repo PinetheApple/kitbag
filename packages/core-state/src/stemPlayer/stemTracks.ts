@@ -2,9 +2,9 @@ import { KB_MAX_TRACKS, KB_RESULT } from '@kitbag/core-native';
 import type { StemSetRecord } from '@kitbag/core-db';
 
 import { UNITY_GAIN, UNSHIFTED_KEY } from './mix.ts';
-import type { StemPlayerRuntime } from './runtime.ts';
+import type { MixerRuntime, StemPlayerRuntime } from './runtime.ts';
 import { transposable, wholeKey } from './speedKey.ts';
-import type { ActionContext, StemRow } from './store.ts';
+import type { StemPlayerState, StemRow } from './store.ts';
 import { longestSeconds } from './tempoGrid.ts';
 
 export function rowsOf(record: StemSetRecord): StemRow[] {
@@ -78,8 +78,16 @@ export async function loadTracks(
   );
 }
 
+type StemsSlice = Pick<StemPlayerState, 'stems'>;
+
+interface WaveformContext {
+  readonly get: () => StemsSlice;
+  readonly set: (change: (state: StemsSlice) => StemsSlice) => void;
+  readonly runtimeOf: () => Pick<MixerRuntime, 'readWaveform'>;
+}
+
 export function loadWaveforms(
-  { get, set, runtimeOf }: Pick<ActionContext, 'get' | 'set' | 'runtimeOf'>,
+  { get, set, runtimeOf }: WaveformContext,
   isLive: () => boolean,
   record: StemSetRecord,
   bars: number,

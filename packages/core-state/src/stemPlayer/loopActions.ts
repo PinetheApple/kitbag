@@ -1,9 +1,13 @@
 import { KB_RESULT } from '@kitbag/core-native';
 
 import {
+  boundsOf,
   loopBetween,
+  loopHolds,
   movedEdge,
+  refusedLoop,
   snapToBeat,
+  type HeldStart,
   type LoopEdge,
   type LoopSeconds,
 } from './loop.ts';
@@ -22,14 +26,6 @@ export type LoopSlice = Pick<
   'beats' | 'engineRate' | 'durationFrames' | 'loop' | 'loopFailure'
 >;
 
-function boundsOf({ startSec, endSec }: LoopSeconds): LoopSeconds {
-  return { startSec, endSec };
-}
-
-function loopHolds({ startSec, endSec }: LoopSeconds, seconds: number) {
-  return seconds >= startSec && seconds < endSec;
-}
-
 function failureOf(result: number): LoopFailure {
   return result === KB_RESULT.KB_ERROR_INVALID_ARGUMENT ? 'pastEnd' : 'engine';
 }
@@ -43,8 +39,7 @@ function loopControls(
     framesToSeconds(runtimeOf().engine.position(), get().engineRate);
 
   const refuse = (loopFailure: LoopFailure) => {
-    const { loop } = get();
-    set({ loop: loop.kind === 'on' ? loop : { kind: 'off' }, loopFailure });
+    set(refusedLoop(get().loop, loopFailure));
   };
 
   const clear = async (undoable: LoopSeconds | null): Promise<boolean> => {
@@ -144,16 +139,28 @@ function loopControls(
   return { busy, clear, setLoop, markLoop, moveLoopEdge };
 }
 
-export function loopActions(
-  context: MixerSessionContext<LoopSlice>,
-): Pick<StemPlayerActions, 'markLoop' | 'moveLoopEdge'> {
-  const { markLoop, moveLoopEdge } = loopControls(context);
-  return { markLoop, moveLoopEdge };
+type SetLoop = (bounds: LoopSeconds) => Promise<boolean>;
+
+export async function applyHeldStart(
+  { startSec, loop }: HeldStart,
+  setLoop: SetLoop,
+  get: () => Pick<StemPlayerActions, 'seek'> & Pick<LoopSlice, 'engineRate'>,
+): Promise<number> {
+  if (loop !== null) await setLoop(loop);
+  const frame = secondsToFrames(startSec, get().engineRate);
+  get().seek(frame);
+  return frame;
 }
 
-export function sectionLoopActions(
-  context: ActionContext,
-): Pick<
+export function loopActions(context: MixerSessionContext<LoopSlice>): {
+  readonly actions: Pick<StemPlayerActions, 'markLoop' | 'moveLoopEdge'>;
+  readonly setLoop: SetLoop;
+} {
+  const { markLoop, moveLoopEdge, setLoop } = loopControls(context);
+  return { actions: { markLoop, moveLoopEdge }, setLoop };
+}
+
+type SectionLoopActions = Pick<
   StemPlayerActions,
   | 'markLoop'
   | 'moveLoopEdge'
@@ -161,7 +168,12 @@ export function sectionLoopActions(
   | 'dismissLoopUndo'
   | 'jumpToSection'
   | 'loopSection'
-> {
+>;
+
+export function sectionLoopActions(context: ActionContext): {
+  readonly actions: SectionLoopActions;
+  readonly setLoop: SetLoop;
+} {
   const { set, get } = context;
   const { busy, clear, setLoop, markLoop, moveLoopEdge } = loopControls(
     context,
@@ -169,7 +181,7 @@ export function sectionLoopActions(
       set({ undoableLoop });
     },
   );
-  return {
+  const actions: SectionLoopActions = {
     markLoop,
     moveLoopEdge,
     undoLoop: async () => {
@@ -201,4 +213,5 @@ export function sectionLoopActions(
       get().seek(secondsToFrames(section.startSec, get().engineRate));
     },
   };
+  return { actions, setLoop };
 }
