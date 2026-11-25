@@ -200,6 +200,7 @@ export function BeatDots({
             silentBeat={state === 'muted'}
             barPulse={barPulse}
             barMuted={barMuted}
+            palette={palette}
           />
           <Text
             style={styles.marker}

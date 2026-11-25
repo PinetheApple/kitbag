@@ -80,9 +80,6 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
     pulseMarks: {
       flexDirection: 'row',
     },
-    pulseMark: {
-      backgroundColor: theme.color.surface3,
-    },
     overlay: {
       position: 'absolute',
       top: 0,

@@ -162,7 +162,6 @@ function stylesAt(moment: Moment): Style[] {
 }
 
 function keysThatMove(before: readonly Style[], after: readonly Style[]) {
-  expect(after).toHaveLength(before.length);
   const moved = new Set<string>();
   before.forEach((style, index) => {
     const next = after[index] ?? {};
@@ -173,27 +172,30 @@ function keysThatMove(before: readonly Style[], after: readonly Style[]) {
   return [...moved];
 }
 
-function fillProgress(): number[] {
-  return fills.map((props) => (props.progress as { value: number }).value);
+function fillProgress(testID: string): number {
+  const fill = fills.find((props) => props.testID === testID);
+  if (fill === undefined) throw new Error(`no fill bar ${testID}`);
+  return (fill.progress as { value: number }).value;
 }
 
-describe('surfaces the playing frame drives', () => {
+describe('default-mode surfaces the playing frame drives', () => {
   it('change only colours on their Views, which Android does not report to accessibility', () => {
-    const moved = keysThatMove(stylesAt(ON_BEAT_ONE), stylesAt(ON_BEAT_TWO));
-    expect(moved.length).toBeGreaterThan(0);
+    const before = stylesAt(ON_BEAT_ONE);
+    const after = stylesAt(ON_BEAT_TWO);
+    expect(after).toHaveLength(before.length);
+    const moved = keysThatMove(before, after);
+    expect(moved).toEqual(
+      expect.arrayContaining(['backgroundColor', 'borderColor']),
+    );
     expect(moved.filter((key) => !COLOUR_KEYS.has(key))).toEqual([]);
   });
 
-  it('draw the bar sweep and the ramp step on svg fill bars', () => {
-    stylesAt(ON_BEAT_ONE);
-    expect(fillProgress()).toEqual([
-      ON_BEAT_ONE.barPhase,
-      ON_BEAT_ONE.rampStepProgress,
-    ]);
-    stylesAt(ON_BEAT_TWO);
-    expect(fillProgress()).toEqual([
-      ON_BEAT_TWO.barPhase,
-      ON_BEAT_TWO.rampStepProgress,
-    ]);
-  });
+  it.each([ON_BEAT_ONE, ON_BEAT_TWO])(
+    'draw the bar sweep and the ramp step on svg fill bars at %o',
+    (moment) => {
+      stylesAt(moment);
+      expect(fillProgress('bar-sweep')).toBe(moment.barPhase);
+      expect(fillProgress('ramp-step-progress')).toBe(moment.rampStepProgress);
+    },
+  );
 });

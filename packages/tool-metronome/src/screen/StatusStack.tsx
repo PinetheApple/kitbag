@@ -118,6 +118,7 @@ function RampStatus({ rows, frame, ramp }: RampStatusProps) {
       </Text>
       <Animated.View style={[styles.progressTrack, track]}>
         <FillBar
+          testID="ramp-step-progress"
           progress={progress}
           color={color.accent}
           style={StyleSheet.absoluteFill}

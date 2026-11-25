@@ -1,4 +1,3 @@
-import { useTheme } from '@kitbag/core-design';
 import { useMemo } from 'react';
 import { View, type ViewStyle } from 'react-native';
 import Animated, {
@@ -6,6 +5,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
+import type { DotPalette } from '../logic/beatDot.ts';
 import { pulseInBeat, pulseMarkFit } from '../logic/pulseMarks.ts';
 import { PULSE_MARKS, useBeatDotStyles } from './beatDotStyles.ts';
 
@@ -16,6 +16,7 @@ interface PulseMarksProps {
   readonly silentBeat: boolean;
   readonly barPulse: SharedValue<number>;
   readonly barMuted: SharedValue<number>;
+  readonly palette: DotPalette;
 }
 
 interface PulseMarkProps extends Omit<PulseMarksProps, 'dotSize'> {
@@ -30,18 +31,17 @@ function PulseMark({
   silentBeat,
   barPulse,
   barMuted,
+  palette,
   shape,
 }: PulseMarkProps) {
-  const styles = useBeatDotStyles();
-  const { color } = useTheme();
   const lit = useAnimatedStyle(() => {
     const sounding =
       !silentBeat &&
       barMuted.value === 0 &&
       pulseInBeat(barPulse.value, beat, pulsesPerBeat) === index;
-    return { backgroundColor: sounding ? color.accent : color.surface3 };
+    return { backgroundColor: sounding ? palette.accent : palette.fill };
   });
-  return <Animated.View style={[styles.pulseMark, shape, lit]} />;
+  return <Animated.View style={[shape, lit]} />;
 }
 
 export function PulseMarks({
@@ -51,6 +51,7 @@ export function PulseMarks({
   silentBeat,
   barPulse,
   barMuted,
+  palette,
 }: PulseMarksProps) {
   const styles = useBeatDotStyles();
   const fit = useMemo(
@@ -75,6 +76,7 @@ export function PulseMarks({
             silentBeat={silentBeat}
             barPulse={barPulse}
             barMuted={barMuted}
+            palette={palette}
             shape={shape}
           />
         ))}

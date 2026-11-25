@@ -46,8 +46,10 @@ export function BarSweep({ barPhase, gap }: BarSweepProps) {
   return (
     <Animated.View style={[styles.track, spacing, trackStyle]}>
       <FillBar
+        testID="bar-sweep"
         progress={fill}
         color={color.accent}
+        radius={radius.sweepTrack}
         style={StyleSheet.absoluteFill}
       />
     </Animated.View>
