@@ -4,6 +4,7 @@ import { TOOL_ID } from '../home/registry.ts';
 
 import {
   LAST_ON_REASON,
+  TOOLS_INTRO,
   TOOLS_NOTE,
   toolsOnSummary,
   toolSwitchStep,
@@ -30,5 +31,16 @@ describe('toolSwitchStep', () => {
       off,
       note: LAST_ON_REASON,
     });
+  });
+});
+
+describe('Tools text', () => {
+  it('says a switch acts everywhere and Home tiles are chosen on Home', () => {
+    expect(TOOLS_INTRO).toBe(
+      'Turn a tool off to hide it everywhere. Nothing is deleted.',
+    );
+    expect(TOOLS_NOTE).toBe(
+      'Choose Home tiles with Edit on Home. Other tools are under More tools.',
+    );
   });
 });

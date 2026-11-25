@@ -1,6 +1,6 @@
 import { space } from '@kitbag/core-design';
 import { createElement } from 'react';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import {
   contentStyle,
@@ -9,6 +9,18 @@ import {
   NAV_BAR,
   renderRecorded,
 } from '../safeAreaInsets.test-helper.ts';
+
+interface MoreItem {
+  readonly tool: { readonly id: string };
+  readonly onPress: () => void;
+}
+
+const home = vi.hoisted(() => ({
+  tiles: [] as { readonly id: string }[][],
+  moreCounts: [] as number[],
+  moreItems: [] as MoreItem[][],
+  push: vi.fn<(href: string) => void>(),
+}));
 
 const dock = vi.hoisted(() => ({
   docked: false,
@@ -29,7 +41,7 @@ const storeState = vi.hoisted(() => ({
   toolId: undefined,
   arrangement: undefined,
   arrange: () => undefined,
-  off: [],
+  off: [] as string[],
 }));
 
 vi.mock(
@@ -50,7 +62,10 @@ vi.mock('@kitbag/core-design', async (original) => {
     ...pure,
     AppBar: () => null,
     Button: () => null,
-    ToolGrid: () => null,
+    ToolGrid: (props: { readonly tiles: { readonly id: string }[] }) => {
+      home.tiles.push(props.tiles);
+      return null;
+    },
     ToolRow: () => null,
     createThemedStyles: (await import('../safeAreaInsets.test-helper.ts'))
       .createThemedStylesMock,
@@ -77,7 +92,7 @@ vi.mock('@kitbag/tool-tuner', () => ({
 }));
 
 vi.mock('expo-router', () => ({
-  useRouter: () => ({ push: () => undefined }),
+  useRouter: () => ({ push: home.push }),
   useFocusEffect: () => undefined,
 }));
 
@@ -101,9 +116,21 @@ vi.mock('../queue/useQueueSheet.tsx', () => ({
 }));
 
 vi.mock('./ArrangeSheet.tsx', () => ({ ArrangeSheet: () => null }));
-vi.mock('./MoreToolsRow.tsx', () => ({ MoreToolsRow: () => null }));
+vi.mock('./MoreToolsRow.tsx', () => ({
+  MoreToolsRow: (props: { readonly count: number }) => {
+    home.moreCounts.push(props.count);
+    return null;
+  },
+}));
+vi.mock('./MoreToolsSheet.tsx', () => ({
+  MoreToolsSheet: (props: { readonly items: MoreItem[] }) => {
+    home.moreItems.push(props.items);
+    return null;
+  },
+}));
 
 const { HomeScreen } = await import('./HomeScreen.tsx');
+const { TOOL_ID } = await import('./registry.ts');
 
 describe('HomeScreen safe-area insets', () => {
   beforeAll(() => {
@@ -138,5 +165,47 @@ describe('HomeScreen with the mini-player docked', () => {
 
   it('leaves the navigation bar to the mini-player rather than the frame', () => {
     expect(frameStyle()?.paddingBottom ?? 0).toBe(0);
+  });
+});
+
+describe('HomeScreen tiles and More tools', () => {
+  afterEach(() => {
+    storeState.off = [];
+  });
+
+  const listed = (off: string[]) => {
+    storeState.off = off;
+    home.tiles.length = 0;
+    home.moreCounts.length = 0;
+    home.moreItems.length = 0;
+    renderRecorded(createElement(HomeScreen));
+    return {
+      tiles: home.tiles[0]?.map((tile) => tile.id),
+      count: home.moreCounts[0],
+      more: home.moreItems[0]?.map((item) => item.tool.id),
+    };
+  };
+
+  it('opens each More tools row on its tool route', () => {
+    listed([]);
+    home.push.mockClear();
+    for (const item of home.moreItems[0] ?? []) item.onPress();
+    expect(home.push.mock.calls).toEqual([['/practice']]);
+  });
+
+  it('on a fresh install puts only Practice history under More tools', () => {
+    expect(listed([])).toEqual({
+      tiles: [TOOL_ID.metronome, TOOL_ID.tuner, TOOL_ID.library, TOOL_ID.stems],
+      count: 1,
+      more: [TOOL_ID.practiceHistory],
+    });
+  });
+
+  it('leaves a tool that is off out of both', () => {
+    expect(listed([TOOL_ID.tuner])).toEqual({
+      tiles: [TOOL_ID.metronome, TOOL_ID.library, TOOL_ID.stems],
+      count: 1,
+      more: [TOOL_ID.practiceHistory],
+    });
   });
 });

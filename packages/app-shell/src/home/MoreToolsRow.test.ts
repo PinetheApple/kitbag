@@ -1,13 +1,10 @@
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const rendered = vi.hoisted(() => [] as Props[]);
-const push = vi.hoisted(() => vi.fn<(href: string) => void>());
-
-vi.mock('expo-router', () => ({ useRouter: () => ({ push }) }));
 
 vi.mock('@kitbag/core-design', async (original) => ({
   ...(await original<Record<string, unknown>>()),
@@ -18,15 +15,25 @@ vi.mock('@kitbag/core-design', async (original) => ({
 }));
 
 const { MoreToolsRow } = await import('./MoreToolsRow.tsx');
-const { MORE_TOOLS_SUBTEXT } = await import('./subtext.ts');
 
 describe('MoreToolsRow', () => {
-  it('opens Settings → Tools', () => {
-    renderToStaticMarkup(createElement(MoreToolsRow));
-    const row = rendered[0];
-    expect(row?.status).toBe('ready');
-    expect(row?.subtitle).toBe(MORE_TOOLS_SUBTEXT);
-    (row?.onPress as () => void)();
-    expect(push).toHaveBeenCalledWith('/settings/tools');
+  beforeEach(() => {
+    rendered.length = 0;
+  });
+
+  it('shows nothing when no tool is under More tools', () => {
+    renderToStaticMarkup(
+      createElement(MoreToolsRow, { count: 0, onPress: vi.fn() }),
+    );
+    expect(rendered).toEqual([]);
+  });
+
+  it('counts the tools and opens the sheet', () => {
+    const onPress = vi.fn();
+    renderToStaticMarkup(createElement(MoreToolsRow, { count: 2, onPress }));
+    expect(rendered).toHaveLength(1);
+    expect(rendered[0]?.title).toBe('More tools');
+    expect(rendered[0]?.subtitle).toBe('2 tools');
+    expect(rendered[0]?.onPress).toBe(onPress);
   });
 });

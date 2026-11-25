@@ -33,8 +33,10 @@ import { useQueueSheet } from '../queue/useQueueSheet.tsx';
 import { useSettingsRoutes } from '../settings/settingsRoutes.ts';
 import { ArrangeSheet } from './ArrangeSheet.tsx';
 import { MoreToolsRow } from './MoreToolsRow.tsx';
+import { MoreToolsSheet, type MoreToolsItem } from './MoreToolsSheet.tsx';
 import {
   arrangedWithOff,
+  moreTools,
   shownArrangement,
   toolFor,
   type HomeArrangement,
@@ -42,7 +44,10 @@ import {
 import {
   continueTarget,
   HOME_TOOLS,
+  hasHomeTile,
   TOOL_ID,
+  toolStatus,
+  type BuiltTool,
   type HomeToolEntry,
   type ToolOnTest,
 } from './registry.ts';
@@ -140,10 +145,19 @@ export function HomeScreen() {
   const { openSettings } = useSettingsRoutes();
   const isOn = useToolOn();
   const { arrangement, onArrange } = useArrangement(isOn);
-  const practiceShown = visibleTiles(arrangement).some(
-    (tile) => tile.toolId === TOOL_ID.practiceHistory,
-  );
-  const liveText = useLiveText(usePracticeTileText(practiceShown));
+  const [moreOpen, setMoreOpen] = useState(false);
+  const openMore = useCallback(() => {
+    setMoreOpen(true);
+  }, []);
+  const closeMore = useCallback(() => {
+    setMoreOpen(false);
+  }, []);
+  const more = moreTools(arrangement);
+  const practiceListed = [
+    ...visibleTiles(arrangement).map((tile) => tile.toolId),
+    ...more.map((tool) => tool.id),
+  ].includes(TOOL_ID.practiceHistory);
+  const liveText = useLiveText(usePracticeTileText(practiceListed));
   const docked = useMiniPlayerDocked();
   const queue = useQueueSheet(insets.bottom);
   const movePaused = useDataFolder((s) => pausedMove(s) !== null);
@@ -164,8 +178,7 @@ export function HomeScreen() {
     [insets, docked],
   );
 
-  const open = (tool: HomeToolEntry) => {
-    if (tool.homeTile === undefined) return undefined;
+  const openBuilt = (tool: BuiltTool) => {
     // The registry's route is a plain string (§9.1); typed routes cannot see
     // that it names a file under app/.
     const href = tool.homeTile.route as Href;
@@ -173,6 +186,11 @@ export function HomeScreen() {
       router.push(href);
     };
   };
+  const open = (tool: HomeToolEntry) =>
+    hasHomeTile(tool) ? openBuilt(tool) : undefined;
+
+  const subtextOf = (tool: HomeToolEntry) =>
+    liveText[tool.id]?.tile ?? UPCOMING_SUBTEXT;
 
   const resume = continueTarget(lastToolId, HOME_TOOLS, isOn);
   const resumeText = resume === undefined ? undefined : liveText[resume.id];
@@ -197,14 +215,19 @@ export function HomeScreen() {
         size: tile.size,
         icon: tool.icon,
         title: tool.name,
-        subtext: liveText[tool.id]?.tile ?? UPCOMING_SUBTEXT,
-        status: tool.homeTile === undefined ? 'upcoming' : 'ready',
+        subtext: subtextOf(tool),
+        status: toolStatus(tool),
         onPress: open(tool),
         onLongPress: openArrange,
       },
     ];
   });
   const rows = HOME_TOOLS.filter((tool) => tool.layout === 'row');
+  const moreItems: MoreToolsItem[] = more.map((tool) => ({
+    tool,
+    subtitle: subtextOf(tool),
+    onPress: openBuilt(tool),
+  }));
 
   return (
     <View style={[styles.screen, frameInset]}>
@@ -235,13 +258,20 @@ export function HomeScreen() {
             key={tool.id}
             icon={tool.icon}
             title={tool.name}
-            subtitle={liveText[tool.id]?.tile ?? UPCOMING_SUBTEXT}
-            status={tool.homeTile === undefined ? 'upcoming' : 'ready'}
+            subtitle={subtextOf(tool)}
+            status={toolStatus(tool)}
             onPress={open(tool)}
           />
         ))}
 
-        <MoreToolsRow />
+        <MoreToolsRow count={moreItems.length} onPress={openMore} />
+
+        <MoreToolsSheet
+          visible={moreOpen}
+          items={moreItems}
+          bottomInset={insets.bottom}
+          onDismiss={closeMore}
+        />
 
         <ArrangeSheet
           visible={arranging}

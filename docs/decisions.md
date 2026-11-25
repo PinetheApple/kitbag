@@ -658,6 +658,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 
 - **2026-11-01 · More tools opens Tools (§9.3, §12.4, #170)** — Home's "More tools" row
   opens Settings → Tools. Coordinator call; the owner may overturn it. **[recorded]**
+  **Superseded 2026-11-26 (#617):** More tools lists hidden tools.
 
 - **2026-11-01 · Poly ratio label goes right first (§5.2, #243)** — The label follows the
   last poly dot at 18 dp, then sits 8 dp left of the row, then above it. It follows the
@@ -1309,3 +1310,12 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 - **2026-11-21 · Loop key icon (§6.3, #610)** — The song player's loop key shows the loop icon the stem player uses, not `design/kitbag-song-player.html`'s "A|B" text. **[owner, 2026-11-21]**
 
 - **2026-11-26 · Up next row with nothing up next (§6.3, §7.9, #613)** — With nothing up next the players' Up next row keeps only Previous and the Repeat chip: no "Up next" label, no "Nothing queued", no "Playback stops" caption. Both rows hold one minimum height, the three text lines at the design's 1.6 line height (59.2 dp), so the dock does not move at the default font size. At large font scales the text row takes two lines, so there the dock height changes when the queue fills or empties. A started setlist's next entry or a song Repeat all brings back still shows the row; Repeat one with nothing else up next shows the bare row. The song player gains the stem player's Queue icon before ⋮, since the row was its only way into the queue. Drawn in `docs/research/mockups/613-up-next-states.html`, option A. **[owner, 2026-11-26]**
+- **2026-11-26 · More tools lists hidden tools; Tools only turns tools on and off (§9.3,
+  §12.4, #617)** — Supersedes "More tools opens Tools" (2026-11-01). Home keeps one
+  "More tools · N tools" row, which opens a sheet of the tools that are on but hidden in
+  Arrange; a row there opens its tool and has no "Show on Home" action. The row is gone
+  when N is 0. Home tiles are chosen only with Edit on Home; Settings → Tools turns a tool
+  off everywhere. Practice history starts hidden and has no switch, so a fresh install
+  lists it under More tools. A tool that is off is in neither place, and no tool is listed
+  twice. Option B of `docs/research/mockups/617-more-tools.html`; option A, inline rows,
+  is rejected. **[owner, 2026-11-26]**

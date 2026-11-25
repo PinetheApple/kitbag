@@ -4,9 +4,9 @@ import { BUILT_TOOL_IDS } from '../home/registry.ts';
 
 export const TOOLS_TITLE = 'Tools';
 export const TOOLS_INTRO =
-  "Kitbag stays lean — add tools when you need them, remove them when you don't.";
+  'Turn a tool off to hide it everywhere. Nothing is deleted.';
 export const TOOLS_NOTE =
-  'Off tools leave the home screen. Nothing is deleted.';
+  'Choose Home tiles with Edit on Home. Other tools are under More tools.';
 export const LAST_ON_REASON =
   'One tool stays on, so Home has something to open.';
 

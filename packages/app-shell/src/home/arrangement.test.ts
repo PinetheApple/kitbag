@@ -7,9 +7,12 @@ import {
   arrangeActions,
   DEFAULT_ARRANGEMENT,
   homeArrangement,
+  moreTools,
+  shownArrangement,
   type HomeArrangement,
 } from './arrangement.ts';
-import { TOOL_ID } from './registry.ts';
+import { BUILT_TOOL_IDS, TOOL_ID } from './registry.ts';
+import { toolOnTest } from './toolsOn.ts';
 
 const ids = (arrangement: HomeArrangement) => arrangement.map((t) => t.toolId);
 
@@ -136,5 +139,56 @@ describe('arrange accessibility actions', () => {
       TOOL_ID.stems,
       TOOL_ID.metronome,
     ]);
+  });
+});
+
+describe('Home tiles and More tools', () => {
+  const listed = (saved: SavedArrangement | undefined, off: string[]) => {
+    const shown = shownArrangement(saved, toolOnTest(off));
+    return {
+      tiles: visibleIds(shown),
+      more: moreTools(shown).map((tool) => tool.id),
+    };
+  };
+
+  const hiding = (toolIds: readonly string[]) =>
+    toolIds.reduce(
+      (arrangement, toolId) =>
+        applyArrangeAction(arrangement, toolId, ARRANGE_ACTION.hide),
+      DEFAULT_ARRANGEMENT,
+    );
+
+  it('on a fresh install lists Practice history under More tools only', () => {
+    expect(listed(undefined, [])).toEqual({
+      tiles: [TOOL_ID.metronome, TOOL_ID.tuner, TOOL_ID.library, TOOL_ID.stems],
+      more: [TOOL_ID.practiceHistory],
+    });
+  });
+
+  it('lists a hidden tool under More tools and a tool that is off nowhere', () => {
+    expect(listed(hiding([TOOL_ID.stems]), [TOOL_ID.tuner])).toEqual({
+      tiles: [TOOL_ID.metronome, TOOL_ID.library],
+      more: [TOOL_ID.practiceHistory, TOOL_ID.stems],
+    });
+    expect(listed(hiding([TOOL_ID.tuner]), [TOOL_ID.tuner])).toEqual({
+      tiles: [TOOL_ID.metronome, TOOL_ID.library, TOOL_ID.stems],
+      more: [TOOL_ID.practiceHistory],
+    });
+  });
+
+  it('lists every tool that is on exactly once, whatever is hidden or off', () => {
+    const tileIds = ids(DEFAULT_ARRANGEMENT);
+    const subsets = <T>(items: readonly T[]): T[][] =>
+      items.reduce<T[][]>(
+        (all, item) => [...all, ...all.map((subset) => [...subset, item])],
+        [[]],
+      );
+    for (const hidden of subsets(tileIds)) {
+      for (const off of [[], ...BUILT_TOOL_IDS.map((id) => [id])]) {
+        const { tiles, more } = listed(hiding(hidden), off);
+        const on = tileIds.filter((id) => !off.includes(id));
+        expect([...tiles, ...more].sort()).toEqual([...on].sort());
+      }
+    }
   });
 });

@@ -1592,8 +1592,9 @@ tool toggles, reached from Settings by a single row. The Flutter
 reconciled with the designed screen; that list leaves Settings. **ON/OFF badges
 become switches** — the original drew `ON` as a static badge beside `Get`
 buttons, which is two visual languages for one column and a badge that looks like
-a label but was meant to be tapped. Off tools leave the home screen; nothing is
-deleted.
+a label but was meant to be tapped. Off removes a tool everywhere; nothing is
+deleted. Tools does not choose Home tiles: that is Edit on Home (§12.4; owner,
+2026-11-26, #617).
 
 Each switch is stored as `tool_enabled_<id>` in preferences (`"true"` or
 `"false"`; a missing key is on).
@@ -1809,7 +1810,7 @@ One migration note that is not obvious from the table:
 | `kitbag-song-player.html` | **The single-song player** (owner-approved 2026-11-07; #297). Supersedes `kitbag-ui.html` §04's Player. Draws the base player, the mini-player on Home and Songs (Stem songs and the Queue key: `kitbag-queue.html`), the Metronome's click-off snackbar, the click sheet, speed (owner-approved 2026-11-20, #528: speed only, in percent, Reset speed in the overflow menu, the speed on the mini-player off 100%), the no-grid states and the A-B loop. Recorded in `docs/decisions.md`, 2026-11-07. |
 | `kitbag-queue.html` | **The play queue** (owner-approved 2026-11-20; #574). Draws the queue sheet (queued songs, a setlist started this session, swipe to remove, nothing playing, empty), Play next and Add to queue, the mini-player's Queue key and its place on Stem songs, the Stem songs app-bar Queue icon, the stem player's app-bar Queue icon and its Previous · Up next · Repeat · Next row (the single-song player takes the same Queue icon, #613), a mixed setlist, Repeat, and filled Previous and Next keys on the Metronome. Adds the Up next row and the Queue icon to `kitbag-stems.html` variant C (the row was built without a binding design); the single-song player takes the same Up next row with no separate mockup (§6.3). Supersedes the mini-player's keys and placement in `kitbag-song-player.html` §1 and the flat skip keys in `kitbag-metronome-setlist.html` D2. Frames draw stem songs; single songs share the queue (§7.9). §f's Before and §i's Superseded frames are not to build. Recorded in `docs/decisions.md`, 2026-11-20. |
 | `kitbag-practice-history.html` | **Practice history** (owner-approved 2026-11-07; #286). Draws the session list with Day, Week and Month grouping and its graph, swipe and menu delete with Undo, the Settings doorway and swipe-direction row, the optional Home tile, and the session timeline with Repeat. The ⋮ menu is built as the app's bottom sheet, not the pop-up drawn. Recorded in `docs/decisions.md`: picks 2026-11-02, mockup approved 2026-11-07. |
-| `kitbag-home-arrange.html` | **Option B only** ("Chosen (owner, 2026-10-31)"; #113). Supersedes the "long-press any tile for edit mode" bullet in `kitbag-ui.html` §04 Home and §12.4's customizable-layout bullet as to *how* editing works: Edit, or a long-press on a tile, opens the Arrange sheet. Options A and C are rejected alternatives, kept as reference in `docs/research/mockups/113/`. Recorded in `docs/decisions.md`, 2026-10-31. |
+| `kitbag-home-arrange.html` | **Option B only** ("Chosen (owner, 2026-10-31)"; #113). Supersedes the "long-press any tile for edit mode" bullet in `kitbag-ui.html` §04 Home and §12.4's customizable-layout bullet as to *how* editing works: Edit, or a long-press on a tile, opens the Arrange sheet. Options A and C are rejected alternatives, kept as reference in `docs/research/mockups/113/`. Recorded in `docs/decisions.md`, 2026-10-31. Its B1 and B5 frames draw the More tools row and sheet (owner, 2026-11-26; #617), superseding the More tools row in `kitbag-ui.html` §04; the approved mockup is `docs/research/mockups/617-more-tools.html` option B. |
 
 ### 12.1 Principles (kitbag-ui §01)
 
@@ -1936,6 +1937,11 @@ Setlists, Setlist detail, Preset editor, Settings, Latency calibration, Restore.
   on any tile, opens the Arrange sheet (`kitbag-home-arrange.html`): reorder by
   drag handle only, resize (1×1 ↔ 2×1), hide/show. The grid itself never moves
   under a finger.
+- **More tools** (owner, 2026-11-26; #617): one "More tools · N tools" row after the
+  row tools. It opens a sheet of the tools that are on but hidden in Arrange, and a
+  row there only opens its tool. The row is gone when N is 0. Practice history starts
+  hidden, so a fresh install lists it there. A tool that is off is in neither the
+  grid nor More tools, and Home never lists a tool twice.
 - Muted upcoming tools visibly present — the extensibility story is part of the UI.
 
 **Restore** (settings design §03) is the screen with a precondition:
@@ -2003,7 +2009,9 @@ the supersession: ≤7 primary choices.)
 - **Tools lists only built tools** (owner, 2026-10-31). Each has an on/off switch, and
   the Settings row reads "N on". `kitbag-settings.html`'s sizes, Get and SOON rows are
   not built (§9.3). Off removes a tool everywhere and is separate from Home's Hide;
-  `docs/decisions.md` has the ruling.
+  `docs/decisions.md` has the ruling. The intro reads "Turn a tool off to hide it
+  everywhere. Nothing is deleted." and the note "Choose Home tiles with Edit on Home.
+  Other tools are under More tools." (#617).
 - **Practice opens the history** (#286). The row shows sessions, total time and
   average tempo, with a chevron to the practice history
   (`kitbag-practice-history.html`). Appearance adds the swipe-to-delete
