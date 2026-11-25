@@ -22,6 +22,7 @@ vi.mock('@kitbag/core-design', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   Button: 'Button',
   IconGlyph: 'IconGlyph',
+  ScreenOverlay: 'ScreenOverlay',
   createThemedStyles: () => () => ({}),
   focusReaderOn,
   onHardwareBack: (handler: () => void) => {
@@ -60,6 +61,11 @@ describe('SwipeHint', () => {
     expect(onDismiss).toHaveBeenCalledOnce();
     cleanups.forEach((cleanup) => cleanup?.());
     expect(back.release).toHaveBeenCalledOnce();
+  });
+
+  it('dims through the shared screen overlay, not a scrim inside the screen', () => {
+    const hint = SwipeHint({ zoneTop: 0, zoneHeight: 0, onDismiss: vi.fn() });
+    expect(hint.type).toBe('ScreenOverlay');
   });
 
   it('moves screen reader focus to its title when it shows', () => {
