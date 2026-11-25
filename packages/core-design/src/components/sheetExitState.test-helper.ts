@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 
 export const REDUCED = 'always';
 export const FULL = 'never';
+export const WINDOW_HEIGHT = 800;
 
 export const anim = {
   running: new Set<(finished: boolean) => void>(),

@@ -52,7 +52,8 @@ import { SheetContentLiveContext } from './sheetContentLive.ts';
 import { SheetHint } from './SheetHint.tsx';
 import { useSheetPortal } from './SheetHost.tsx';
 import { fadeToClear } from './fadeToClear.ts';
-import { useSheetCardStyle, useSheetEnter } from './useSheetCardStyle.ts';
+import { useSheetCardStyle } from './useSheetCardStyle.ts';
+import { useSheetEnter } from './useSheetEnter.ts';
 import { useSheetExit } from './useSheetExit.ts';
 import { SHEET_TOUCH_ROOM } from '../sheetRoom.ts';
 
@@ -218,7 +219,7 @@ export function Sheet({
   const motion = useReduceMotionMode();
   const titleRef = useRef<TextInstance>(null);
   // Focus sent mid-slide did not land on the title under TalkBack.
-  const arrived = useCallback(() => {
+  const reportShown = useCallback(() => {
     focusReaderOn(initialFocusRef?.current ?? titleRef.current);
     onShown?.();
   }, [initialFocusRef, onShown]);
@@ -234,11 +235,11 @@ export function Sheet({
   );
   const dragY = useSharedValue(0);
   const open = useSharedValue(visible);
-  const { enter, style: enterStyle } = useSheetEnter({
-    motion,
-    open,
-    onArrived: arrived,
-  });
+  const {
+    enter,
+    returned,
+    style: enterStyle,
+  } = useSheetEnter({ motion, open, onShown: reportShown });
   const sheetHeight = useSharedValue(0);
   const scrimOpacity = useSharedValue(0);
 
@@ -371,7 +372,7 @@ export function Sheet({
     dragY,
     scrimOpacity,
     onEnter: enter,
-    onReturn: arrived,
+    onReturn: returned,
     onClosed,
   });
 

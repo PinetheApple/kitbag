@@ -9,6 +9,7 @@ import {
   dismissKeyboard,
   finishExits,
   focusReaderOn,
+  lastTiming,
   mount,
   REDUCED,
   rerender,
@@ -46,8 +47,7 @@ it('takes the leaving sheet out of touch and reader reach while the new one gets
     pointerEvents: 'auto',
     importantForAccessibility: 'auto',
   });
-  const [enter] = anim.timings.slice(-1);
-  if (enter === undefined) throw new Error('no enter started');
+  const enter = lastTiming();
   act(() => {
     enter(true);
   });
@@ -90,8 +90,17 @@ it('drops the keyboard once a sheet starts to leave', () => {
   expect(dismissKeyboard).toHaveBeenCalledOnce();
 });
 
+function arrive() {
+  const slide = lastTiming();
+  act(() => {
+    slide(true);
+  });
+  focusReaderOn.mockClear();
+}
+
 it('moves reader focus back to the title of a sheet shown again mid-exit', () => {
   const tree = mount({ actions: true, remove: false });
+  arrive();
   rerender(tree, { actions: false, remove: false });
   rerender(tree, { actions: true, remove: false });
   expect(focusReaderOn).toHaveBeenCalledExactlyOnceWith({ title: ACTIONS });
@@ -114,8 +123,7 @@ it('puts a sheet shown again mid-exit above one opened meanwhile', () => {
 it('keeps a sheet shown again when its exit reports finished late', () => {
   const tree = mount({ actions: true, remove: false });
   rerender(tree, { actions: false, remove: false });
-  const [settle] = anim.timings.slice(-1);
-  if (settle === undefined) throw new Error('no exit started');
+  const settle = lastTiming();
   rerender(tree, { actions: true, remove: false });
   act(() => {
     settle(true);
@@ -126,6 +134,7 @@ it('keeps a sheet shown again when its exit reports finished late', () => {
 it('moves reader focus back to the initial focus target of a sheet shown again mid-exit', () => {
   const focus = { current: { start: true } as unknown as HostInstance };
   const tree = mount({ actions: true, remove: false, focus });
+  arrive();
   rerender(tree, { actions: false, remove: false, focus });
   rerender(tree, { actions: true, remove: false, focus });
   expect(focusReaderOn).toHaveBeenCalledExactlyOnceWith(focus.current);
@@ -150,26 +159,4 @@ it('does not report a sheet closed when it is shown again before its exit ends',
   finishExits();
   settleFrames();
   expect(closed).not.toHaveBeenCalled();
-});
-
-it('does not report a sheet shown when it closes before its card arrives', () => {
-  const shown = vi.fn();
-  const tree = mount({ actions: true, remove: false, shown });
-  rerender(tree, { actions: false, remove: false, shown });
-  finishExits();
-  expect(shown).not.toHaveBeenCalled();
-});
-
-it('reports a sheet shown again when it returns mid-exit', () => {
-  const shown = vi.fn();
-  const tree = mount({ actions: true, remove: false, shown });
-  const [enter] = anim.timings;
-  if (enter === undefined) throw new Error('no enter started');
-  act(() => {
-    enter(true);
-  });
-  expect(shown).toHaveBeenCalledOnce();
-  rerender(tree, { actions: false, remove: false, shown });
-  rerender(tree, { actions: true, remove: false, shown });
-  expect(shown).toHaveBeenCalledTimes(2);
 });

@@ -1,16 +1,9 @@
 import { createElement, type ReactElement, type ReactNode } from 'react';
-import type { HostInstance } from 'react-native';
 import { expect, it, vi } from 'vitest';
 
 import type { ThemeMode } from '../tokens.ts';
 
-const WINDOW_HEIGHT = 800;
-const DRAG_DISTANCE = 40;
-interface Motion {
-  readonly settles: ((finished: boolean) => void)[];
-  pan: { onUpdate?: (event: { translationY: number }) => void };
-}
-const motion = vi.hoisted((): Motion => ({ settles: [], pan: {} }));
+const DRAG = { drag: true };
 const STATUS_BAR = 24;
 const portal = { show: vi.fn(), hide: vi.fn(), topInset: STATUS_BAR };
 const back = vi.hoisted(() => ({ handlers: [] as (() => void)[] }));
@@ -39,59 +32,18 @@ vi.mock('react-native', () => ({
   Text: 'Text',
   View: 'View',
   StyleSheet: { create: <T>(styles: T) => styles, absoluteFill: {} },
-  useWindowDimensions: () => ({
-    height: WINDOW_HEIGHT,
-    fontScale: display.fontScale,
-  }),
+  useWindowDimensions: () => ({ height: 0, fontScale: display.fontScale }),
 }));
-vi.mock('react-native-reanimated', () => {
-  interface Timing {
-    readonly to: number;
-    readonly done?: (finished: boolean) => void;
-  }
-  const isTiming = (next: unknown): next is Timing =>
-    typeof next === 'object' && next !== null && 'to' in next;
-  function useSharedValue(initial: unknown) {
-    let current = initial;
-    return {
-      get value() {
-        return current;
-      },
-      set value(next: unknown) {
-        if (!isTiming(next)) {
-          current = next;
-          return;
-        }
-        const { to, done } = next;
-        if (done === undefined) {
-          current = to;
-          return;
-        }
-        motion.settles.push((finished) => {
-          if (finished) current = to;
-          done(finished);
-        });
-      },
-    };
-  }
-  return {
-    default: { View: 'Animated.View' },
-    cancelAnimation: vi.fn(),
-    useAnimatedStyle: (updater: () => unknown) => ({ animated: updater }),
-    useSharedValue,
-    withSpring: vi.fn(),
-    withTiming: (
-      to: number,
-      _config: unknown,
-      done?: (finished: boolean) => void,
-    ) => ({ to, done }),
-  };
-});
+vi.mock('react-native-reanimated', () => ({
+  default: { View: 'Animated.View' },
+  cancelAnimation: vi.fn(),
+  useAnimatedStyle: () => DRAG,
+  useSharedValue: (value: number) => ({ value }),
+  withSpring: vi.fn(),
+  withTiming: vi.fn(),
+}));
 vi.mock('react-native-gesture-handler', () => ({
-  usePanGesture: (config: typeof motion.pan) => {
-    motion.pan = config;
-    return {};
-  },
+  usePanGesture: () => ({}),
   GestureDetector: 'GestureDetector',
 }));
 vi.mock('react-native-keyboard-controller', () => ({
@@ -148,51 +100,27 @@ function flat(style: unknown): Record<string, unknown> {
   return Object.assign({}, ...parts) as Record<string, unknown>;
 }
 
-function translateY(style: unknown): number | undefined {
-  const parts: unknown[] = [style].flat(Infinity).filter(Boolean);
-  const moved = parts.flatMap((part) =>
-    typeof part === 'object' && part !== null && 'animated' in part
-      ? [(part as { animated: () => { transform?: unknown } }).animated()]
-      : [],
-  );
-  const transforms = moved.flatMap(({ transform }) =>
-    Array.isArray(transform) ? (transform as unknown[]) : [],
-  ) as { translateY: number }[];
-  return transforms[0]?.translateY;
+interface OpenOptions {
+  readonly onDismiss?: () => void;
+  readonly title?: string;
+  readonly notice?: ReactNode;
 }
 
-function openSheet(
+function openSheet({
   onDismiss = vi.fn(),
   title = 'T',
-  notice?: ReactNode,
-  onShown?: () => void,
-) {
+  notice,
+}: OpenOptions = {}) {
   portal.show.mockClear();
-  motion.settles.length = 0;
   Sheet({
     visible: true,
     title,
     dismissLabel: `Close ${title}`,
     onDismiss,
     notice,
-    ...(onShown === undefined ? {} : { onShown }),
     children: null,
   });
   return portal.show.mock.calls[0]?.[1] as ReactElement<Props>;
-}
-
-function settleEnter(finished: boolean) {
-  const [settle] = motion.settles.splice(0);
-  if (settle === undefined) throw new Error('no enter started');
-  settle(finished);
-}
-
-function hasEntering(node: unknown): boolean {
-  if (Array.isArray(node)) return node.some(hasEntering);
-  if (node === null || typeof node !== 'object' || !('props' in node))
-    return false;
-  const { props } = node as { props: Record<string, unknown> };
-  return 'entering' in props || hasEntering(props.children);
 }
 
 function child(element: ReactElement<Props>, index: number) {
@@ -251,49 +179,13 @@ it('keeps one shrinking title line beside its action at the default size', () =>
   expect(title.style.flexShrink).toBe(1);
 });
 
-it('slides its card up from a window height below by its own value, not a layout animation', () => {
-  const frame = openSheet();
-  const slot = child(frame, 1);
-  expect(hasEntering(frame)).toBe(false);
-  expect(translateY(slot.props.style)).toBe(WINDOW_HEIGHT);
-  settleEnter(true);
-  expect(translateY(slot.props.style)).toBe(0);
-});
-
-it('settles the card in place when its slide is interrupted', () => {
-  focusReaderOn.mockClear();
-  const onShown = vi.fn();
-  const slot = child(openSheet(vi.fn(), 'T', undefined, onShown), 1);
-  settleEnter(false);
-  expect(translateY(slot.props.style)).toBe(0);
-  expect(onShown).not.toHaveBeenCalled();
-  expect(focusReaderOn).not.toHaveBeenCalled();
-});
-
-it('reports itself shown only once its card has arrived', () => {
-  const onShown = vi.fn();
-  openSheet(vi.fn(), 'T', undefined, onShown);
-  expect(onShown).not.toHaveBeenCalled();
-  settleEnter(true);
-  expect(onShown).toHaveBeenCalledOnce();
-});
-
-it('drags the card, not the slot that slides it in', () => {
-  const slot = child(openSheet(), 1);
-  settleEnter(true);
-  motion.pan.onUpdate?.({ translationY: DRAG_DISTANCE });
-  expect(translateY(slot.props.style)).toBe(0);
-  expect(translateY(child(slot, 1).props.style)).toBe(DRAG_DISTANCE);
-});
-
 it('draws the notice in the portal above the sheet, sliding with its drag', () => {
   const notice = createElement('Notice');
-  const slot = child(openSheet(vi.fn(), 'T', notice), 1);
+  const slot = child(openSheet({ notice }), 1);
   const [noticeView, sheet] = [child(slot, 0), child(slot, 1)];
   expect(child(noticeView, 0)).toBe(notice);
-  motion.pan.onUpdate?.({ translationY: DRAG_DISTANCE });
-  expect(translateY(noticeView.props.style)).toBe(DRAG_DISTANCE);
-  expect(translateY(sheet.props.style)).toBe(DRAG_DISTANCE);
+  expect([noticeView.props.style].flat()).toContain(DRAG);
+  expect([sheet.props.style].flat()).toContain(DRAG);
   expect(child(openSheet(), 1).props.children).toContain(null);
 });
 
@@ -400,38 +292,6 @@ function headers(node: unknown): ReactElement<Props>[] {
   return [...here, ...headers(element.props.children)];
 }
 
-it('moves screen reader focus to its title once it has slid in', () => {
-  focusReaderOn.mockClear();
-  const [title] = headers(openSheet());
-  const node = {};
-  (title?.props.ref as { current: unknown }).current = node;
-  expect(title?.props.children).toBe('T');
-  expect(focusReaderOn).not.toHaveBeenCalled();
-  settleEnter(true);
-  expect(focusReaderOn).toHaveBeenCalledOnce();
-  expect(focusReaderOn).toHaveBeenCalledWith(node);
-});
-
-it('moves screen reader focus to the node it was asked to start on', () => {
-  focusReaderOn.mockClear();
-  portal.show.mockClear();
-  motion.settles.length = 0;
-  const start = { node: 'rate heading' };
-  Sheet({
-    visible: true,
-    title: 'T',
-    dismissLabel: 'Close T',
-    onDismiss: vi.fn(),
-    initialFocusRef: { current: start as unknown as HostInstance },
-    children: null,
-  });
-  const [title] = headers(portal.show.mock.calls[0]?.[1]);
-  (title?.props.ref as { current: unknown }).current = { node: 'title' };
-  settleEnter(true);
-  expect(focusReaderOn).toHaveBeenCalledOnce();
-  expect(focusReaderOn.mock.calls[0]?.[0]).toBe(start);
-});
-
 function readerOrder(node: unknown): ReactElement<Props>[] {
   if (Array.isArray(node)) return node.flatMap(readerOrder);
   if (node === null || typeof node !== 'object' || !('props' in node))
@@ -447,14 +307,14 @@ function readerOrder(node: unknown): ReactElement<Props>[] {
 }
 
 it('puts its title, not its backdrop, first for a screen reader', () => {
-  const [first] = readerOrder(openSheet(vi.fn(), 'Top'));
+  const [first] = readerOrder(openSheet({ title: 'Top' }));
   expect(first?.props.accessibilityRole).toBe('header');
   expect(first?.props.children).toBe('Top');
 });
 
 it('offers closing as a screen reader action on the title', () => {
   const onDismiss = vi.fn();
-  const [title] = headers(openSheet(onDismiss, 'Top'));
+  const [title] = headers(openSheet({ onDismiss, title: 'Top' }));
   expect(title?.props.accessibilityActions).toEqual([
     { name: 'dismiss', label: 'Close Top' },
   ]);
@@ -470,14 +330,14 @@ it('offers closing as a screen reader action on the title', () => {
 
 it('closes on the screen reader escape gesture anywhere in the sheet', () => {
   const onDismiss = vi.fn();
-  const frame = openSheet(onDismiss);
+  const frame = openSheet({ onDismiss });
   expect(frame.props.onAccessibilityEscape).toBe(onDismiss);
 });
 
 it('closes on hardware Back', () => {
   back.handlers.length = 0;
   const onDismiss = vi.fn();
-  openSheet(onDismiss);
+  openSheet({ onDismiss });
   back.handlers.forEach((handler) => {
     handler();
   });

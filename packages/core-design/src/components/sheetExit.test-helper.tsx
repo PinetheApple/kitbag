@@ -23,6 +23,7 @@ import {
   FULL,
   keyboard,
   REDUCED,
+  WINDOW_HEIGHT,
 } from './sheetExitState.test-helper.ts';
 
 export {
@@ -33,6 +34,7 @@ export {
   FULL,
   keyboard,
   REDUCED,
+  WINDOW_HEIGHT,
 } from './sheetExitState.test-helper.ts';
 
 interface Timing {
@@ -52,7 +54,7 @@ vi.mock('react-native', () => ({
     create: <T,>(styles: T) => styles,
     absoluteFill: { fill: true },
   },
-  useWindowDimensions: () => ({ height: 800 }),
+  useWindowDimensions: () => ({ height: WINDOW_HEIGHT }),
 }));
 vi.mock('react-native-reanimated', async () => {
   const { useState } = await import('react');
@@ -79,14 +81,22 @@ vi.mock('react-native-reanimated', async () => {
             current = next;
             return;
           }
-          current = next.to;
-          const settle = next.done;
-          if (settle === undefined) return;
-          done = (finished) => {
-            done = undefined;
+          const { to, done: settle } = next;
+          if (settle === undefined) {
+            current = to;
+            return;
+          }
+          const finish = (finished: boolean) => {
+            anim.running.delete(finish);
+            if (done === finish) {
+              done = undefined;
+              if (finished) current = to;
+            }
             settle(finished);
           };
-          anim.running.add(done);
+          done = finish;
+          anim.running.add(finish);
+          anim.timings.push(finish);
         },
       };
     });
@@ -145,7 +155,6 @@ vi.mock('react-native-reanimated', async () => {
       config: { reduceMotion: string },
       done?: (finished: boolean) => void,
     ) => {
-      if (done !== undefined) anim.timings.push(done);
       if (config.reduceMotion !== REDUCED) return { to, done };
       if (done !== undefined)
         queueMicrotask(() => {
@@ -314,6 +323,12 @@ export function finishExits() {
   act(() => {
     for (const done of [...anim.running]) done(true);
   });
+}
+
+export function lastTiming(): (finished: boolean) => void {
+  const timing = anim.timings.at(-1);
+  if (timing === undefined) throw new Error('no timing started');
+  return timing;
 }
 
 export function runReactions() {

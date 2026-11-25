@@ -1,51 +1,13 @@
-import { useCallback, useEffect } from 'react';
-import { useWindowDimensions } from 'react-native';
+import { useEffect } from 'react';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import {
-  cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
-  withTiming,
-  type ReduceMotion,
   type SharedValue,
 } from 'react-native-reanimated';
-import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
+import { scheduleOnUI } from 'react-native-worklets';
 
 import { space } from '../roles.ts';
-
-export interface SheetEnterOptions {
-  readonly motion: ReduceMotion;
-  readonly open: SharedValue<boolean>;
-  readonly onArrived: () => void;
-}
-
-// The layout `entering` slide sometimes left the card below the screen when a
-// field focused mid-slide, so the slide runs on the sheet's own value.
-export function useSheetEnter({ motion, open, onArrived }: SheetEnterOptions) {
-  const { height: windowHeight } = useWindowDimensions();
-  const enterY = useSharedValue(windowHeight);
-  const enter = useCallback(() => {
-    enterY.value = windowHeight;
-    enterY.value = withTiming(0, { reduceMotion: motion }, (finished) => {
-      'worklet';
-      if (!finished) {
-        enterY.value = 0;
-        return;
-      }
-      if (open.value) scheduleOnRN(onArrived);
-    });
-  }, [enterY, windowHeight, motion, open, onArrived]);
-  useEffect(
-    () => () => {
-      cancelAnimation(enterY);
-    },
-    [enterY],
-  );
-  const style = useAnimatedStyle(() => ({
-    transform: [{ translateY: enterY.value }],
-  }));
-  return { enter, style };
-}
 
 export interface SheetCardStyleOptions {
   readonly visible: boolean;
