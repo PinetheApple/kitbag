@@ -39,6 +39,7 @@ export * from './tempoText.ts';
 export * from './scannerRoles.ts';
 export * from './ThemeProvider.tsx';
 export * from './components/AppBar.tsx';
+export * from './components/useQueueBarAction.ts';
 export * from './components/Badge.tsx';
 export * from './components/BeatLed.tsx';
 export * from './components/CountSquare.tsx';

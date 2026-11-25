@@ -21,7 +21,6 @@ export const QUEUE_TEXT = {
   closeQueue: 'Close the queue',
   nothingQueued: 'Nothing queued',
   nothingQueuedReason: `${HOW_TO_QUEUE} When this song ends, playback stops.`,
-  playbackStops: 'Playback stops when this song ends',
   playsAgain: 'Plays again when this song ends',
   nothingQueuedPlaysAgainReason: `${HOW_TO_QUEUE} When this song ends, it plays again.`,
   repeatOff: 'Repeat off',

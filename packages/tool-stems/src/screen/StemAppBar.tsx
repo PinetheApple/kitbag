@@ -1,4 +1,8 @@
-import { AppBar, queueKeyLabel, type AppBarAction } from '@kitbag/core-design';
+import {
+  AppBar,
+  useQueueBarAction,
+  type AppBarAction,
+} from '@kitbag/core-design';
 import { useStemPlayer, useUpNextCount } from '@kitbag/core-state';
 import { useMemo } from 'react';
 
@@ -11,17 +15,15 @@ interface StemAppBarProps {
 export function StemAppBar({ onBack, onQueue, onMenu }: StemAppBarProps) {
   const title = useStemPlayer((s) => s.title);
   const artist = useStemPlayer((s) => s.artist);
-  const queueLabel = queueKeyLabel(useUpNextCount());
+  const queue = useQueueBarAction(onQueue, useUpNextCount());
   const actions: readonly AppBarAction[] = useMemo(
     () => [
-      ...(onQueue === null
-        ? []
-        : [{ icon: 'queue', label: queueLabel, onPress: onQueue } as const]),
+      ...queue,
       ...(onMenu === null
         ? []
         : [{ icon: 'more', label: 'Player menu', onPress: onMenu } as const]),
     ],
-    [queueLabel, onQueue, onMenu],
+    [queue, onMenu],
   );
   return (
     <AppBar

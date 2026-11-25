@@ -31,6 +31,7 @@ export * from './components/useAfterSheetClosed.ts';
 export * from './components/useNotice.ts';
 export * from './components/useQueueNotices.ts';
 export * from './components/useQueuePresses.ts';
+export * from './components/useQueueBarAction.ts';
 export * from './separator.ts';
 export * from './queueText.ts';
 export * from './queueRoles.ts';

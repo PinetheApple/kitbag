@@ -13,9 +13,11 @@ const screens = vi.hoisted(() => ({
     readonly focused?: boolean;
     readonly onOpenStemSet?: (stemSetId: number) => void;
     readonly renderUpNext?: (songSec: unknown) => unknown;
+    readonly onOpenQueue?: () => void;
   }[],
   upNext: [] as Record<string, unknown>[],
 }));
+const queueSheet = vi.hoisted(() => ({ open: vi.fn() }));
 
 vi.mock('expo-router', () => ({
   useRouter: () => ({ navigate: nav.navigate, setParams: nav.topSetParams }),
@@ -34,7 +36,7 @@ vi.mock('@/home/ToolGate', () => ({
 }));
 
 vi.mock('@/queue/useQueueSheet', () => ({
-  useQueueSheet: () => ({ open: vi.fn(), sheet: null }),
+  useQueueSheet: () => ({ open: queueSheet.open, sheet: null }),
 }));
 
 function captureScreen(props: (typeof screens.props)[number]) {
@@ -97,6 +99,16 @@ describe('the song player route', () => {
       onNext: pressNext,
       onPrevious: pressPrevious,
     });
+  });
+});
+
+describe("the song player's Queue key", () => {
+  it('opens the queue sheet its Up next row opens', () => {
+    renderToStaticMarkup(createElement(ROUTES.song));
+    const row = screens.props.at(-1)?.renderUpNext?.({ value: 0 });
+    renderToStaticMarkup(row as Parameters<typeof renderToStaticMarkup>[0]);
+    expect(screens.props.at(-1)?.onOpenQueue).toBe(queueSheet.open);
+    expect(screens.upNext.at(-1)?.onOpenSheet).toBe(queueSheet.open);
   });
 });
 

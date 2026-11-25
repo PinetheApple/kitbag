@@ -16,8 +16,10 @@ import { SONG_CLICK_TEXT } from '../logic/clickChipText.ts';
 import { METER_FAILED } from '../logic/songMeterText.ts';
 import { REANALYZE_LABEL, SONG_SPEED_TEXT } from '../logic/viewText.ts';
 import {
+  barActions,
   mount,
   onBack,
+  pressBarAction,
   screen,
   styleAround,
 } from './SongPlayerScreen.mount.test-helper.ts';
@@ -65,6 +67,7 @@ const ROW_TITLES: Readonly<Record<string, unknown>> = {
   MeterRow: meterCopy.title,
   TempoModeRow: tempoSheetCopy.row,
 };
+const MORE = 'More';
 const CLOSED_SONG = { songId: null, title: '', artist: null, bpm: null };
 const DROPPED_FRACTION = 0.25;
 
@@ -87,6 +90,27 @@ function lockIconOf(tree: ReactTestRenderer) {
 }
 
 beforeEach(resetScreenState);
+
+describe('the Queue key on the app bar', () => {
+  it('sits before More and opens the queue', () => {
+    const onOpenQueue = vi.fn();
+    const tree = mount(true, { onOpenQueue });
+    expect(barActions(tree).map((action) => action.label)).toEqual([
+      'Queue',
+      MORE,
+    ]);
+    pressBarAction(tree, 'Queue');
+    expect(onOpenQueue).toHaveBeenCalledOnce();
+  });
+
+  it('names the count up next', () => {
+    display.upNextCount = 2;
+    const tree = mount(true, { onOpenQueue: vi.fn() });
+    expect(barActions(tree).map((action) => action.label)).toContain(
+      'Queue, 2 up next',
+    );
+  });
+});
 
 describe('the song player layout', () => {
   it('keeps the click toggle beside the text at the default size', () => {
@@ -270,11 +294,7 @@ describe('the player menu', () => {
 
   function openMenu(): ReactTestRenderer {
     const tree = mount();
-    const [more] = tree.root.findByType('AppBar' as never).props
-      .actions as readonly { onPress: () => void }[];
-    act(() => {
-      more?.onPress();
-    });
+    pressBarAction(tree, MORE);
     return tree;
   }
 
@@ -673,11 +693,7 @@ describe('a re-analysis with an override set', () => {
     meter.override = { meterBeatsPerBar: 3, barOneSeconds: null };
     meter.notice = { meter: 4, barOneSeconds: 2.3 };
     const tree = mount();
-    const [more] = tree.root.findByType('AppBar' as never).props
-      .actions as readonly { onPress: () => void }[];
-    act(() => {
-      more?.onPress();
-    });
+    pressBarAction(tree, MORE);
     act(() => {
       (tree.root.findByType('MeterRow' as never).props.onPress as () => void)();
     });

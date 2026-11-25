@@ -1,10 +1,12 @@
 import {
+  bodyLineHeight,
   Button,
   createThemedStyles,
   miniPlayer,
   minTouchTargetDp,
   nextUpLabel,
   QUEUE_TEXT,
+  rowLineHeight,
   size,
   stemPlayer,
   textRoles,
@@ -24,7 +26,7 @@ import {
   useStage,
   useUpNext,
 } from '@kitbag/core-state';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useAnimatedReaction, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -38,20 +40,21 @@ import { RepeatChip } from './RepeatChip.tsx';
 
 export const UP_NEXT = 'Up next';
 export const REPEAT_LINE_ID = 'up-next-repeat-line';
+export const UP_NEXT_ROW_ID = 'up-next-row';
 
-const NOTHING_NEXT: UpNextText = {
-  title: QUEUE_TEXT.nothingQueued,
-  source: QUEUE_TEXT.playbackStops,
-  metronome: false,
-};
+const TEXT_COLUMN_HEIGHT =
+  textRoles.sectionLabel.size * bodyLineHeight +
+  rowLineHeight.title +
+  rowLineHeight.subtitle;
 
 const useStyles = createThemedStyles((theme) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: miniPlayer.gap,
-    minHeight: minTouchTargetDp,
+    minHeight: Math.max(minTouchTargetDp, TEXT_COLUMN_HEIGHT),
   },
+  controlsOnly: { justifyContent: 'space-between' },
   divided: {
     borderBottomWidth: size.stroke,
     borderBottomColor: theme.color.line,
@@ -85,10 +88,10 @@ function usePastRestart(songSec: SharedValue<number>): boolean {
 
 interface UpNextRowText {
   readonly shown: UpNextText;
-  readonly next: UpNextText | null;
+  readonly next: UpNextText;
 }
 
-function useUpNextRowText(): UpNextRowText {
+function useUpNextRowText(): UpNextRowText | null {
   const upNext = useUpNext();
   const queueLength = usePlayOrder((s) => s.queue.length);
   const { stage, name } = useStage();
@@ -96,18 +99,16 @@ function useUpNextRowText(): UpNextRowText {
   const repeatsOne = useRepeatMode() === REPEAT.one;
   const playing = useShownSong();
   const loopHeld = useShownLoopHeld();
-  const next =
-    upNext === undefined
-      ? null
-      : upNextText(upNext, {
-          queueLength,
-          stage,
-          setlistName: name,
-          library,
-        });
+  if (upNext === undefined) return null;
+  const next = upNextText(upNext, {
+    queueLength,
+    stage,
+    setlistName: name,
+    library,
+  });
   if (repeatsOne && playing !== null)
     return { shown: repeatedText(playing, library, loopHeld), next };
-  return { shown: next ?? NOTHING_NEXT, next };
+  return { shown: next, next };
 }
 
 export interface UpNextRowProps {
@@ -142,32 +143,43 @@ function NextKey({
   );
 }
 
-export function UpNextRow({
+function PreviousKey({
   songSec,
-  onOpenSheet,
-  onNext,
   onPrevious,
-}: UpNextRowProps) {
-  const styles = useStyles();
-  const { shown: text, next } = useUpNextRowText();
+}: Pick<UpNextRowProps, 'songSec' | 'onPrevious'>) {
   const canGoBack = useCanGoBack();
   const pastRestart = usePastRestart(songSec);
+  return (
+    <TransportKey
+      size="dock"
+      icon="previous"
+      accessibilityLabel={QUEUE_TEXT.previous}
+      disabled={!canGoBack && !pastRestart}
+      onPress={onPrevious}
+    />
+  );
+}
+
+interface TextRowProps extends Omit<UpNextRowProps, 'songSec' | 'onPrevious'> {
+  readonly previous: ReactNode;
+  readonly shown: UpNextText;
+  readonly next: UpNextText;
+}
+
+function TextRow({ previous, shown, next, onOpenSheet, onNext }: TextRowProps) {
+  const styles = useStyles();
   const scaled = useTextScaled();
-  const nextKey =
-    next === null ? null : <NextKey text={next} onNext={onNext} />;
-  const openOnRepeatLine = scaled && next?.metronome === true;
+  const nextKey = <NextKey text={next} onNext={onNext} />;
+  const openOnRepeatLine = scaled && next.metronome;
   const line = (
-    <View style={[styles.row, !scaled && styles.divided]}>
-      <TransportKey
-        size="dock"
-        icon="previous"
-        accessibilityLabel={QUEUE_TEXT.previous}
-        disabled={!canGoBack && !pastRestart}
-        onPress={onPrevious}
-      />
+    <View
+      testID={UP_NEXT_ROW_ID}
+      style={[styles.row, !scaled && styles.divided]}
+    >
+      {previous}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${UP_NEXT}: ${text.title}, ${text.source}`}
+        accessibilityLabel={`${UP_NEXT}: ${shown.title}, ${shown.source}`}
         accessibilityHint="Opens the queue"
         style={styles.text}
         onPress={onOpenSheet}
@@ -176,10 +188,10 @@ export function UpNextRow({
           {UP_NEXT}
         </Text>
         <Text style={styles.title} numberOfLines={1}>
-          {text.title}
+          {shown.title}
         </Text>
         <Text style={styles.source} numberOfLines={1}>
-          {text.source}
+          {shown.source}
         </Text>
       </Pressable>
       {scaled ? null : <RepeatChip />}
@@ -195,5 +207,29 @@ export function UpNextRow({
         {openOnRepeatLine ? nextKey : null}
       </View>
     </View>
+  );
+}
+
+export function UpNextRow({ songSec, onPrevious, ...presses }: UpNextRowProps) {
+  const styles = useStyles();
+  const text = useUpNextRowText();
+  const previous = <PreviousKey songSec={songSec} onPrevious={onPrevious} />;
+  if (text === null)
+    return (
+      <View
+        testID={UP_NEXT_ROW_ID}
+        style={[styles.row, styles.controlsOnly, styles.divided]}
+      >
+        {previous}
+        <RepeatChip />
+      </View>
+    );
+  return (
+    <TextRow
+      previous={previous}
+      shown={text.shown}
+      next={text.next}
+      {...presses}
+    />
   );
 }
