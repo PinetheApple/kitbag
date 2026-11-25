@@ -13,6 +13,7 @@ type Style = Readonly<Record<string, unknown>>;
 
 const styles = vi.hoisted(() => [] as Style[]);
 const fills = vi.hoisted(() => [] as Props[]);
+const countBeats = vi.hoisted(() => [] as number[]);
 
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
@@ -52,6 +53,10 @@ vi.mock('react-native-reanimated', async () => {
 
 vi.mock('@kitbag/core-design', async (original) => ({
   ...(await original<Record<string, unknown>>()),
+  CountSquare: (props: Props) => {
+    countBeats.push((props.currentBeat as { value: number }).value);
+    return null;
+  },
   createThemedStyles: () => () => new Proxy({}, { get: () => ({}) }),
   FillBar: (props: Props) => {
     fills.push(props);
@@ -83,13 +88,12 @@ vi.mock('./StatusVariant.tsx', async () => {
   };
 });
 vi.mock('./PolyDots.tsx', () => ({ PolyDots: () => null }));
-vi.mock('./CountInSquares.tsx', () => ({ CountInSquares: () => null }));
 
 const { BarSweep } = await import('./BarSweep.tsx');
 const { BeatDots } = await import('./BeatDots.tsx');
 const { StatusStack } = await import('./StatusStack.tsx');
 
-const COLOUR_KEYS = new Set(['backgroundColor', 'borderColor', 'color']);
+const VIEW_COLOUR_KEYS = new Set(['backgroundColor', 'borderColor']);
 const SUBDIVISION = 2;
 const ACCENTS = [
   KB_ACCENT.KB_ACCENT_ACCENTED,
@@ -129,6 +133,7 @@ function frameAt(moment: Moment): BeatDotsFrame & StatusFrame {
 function stylesAt(moment: Moment): Style[] {
   styles.length = 0;
   fills.length = 0;
+  countBeats.length = 0;
   const frame = frameAt(moment);
   renderToStaticMarkup(
     createElement('div', null, [
@@ -187,7 +192,7 @@ describe('default-mode surfaces the playing frame drives', () => {
     expect(moved).toEqual(
       expect.arrayContaining(['backgroundColor', 'borderColor']),
     );
-    expect(moved.filter((key) => !COLOUR_KEYS.has(key))).toEqual([]);
+    expect(moved.filter((key) => !VIEW_COLOUR_KEYS.has(key))).toEqual([]);
   });
 
   it.each([ON_BEAT_ONE, ON_BEAT_TWO])(
@@ -198,4 +203,12 @@ describe('default-mode surfaces the playing frame drives', () => {
       expect(fillProgress('ramp-step-progress')).toBe(moment.rampStepProgress);
     },
   );
+
+  it('hold the hidden count-in digits still outside a count-in', () => {
+    stylesAt(ON_BEAT_ONE);
+    const before = [...countBeats];
+    stylesAt(ON_BEAT_TWO);
+    expect(before.length).toBeGreaterThan(0);
+    expect(countBeats).toEqual(before);
+  });
 });
