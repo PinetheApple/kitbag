@@ -59,11 +59,6 @@ vi.mock('react-native-reanimated', async () => {
   const noRef = () => undefined;
   const isTiming = (next: unknown): next is Timing =>
     typeof next === 'object' && next !== null && 'to' in next;
-  const settling = (name: string) => ({
-    reduceMotion: () => ({
-      withCallback: (settle: (finished: boolean) => void) => ({ name, settle }),
-    }),
-  });
   function useSharedValue(initial: number) {
     const [shared] = useState(() => {
       let current = initial;
@@ -125,7 +120,6 @@ vi.mock('react-native-reanimated', async () => {
       ScrollView: 'Animated.ScrollView',
       createAnimatedComponent: (component: string) => `Animated.${component}`,
     },
-    SlideInDown: settling('sheetIn'),
     cancelAnimation: (shared: { stop: () => void }) => {
       shared.stop();
     },
@@ -151,7 +145,7 @@ vi.mock('react-native-reanimated', async () => {
       config: { reduceMotion: string },
       done?: (finished: boolean) => void,
     ) => {
-      if (done !== undefined) anim.exits.push(done);
+      if (done !== undefined) anim.timings.push(done);
       if (config.reduceMotion !== REDUCED) return { to, done };
       if (done !== undefined)
         queueMicrotask(() => {
@@ -232,6 +226,7 @@ export interface Open {
   readonly detail?: string | null;
   readonly focus?: RefObject<HostInstance | null>;
   readonly closed?: () => void;
+  readonly shown?: () => void;
   readonly content?: ReactNode;
 }
 
@@ -242,6 +237,7 @@ export function Pair({
   detail = SONG,
   focus,
   closed,
+  shown,
   content,
 }: Open) {
   return (
@@ -254,6 +250,7 @@ export function Pair({
           onDismiss={noop}
           {...(focus === undefined ? {} : { initialFocusRef: focus })}
           {...(closed === undefined ? {} : { onClosed: closed })}
+          {...(shown === undefined ? {} : { onShown: shown })}
         >
           {content ?? (detail === null ? null : h('Detail', { name: detail }))}
         </Sheet>
@@ -342,7 +339,7 @@ beforeEach(() => {
   );
   keyboard.height.value = 0;
   anim.running.clear();
-  anim.exits.length = 0;
+  anim.timings.length = 0;
   anim.reactions.length = 0;
   anim.frameCallbacks.length = 0;
   anim.scrolls.length = 0;

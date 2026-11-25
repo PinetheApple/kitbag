@@ -46,15 +46,10 @@ it('takes the leaving sheet out of touch and reader reach while the new one gets
     pointerEvents: 'auto',
     importantForAccessibility: 'auto',
   });
-  const slide = arriving.find(
-    (node) =>
-      (node.props.entering as { name?: string } | undefined)?.name ===
-      'sheetIn',
-  );
+  const [enter] = anim.timings.slice(-1);
+  if (enter === undefined) throw new Error('no enter started');
   act(() => {
-    (slide.props.entering as { settle: (finished: boolean) => void }).settle(
-      true,
-    );
+    enter(true);
   });
   expect(focusReaderOn).toHaveBeenCalledExactlyOnceWith({ title: DELETE });
 });
@@ -119,7 +114,7 @@ it('puts a sheet shown again mid-exit above one opened meanwhile', () => {
 it('keeps a sheet shown again when its exit reports finished late', () => {
   const tree = mount({ actions: true, remove: false });
   rerender(tree, { actions: false, remove: false });
-  const [settle] = anim.exits.slice(-1);
+  const [settle] = anim.timings.slice(-1);
   if (settle === undefined) throw new Error('no exit started');
   rerender(tree, { actions: true, remove: false });
   act(() => {
@@ -155,4 +150,26 @@ it('does not report a sheet closed when it is shown again before its exit ends',
   finishExits();
   settleFrames();
   expect(closed).not.toHaveBeenCalled();
+});
+
+it('does not report a sheet shown when it closes before its card arrives', () => {
+  const shown = vi.fn();
+  const tree = mount({ actions: true, remove: false, shown });
+  rerender(tree, { actions: false, remove: false, shown });
+  finishExits();
+  expect(shown).not.toHaveBeenCalled();
+});
+
+it('reports a sheet shown again when it returns mid-exit', () => {
+  const shown = vi.fn();
+  const tree = mount({ actions: true, remove: false, shown });
+  const [enter] = anim.timings;
+  if (enter === undefined) throw new Error('no enter started');
+  act(() => {
+    enter(true);
+  });
+  expect(shown).toHaveBeenCalledOnce();
+  rerender(tree, { actions: false, remove: false, shown });
+  rerender(tree, { actions: true, remove: false, shown });
+  expect(shown).toHaveBeenCalledTimes(2);
 });

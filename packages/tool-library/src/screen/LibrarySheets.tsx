@@ -221,10 +221,13 @@ function RenameSheet({ menu, bottomInset }: SheetProps) {
   const prefill = useCallback(() => {
     setDraft(title);
   }, [title]);
-  const clear = useCallback(() => {
-    setDraft('');
+  const focusField = useCallback(() => {
     field.current?.focus();
   }, []);
+  const clear = useCallback(() => {
+    setDraft('');
+    focusField();
+  }, [focusField]);
   const save = useCallback(() => {
     if (target === null || blank) return;
     close();
@@ -237,6 +240,7 @@ function RenameSheet({ menu, bottomInset }: SheetProps) {
       dismissLabel="Cancel rename"
       bottomInset={bottomInset}
       onShow={prefill}
+      onShown={focusField}
       onDismiss={close}
     >
       <TextField
@@ -245,7 +249,6 @@ function RenameSheet({ menu, bottomInset }: SheetProps) {
         onChangeText={setDraft}
         placeholder="Song name"
         accessibilityLabel={`New name for ${title}`}
-        autoFocus
         onSubmitEditing={save}
         onClear={clear}
       />

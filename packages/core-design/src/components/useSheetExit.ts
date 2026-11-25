@@ -16,6 +16,7 @@ export interface SheetExitOptions {
   readonly motion: ReduceMotion;
   readonly dragY: SharedValue<number>;
   readonly scrimOpacity: SharedValue<number>;
+  readonly onEnter: () => void;
   readonly onReturn: () => void;
   readonly onClosed?: (() => void) | undefined;
 }
@@ -43,6 +44,7 @@ export function useSheetExit({
   motion,
   dragY,
   scrimOpacity,
+  onEnter,
   onReturn,
   onClosed,
 }: SheetExitOptions): void {
@@ -72,6 +74,7 @@ export function useSheetExit({
     const timing = { reduceMotion: motion };
     if (visible) {
       if (present.current) onReturn();
+      else onEnter();
       present.current = true;
       dragY.value = 0;
       scrimOpacity.value = withTiming(1, timing);

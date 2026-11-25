@@ -5,7 +5,7 @@ export const FULL = 'never';
 
 export const anim = {
   running: new Set<(finished: boolean) => void>(),
-  exits: [] as ((finished: boolean) => void)[],
+  timings: [] as ((finished: boolean) => void)[],
   motion: FULL as string,
   reactions: [] as (() => void)[],
   frameCallbacks: [] as ((frame: { timestamp: number }) => void)[],
