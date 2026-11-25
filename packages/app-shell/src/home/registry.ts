@@ -1,4 +1,4 @@
-import type { IconName, ToolTileSize } from '@kitbag/core-design';
+import type { IconName, ToolStatus, ToolTileSize } from '@kitbag/core-design';
 import type { ToolPlugin } from '@kitbag/core-plugin-api';
 
 export const TOOL_ID = {
@@ -81,6 +81,10 @@ export const BUILT_TOOLS: readonly BuiltTool[] = HOME_TOOLS.filter(
 );
 
 export const BUILT_TOOL_IDS: readonly string[] = BUILT_TOOLS.map((t) => t.id);
+
+export function toolStatus(tool: HomeToolEntry): ToolStatus {
+  return tool.homeTile === undefined ? 'upcoming' : 'ready';
+}
 
 export function continueTarget(
   lastToolId: string | undefined,

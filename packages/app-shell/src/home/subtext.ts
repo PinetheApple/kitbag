@@ -10,11 +10,11 @@ import {
 import { daysAgoText, weekdayDate } from '../practice/dates.ts';
 import { SEPARATOR } from '../settings/separator.ts';
 
-import { SONG_NOUNS, STEM_SONG_NOUNS } from '../nouns.ts';
+import { SONG_NOUNS, STEM_SONG_NOUNS, TOOL_NOUNS } from '../nouns.ts';
 
 export const UPCOMING_SUBTEXT = 'Coming soon';
 export const MORE_TOOLS_TITLE = 'More tools';
-export const MORE_TOOLS_SUBTEXT = 'Turn tools on or off';
+export const MORE_TOOLS_HINT = 'To make one a Home tile, tap Edit on Home.';
 export const LIBRARY_UNAVAILABLE_SUBTEXT = 'Library unavailable';
 
 export interface MetronomeSummary {
@@ -53,6 +53,10 @@ export function metronomeResumeSubtitle(summary: MetronomeSummary): string {
 
 export function songsTileSubtext(summary: LibrarySummary): string {
   return `${countLabel(summary.songCount, ...SONG_NOUNS)} · ${String(summary.analyzedCount)} analyzed`;
+}
+
+export function moreToolsSubtext(count: number): string {
+  return countLabel(count, ...TOOL_NOUNS);
 }
 
 export function stemsTileSubtext(summary: LibrarySummary): string {

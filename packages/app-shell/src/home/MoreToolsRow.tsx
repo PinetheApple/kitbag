@@ -1,17 +1,21 @@
 import { ToolRow } from '@kitbag/core-design';
 
-import { useSettingsRoutes } from '../settings/settingsRoutes.ts';
-import { MORE_TOOLS_SUBTEXT, MORE_TOOLS_TITLE } from './subtext.ts';
+import { MORE_TOOLS_TITLE, moreToolsSubtext } from './subtext.ts';
 
-export function MoreToolsRow() {
-  const { openTools } = useSettingsRoutes();
+export interface MoreToolsRowProps {
+  readonly count: number;
+  readonly onPress: () => void;
+}
+
+export function MoreToolsRow({ count, onPress }: MoreToolsRowProps) {
+  if (count === 0) return null;
   return (
     <ToolRow
       icon="moreTools"
       title={MORE_TOOLS_TITLE}
-      subtitle={MORE_TOOLS_SUBTEXT}
+      subtitle={moreToolsSubtext(count)}
       status="ready"
-      onPress={openTools}
+      onPress={onPress}
     />
   );
 }

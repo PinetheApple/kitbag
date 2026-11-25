@@ -3,6 +3,7 @@ import type { LibraryView } from '@kitbag/core-state';
 
 export const SONG_NOUNS = ['song', 'songs'] as const;
 export const STEM_SONG_NOUNS = ['stem song', 'stem songs'] as const;
+export const TOOL_NOUNS = ['tool', 'tools'] as const;
 
 const VIEW_NOUNS: Readonly<Record<LibraryView, readonly [string, string]>> = {
   songs: SONG_NOUNS,

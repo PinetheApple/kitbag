@@ -124,8 +124,8 @@ td:first-child{font-family:'Space Grotesk';white-space:nowrap}
   <p class="muted">Stem songs and Practice history are hidden in Arrange. Both are still on. Rows list them in the order the Hidden section holds them, and a tap opens the tool, as its tile would.</p>
   <div class="rule"></div>
   <div class="states">
-    <figure><figcaption><b>1A</b>Option A<span class="rec">Recommended</span> — inline rows on Home under a More tools label, after the Play along row. Each row is the existing ToolRow: icon, name, the tile's live subtext, chevron.</figcaption><div class="pair" data-tpl="a"></div></figure>
-    <figure><figcaption><b>1B</b>Option B — the single More tools row stays, its subtitle a count (“2 tools”).</figcaption><div class="pair" data-tpl="b"></div></figure>
+    <figure><figcaption><b>1A</b>Option A (rejected) — inline rows on Home under a More tools label, after the Play along row. Each row is the existing ToolRow: icon, name, the tile's live subtext, chevron.</figcaption><div class="pair" data-tpl="a"></div></figure>
+    <figure><figcaption><b>1B</b>Option B<span class="rec">Chosen (owner, 2026-11-26)</span> — the single More tools row stays, its subtitle a count (“2 tools”).</figcaption><div class="pair" data-tpl="b"></div></figure>
     <figure><figcaption><b>1B·sheet</b>Option B, row tapped — a sheet lists the same two rows. A tap opens the tool and closes the sheet.</figcaption><div class="pair" data-tpl="bsheet"></div></figure>
   </div>
 </section>
@@ -173,16 +173,6 @@ td:first-child{font-family:'Space Grotesk';white-space:nowrap}
     <tr><td>screenBar.height / iconButton</td><td>56 / 48</td><td></td></tr>
   </table></div>
 </section>
-
-<section>
-  <h2>Questions for the owner</h2>
-  <div class="panel"><ol>
-    <li><b>Option A or Option B?</b> Recommended: <b>A</b>, hidden tools as rows under a More tools label on Home. A tool is one tap away, and Home shows what is there without a sheet. B keeps Home one row shorter, but every hidden tool costs two taps and the count says nothing about which tools they are.</li>
-    <li><b>Should a More tools row offer a “Show on Home” action, or is Arrange the only place?</b> Recommended: <b>Arrange only.</b> A row opens its tool and does nothing else, and Home placement is chosen in one place, Home → Edit, whose Hidden section already has Show.</li>
-    <li><b>Wording of the Settings → Tools text.</b> Recommended: intro “A tool that's off leaves Kitbag everywhere until you turn it back on. Nothing is deleted.” and note “Which tools are tiles on Home is set on Home with Edit. A tool you hide there stays on and is listed under More tools.” (today: “Kitbag stays lean — add tools when you need them, remove them when you don't.” and “Off tools leave the home screen. Nothing is deleted.”)</li>
-    <li><b>Practice history starts hidden and has no switch, so a new install lists it under More tools from day one.</b> Recommended: <b>keep that</b>; it makes the shortcut findable without taking a tile. The alternative is to leave tools that start hidden out of More tools.</li>
-  </ol></div>
-</section>
 </main>
 
 <template id="a">
@@ -200,9 +190,9 @@ td:first-child{font-family:'Space Grotesk';white-space:nowrap}
 </template>
 <template id="tools">
 <div class="scr"><div class="statusbar"><span>21:47</span><span></span></div><div class="appbar"><span class="ib bk"><i class="mi">&#xF0141;</i></span><h5>Tools</h5></div>
-<p class="intro">A tool that's off leaves Kitbag everywhere until you turn it back on. Nothing is deleted.</p>
+<p class="intro">Turn a tool off to hide it everywhere. Nothing is deleted.</p>
 <div class="row"><div class="ticon"><i class="mi">&#xF07DA;</i></div><div class="tl lines"><b>Metronome</b><span>Core</span></div><span class="tog on"></span></div><div class="row"><div class="ticon"><i class="mi">&#xF0771;</i></div><div class="tl lines"><b>Tuner</b><span>Core</span></div><span class="tog on"></span></div><div class="row"><div class="ticon"><i class="mi">&#xF0CB8;</i></div><div class="tl lines"><b>Songs</b><span>Imported songs, beats analyzed</span></div><span class="tog on"></span></div><div class="row"><div class="ticon"><i class="mi">&#xF066A;</i></div><div class="tl lines"><b>Stem songs</b><span>Mix and loop imported stems</span></div><span class="tog on"></span></div>
-<div class="note"><p>Which tools are tiles on Home is set on Home with Edit. A tool you hide there stays on and is listed under More tools.</p></div></div>
+<div class="note"><p>Choose Home tiles with Edit on Home. Other tools are under More tools.</p></div></div>
 </template>
 <script>
 document.querySelectorAll('.pair').forEach((pair) => {

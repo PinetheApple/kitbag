@@ -656,9 +656,6 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   switching Stem songs Off closes an open stem song, which stops it and hides its
   notification. Coordinator call; the owner may overturn it. **[recorded]**
 
-- **2026-11-01 · More tools opens Tools (§9.3, §12.4, #170)** — Home's "More tools" row
-  opens Settings → Tools. Coordinator call; the owner may overturn it. **[recorded]**
-
 - **2026-11-01 · Poly ratio label goes right first (§5.2, #243)** — The label follows the
   last poly dot at 18 dp, then sits 8 dp left of the row, then above it. It follows the
   owner-approved round 2 frame (`design/kitbag-metronome.html` §02) rather than the poly
@@ -1307,3 +1304,13 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   UI-thread CPU. The hypothesis is that these two account for it.
 
 - **2026-11-21 · Loop key icon (§6.3, #610)** — The song player's loop key shows the loop icon the stem player uses, not `design/kitbag-song-player.html`'s "A|B" text. **[owner, 2026-11-21]**
+
+- **2026-11-26 · More tools lists hidden tools; Tools only turns tools on and off (§9.3,
+  §12.4, #617)** — Supersedes "More tools opens Tools" (2026-11-01). Home keeps one
+  "More tools · N tools" row, which opens a sheet of the tools that are on but hidden in
+  Arrange; a row there opens its tool and has no "Show on Home" action. The row is gone
+  when N is 0. Home tiles are chosen only with Edit on Home; Settings → Tools turns a tool
+  off everywhere. Practice history starts hidden and has no switch, so a fresh install
+  lists it under More tools. A tool that is off is in neither place, and no tool is listed
+  twice. Option B of `docs/research/mockups/617-more-tools.html`; option A, inline rows,
+  is rejected. **[owner, 2026-11-26]**

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   metronomeResumeSubtitle,
   metronomeTileSubtext,
+  moreToolsSubtext,
   songsTileSubtext,
   practiceTileSubtext,
   stemsTileSubtext,
@@ -86,5 +87,12 @@ describe('practice history subtext', () => {
 
   it('says so when nothing is saved', () => {
     expect(practiceTileSubtext([], now)).toBe('No sessions yet');
+  });
+});
+
+describe('more tools subtext', () => {
+  it('counts the tools under More tools', () => {
+    expect(moreToolsSubtext(1)).toBe('1 tool');
+    expect(moreToolsSubtext(2)).toBe('2 tools');
   });
 });

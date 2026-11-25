@@ -1,5 +1,6 @@
 import { isToolTileSize, type ToolTileSize } from '@kitbag/core-design';
 import {
+  hiddenTiles,
   hideTile,
   moveTile,
   reconcileArrangement,
@@ -54,6 +55,10 @@ export function arrangedWithOff(
 
 export function toolFor(tile: HomeTile): HomeToolEntry | undefined {
   return HOME_TOOLS.find((tool) => tool.id === tile.toolId);
+}
+
+export function moreTools(arrangement: HomeArrangement): HomeToolEntry[] {
+  return hiddenTiles(arrangement).flatMap((tile) => toolFor(tile) ?? []);
 }
 
 export const ARRANGE_ACTION = {
