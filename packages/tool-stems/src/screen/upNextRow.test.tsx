@@ -1,4 +1,10 @@
-import { playerWaveBars, QUEUE_TEXT } from '@kitbag/core-design';
+import {
+  bodyLineHeight,
+  playerWaveBars,
+  QUEUE_TEXT,
+  rowLineHeight,
+  textRoles,
+} from '@kitbag/core-design';
 import {
   autoAdvanceDeps,
   configurePlayOrder,
@@ -33,7 +39,7 @@ import {
   withTestId,
   type Player,
 } from './playerHarness.test-helper.tsx';
-import { REPEAT_LINE_ID, UP_NEXT } from './UpNextRow.tsx';
+import { REPEAT_LINE_ID, UP_NEXT, UP_NEXT_ROW_ID } from './UpNextRow.tsx';
 
 const NIGHT_BUS = 21;
 const TIN_ROOF = 22;
@@ -78,6 +84,19 @@ const nextKeys = (p: Player) =>
       String(node.props.accessibilityLabel).startsWith('Next:'),
   );
 
+const THREE_TEXT_LINES =
+  textRoles.sectionLabel.size * bodyLineHeight +
+  rowLineHeight.title +
+  rowLineHeight.subtitle;
+
+function rowMinHeight(p: Player): unknown {
+  const [row] = withTestId(p, UP_NEXT_ROW_ID);
+  const style: unknown = row?.props.style;
+  return (
+    Object.assign({}, ...[style].flat(Infinity)) as Record<string, unknown>
+  ).minHeight;
+}
+
 async function queueNow(...ids: number[]) {
   setQueued(ids.map(stems));
   await playOrderStore.getState().refresh();
@@ -112,6 +131,15 @@ describe('the Up next row', () => {
     expect(p.has('Night Bus')).toBe(false);
     expect(p.labelled(PREVIOUS)).toHaveLength(1);
     expect(p.labelled(QUEUE_TEXT.repeatOff)).toHaveLength(1);
+  });
+
+  it('holds the same height with and without its text, room for its three lines', async () => {
+    const p = await withQueue();
+    const bare = rowMinHeight(p);
+    await queueNow(NIGHT_BUS);
+    expect(upNextLabels(p)).toHaveLength(1);
+    expect(rowMinHeight(p)).toBe(bare);
+    expect(bare).toBe(THREE_TEXT_LINES);
   });
 
   it("shows a started setlist's next entry with nothing queued", async () => {

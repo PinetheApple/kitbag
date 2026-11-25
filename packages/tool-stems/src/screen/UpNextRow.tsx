@@ -1,10 +1,12 @@
 import {
+  bodyLineHeight,
   Button,
   createThemedStyles,
   miniPlayer,
   minTouchTargetDp,
   nextUpLabel,
   QUEUE_TEXT,
+  rowLineHeight,
   size,
   stemPlayer,
   textRoles,
@@ -38,13 +40,19 @@ import { RepeatChip } from './RepeatChip.tsx';
 
 export const UP_NEXT = 'Up next';
 export const REPEAT_LINE_ID = 'up-next-repeat-line';
+export const UP_NEXT_ROW_ID = 'up-next-row';
+
+const TEXT_COLUMN_HEIGHT =
+  textRoles.sectionLabel.size * bodyLineHeight +
+  rowLineHeight.title +
+  rowLineHeight.subtitle;
 
 const useStyles = createThemedStyles((theme) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: miniPlayer.gap,
-    minHeight: minTouchTargetDp,
+    minHeight: Math.max(minTouchTargetDp, TEXT_COLUMN_HEIGHT),
   },
   controlsOnly: { justifyContent: 'space-between' },
   divided: {
@@ -164,7 +172,10 @@ function TextRow({ previous, shown, next, onOpenSheet, onNext }: TextRowProps) {
   const nextKey = <NextKey text={next} onNext={onNext} />;
   const openOnRepeatLine = scaled && next.metronome;
   const line = (
-    <View style={[styles.row, !scaled && styles.divided]}>
+    <View
+      testID={UP_NEXT_ROW_ID}
+      style={[styles.row, !scaled && styles.divided]}
+    >
       {previous}
       <Pressable
         accessibilityRole="button"
@@ -205,7 +216,10 @@ export function UpNextRow({ songSec, onPrevious, ...presses }: UpNextRowProps) {
   const previous = <PreviousKey songSec={songSec} onPrevious={onPrevious} />;
   if (text === null)
     return (
-      <View style={[styles.row, styles.controlsOnly, styles.divided]}>
+      <View
+        testID={UP_NEXT_ROW_ID}
+        style={[styles.row, styles.controlsOnly, styles.divided]}
+      >
         {previous}
         <RepeatChip />
       </View>
