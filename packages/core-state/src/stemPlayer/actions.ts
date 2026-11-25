@@ -118,6 +118,10 @@ export function mixActions(
   };
 }
 
+export interface SoundingPause {
+  readonly pauseIfSounding: () => boolean;
+}
+
 export type TransportSlice = Pick<
   StemPlayerState,
   'title' | 'artist' | 'durationFrames' | 'engineRate' | 'status'
@@ -143,7 +147,13 @@ export function transportActions(
   start: Pick<SongStart, 'play' | 'cancel'> = plainStart(runtimeOf),
 ): Pick<
   StemPlayerActions,
-  'togglePlay' | 'playFrom' | 'scrub' | 'cancelScrub' | 'seek' | 'skip'
+  | 'togglePlay'
+  | 'playFrom'
+  | 'pauseIfSounding'
+  | 'scrub'
+  | 'cancelScrub'
+  | 'seek'
+  | 'skip'
 > {
   const seek = (frame: number) => {
     scrubSeek.cancel();
@@ -173,6 +183,12 @@ export function transportActions(
       playFrom(engine.position());
     },
     playFrom,
+    pauseIfSounding: () => {
+      const { commands, engine } = runtimeOf();
+      if (!engine.playing()) return start.cancel();
+      commands.mixerPause();
+      return true;
+    },
     scrub: (frame) => {
       scrubSeek(frame);
     },

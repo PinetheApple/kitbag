@@ -13,6 +13,7 @@ export type SongPlayerActions = Pick<
   StemPlayerActions,
   | 'togglePlay'
   | 'playFrom'
+  | 'pauseIfSounding'
   | 'scrub'
   | 'cancelScrub'
   | 'seek'
@@ -28,6 +29,7 @@ export type SongPlayerActions = Pick<
   | 'handOver'
   | 'takeOver'
   | 'pressNext'
+  | 'pressNextPaused'
   | 'pressPrevious'
   | 'onPrevious'
   | 'playheadSeconds'

@@ -67,9 +67,9 @@ export function stemSongAdvance({
     return opened;
   }, lastBars);
   return {
-    advanceTo: (setId) => advanceSong(advancing, setId),
+    advanceTo: (setId, start) => advanceSong(advancing, setId, start),
     playNow: (setId) => startSong(advancing, setId),
-    takeOver: (setId, bars, held) =>
+    takeOver: (setId, bars, held, start) =>
       startSong(
         steps(
           (id) => {
@@ -81,6 +81,7 @@ export function stemSongAdvance({
           held,
         ),
         setId,
+        start,
       ),
     handOver: mixer.handOver,
     handToMetronome: () => {

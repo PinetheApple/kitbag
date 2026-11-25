@@ -10,6 +10,7 @@ import {
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { mixActions, transportActions } from './actions.ts';
+import type { SoundingPause } from './actions.ts';
 import { sameNumbers } from './bars.ts';
 import { clickActions, followNewGrid, releaseClick } from './clickActions.ts';
 import { clickShapeActions } from './clickShape.ts';
@@ -22,7 +23,7 @@ import {
   type ExportSlice,
 } from './exportActions.ts';
 import type { SongFacts } from './facts.ts';
-import type { HeldStart, LoopEdge, LoopSeconds } from './loop.ts';
+import type { LoopEdge, LoopSeconds } from './loop.ts';
 import { applyHeldStart, sectionLoopActions } from './loopActions.ts';
 import { overrideDownbeats } from './meterOverride.ts';
 import type { RetimeTap, SongLyrics } from './lyrics.ts';
@@ -46,6 +47,8 @@ import {
   songEnds,
   type AdvanceListener,
   type AdvanceOutcome,
+  type StartById,
+  type TakeOverById,
 } from './songEnd.ts';
 import { countPending, songStart } from './songStart.ts';
 import {
@@ -139,16 +142,12 @@ export interface StemPlayerState {
   readonly retimeFailure: RetimeFailure | null;
 }
 
-export interface StemPlayerActions extends CardPressActions {
+export interface StemPlayerActions extends CardPressActions, SoundingPause {
   readonly open: (setId: number, waveformBars: number) => Promise<void>;
   readonly acquireSong: (setId: number, waveformBars: number) => MixerHold;
-  readonly advanceTo: (setId: number) => Promise<AdvanceOutcome>;
+  readonly advanceTo: StartById;
   readonly playNow: (setId: number) => Promise<AdvanceOutcome>;
-  readonly takeOver: (
-    setId: number,
-    waveformBars: number,
-    held?: HeldStart,
-  ) => Promise<AdvanceOutcome>;
+  readonly takeOver: TakeOverById;
   readonly handOver: () => void;
   readonly onSongEnd: (listener: AdvanceListener) => () => void;
   readonly songStillEnded: () => boolean;

@@ -1,3 +1,4 @@
+import type { HeldStart } from './loop.ts';
 import type { StemPlayerEngine } from './runtime.ts';
 import { restartFromFrame } from './songTransport.ts';
 import type { StemPlayerState } from './store.ts';
@@ -5,12 +6,29 @@ import type { StemPlayerState } from './store.ts';
 export const ADVANCE_OUTCOME = {
   playing: 'playing',
   stopped: 'stopped',
+  paused: 'paused',
   unplayable: 'unplayable',
   displaced: 'displaced',
 } as const;
 
 export type AdvanceOutcome =
   (typeof ADVANCE_OUTCOME)[keyof typeof ADVANCE_OUTCOME];
+
+export const START = { playing: 'playing', paused: 'paused' } as const;
+
+export type StartMode = (typeof START)[keyof typeof START];
+
+export type StartById = (
+  id: number,
+  start?: StartMode,
+) => Promise<AdvanceOutcome>;
+
+export type TakeOverById = (
+  id: number,
+  waveformBars: number,
+  held?: HeldStart,
+  start?: StartMode,
+) => Promise<AdvanceOutcome>;
 
 type EndSlice = Pick<
   StemPlayerState,
@@ -37,6 +55,7 @@ export const ADVANCE_CAUSE = {
   ended: 'ended',
   next: 'next',
   nextInApp: 'nextInApp',
+  nextPaused: 'nextPaused',
 } as const;
 
 export type AdvanceCause = (typeof ADVANCE_CAUSE)[keyof typeof ADVANCE_CAUSE];
@@ -117,6 +136,7 @@ export interface AdvanceSteps {
 export async function startSong(
   steps: AdvanceSteps,
   id: number,
+  start: StartMode = START.playing,
 ): Promise<AdvanceOutcome> {
   const opened = steps.begin(id);
   await steps.load(opened, id);
@@ -131,6 +151,7 @@ export async function startSong(
     if (!steps.live(opened)) return ADVANCE_OUTCOME.displaced;
   }
   steps.ends.advanced();
+  if (start === START.paused) return ADVANCE_OUTCOME.paused;
   if (steps.ends.stoppedSince(opened)) return ADVANCE_OUTCOME.stopped;
   steps.play(head);
   return ADVANCE_OUTCOME.playing;
@@ -139,7 +160,8 @@ export async function startSong(
 export function advanceSong(
   steps: AdvanceSteps,
   id: number,
+  start: StartMode = START.playing,
 ): Promise<AdvanceOutcome> {
   if (!steps.ends.stands()) return Promise.resolve(ADVANCE_OUTCOME.displaced);
-  return startSong(steps, id);
+  return startSong(steps, id, start);
 }

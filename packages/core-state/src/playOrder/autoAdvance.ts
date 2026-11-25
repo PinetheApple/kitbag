@@ -6,6 +6,7 @@ import type { PresetSetlistEntry } from '../library/snapshot.ts';
 import {
   ADVANCE_CAUSE,
   ADVANCE_OUTCOME,
+  START,
   type AdvanceCause,
   type AdvanceListener,
   type AdvanceOutcome,
@@ -46,6 +47,7 @@ import {
   type RepeatMode,
 } from './repeat.ts';
 import { repeatSong, runOut } from './repeatRunOut.ts';
+import { startingPaused } from './startingPaused.ts';
 import { playOrderStore, type SkipResult, type Undo } from './store.ts';
 
 export interface SetlistPlace {
@@ -92,6 +94,7 @@ export interface AdvancingPlayer {
   readonly advanceTo?: (id: number) => Promise<AdvanceOutcome>;
   readonly playNow?: (id: number) => Promise<AdvanceOutcome>;
   readonly takeOver: (id: number) => Promise<AdvanceOutcome>;
+  readonly paused: Pick<AdvancingPlayer, 'advanceTo' | 'takeOver'>;
   readonly handOver: () => void;
   readonly stillEnded: () => boolean;
   readonly stopAdvancing: () => void;
@@ -145,6 +148,11 @@ const stemSongs = (bars: number): AdvancingPlayer => ({
   advanceTo: (id) => stemPlayerStore.getState().advanceTo(id),
   playNow: (id) => stemPlayerStore.getState().playNow(id),
   takeOver: (id) => stemPlayerStore.getState().takeOver(id, bars),
+  paused: {
+    advanceTo: (id) => stemPlayerStore.getState().advanceTo(id, START.paused),
+    takeOver: (id) =>
+      stemPlayerStore.getState().takeOver(id, bars, undefined, START.paused),
+  },
   handOver: () => {
     stemPlayerStore.getState().handOver();
   },
@@ -169,6 +177,10 @@ const singleSongs = (bars: number): AdvancingPlayer => ({
   },
   loopHeld: () => songPlayerStore.getState().loop.kind === 'on',
   takeOver: (id) => songPlayerStore.getState().takeOver(id, bars),
+  paused: {
+    takeOver: (id) =>
+      songPlayerStore.getState().takeOver(id, bars, undefined, START.paused),
+  },
   handOver: () => {
     songPlayerStore.getState().handOver();
   },
@@ -323,7 +335,10 @@ async function play(
   arrive({ kind: ARRIVAL.arriving, song });
   const outcome = await startNext(deps.players, from, song);
   if (outcome === ADVANCE_OUTCOME.displaced) await undo();
-  if (outcome === ADVANCE_OUTCOME.playing) {
+  if (
+    outcome === ADVANCE_OUTCOME.playing ||
+    outcome === ADVANCE_OUTCOME.paused
+  ) {
     if (queuedSongOfAdvance(next) !== null) deps.notePlayed?.(song);
     arrive({ kind: ARRIVAL.playing, song, place, ...said });
   }
@@ -361,9 +376,9 @@ async function advance(
       return;
     }
     if (!isPlayAdvance(next)) break;
-    const tried = await play(deps, arrive, from, next, {
+    const tried = await play(startingPaused(deps, cause), arrive, from, next, {
       skipped,
-      inApp: cause === ADVANCE_CAUSE.nextInApp,
+      inApp: cause !== ADVANCE_CAUSE.ended && cause !== ADVANCE_CAUSE.next,
     });
     if (tried.played === PLAYED.settled) return;
     from = tried.by;

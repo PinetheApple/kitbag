@@ -109,9 +109,10 @@ function SongMiniPlayer({ songId, onOpenSong, ...bar }: SongProps) {
   const durationFrames = useSongPlayer((s) => s.durationFrames);
   const loopEnd = useSongPlayer(loopEndFrames);
   const onTogglePlay = useSongPlayer((s) => s.togglePlay);
+  const { songs } = useLibrarySongs();
   const onOpen = useCallback(() => {
-    onOpenSong(songId);
-  }, [onOpenSong, songId]);
+    if (songs.has(songId)) onOpenSong(songId);
+  }, [onOpenSong, songId, songs]);
   const shown: ShownSong = {
     tile: 'song',
     title,
@@ -152,9 +153,10 @@ function StemMiniPlayer({ setId, onOpenStemSet, ...bar }: StemProps) {
   const onTogglePlay = useStemPlayer((s) => s.togglePlay);
   const spot = useSetlistSpot(setId);
   const next = useNextTitle();
+  const { stems } = useLibrarySongs();
   const onOpen = useCallback(() => {
-    onOpenStemSet(setId);
-  }, [onOpenStemSet, setId]);
+    if (stems.has(setId)) onOpenStemSet(setId);
+  }, [onOpenStemSet, setId, stems]);
   const shown: ShownSong = {
     tile: 'stems',
     title,
