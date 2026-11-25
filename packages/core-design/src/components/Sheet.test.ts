@@ -1,21 +1,9 @@
 import { createElement, type ReactElement, type ReactNode } from 'react';
-import type { HostInstance } from 'react-native';
 import { expect, it, vi } from 'vitest';
 
 import type { ThemeMode } from '../tokens.ts';
 
 const DRAG = { drag: true };
-const entered = vi.hoisted(() => ({
-  settle: undefined as ((finished: boolean) => void) | undefined,
-}));
-const settlingTransition = (name: string) => ({
-  reduceMotion: () => ({
-    withCallback: (settle: (finished: boolean) => void) => {
-      entered.settle = settle;
-      return name;
-    },
-  }),
-});
 const STATUS_BAR = 24;
 const portal = { show: vi.fn(), hide: vi.fn(), topInset: STATUS_BAR };
 const back = vi.hoisted(() => ({ handlers: [] as (() => void)[] }));
@@ -48,7 +36,7 @@ vi.mock('react-native', () => ({
 }));
 vi.mock('react-native-reanimated', () => ({
   default: { View: 'Animated.View' },
-  SlideInDown: settlingTransition('sheetIn'),
+  cancelAnimation: vi.fn(),
   useAnimatedStyle: () => DRAG,
   useSharedValue: (value: number) => ({ value }),
   withSpring: vi.fn(),
@@ -101,7 +89,6 @@ type Props = Readonly<{
     nativeEvent: { actionName: string };
   }) => void;
   ref?: unknown;
-  entering?: unknown;
   style?: unknown;
   contentContainerStyle?: unknown;
   persistentScrollbar?: boolean;
@@ -113,7 +100,17 @@ function flat(style: unknown): Record<string, unknown> {
   return Object.assign({}, ...parts) as Record<string, unknown>;
 }
 
-function openSheet(onDismiss = vi.fn(), title = 'T', notice?: ReactNode) {
+interface OpenOptions {
+  readonly onDismiss?: () => void;
+  readonly title?: string;
+  readonly notice?: ReactNode;
+}
+
+function openSheet({
+  onDismiss = vi.fn(),
+  title = 'T',
+  notice,
+}: OpenOptions = {}) {
   portal.show.mockClear();
   Sheet({
     visible: true,
@@ -182,19 +179,9 @@ it('keeps one shrinking title line beside its action at the default size', () =>
   expect(title.style.flexShrink).toBe(1);
 });
 
-it('keeps the slide animation off the view that carries the drag transform', () => {
-  const frame = openSheet();
-  const outer = child(frame, 1);
-  const inner = child(outer, 1);
-  expect(outer.props.entering).toBe('sheetIn');
-  expect([outer.props.style].flat()).not.toContain(DRAG);
-  expect(inner.props.entering).toBeUndefined();
-  expect([inner.props.style].flat()).toContain(DRAG);
-});
-
 it('draws the notice in the portal above the sheet, sliding with its drag', () => {
   const notice = createElement('Notice');
-  const slot = child(openSheet(vi.fn(), 'T', notice), 1);
+  const slot = child(openSheet({ notice }), 1);
   const [noticeView, sheet] = [child(slot, 0), child(slot, 1)];
   expect(child(noticeView, 0)).toBe(notice);
   expect([noticeView.props.style].flat()).toContain(DRAG);
@@ -305,44 +292,6 @@ function headers(node: unknown): ReactElement<Props>[] {
   return [...here, ...headers(element.props.children)];
 }
 
-function settleEntering(finished: boolean) {
-  if (entered.settle === undefined) throw new Error('no entering callback');
-  entered.settle(finished);
-}
-
-it('moves screen reader focus to its title once it has slid in', () => {
-  focusReaderOn.mockClear();
-  const [title] = headers(openSheet());
-  const node = {};
-  (title?.props.ref as { current: unknown }).current = node;
-  expect(title?.props.children).toBe('T');
-  expect(focusReaderOn).not.toHaveBeenCalled();
-  settleEntering(false);
-  expect(focusReaderOn).not.toHaveBeenCalled();
-  settleEntering(true);
-  expect(focusReaderOn).toHaveBeenCalledOnce();
-  expect(focusReaderOn).toHaveBeenCalledWith(node);
-});
-
-it('moves screen reader focus to the node it was asked to start on', () => {
-  focusReaderOn.mockClear();
-  portal.show.mockClear();
-  const start = { node: 'rate heading' };
-  Sheet({
-    visible: true,
-    title: 'T',
-    dismissLabel: 'Close T',
-    onDismiss: vi.fn(),
-    initialFocusRef: { current: start as unknown as HostInstance },
-    children: null,
-  });
-  const [title] = headers(portal.show.mock.calls[0]?.[1]);
-  (title?.props.ref as { current: unknown }).current = { node: 'title' };
-  settleEntering(true);
-  expect(focusReaderOn).toHaveBeenCalledOnce();
-  expect(focusReaderOn.mock.calls[0]?.[0]).toBe(start);
-});
-
 function readerOrder(node: unknown): ReactElement<Props>[] {
   if (Array.isArray(node)) return node.flatMap(readerOrder);
   if (node === null || typeof node !== 'object' || !('props' in node))
@@ -358,14 +307,14 @@ function readerOrder(node: unknown): ReactElement<Props>[] {
 }
 
 it('puts its title, not its backdrop, first for a screen reader', () => {
-  const [first] = readerOrder(openSheet(vi.fn(), 'Top'));
+  const [first] = readerOrder(openSheet({ title: 'Top' }));
   expect(first?.props.accessibilityRole).toBe('header');
   expect(first?.props.children).toBe('Top');
 });
 
 it('offers closing as a screen reader action on the title', () => {
   const onDismiss = vi.fn();
-  const [title] = headers(openSheet(onDismiss, 'Top'));
+  const [title] = headers(openSheet({ onDismiss, title: 'Top' }));
   expect(title?.props.accessibilityActions).toEqual([
     { name: 'dismiss', label: 'Close Top' },
   ]);
@@ -381,14 +330,14 @@ it('offers closing as a screen reader action on the title', () => {
 
 it('closes on the screen reader escape gesture anywhere in the sheet', () => {
   const onDismiss = vi.fn();
-  const frame = openSheet(onDismiss);
+  const frame = openSheet({ onDismiss });
   expect(frame.props.onAccessibilityEscape).toBe(onDismiss);
 });
 
 it('closes on hardware Back', () => {
   back.handlers.length = 0;
   const onDismiss = vi.fn();
-  openSheet(onDismiss);
+  openSheet({ onDismiss });
   back.handlers.forEach((handler) => {
     handler();
   });

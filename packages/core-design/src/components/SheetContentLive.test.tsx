@@ -144,7 +144,8 @@ function bandOffset(tree: ReactTestRenderer): number {
     (node) =>
       node.type === ('Animated.View' as never) &&
       Array.isArray(node.props.style) &&
-      node.parent?.props.onLayout !== undefined,
+      node.parent?.type === ('View' as never) &&
+      node.parent.props.onLayout !== undefined,
   );
   const sweep = (band.props.style as unknown[]).at(-1) as Updating<{
     transform: [{ translateX: number }];

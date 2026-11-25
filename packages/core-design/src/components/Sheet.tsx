@@ -19,7 +19,6 @@ import {
 } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
-  SlideInDown,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -53,6 +52,7 @@ import { SheetHint } from './SheetHint.tsx';
 import { useSheetPortal } from './SheetHost.tsx';
 import { fadeToClear } from './fadeToClear.ts';
 import { useSheetCardStyle } from './useSheetCardStyle.ts';
+import { useSheetEnter } from './useSheetEnter.ts';
 import { useSheetExit } from './useSheetExit.ts';
 import { SHEET_TOUCH_ROOM } from '../sheetRoom.ts';
 
@@ -168,6 +168,7 @@ export interface SheetProps {
   readonly bottomInset?: number;
   readonly onDismiss: () => void;
   readonly onShow?: () => void;
+  readonly onShown?: () => void;
   readonly onClosed?: () => void;
   readonly initialFocusRef?: RefObject<HostInstance | null>;
   readonly dim?: boolean;
@@ -190,6 +191,7 @@ export function Sheet({
   bottomInset = 0,
   onDismiss,
   onShow,
+  onShown,
   onClosed,
   initialFocusRef,
   dim = false,
@@ -214,9 +216,11 @@ export function Sheet({
   ];
   const motion = useReduceMotionMode();
   const titleRef = useRef<TextInstance>(null);
-  const focusTitle = useCallback(() => {
+  // Focus sent mid-slide did not land on the title under TalkBack.
+  const reportShown = useCallback(() => {
     focusReaderOn(initialFocusRef?.current ?? titleRef.current);
-  }, [initialFocusRef]);
+    onShown?.();
+  }, [initialFocusRef, onShown]);
   const readerActions = useMemo(
     () => [{ name: READER_CLOSE_ACTION, label: dismissLabel }],
     [dismissLabel],
@@ -227,17 +231,15 @@ export function Sheet({
     },
     [onDismiss],
   );
-  // Focus sent at mount, mid-slide, did not land on the title under TalkBack.
-  const slideIn = useMemo(
-    () =>
-      SlideInDown.reduceMotion(motion).withCallback((finished) => {
-        'worklet';
-        if (finished) scheduleOnRN(focusTitle);
-      }),
-    [motion, focusTitle],
-  );
   const dragY = useSharedValue(0);
   const open = useSharedValue(visible);
+  const {
+    enter,
+    returned,
+    slotAttached,
+    slotLaidOut,
+    style: enterStyle,
+  } = useSheetEnter({ motion, open, onShown: reportShown });
   const sheetHeight = useSharedValue(0);
   const scrimOpacity = useSharedValue(0);
 
@@ -305,8 +307,11 @@ export function Sheet({
           onPress={onDismiss}
         />
       </Animated.View>
-      {/* Layout animations overwrite transforms, so the drag transform lives on the inner view. */}
-      <Animated.View entering={slideIn} style={slotStyle}>
+      <Animated.View
+        ref={slotAttached}
+        style={[slotStyle, enterStyle]}
+        onLayout={slotLaidOut}
+      >
         {notice === undefined ? null : (
           <Animated.View style={noticeStyle}>{notice}</Animated.View>
         )}
@@ -370,7 +375,8 @@ export function Sheet({
     motion,
     dragY,
     scrimOpacity,
-    onReturn: focusTitle,
+    onEnter: enter,
+    onReturn: returned,
     onClosed,
   });
 

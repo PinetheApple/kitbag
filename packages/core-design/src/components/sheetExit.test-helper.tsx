@@ -23,6 +23,7 @@ import {
   FULL,
   keyboard,
   REDUCED,
+  WINDOW_HEIGHT,
 } from './sheetExitState.test-helper.ts';
 
 export {
@@ -33,6 +34,7 @@ export {
   FULL,
   keyboard,
   REDUCED,
+  WINDOW_HEIGHT,
 } from './sheetExitState.test-helper.ts';
 
 interface Timing {
@@ -52,18 +54,13 @@ vi.mock('react-native', () => ({
     create: <T,>(styles: T) => styles,
     absoluteFill: { fill: true },
   },
-  useWindowDimensions: () => ({ height: 800 }),
+  useWindowDimensions: () => ({ height: WINDOW_HEIGHT }),
 }));
 vi.mock('react-native-reanimated', async () => {
   const { useState } = await import('react');
   const noRef = () => undefined;
   const isTiming = (next: unknown): next is Timing =>
     typeof next === 'object' && next !== null && 'to' in next;
-  const settling = (name: string) => ({
-    reduceMotion: () => ({
-      withCallback: (settle: (finished: boolean) => void) => ({ name, settle }),
-    }),
-  });
   function useSharedValue(initial: number) {
     const [shared] = useState(() => {
       let current = initial;
@@ -84,14 +81,22 @@ vi.mock('react-native-reanimated', async () => {
             current = next;
             return;
           }
-          current = next.to;
-          const settle = next.done;
-          if (settle === undefined) return;
-          done = (finished) => {
-            done = undefined;
+          const { to, done: settle } = next;
+          if (settle === undefined) {
+            current = to;
+            return;
+          }
+          const finish = (finished: boolean) => {
+            anim.running.delete(finish);
+            if (done === finish) {
+              done = undefined;
+              if (finished) current = to;
+            }
             settle(finished);
           };
-          anim.running.add(done);
+          done = finish;
+          anim.running.add(finish);
+          anim.timings.push(finish);
         },
       };
     });
@@ -125,7 +130,6 @@ vi.mock('react-native-reanimated', async () => {
       ScrollView: 'Animated.ScrollView',
       createAnimatedComponent: (component: string) => `Animated.${component}`,
     },
-    SlideInDown: settling('sheetIn'),
     cancelAnimation: (shared: { stop: () => void }) => {
       shared.stop();
     },
@@ -151,7 +155,6 @@ vi.mock('react-native-reanimated', async () => {
       config: { reduceMotion: string },
       done?: (finished: boolean) => void,
     ) => {
-      if (done !== undefined) anim.exits.push(done);
       if (config.reduceMotion !== REDUCED) return { to, done };
       if (done !== undefined)
         queueMicrotask(() => {
@@ -232,6 +235,7 @@ export interface Open {
   readonly detail?: string | null;
   readonly focus?: RefObject<HostInstance | null>;
   readonly closed?: () => void;
+  readonly shown?: () => void;
   readonly content?: ReactNode;
 }
 
@@ -242,6 +246,7 @@ export function Pair({
   detail = SONG,
   focus,
   closed,
+  shown,
   content,
 }: Open) {
   return (
@@ -254,6 +259,7 @@ export function Pair({
           onDismiss={noop}
           {...(focus === undefined ? {} : { initialFocusRef: focus })}
           {...(closed === undefined ? {} : { onClosed: closed })}
+          {...(shown === undefined ? {} : { onShown: shown })}
         >
           {content ?? (detail === null ? null : h('Detail', { name: detail }))}
         </Sheet>
@@ -319,6 +325,23 @@ export function finishExits() {
   });
 }
 
+export function layOutSlot(tree: ReactTestRenderer, title: string) {
+  const [, slot] = slotTitled(tree, title).findAll(
+    (node) => node.type === ('Animated.View' as never),
+  );
+  const layOut = slot?.props.onLayout as (() => void) | undefined;
+  if (layOut === undefined) throw new Error(`no ${title} slot layout`);
+  act(() => {
+    layOut();
+  });
+}
+
+export function lastTiming(): (finished: boolean) => void {
+  const timing = anim.timings.at(-1);
+  if (timing === undefined) throw new Error('no timing started');
+  return timing;
+}
+
 export function runReactions() {
   act(() => {
     for (const reaction of anim.reactions) reaction();
@@ -342,7 +365,7 @@ beforeEach(() => {
   );
   keyboard.height.value = 0;
   anim.running.clear();
-  anim.exits.length = 0;
+  anim.timings.length = 0;
   anim.reactions.length = 0;
   anim.frameCallbacks.length = 0;
   anim.scrolls.length = 0;

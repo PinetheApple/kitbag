@@ -1,0 +1,22 @@
+appId: com.kitbag.app
+name: '#609: the rename sheet, opened again and again, shows its card with the name field focused'
+tags:
+  - issue-609
+env:
+  ITERATIONS: 50
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- runFlow: ../../subflows/import-fixture-song.yaml
+- evalScript: ${output.iteration = 0}
+- repeat:
+    times: ${ITERATIONS}
+    commands:
+      - evalScript: ${output.iteration = output.iteration + 1}
+      - tapOn: 'Actions for ${FIXTURE_SONG}'
+      - tapOn: 'Rename'
+      - assertVisible:
+          label: 'Rename field focused, ${output.iteration} of ${ITERATIONS}'
+          text: 'New name for ${FIXTURE_SONG}'
+          focused: true
+      - tapOn: 'Cancel'
+      - assertNotVisible: 'New name for ${FIXTURE_SONG}'

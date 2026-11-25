@@ -9,6 +9,8 @@ import {
   dismissKeyboard,
   finishExits,
   focusReaderOn,
+  lastTiming,
+  layOutSlot,
   mount,
   REDUCED,
   rerender,
@@ -46,15 +48,10 @@ it('takes the leaving sheet out of touch and reader reach while the new one gets
     pointerEvents: 'auto',
     importantForAccessibility: 'auto',
   });
-  const slide = arriving.find(
-    (node) =>
-      (node.props.entering as { name?: string } | undefined)?.name ===
-      'sheetIn',
-  );
+  layOutSlot(tree, DELETE);
+  const enter = lastTiming();
   act(() => {
-    (slide.props.entering as { settle: (finished: boolean) => void }).settle(
-      true,
-    );
+    enter(true);
   });
   expect(focusReaderOn).toHaveBeenCalledExactlyOnceWith({ title: DELETE });
 });
@@ -95,8 +92,18 @@ it('drops the keyboard once a sheet starts to leave', () => {
   expect(dismissKeyboard).toHaveBeenCalledOnce();
 });
 
+function arrive(tree: Parameters<typeof layOutSlot>[0]) {
+  layOutSlot(tree, ACTIONS);
+  const slide = lastTiming();
+  act(() => {
+    slide(true);
+  });
+  focusReaderOn.mockClear();
+}
+
 it('moves reader focus back to the title of a sheet shown again mid-exit', () => {
   const tree = mount({ actions: true, remove: false });
+  arrive(tree);
   rerender(tree, { actions: false, remove: false });
   rerender(tree, { actions: true, remove: false });
   expect(focusReaderOn).toHaveBeenCalledExactlyOnceWith({ title: ACTIONS });
@@ -119,8 +126,7 @@ it('puts a sheet shown again mid-exit above one opened meanwhile', () => {
 it('keeps a sheet shown again when its exit reports finished late', () => {
   const tree = mount({ actions: true, remove: false });
   rerender(tree, { actions: false, remove: false });
-  const [settle] = anim.exits.slice(-1);
-  if (settle === undefined) throw new Error('no exit started');
+  const settle = lastTiming();
   rerender(tree, { actions: true, remove: false });
   act(() => {
     settle(true);
@@ -131,6 +137,7 @@ it('keeps a sheet shown again when its exit reports finished late', () => {
 it('moves reader focus back to the initial focus target of a sheet shown again mid-exit', () => {
   const focus = { current: { start: true } as unknown as HostInstance };
   const tree = mount({ actions: true, remove: false, focus });
+  arrive(tree);
   rerender(tree, { actions: false, remove: false, focus });
   rerender(tree, { actions: true, remove: false, focus });
   expect(focusReaderOn).toHaveBeenCalledExactlyOnceWith(focus.current);
