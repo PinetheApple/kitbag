@@ -5,6 +5,7 @@ import {
   createThemedStyles,
   practiceHistory,
   practiceHistoryText,
+  screenFrameInsets,
   size,
   space,
   textStyle,
@@ -71,6 +72,7 @@ const useStyles = createThemedStyles((theme) => ({
   foot: {
     gap: practiceHistory.footGap,
     paddingTop: practiceHistory.footTop,
+    paddingBottom: practiceHistory.footBottom,
     paddingHorizontal: space.screenInset,
     borderTopWidth: size.stroke,
     borderTopColor: theme.color.line,
@@ -109,10 +111,8 @@ function Foot({
   readonly hint: string;
 }) {
   const styles = useStyles();
-  const insets = useSafeAreaInsets();
-  const inset = { paddingBottom: insets.bottom + practiceHistory.footBottom };
   return (
-    <View style={[styles.foot, inset]}>
+    <View style={styles.foot}>
       {children}
       <Text style={styles.footHint}>{hint}</Text>
     </View>
@@ -208,7 +208,7 @@ export function SessionDetailScreen({
   const { session } = detail;
   const heading =
     session === null ? null : detailHeading(session.startedAt, detail.now);
-  const framed = { paddingTop: insets.top };
+  const framed = screenFrameInsets(insets);
   return (
     <View style={[styles.screen, framed]}>
       <AppBar

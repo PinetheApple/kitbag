@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 const PACKAGES = join(import.meta.dirname, '..', '..');
 const SHARED_BAR = 'core-design/src/components/AppBar.tsx';
 const ICON_MAP = 'core-design/src/icons.ts';
+const SHARED_FRAME = 'core-design/src/screenFrame.ts';
 
 const BAR_USERS = [
   'app-shell/src/home/HomeScreen.tsx',
@@ -37,6 +38,7 @@ const BACK_GLYPH =
   /\b(?:icon|name)(?:=|: ?)(?:"back"|'back'|\{'back'\})|['"](?:chevron|arrow)-left['"]/;
 const TOP_PADDING =
   /paddingTop:\s*([^,}\n]*(?:insets\.top|screenInset)[^,}\n]*)/g;
+const SHARED_FRAME_CALL = /\bscreenFrameInsets\(\s*insets\b/g;
 
 function sources(): Record<string, string> {
   const found: Record<string, string> = {};
@@ -77,12 +79,16 @@ describe('app bar', () => {
   });
 
   it('puts the bar directly under the status bar on every screen with a bar frame', () => {
-    const tops = STATUS_BAR_FRAMES.flatMap((file) =>
-      [...(files[file] ?? '').matchAll(TOP_PADDING)].map((match) => ({
-        file,
-        top: match[1]?.trim(),
-      })),
-    );
+    const topsIn = (source: string) =>
+      [...source.matchAll(TOP_PADDING)].map((match) => match[1]?.trim());
+    const sharedTops = topsIn(files[SHARED_FRAME] ?? '');
+    const tops = STATUS_BAR_FRAMES.flatMap((file) => {
+      const source = files[file] ?? '';
+      const shared = [...source.matchAll(SHARED_FRAME_CALL)].flatMap(
+        () => sharedTops,
+      );
+      return [...topsIn(source), ...shared].map((top) => ({ file, top }));
+    });
     expect(new Set(tops.map((t) => t.file))).toEqual(
       new Set(STATUS_BAR_FRAMES),
     );

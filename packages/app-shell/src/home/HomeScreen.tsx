@@ -3,6 +3,7 @@ import {
   type AppBarAction,
   Button,
   createThemedStyles,
+  screenFrameInsets,
   space,
   ToolGrid,
   ToolRow,
@@ -65,6 +66,7 @@ const useStyles = createThemedStyles((theme) => ({
   scroll: { flex: 1 },
   content: {
     paddingHorizontal: space.screenInset,
+    paddingBottom: space.screenInset,
     gap: space.sectionGap,
   },
 }));
@@ -157,11 +159,9 @@ export function HomeScreen() {
     [openSettings],
   );
 
-  const frameInset = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
-  const scrollBottomInset = docked ? 0 : insets.bottom;
-  const contentInset = useMemo(
-    () => ({ paddingBottom: space.screenInset + scrollBottomInset }),
-    [scrollBottomInset],
+  const frameInset = useMemo(
+    () => screenFrameInsets(insets, { dockBelow: docked }),
+    [insets, docked],
   );
 
   const open = (tool: HomeToolEntry) => {
@@ -208,10 +208,7 @@ export function HomeScreen() {
 
   return (
     <View style={[styles.screen, frameInset]}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[styles.content, contentInset]}
-      >
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <AppBar
           wordmark
           title="Kitbag"
