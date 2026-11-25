@@ -1,0 +1,1 @@
+• While the metronome plays, the screen no longer reports a change to Android's accessibility service on every frame, so UI automation can read it. The bar sweep, pulse marks and accent ring look the same.
