@@ -10,6 +10,7 @@ import {
   finishExits,
   focusReaderOn,
   lastTiming,
+  layOutSlot,
   mount,
   REDUCED,
   rerender,
@@ -47,6 +48,7 @@ it('takes the leaving sheet out of touch and reader reach while the new one gets
     pointerEvents: 'auto',
     importantForAccessibility: 'auto',
   });
+  layOutSlot(tree, DELETE);
   const enter = lastTiming();
   act(() => {
     enter(true);
@@ -90,7 +92,8 @@ it('drops the keyboard once a sheet starts to leave', () => {
   expect(dismissKeyboard).toHaveBeenCalledOnce();
 });
 
-function arrive() {
+function arrive(tree: Parameters<typeof layOutSlot>[0]) {
+  layOutSlot(tree, ACTIONS);
   const slide = lastTiming();
   act(() => {
     slide(true);
@@ -100,7 +103,7 @@ function arrive() {
 
 it('moves reader focus back to the title of a sheet shown again mid-exit', () => {
   const tree = mount({ actions: true, remove: false });
-  arrive();
+  arrive(tree);
   rerender(tree, { actions: false, remove: false });
   rerender(tree, { actions: true, remove: false });
   expect(focusReaderOn).toHaveBeenCalledExactlyOnceWith({ title: ACTIONS });
@@ -134,7 +137,7 @@ it('keeps a sheet shown again when its exit reports finished late', () => {
 it('moves reader focus back to the initial focus target of a sheet shown again mid-exit', () => {
   const focus = { current: { start: true } as unknown as HostInstance };
   const tree = mount({ actions: true, remove: false, focus });
-  arrive();
+  arrive(tree);
   rerender(tree, { actions: false, remove: false, focus });
   rerender(tree, { actions: true, remove: false, focus });
   expect(focusReaderOn).toHaveBeenCalledExactlyOnceWith(focus.current);

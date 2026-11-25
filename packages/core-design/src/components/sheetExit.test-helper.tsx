@@ -325,6 +325,17 @@ export function finishExits() {
   });
 }
 
+export function layOutSlot(tree: ReactTestRenderer, title: string) {
+  const [, slot] = slotTitled(tree, title).findAll(
+    (node) => node.type === ('Animated.View' as never),
+  );
+  const layOut = slot?.props.onLayout as (() => void) | undefined;
+  if (layOut === undefined) throw new Error(`no ${title} slot layout`);
+  act(() => {
+    layOut();
+  });
+}
+
 export function lastTiming(): (finished: boolean) => void {
   const timing = anim.timings.at(-1);
   if (timing === undefined) throw new Error('no timing started');

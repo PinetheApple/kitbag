@@ -12,6 +12,7 @@ import {
   focusReaderOn,
   frames,
   keyboard,
+  layOutSlot,
   mount,
   rerender,
   runFrame,
@@ -76,6 +77,7 @@ it('removes a leaving slot only after a frame has run past its exit', () => {
 
 it('keeps a sheet shown again after its exit finished but before removal', () => {
   const tree = mount({ actions: true, remove: false });
+  layOutSlot(tree, ACTIONS);
   rerender(tree, { actions: false, remove: false });
   finishExits();
   rerender(tree, { actions: true, remove: false });

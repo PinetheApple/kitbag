@@ -7,13 +7,16 @@ import { expect, it, vi } from 'vitest';
 
 import {
   ACTIONS,
+  anim,
   finishExits,
   focusReaderOn,
   lastTiming,
+  layOutSlot,
   mount,
   rerender,
   slotTitled,
   WINDOW_HEIGHT,
+  type Open,
 } from './sheetExit.test-helper.tsx';
 
 const DRAG_DISTANCE = 40;
@@ -40,6 +43,16 @@ function moving(tree: ReactTestRenderer) {
   return { slot: views[1], card: views[2] };
 }
 
+function open(shown?: () => void, focus?: Open['focus']) {
+  const tree = mount({
+    ...OPEN,
+    ...(shown === undefined ? {} : { shown }),
+    ...(focus === undefined ? {} : { focus }),
+  });
+  layOutSlot(tree, ACTIONS);
+  return tree;
+}
+
 function settleSlide(finished: boolean) {
   const slide = lastTiming();
   act(() => {
@@ -48,7 +61,7 @@ function settleSlide(finished: boolean) {
 }
 
 it('slides its card up from a window height below by its own value, not a layout animation', () => {
-  const tree = mount(OPEN);
+  const tree = open();
   expect(tree.root.findAll((node) => 'entering' in node.props)).toEqual([]);
   expect(translateY(moving(tree).slot)).toBe(WINDOW_HEIGHT);
   settleSlide(true);
@@ -57,7 +70,7 @@ it('slides its card up from a window height below by its own value, not a layout
 
 it('reports itself shown and moves reader focus to its title only once its card has arrived', () => {
   const shown = vi.fn();
-  mount({ ...OPEN, shown });
+  open(shown);
   expect(shown).not.toHaveBeenCalled();
   expect(focusReaderOn).not.toHaveBeenCalled();
   settleSlide(true);
@@ -67,14 +80,14 @@ it('reports itself shown and moves reader focus to its title only once its card 
 
 it('moves reader focus to the node it was asked to start on once its card has arrived', () => {
   const focus = { current: { start: true } as unknown as HostInstance };
-  mount({ ...OPEN, focus });
+  open(undefined, focus);
   settleSlide(true);
   expect(focusReaderOn).toHaveBeenCalledExactlyOnceWith(focus.current);
 });
 
 it('settles the card in place and still reports it shown when its slide is cut short', () => {
   const shown = vi.fn();
-  const tree = mount({ ...OPEN, shown });
+  const tree = open(shown);
   settleSlide(false);
   expect(translateY(moving(tree).slot)).toBe(0);
   expect(shown).toHaveBeenCalledOnce();
@@ -90,7 +103,7 @@ it('does not report a sheet shown when it closes before its card arrives', () =>
 
 it('reports a sheet reopened mid-slide shown once, when its slide ends', () => {
   const shown = vi.fn();
-  const tree = mount({ ...OPEN, shown });
+  const tree = open(shown);
   const slide = lastTiming();
   rerender(tree, { ...CLOSED, shown });
   rerender(tree, { ...OPEN, shown });
@@ -105,7 +118,7 @@ it('reports a sheet reopened mid-slide shown once, when its slide ends', () => {
 
 it('reports a sheet shown again when it returns mid-exit', () => {
   const shown = vi.fn();
-  const tree = mount({ ...OPEN, shown });
+  const tree = open(shown);
   settleSlide(true);
   expect(shown).toHaveBeenCalledOnce();
   rerender(tree, { ...CLOSED, shown });
@@ -114,7 +127,7 @@ it('reports a sheet shown again when it returns mid-exit', () => {
 });
 
 it('drags the card, not the slot that slides it in', () => {
-  const tree = mount(OPEN);
+  const tree = open();
   settleSlide(true);
   const detector = slotTitled(tree, ACTIONS).findByType(
     'GestureDetector' as never,
@@ -128,4 +141,25 @@ it('drags the card, not the slot that slides it in', () => {
   const { slot, card } = moving(tree);
   expect(translateY(slot)).toBe(0);
   expect(translateY(card)).toBe(DRAG_DISTANCE);
+});
+
+it('starts its slide only once its slot has laid out', () => {
+  const shown = vi.fn();
+  const tree = mount({ ...OPEN, shown });
+  expect(anim.timings).toEqual([]);
+  finishExits();
+  expect(shown).not.toHaveBeenCalled();
+  expect(translateY(moving(tree).slot)).toBe(WINDOW_HEIGHT);
+  layOutSlot(tree, ACTIONS);
+  settleSlide(true);
+  expect(shown).toHaveBeenCalledOnce();
+  expect(translateY(moving(tree).slot)).toBe(0);
+});
+
+it('does not slide again when its slot lays out again', () => {
+  const tree = open();
+  settleSlide(true);
+  layOutSlot(tree, ACTIONS);
+  expect(anim.timings).toHaveLength(1);
+  expect(translateY(moving(tree).slot)).toBe(0);
 });

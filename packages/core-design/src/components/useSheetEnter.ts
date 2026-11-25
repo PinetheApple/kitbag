@@ -21,6 +21,7 @@ export function useSheetEnter({ motion, open, onShown }: SheetEnterOptions) {
   const enterY = useSharedValue(windowHeight);
   const slides = useRef(0);
   const sliding = useRef<number | null>(null);
+  const waiting = useRef(false);
   const shown = useRef(onShown);
   shown.current = onShown;
   const settled = useCallback((slide: number, stillOpen: boolean) => {
@@ -30,21 +31,29 @@ export function useSheetEnter({ motion, open, onShown }: SheetEnterOptions) {
   }, []);
   const enter = useCallback(() => {
     slides.current += 1;
-    const slide = slides.current;
-    sliding.current = slide;
+    sliding.current = slides.current;
+    waiting.current = true;
     enterY.value = windowHeight;
+  }, [enterY, windowHeight]);
+  // A long frame could end a slide started before the content mounted, so
+  // onShown would focus a field that did not exist yet.
+  const slotLaidOut = useCallback(() => {
+    const slide = sliding.current;
+    if (!waiting.current || slide === null) return;
+    waiting.current = false;
     enterY.value = withTiming(0, { reduceMotion: motion }, (finished) => {
       'worklet';
       if (!finished) enterY.value = 0;
       scheduleOnRN(settled, slide, open.value);
     });
-  }, [enterY, windowHeight, motion, open, settled]);
+  }, [enterY, motion, open, settled]);
   const returned = useCallback(() => {
     if (sliding.current === null) shown.current();
   }, []);
   useEffect(
     () => () => {
       sliding.current = null;
+      waiting.current = false;
       cancelAnimation(enterY);
     },
     [enterY],
@@ -52,5 +61,5 @@ export function useSheetEnter({ motion, open, onShown }: SheetEnterOptions) {
   const style = useAnimatedStyle(() => ({
     transform: [{ translateY: enterY.value }],
   }));
-  return { enter, returned, style };
+  return { enter, returned, slotLaidOut, style };
 }

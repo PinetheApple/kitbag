@@ -238,6 +238,7 @@ export function Sheet({
   const {
     enter,
     returned,
+    slotLaidOut,
     style: enterStyle,
   } = useSheetEnter({ motion, open, onShown: reportShown });
   const sheetHeight = useSharedValue(0);
@@ -307,7 +308,7 @@ export function Sheet({
           onPress={onDismiss}
         />
       </Animated.View>
-      <Animated.View style={[slotStyle, enterStyle]}>
+      <Animated.View style={[slotStyle, enterStyle]} onLayout={slotLaidOut}>
         {notice === undefined ? null : (
           <Animated.View style={noticeStyle}>{notice}</Animated.View>
         )}
