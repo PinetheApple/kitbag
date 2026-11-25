@@ -3,7 +3,7 @@ name: '#609: the rename sheet, opened again and again, shows its card with the n
 tags:
   - issue-609
 env:
-  ITERATIONS: 20
+  ITERATIONS: 50
 ---
 - runFlow: ../../subflows/launch-fresh.yaml
 - runFlow: ../../subflows/import-fixture-song.yaml
