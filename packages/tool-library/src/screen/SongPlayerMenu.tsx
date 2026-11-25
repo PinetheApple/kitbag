@@ -3,10 +3,9 @@ import {
   MenuRow,
   meterCopy,
   MeterRow,
-  QUEUE_TEXT,
+  QueueMenuRows,
   Sheet,
   TempoModeRow,
-  useQueueKeys,
   useQueueNotices,
   useQueuePresses,
   type MeterGridState,
@@ -203,21 +202,7 @@ function QueueRows({
     [songId, title],
   );
   const presses = useQueuePresses<QueuedSong>(actions, target, onDismiss);
-  const keys = useQueueKeys(presses, useIsQueued(target.song));
-  return (
-    <>
-      <MenuRow
-        icon="playNext"
-        label={QUEUE_TEXT.playNext}
-        onPress={keys.playNext}
-      />
-      <MenuRow
-        icon="addToQueue"
-        label={keys.addLabel}
-        onPress={keys.addToQueue}
-      />
-    </>
-  );
+  return <QueueMenuRows presses={presses} queued={useIsQueued(target.song)} />;
 }
 
 export function SongPlayerMenu({

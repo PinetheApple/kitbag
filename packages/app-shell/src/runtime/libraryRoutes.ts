@@ -5,8 +5,17 @@ import { useMemo } from 'react';
 export const ADD_STEM_SONGS = 'add';
 export const VIEW_SONG = 'view';
 
-const viewParams = (tap: RowTap | undefined) =>
-  tap === ROW_TAP.view ? `?${VIEW_SONG}=1` : '';
+export interface FollowParams {
+  readonly id: string;
+  readonly [VIEW_SONG]: undefined;
+}
+
+export const followParams = (id: number): FollowParams => ({
+  id: String(id),
+  [VIEW_SONG]: undefined,
+});
+
+const viewParams = (id: number) => ({ id: String(id), [VIEW_SONG]: '1' });
 
 export function useLibraryRoutes() {
   const router = useRouter();
@@ -26,13 +35,20 @@ export function useLibraryRoutes() {
       },
       // Unlike push, navigate keeps one screen when a double tap repeats the id.
       openStemSet: (id: number, tap?: RowTap) => {
-        router.navigate(`/stems/${String(id)}${viewParams(tap)}`);
+        if (tap === ROW_TAP.view)
+          router.navigate({ pathname: '/stems/[id]', params: viewParams(id) });
+        else router.navigate(`/stems/${String(id)}`);
       },
       openStemSongsToAdd: () => {
         router.push({ pathname: '/stems', params: { [ADD_STEM_SONGS]: '1' } });
       },
       openSong: (id: number, tap?: RowTap) => {
-        router.navigate(`/library/${String(id)}${viewParams(tap)}`);
+        if (tap === ROW_TAP.view)
+          router.navigate({
+            pathname: '/library/[id]',
+            params: viewParams(id),
+          });
+        else router.navigate(`/library/${String(id)}`);
       },
       // A player the queue hands over from must not stay under the next one: Back would reopen its song.
       replaceSong: (id: number) => {

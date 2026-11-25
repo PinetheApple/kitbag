@@ -6,10 +6,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
 import { useViewedPlayerDock } from '@/miniPlayer/useViewedPlayerDock';
-import { useLibraryRoutes, VIEW_SONG } from '@/runtime/libraryRoutes';
+import {
+  followParams,
+  useLibraryRoutes,
+  VIEW_SONG,
+  type FollowParams,
+} from '@/runtime/libraryRoutes';
 
 interface StemRouteNavigation {
-  readonly setParams: (params: { readonly id: string }) => void;
+  readonly setParams: (params: FollowParams) => void;
 }
 
 function StemPlayerRoute() {
@@ -24,7 +29,7 @@ function StemPlayerRoute() {
   const dock = useViewedPlayerDock();
   const follow = useCallback(
     (stemSetId: number) => {
-      navigation.setParams({ id: String(stemSetId) });
+      navigation.setParams(followParams(stemSetId));
     },
     [navigation],
   );

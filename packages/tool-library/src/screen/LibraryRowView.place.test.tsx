@@ -149,7 +149,7 @@ describe('a row whose files are moving', () => {
 });
 
 describe('a row at home', () => {
-  it('views a song that is not the open one, leaving the setlist', () => {
+  it('views a song that is not the open one, keeping the setlist', () => {
     pressRow(mount());
     expect(handlers.onOpenSong).toHaveBeenCalledExactlyOnceWith(
       ROW.id,

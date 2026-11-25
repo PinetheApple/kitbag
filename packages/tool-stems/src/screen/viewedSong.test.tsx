@@ -189,6 +189,13 @@ describe('a stem song viewed while another plays', () => {
     expect(texts()).not.toContain(DOCKED);
   });
 
+  it('opens sheets on the live song once Play has switched', async () => {
+    const { playing } = await playingThenViewed();
+    await press(`Play ${VIEWED_TITLE}. Stops ${playing}.`);
+    await press(MENU);
+    expect(labelled('Export mix as a WAV file')).not.toEqual([]);
+  });
+
   it('stops viewing when the screen goes', async () => {
     await playingThenViewed();
     act(() => {

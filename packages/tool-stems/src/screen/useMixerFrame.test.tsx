@@ -30,7 +30,10 @@ interface ProbeProps {
 }
 
 function Probe({ countEnd, held, sink }: ProbeProps) {
-  sink.values = useMixerFrame(RATE, DURATION, null, countEnd, held);
+  sink.values = useMixerFrame(RATE, DURATION, null, {
+    countEndFrame: countEnd,
+    heldFrame: held,
+  });
   return null;
 }
 
@@ -71,6 +74,16 @@ describe('the playhead of a viewed song', () => {
     expect(frame.progress.value).toBe(COUNT_END / DURATION);
     expect(frame.songSec.value).toBe(COUNT_END / RATE);
     expect(frame.playing.value).toBe(0);
+  });
+
+  it('shows the engine position once Play makes it live, even behind the held start', () => {
+    const frame = mount(null, COUNT_END);
+    act(() => {
+      renderer?.update(<Probe countEnd={null} held={null} sink={{}} />);
+    });
+    setHost(1, 0);
+    runFrame();
+    expect(frame.songSec.value).toBe(HEAD / RATE);
   });
 });
 

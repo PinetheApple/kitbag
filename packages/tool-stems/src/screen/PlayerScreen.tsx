@@ -1,10 +1,10 @@
 import {
+  BridgedProvider,
   createThemedStyles,
   EmptyState,
   PlayerDock,
   readerHiding,
   SegmentedControl,
-  SheetBridge,
   space,
   stemPlayer,
   type Notice,
@@ -201,7 +201,10 @@ function useStemFrame(viewing: boolean): MixerFrameValues {
   const loopEnd = useStemPlayer(loopEndFrames);
   const countEnd = useStemPlayer((s) => s.countEndFrame);
   const held = useStemHeldFrame(viewing);
-  return useMixerFrame(rate, frames, loopEnd, countEnd, held);
+  return useMixerFrame(rate, frames, loopEnd, {
+    countEndFrame: countEnd,
+    heldFrame: held,
+  });
 }
 
 interface BodyProps {
@@ -302,7 +305,8 @@ function StemPlayerContent({
     onOpenMetronome,
   );
   useCarriedSkipNotice(notice.showMessage);
-  useArrivalFollow(setId, routes, !viewing);
+  const following = !viewing;
+  useArrivalFollow(following, setId, routes);
   const ready = useStemPlayer((s) => s.status === 'ready');
   const acquireSong = useLiveStemPlayer((s) => s.acquireSong);
   const { retiming, shown, askReset, askLeave, closeAsk } =
@@ -377,19 +381,9 @@ export function PlayerScreen({
   ...props
 }: StemPlayerScreenProps) {
   const source = useStemSource(props.setId, view, WAVEFORM_BARS);
-  const wrap = useCallback(
-    (node: ReactNode) => (
-      <StemSourceContext.Provider value={source}>
-        {node}
-      </StemSourceContext.Provider>
-    ),
-    [source],
-  );
   return (
-    <StemSourceContext.Provider value={source}>
-      <SheetBridge wrap={wrap}>
-        <StemPlayerContent {...props} viewing={source.viewing} />
-      </SheetBridge>
-    </StemSourceContext.Provider>
+    <BridgedProvider context={StemSourceContext} value={source}>
+      <StemPlayerContent {...props} viewing={source.viewing} />
+    </BridgedProvider>
   );
 }

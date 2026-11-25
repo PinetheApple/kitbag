@@ -10,6 +10,7 @@ import {
   type StemPlayerStore,
 } from '../stemPlayer/store.ts';
 import { secondsToFrames } from '../stemPlayer/time.ts';
+import type { HeldSlice } from './heldTransport.ts';
 import type { PlayerSource, SongSource, StemSource } from './playerSource.ts';
 import { songViewStore, type SongViewStore } from './songView.ts';
 import { stemViewStore, type StemViewStore } from './stemView.ts';
@@ -20,28 +21,29 @@ interface Viewer {
   readonly leave: () => void;
 }
 
-interface ViewedKind<S, L extends S, V extends S & Viewer> {
+export interface ViewedKind<S, L extends S, V extends S & Viewer> {
   readonly live: StoreApi<L>;
   readonly view: StoreApi<V>;
-  readonly liveHolds: (state: L, id: number) => boolean;
+  readonly liveHoldsId: (state: L, id: number) => boolean;
   readonly idOf: (state: V) => number | null;
 }
 
-const SONG_KIND: ViewedKind<SongSource, SongPlayerStore, SongViewStore> = {
-  live: songPlayerStore,
-  view: songViewStore,
-  liveHolds: (state, id) => songShown(state) && state.songId === id,
-  idOf: (state) => state.songId,
-};
+export const SONG_KIND: ViewedKind<SongSource, SongPlayerStore, SongViewStore> =
+  {
+    live: songPlayerStore,
+    view: songViewStore,
+    liveHoldsId: (state, id) => songShown(state) && state.songId === id,
+    idOf: (state) => state.songId,
+  };
 
 const STEM_KIND: ViewedKind<StemSource, StemPlayerStore, StemViewStore> = {
   live: stemPlayerStore,
   view: stemViewStore,
-  liveHolds: (state, id) => stemShown(state) && state.setId === id,
+  liveHoldsId: (state, id) => stemShown(state) && state.setId === id,
   idOf: (state) => state.setId,
 };
 
-function viewHolds<V extends Viewer>(
+function viewHoldsId<V extends Viewer>(
   kind: { readonly idOf: (state: V) => number | null },
   state: V,
   id: number,
@@ -49,31 +51,33 @@ function viewHolds<V extends Viewer>(
   return state.status !== 'idle' && kind.idOf(state) === id;
 }
 
-function useViewedPlayer<S, L extends S, V extends S & Viewer>(
+export function useViewingMode<S, L extends S, V extends S & Viewer>(
+  kind: ViewedKind<S, L, V>,
+  id: number,
+  requested: boolean,
+): boolean {
+  const [firstId] = useState(id);
+  const [wentLive, setWentLive] = useState(!requested);
+  const playsHere = useStore(kind.live, (state) => kind.liveHoldsId(state, id));
+  const goesLive = !wentLive && (id !== firstId || playsHere);
+  if (goesLive) setWentLive(true);
+  return !wentLive && !goesLive;
+}
+
+export function useViewedSource<S, L extends S, V extends S & Viewer>(
   kind: ViewedKind<S, L, V>,
   id: number,
   requested: boolean,
   waveformBars: number,
 ): PlayerSource<S> {
-  const [mode, setMode] = useState({ id, viewing: requested });
-  let { viewing } = mode;
-  if (mode.id !== id) {
-    viewing = requested;
-    setMode({ id, viewing });
-  }
-  const live = useStore(kind.live, (state) => kind.liveHolds(state, id));
-  const viewed = useStore(kind.view, (state) => viewHolds(kind, state, id));
-  if (viewing && live && !viewed) {
-    viewing = false;
-    setMode({ id, viewing });
-  }
+  const viewing = useViewingMode(kind, id, requested);
   useLayoutEffect(() => {
     if (!viewing) return undefined;
-    if (!viewHolds(kind, kind.view.getState(), id))
+    if (!viewHoldsId(kind, kind.view.getState(), id))
       void kind.view.getState().view(id, waveformBars);
     return () => {
       const state = kind.view.getState();
-      if (viewHolds(kind, state, id)) state.leave();
+      if (viewHoldsId(kind, state, id)) state.leave();
     };
   }, [kind, viewing, id, waveformBars]);
   return useMemo(
@@ -87,7 +91,7 @@ export function useSongSource(
   requested: boolean,
   waveformBars: number,
 ): PlayerSource<SongSource> {
-  return useViewedPlayer(SONG_KIND, songId, requested, waveformBars);
+  return useViewedSource(SONG_KIND, songId, requested, waveformBars);
 }
 
 export function useStemSource(
@@ -95,18 +99,24 @@ export function useStemSource(
   requested: boolean,
   waveformBars: number,
 ): PlayerSource<StemSource> {
-  return useViewedPlayer(STEM_KIND, setId, requested, waveformBars);
+  return useViewedSource(STEM_KIND, setId, requested, waveformBars);
 }
 
-const heldFrame = (state: { startSec: number; engineRate: number }) =>
+const heldFrameOf = (state: HeldSlice) =>
   secondsToFrames(state.startSec, state.engineRate);
 
-export function useSongHeldFrame(viewing: boolean): number | null {
-  const frame = useStore(songViewStore, heldFrame);
+export function useHeldFrame(
+  view: StoreApi<HeldSlice>,
+  viewing: boolean,
+): number | null {
+  const frame = useStore(view, heldFrameOf);
   return viewing ? frame : null;
+}
+
+export function useSongHeldFrame(viewing: boolean): number | null {
+  return useHeldFrame(songViewStore, viewing);
 }
 
 export function useStemHeldFrame(viewing: boolean): number | null {
-  const frame = useStore(stemViewStore, heldFrame);
-  return viewing ? frame : null;
+  return useHeldFrame(stemViewStore, viewing);
 }

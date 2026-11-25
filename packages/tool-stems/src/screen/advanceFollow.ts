@@ -45,13 +45,13 @@ function follow(arrival: Arrival, setId: number, routes: PlayOrderRoutes) {
 }
 
 export function useArrivalFollow(
+  following: boolean,
   setId: number,
   routes: PlayOrderRoutes,
-  enabled: boolean,
 ) {
   const library = useLibrarySongs();
   useEffect(() => {
-    if (!enabled) return undefined;
+    if (!following) return undefined;
     return arrivalStore.subscribe(({ arrival }, previous) => {
       if (arrival === null || arrival.serial === previous.arrival?.serial)
         return;
@@ -59,5 +59,5 @@ export function useArrivalFollow(
       const message = arrivalText(arrival, library);
       if (message !== null) routes.onNotice(message);
     });
-  }, [setId, routes, library, enabled]);
+  }, [following, setId, routes, library]);
 }

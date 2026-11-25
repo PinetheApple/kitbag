@@ -68,7 +68,7 @@ export function heldTransport(
   };
   const actions: HeldTransportActions = {
     seek,
-    scrub: seek,
+    scrub: () => undefined,
     cancelScrub: () => undefined,
     skip: (seconds) => {
       holdAt(get().startSec + seconds);

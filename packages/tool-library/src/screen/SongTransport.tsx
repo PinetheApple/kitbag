@@ -20,14 +20,14 @@ import { SongSpeedSheet } from './SongSpeedSheet.tsx';
 
 export interface SongTransportProps {
   readonly playing: PlayerFrame['playing'];
-  readonly bottomInset: number;
+  readonly dockInset: number;
   readonly sheetInset: number;
   readonly upNext?: ReactNode;
 }
 
 export function SongTransport({
   playing,
-  bottomInset,
+  dockInset,
   sheetInset,
   upNext,
 }: SongTransportProps) {
@@ -51,7 +51,7 @@ export function SongTransport({
   const speedText = speedPercentText(speed);
   return (
     <>
-      <PlayerDock bottomInset={bottomInset}>
+      <PlayerDock bottomInset={dockInset}>
         {upNext}
         <PlayerTransport
           playing={playing}

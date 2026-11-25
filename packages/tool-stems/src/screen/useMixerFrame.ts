@@ -34,12 +34,16 @@ export interface MixerFrameValues {
   readonly hold: (fraction: number) => void;
 }
 
+export interface MixerFrameOptions {
+  readonly countEndFrame?: number | null;
+  readonly heldFrame?: number | null;
+}
+
 export function useMixerFrame(
   engineRate: number,
   durationFrames: number,
   loopEndFrames: number | null,
-  countEndFrame: number | null = null,
-  heldFrame: number | null = null,
+  { countEndFrame = null, heldFrame = null }: MixerFrameOptions = {},
 ): MixerFrameValues {
   const progress = useSharedValue(0);
   const playing = useSharedValue(0);
@@ -76,28 +80,29 @@ export function useMixerFrame(
     countEnd.value = countEndFrame ?? NO_COUNT;
   }, [countEndFrame, countEnd]);
 
+  const showFrame = useCallback(
+    (shown: number, frameRate: number) => {
+      'worklet';
+      const fraction = duration.value > 0 ? shown / duration.value : 0;
+      if (progress.value !== fraction) progress.value = fraction;
+      const seconds = framesToSeconds(shown, frameRate);
+      if (songSec.value !== seconds) songSec.value = seconds;
+      const now = Math.floor(seconds);
+      if (now === second.value) return;
+      second.value = now;
+      elapsed.value = formatClock(shown, frameRate);
+    },
+    [duration, progress, songSec, second, elapsed],
+  );
+
   useEffect(() => {
     viewed.value = heldFrame ?? NOT_HELD;
     if (heldFrame === null) return;
-    const seconds = framesToSeconds(heldFrame, engineRate);
+    held.value = NOT_HELD;
     playing.value = 0;
-    lastShown.value = heldFrame;
-    progress.value = durationFrames > 0 ? heldFrame / durationFrames : 0;
-    songSec.value = seconds;
-    second.value = Math.floor(seconds);
-    elapsed.value = formatClock(heldFrame, engineRate);
-  }, [
-    heldFrame,
-    engineRate,
-    durationFrames,
-    viewed,
-    playing,
-    lastShown,
-    progress,
-    songSec,
-    second,
-    elapsed,
-  ]);
+    second.value = NO_SECOND;
+    showFrame(heldFrame, engineRate);
+  }, [heldFrame, engineRate, viewed, held, playing, second, showFrame]);
 
   const hold = useCallback(
     (fraction: number) => {
@@ -144,14 +149,7 @@ export function useMixerFrame(
       );
     }
     lastShown.value = shown;
-    const fraction = duration.value > 0 ? shown / duration.value : 0;
-    if (progress.value !== fraction) progress.value = fraction;
-    const seconds = framesToSeconds(shown, rate.value);
-    if (songSec.value !== seconds) songSec.value = seconds;
-    const now = Math.floor(seconds);
-    if (now === second.value) return;
-    second.value = now;
-    elapsed.value = formatClock(shown, rate.value);
+    showFrame(shown, rate.value);
   });
 
   return { progress, playing, elapsed, second, songSec, hold };

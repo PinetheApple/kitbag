@@ -17,6 +17,7 @@ const screens = vi.hoisted(() => ({
     readonly focused?: boolean;
     readonly view?: boolean;
     readonly onOpenStemSet?: (stemSetId: number) => void;
+    readonly onOpenSong?: (songId: number) => void;
     readonly renderUpNext?: (songSec: unknown) => unknown;
     readonly onOpenQueue?: () => void;
   }[],
@@ -140,6 +141,19 @@ describe('the stem player following the next song', () => {
   });
 });
 
+describe('a viewed player following the song that plays on', () => {
+  it.each([
+    ['stems', () => screens.props.at(-1)?.onOpenStemSet?.(9)],
+    ['song', () => screens.props.at(-1)?.onOpenSong?.(9)],
+  ] as const)('drops the view request from the %s route', (name, follow) => {
+    nav.params = { id: '4', [VIEW_SONG]: '1' };
+    renderToStaticMarkup(createElement(ROUTES[name]));
+    follow();
+    const [params] = nav.ownSetParams.mock.lastCall as [object];
+    expect(params).toStrictEqual({ id: '9', [VIEW_SONG]: undefined });
+  });
+});
+
 describe('opening a player', () => {
   it('calls navigate for a stem song', () => {
     routes().openStemSet(4);
@@ -155,8 +169,14 @@ describe('opening a player', () => {
     routes().openSong(4, ROW_TAP.asIs);
     expect(nav.navigate).toHaveBeenLastCalledWith('/library/4');
     routes().openSong(4, ROW_TAP.view);
-    expect(nav.navigate).toHaveBeenLastCalledWith(`/library/4?${VIEW_SONG}=1`);
+    expect(nav.navigate).toHaveBeenLastCalledWith({
+      pathname: '/library/[id]',
+      params: { id: '4', [VIEW_SONG]: '1' },
+    });
     routes().openStemSet(4, ROW_TAP.view);
-    expect(nav.navigate).toHaveBeenLastCalledWith(`/stems/4?${VIEW_SONG}=1`);
+    expect(nav.navigate).toHaveBeenLastCalledWith({
+      pathname: '/stems/[id]',
+      params: { id: '4', [VIEW_SONG]: '1' },
+    });
   });
 });

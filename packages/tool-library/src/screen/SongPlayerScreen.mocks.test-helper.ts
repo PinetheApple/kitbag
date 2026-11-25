@@ -111,7 +111,27 @@ export async function coreDesignMock(original: <T>() => Promise<T>) {
   const actual = await original<{
     PLAYER_SCROLL_ID: string;
     usePlayerScroll: () => Record<string, unknown>;
+    QUEUE_TEXT: { playNext: string };
+    useQueueKeys: (
+      presses: unknown,
+      queued: boolean,
+    ) => { playNext: () => void; addToQueue: () => void; addLabel: string };
   }>();
+  const QueueMenuRows = (props: Props) => {
+    const keys = actual.useQueueKeys(props.presses, props.queued === true);
+    return [
+      createElement('MenuRow', {
+        key: 'next',
+        label: actual.QUEUE_TEXT.playNext,
+        onPress: keys.playNext,
+      }),
+      createElement('MenuRow', {
+        key: 'add',
+        label: keys.addLabel,
+        onPress: keys.addToQueue,
+      }),
+    ];
+  };
   const PlayerScroll = (props: Props) =>
     createElement(
       'ScrollView',
@@ -143,6 +163,7 @@ export async function coreDesignMock(original: <T>() => Promise<T>) {
       createElement('SheetHint', null, props.children),
     Badge: (props: Props) => createElement('Badge', { label: props.label }),
     MenuRow: (props: Props) => createElement('MenuRow', props),
+    QueueMenuRows,
     MeterRow: (props: Props) => createElement('MeterRow', props),
     MeterSheet: (props: Props) => createElement('MeterSheet', props),
     TempoModeRow: (props: Props) => createElement('TempoModeRow', props),

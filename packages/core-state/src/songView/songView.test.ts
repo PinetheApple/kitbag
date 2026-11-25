@@ -1,22 +1,17 @@
-import type { SongRecord } from '@kitbag/core-db';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createSongPlayerStore } from '../songPlayer/store.ts';
-import {
-  BARS,
-  fakeSongRuntime,
-  SEEK_MS,
-  SONG_ID,
-  songRecord,
-} from '../songPlayer/store.test-helper.ts';
+import { BARS, SONG_ID, songRecord } from '../songPlayer/store.test-helper.ts';
 import { ADVANCE_OUTCOME } from '../stemPlayer/songEnd.ts';
 import { at } from '../stemPlayer/store.test-helper.ts';
-import { createMixerClaim } from '../stemPlayer/mixerClaim.ts';
-import { createSongViewStore } from './songView.ts';
+import {
+  OTHER,
+  playing,
+  twoSongs,
+  type Songs,
+  type View,
+} from './songView.test-helper.ts';
 import { engineCalls, startedSetlist } from './view.test-helper.ts';
-import type { ViewLibrary } from './viewedPlay.ts';
 
-const OTHER = 9;
 const SLOWED = 0.9;
 const LOOP_START = 1;
 const LOOP_END = 2;
@@ -24,48 +19,6 @@ const HELD_START = 1.5;
 const ONE_BAR = 1;
 const SOUND_A = 1;
 const SOUND_B = 2;
-
-function twoSongs() {
-  const fake = fakeSongRuntime();
-  const other = songRecord({ id: OTHER, title: 'Other', speed: 1 });
-  const readSong = vi.fn((id: number) =>
-    Promise.resolve<SongRecord | undefined>(
-      id === OTHER ? other : songRecord(),
-    ),
-  );
-  const runtime = {
-    ...fake.runtime,
-    records: { ...fake.records, readSong },
-  };
-  fake.commands.mixerStop.mockImplementation(() => {
-    fake.engine.playing = false;
-  });
-  return { ...fake, runtime, readSong };
-}
-
-type Songs = ReturnType<typeof twoSongs>;
-type View = ReturnType<typeof createSongViewStore>;
-
-async function playing(songs: Songs, library: ViewLibrary) {
-  const player = createSongPlayerStore(() => songs.runtime, {
-    scrubSeekDelayMs: SEEK_MS,
-    metronome: songs.metronome,
-    mixerClaim: createMixerClaim(),
-  });
-  const session = player.getState().open(SONG_ID, BARS);
-  await session.loaded;
-  player.getState().togglePlay();
-  songs.engine.playing = true;
-  session.hold.release();
-  const view = createSongViewStore({
-    runtimeOf: () => songs.runtime,
-    player: () => player.getState(),
-    library: () => library,
-    metronome: songs.metronome,
-  });
-  vi.clearAllMocks();
-  return { player, view };
-}
 
 describe('viewing a song while another plays', () => {
   let songs: Songs;
@@ -156,6 +109,15 @@ describe('viewing a song while another plays', () => {
     expect(songs.commands.mixerSeek).toHaveBeenLastCalledWith(at(HELD_START));
     expect(songs.commands.songCountIn).not.toHaveBeenCalled();
     expect(songs.commands.mixerPlay).toHaveBeenCalled();
+  });
+
+  it('moves the held start on the scrub release, not while it drags', async () => {
+    const { view } = await playing(songs, startedSetlist());
+    await view.getState().view(OTHER, BARS);
+    view.getState().scrub(at(LOOP_END));
+    expect(view.getState().startSec).toBe(0);
+    view.getState().seek(at(LOOP_END));
+    expect(view.getState().startSec).toBe(LOOP_END);
   });
 
   it('keeps the loop when a held seek leaves it', async () => {

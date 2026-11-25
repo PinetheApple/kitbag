@@ -1,10 +1,10 @@
 import {
   BeatWaveform,
+  BridgedProvider,
   Card,
   createThemedStyles,
   PlayerScroll,
   ScrubRow,
-  SheetBridge,
   size,
   songPlayer,
   space,
@@ -152,7 +152,7 @@ function Body({
   const frames = useSongPlayer((s) => s.durationFrames);
   const loopEnd = useSongPlayer(loopEndFrames);
   const held = useSongHeldFrame(viewing);
-  const playhead = usePlayhead(rate, frames, loopEnd, null, held);
+  const playhead = usePlayhead(rate, frames, loopEnd, { heldFrame: held });
   const scrub = useLoopScrub(useSongPlayer);
   const handles = useLoopHandles();
   if (status !== 'ready')
@@ -180,7 +180,7 @@ function Body({
         </View>
         <SongTransport
           playing={playhead.playing}
-          bottomInset={dockInset}
+          dockInset={dockInset}
           sheetInset={bottom}
           upNext={viewing ? null : renderUpNext?.(playhead.songSec)}
         />
@@ -278,14 +278,14 @@ function SongPlayerContent({
     () => open(songId, songPlayer.waveBars).hold,
     [open, songId],
   );
-  const live = focused && !viewing;
-  useFocusedMixerHold(live, acquire);
+  const following = focused && !viewing;
+  useFocusedMixerHold(following, acquire);
   const follow = useMemo(
     () => ({ songId, onOpenStemSet, onOpenSong }),
     [songId, onOpenStemSet, onOpenSong],
   );
-  const { leave, markLeft } = useLeaveOnStop(live, onBack, songId);
-  useFollowQueueArrivals(live, follow, markLeft);
+  const { leave, markLeft } = useLeaveOnStop(following, onBack, songId);
+  useFollowQueueArrivals(following, follow, markLeft);
   const notice = useNotice();
   const [menuOpen, setMenuOpen] = useState(false);
   const openMenu = useCallback(() => {
@@ -366,19 +366,9 @@ export function SongPlayerScreen({
   ...props
 }: SongPlayerScreenProps) {
   const source = useSongSource(props.songId, view, songPlayer.waveBars);
-  const wrap = useCallback(
-    (node: ReactNode) => (
-      <SongSourceContext.Provider value={source}>
-        {node}
-      </SongSourceContext.Provider>
-    ),
-    [source],
-  );
   return (
-    <SongSourceContext.Provider value={source}>
-      <SheetBridge wrap={wrap}>
-        <SongPlayerContent {...props} viewing={source.viewing} />
-      </SheetBridge>
-    </SongSourceContext.Provider>
+    <BridgedProvider context={SongSourceContext} value={source}>
+      <SongPlayerContent {...props} viewing={source.viewing} />
+    </BridgedProvider>
   );
 }

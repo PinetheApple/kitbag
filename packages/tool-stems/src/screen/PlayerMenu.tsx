@@ -6,12 +6,12 @@ import {
   MenuRow,
   MeterRow,
   QUEUE_TEXT,
+  QueueMenuRows,
   Sheet,
   size,
   stemPlayer,
   textRoles,
   textStyle,
-  useQueueKeys,
   useTextScaled,
   type IconName,
   type QueuePresses,
@@ -206,19 +206,9 @@ function QueueRows({ queue, onAddToSetlist }: QueueRowsProps) {
   const queued = useIsQueued(
     setId === null ? null : { kind: 'stems', id: setId },
   );
-  const keys = useQueueKeys(queue, queued);
   return (
     <View style={styles.divided}>
-      <MenuRow
-        icon="playNext"
-        label={QUEUE_TEXT.playNext}
-        onPress={keys.playNext}
-      />
-      <MenuRow
-        icon="addToQueue"
-        label={keys.addLabel}
-        onPress={keys.addToQueue}
-      />
+      <QueueMenuRows presses={queue} queued={queued} />
       <MenuRow
         icon="addToSetlist"
         label={QUEUE_TEXT.addToSetlist}

@@ -36,5 +36,12 @@ export function StemPlayerScreen(props: StemPlayerScreenProps) {
   );
   // The metronome song took the stage; remounting on Back reopens this song.
   if (displaced) return null;
-  return <PlayerScreen key={reopenCount} {...props} onOpenStemSet={open} />;
+  return (
+    <PlayerScreen
+      key={reopenCount}
+      {...props}
+      view={reopenCount === 0 && props.view === true}
+      onOpenStemSet={open}
+    />
+  );
 }
