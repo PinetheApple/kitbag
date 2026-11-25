@@ -45,6 +45,7 @@ import {
   repeatStore,
   type RepeatMode,
 } from './repeat.ts';
+import { repeatSong, runOut } from './repeatRunOut.ts';
 import { playOrderStore, type SkipResult, type Undo } from './store.ts';
 
 export interface SetlistPlace {
@@ -331,23 +332,21 @@ async function play(
     : { played: PLAYED.settled, by: song.kind };
 }
 
-function repeatSong(player: AdvancingPlayer) {
-  if (player.stillEnded() && !player.loopHeld()) player.replay();
-}
-
 async function advance(
   deps: AutoAdvanceDeps,
   arrive: Arrive,
   ended: PlayerKind,
   cause: AdvanceCause,
 ) {
-  if (cause === ADVANCE_CAUSE.ended && deps.repeat?.() === REPEAT.one) {
+  const mode = deps.repeat?.();
+  if (cause === ADVANCE_CAUSE.ended && mode === REPEAT.one) {
     repeatSong(deps.players[ended]);
     return;
   }
   let skipped: SkippedSong | null = null;
   let from = ended;
-  let at: Advance['kind'] = ADVANCE.end;
+  let lastAdvance: Advance['kind'] = ADVANCE.end;
+  let failedOpen = false;
   for (let left = deps.candidates(); left > 0; left--) {
     const player = deps.players[from];
     if (!player.stillEnded()) return;
@@ -356,7 +355,7 @@ async function advance(
     if (step.skipped !== null)
       skipped = { reason: SKIP.deleted, kind: step.skipped };
     const next = step.advance;
-    at = next.kind;
+    lastAdvance = next.kind;
     if (next.kind === ADVANCE.open && cause !== ADVANCE_CAUSE.ended) {
       await openMetronome(deps, player, arrive, next.entry);
       return;
@@ -368,41 +367,12 @@ async function advance(
     });
     if (tried.played === PLAYED.settled) return;
     from = tried.by;
+    failedOpen = true;
     skipped = { reason: SKIP.unopened, kind: tried.by };
   }
-  runOut(deps, arrive, cause, { from, at, skipped });
-}
-
-interface RunOut {
-  readonly from: PlayerKind;
-  readonly at: Advance['kind'];
-  readonly skipped: SkippedSong | null;
-}
-
-const repeatsAlone = (
-  deps: AutoAdvanceDeps,
-  cause: AdvanceCause,
-  { at, skipped }: RunOut,
-) =>
-  cause === ADVANCE_CAUSE.ended &&
-  deps.repeat?.() === REPEAT.all &&
-  at === ADVANCE.end &&
-  skipped?.reason !== SKIP.unopened;
-
-function runOut(
-  deps: AutoAdvanceDeps,
-  arrive: Arrive,
-  cause: AdvanceCause,
-  out: RunOut,
-) {
-  const player = deps.players[out.from];
-  if (repeatsAlone(deps, cause, out)) {
-    repeatSong(player);
-    return;
-  }
-  player.stopAdvancing();
-  if (out.skipped?.reason === SKIP.deleted)
-    arrive({ kind: ARRIVAL.gaveUp, skipped: out.skipped });
+  const out = { from, lastAdvance, skipped, failedOpen };
+  const gaveUp = runOut(deps.players, mode, cause, out);
+  if (gaveUp !== null) arrive({ kind: ARRIVAL.gaveUp, skipped: gaveUp });
 }
 
 interface BackStep {

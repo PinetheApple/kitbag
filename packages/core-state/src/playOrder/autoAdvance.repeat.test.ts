@@ -1,15 +1,14 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createStore } from 'zustand/vanilla';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   ADVANCE_CAUSE,
   ADVANCE_OUTCOME,
-  type AdvanceCause,
-  type AdvanceListener,
   type AdvanceOutcome,
 } from '../stemPlayer/songEnd.ts';
-import { startAutoAdvance, type ArrivalState } from './autoAdvance.ts';
-import { NO_BACK, restingPlayer } from './autoAdvance.test-helper.ts';
+import {
+  endingHarness,
+  stopEndingHarnesses,
+} from './autoAdvance.test-helper.ts';
 import { ADVANCE } from './order.ts';
 import { REPEAT, type RepeatMode } from './repeat.ts';
 import type { SkipResult } from './store.ts';
@@ -21,13 +20,7 @@ const nextSong: SkipResult = {
   skipped: null,
 };
 
-const stops: (() => void)[] = [];
-
-afterEach(() => {
-  stops.splice(0).forEach((stop) => {
-    stop();
-  });
-});
+afterEach(stopEndingHarnesses);
 
 function harness(
   mode: RepeatMode,
@@ -35,64 +28,31 @@ function harness(
   next: SkipResult = nextSong,
   outcome: AdvanceOutcome = ADVANCE_OUTCOME.playing,
 ) {
-  let leave: AdvanceListener = () => undefined;
-  const advanceTo = vi.fn<(id: number) => Promise<AdvanceOutcome>>(() =>
-    Promise.resolve(outcome),
-  );
-  const notePlayed = vi.fn();
-  const stems = {
-    ...restingPlayer(),
-    onSongEnd: (listener: AdvanceListener) => {
-      leave = listener;
-      return () => undefined;
-    },
-    loopHeld: vi.fn(() => loopHeld),
-    advanceTo,
-  };
-  const peekNext = vi.fn(() => Promise.resolve(next));
-  stops.push(
-    startAutoAdvance({
-      players: { stems, song: restingPlayer() },
-      peekNext,
-      commitNext: () => Promise.resolve(() => Promise.resolve()),
-      placeOf: () => null,
-      candidates: () => 1,
-      commitOpen: () => Promise.resolve(false),
-      arrivals: createStore<ArrivalState>(() => ({ arrival: null })),
-      ...NO_BACK,
-      repeat: () => mode,
-      notePlayed,
-    }),
-  );
-  const happens = async (cause: AdvanceCause) => {
-    leave(cause);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  };
-  return { stems, peekNext, advanceTo, happens, notePlayed };
+  return endingHarness({ mode, loopHeld, steps: [next], outcomes: [outcome] });
 }
 
 describe('Repeat one at the end of a song', () => {
   it('plays the same song again from the start', async () => {
     const h = harness(REPEAT.one);
     await h.happens(ADVANCE_CAUSE.ended);
-    expect(h.stems.replay).toHaveBeenCalledTimes(1);
+    expect(h.ending.replay).toHaveBeenCalledTimes(1);
     expect(h.peekNext).not.toHaveBeenCalled();
-    expect(h.advanceTo).not.toHaveBeenCalled();
+    expect(h.opens).not.toHaveBeenCalled();
   });
 
   it('lets an A-B loop win: nothing restarts and nothing advances', async () => {
     const h = harness(REPEAT.one, true);
     await h.happens(ADVANCE_CAUSE.ended);
-    expect(h.stems.replay).not.toHaveBeenCalled();
+    expect(h.ending.replay).not.toHaveBeenCalled();
     expect(h.peekNext).not.toHaveBeenCalled();
-    expect(h.advanceTo).not.toHaveBeenCalled();
+    expect(h.opens).not.toHaveBeenCalled();
   });
 
   it('still moves to the next entry on a Next press', async () => {
     const h = harness(REPEAT.one);
     await h.happens(ADVANCE_CAUSE.nextInApp);
-    expect(h.advanceTo).toHaveBeenCalledWith(NIGHT_BUS);
-    expect(h.stems.replay).not.toHaveBeenCalled();
+    expect(h.opens).toHaveBeenCalledWith(NIGHT_BUS);
+    expect(h.ending.replay).not.toHaveBeenCalled();
   });
 });
 
@@ -102,8 +62,8 @@ describe('Repeat off and Repeat all at the end of a song', () => {
     async (mode) => {
       const h = harness(mode);
       await h.happens(ADVANCE_CAUSE.ended);
-      expect(h.advanceTo).toHaveBeenCalledWith(NIGHT_BUS);
-      expect(h.stems.replay).not.toHaveBeenCalled();
+      expect(h.opens).toHaveBeenCalledWith(NIGHT_BUS);
+      expect(h.ending.replay).not.toHaveBeenCalled();
     },
   );
 });
@@ -134,7 +94,7 @@ describe('a queued song kept for the next Repeat all round', () => {
     };
     const h = harness(REPEAT.all, false, entry);
     await h.happens(ADVANCE_CAUSE.ended);
-    expect(h.advanceTo).toHaveBeenCalledWith(NIGHT_BUS);
+    expect(h.opens).toHaveBeenCalledWith(NIGHT_BUS);
     expect(h.notePlayed).not.toHaveBeenCalled();
   });
 });

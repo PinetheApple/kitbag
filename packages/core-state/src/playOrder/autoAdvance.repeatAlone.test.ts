@@ -1,169 +1,137 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createStore } from 'zustand/vanilla';
+import { afterEach, describe, expect, it } from 'vitest';
 
+import { ADVANCE_CAUSE, ADVANCE_OUTCOME } from '../stemPlayer/songEnd.ts';
+import { ARRIVAL } from './autoAdvance.ts';
 import {
-  ADVANCE_CAUSE,
-  type AdvanceCause,
-  type AdvanceListener,
-} from '../stemPlayer/songEnd.ts';
-import { ARRIVAL, startAutoAdvance, type ArrivalState } from './autoAdvance.ts';
-import { NO_BACK, restingPlayer } from './autoAdvance.test-helper.ts';
+  end,
+  endingHarness,
+  metronomeNext,
+  stopEndingHarnesses,
+} from './autoAdvance.test-helper.ts';
+import { HUM, TIN_ROOF } from './heard.test-helper.ts';
 import { ADVANCE, type PlayerKind } from './order.ts';
-import { REPEAT, type RepeatMode } from './repeat.ts';
-import type { PresetSetlistEntry } from '../library/snapshot.ts';
+import { REPEAT } from './repeat.ts';
 import type { SkipResult } from './store.ts';
 
-const TIN_ROOF = 22;
 const ENDS_IN_A_ROW = 3;
 const KINDS: readonly PlayerKind[] = ['stems', 'song'];
 
-const nothingNext: SkipResult = {
-  advance: { kind: ADVANCE.end },
-  skipped: null,
-};
-const metronomeNext: SkipResult = {
-  advance: {
-    kind: ADVANCE.open,
-    entry: { item: { id: 3 } } as unknown as PresetSetlistEntry,
-  },
-  skipped: null,
-};
+const queuedOf = (kind: PlayerKind) => (kind === 'song' ? HUM : TIN_ROOF);
 const deletedNext = (kind: PlayerKind): SkipResult => ({
-  advance: { kind: ADVANCE.end },
+  ...end,
   skipped: kind,
 });
-const queuedNext = (kind: PlayerKind): SkipResult => ({
-  advance:
-    kind === 'song'
-      ? { kind: ADVANCE.song, songId: TIN_ROOF }
-      : { kind: ADVANCE.stems, stemSetId: TIN_ROOF, setlistItemId: null },
-  skipped: null,
-});
-
-const stops: (() => void)[] = [];
-
-afterEach(() => {
-  stops.splice(0).forEach((stop) => {
-    stop();
-  });
-});
-
-interface Setup {
-  readonly kind: PlayerKind;
-  readonly mode: RepeatMode;
-  readonly next?: SkipResult;
-  readonly candidates?: number;
-  readonly loopHeld?: boolean;
-}
-
-function harness({
-  kind,
-  mode,
-  next = nothingNext,
-  candidates = 1,
-  loopHeld = false,
-}: Setup) {
-  let leave: AdvanceListener = () => undefined;
-  const arrivals = createStore<ArrivalState>(() => ({ arrival: null }));
-  const ending = {
-    ...restingPlayer(),
-    onSongEnd: (listener: AdvanceListener) => {
-      leave = listener;
-      return () => undefined;
-    },
-    loopHeld: vi.fn(() => loopHeld),
+const queuedNext = (kind: PlayerKind): SkipResult => {
+  const { id } = queuedOf(kind);
+  return {
+    advance:
+      kind === 'song'
+        ? { kind: ADVANCE.song, songId: id }
+        : { kind: ADVANCE.stems, stemSetId: id, setlistItemId: null },
+    skipped: null,
   };
-  const players =
-    kind === 'stems'
-      ? { stems: ending, song: restingPlayer() }
-      : { stems: restingPlayer(), song: ending };
-  stops.push(
-    startAutoAdvance({
-      players,
-      peekNext: () => Promise.resolve(next),
-      commitNext: () => Promise.resolve(() => Promise.resolve()),
-      placeOf: () => null,
-      candidates: () => candidates,
-      commitOpen: () => Promise.resolve(false),
-      arrivals,
-      ...NO_BACK,
-      repeat: () => mode,
-    }),
-  );
-  const happens = async (cause: AdvanceCause) => {
-    leave(cause);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  };
-  const arrived = () => arrivals.getState().arrival?.kind ?? null;
-  return { ending, players, happens, arrived };
-}
+};
+
+afterEach(stopEndingHarnesses);
 
 describe.each(KINDS)('Repeat all with nothing up next, %s player', (kind) => {
   it('plays the song again when it ends', async () => {
-    const h = harness({ kind, mode: REPEAT.all });
+    const h = endingHarness({ kind, mode: REPEAT.all, steps: [end] });
     await h.happens(ADVANCE_CAUSE.ended);
     expect(h.ending.replay).toHaveBeenCalledTimes(1);
     expect(h.ending.stopAdvancing).not.toHaveBeenCalled();
   });
 
   it('plays it again with no queue, setlist or played songs at all', async () => {
-    const h = harness({ kind, mode: REPEAT.all, candidates: 0 });
+    const h = endingHarness({ kind, mode: REPEAT.all, candidates: 0 });
     await h.happens(ADVANCE_CAUSE.ended);
     expect(h.ending.replay).toHaveBeenCalledTimes(1);
     expect(h.ending.stopAdvancing).not.toHaveBeenCalled();
   });
 
   it('keeps playing it again at every end', async () => {
-    const h = harness({ kind, mode: REPEAT.all, candidates: 0 });
-    for (let end = 0; end < ENDS_IN_A_ROW; end++)
+    const h = endingHarness({ kind, mode: REPEAT.all, candidates: 0 });
+    for (let ends = 0; ends < ENDS_IN_A_ROW; ends++)
       await h.happens(ADVANCE_CAUSE.ended);
     expect(h.ending.replay).toHaveBeenCalledTimes(ENDS_IN_A_ROW);
   });
 
   it('lets an A-B loop win', async () => {
-    const h = harness({ kind, mode: REPEAT.all, loopHeld: true });
+    const h = endingHarness({ kind, mode: REPEAT.all, loopHeld: true });
     await h.happens(ADVANCE_CAUSE.ended);
     expect(h.ending.replay).not.toHaveBeenCalled();
   });
 
   it('still plays a queued song next rather than this one', async () => {
-    const h = harness({ kind, mode: REPEAT.all, next: queuedNext(kind) });
+    const steps = [queuedNext(kind)];
+    const h = endingHarness({ kind, mode: REPEAT.all, steps });
     await h.happens(ADVANCE_CAUSE.ended);
+    expect(h.opens).toHaveBeenCalledExactlyOnceWith(queuedOf(kind).id);
     expect(h.ending.replay).not.toHaveBeenCalled();
     expect(h.ending.stopAdvancing).not.toHaveBeenCalled();
   });
 
+  it('plays it again when every queued song was deleted', async () => {
+    const steps = [deletedNext(kind)];
+    const h = endingHarness({ kind, mode: REPEAT.all, steps });
+    await h.happens(ADVANCE_CAUSE.ended);
+    expect(h.ending.replay).toHaveBeenCalledTimes(1);
+    expect(h.ending.stopAdvancing).not.toHaveBeenCalled();
+    expect(h.seen).toEqual([]);
+  });
+
+  it('stops after a queued song fails to open, then a deletion', async () => {
+    const steps = [queuedNext(kind), deletedNext(kind)];
+    const h = endingHarness({
+      kind,
+      mode: REPEAT.all,
+      steps,
+      outcomes: [ADVANCE_OUTCOME.unplayable],
+    });
+    await h.happens(ADVANCE_CAUSE.ended);
+    expect(h.ending.replay).not.toHaveBeenCalled();
+    expect(h.players[kind].stopAdvancing).toHaveBeenCalledTimes(1);
+    expect(h.seen.at(-1)?.kind).toBe(ARRIVAL.gaveUp);
+  });
+
+  it('stops after a queued song fails to open with nothing after it', async () => {
+    const h = endingHarness({
+      kind,
+      mode: REPEAT.all,
+      steps: [queuedNext(kind)],
+      candidates: 2,
+      outcomes: [ADVANCE_OUTCOME.unplayable],
+    });
+    await h.happens(ADVANCE_CAUSE.ended);
+    expect(h.ending.replay).not.toHaveBeenCalled();
+    expect(h.players[kind].stopAdvancing).toHaveBeenCalledTimes(1);
+  });
+
   it('stops before a metronome song up next', async () => {
-    const h = harness({ kind, mode: REPEAT.all, next: metronomeNext });
+    const steps = [metronomeNext];
+    const h = endingHarness({ kind, mode: REPEAT.all, steps });
     await h.happens(ADVANCE_CAUSE.ended);
     expect(h.ending.replay).not.toHaveBeenCalled();
     expect(h.ending.stopAdvancing).toHaveBeenCalledTimes(1);
   });
 
   it('does not restart the song on a Next press', async () => {
-    const h = harness({ kind, mode: REPEAT.all });
+    const h = endingHarness({ kind, mode: REPEAT.all, steps: [end] });
     await h.happens(ADVANCE_CAUSE.next);
     expect(h.ending.replay).not.toHaveBeenCalled();
   });
 
-  it('plays it again when every queued song was deleted', async () => {
-    const h = harness({ kind, mode: REPEAT.all, next: deletedNext(kind) });
-    await h.happens(ADVANCE_CAUSE.ended);
-    expect(h.ending.replay).toHaveBeenCalledTimes(1);
-    expect(h.ending.stopAdvancing).not.toHaveBeenCalled();
-    expect(h.arrived()).toBeNull();
-  });
-
   it('stops and says a deleted song was skipped with Repeat off', async () => {
-    const h = harness({ kind, mode: REPEAT.off, next: deletedNext(kind) });
+    const steps = [deletedNext(kind)];
+    const h = endingHarness({ kind, mode: REPEAT.off, steps });
     await h.happens(ADVANCE_CAUSE.ended);
     expect(h.ending.replay).not.toHaveBeenCalled();
     expect(h.ending.stopAdvancing).toHaveBeenCalledTimes(1);
-    expect(h.arrived()).toBe(ARRIVAL.gaveUp);
+    expect(h.seen.map((arrival) => arrival.kind)).toEqual([ARRIVAL.gaveUp]);
   });
 
   it('stops with Repeat off', async () => {
-    const h = harness({ kind, mode: REPEAT.off });
+    const h = endingHarness({ kind, mode: REPEAT.off, steps: [end] });
     await h.happens(ADVANCE_CAUSE.ended);
     expect(h.ending.replay).not.toHaveBeenCalled();
     expect(h.ending.stopAdvancing).toHaveBeenCalledTimes(1);

@@ -1310,10 +1310,10 @@ phone. That page defines the format; this spec does not copy it.
   played only once it plays. Repeat all also wraps the Metronome's Next (§5.4).
   A setlist whose last entry (ignoring entries skipped this time) is a
   metronome song does not wrap: playback stops before it. With nothing to play
-  next and no song to bring back, queued songs deleted since counting as
-  nothing, Repeat all plays the current song again, as a queue of one (#615). The Repeat all hint
-  shows in the queue sheet once per install (owner, 2026-11-20). An active A-B
-  loop wins over Repeat one, which acts only once the loop is cleared.
+  next and no song to bring back, Repeat all plays the current song again, as a
+  queue of one, even when the queued songs were deleted (#615). The Repeat all
+  hint shows in the queue sheet once per install (owner, 2026-11-20). An active
+  A-B loop wins over Repeat one, which acts only once the loop is cleared.
 - **Previous and Next** sit beside the Up next row, on the stem player and the
   single-song player (§6.3). Past 3 s Previous restarts the song; otherwise it
   goes to the song played before it in this session, or the setlist entry
