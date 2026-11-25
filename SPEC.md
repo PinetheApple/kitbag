@@ -1029,13 +1029,16 @@ working. Changes:
   here too, with no separate mockup. The app bar carries the same Queue icon as
   the stem player, before ⋮ (#613).
 - Tapping the Songs or Stem songs row of the open song opens its player as it
-  is, still playing if it was. Any other row tap opens that song's player in a
-  **view state** (owner, 2026-11-26; #616;
+  is, still playing if it was. While another song holds the session (the
+  mini-player shows it, playing or paused), any other row tap opens that
+  song's player in a **view state** (owner, 2026-11-26; #616;
   `docs/research/mockups/616-view-states.html`): nothing loads into the engine
   and the playing song plays on, its mini-player docked under the transport.
   Speed, key, mix and click settings save per song at once; seek and A-B set a
   held start and loop. Up next and Stop are hidden; Export mix, master level,
-  meter, tempo, retime and the click toggle wait for Play. Play stops the other
+  meter, tempo, retime and the click toggle wait for Play, unless the row has
+  its own reason (no beat grid), which shows instead. With no song holding the
+  session a row tap opens the song live, as before. Play stops the other
   song and starts this one there, and the screen becomes its player; its spoken
   label names both songs. The song player's ⋮ menu carries Play next and Add to
   queue.
