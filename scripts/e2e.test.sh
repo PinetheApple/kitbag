@@ -4,6 +4,8 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 readonly SCRIPT=scripts/e2e.sh
+LONG_STEMS_SECONDS=$(sed -n 's/^readonly FIXTURE_STEMS_LONG_NO_GRID_SECONDS=//p' "$SCRIPT")
+readonly LONG_STEMS_SECONDS
 SCRATCH=$(mktemp -d) || exit 1
 readonly SCRATCH
 trap 'rm -rf "$SCRATCH"' EXIT
@@ -23,6 +25,10 @@ export ADB_LOG="$SCRATCH/adb.log"
 export MAESTRO_LOG="$SCRATCH/maestro.log"
 export INDEX_POLLS="$SCRATCH/index-polls"
 export SLEEP_LOG="$SCRATCH/sleep.log"
+export PYTHON_LOG="$SCRATCH/python.log"
+REAL_PYTHON=$(python3 -I -c 'import sys; print(sys.executable)') || exit 1
+export REAL_PYTHON
+export FAKE_FIXTURE_SECONDS=1
 mkdir -p "$FAKE_BIN"
 
 cat > "$FAKE_BIN/adb" <<'STUB'
@@ -101,6 +107,13 @@ CRASH
     exit 1 ;;
 esac
 STUB
+cat > "$FAKE_BIN/python3" <<'STUB'
+#!/usr/bin/env bash
+echo "$*" >> "$PYTHON_LOG"
+args=("$@")
+[[ ${args[1]:-} == e2e/make_*.py ]] && args[3]=$FAKE_FIXTURE_SECONDS
+exec "$REAL_PYTHON" "${args[@]}"
+STUB
 cat > "$FAKE_BIN/sleep" <<'STUB'
 #!/usr/bin/env bash
 echo "$1" >> "$SLEEP_LOG"
@@ -117,7 +130,7 @@ expect() {
   local name=$1 want_exit=$2 want_text=$3
   shift 3
   local out_dir="$SCRATCH/out-$((PASS + FAIL))" script="$PWD/$SCRIPT" output status
-  rm -f "$ADB_LOG" "$MAESTRO_LOG" "$INDEX_POLLS" "$SLEEP_LOG"
+  rm -f "$ADB_LOG" "$MAESTRO_LOG" "$INDEX_POLLS" "$SLEEP_LOG" "$PYTHON_LOG"
   output=$(cd "${RUN_FROM:-.}" && PATH="$FAKE_BIN:$PATH" MAESTRO="${MAESTRO_UNDER_TEST:-$FAKE_MAESTRO}" \
     XDG_CACHE_HOME="$out_dir" "$script" "$@" 2>&1)
   status=$?
@@ -151,6 +164,7 @@ flow_count() { find e2e/flows -name '*.yaml' | wc -l; }
 maestro_flows() { grep -c '^e2e/flows/.*\.yaml$' "$MAESTRO_LOG"; }
 adb_called() { grep -q -- "$1" "$ADB_LOG"; }
 maestro_got() { grep -qx -- "$1" "$MAESTRO_LOG"; }
+python_got() { grep -qx -- "$1" "$PYTHON_LOG"; }
 maestro_ran() { [[ -e $MAESTRO_LOG ]]; }
 maestro_skipped() { [[ ! -e $MAESTRO_LOG ]]; }
 sleeps_were() { [[ $(cat "$SLEEP_LOG" 2>/dev/null | wc -l) == "$1" ]]; }
@@ -186,13 +200,13 @@ grid, bare = (set(zipfile.ZipFile(p).namelist()) for p in sys.argv[1:])
 sys.exit(grid - bare != {"beats.json"} or bare - grid != set())
 ' "$(find "$LAST_OUT_DIR" -name e2estems.zip)" "$(find "$LAST_OUT_DIR" -name e2enogrid.zip)"
 check "  ... and a long gridless one" adb_called "push .*e2elongnogrid.zip /sdcard/Download/"
-check "  ... as long as the fixture song, with no beat grid" python3 -I -c '
-import json, sys, wave, zipfile
-manifest = json.loads(zipfile.ZipFile(sys.argv[1]).read("manifest.json"))
-with wave.open(sys.argv[2]) as song:
-    song_seconds = song.getnframes() / song.getframerate()
-sys.exit(manifest["duration_sec"] != song_seconds or "beats.json" in zipfile.ZipFile(sys.argv[1]).namelist())
-' "$(find "$LAST_OUT_DIR" -name e2elongnogrid.zip)" "$(find "$LAST_OUT_DIR" -name e2eclick.wav)"
+check "  ... built to e2e.sh's long length" python_got \
+  "-I e2e/make_stem_bundle.py .*/e2elongnogrid.zip $LONG_STEMS_SECONDS --no-grid"
+check "  ... with no beat grid" python3 -I -c '
+import sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as bundle:
+    sys.exit("beats.json" in bundle.namelist())
+' "$(find "$LAST_OUT_DIR" -name e2elongnogrid.zip)"
 check "  ... runs every flow, no subflows" test "$(maestro_flows)" -eq "$(flow_count)"
 check "  ... on the emulator" maestro_got "emulator-5554"
 check "  ... with a JUnit report" maestro_got "junit"
