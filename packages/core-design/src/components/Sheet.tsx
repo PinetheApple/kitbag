@@ -29,20 +29,19 @@ import { scheduleOnRN } from 'react-native-worklets';
 import type { IconName } from '../icons.ts';
 import {
   contentColumnStyle,
-  opacity,
   screenBar,
   size,
   space,
   textRoles,
 } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
-import { withAlpha } from '../theme.ts';
+import { sheetScrimColor } from '../theme.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import {
   SHEET_DRAG_ACTIVATION_DP,
   shouldDismissSheet,
 } from '../sheetDismiss.ts';
-import { palette, radii } from '../tokens.ts';
+import { radii } from '../tokens.ts';
 import { useReduceMotionMode } from '../useReduceMotion.ts';
 import { useTextScaled } from '../useTextScaled.ts';
 import { focusReaderOn } from '../readerFocus';
@@ -64,7 +63,6 @@ export {
 } from './SheetHint.tsx';
 
 const INDICATOR_INSETS = { top: SHEET_TOUCH_ROOM, bottom: SHEET_TOUCH_ROOM };
-const SCRIM = withAlpha(palette.bg.dark, opacity.sheetScrim);
 const READER_CLOSE_ACTION = 'dismiss';
 const BACKDROP_READER_HIDING = readerHiding(true);
 
@@ -152,7 +150,7 @@ const useStyles = createThemedStyles((theme) => ({
     padding: SHEET_TOUCH_ROOM,
   },
   scrim: {
-    backgroundColor: SCRIM,
+    backgroundColor: sheetScrimColor,
   },
 }));
 

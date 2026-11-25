@@ -99,7 +99,7 @@ export interface ReaderHiding {
 export const HIDDEN_FROM_READERS: ReaderHiding = { android: true, ios: true };
 export const SHOWN_TO_READERS: ReaderHiding = { android: false, ios: false };
 
-function hostAncestors(node: ReactTestInstance): ReactTestInstance[] {
+export function hostAncestors(node: ReactTestInstance): ReactTestInstance[] {
   const hosts: ReactTestInstance[] = [];
   for (
     let step: ReactTestInstance | null = node;

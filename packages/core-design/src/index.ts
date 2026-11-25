@@ -87,6 +87,7 @@ export * from './components/NoticeSnackbar.tsx';
 export * from './components/SetlistPickerSheet.tsx';
 export * from './components/SwipeDeleteRow.tsx';
 export * from './components/SheetHost.tsx';
+export * from './components/WindowOverlay.tsx';
 export { onHardwareBack } from './components/hardwareBack';
 export { focusReaderOn, setReaderFocuser } from './readerFocus';
 export * from './readerHiding.ts';

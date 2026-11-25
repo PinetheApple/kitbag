@@ -22,6 +22,7 @@ vi.mock('@kitbag/core-design', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   Button: 'Button',
   IconGlyph: 'IconGlyph',
+  WindowOverlay: 'WindowOverlay',
   createThemedStyles: () => () => ({}),
   focusReaderOn,
   onHardwareBack: (handler: () => void) => {
@@ -33,6 +34,10 @@ vi.mock('@kitbag/core-design', async (original) => ({
 }));
 
 const { SwipeHint } = await import('./SwipeHint.tsx');
+
+const SWIPE = { swipe: 'tempo' } as unknown as Parameters<
+  typeof SwipeHint
+>[0]['gesture'];
 
 type Props = Readonly<{
   accessibilityRole?: string;
@@ -52,7 +57,7 @@ function headers(node: unknown): ReactElement<Props>[] {
 describe('SwipeHint', () => {
   it('dismisses on Back and releases Back when it goes', () => {
     const onDismiss = vi.fn();
-    SwipeHint({ zoneTop: 0, zoneHeight: 0, onDismiss });
+    SwipeHint({ zoneTop: 0, zoneHeight: 0, gesture: SWIPE, onDismiss });
     const cleanups = back.effects.map((effect) => effect());
     back.handlers.forEach((handler) => {
       handler();
@@ -62,9 +67,24 @@ describe('SwipeHint', () => {
     expect(back.release).toHaveBeenCalledOnce();
   });
 
+  it('puts the tempo swipe on the dimmed overlay it draws', () => {
+    const hint = SwipeHint({
+      zoneTop: 0,
+      zoneHeight: 0,
+      gesture: SWIPE,
+      onDismiss: vi.fn(),
+    }) as ReactElement<{ gesture?: unknown }>;
+    expect(hint.props.gesture).toBe(SWIPE);
+  });
+
   it('moves screen reader focus to its title when it shows', () => {
     const [title] = headers(
-      SwipeHint({ zoneTop: 0, zoneHeight: 0, onDismiss: vi.fn() }),
+      SwipeHint({
+        zoneTop: 0,
+        zoneHeight: 0,
+        gesture: SWIPE,
+        onDismiss: vi.fn(),
+      }),
     );
     expect(title?.props.ref).toBe(focusReaderOn);
   });
