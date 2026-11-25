@@ -1,8 +1,10 @@
 import { CountSquare } from '@kitbag/core-design';
+import { KB_STOPPED_BEAT } from '@kitbag/core-native';
 import { useCallback, useMemo } from 'react';
 import { Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
+  useDerivedValue,
   type SharedValue,
 } from 'react-native-reanimated';
 import type { LedRowLayout } from '@kitbag/core-state';
@@ -28,18 +30,21 @@ export function CountInSquares({
 }: CountInSquaresProps) {
   const styles = useBeatDotStyles();
   const lineSpacing = useMemo(() => ({ gap: lineGap }), [lineGap]);
+  const countBeat = useDerivedValue(() =>
+    countingIn.value === 0 ? KB_STOPPED_BEAT : currentBeat.value,
+  );
   const shown = useAnimatedStyle(() => ({
     opacity: countingIn.value === 0 ? 0 : 1,
   }));
   const renderSquare = useCallback(
     (beat: number) => (
       <>
-        <CountSquare beat={beat} side={dotSize} currentBeat={currentBeat} />
+        <CountSquare beat={beat} side={dotSize} currentBeat={countBeat} />
         <View style={styles.pulseRow} />
         <Text style={styles.marker}>{TEXT_PLACEHOLDER}</Text>
       </>
     ),
-    [dotSize, currentBeat, styles],
+    [dotSize, countBeat, styles],
   );
   return (
     <Animated.View

@@ -1,13 +1,17 @@
 import {
   createThemedStyles,
+  FillBar,
   inset,
   radius,
   size,
   useReduceMotionValue,
+  useTheme,
 } from '@kitbag/core-design';
 import { useMemo } from 'react';
+import { StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
+  useDerivedValue,
   type SharedValue,
 } from 'react-native-reanimated';
 
@@ -27,29 +31,27 @@ const useStyles = createThemedStyles((theme) => ({
     marginHorizontal: inset.sweepH,
     overflow: 'hidden',
   },
-  fill: {
-    height: size.sweepTrack,
-    borderRadius: radius.sweepTrack,
-    backgroundColor: theme.color.accent,
-    width: '100%',
-    transformOrigin: 'left',
-  },
 }));
 
 export function BarSweep({ barPhase, gap }: BarSweepProps) {
   const styles = useStyles();
+  const { color } = useTheme();
   const spacing = useMemo(() => ({ marginTop: gap }), [gap]);
   const still = useReduceMotionValue();
   const trackStyle = useAnimatedStyle(() => ({
     opacity: trackOpacity(!still.value),
   }));
-  const fillStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: sweepFill(barPhase.value, still.value) }],
-  }));
+  const fill = useDerivedValue(() => sweepFill(barPhase.value, still.value));
 
   return (
     <Animated.View style={[styles.track, spacing, trackStyle]}>
-      <Animated.View style={[styles.fill, fillStyle]} />
+      <FillBar
+        testID="bar-sweep"
+        progress={fill}
+        color={color.accent}
+        radius={radius.sweepTrack}
+        style={StyleSheet.absoluteFill}
+      />
     </Animated.View>
   );
 }

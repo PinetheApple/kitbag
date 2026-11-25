@@ -1,6 +1,5 @@
 import {
   StyleSheet,
-  Text,
   View,
   type StyleProp,
   type TextStyle,
@@ -8,8 +7,8 @@ import {
 } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
-import { textRoles, type TextRoleName } from '../roles.ts';
-import { textStyle as roleStyle } from '../textStyle.ts';
+import type { TextRoleName } from '../roles.ts';
+import { GhostText } from './GhostText.tsx';
 import { LiveText, type LiveTextProps } from './LiveText.tsx';
 
 export interface LiveSlotProps {
@@ -22,7 +21,6 @@ export interface LiveSlotProps {
 }
 
 const styles = StyleSheet.create({
-  ghost: { opacity: 0 },
   fill: { width: '100%' },
 });
 
@@ -38,18 +36,7 @@ export function LiveSlot({
 }: LiveSlotProps) {
   return (
     <View style={style}>
-      <Text
-        style={[
-          roleStyle({ ...textRoles[role], tabular: true }),
-          textStyle,
-          styles.ghost,
-        ]}
-        numberOfLines={1}
-        importantForAccessibility="no"
-        accessibilityElementsHidden
-      >
-        {widest}
-      </Text>
+      <GhostText role={role} text={widest} textStyle={textStyle} />
       <View style={StyleSheet.absoluteFill}>
         <LiveText
           text={text}

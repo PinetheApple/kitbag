@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
-import { View } from 'react-native';
+import { View, type ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { NO_PULSE, pulseInBeat, pulseMarkFit } from '../logic/pulseMarks.ts';
+import type { DotPalette } from '../logic/beatDot.ts';
+import { pulseInBeat, pulseMarkFit } from '../logic/pulseMarks.ts';
 import { PULSE_MARKS, useBeatDotStyles } from './beatDotStyles.ts';
 
 interface PulseMarksProps {
@@ -15,6 +16,32 @@ interface PulseMarksProps {
   readonly silentBeat: boolean;
   readonly barPulse: SharedValue<number>;
   readonly barMuted: SharedValue<number>;
+  readonly palette: DotPalette;
+}
+
+interface PulseMarkProps extends Omit<PulseMarksProps, 'dotSize'> {
+  readonly index: number;
+  readonly shape: ViewStyle;
+}
+
+function PulseMark({
+  index,
+  beat,
+  pulsesPerBeat,
+  silentBeat,
+  barPulse,
+  barMuted,
+  palette,
+  shape,
+}: PulseMarkProps) {
+  const lit = useAnimatedStyle(() => {
+    const sounding =
+      !silentBeat &&
+      barMuted.value === 0 &&
+      pulseInBeat(barPulse.value, beat, pulsesPerBeat) === index;
+    return { backgroundColor: sounding ? palette.accent : palette.fill };
+  });
+  return <Animated.View style={[shape, lit]} />;
 }
 
 export function PulseMarks({
@@ -24,36 +51,35 @@ export function PulseMarks({
   silentBeat,
   barPulse,
   barMuted,
+  palette,
 }: PulseMarksProps) {
   const styles = useBeatDotStyles();
   const fit = useMemo(
     () => pulseMarkFit(pulsesPerBeat, dotSize, PULSE_MARKS),
     [pulsesPerBeat, dotSize],
   );
-  const mark = useMemo(
+  const shape = useMemo(
     () => ({ width: fit.mark, height: fit.mark, borderRadius: fit.radius }),
     [fit],
   );
   const spacing = useMemo(() => ({ gap: fit.gap }), [fit.gap]);
-  const pitch = fit.mark + fit.gap;
-  const lit = useAnimatedStyle(() => {
-    const local = pulseInBeat(barPulse.value, beat, pulsesPerBeat);
-    const sounding = local !== NO_PULSE && barMuted.value === 0;
-    return {
-      opacity: sounding ? 1 : 0,
-      transform: [{ translateX: sounding ? local * pitch : 0 }],
-    };
-  });
   const marks = Array.from({ length: pulsesPerBeat }, (_u, i) => i);
   return (
     <View style={styles.pulseRow}>
       <View style={[styles.pulseMarks, spacing]}>
         {marks.map((index) => (
-          <View key={index} style={[styles.pulseMark, mark]} />
+          <PulseMark
+            key={index}
+            index={index}
+            beat={beat}
+            pulsesPerBeat={pulsesPerBeat}
+            silentBeat={silentBeat}
+            barPulse={barPulse}
+            barMuted={barMuted}
+            palette={palette}
+            shape={shape}
+          />
         ))}
-        {silentBeat ? null : (
-          <Animated.View style={[styles.pulseLit, mark, lit]} />
-        )}
       </View>
     </View>
   );

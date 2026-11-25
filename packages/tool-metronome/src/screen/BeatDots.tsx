@@ -79,7 +79,7 @@ function BeatDot({
     ),
   );
   const ring = useAnimatedStyle(() => ({
-    opacity: currentBeat.value === beat ? 1 : 0,
+    borderColor: currentBeat.value === beat ? palette.accent : palette.clear,
   }));
   const handlePress = useCallback(() => {
     onPress(beat);
@@ -200,6 +200,7 @@ export function BeatDots({
             silentBeat={state === 'muted'}
             barPulse={barPulse}
             barMuted={barMuted}
+            palette={palette}
           />
           <Text
             style={styles.marker}

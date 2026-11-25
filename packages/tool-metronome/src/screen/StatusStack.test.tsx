@@ -18,6 +18,7 @@ vi.mock('react-native', async () => {
   return {
     View: box,
     Text: box,
+    StyleSheet: { absoluteFill: {} },
     useWindowDimensions: () => ({ fontScale: display.fontScale }),
   };
 });
@@ -33,6 +34,7 @@ vi.mock('react-native-reanimated', async () => {
 
 vi.mock('@kitbag/core-design', async (original) => ({
   ...(await original<Record<string, unknown>>()),
+  FillBar: () => null,
   Icon: () => null,
   IconGlyph: () => null,
   LiveSlot: () => null,

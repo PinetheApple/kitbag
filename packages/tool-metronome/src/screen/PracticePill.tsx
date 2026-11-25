@@ -1,5 +1,6 @@
 import {
   createThemedStyles,
+  DrawnFigures,
   hitSlopForPadded,
   InlineIcon,
   inset,
@@ -19,6 +20,7 @@ import {
 } from '../logic/practiceTimer.ts';
 
 const TICK_MS = 1000;
+const END_LABEL = 'Practice timer, end session';
 
 const PILL_HIT_SLOP = hitSlopForPadded(
   textRoles.chip.size,
@@ -49,10 +51,6 @@ const useStyles = createThemedStyles((theme) => ({
   icon: {
     ...textStyle(textRoles.chip),
     color: theme.color.text2,
-  },
-  elapsed: {
-    ...textStyle(textRoles.chipValue),
-    color: theme.color.text,
   },
   endRow: {
     paddingLeft: space.controlGap,
@@ -98,7 +96,7 @@ export function PracticePill({ elapsedMs, onEnd }: PracticePillProps) {
         accessibilityRole="button"
         {...(endable
           ? {
-              accessibilityLabel: `Practice ${formatPracticeElapsed(elapsedMs)}, end session`,
+              accessibilityLabel: END_LABEL,
               accessibilityHint:
                 'Ends the practice session and shows its summary',
             }
@@ -110,7 +108,10 @@ export function PracticePill({ elapsedMs, onEnd }: PracticePillProps) {
         onPress={onEnd}
       >
         <InlineIcon name="practice" style={styles.icon} />
-        <Text style={styles.elapsed}>{formatPracticeElapsed(elapsedMs)}</Text>
+        <DrawnFigures
+          text={formatPracticeElapsed(elapsedMs)}
+          role="chipValue"
+        />
         {endable ? (
           <View style={styles.endRow}>
             <Text style={styles.end}>End</Text>

@@ -21,7 +21,7 @@ import Svg, {
 } from 'react-native-svg';
 
 import { clampUnit } from '../clampUnit.ts';
-import { readerHiding } from '../readerHiding.ts';
+import { READER_HIDDEN } from '../readerHiding.ts';
 
 export interface FillWarning {
   readonly color: string;
@@ -56,7 +56,6 @@ const AnimatedRect = Animated.createAnimatedComponent(Rect);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient);
 
-const READER_HIDDEN = { ...readerHiding(true), accessible: false };
 const UNMEASURED = { width: 0, height: 0 };
 const FULL = '100%';
 const PLAYHEAD_EDGE = 0.01;

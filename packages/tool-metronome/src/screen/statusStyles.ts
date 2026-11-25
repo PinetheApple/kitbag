@@ -109,6 +109,5 @@ export const useStatusStyles = createThemedStyles((theme) => ({
   progress: {
     height: metronome.statusProgress,
     backgroundColor: theme.color.accent,
-    transformOrigin: 'left',
   },
 }));

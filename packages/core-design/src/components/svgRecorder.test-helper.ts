@@ -25,6 +25,7 @@ export const svg = {
   Path: recorded('Path'),
   Rect: recorded('Rect'),
   Circle: recorded('Circle'),
+  Text: recorded('SvgText'),
 };
 
 export function drawnAs(name: string): Props[] {

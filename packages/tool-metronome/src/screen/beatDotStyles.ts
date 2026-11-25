@@ -66,7 +66,6 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
       left: -RING_REACH,
       borderRadius: radius.circle,
       borderWidth: metronome.dotRing,
-      borderColor: theme.color.accent,
     },
     marker: {
       ...textStyle(textRoles.beatMarker),
@@ -80,15 +79,6 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
     },
     pulseMarks: {
       flexDirection: 'row',
-    },
-    pulseMark: {
-      backgroundColor: theme.color.surface3,
-    },
-    pulseLit: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      backgroundColor: theme.color.accent,
     },
     overlay: {
       position: 'absolute',
