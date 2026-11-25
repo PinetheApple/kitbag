@@ -123,6 +123,14 @@ describe('when the round wraps under Repeat all', () => {
 });
 
 describe('up next across the wrap', () => {
+  it('is song 1, not a replay, when every entry left is skipped this time', () => {
+    const restSkipped = { ...allStems, skipped: [3] };
+    expect(upNext(orderAt(restSkipped, 2, ALL))).toEqual({
+      source: UP_NEXT_SOURCE.setlist,
+      entry: allStems.entries[0],
+    });
+  });
+
   it('is the first song played from the queue, then song 1', () => {
     const order = orderAt(
       allStems,

@@ -15,7 +15,13 @@ import {
   type ArrivalState,
   type AutoAdvanceDeps,
 } from './autoAdvance.ts';
-import { NO_BACK, restingPlayer } from './autoAdvance.test-helper.ts';
+import {
+  BALLAD_COUNT,
+  end,
+  metronomeNext,
+  NO_BACK,
+  restingPlayer,
+} from './autoAdvance.test-helper.ts';
 import { ADVANCE, type Advance } from './order.ts';
 import { SKIP } from './queuedSongText.ts';
 import type { SkipResult, Undo } from './store.ts';
@@ -37,12 +43,6 @@ const single = (songId: number): SkipResult => ({
   advance: { kind: ADVANCE.song, songId },
   skipped: null,
 });
-const BALLAD_COUNT = {} as never;
-const metronomeNext: SkipResult = {
-  advance: { kind: ADVANCE.open, entry: BALLAD_COUNT },
-  skipped: null,
-};
-const end: SkipResult = { advance: { kind: ADVANCE.end }, skipped: null };
 
 function harness(
   steps: readonly SkipResult[],
