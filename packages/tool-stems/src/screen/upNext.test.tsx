@@ -8,7 +8,12 @@ import {
   startAutoAdvance,
   stopSongsForMetronome,
 } from '@kitbag/core-state';
-import { playerWaveBars, Snackbar, SwipeDeleteRow } from '@kitbag/core-design';
+import {
+  playerWaveBars,
+  QUEUE_TEXT,
+  Snackbar,
+  SwipeDeleteRow,
+} from '@kitbag/core-design';
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -34,6 +39,7 @@ import {
   unmountTracked,
   type Player,
 } from './playerHarness.test-helper.tsx';
+import { UP_NEXT } from './UpNextRow.tsx';
 
 const NIGHT_BUS = 21;
 const TIN_ROOF = 22;
@@ -368,7 +374,8 @@ describe('the setlist part of Up next', () => {
     libraryStore.setState({ session: null });
     const p = await withQueue();
     expect(p.has('Ballad')).toBe(false);
-    expect(p.has('Nothing queued')).toBe(true);
+    expect(p.has(UP_NEXT)).toBe(false);
+    expect(p.labelled(QUEUE_TEXT.previous)).toHaveLength(1);
   });
 
   it('skips an entry this time from the sheet', async () => {

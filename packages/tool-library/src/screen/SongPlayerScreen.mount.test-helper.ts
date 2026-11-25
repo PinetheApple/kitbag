@@ -20,6 +20,7 @@ import {
 export const onBack = vi.fn();
 export const onOpenStemSet = vi.fn();
 export const onOpenSong = vi.fn();
+export const onOpenQueue = vi.fn();
 
 const playhead = () => ({}) as never;
 
@@ -34,6 +35,7 @@ export function screen(
     onBack,
     onOpenStemSet,
     onOpenSong,
+    onOpenQueue,
     usePlayhead: playhead,
     ...routes,
   });
@@ -49,6 +51,24 @@ export function mount(
   });
   if (tree === undefined) throw new Error('not mounted');
   return tree;
+}
+
+interface BarAction {
+  readonly label: string;
+  readonly onPress: () => void;
+}
+
+export function barActions(tree: ReactTestRenderer): readonly BarAction[] {
+  return tree.root.findByType('AppBar' as never).props
+    .actions as readonly BarAction[];
+}
+
+export function pressBarAction(tree: ReactTestRenderer, label: string) {
+  act(() => {
+    barActions(tree)
+      .find((action) => action.label === label)
+      ?.onPress();
+  });
 }
 
 export function styleAround(tree: ReactTestRenderer, type: string) {

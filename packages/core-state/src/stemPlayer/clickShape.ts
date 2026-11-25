@@ -20,7 +20,7 @@ const ENGINE_GRID_RATE: Readonly<Record<ClickRate, KB_GRID_RATE>> = {
   [CLICK_RATE.half]: KB_GRID_RATE.KB_GRID_RATE_HALF,
 };
 
-type ClickField = keyof StemSetClick;
+export type ClickField = keyof StemSetClick;
 
 function sent(what: string) {
   return {
@@ -53,8 +53,10 @@ export function clickSenders(
   };
 }
 
-const patchOf = <K extends ClickField>(field: K, value: StemSetClick[K]) =>
-  ({ [field]: value }) as Pick<StemSetClick, K>;
+export const patchOf = <K extends ClickField>(
+  field: K,
+  value: StemSetClick[K],
+) => ({ [field]: value }) as Pick<StemSetClick, K>;
 
 function clickChanger(
   { set, get, runtimeOf, session }: ActionContext,

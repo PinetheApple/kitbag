@@ -1,6 +1,7 @@
 import { KB_MAX_GRID_BEATS } from '@kitbag/core-native';
 
 import { lastValueAtOrBefore, NOT_FOUND } from './search.ts';
+import type { LoopFailure, LoopState } from './store.ts';
 
 export function nearestBeat(
   beats: readonly number[],
@@ -38,7 +39,27 @@ export function loopBetween(
   return end > first ? { startSec: first, endSec: end } : null;
 }
 
+export function boundsOf({ startSec, endSec }: LoopSeconds): LoopSeconds {
+  return { startSec, endSec };
+}
+
+export function loopHolds({ startSec, endSec }: LoopSeconds, seconds: number) {
+  return seconds >= startSec && seconds < endSec;
+}
+
+export function refusedLoop(loop: LoopState, loopFailure: LoopFailure) {
+  return {
+    loop: loop.kind === 'on' ? loop : ({ kind: 'off' } as const),
+    loopFailure,
+  };
+}
+
 export type LoopEdge = 'start' | 'end';
+
+export interface HeldStart {
+  readonly startSec: number;
+  readonly loop: LoopSeconds | null;
+}
 
 export function movedEdge(
   loop: LoopSeconds,

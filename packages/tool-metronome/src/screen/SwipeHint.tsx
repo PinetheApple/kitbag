@@ -14,24 +14,19 @@ import {
   textStyle,
   useReduceMotionMode,
   withAlpha,
+  WindowOverlay,
+  type WindowOverlayProps,
 } from '@kitbag/core-design';
 import { useEffect, useMemo } from 'react';
 import { Text, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { FadeIn } from 'react-native-reanimated';
 
-// The scrim stays dark on Daylight too, so it takes Stage's background.
 const SCRIM = withAlpha(palette.bg.dark, metronome.coachScrim);
 
 const useStyles = createThemedStyles((theme) => ({
-  scrim: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
+  column: {
     alignItems: 'center',
     paddingHorizontal: space.screenInset,
-    backgroundColor: SCRIM,
   },
   ring: {
     width: metronome.coachRingWidth,
@@ -71,28 +66,38 @@ const useStyles = createThemedStyles((theme) => ({
 interface SwipeHintProps {
   readonly zoneTop: number;
   readonly zoneHeight: number;
+  readonly gesture: NonNullable<WindowOverlayProps['gesture']>;
   readonly onDismiss: () => void;
 }
 
-export function SwipeHint({ zoneTop, zoneHeight, onDismiss }: SwipeHintProps) {
+export function SwipeHint({
+  zoneTop,
+  zoneHeight,
+  gesture,
+  onDismiss,
+}: SwipeHintProps) {
   const styles = useStyles();
   const motion = useReduceMotionMode();
   const entering = useMemo(() => FadeIn.reduceMotion(motion), [motion]);
   useEffect(() => onHardwareBack(onDismiss), [onDismiss]);
-  const ringTop = useMemo(
-    () => ({
-      paddingTop: Math.max(
-        0,
-        zoneTop + (zoneHeight - metronome.coachRingHeight) / 2,
-      ),
-    }),
-    [zoneTop, zoneHeight],
+  const column = useMemo(
+    () => [
+      styles.column,
+      {
+        paddingTop: Math.max(
+          0,
+          zoneTop + (zoneHeight - metronome.coachRingHeight) / 2,
+        ),
+      },
+    ],
+    [styles.column, zoneTop, zoneHeight],
   );
   return (
-    <Animated.View
+    <WindowOverlay
+      scrim={SCRIM}
       entering={entering}
-      accessibilityViewIsModal
-      style={[styles.scrim, ringTop]}
+      gesture={gesture}
+      style={column}
     >
       <View style={styles.ring} importantForAccessibility="no-hide-descendants">
         <IconGlyph
@@ -122,6 +127,6 @@ export function SwipeHint({ zoneTop, zoneHeight, onDismiss }: SwipeHintProps) {
           />
         </View>
       </View>
-    </Animated.View>
+    </WindowOverlay>
   );
 }

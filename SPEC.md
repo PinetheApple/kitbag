@@ -1026,7 +1026,8 @@ working. Changes:
   restored on open. Reset speed sits in the overflow menu (#528).
 - **Up next row** — the stem player's Previous · Up next · Repeat · Next row
   (§7.9), built from the same parts; `design/kitbag-queue.html` §e binds it
-  here too, with no separate mockup.
+  here too, with no separate mockup. The app bar carries the same Queue icon as
+  the stem player, before ⋮ (#613).
 - Tapping the Songs row of the song the mini-player is showing opens the player
   on that song as it is, still playing if it was. Any other row tap on Songs
   opens the player paused.
@@ -1277,9 +1278,9 @@ phone. That page defines the format; this spec does not copy it.
   the user's order), then Next from: <setlist>. `play_queue` holds a
   `stem_set_id` or a `song_id`, never both (§11.2, schema v29).
 - **Entry points:** a Queue key on the mini-player (§6.3), a Queue icon on the
-  stem player, and a Queue icon in the Stem songs app bar, badged with the
-  count up next (no badge at 0). Each opens the same queue sheet, as does the
-  Up next row of either player.
+  stem player and the single-song player, and a Queue icon in the Stem songs app
+  bar, badged with the count up next (no badge at 0). Each opens the same queue
+  sheet, as does the Up next row of either player.
 - **Play next** puts a song first in Next in queue; **Add to queue** puts it
   last; a song already queued offers Move to end of queue instead. Both are in
   the row menus of the Songs and Stem songs lists and in the stem player's ⋮
@@ -1309,14 +1310,19 @@ phone. That page defines the format; this spec does not copy it.
   the queue sheet and the card show them as pending. A queued song counts as
   played only once it plays. Repeat all also wraps the Metronome's Next (§5.4).
   A setlist whose last entry (ignoring entries skipped this time) is a
-  metronome song does not wrap: playback stops before it. The Repeat all hint
-  shows in the queue sheet once per install (owner, 2026-11-20). An active A-B
-  loop wins over Repeat one, which acts only once the loop is cleared.
+  metronome song does not wrap: playback stops before it. With nothing to play
+  next and no song to bring back, Repeat all plays the current song again, as a
+  queue of one, even when the queued songs were deleted (#615). The Repeat all
+  hint shows in the queue sheet once per install (owner, 2026-11-20). An active
+  A-B loop wins over Repeat one, which acts only once the loop is cleared.
 - **Previous and Next** sit beside the Up next row, on the stem player and the
-  single-song player (§6.3). Past 3 s Previous restarts the song; otherwise it
-  goes to the song played before it in this session, or the setlist entry
-  before it. Next plays the next entry. On the Metronome Previous always goes
-  back an entry (§5.4).
+  single-song player (§6.3). With nothing up next (no queued song, no next entry
+  of a started setlist, no song Repeat all brings back) the row keeps only
+  Previous and the Repeat chip, with no label or text; this holds under Repeat
+  one too (owner, #613). Past 3 s Previous restarts the song; otherwise it goes
+  to the song played before it in this session, or the setlist entry before it.
+  Next plays the next entry. On the Metronome Previous always goes back an entry
+  (§5.4).
 
 ---
 
@@ -1802,7 +1808,7 @@ One migration note that is not obvious from the table:
 | `kitbag-stems.html` | **Variant C only** ("Bottom dock"; #137). Supersedes `kitbag-ui.html` §04's Stem player. Variants A and B are rejected alternatives; `docs/decisions.md` (2026-10-30, #137) lists what is deliberately not built. |
 | `kitbag-stems-sections.html` | **Option C only** ("Chosen (owner, 2026-11-01)"; #139). Extends `kitbag-stems.html` variant C with the Mix \| Lyrics switch, section cards, lane notches and tint, stage lyrics and retime mode. Options A and B are rejected alternatives, kept in `docs/research/mockups/stems-sections-lyrics.html`. Retime's 0.75× subtitle is built (#299); its speed stepper is not (#328). Recorded in `docs/decisions.md`, 2026-11-01. |
 | `kitbag-song-player.html` | **The single-song player** (owner-approved 2026-11-07; #297). Supersedes `kitbag-ui.html` §04's Player. Draws the base player, the mini-player on Home and Songs (Stem songs and the Queue key: `kitbag-queue.html`), the Metronome's click-off snackbar, the click sheet, speed (owner-approved 2026-11-20, #528: speed only, in percent, Reset speed in the overflow menu, the speed on the mini-player off 100%), the no-grid states and the A-B loop. Recorded in `docs/decisions.md`, 2026-11-07. |
-| `kitbag-queue.html` | **The play queue** (owner-approved 2026-11-20; #574). Draws the queue sheet (queued songs, a setlist started this session, swipe to remove, nothing playing, empty), Play next and Add to queue, the mini-player's Queue key and its place on Stem songs, the Stem songs app-bar Queue icon, the stem player's app-bar Queue icon and its Previous · Up next · Repeat · Next row, a mixed setlist, Repeat, and filled Previous and Next keys on the Metronome. Adds the Up next row and the Queue icon to `kitbag-stems.html` variant C (the row was built without a binding design); the single-song player takes the same Up next row with no separate mockup (§6.3). Supersedes the mini-player's keys and placement in `kitbag-song-player.html` §1 and the flat skip keys in `kitbag-metronome-setlist.html` D2. Frames draw stem songs; single songs share the queue (§7.9). §f's Before and §i's Superseded frames are not to build. Recorded in `docs/decisions.md`, 2026-11-20. |
+| `kitbag-queue.html` | **The play queue** (owner-approved 2026-11-20; #574). Draws the queue sheet (queued songs, a setlist started this session, swipe to remove, nothing playing, empty), Play next and Add to queue, the mini-player's Queue key and its place on Stem songs, the Stem songs app-bar Queue icon, the stem player's app-bar Queue icon and its Previous · Up next · Repeat · Next row (the single-song player takes the same Queue icon, #613), a mixed setlist, Repeat, and filled Previous and Next keys on the Metronome. Adds the Up next row and the Queue icon to `kitbag-stems.html` variant C (the row was built without a binding design); the single-song player takes the same Up next row with no separate mockup (§6.3). Supersedes the mini-player's keys and placement in `kitbag-song-player.html` §1 and the flat skip keys in `kitbag-metronome-setlist.html` D2. Frames draw stem songs; single songs share the queue (§7.9). §f's Before and §i's Superseded frames are not to build. Recorded in `docs/decisions.md`, 2026-11-20. |
 | `kitbag-practice-history.html` | **Practice history** (owner-approved 2026-11-07; #286). Draws the session list with Day, Week and Month grouping and its graph, swipe and menu delete with Undo, the Settings doorway and swipe-direction row, the optional Home tile, and the session timeline with Repeat. The ⋮ menu is built as the app's bottom sheet, not the pop-up drawn. Recorded in `docs/decisions.md`: picks 2026-11-02, mockup approved 2026-11-07. |
 | `kitbag-home-arrange.html` | **Option B only** ("Chosen (owner, 2026-10-31)"; #113). Supersedes the "long-press any tile for edit mode" bullet in `kitbag-ui.html` §04 Home and §12.4's customizable-layout bullet as to *how* editing works: Edit, or a long-press on a tile, opens the Arrange sheet. Options A and C are rejected alternatives, kept as reference in `docs/research/mockups/113/`. Recorded in `docs/decisions.md`, 2026-10-31. Its B1 and B5 frames draw the More tools row and sheet (owner, 2026-11-26; #617), superseding the More tools row in `kitbag-ui.html` §04; the approved mockup is `docs/research/mockups/617-more-tools.html` option B. |
 

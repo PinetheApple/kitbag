@@ -7,6 +7,7 @@ import {
   FloatingActionButton,
   libraryList,
   queueKeyLabel,
+  screenFrameInsets,
   SearchField,
   space,
   textRoles,
@@ -74,7 +75,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   inset: { paddingHorizontal: space.screenInset, gap: libraryList.bodyGap },
   list: { flex: 1 },
-  content: { flexGrow: 1, gap: libraryList.bodyGap },
+  content: { flexGrow: 1, gap: libraryList.bodyGap, paddingBottom: FAB_ROOM },
   cardBody: { gap: space.controlGap, alignItems: 'flex-start' },
   cardText: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
 }));
@@ -348,14 +349,10 @@ export function LibraryScreen({
   const state = useViewState(view);
   const listed = state === 'list';
   const actions = useBarActions(view, onOpenSetlists, onOpenQueue);
+  const docked = dock !== undefined;
   const frame = useMemo(
-    () => [styles.screen, { paddingTop: insets.top }],
-    [styles.screen, insets.top],
-  );
-  const mainBottomInset = dock === undefined ? insets.bottom : 0;
-  const content = useMemo(
-    () => [styles.content, { paddingBottom: FAB_ROOM + mainBottomInset }],
-    [styles.content, mainBottomInset],
+    () => [styles.screen, screenFrameInsets(insets, { dockBelow: docked })],
+    [styles.screen, insets, docked],
   );
   return (
     <View style={frame}>
@@ -368,7 +365,7 @@ export function LibraryScreen({
           ) : null}
           <ScrollView
             style={styles.list}
-            contentContainerStyle={content}
+            contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
           >
             <StatusCards status={status} />
@@ -388,7 +385,6 @@ export function LibraryScreen({
             variant="list"
             icon={text.fabIcon}
             accessibilityLabel={text.fabLabel}
-            bottomInset={mainBottomInset}
             onPress={startImport}
           />
         ) : null}

@@ -1,6 +1,7 @@
 import type { StoreApi } from 'zustand/vanilla';
 
 import { activeSetlistOf } from './setlistPosition.ts';
+import { isPresetEntry, type StemSetlistEntry } from './snapshot.ts';
 import type {
   DiscardedChanges,
   LibraryState,
@@ -74,6 +75,17 @@ function playsFromSession(
     loaded?.presetId === null &&
     loaded.stemSetId === stemSetId &&
     loaded.setlistId === session.setlistId
+  );
+}
+
+export function sessionStemEntry(
+  { session, entries }: Pick<LibraryState, 'session' | 'entries'>,
+  stemSetId: number,
+): StemSetlistEntry | undefined {
+  if (session === null) return undefined;
+  return (entries[session.setlistId] ?? []).find(
+    (entry): entry is StemSetlistEntry =>
+      !isPresetEntry(entry) && entry.stemSetId === stemSetId,
   );
 }
 

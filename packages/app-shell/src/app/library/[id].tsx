@@ -42,7 +42,7 @@ function useSongUpNext(bottomInset: number, onOpenSong: (id: number) => void) {
     ),
     [queue.open, pressNext, pressPrevious],
   );
-  return { renderUpNext, sheet: queue.sheet };
+  return { renderUpNext, openQueue: queue.open, sheet: queue.sheet };
 }
 
 function SongPlayerRoute() {
@@ -69,6 +69,7 @@ function SongPlayerRoute() {
         onOpenSong={follow}
         usePlayhead={useMixerFrame}
         renderUpNext={upNext.renderUpNext}
+        onOpenQueue={upNext.openQueue}
       />
       {upNext.sheet}
     </>

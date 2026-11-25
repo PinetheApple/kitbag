@@ -1,7 +1,8 @@
 import { libraryMix } from './libraryRoles.ts';
 import { metronomeMix } from './metronomeRoles.ts';
-import { mix } from './roles.ts';
+import { mix, opacity } from './roles.ts';
 import {
+  palette,
   resolveTheme,
   shadow,
   type ColorToken,
@@ -35,6 +36,8 @@ export function withAlpha(hex: string, alpha: number): string {
   const byte = Math.round(Math.min(1, Math.max(0, alpha)) * CHANNEL_MAX);
   return `${hex}${byte.toString(HEX_RADIX).padStart(HEX_PAIR, '0').toUpperCase()}`;
 }
+
+export const sheetScrimColor = withAlpha(palette.bg.dark, opacity.sheetScrim);
 
 export type FeedbackTone = 'success' | 'warning' | 'danger';
 

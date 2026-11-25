@@ -3,9 +3,10 @@ import {
   Badge,
   createThemedStyles,
   screenBar,
+  useQueueBarAction,
   type AppBarAction,
 } from '@kitbag/core-design';
-import { useSongPlayer } from '@kitbag/core-state';
+import { useSongPlayer, useUpNextCount } from '@kitbag/core-state';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
@@ -20,6 +21,7 @@ const useStyles = createThemedStyles(() => ({
 
 interface SongAppBarProps {
   readonly onBack: () => void;
+  readonly onQueue: () => void;
   readonly onMenu: () => void;
 }
 
@@ -47,13 +49,14 @@ function useLastOpenFacts(): BarFacts {
   return open ? { title, artist, bpm, status } : kept;
 }
 
-export function SongAppBar({ onBack, onMenu }: SongAppBarProps) {
+export function SongAppBar({ onBack, onQueue, onMenu }: SongAppBarProps) {
   const styles = useStyles();
   const { title, artist, status, bpm } = useLastOpenFacts();
   const shown = barBadge(status, bpm);
+  const queue = useQueueBarAction(onQueue, useUpNextCount());
   const actions: readonly AppBarAction[] = useMemo(
-    () => [{ icon: 'more', label: 'More', onPress: onMenu }],
-    [onMenu],
+    () => [...queue, { icon: 'more', label: 'More', onPress: onMenu }],
+    [queue, onMenu],
   );
   return (
     <AppBar

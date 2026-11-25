@@ -1,27 +1,18 @@
 import {
   Button,
   createThemedStyles,
+  focusReaderOn,
   onHardwareBack,
-  opacity,
-  palette,
+  WindowOverlay,
   stemSections,
   stemSectionsText,
   textStyle,
-  withAlpha,
 } from '@kitbag/core-design';
-import { useEffect, useRef } from 'react';
-import {
-  AccessibilityInfo,
-  StyleSheet,
-  Text,
-  type TextInstance,
-  View,
-} from 'react-native';
+import { useEffect } from 'react';
+import { Text, View } from 'react-native';
 
 const useStyles = createThemedStyles((theme) => ({
-  scrim: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: withAlpha(palette.bg.dark, opacity.sheetScrim),
+  column: {
     justifyContent: 'center',
     paddingHorizontal: stemSections.dialogMargin,
   },
@@ -69,16 +60,15 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const styles = useStyles();
-  const heading = useRef<TextInstance>(null);
   useEffect(() => onHardwareBack(onCancel), [onCancel]);
-  useEffect(() => {
-    if (heading.current !== null)
-      AccessibilityInfo.sendAccessibilityEvent(heading.current, 'focus');
-  }, []);
   return (
-    <View style={styles.scrim} accessibilityViewIsModal>
+    <WindowOverlay style={styles.column}>
       <View style={styles.dialog}>
-        <Text ref={heading} accessibilityRole="header" style={styles.title}>
+        <Text
+          ref={focusReaderOn}
+          accessibilityRole="header"
+          style={styles.title}
+        >
           {title}
         </Text>
         <Text style={styles.body}>{body}</Text>
@@ -99,6 +89,6 @@ export function ConfirmDialog({
           />
         </View>
       </View>
-    </View>
+    </WindowOverlay>
   );
 }

@@ -17,6 +17,7 @@ export type Props = Record<string, unknown> & {
 export const display = {
   speed: 1,
   scaled: false,
+  upNextCount: 0,
   status: 'ready',
   song: {},
   analysis: { analysisStatus: 'done', beats: [0] as readonly number[] },
@@ -62,6 +63,7 @@ export function resetScreenState() {
   vi.clearAllMocks();
   display.speed = 1;
   display.scaled = false;
+  display.upNextCount = 0;
   display.status = 'ready';
   display.song = OPEN_SONG;
   display.analysis = { analysisStatus: 'done', beats: [0] };
@@ -287,6 +289,7 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
     playerSongBadge,
     useFocusedMixerHold,
     useLoopScrub: () => ({}),
+    useUpNextCount: () => display.upNextCount,
     useSongLibrary: (select: (state: unknown) => unknown) =>
       select({
         rows: library.rows,

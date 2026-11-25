@@ -33,7 +33,16 @@ const INITIAL_DISPLAY = { ...display };
 const hint = vi.hoisted(() => ({ props: null as Props | null }));
 const scroll = vi.hoisted(() => ({ props: null as Props | null }));
 const zone = vi.hoisted(() => ({ props: null as Props | null }));
-const swipes = vi.hoisted(() => [] as { readonly enabled: boolean }[]);
+interface Swipe {
+  readonly enabled: boolean;
+  readonly onTempo: (bpm: number) => void;
+}
+
+const swipes = vi.hoisted(() => [] as Swipe[]);
+const store = vi.hoisted(() => ({
+  setTempo: vi.fn<(bpm: number) => void>(),
+  dismissHint: vi.fn<() => void>(),
+}));
 
 vi.mock('./EndedSetlistSnackbar.tsx', () => ({
   EndedSetlistSnackbar: () => null,
@@ -82,9 +91,14 @@ vi.mock('@kitbag/core-state', () => ({
   useLibrary: (select: (state: unknown) => unknown) =>
     select({ loaded: null, presets: [] }),
   useMetronome: (select: (state: unknown) => unknown) =>
-    select({ running: display.running, beatsPerBar: 4, polyEnabled: false }),
+    select({
+      running: display.running,
+      beatsPerBar: 4,
+      polyEnabled: false,
+      setTempo: store.setTempo,
+    }),
   useSwipeHint: (select: (state: unknown) => unknown) =>
-    select({ seen: display.hintSeen, dismiss: () => undefined }),
+    select({ seen: display.hintSeen, dismiss: store.dismissHint }),
 }));
 
 vi.mock('../logic/belowTempo.ts', async (original) => ({
@@ -110,11 +124,12 @@ vi.mock('./useStatusRunRows.ts', () => ({
 vi.mock('./useTempoSwipe.ts', () => ({
   useTempoSwipe: (
     _bpm: unknown,
-    _onTempo: unknown,
+    onTempo: (bpm: number) => void,
     options: { readonly enabled: boolean },
   ) => {
-    swipes.push(options);
-    return {};
+    const swipe = { ...options, onTempo };
+    swipes.push(swipe);
+    return swipe;
   },
 }));
 vi.mock('../logic/statusRows.ts', () => ({
@@ -181,10 +196,22 @@ function renderBody(fontScale: number, running: boolean): string {
   return renderToStaticMarkup(screenElement());
 }
 
-function layOut(view: { readonly props: Props }, y: number, height: number) {
+type MeasureDone = (
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) => void;
+
+const zoneInWindow = { top: 0, height: 0 };
+const LOCAL_ZONE_Y = 20;
+
+function layOut(view: { readonly props: Props }, top: number, height: number) {
+  zoneInWindow.top = top;
+  zoneInWindow.height = height;
   const onLayout = view.props.onLayout as (event: unknown) => void;
   act(() => {
-    onLayout({ nativeEvent: { layout: { y, height } } });
+    onLayout({ nativeEvent: { layout: { y: LOCAL_ZONE_Y, height } } });
   });
 }
 
@@ -214,11 +241,20 @@ function laidOutViews(screen: ReactTestRenderer) {
     .findAllByType(View)
     .find((view) => view.props.onLayout !== undefined && view !== block);
   if (zoneView === undefined) throw new Error('tempo zone has no onLayout');
+  const zoneRef = zoneView.props.ref as { current: unknown } | undefined;
+  if (zoneRef !== undefined)
+    zoneRef.current = {
+      measureInWindow: (done: MeasureDone) => {
+        done(0, zoneInWindow.top, 0, zoneInWindow.height);
+      },
+    };
   return { block, zone: zoneView };
 }
 
 afterEach(() => {
   Object.assign(display, INITIAL_DISPLAY);
+  store.setTempo.mockClear();
+  store.dismissHint.mockClear();
 });
 
 describe('MetronomeScreen scroll body', () => {
@@ -271,15 +307,24 @@ describe('MetronomeScreen scroll body', () => {
     );
   });
 
-  it('places the swipe hint from the tempo block it sits in', () => {
-    const BLOCK_TOP = 50;
-    const ZONE_TOP = 20;
+  it('places the swipe hint at the zone in window coordinates', () => {
+    const ZONE_WINDOW_TOP = 180;
     const ZONE_HEIGHT = 100;
     display.hintSeen = false;
+    layOut(laidOutViews(mountScreen()).zone, ZONE_WINDOW_TOP, ZONE_HEIGHT);
+    expect(hint.props?.zoneTop).toBe(ZONE_WINDOW_TOP);
+    expect(hint.props?.zoneHeight).toBe(ZONE_HEIGHT);
+  });
+
+  it('moves the swipe hint with the zone when the tempo block lays out again', () => {
+    const ZONE_HEIGHT = 100;
+    const FIRST_TOP = 180;
+    const MOVED_TOP = 240;
+    display.hintSeen = false;
     const views = laidOutViews(mountScreen());
-    layOut(views.block, BLOCK_TOP, ZONE_HEIGHT);
-    layOut(views.zone, ZONE_TOP, ZONE_HEIGHT);
-    expect(hint.props?.zoneTop).toBe(BLOCK_TOP + ZONE_TOP);
+    layOut(views.zone, FIRST_TOP, ZONE_HEIGHT);
+    layOut(views.block, MOVED_TOP, ZONE_HEIGHT);
+    expect(hint.props?.zoneTop).toBe(MOVED_TOP);
   });
 });
 
@@ -343,6 +388,18 @@ describe('MetronomeScreen swipe hint', () => {
     expect(screen.root.findAllByType(SwipeHint)).toHaveLength(0);
     for (const layer of readerLayers(screen).layers)
       expect(layer.props).toMatchObject(SHOWN);
+  });
+
+  it('lets a swipe on the hint change tempo and dismiss it', () => {
+    const SWIPED_BPM = 132;
+    hintShown();
+    const gesture = hint.props?.gesture as Swipe;
+    expect(gesture.enabled).toBe(true);
+    act(() => {
+      gesture.onTempo(SWIPED_BPM);
+    });
+    expect(store.setTempo).toHaveBeenCalledWith(SWIPED_BPM);
+    expect(store.dismissHint).toHaveBeenCalledOnce();
   });
 
   it('keeps each reader layer as its own native view', () => {
