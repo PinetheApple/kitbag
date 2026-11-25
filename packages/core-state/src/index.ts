@@ -550,7 +550,7 @@ export {
   type SwipeHintPersistence,
   type SwipeHintStore,
 } from './firstUse/store.ts';
-export { useStemPlayer } from './stemPlayer/useStemPlayer.ts';
+export { useLiveStemPlayer } from './stemPlayer/useStemPlayer.ts';
 export { UNITY_GAIN, UNSHIFTED_KEY } from './stemPlayer/mix.ts';
 export {
   createStemPlayerStore,
@@ -682,7 +682,7 @@ export {
 export { useLoopScrub } from './stemPlayer/useLoopScrub.ts';
 export type { MixerHold } from './stemPlayer/mixerSession.ts';
 export { useFocusedMixerHold } from './stemPlayer/screenHold.ts';
-export { useSongPlayer } from './songPlayer/useSongPlayer.ts';
+export { useLiveSongPlayer } from './songPlayer/useSongPlayer.ts';
 export { songPlayerStore, type SongPlayerStore } from './songPlayer/store.ts';
 export { configureSongPlayer } from './songPlayer/runtime.ts';
 export { ROW_TAP, rowTap, type RowTap } from './songView/rowTap.ts';
@@ -690,6 +690,25 @@ export { songViewStore, type SongViewStore } from './songView/songView.ts';
 export { stemViewStore, type StemViewStore } from './songView/stemView.ts';
 export { useSongView } from './songView/useSongView.ts';
 export { useStemView } from './songView/useStemView.ts';
+export {
+  SongSourceContext,
+  StemSourceContext,
+  useSongPlayer,
+  useSongViewing,
+  useStemPlayer,
+  useStemViewing,
+  type PlayerSource,
+  type SongSource,
+  type StemSource,
+} from './songView/playerSource.ts';
+export {
+  useSongHeldFrame,
+  useSongSource,
+  useStemHeldFrame,
+  useStemSource,
+} from './songView/useViewedPlayer.ts';
+export { useViewPlayLabel } from './songView/useViewPlayLabel.ts';
+export { VIEW_ONLY_REASON, viewPlayLabel } from './songView/viewText.ts';
 export type { HeldStart } from './stemPlayer/loop.ts';
 export {
   createMixerClick,

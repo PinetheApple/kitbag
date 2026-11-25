@@ -24,6 +24,9 @@ vi.mock('@kitbag/core-state', async (original) => ({
     select({
       tempoCorrection: player.correction,
       detectedBpm: DETECTED_BPM,
+    }),
+  useLiveSongPlayer: (select: (state: unknown) => unknown) =>
+    select({
       tempoCorrectionChanged: apply,
       tempoCorrectionSettled: settle,
     }),

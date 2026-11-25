@@ -9,6 +9,7 @@ const library = vi.hoisted(() => ({
   files: null as RowFiles | null,
   endSetlistSession: vi.fn(),
   player: { status: 'ready', setId: null as number | null },
+  song: { status: 'idle', songId: null as number | null },
 }));
 
 vi.mock('react-native', () => ({
@@ -46,15 +47,17 @@ vi.mock('@kitbag/core-state', async (original) => ({
   analysisFailure: () => null,
   rowFilesOf: () => library.files,
   useLibrary: (select: (state: typeof library) => unknown) => select(library),
-  useSongPlayer: () => null,
   useShownSongId: () => null,
   useShownStemSetId: () => library.player.setId,
-  useStemPlayer: (select: (state: typeof library.player) => unknown) =>
+  useLiveSongPlayer: (select: (state: typeof library.song) => unknown) =>
+    select(library.song),
+  useLiveStemPlayer: (select: (state: typeof library.player) => unknown) =>
     select(library.player),
 }));
 
 const { LibraryRowView } = await import('./LibraryRowView.tsx');
 const { opacity } = await import('@kitbag/core-design');
+const { ROW_TAP } = await import('@kitbag/core-state');
 
 const ROW = {
   kind: 'song',
@@ -112,6 +115,7 @@ const titleOpacity = (tree: ReactTestRenderer) => {
 beforeEach(() => {
   library.files = null;
   library.player.setId = null;
+  library.song = { status: 'idle', songId: null };
   vi.clearAllMocks();
 });
 
@@ -138,40 +142,50 @@ describe('a row whose files are moving', () => {
   it('still opens the player, as its old copy plays', () => {
     const tree = mount(true);
     pressRow(tree);
-    expect(handlers.onOpenSong).toHaveBeenCalledWith(ROW.id);
+    expect(handlers.onOpenSong).toHaveBeenCalledWith(ROW.id, ROW_TAP.view);
     expect(badgeLabels(tree)).toEqual(['MOVING']);
     expect(titleOpacity(tree)).toBeUndefined();
   });
 });
 
 describe('a row at home', () => {
-  it('opens the player', () => {
+  it('views a song that is not the open one, leaving the setlist', () => {
     pressRow(mount());
-    expect(handlers.onOpenSong).toHaveBeenCalledWith(ROW.id);
+    expect(handlers.onOpenSong).toHaveBeenCalledExactlyOnceWith(
+      ROW.id,
+      ROW_TAP.view,
+    );
+    expect(library.endSetlistSession).not.toHaveBeenCalled();
     expect(handlers.onUnavailable).not.toHaveBeenCalled();
   });
 
-  it('ends the setlist started this session, as the song starts from a list', () => {
+  it('opens the open song as it is', () => {
+    library.song = { status: 'ready', songId: ROW.id };
     pressRow(mount());
-    expect(library.endSetlistSession).toHaveBeenCalledExactlyOnceWith(
-      undefined,
+    expect(handlers.onOpenSong).toHaveBeenCalledExactlyOnceWith(
+      ROW.id,
+      ROW_TAP.asIs,
     );
+    expect(library.endSetlistSession).not.toHaveBeenCalled();
   });
 
-  it('names the stem song it reopens when that song is the one playing', () => {
+  it('opens the open stem song as it is', () => {
     library.player.setId = STEM_ROW.id;
     pressRow(mount(false, STEM_ROW));
-    expect(library.endSetlistSession).toHaveBeenCalledExactlyOnceWith(
+    expect(handlers.onOpenStemSet).toHaveBeenCalledExactlyOnceWith(
       STEM_ROW.id,
+      ROW_TAP.asIs,
     );
-    expect(handlers.onOpenStemSet).toHaveBeenCalledWith(STEM_ROW.id);
+    expect(library.endSetlistSession).not.toHaveBeenCalled();
   });
 
-  it('starts a stem song that is not the one playing as a new song', () => {
+  it('views a stem song that is not the open one', () => {
     library.player.setId = STEM_ROW.id + 1;
     pressRow(mount(false, STEM_ROW));
-    expect(library.endSetlistSession).toHaveBeenCalledExactlyOnceWith(
-      undefined,
+    expect(handlers.onOpenStemSet).toHaveBeenCalledExactlyOnceWith(
+      STEM_ROW.id,
+      ROW_TAP.view,
     );
+    expect(library.endSetlistSession).not.toHaveBeenCalled();
   });
 });

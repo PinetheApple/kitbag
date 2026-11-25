@@ -31,7 +31,10 @@ function harness() {
   return current.harness;
 }
 
-vi.mock('react', () => ({ useEffect: effects.run }));
+vi.mock('react', async (original) => ({
+  createContext: (await original<typeof import('react')>()).createContext,
+  useEffect: effects.run,
+}));
 vi.mock('@kitbag/core-state', async (original) => ({
   ...(await original<typeof CoreState>()),
   useMetronome: <T>(select: (state: CoreState.MetronomeStore) => T): T =>

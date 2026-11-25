@@ -36,6 +36,9 @@ vi.mock('@kitbag/core-state', () => ({
     select({
       meterOverride: player.override,
       detected: { meter: 4, barOneSeconds: 2.3 },
+    }),
+  useLiveSongPlayer: (select: (state: unknown) => unknown) =>
+    select({
       meterOverrideChanged: apply,
       playheadBeatSeconds: () => player.beat,
     }),

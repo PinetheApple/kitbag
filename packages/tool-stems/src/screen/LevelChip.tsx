@@ -1,6 +1,8 @@
+import { opacity } from '@kitbag/core-design';
 import { useCallback } from 'react';
 import {
   Pressable,
+  StyleSheet,
   Text,
   View,
   type AccessibilityActionEvent,
@@ -15,7 +17,10 @@ interface LevelChipProps {
   readonly open: boolean;
   readonly onPress: () => void;
   readonly onRename?: () => void;
+  readonly disabled?: boolean;
 }
+
+const off = StyleSheet.create({ level: { opacity: opacity.muted } });
 
 const RENAME_ACTION = 'rename';
 const RENAME_ACTIONS = [{ name: RENAME_ACTION, label: 'Rename' }];
@@ -26,6 +31,7 @@ export function LevelChip({
   open,
   onPress,
   onRename,
+  disabled = false,
 }: LevelChipProps) {
   const styles = useStemStyles();
   const db = formatDb(gain);
@@ -39,10 +45,11 @@ export function LevelChip({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${label} volume, ${db}, ${open ? 'collapse' : 'expand'}`}
-      accessibilityState={{ expanded: open }}
+      accessibilityState={{ expanded: open, disabled }}
       accessibilityActions={onRename === undefined ? undefined : RENAME_ACTIONS}
       onAccessibilityAction={act}
-      style={LEVEL_HIT_BOX}
+      style={[LEVEL_HIT_BOX, disabled && off.level]}
+      disabled={disabled}
       onPress={onPress}
     >
       <View style={[styles.level, open && styles.levelOpen]}>

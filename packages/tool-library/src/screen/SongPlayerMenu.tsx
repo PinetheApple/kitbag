@@ -3,20 +3,32 @@ import {
   MenuRow,
   meterCopy,
   MeterRow,
+  QUEUE_TEXT,
   Sheet,
   TempoModeRow,
+  useQueueKeys,
+  useQueueNotices,
+  useQueuePresses,
   type MeterGridState,
+  type Notice,
 } from '@kitbag/core-design';
 import { KB_MIXER_UNITY_RATE } from '@kitbag/core-native';
 import {
   speedPercentText,
   tempoModeLabel,
   tempoUnavailable,
+  useIsQueued,
+  useLiveSongPlayer,
+  useQueueRefresh,
+  useQueueSong,
   useSongLibrary,
   useSongPlayer,
+  useSongViewing,
+  VIEW_ONLY_REASON,
+  type QueuedSong,
   type StemPlayerStatus,
 } from '@kitbag/core-state';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { countInOptionLabel } from '../logic/clickChipText.ts';
 import { lockBadgeOf } from '../logic/lockText.ts';
@@ -43,6 +55,9 @@ interface SongPlayerMenuProps {
   readonly onTempoMode: () => void;
   readonly onTempoCorrection: () => void;
   readonly onCountIn: () => void;
+  readonly notice: Notice;
+  readonly onOpenQueue: () => void;
+  readonly onOpenSetlist: (setlistId: number) => void;
 }
 const UNPLAYABLE: ReadonlySet<StemPlayerStatus> = new Set([
   'failed',
@@ -76,23 +91,29 @@ function useGridGatedRow() {
   return { disabled, detail: disabled ? gridRowReason(state) : undefined };
 }
 
+function useLiveOnlyRow() {
+  const gated = useGridGatedRow();
+  const viewing = useSongViewing();
+  return viewing ? { disabled: true, detail: VIEW_ONLY_REASON } : gated;
+}
+
 function SongMeterRow({ onPress }: RowProps) {
   const override = useSongPlayer((s) => s.meterOverride);
   const detected = useSongPlayer((s) => s.detected.meter);
-  const state = useGridRowState();
+  const { disabled, detail } = useLiveOnlyRow();
   return (
     <MeterRow
       value={override.meterBeatsPerBar ?? detected}
       yours={isOverridden(override)}
-      disabled={state !== 'ready'}
-      reason={gridRowReason(state)}
+      disabled={disabled}
+      {...(detail === undefined ? {} : { reason: detail })}
       onPress={onPress}
     />
   );
 }
 
 function SongTempoModeRow({ onPress }: RowProps) {
-  const { disabled, detail } = useGridGatedRow();
+  const { disabled, detail } = useLiveOnlyRow();
   const reason = useSongPlayer((s) => tempoUnavailable(s.tempo, 'song'));
   const mode = useSongPlayer((s) => s.tempoMode);
   return (
@@ -107,7 +128,7 @@ function SongTempoModeRow({ onPress }: RowProps) {
 function TempoCorrectionRow({ onPress }: RowProps) {
   const correction = useSongPlayer((s) => s.tempoCorrection);
   const detectedBpm = useSongPlayer((s) => s.detectedBpm);
-  const { disabled, detail } = useGridGatedRow();
+  const { disabled, detail } = useLiveOnlyRow();
   const value = tempoCorrectionValue(correction, detectedBpm);
   return (
     <MenuRow
@@ -153,6 +174,52 @@ function ResetSpeedRow({ onPress }: RowProps) {
   );
 }
 
+interface QueueRowsProps {
+  readonly songId: number;
+  readonly notice: Notice;
+  readonly onDismiss: () => void;
+  readonly onOpenQueue: () => void;
+  readonly onOpenSetlist: (setlistId: number) => void;
+}
+
+function QueueRows({
+  songId,
+  notice,
+  onDismiss,
+  onOpenQueue,
+  onOpenSetlist,
+}: QueueRowsProps) {
+  useQueueRefresh();
+  const queueSong = useQueueSong();
+  const actions = useQueueNotices(
+    notice,
+    queueSong,
+    onOpenSetlist,
+    onOpenQueue,
+  );
+  const title = useSongPlayer((s) => s.title);
+  const target = useMemo(
+    () => ({ song: { kind: 'song', id: songId } as const, title }),
+    [songId, title],
+  );
+  const presses = useQueuePresses<QueuedSong>(actions, target, onDismiss);
+  const keys = useQueueKeys(presses, useIsQueued(target.song));
+  return (
+    <>
+      <MenuRow
+        icon="playNext"
+        label={QUEUE_TEXT.playNext}
+        onPress={keys.playNext}
+      />
+      <MenuRow
+        icon="addToQueue"
+        label={keys.addLabel}
+        onPress={keys.addToQueue}
+      />
+    </>
+  );
+}
+
 export function SongPlayerMenu({
   songId,
   visible,
@@ -163,8 +230,12 @@ export function SongPlayerMenu({
   onTempoMode,
   onTempoCorrection,
   onCountIn,
+  notice,
+  onOpenQueue,
+  onOpenSetlist,
 }: SongPlayerMenuProps) {
-  const close = useSongPlayer((s) => s.close);
+  const close = useLiveSongPlayer((s) => s.close);
+  const viewing = useSongViewing();
   const reanalyze = useSongLibrary((s) => s.reanalyze);
   const reanalyzable = canReanalyze(useSongFailure(songId));
   const stop = useCallback(() => {
@@ -200,6 +271,13 @@ export function SongPlayerMenu({
       bottomInset={bottomInset}
       onDismiss={onDismiss}
     >
+      <QueueRows
+        songId={songId}
+        notice={notice}
+        onDismiss={onDismiss}
+        onOpenQueue={onOpenQueue}
+        onOpenSetlist={onOpenSetlist}
+      />
       <ResetSpeedRow onPress={onDismiss} />
       {reanalyzable ? (
         <MenuRow
@@ -213,12 +291,14 @@ export function SongPlayerMenu({
       <SongTempoModeRow onPress={openTempoMode} />
       <TempoCorrectionRow onPress={openTempoCorrection} />
       <CountInRow onPress={openCountIn} />
-      <MenuRow
-        icon="stop"
-        label={PLAYER_MENU_TEXT.stop}
-        detail={PLAYER_MENU_TEXT.stopDetail}
-        onPress={stop}
-      />
+      {viewing ? null : (
+        <MenuRow
+          icon="stop"
+          label={PLAYER_MENU_TEXT.stop}
+          detail={PLAYER_MENU_TEXT.stopDetail}
+          onPress={stop}
+        />
+      )}
     </Sheet>
   );
 }

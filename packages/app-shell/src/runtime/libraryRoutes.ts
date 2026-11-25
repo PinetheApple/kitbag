@@ -1,7 +1,12 @@
+import { ROW_TAP, type RowTap } from '@kitbag/core-state';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 
 export const ADD_STEM_SONGS = 'add';
+export const VIEW_SONG = 'view';
+
+const viewParams = (tap: RowTap | undefined) =>
+  tap === ROW_TAP.view ? `?${VIEW_SONG}=1` : '';
 
 export function useLibraryRoutes() {
   const router = useRouter();
@@ -20,14 +25,14 @@ export function useLibraryRoutes() {
         router.push('/songs');
       },
       // Unlike push, navigate keeps one screen when a double tap repeats the id.
-      openStemSet: (id: number) => {
-        router.navigate(`/stems/${String(id)}`);
+      openStemSet: (id: number, tap?: RowTap) => {
+        router.navigate(`/stems/${String(id)}${viewParams(tap)}`);
       },
       openStemSongsToAdd: () => {
         router.push({ pathname: '/stems', params: { [ADD_STEM_SONGS]: '1' } });
       },
-      openSong: (id: number) => {
-        router.navigate(`/library/${String(id)}`);
+      openSong: (id: number, tap?: RowTap) => {
+        router.navigate(`/library/${String(id)}${viewParams(tap)}`);
       },
       // A player the queue hands over from must not stay under the next one: Back would reopen its song.
       replaceSong: (id: number) => {

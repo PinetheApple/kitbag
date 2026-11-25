@@ -5,7 +5,11 @@ import {
   Snackbar,
   type PlayerFrame,
 } from '@kitbag/core-design';
-import { GRID_METERS, useSongPlayer } from '@kitbag/core-state';
+import {
+  GRID_METERS,
+  useLiveSongPlayer,
+  useSongPlayer,
+} from '@kitbag/core-state';
 import { useCallback } from 'react';
 
 import { lockBadgeOf } from '../logic/lockText.ts';
@@ -32,7 +36,7 @@ function ReanalysedNotice({
 }) {
   const notice = useSongPlayer((s) => s.meterNotice);
   const override = useSongPlayer((s) => s.meterOverride);
-  const dismiss = useSongPlayer((s) => s.dismissMeterNotice);
+  const dismiss = useLiveSongPlayer((s) => s.dismissMeterNotice);
   const useDetected = useCallback(() => {
     dismiss();
     onUseDetected();

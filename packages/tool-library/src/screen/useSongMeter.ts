@@ -2,6 +2,7 @@ import type { MeterSheetNotice } from '@kitbag/core-design';
 import {
   isGridMeter,
   NO_METER_OVERRIDE,
+  useLiveSongPlayer,
   useSongLibrary,
   useSongPlayer,
   type MeterOverride,
@@ -40,8 +41,8 @@ export interface SongMeter {
 export function useSongMeter(songId: number): SongMeter {
   const override = useSongPlayer((s) => s.meterOverride);
   const detectedMeter = useSongPlayer((s) => s.detected.meter);
-  const apply = useSongPlayer((s) => s.meterOverrideChanged);
-  const beatAtPlayhead = useSongPlayer((s) => s.playheadBeatSeconds);
+  const apply = useLiveSongPlayer((s) => s.meterOverrideChanged);
+  const beatAtPlayhead = useLiveSongPlayer((s) => s.playheadBeatSeconds);
   const save = useSongLibrary((s) => s.saveSongMeterOverride);
   const [pending, setPending] = useState<MeterNoticeState | null>(null);
   const saving = useRef(false);

@@ -5,6 +5,7 @@ import {
   snackbar,
   type Notice,
 } from '@kitbag/core-design';
+import { useStemViewing } from '@kitbag/core-state';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 
@@ -63,6 +64,7 @@ interface PlayerOverlaysProps {
 export function PlayerOverlays({ notice, dockHeight }: PlayerOverlaysProps) {
   const styles = useStyles();
   const aboveDock = useMemo(() => ({ bottom: dockHeight }), [dockHeight]);
+  const viewing = useStemViewing();
   return (
     <View
       testID={OVERLAY_ID}
@@ -70,8 +72,12 @@ export function PlayerOverlays({ notice, dockHeight }: PlayerOverlaysProps) {
       style={[styles.overlay, aboveDock]}
     >
       <AdvanceCountIn />
-      <LoopUndoSnackbar />
-      <ExportCancelledSnackbar />
+      {viewing ? null : (
+        <>
+          <LoopUndoSnackbar />
+          <ExportCancelledSnackbar />
+        </>
+      )}
       <NoticeSnackbar notice={notice} bottom={snackbar.aboveDock} />
     </View>
   );

@@ -1,4 +1,4 @@
-import { useSongPlayer } from '@kitbag/core-state';
+import { useLiveSongPlayer } from '@kitbag/core-state';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 export function useLeaveOnStop(
@@ -6,7 +6,7 @@ export function useLeaveOnStop(
   onBack: () => void,
   songId: number,
 ) {
-  const idle = useSongPlayer((s) => s.status === 'idle');
+  const idle = useLiveSongPlayer((s) => s.status === 'idle');
   const seenOpen = useRef(false);
   const left = useRef(false);
   const shownSong = useRef(songId);

@@ -8,6 +8,7 @@ import {
 } from 'react-native-reanimated';
 import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 
+import { useSheetBridge } from './SheetBridge.tsx';
 import { useSheetPortal } from './SheetHost.tsx';
 
 export interface SheetExitOptions {
@@ -49,6 +50,7 @@ export function useSheetExit({
   onClosed,
 }: SheetExitOptions): void {
   const { show, hide } = useSheetPortal();
+  const bridge = useSheetBridge();
   const { height: windowHeight } = useWindowDimensions();
   const id = useId();
   const present = useRef(false);
@@ -97,7 +99,7 @@ export function useSheetExit({
   }, [visible]);
 
   useEffect(() => {
-    if (visible) lastShown.current = content;
+    if (visible) lastShown.current = bridge(content);
     if (present.current)
       show(id, lastShown.current, visible ? 'open' : 'leaving');
   });

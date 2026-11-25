@@ -21,7 +21,10 @@ import {
   resetValue,
   speedKeyCopy,
   useIsQueued,
+  useLiveStemPlayer,
   useStemPlayer,
+  useStemViewing,
+  VIEW_ONLY_REASON,
 } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -132,10 +135,11 @@ interface ExportRowProps {
 }
 
 function ExportRow({ visible, onExport }: ExportRowProps) {
-  const block = useStemPlayer(exportBlock);
+  const block = useLiveStemPlayer(exportBlock);
+  const viewing = useStemViewing();
   const percent = useMixdownProgress(visible && block === 'running');
-  const value = exportRowValue(block, percent);
-  const disabled = block !== null;
+  const value = viewing ? VIEW_ONLY_REASON : exportRowValue(block, percent);
+  const disabled = viewing || block !== null;
   return (
     <ActionRow
       icon="exportMix"
@@ -158,13 +162,16 @@ function StemMeterRow({ onMeter }: { readonly onMeter: () => void }) {
   );
   const yours = useStemPlayer((s) => isOverridden(s.meterOverride));
   const noGrid = useStemPlayer((s) => meterGridState(s.beats) !== 'ready');
+  const viewing = useStemViewing();
+  const reason = viewing ? VIEW_ONLY_REASON : NO_GRID_REASON;
+  const disabled = viewing || noGrid;
   return (
     <View style={styles.divided}>
       <MeterRow
         value={meter}
         yours={yours}
-        disabled={noGrid}
-        {...(noGrid ? { reason: NO_GRID_REASON } : {})}
+        disabled={disabled}
+        {...(disabled ? { reason } : {})}
         onPress={onMeter}
       />
     </View>

@@ -36,7 +36,7 @@ import {
   useShownSongId,
   useShownStemSetId,
   useSongPlayer,
-  useStemPlayer,
+  useLiveStemPlayer,
   useStemSongs,
   type PlayOrderStore,
   type QueuedSong,
@@ -129,7 +129,7 @@ function NowPlayingRow({ title, subtitle, stems }: NowPlayingRowProps) {
 }
 
 function StemNowPlaying({ setId }: { readonly setId: number }) {
-  const title = useStemPlayer((s) => s.title);
+  const title = useLiveStemPlayer((s) => s.title);
   const stems = useStemSongs();
   const spot = useSetlistSpot(setId);
   return (

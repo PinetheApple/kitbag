@@ -88,6 +88,7 @@ export * from './components/useQueuePresses.ts';
 export * from './components/NoticeSnackbar.tsx';
 export * from './components/SetlistPickerSheet.tsx';
 export * from './components/SwipeDeleteRow.tsx';
+export * from './components/SheetBridge.tsx';
 export * from './components/SheetHost.tsx';
 export * from './components/WindowOverlay.tsx';
 export { onHardwareBack } from './components/hardwareBack';

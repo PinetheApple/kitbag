@@ -2,7 +2,7 @@ import {
   ARRIVAL,
   arrivalStore,
   useLibrarySongs,
-  useStemPlayer,
+  useLiveStemPlayer,
   type Arrival,
   type MixerHold,
 } from '@kitbag/core-state';
@@ -17,7 +17,7 @@ export function useRouteAcquire(
   setId: number,
   acquireSong: (setId: number) => MixerHold,
 ): () => MixerHold {
-  const advancedTo = useStemPlayer((s) => s.advancedTo);
+  const advancedTo = useLiveStemPlayer((s) => s.advancedTo);
   const routeId = useRef(setId);
   useLayoutEffect(() => {
     routeId.current = setId;
@@ -44,17 +44,20 @@ function follow(arrival: Arrival, setId: number, routes: PlayOrderRoutes) {
   else if (song.id !== setId) routes.onOpenStemSet(song.id);
 }
 
-export function useArrivalFollow(setId: number, routes: PlayOrderRoutes) {
+export function useArrivalFollow(
+  setId: number,
+  routes: PlayOrderRoutes,
+  enabled: boolean,
+) {
   const library = useLibrarySongs();
-  useEffect(
-    () =>
-      arrivalStore.subscribe(({ arrival }, previous) => {
-        if (arrival === null || arrival.serial === previous.arrival?.serial)
-          return;
-        follow(arrival, setId, routes);
-        const message = arrivalText(arrival, library);
-        if (message !== null) routes.onNotice(message);
-      }),
-    [setId, routes, library],
-  );
+  useEffect(() => {
+    if (!enabled) return undefined;
+    return arrivalStore.subscribe(({ arrival }, previous) => {
+      if (arrival === null || arrival.serial === previous.arrival?.serial)
+        return;
+      follow(arrival, setId, routes);
+      const message = arrivalText(arrival, library);
+      if (message !== null) routes.onNotice(message);
+    });
+  }, [setId, routes, library, enabled]);
 }

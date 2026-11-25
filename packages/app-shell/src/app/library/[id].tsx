@@ -1,4 +1,4 @@
-import { useSongPlayer } from '@kitbag/core-state';
+import { useLiveSongPlayer } from '@kitbag/core-state';
 import {
   SongPlayerScreen,
   type SongPlayerScreenProps,
@@ -11,7 +11,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
 import { useQueueSheet } from '@/queue/useQueueSheet';
-import { useLibraryRoutes } from '@/runtime/libraryRoutes';
+import { useViewedPlayerDock } from '@/miniPlayer/useViewedPlayerDock';
+import { useLibraryRoutes, VIEW_SONG } from '@/runtime/libraryRoutes';
 
 interface SongRouteNavigation {
   readonly setParams: (params: { readonly id: string }) => void;
@@ -29,8 +30,8 @@ function useSongUpNext(bottomInset: number, onOpenSong: (id: number) => void) {
     [routes.replaceStemSet, onOpenSong],
   );
   const queue = useQueueSheet(bottomInset, place);
-  const pressNext = useSongPlayer((s) => s.pressNext);
-  const pressPrevious = useSongPlayer((s) => s.pressPrevious);
+  const pressNext = useLiveSongPlayer((s) => s.pressNext);
+  const pressPrevious = useLiveSongPlayer((s) => s.pressPrevious);
   const renderUpNext = useCallback<RenderUpNext>(
     (songSec) => (
       <UpNextRow
@@ -50,7 +51,11 @@ function SongPlayerRoute() {
   const routes = useLibraryRoutes();
   const navigation = useNavigation<SongRouteNavigation>();
   const focused = useIsFocused();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{
+    id: string;
+    [VIEW_SONG]?: string;
+  }>();
+  const dock = useViewedPlayerDock();
   const follow = useCallback(
     (songId: number) => {
       navigation.setParams({ id: String(songId) });
@@ -61,7 +66,8 @@ function SongPlayerRoute() {
   return (
     <>
       <SongPlayerScreen
-        songId={Number(id)}
+        songId={Number(params.id)}
+        view={params[VIEW_SONG] !== undefined}
         focused={focused}
         insets={insets}
         onBack={routes.back}
@@ -70,6 +76,8 @@ function SongPlayerRoute() {
         usePlayhead={useMixerFrame}
         renderUpNext={upNext.renderUpNext}
         onOpenQueue={upNext.openQueue}
+        onOpenSetlist={routes.openSetlist}
+        {...dock}
       />
       {upNext.sheet}
     </>

@@ -1,5 +1,5 @@
 import { useNotice } from '@kitbag/core-design';
-import { useStemPlayer } from '@kitbag/core-state';
+import { useLiveStemPlayer } from '@kitbag/core-state';
 import { useMemo } from 'react';
 
 import type { PlayOrderRoutes } from './usePlayOrderNav.ts';
@@ -23,7 +23,7 @@ export function usePlayerRoutes(
 }
 
 export function useStemPresses() {
-  const onNext = useStemPlayer((s) => s.pressNext);
-  const onPrevious = useStemPlayer((s) => s.pressPrevious);
+  const onNext = useLiveStemPlayer((s) => s.pressNext);
+  const onPrevious = useLiveStemPlayer((s) => s.pressPrevious);
   return { onNext, onPrevious };
 }

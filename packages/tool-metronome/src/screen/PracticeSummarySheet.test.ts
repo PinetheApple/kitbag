@@ -16,7 +16,8 @@ function harness() {
   return current.harness;
 }
 
-vi.mock('react', () => ({
+vi.mock('react', async (original) => ({
+  createContext: (await original<typeof import('react')>()).createContext,
   useState: (initial: unknown) => [initial, vi.fn()],
   useCallback: <T>(callback: T) => callback,
 }));

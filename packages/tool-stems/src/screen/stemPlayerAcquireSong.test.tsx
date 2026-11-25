@@ -28,10 +28,8 @@ vi.mock('@kitbag/core-design', async (original) => ({
     new Proxy({}, { get: (_, key) => ({ styleName: key }) }),
 }));
 
-vi.mock('@kitbag/core-state', async (original) => ({
-  ...(await original<Record<string, unknown>>()),
-  loopEndFrames: () => null,
-  useStemPlayer: (select: (state: unknown) => unknown) =>
+vi.mock('@kitbag/core-state', async (original) => {
+  const player = (select: (state: unknown) => unknown) =>
     select({
       status: 'loading',
       engineRate: 0,
@@ -40,8 +38,14 @@ vi.mock('@kitbag/core-state', async (original) => ({
       retime: { kind: 'off' },
       acquireSong: spies.acquireSong,
       close: spies.close,
-    }),
-}));
+    });
+  return {
+    ...(await original<Record<string, unknown>>()),
+    loopEndFrames: () => null,
+    useStemPlayer: player,
+    useLiveStemPlayer: player,
+  };
+});
 
 const nothing = () => null;
 vi.mock('./useMixerFrame.ts', () => ({ useMixerFrame: () => ({}) }));

@@ -3,7 +3,7 @@ import {
   GRID_METERS,
   isGridMeter,
   stemPlayerStore,
-  useStemPlayer,
+  useLiveStemPlayer,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { SharedValue } from 'react-native-reanimated';
@@ -25,8 +25,8 @@ function openSong(): MeterEditTarget | null {
 }
 
 function useMeterEditor() {
-  const save = useStemPlayer((s) => s.saveMeterOverride);
-  const applied = useStemPlayer((s) => s.meterOverrideChanged);
+  const save = useLiveStemPlayer((s) => s.saveMeterOverride);
+  const applied = useLiveStemPlayer((s) => s.meterOverrideChanged);
   return useMemo(
     () => createMeterEditor({ save, applied, target: openSong }),
     [save, applied],
@@ -115,10 +115,10 @@ export function StemMeterSheet({
   playhead,
   onClose,
 }: StemMeterSheetProps) {
-  const override = useStemPlayer((s) => s.meterOverride);
-  const detectedMeter = useStemPlayer((s) => s.detectedMeter);
-  const detectedBarOne = useStemPlayer((s) => s.detectedBarOneSeconds);
-  const state = useStemPlayer((s) => meterGridState(s.beats));
+  const override = useLiveStemPlayer((s) => s.meterOverride);
+  const detectedMeter = useLiveStemPlayer((s) => s.detectedMeter);
+  const detectedBarOne = useLiveStemPlayer((s) => s.detectedBarOneSeconds);
+  const state = useLiveStemPlayer((s) => meterGridState(s.beats));
   const { notice, edit, act, dismiss, closed } = useMeterEdits();
   const sheetNotice = useSheetNotice(notice, act, dismiss);
   const { pickMeter, barOne, reset } = useMeterHandlers(edit);

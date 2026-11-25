@@ -39,6 +39,7 @@ export function useMixerFrame(
   durationFrames: number,
   loopEndFrames: number | null,
   countEndFrame: number | null = null,
+  heldFrame: number | null = null,
 ): MixerFrameValues {
   const progress = useSharedValue(0);
   const playing = useSharedValue(0);
@@ -54,6 +55,7 @@ export function useMixerFrame(
   const lastShown = useSharedValue(0);
   const held = useSharedValue(NOT_HELD);
   const heldSince = useSharedValue(NOT_HELD);
+  const viewed = useSharedValue(heldFrame ?? NOT_HELD);
 
   useEffect(() => {
     rate.value = engineRate;
@@ -74,6 +76,29 @@ export function useMixerFrame(
     countEnd.value = countEndFrame ?? NO_COUNT;
   }, [countEndFrame, countEnd]);
 
+  useEffect(() => {
+    viewed.value = heldFrame ?? NOT_HELD;
+    if (heldFrame === null) return;
+    const seconds = framesToSeconds(heldFrame, engineRate);
+    playing.value = 0;
+    lastShown.value = heldFrame;
+    progress.value = durationFrames > 0 ? heldFrame / durationFrames : 0;
+    songSec.value = seconds;
+    second.value = Math.floor(seconds);
+    elapsed.value = formatClock(heldFrame, engineRate);
+  }, [
+    heldFrame,
+    engineRate,
+    durationFrames,
+    viewed,
+    playing,
+    lastShown,
+    progress,
+    songSec,
+    second,
+    elapsed,
+  ]);
+
   const hold = useCallback(
     (fraction: number) => {
       held.value = fraction * duration.value;
@@ -84,6 +109,7 @@ export function useMixerFrame(
 
   useFrameCallback((frame) => {
     'worklet';
+    if (viewed.value !== NOT_HELD) return;
     const host = (globalThis as unknown as HostGlobal)[KITBAG_HOST_OBJECT_KEY];
     if (host === undefined) return;
     const position = host.mixer_position;

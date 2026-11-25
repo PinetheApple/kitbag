@@ -1,5 +1,6 @@
 import type { MeterSheetNotice } from '@kitbag/core-design';
 import {
+  useLiveSongPlayer,
   useSongLibrary,
   useSongPlayer,
   type TempoCorrection,
@@ -49,8 +50,8 @@ function takeQueued(queued: RefObject<Choice | null>): Choice | null {
 export function useSongTempoCorrection(songId: number): SongTempoCorrection {
   const correction = useSongPlayer((s) => s.tempoCorrection);
   const detectedBpm = useSongPlayer((s) => s.detectedBpm);
-  const apply = useSongPlayer((s) => s.tempoCorrectionChanged);
-  const settle = useSongPlayer((s) => s.tempoCorrectionSettled);
+  const apply = useLiveSongPlayer((s) => s.tempoCorrectionChanged);
+  const settle = useLiveSongPlayer((s) => s.tempoCorrectionSettled);
   const save = useSongLibrary((s) => s.saveSongTempoCorrection);
   const [pending, setPending] = useState<TempoNoticeState | null>(null);
   const [picked, setPicked] = useState<TempoCorrection | null>(null);

@@ -1,14 +1,14 @@
 import { Snackbar, snackbar } from '@kitbag/core-design';
-import { useStemPlayer } from '@kitbag/core-state';
+import { useLiveStemPlayer } from '@kitbag/core-state';
 import { useCallback } from 'react';
 
 import { undoMessage } from '../logic/sectionView.ts';
 
 export function LoopUndoSnackbar() {
-  const undoableLoop = useStemPlayer((s) => s.undoableLoop);
-  const loop = useStemPlayer((s) => s.loop);
-  const undoLoop = useStemPlayer((s) => s.undoLoop);
-  const dismissLoopUndo = useStemPlayer((s) => s.dismissLoopUndo);
+  const undoableLoop = useLiveStemPlayer((s) => s.undoableLoop);
+  const loop = useLiveStemPlayer((s) => s.loop);
+  const undoLoop = useLiveStemPlayer((s) => s.undoLoop);
+  const dismissLoopUndo = useLiveStemPlayer((s) => s.dismissLoopUndo);
   const onUndo = useCallback(() => {
     void undoLoop();
   }, [undoLoop]);

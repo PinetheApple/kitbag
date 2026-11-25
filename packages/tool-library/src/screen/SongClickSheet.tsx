@@ -16,7 +16,9 @@ import {
   SOUND_ROLE_OPTIONS,
   soundPickerLabel,
   soundsWith,
+  useLiveSongPlayer,
   useSongPlayer,
+  useSongViewing,
   type SoundRole,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState, type RefObject } from 'react';
@@ -147,7 +149,8 @@ export function SongClickSheet({
   bottomInset,
   onDismiss,
 }: SongClickSheetProps) {
-  const save = useSongPlayer((s) => s.saveForSong);
+  const save = useLiveSongPlayer((s) => s.saveForSong);
+  const viewing = useSongViewing();
   const handleSave = useCallback(() => {
     void save();
   }, [save]);
@@ -171,12 +174,14 @@ export function SongClickSheet({
       <CountInGroup headerRef={countInRef} />
       <SoundGroup headerRef={soundRef} />
       <AccentsGroup headerRef={accentsRef} />
-      <Button
-        variant="primary"
-        size="sheet"
-        label={SONG_CLICK_TEXT.save}
-        onPress={handleSave}
-      />
+      {viewing ? null : (
+        <Button
+          variant="primary"
+          size="sheet"
+          label={SONG_CLICK_TEXT.save}
+          onPress={handleSave}
+        />
+      )}
     </Sheet>
   );
 }

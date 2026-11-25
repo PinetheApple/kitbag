@@ -25,6 +25,7 @@ import {
   useUpNextCount,
   type LibraryRow,
   type LibraryView,
+  type RowTap,
 } from '@kitbag/core-state';
 import { useCallback, useEffect, useMemo, type ReactElement } from 'react';
 import { ScrollView, Text, View } from 'react-native';
@@ -51,8 +52,8 @@ export interface LibraryScreenProps {
   readonly view: LibraryView;
   readonly insets: LibraryScreenInsets;
   readonly onBack: () => void;
-  readonly onOpenStemSet: (id: number) => void;
-  readonly onOpenSong: (id: number) => void;
+  readonly onOpenStemSet: (id: number, tap: RowTap) => void;
+  readonly onOpenSong: (id: number, tap: RowTap) => void;
   readonly onOpenSetlists?: () => void;
   readonly onOpenSetlist: (setlistId: number) => void;
   readonly onOpenQueue?: () => void;
@@ -180,8 +181,8 @@ function LibraryUnavailable() {
 interface ListProps {
   readonly view: LibraryView;
   readonly menu: LibraryMenu;
-  readonly onOpenStemSet: (id: number) => void;
-  readonly onOpenSong: (id: number) => void;
+  readonly onOpenStemSet: (id: number, tap: RowTap) => void;
+  readonly onOpenSong: (id: number, tap: RowTap) => void;
   readonly onUnavailable: (row: LibraryRow) => void;
 }
 

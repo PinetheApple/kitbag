@@ -25,18 +25,22 @@ interface FrameSink {
 
 interface ProbeProps {
   readonly countEnd: number | null;
+  readonly held: number | null;
   readonly sink: FrameSink;
 }
 
-function Probe({ countEnd, sink }: ProbeProps) {
-  sink.values = useMixerFrame(RATE, DURATION, null, countEnd);
+function Probe({ countEnd, held, sink }: ProbeProps) {
+  sink.values = useMixerFrame(RATE, DURATION, null, countEnd, held);
   return null;
 }
 
-function mount(countEnd: number | null = COUNT_END): MixerFrameValues {
+function mount(
+  countEnd: number | null = COUNT_END,
+  held: number | null = null,
+): MixerFrameValues {
   const sink: FrameSink = {};
   act(() => {
-    renderer = create(<Probe countEnd={countEnd} sink={sink} />);
+    renderer = create(<Probe countEnd={countEnd} held={held} sink={sink} />);
   });
   const { values } = sink;
   if (values === undefined) throw new Error('hook did not render');
@@ -57,6 +61,17 @@ afterEach(() => {
     renderer?.unmount();
   });
   renderer = undefined;
+});
+
+describe('the playhead of a viewed song', () => {
+  it('shows the held start and not the playing song', () => {
+    const frame = mount(null, COUNT_END);
+    setHost(1, 0);
+    runFrame();
+    expect(frame.progress.value).toBe(COUNT_END / DURATION);
+    expect(frame.songSec.value).toBe(COUNT_END / RATE);
+    expect(frame.playing.value).toBe(0);
+  });
 });
 
 describe('the transport while the song counts in', () => {
