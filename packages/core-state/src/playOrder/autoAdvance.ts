@@ -387,7 +387,7 @@ const repeatsAlone = (
   cause === ADVANCE_CAUSE.ended &&
   deps.repeat?.() === REPEAT.all &&
   at === ADVANCE.end &&
-  skipped === null;
+  skipped?.reason !== SKIP.unopened;
 
 function runOut(
   deps: AutoAdvanceDeps,

@@ -6,7 +6,7 @@ import {
   type AdvanceCause,
   type AdvanceListener,
 } from '../stemPlayer/songEnd.ts';
-import { startAutoAdvance, type ArrivalState } from './autoAdvance.ts';
+import { ARRIVAL, startAutoAdvance, type ArrivalState } from './autoAdvance.ts';
 import { NO_BACK, restingPlayer } from './autoAdvance.test-helper.ts';
 import { ADVANCE, type PlayerKind } from './order.ts';
 import { REPEAT, type RepeatMode } from './repeat.ts';
@@ -28,6 +28,10 @@ const metronomeNext: SkipResult = {
   },
   skipped: null,
 };
+const deletedNext = (kind: PlayerKind): SkipResult => ({
+  advance: { kind: ADVANCE.end },
+  skipped: kind,
+});
 const queuedNext = (kind: PlayerKind): SkipResult => ({
   advance:
     kind === 'song'
@@ -60,6 +64,7 @@ function harness({
   loopHeld = false,
 }: Setup) {
   let leave: AdvanceListener = () => undefined;
+  const arrivals = createStore<ArrivalState>(() => ({ arrival: null }));
   const ending = {
     ...restingPlayer(),
     onSongEnd: (listener: AdvanceListener) => {
@@ -80,7 +85,7 @@ function harness({
       placeOf: () => null,
       candidates: () => candidates,
       commitOpen: () => Promise.resolve(false),
-      arrivals: createStore<ArrivalState>(() => ({ arrival: null })),
+      arrivals,
       ...NO_BACK,
       repeat: () => mode,
     }),
@@ -89,7 +94,8 @@ function harness({
     leave(cause);
     await new Promise((resolve) => setTimeout(resolve, 0));
   };
-  return { ending, players, happens };
+  const arrived = () => arrivals.getState().arrival?.kind ?? null;
+  return { ending, players, happens, arrived };
 }
 
 describe.each(KINDS)('Repeat all with nothing up next, %s player', (kind) => {
@@ -138,6 +144,22 @@ describe.each(KINDS)('Repeat all with nothing up next, %s player', (kind) => {
     const h = harness({ kind, mode: REPEAT.all });
     await h.happens(ADVANCE_CAUSE.next);
     expect(h.ending.replay).not.toHaveBeenCalled();
+  });
+
+  it('plays it again when every queued song was deleted', async () => {
+    const h = harness({ kind, mode: REPEAT.all, next: deletedNext(kind) });
+    await h.happens(ADVANCE_CAUSE.ended);
+    expect(h.ending.replay).toHaveBeenCalledTimes(1);
+    expect(h.ending.stopAdvancing).not.toHaveBeenCalled();
+    expect(h.arrived()).toBeNull();
+  });
+
+  it('stops and says a deleted song was skipped with Repeat off', async () => {
+    const h = harness({ kind, mode: REPEAT.off, next: deletedNext(kind) });
+    await h.happens(ADVANCE_CAUSE.ended);
+    expect(h.ending.replay).not.toHaveBeenCalled();
+    expect(h.ending.stopAdvancing).toHaveBeenCalledTimes(1);
+    expect(h.arrived()).toBe(ARRIVAL.gaveUp);
   });
 
   it('stops with Repeat off', async () => {
