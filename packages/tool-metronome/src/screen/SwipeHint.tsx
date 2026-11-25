@@ -80,17 +80,17 @@ export function SwipeHint({
   const motion = useReduceMotionMode();
   const entering = useMemo(() => FadeIn.reduceMotion(motion), [motion]);
   useEffect(() => onHardwareBack(onDismiss), [onDismiss]);
+  const ringHeight = Math.min(metronome.coachRingHeight, zoneHeight);
   const column = useMemo(
     () => [
       styles.column,
-      {
-        paddingTop: Math.max(
-          0,
-          zoneTop + (zoneHeight - metronome.coachRingHeight) / 2,
-        ),
-      },
+      { paddingTop: Math.max(0, zoneTop + (zoneHeight - ringHeight) / 2) },
     ],
-    [styles.column, zoneTop, zoneHeight],
+    [styles.column, zoneTop, zoneHeight, ringHeight],
+  );
+  const ring = useMemo(
+    () => [styles.ring, { height: ringHeight }],
+    [styles.ring, ringHeight],
   );
   return (
     <WindowOverlay
@@ -99,7 +99,7 @@ export function SwipeHint({
       gesture={gesture}
       style={column}
     >
-      <View style={styles.ring} importantForAccessibility="no-hide-descendants">
+      <View style={ring} importantForAccessibility="no-hide-descendants">
         <IconGlyph
           name="swipeTempo"
           px={iconSizes.coachRing}

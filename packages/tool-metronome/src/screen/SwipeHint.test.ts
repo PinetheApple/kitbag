@@ -1,6 +1,8 @@
 import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { metronome } from '@kitbag/core-design';
+
 const back = vi.hoisted(() => ({
   effects: [] as (() => (() => void) | undefined)[],
   release: vi.fn(),
@@ -41,6 +43,8 @@ const SWIPE = { swipe: 'tempo' } as unknown as Parameters<
 
 type Props = Readonly<{
   accessibilityRole?: string;
+  importantForAccessibility?: string;
+  style?: unknown;
   ref?: unknown;
   children?: ReactNode;
 }>;
@@ -52,6 +56,33 @@ function headers(node: unknown): ReactElement<Props>[] {
   const element = node as ReactElement<Props>;
   const here = element.props.accessibilityRole === 'header' ? [element] : [];
   return [...here, ...headers(element.props.children)];
+}
+
+function flat(style: unknown): Record<string, unknown> {
+  return Object.assign({}, ...[style].flat(Infinity)) as Record<
+    string,
+    unknown
+  >;
+}
+
+function placed(zoneTop: number, zoneHeight: number) {
+  const hint = SwipeHint({
+    zoneTop,
+    zoneHeight,
+    gesture: SWIPE,
+    onDismiss: vi.fn(),
+  }) as ReactElement<Props>;
+  const ring = [hint.props.children]
+    .flat()
+    .find(
+      (child): child is ReactElement<Props> =>
+        (child as ReactElement<Props> | null)?.props
+          .importantForAccessibility === 'no-hide-descendants',
+    );
+  return {
+    top: flat(hint.props.style).paddingTop,
+    height: flat(ring?.props.style).height,
+  };
 }
 
 describe('SwipeHint', () => {
@@ -87,5 +118,23 @@ describe('SwipeHint', () => {
       }),
     );
     expect(title?.props.ref).toBe(focusReaderOn);
+  });
+
+  it('fits the ring to a zone shorter than the drawn ring, from its top', () => {
+    const ZONE_TOP = 120;
+    const SHORT_ZONE = metronome.coachRingHeight / 2;
+    expect(placed(ZONE_TOP, SHORT_ZONE)).toEqual({
+      top: ZONE_TOP,
+      height: SHORT_ZONE,
+    });
+  });
+
+  it('keeps the drawn ring centred on a zone taller than it', () => {
+    const ZONE_TOP = 120;
+    const SPARE = 40;
+    expect(placed(ZONE_TOP, metronome.coachRingHeight + SPARE * 2)).toEqual({
+      top: ZONE_TOP + SPARE,
+      height: metronome.coachRingHeight,
+    });
   });
 });
