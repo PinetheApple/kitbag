@@ -19,6 +19,7 @@ import {
 } from '../logic/practiceTimer.ts';
 
 const TICK_MS = 1000;
+const END_LABEL = 'Practice timer, end session';
 
 const PILL_HIT_SLOP = hitSlopForPadded(
   textRoles.chip.size,
@@ -98,7 +99,7 @@ export function PracticePill({ elapsedMs, onEnd }: PracticePillProps) {
         accessibilityRole="button"
         {...(endable
           ? {
-              accessibilityLabel: `Practice ${formatPracticeElapsed(elapsedMs)}, end session`,
+              accessibilityLabel: END_LABEL,
               accessibilityHint:
                 'Ends the practice session and shows its summary',
             }
