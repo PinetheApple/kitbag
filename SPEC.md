@@ -1297,9 +1297,10 @@ phone. That page defines the format; this spec does not copy it.
 - **Setlist context.** A setlist is started in this listening session when the
   user loads one of its entries, metronome or stem song, during this app run;
   a setlist pinned in an earlier run is not started until then. "Next from:
-  <setlist>" shows only for a started setlist. A song from outside the setlist
-  starting to play ends it; a list tap or a viewed song does not (owner,
-  2026-11-26; #616). Starting another setlist replaces it;
+  <setlist>" shows only for a started setlist. Play on a viewed song that is
+  not in the setlist ends it; a list tap, viewing a song or a queued song
+  playing does not (owner, 2026-11-26; #616). Starting another setlist
+  replaces it;
   queued songs stay either way. Its rows keep setlist order, and ✕ skips an
   entry this time without editing the setlist. A listening session ends with
   Stop (the mini-player's close or the notification) or when the app closes.

@@ -1324,3 +1324,5 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   lists it under More tools. A tool that is off is in neither place, and no tool is listed
   twice. Option B of `docs/research/mockups/617-more-tools.html`; option A, inline rows,
   is rejected. **[owner, 2026-11-26]**
+
+- **2026-11-26 · Viewing a song while another plays (§6.3, §7.9, #616)** — A Songs or Stem songs row tap of any song but the open one opens its player in a view state: nothing loads, the playing song plays on under its docked mini-player, and Play switches. The setlist context now ends on Play of a viewed song that is not in the setlist, not on a list tap; viewing never ends it and queued songs do not. Supersedes the list-start rule of the 2026-11-20 song queue entry and `design/kitbag-queue.html` §f. Drawn in `docs/research/mockups/616-view-states.html`. **[owner, 2026-11-26]**
