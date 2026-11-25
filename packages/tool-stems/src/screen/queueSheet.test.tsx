@@ -214,6 +214,16 @@ describe('the queue sheet over a list, with nothing playing', () => {
     expect(sheet.has('Play queue')).toBe(false);
     expect(sheet.texts().some((text) => text.endsWith('up next'))).toBe(false);
   });
+
+  it.each([REPEAT.all, REPEAT.one])(
+    'says the song plays again with nothing queued under Repeat %s',
+    async (mode) => {
+      repeatStore.setState({ mode });
+      const sheet = await openOnList();
+      expect(sheet.has(QUEUE_TEXT.nothingQueuedPlaysAgainReason)).toBe(true);
+      expect(sheet.has(QUEUE_TEXT.nothingQueuedReason)).toBe(false);
+    },
+  );
 });
 
 describe('the queue sheet over a list, while a stem song plays', () => {

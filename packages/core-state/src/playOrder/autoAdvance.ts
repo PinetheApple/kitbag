@@ -347,6 +347,7 @@ async function advance(
   }
   let skipped: SkippedSong | null = null;
   let from = ended;
+  let at: Advance['kind'] = ADVANCE.end;
   for (let left = deps.candidates(); left > 0; left--) {
     const player = deps.players[from];
     if (!player.stillEnded()) return;
@@ -355,6 +356,7 @@ async function advance(
     if (step.skipped !== null)
       skipped = { reason: SKIP.deleted, kind: step.skipped };
     const next = step.advance;
+    at = next.kind;
     if (next.kind === ADVANCE.open && cause !== ADVANCE_CAUSE.ended) {
       await openMetronome(deps, player, arrive, next.entry);
       return;
@@ -368,9 +370,39 @@ async function advance(
     from = tried.by;
     skipped = { reason: SKIP.unopened, kind: tried.by };
   }
-  deps.players[from].stopAdvancing();
-  if (skipped?.reason === SKIP.deleted)
-    arrive({ kind: ARRIVAL.gaveUp, skipped });
+  runOut(deps, arrive, cause, { from, at, skipped });
+}
+
+interface RunOut {
+  readonly from: PlayerKind;
+  readonly at: Advance['kind'];
+  readonly skipped: SkippedSong | null;
+}
+
+const repeatsAlone = (
+  deps: AutoAdvanceDeps,
+  cause: AdvanceCause,
+  { at, skipped }: RunOut,
+) =>
+  cause === ADVANCE_CAUSE.ended &&
+  deps.repeat?.() === REPEAT.all &&
+  at === ADVANCE.end &&
+  skipped === null;
+
+function runOut(
+  deps: AutoAdvanceDeps,
+  arrive: Arrive,
+  cause: AdvanceCause,
+  out: RunOut,
+) {
+  const player = deps.players[out.from];
+  if (repeatsAlone(deps, cause, out)) {
+    repeatSong(player);
+    return;
+  }
+  player.stopAdvancing();
+  if (out.skipped?.reason === SKIP.deleted)
+    arrive({ kind: ARRIVAL.gaveUp, skipped: out.skipped });
 }
 
 interface BackStep {

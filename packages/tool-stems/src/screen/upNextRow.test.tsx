@@ -5,6 +5,8 @@ import {
   heardStore,
   libraryStore,
   PREVIOUS_RESTARTS_AFTER_SECONDS,
+  REPEAT,
+  repeatStore,
   songLibraryStore,
   startAutoAdvance,
 } from '@kitbag/core-state';
@@ -54,6 +56,7 @@ beforeEach(() => {
 
 afterEach(() => {
   display.fontScale = 1;
+  repeatStore.setState({ mode: REPEAT.off });
   unmountTracked();
   libraryStore.setState(libraryBefore, true);
 });
@@ -77,6 +80,13 @@ describe('the Up next row', () => {
       String(node.props.accessibilityLabel).startsWith('Next:'),
     );
     expect(nextKeys).toEqual([]);
+  });
+
+  it('says this song plays again under Repeat all when nothing is up next', async () => {
+    repeatStore.setState({ mode: REPEAT.all });
+    const p = await withQueue();
+    expect(p.has(QUEUE_TEXT.playsAgain)).toBe(true);
+    expect(p.has(QUEUE_TEXT.playbackStops)).toBe(false);
   });
 
   it('names the first queued song and skips to it, dropping it from the queue', async () => {

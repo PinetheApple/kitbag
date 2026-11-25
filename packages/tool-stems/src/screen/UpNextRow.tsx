@@ -93,7 +93,7 @@ function useUpNextRowText(): UpNextRowText {
   const queueLength = usePlayOrder((s) => s.queue.length);
   const { stage, name } = useStage();
   const library = useLibrarySongs();
-  const repeatsOne = useRepeatMode() === REPEAT.one;
+  const mode = useRepeatMode();
   const playing = useShownSong();
   const loopHeld = useShownLoopHeld();
   const next =
@@ -105,7 +105,9 @@ function useUpNextRowText(): UpNextRowText {
           setlistName: name,
           library,
         });
-  if (repeatsOne && playing !== null)
+  const playsAgain =
+    mode === REPEAT.one || (mode === REPEAT.all && upNext === undefined);
+  if (playsAgain && playing !== null)
     return { shown: repeatedText(playing, library, loopHeld), next };
   return { shown: next ?? NOTHING_NEXT, next };
 }

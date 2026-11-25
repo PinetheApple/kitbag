@@ -154,7 +154,7 @@ function SetlistSection({
 
 function QueueList(props: QueueListProps) {
   const upNextCount = useUpNextCount();
-  const repeatsOne = useRepeatMode() === REPEAT.one;
+  const playsAgain = useRepeatMode() !== REPEAT.off;
   return (
     <>
       <QueuedSection onPlay={props.onPlay} onClear={props.onClear} />
@@ -164,7 +164,7 @@ function QueueList(props: QueueListProps) {
           icon="queue"
           title={QUEUE_TEXT.nothingQueued}
           reason={
-            repeatsOne
+            playsAgain
               ? QUEUE_TEXT.nothingQueuedPlaysAgainReason
               : QUEUE_TEXT.nothingQueuedReason
           }
