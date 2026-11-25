@@ -1,0 +1,2 @@
+• With Repeat all on and nothing queued, the song now plays again when it ends instead of stopping.
+• Settings, Home, Songs, Stem songs, Practice history and Stem Deck screens now stop above the navigation bar, so the bottom control on screen can be tapped without scrolling first. Before, Settings' Theme control sat under the gesture bar.
