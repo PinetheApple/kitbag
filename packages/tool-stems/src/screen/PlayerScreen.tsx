@@ -246,12 +246,13 @@ function Body({
   );
 }
 
-function useRetimeAsk() {
+function useRetimeAsk(focused: boolean) {
   const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
   const unsaved = useStemPlayer((s) => hasUnsavedRetime(s.retime));
   const [asking, setAsking] = useState<RetimeAsk | null>(null);
   const stale =
-    asking !== null && (!retiming || (asking === 'leave' && !unsaved));
+    asking !== null &&
+    (!focused || !retiming || (asking === 'leave' && !unsaved));
   if (stale) setAsking(null);
   const askReset = useCallback(() => {
     setAsking('reset');
@@ -286,7 +287,8 @@ export function PlayerScreen({
   useArrivalFollow(setId, routes);
   const ready = useStemPlayer((s) => s.status === 'ready');
   const acquireSong = useStemPlayer((s) => s.acquireSong);
-  const { retiming, shown, askReset, askLeave, closeAsk } = useRetimeAsk();
+  const { retiming, shown, askReset, askLeave, closeAsk } =
+    useRetimeAsk(focused);
   const sheets = usePlayerSheet(retiming);
   const queue = useQueueActions(
     notice,

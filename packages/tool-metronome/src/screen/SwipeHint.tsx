@@ -9,18 +9,18 @@ import {
   onHardwareBack,
   palette,
   radius,
-  ScreenOverlay,
   space,
   textRoles,
   textStyle,
   useReduceMotionMode,
   withAlpha,
+  WindowOverlay,
+  type WindowOverlayProps,
 } from '@kitbag/core-design';
 import { useEffect, useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { FadeIn } from 'react-native-reanimated';
 
-// The scrim stays dark on Daylight too, so it takes Stage's background.
 const SCRIM = withAlpha(palette.bg.dark, metronome.coachScrim);
 
 const useStyles = createThemedStyles((theme) => ({
@@ -66,10 +66,16 @@ const useStyles = createThemedStyles((theme) => ({
 interface SwipeHintProps {
   readonly zoneTop: number;
   readonly zoneHeight: number;
+  readonly gesture: NonNullable<WindowOverlayProps['gesture']>;
   readonly onDismiss: () => void;
 }
 
-export function SwipeHint({ zoneTop, zoneHeight, onDismiss }: SwipeHintProps) {
+export function SwipeHint({
+  zoneTop,
+  zoneHeight,
+  gesture,
+  onDismiss,
+}: SwipeHintProps) {
   const styles = useStyles();
   const motion = useReduceMotionMode();
   const entering = useMemo(() => FadeIn.reduceMotion(motion), [motion]);
@@ -87,7 +93,12 @@ export function SwipeHint({ zoneTop, zoneHeight, onDismiss }: SwipeHintProps) {
     [styles.column, zoneTop, zoneHeight],
   );
   return (
-    <ScreenOverlay scrim={SCRIM} entering={entering} style={column}>
+    <WindowOverlay
+      scrim={SCRIM}
+      entering={entering}
+      gesture={gesture}
+      style={column}
+    >
       <View style={styles.ring} importantForAccessibility="no-hide-descendants">
         <IconGlyph
           name="swipeTempo"
@@ -116,6 +127,6 @@ export function SwipeHint({ zoneTop, zoneHeight, onDismiss }: SwipeHintProps) {
           />
         </View>
       </View>
-    </ScreenOverlay>
+    </WindowOverlay>
   );
 }

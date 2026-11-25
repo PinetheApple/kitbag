@@ -111,8 +111,8 @@ export function MetronomeScreen({
   const [openSheet, setOpenSheet] = useState<OpenSheet>(() =>
     summarySheetOnMount(getPracticeSessionStore().getState().pending),
   );
-  // The summary can open on mount, before the hint's first layout; a hint
-  // drawn under it would take Back first.
+  // The summary can open on mount, before the hint's first layout; the hint
+  // would then stack over it and take Back first.
   const summaryShown = openSheet === 'summary' && pendingPractice !== null;
   const [bodyTop, setBodyTop] = useState(0);
   const [zone, setZone] = useState<ZoneFrame>({ top: 0, height: 0 });
@@ -149,6 +149,9 @@ export function MetronomeScreen({
     handleBodyLayout,
     handleContentSize,
   } = useControlsFit(window.height, layoutKey);
+  const hintSwipe = useTempoSwipe(frame.currentBpm, handleSwipeOrTypedTempo, {
+    enabled: !scrollable,
+  });
   const screenSwipe = useTempoSwipe(frame.currentBpm, handleSwipeOrTypedTempo, {
     enabled: !scrollable,
   });
@@ -381,6 +384,7 @@ export function MetronomeScreen({
           <SwipeHint
             zoneTop={bodyTop + zone.top}
             zoneHeight={zone.height}
+            gesture={hintSwipe}
             onDismiss={dismissHint}
           />
         ) : null}

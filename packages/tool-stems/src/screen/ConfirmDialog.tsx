@@ -3,18 +3,13 @@ import {
   createThemedStyles,
   focusReaderOn,
   onHardwareBack,
-  opacity,
-  palette,
-  ScreenOverlay,
+  WindowOverlay,
   stemSections,
   stemSectionsText,
   textStyle,
-  withAlpha,
 } from '@kitbag/core-design';
 import { useEffect } from 'react';
 import { Text, View } from 'react-native';
-
-const SCRIM = withAlpha(palette.bg.dark, opacity.sheetScrim);
 
 const useStyles = createThemedStyles((theme) => ({
   column: {
@@ -67,7 +62,7 @@ export function ConfirmDialog({
   const styles = useStyles();
   useEffect(() => onHardwareBack(onCancel), [onCancel]);
   return (
-    <ScreenOverlay scrim={SCRIM} style={styles.column}>
+    <WindowOverlay style={styles.column}>
       <View style={styles.dialog}>
         <Text
           ref={focusReaderOn}
@@ -94,6 +89,6 @@ export function ConfirmDialog({
           />
         </View>
       </View>
-    </ScreenOverlay>
+    </WindowOverlay>
   );
 }

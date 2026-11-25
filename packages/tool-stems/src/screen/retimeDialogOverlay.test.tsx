@@ -4,44 +4,43 @@ import { describe, expect, it } from 'vitest';
 import { StyleSheet } from '../testing/reactNativeHosts.ts';
 import {
   DIALOG_TITLE,
+  hostAncestors,
   PAD,
-  type Player,
   RESET,
   retiming,
 } from './playerHarness.test-helper.tsx';
 import { StemPlayerScreen } from './StemPlayerScreen.tsx';
 
-type Node = ReturnType<Player['byText']>;
-
-function ancestors(node: Node): Node[] {
-  const chain: Node[] = [];
-  for (let step = node.parent; step !== null; step = step.parent)
-    chain.push(step);
-  return chain;
-}
-
-async function resetDialogTitle() {
+async function askedToReset() {
   const p = await retiming();
   await p.touchDown(PAD);
   await p.press(RESET);
-  return { p, title: p.byText(DIALOG_TITLE) };
+  return p;
 }
 
 describe('retime confirm dialog', () => {
   it('dims from above the screen, so a capped content column cannot clip its scrim', async () => {
-    const { p, title } = await resetDialogTitle();
+    const p = await askedToReset();
+    const title = p.byText(DIALOG_TITLE);
     const screen = p.renderer.root.findByType(StemPlayerScreen);
-    expect(ancestors(title)).not.toContain(screen);
+    expect(screen.findAll((node) => node === title)).toHaveLength(0);
   });
 
   it('keeps the dialog card inside the content column', async () => {
-    const { title } = await resetDialogTitle();
-    const capped = ancestors(title).filter(
+    const p = await askedToReset();
+    const capped = hostAncestors(p.byText(DIALOG_TITLE)).filter(
       (node) =>
-        typeof node.type === 'string' &&
         StyleSheet.flatten(node.props.style).maxWidth ===
-          layout.maxContentWidth,
+        layout.maxContentWidth,
     );
     expect(capped).toHaveLength(1);
+  });
+
+  it('closes when another screen covers the player and stays closed on return', async () => {
+    const p = await askedToReset();
+    p.setFocused(false);
+    expect(p.has(DIALOG_TITLE)).toBe(false);
+    p.setFocused(true);
+    expect(p.has(DIALOG_TITLE)).toBe(false);
   });
 });
