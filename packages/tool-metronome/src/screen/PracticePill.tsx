@@ -1,5 +1,6 @@
 import {
   createThemedStyles,
+  DrawnFigures,
   hitSlopForPadded,
   InlineIcon,
   inset,
@@ -8,6 +9,7 @@ import {
   space,
   textRoles,
   textStyle,
+  useTheme,
 } from '@kitbag/core-design';
 import { practiceElapsedMs, useMetronome } from '@kitbag/core-state';
 import { useEffect, useState } from 'react';
@@ -51,10 +53,6 @@ const useStyles = createThemedStyles((theme) => ({
     ...textStyle(textRoles.chip),
     color: theme.color.text2,
   },
-  elapsed: {
-    ...textStyle(textRoles.chipValue),
-    color: theme.color.text,
-  },
   endRow: {
     paddingLeft: space.controlGap,
     borderLeftWidth: size.stroke,
@@ -92,6 +90,7 @@ interface PracticePillProps {
 
 export function PracticePill({ elapsedMs, onEnd }: PracticePillProps) {
   const styles = useStyles();
+  const { color } = useTheme();
   const endable = hasPracticeToEnd(elapsedMs);
   return (
     <View style={styles.centre}>
@@ -111,7 +110,11 @@ export function PracticePill({ elapsedMs, onEnd }: PracticePillProps) {
         onPress={onEnd}
       >
         <InlineIcon name="practice" style={styles.icon} />
-        <Text style={styles.elapsed}>{formatPracticeElapsed(elapsedMs)}</Text>
+        <DrawnFigures
+          text={formatPracticeElapsed(elapsedMs)}
+          role={textRoles.chipValue}
+          color={color.text}
+        />
         {endable ? (
           <View style={styles.endRow}>
             <Text style={styles.end}>End</Text>
