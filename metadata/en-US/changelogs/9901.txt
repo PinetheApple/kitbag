@@ -1,0 +1,1 @@
+• On tablets, confirm dialogs and the metronome's swipe hint now dim the whole screen, not only the centre column.
