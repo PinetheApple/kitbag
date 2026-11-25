@@ -1,0 +1,1 @@
+• The song and stem players no longer show an "Up next" row saying nothing is queued. With an empty queue only Previous and Repeat remain, and the song player has a Queue button in its top bar.
