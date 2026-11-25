@@ -26,6 +26,7 @@ import {
 } from './playerHarness.test-helper.tsx';
 import { StemPlayerScreen } from './StemPlayerScreen.tsx';
 import { WAVEFORM_BARS } from './StemRowView.tsx';
+import { NO_GRID_REASON } from '../logic/meterEdit.ts';
 
 const VIEWED = SET_ID + 1;
 const VIEWED_TITLE = 'Way Maker';
@@ -63,7 +64,7 @@ function viewedScreen(view = true): ReactElement {
 let renderer: ReactTestRenderer | undefined;
 let hold: MixerHold | undefined;
 
-async function playingThenViewed() {
+async function playingThenViewed(beats?: readonly number[]) {
   stemPlayerStore.getState().close();
   const fake = installFakeRuntime();
   const stored = await fake.records.readStemSet();
@@ -73,6 +74,7 @@ async function playingThenViewed() {
     id: VIEWED,
     title: VIEWED_TITLE,
     songTitle: null,
+    ...(beats === undefined ? {} : { beats, downbeatIndices: [] }),
   };
   fake.records.readStemSet.mockImplementation(((id: number) =>
     Promise.resolve(id === VIEWED ? viewed : stored)) as never);
@@ -160,6 +162,14 @@ describe('a stem song viewed while another plays', () => {
     expect(
       byLabel(`Export mix: ${VIEW_ONLY_REASON}`).props.accessibilityState,
     ).toEqual({ disabled: true });
+  });
+
+  it('keeps the no-grid reason on Meter over the view reason', async () => {
+    await playingThenViewed([]);
+    await press(MENU);
+    expect(
+      byLabel(`Meter, ${NO_GRID_REASON}`).props.accessibilityState,
+    ).toMatchObject({ disabled: true });
   });
 
   it('does not follow the playing song to its next one', async () => {

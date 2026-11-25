@@ -708,7 +708,11 @@ export {
   useStemSource,
 } from './songView/useViewedPlayer.ts';
 export { useViewPlayLabel } from './songView/useViewPlayLabel.ts';
-export { VIEW_ONLY_REASON, viewPlayLabel } from './songView/viewText.ts';
+export {
+  VIEW_ONLY_REASON,
+  viewOnlyReason,
+  viewPlayLabel,
+} from './songView/viewText.ts';
 export type { HeldStart } from './stemPlayer/loop.ts';
 export {
   createMixerClick,

@@ -1,7 +1,13 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
-import { QUEUE_TEXT } from '@kitbag/core-design';
-import { ARRIVAL, arrivalStore, VIEW_ONLY_REASON } from '@kitbag/core-state';
+import { meterCopy, QUEUE_TEXT } from '@kitbag/core-design';
+import {
+  ARRIVAL,
+  arrivalStore,
+  TEMPO_MODE,
+  TEMPO_SOURCE,
+  VIEW_ONLY_REASON,
+} from '@kitbag/core-state';
 import { act, createElement } from 'react';
 import type { ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,6 +23,7 @@ import {
   OPEN_SONG,
   queue,
   resetScreenState,
+  songTempo,
 } from './SongPlayerScreen.mocks.test-helper.ts';
 
 vi.mock('./EndedSetlistSnackbar.tsx', () => ({
@@ -47,6 +54,7 @@ vi.mock('@kitbag/core-state', async (original) =>
 );
 
 const MORE = 'More';
+const FITTED_BPM = 120;
 
 beforeEach(resetScreenState);
 
@@ -128,6 +136,13 @@ describe('a song viewed while another plays', () => {
   });
 
   it('hides Stop and waits for Play on Meter, Tempo and Tempo correction', () => {
+    songTempo.tempo = {
+      mode: TEMPO_MODE.follow,
+      bpm: FITTED_BPM,
+      anchor: 0,
+      beatsPerBar: 4,
+      source: TEMPO_SOURCE.analysed,
+    };
     const tree = viewing();
     const sheet = menuOf(tree);
     expect(
@@ -152,6 +167,23 @@ describe('a song viewed while another plays', () => {
       disabled: true,
       detail: VIEW_ONLY_REASON,
     });
+  });
+});
+
+describe('a viewed song whose beat is still being found', () => {
+  it('keeps the rows own reason over the view reason', () => {
+    display.viewing = true;
+    display.analysis = { analysisStatus: 'analyzing', beats: [] };
+    const tree = mount(true, { view: true });
+    pressBarAction(tree, MORE);
+    const sheet = tree.root.findByType('Sheet' as never);
+    expect(sheet.findByType('MeterRow' as never).props).toMatchObject({
+      disabled: true,
+      reason: meterCopy.pending,
+    });
+    expect(sheet.findByType('TempoModeRow' as never).props.reason).toBe(
+      meterCopy.pending,
+    );
   });
 });
 

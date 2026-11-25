@@ -23,7 +23,7 @@ import {
   useSongLibrary,
   useSongPlayer,
   useSongViewing,
-  VIEW_ONLY_REASON,
+  viewOnlyReason,
   type QueuedSong,
   type StemPlayerStatus,
 } from '@kitbag/core-state';
@@ -92,8 +92,8 @@ function useGridGatedRow() {
 
 function useLiveOnlyRow() {
   const gated = useGridGatedRow();
-  const viewing = useSongViewing();
-  return viewing ? { disabled: true, detail: VIEW_ONLY_REASON } : gated;
+  const detail = viewOnlyReason(gated.detail ?? null, useSongViewing());
+  return { disabled: detail !== null, detail: detail ?? undefined };
 }
 
 function SongMeterRow({ onPress }: RowProps) {
@@ -112,8 +112,9 @@ function SongMeterRow({ onPress }: RowProps) {
 }
 
 function SongTempoModeRow({ onPress }: RowProps) {
-  const { disabled, detail } = useLiveOnlyRow();
-  const reason = useSongPlayer((s) => tempoUnavailable(s.tempo, 'song'));
+  const { disabled, detail } = useGridGatedRow();
+  const unavailable = useSongPlayer((s) => tempoUnavailable(s.tempo, 'song'));
+  const reason = viewOnlyReason(unavailable, useSongViewing());
   const mode = useSongPlayer((s) => s.tempoMode);
   return (
     <TempoModeRow

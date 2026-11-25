@@ -225,6 +225,7 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
     TEMPO_MODE,
     TEMPO_SOURCE,
     VIEW_ONLY_REASON,
+    viewOnlyReason,
     viewPlayLabel,
   } = await original<{
     useFocusedMixerHold: unknown;
@@ -256,7 +257,8 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
     TEMPO_MODE: unknown;
     TEMPO_SOURCE: unknown;
     VIEW_ONLY_REASON: unknown;
-    viewPlayLabel: (title: string, playing: string | null) => string;
+    viewOnlyReason: unknown;
+    viewPlayLabel: (title: string, playing: string) => string;
   }>();
   const open = () => {
     const mine = ++mixer.session;
@@ -380,6 +382,7 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
         ? viewPlayLabel(title, display.playing)
         : undefined,
     VIEW_ONLY_REASON,
+    viewOnlyReason,
     useIsQueued: () => false,
     useQueueRefresh: () => undefined,
     useQueueSong: () => queue,

@@ -25,6 +25,7 @@ import {
   useStemPlayer,
   useStemViewing,
   VIEW_ONLY_REASON,
+  viewOnlyReason,
 } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -162,16 +163,18 @@ function StemMeterRow({ onMeter }: { readonly onMeter: () => void }) {
   );
   const yours = useStemPlayer((s) => isOverridden(s.meterOverride));
   const noGrid = useStemPlayer((s) => meterGridState(s.beats) !== 'ready');
-  const viewing = useStemViewing();
-  const reason = viewing ? VIEW_ONLY_REASON : NO_GRID_REASON;
-  const disabled = viewing || noGrid;
+  const reason = viewOnlyReason(
+    noGrid ? NO_GRID_REASON : null,
+    useStemViewing(),
+  );
+  const disabled = reason !== null;
   return (
     <View style={styles.divided}>
       <MeterRow
         value={meter}
         yours={yours}
         disabled={disabled}
-        {...(disabled ? { reason } : {})}
+        {...(reason === null ? {} : { reason })}
         onPress={onMeter}
       />
     </View>

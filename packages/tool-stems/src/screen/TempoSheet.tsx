@@ -11,7 +11,7 @@ import {
   useLiveStemPlayer,
   useStemPlayer,
   useStemViewing,
-  VIEW_ONLY_REASON,
+  viewOnlyReason,
   type TempoMode,
 } from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
@@ -27,7 +27,7 @@ const useStyles = createThemedStyles((theme) => ({
 export function TempoRow({ onOpen }: { readonly onOpen: () => void }) {
   const styles = useStyles();
   const unavailable = useStemPlayer((s) => tempoUnavailable(s.tempo, 'stems'));
-  const reason = useStemViewing() ? VIEW_ONLY_REASON : unavailable;
+  const reason = viewOnlyReason(unavailable, useStemViewing());
   const mode = useStemPlayer((s) => s.tempoMode);
   return (
     <View style={styles.divided}>
