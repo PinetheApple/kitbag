@@ -31,7 +31,6 @@ const useStyles = createThemedStyles((theme) => ({
   ring: {
     width: metronome.coachRingWidth,
     maxWidth: '100%',
-    height: metronome.coachRingHeight,
     borderRadius: metronome.coachRingRadius,
     borderWidth: metronome.coachRingBorder,
     borderStyle: 'dashed',
