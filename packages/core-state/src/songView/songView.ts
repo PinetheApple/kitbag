@@ -3,7 +3,6 @@ import { KB_MIXER_UNITY_RATE } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { libraryStore } from '../library/store.ts';
-import { warn } from '../songLibrary/storeSupport.ts';
 import type { SongPlayerActions } from '../songPlayer/actions.ts';
 import {
   getSongPlayer,
@@ -28,7 +27,7 @@ import {
   type SongPlayerState,
 } from '../songPlayer/state.ts';
 import { songPlayerStore, type SongPlayerStore } from '../songPlayer/store.ts';
-import { ADVANCE_OUTCOME, type AdvanceOutcome } from '../stemPlayer/songEnd.ts';
+import type { AdvanceOutcome } from '../stemPlayer/songEnd.ts';
 import { clampedSpeed } from '../stemPlayer/speedKey.ts';
 import { tempoModeOf } from '../stemPlayer/tempoGrid.ts';
 import { secondsToFrames } from '../stemPlayer/time.ts';
@@ -37,7 +36,7 @@ import {
   type HeldSlice,
   type HeldTransportActions,
 } from './heldTransport.ts';
-import { viewedPlay, type ViewLibrary } from './viewedPlay.ts';
+import { viewSession, type ViewLibrary } from './viewedPlay.ts';
 
 export type SongViewState = SongPlayerState & HeldSlice;
 
@@ -68,21 +67,38 @@ export function createSongViewStore({
   library,
   metronome,
 }: SongViewDeps): StoreApi<SongViewStore> {
-  let viewing = 0;
-  let bars = 0;
-  let starting = false;
-  const live = (opened: number) => opened === viewing;
-  const plays = viewedPlay(library);
-
   return createStore<SongViewStore>((set, get) => {
     const transport = heldTransport(set, get);
+    const session = viewSession({
+      kind: 'song',
+      library,
+      viewedId: () => (get().status === 'ready' ? get().songId : null),
+      held: transport.held,
+      opening: (songId, bars) => {
+        waveform.reset(bars);
+        set({ ...VIEW_CLOSED, status: 'loading', songId });
+      },
+      show: (opened, songId) => show(opened, songId),
+      failed: () => {
+        set({ status: 'failed' });
+      },
+      closing: () => {
+        set(VIEW_CLOSED);
+      },
+      takeOver: (songId, bars, held) => player().takeOver(songId, bars, held),
+    });
+    const { live } = session;
     const waveform = songWaveform({ set, runtimeOf, live });
-    const clicks = songClickActions({ set, get, metronome });
+    const clicks = songClickActions({
+      set,
+      get: () => ({ ...get(), click: false }),
+      metronome,
+    });
     const presets = songPresetActions({
       set,
       get,
       runtimeOf,
-      session: () => viewing,
+      session: session.current,
       live,
     });
 
@@ -90,7 +106,8 @@ export function createSongViewStore({
       <A extends unknown[]>(edit: (...args: A) => void) =>
       (...args: A) => {
         edit(...args);
-        if (get().clickSettings.dirty) plays.track(presets.saveForSong());
+        if (get().clickSettings.dirty)
+          session.save(presets.saveForSong(), 'song click not stored');
       };
 
     const setSpeed = (requested: number) => {
@@ -99,12 +116,9 @@ export function createSongViewStore({
       if (status !== 'ready' || songId === null || speed === previous)
         return Promise.resolve();
       set({ speed });
-      plays.track(
-        runtimeOf()
-          .records.saveSongSpeed(songId, speed)
-          .catch((error: unknown) => {
-            warn('song speed not stored', error);
-          }),
+      session.save(
+        runtimeOf().records.saveSongSpeed(songId, speed),
+        'song speed not stored',
       );
       return Promise.resolve();
     };
@@ -138,6 +152,7 @@ export function createSongViewStore({
           { record, preset, engineRate, durationFrames },
           clickSettings,
         ),
+        click: preset !== undefined,
         speed: clampedSpeed(record.speed),
       });
       waveform.show(opened, record.waveformPath);
@@ -152,41 +167,11 @@ export function createSongViewStore({
       setSpeed,
       resetSpeed: () => setSpeed(KB_MIXER_UNITY_RATE),
       togglePlay: () => {
-        void get().play();
+        void session.play();
       },
-      view: async (songId, waveformBars) => {
-        const opened = ++viewing;
-        bars = waveformBars;
-        waveform.reset(waveformBars);
-        set({ ...VIEW_CLOSED, status: 'loading', songId });
-        try {
-          await show(opened, songId);
-        } catch (error: unknown) {
-          warn('song not viewable', error);
-          if (live(opened)) set({ status: 'failed' });
-        }
-      },
-      play: async () => {
-        const { status, songId } = get();
-        if (status !== 'ready' || songId === null || starting) return null;
-        starting = true;
-        const opened = viewing;
-        const held = transport.held();
-        try {
-          const outcome = await plays.play({ kind: 'song', id: songId }, () =>
-            player().takeOver(songId, bars, held),
-          );
-          if (live(opened) && outcome === ADVANCE_OUTCOME.playing)
-            get().leave();
-          return outcome;
-        } finally {
-          starting = false;
-        }
-      },
-      leave: () => {
-        viewing++;
-        set(VIEW_CLOSED);
-      },
+      view: session.view,
+      play: session.play,
+      leave: session.leave,
     };
   });
 }

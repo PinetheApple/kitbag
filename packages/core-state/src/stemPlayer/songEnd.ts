@@ -110,8 +110,8 @@ export interface AdvanceSteps {
   readonly load: (opened: number, id: number) => Promise<void>;
   readonly live: (opened: number) => boolean;
   readonly ready: () => boolean;
-  readonly play: () => void;
-  readonly prepare?: () => Promise<void>;
+  readonly play: (headFrame?: number) => void;
+  readonly prepare?: () => Promise<number>;
 }
 
 export async function startSong(
@@ -125,13 +125,14 @@ export async function startSong(
     steps.ends.unopened(opened);
     return ADVANCE_OUTCOME.unplayable;
   }
+  let head: number | undefined;
   if (steps.prepare !== undefined) {
-    await steps.prepare();
+    head = await steps.prepare();
     if (!steps.live(opened)) return ADVANCE_OUTCOME.displaced;
   }
   steps.ends.advanced();
   if (steps.ends.stoppedSince(opened)) return ADVANCE_OUTCOME.stopped;
-  steps.play();
+  steps.play(head);
   return ADVANCE_OUTCOME.playing;
 }
 

@@ -21,6 +21,7 @@ export function startedSetlist(...songs: QueuedSong[]): ViewLibrary {
     session: { setlistId: SETLIST_ID, skipped: [] },
     entries: { [SETLIST_ID]: songs.map((song, i) => entryOf(song, i + 1)) },
     endSetlistSession: vi.fn(),
+    openStemEntry: vi.fn(() => Promise.resolve(true)),
   };
 }
 

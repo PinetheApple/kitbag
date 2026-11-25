@@ -166,6 +166,7 @@ export interface StemPlayerActions extends CardPressActions {
   readonly setStemKey: (index: number, key: number) => Promise<void>;
   readonly resetSpeedKey: () => Promise<void>;
   readonly togglePlay: () => void;
+  readonly playFrom: (frame: number) => void;
   readonly scrub: (frame: number) => void;
   readonly cancelScrub: () => void;
   readonly seek: (frame: number) => void;

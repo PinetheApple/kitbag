@@ -2,6 +2,7 @@ import { clamp } from '../metronome/config.ts';
 import {
   loopBetween,
   movedEdge,
+  refusedLoop,
   snapToBeat,
   type HeldStart,
   type LoopSeconds,
@@ -40,22 +41,18 @@ export function heldTransport(
     holdAt(framesToSeconds(frame, get().engineRate));
   };
   const refuse = () => {
-    const { loop } = get();
-    set({
-      loop: loop.kind === 'on' ? loop : { kind: 'off' },
-      loopFailure: 'tooShort',
-    });
+    set(refusedLoop(get().loop, 'tooShort'));
+    return false;
   };
   const holdLoop = (bounds: LoopSeconds | null) => {
-    const endSec = Math.min(bounds?.endSec ?? 0, lengthSec());
-    if (bounds === null || endSec <= bounds.startSec) {
-      refuse();
-      return;
-    }
+    if (bounds === null) return refuse();
+    const endSec = Math.min(bounds.endSec, lengthSec());
+    if (endSec <= bounds.startSec) return refuse();
     set({
       loop: { kind: 'on', startSec: bounds.startSec, endSec },
       loopFailure: null,
     });
+    return true;
   };
   const markLoop = () => {
     const { loop, beats, startSec } = get();

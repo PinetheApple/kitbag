@@ -7,10 +7,10 @@ import { KB_MIXER_UNITY_RATE } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { libraryStore } from '../library/store.ts';
-import { warn } from '../songLibrary/storeSupport.ts';
-import { mixActions, type MixCommands } from '../stemPlayer/actions.ts';
+import { stemMixActions, type StemMixCommands } from '../stemPlayer/actions.ts';
 import { patchOf, type ClickField } from '../stemPlayer/clickShape.ts';
 import { closedState } from '../stemPlayer/closedState.ts';
+import { boundsOf, loopHolds } from '../stemPlayer/loop.ts';
 import { UNITY_GAIN, UNSHIFTED_KEY } from '../stemPlayer/mix.ts';
 import { mixSaver } from '../stemPlayer/mixSaver.ts';
 import { openedStemState } from '../stemPlayer/openedState.ts';
@@ -18,7 +18,7 @@ import {
   getStemPlayer,
   type StemPlayerRuntime,
 } from '../stemPlayer/runtime.ts';
-import { ADVANCE_OUTCOME, type AdvanceOutcome } from '../stemPlayer/songEnd.ts';
+import type { AdvanceOutcome } from '../stemPlayer/songEnd.ts';
 import { clampedSpeed, wholeKey } from '../stemPlayer/speedKey.ts';
 import {
   keyedRows,
@@ -41,7 +41,7 @@ import {
   type HeldSlice,
   type HeldTransportActions,
 } from './heldTransport.ts';
-import { viewedPlay, type ViewLibrary } from './viewedPlay.ts';
+import { viewSession, type ViewLibrary } from './viewedPlay.ts';
 
 export type StemViewState = StemPlayerState & HeldSlice;
 
@@ -52,7 +52,6 @@ type StemViewEdits = Pick<
   | 'setGain'
   | 'toggleMute'
   | 'solo'
-  | 'setMasterGain'
   | 'resetMix'
   | 'setSpeed'
   | 'setSongKey'
@@ -84,12 +83,10 @@ type SpeedKeyShift = Partial<
 
 const VIEW_CLOSED: StemViewState = { ...closedState, startSec: 0 };
 
-// A viewed song's mix reaches the engine only through Play's load.
-const NO_MIXER: MixCommands = {
+const VIEW_MIX_COMMANDS: StemMixCommands = {
   mixerSetGain: () => undefined,
   mixerSetMute: () => undefined,
   mixerSetSolo: () => undefined,
-  mixerSetMasterGain: () => undefined,
 };
 
 export function createStemViewStore({
@@ -98,42 +95,53 @@ export function createStemViewStore({
   library,
   mixSaveDelayMs = MIX_SAVE_DELAY_MS,
 }: StemViewDeps): StoreApi<StemViewStore> {
-  let viewing = 0;
-  let bars = 0;
-  let starting = false;
   let viewed: StemSetRecord | null = null;
-  const live = (opened: number) => opened === viewing;
-  const plays = viewedPlay(library);
   const records = () => runtimeOf().records;
-  const saver = mixSaver((mixes) => {
-    const write = records().saveStemMix(mixes);
-    plays.track(write);
-    return write;
-  }, mixSaveDelayMs);
 
   return createStore<StemViewStore>((set, get) => {
     const transport = heldTransport(set, get);
+    const saver = mixSaver((mixes) => {
+      const write = records().saveStemMix(mixes);
+      session.track(write);
+      return write;
+    }, mixSaveDelayMs);
+    const session = viewSession({
+      kind: 'stems',
+      library,
+      viewedId: () => (get().status === 'ready' ? get().setId : null),
+      held: transport.held,
+      opening: (setId) => {
+        viewed = null;
+        set({ ...VIEW_CLOSED, status: 'loading', setId });
+      },
+      show: (opened, setId, bars) => show(opened, setId, bars),
+      failed: () => {
+        set({ status: 'failed' });
+      },
+      closing: () => {
+        viewed = null;
+        set(VIEW_CLOSED);
+      },
+      takeOver: (setId, bars, held) => player().takeOver(setId, bars, held),
+      flush: saver.flush,
+    });
+    const { live } = session;
     const editable = () => get().status === 'ready';
-
-    const saveSpeedKey = (setId: number) => {
-      const { speed, songKey, stems } = get();
-      plays.track(
-        records()
-          .saveStemSetSpeedKey(setId, speedKeyChange(speed, songKey, stems))
-          .catch((error: unknown) => {
-            warn('speed and key not stored', error);
-          }),
-      );
-    };
 
     const shift = (change: SpeedKeyShift) => {
       const { setId, tempoMode } = get();
       if (!editable() || setId === null || viewed === null)
         return Promise.resolve();
       set(change);
-      const { speed, songKey } = get();
+      const { speed, songKey, stems } = get();
       set(gridFacts(viewed, tempoMode, { speed, key: songKey }));
-      saveSpeedKey(setId);
+      session.save(
+        records().saveStemSetSpeedKey(
+          setId,
+          speedKeyChange(speed, songKey, stems),
+        ),
+        'speed and key not stored',
+      );
       return Promise.resolve();
     };
 
@@ -150,17 +158,14 @@ export function createStemViewStore({
       )
         return Promise.resolve();
       set(patch);
-      plays.track(
-        records()
-          .saveStemSetClick(setId, patch)
-          .catch((error: unknown) => {
-            warn('click setting not stored', error);
-          }),
+      session.save(
+        records().saveStemSetClick(setId, patch),
+        'click setting not stored',
       );
       return Promise.resolve();
     };
 
-    const show = async (opened: number, setId: number) => {
+    const show = async (opened: number, setId: number, bars: number) => {
       const runtime = runtimeOf();
       const record = await runtime.records.readStemSet(setId);
       if (!live(opened)) return;
@@ -187,23 +192,29 @@ export function createStemViewStore({
     return {
       ...VIEW_CLOSED,
       ...transport.actions,
-      ...mixActions(set, get, () => NO_MIXER, saver),
+      ...stemMixActions(set, get, () => VIEW_MIX_COMMANDS, saver),
       jumpToSection: (index) => {
         const { sections, loop } = get();
         const section = sections[index];
         if (section === undefined) return Promise.resolve();
-        const outside =
-          loop.kind === 'on' &&
-          (section.startSec < loop.startSec || section.startSec >= loop.endSec);
-        if (outside) set({ loop: { kind: 'off' } });
+        if (loop.kind === 'on' && !loopHolds(loop, section.startSec))
+          set({
+            loop: { kind: 'off' },
+            loopFailure: null,
+            undoableLoop: boundsOf(loop),
+          });
         transport.holdAt(section.startSec);
         return Promise.resolve();
       },
       loopSection: (index) => {
-        const section = get().sections[index];
-        if (section === undefined) return Promise.resolve();
-        transport.holdLoop(section);
-        if (get().loop.kind === 'on') transport.holdAt(section.startSec);
+        const { sections, loop, undoableLoop } = get();
+        const section = sections[index];
+        if (section === undefined || !transport.holdLoop(section))
+          return Promise.resolve();
+        set({
+          undoableLoop: loop.kind === 'on' ? boundsOf(loop) : undoableLoop,
+        });
+        transport.holdAt(section.startSec);
         return Promise.resolve();
       },
       setSpeed: (requested) => shift({ speed: clampedSpeed(requested) }),
@@ -227,45 +238,11 @@ export function createStemViewStore({
       setClickGrouping: (groups) => changeClick('clickGrouping', groups),
       setClickRate: (rate) => changeClick('clickRate', rate),
       togglePlay: () => {
-        void get().play();
+        void session.play();
       },
-      view: async (setId, waveformBars) => {
-        saver.flush();
-        const opened = ++viewing;
-        bars = waveformBars;
-        viewed = null;
-        set({ ...VIEW_CLOSED, status: 'loading', setId });
-        try {
-          await show(opened, setId);
-        } catch (error: unknown) {
-          warn('stem song not viewable', error);
-          if (live(opened)) set({ status: 'failed' });
-        }
-      },
-      play: async () => {
-        const { status, setId } = get();
-        if (status !== 'ready' || setId === null || starting) return null;
-        starting = true;
-        saver.flush();
-        const opened = viewing;
-        const held = transport.held();
-        try {
-          const outcome = await plays.play({ kind: 'stems', id: setId }, () =>
-            player().takeOver(setId, bars, held),
-          );
-          if (live(opened) && outcome === ADVANCE_OUTCOME.playing)
-            get().leave();
-          return outcome;
-        } finally {
-          starting = false;
-        }
-      },
-      leave: () => {
-        saver.flush();
-        viewing++;
-        viewed = null;
-        set(VIEW_CLOSED);
-      },
+      view: session.view,
+      play: session.play,
+      leave: session.leave,
     };
   });
 }

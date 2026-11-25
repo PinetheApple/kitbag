@@ -15,7 +15,7 @@ import {
   stem,
 } from '../stemPlayer/store.test-helper.ts';
 import { createStemViewStore } from './stemView.ts';
-import { engineCalls, startedSetlist } from './view.test-helper.ts';
+import { engineCalls, SETLIST_ID, startedSetlist } from './view.test-helper.ts';
 import type { ViewLibrary } from './viewedPlay.ts';
 
 const PLAYING = 7;
@@ -26,6 +26,9 @@ const HALF_GAIN = 0.5;
 const VERSE = 1;
 const VERSE_START = 4;
 const VERSE_END = 8;
+const INTRO = 0;
+const ONE_BAR = 1;
+const HELD_START = 1.5;
 
 function twoStemSongs() {
   const other = record([stem(3), stem(4, { role: 'drums' })], {
@@ -166,6 +169,36 @@ describe('viewing a stem song while another plays', () => {
   });
 });
 
+describe('held edits on a viewed stem song', () => {
+  let songs: Songs;
+  beforeEach(() => {
+    songs = twoStemSongs();
+  });
+
+  it('counts in from the held start, not from the engine position', async () => {
+    const { player, view } = await playing(songs, startedSetlist());
+    songs.countInBars.mockReturnValue(ONE_BAR);
+    await view.getState().view(OTHER, BARS);
+    view.getState().seek(at(HELD_START));
+    expect(await view.getState().play()).toBe(ADVANCE_OUTCOME.playing);
+    expect(songs.commands.mixerSeek).toHaveBeenLastCalledWith(at(HELD_START));
+    expect(songs.commands.songCountIn).toHaveBeenCalledOnce();
+    expect(player.getState().countEndFrame).not.toBeNull();
+  });
+
+  it('clears a loop that a section jump leaves, as the player does', async () => {
+    const { view } = await playing(songs, startedSetlist());
+    await view.getState().view(OTHER, BARS);
+    await view.getState().loopSection(VERSE);
+    await view.getState().jumpToSection(INTRO);
+    expect(view.getState()).toMatchObject({
+      startSec: 0,
+      loop: { kind: 'off' },
+      undoableLoop: { startSec: VERSE_START, endSec: VERSE_END },
+    });
+  });
+});
+
 describe('the setlist on Play from a viewed stem song', () => {
   let songs: Songs;
   beforeEach(() => {
@@ -187,7 +220,7 @@ describe('the setlist on Play from a viewed stem song', () => {
     expect(library.endSetlistSession).toHaveBeenCalledOnce();
   });
 
-  it('stays when the played song is one of its entries', async () => {
+  it('moves to the played song when it is one of its entries', async () => {
     const library = startedSetlist(
       { kind: 'stems', id: PLAYING },
       { kind: 'stems', id: OTHER },
@@ -196,5 +229,16 @@ describe('the setlist on Play from a viewed stem song', () => {
     await view.getState().view(OTHER, BARS);
     await view.getState().play();
     expect(library.endSetlistSession).not.toHaveBeenCalled();
+    expect(library.openStemEntry).toHaveBeenCalledWith(2, SETLIST_ID);
+  });
+
+  it('stays where it was when the viewed song cannot play', async () => {
+    const library = startedSetlist({ kind: 'stems', id: PLAYING });
+    const { view } = await playing(songs, library);
+    await view.getState().view(OTHER, BARS);
+    songs.readStemSet.mockResolvedValueOnce(undefined);
+    expect(await view.getState().play()).toBe(ADVANCE_OUTCOME.unplayable);
+    expect(library.endSetlistSession).not.toHaveBeenCalled();
+    expect(library.openStemEntry).not.toHaveBeenCalled();
   });
 });

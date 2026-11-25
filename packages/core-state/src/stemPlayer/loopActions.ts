@@ -1,8 +1,11 @@
 import { KB_RESULT } from '@kitbag/core-native';
 
 import {
+  boundsOf,
   loopBetween,
+  loopHolds,
   movedEdge,
+  refusedLoop,
   snapToBeat,
   type HeldStart,
   type LoopEdge,
@@ -23,14 +26,6 @@ export type LoopSlice = Pick<
   'beats' | 'engineRate' | 'durationFrames' | 'loop' | 'loopFailure'
 >;
 
-function boundsOf({ startSec, endSec }: LoopSeconds): LoopSeconds {
-  return { startSec, endSec };
-}
-
-function loopHolds({ startSec, endSec }: LoopSeconds, seconds: number) {
-  return seconds >= startSec && seconds < endSec;
-}
-
 function failureOf(result: number): LoopFailure {
   return result === KB_RESULT.KB_ERROR_INVALID_ARGUMENT ? 'pastEnd' : 'engine';
 }
@@ -44,8 +39,7 @@ function loopControls(
     framesToSeconds(runtimeOf().engine.position(), get().engineRate);
 
   const refuse = (loopFailure: LoopFailure) => {
-    const { loop } = get();
-    set({ loop: loop.kind === 'on' ? loop : { kind: 'off' }, loopFailure });
+    set(refusedLoop(get().loop, loopFailure));
   };
 
   const clear = async (undoable: LoopSeconds | null): Promise<boolean> => {
@@ -151,9 +145,11 @@ export async function applyHeldStart(
   { startSec, loop }: HeldStart,
   setLoop: SetLoop,
   get: () => Pick<StemPlayerActions, 'seek'> & Pick<LoopSlice, 'engineRate'>,
-): Promise<void> {
+): Promise<number> {
   if (loop !== null) await setLoop(loop);
-  get().seek(secondsToFrames(startSec, get().engineRate));
+  const frame = secondsToFrames(startSec, get().engineRate);
+  get().seek(frame);
+  return frame;
 }
 
 export function loopActions(context: MixerSessionContext<LoopSlice>): {

@@ -14,7 +14,7 @@ interface StemSongAdvanceContext {
   readonly ends: SongEnds;
   readonly get: () => Pick<
     StemPlayerStore,
-    'status' | 'togglePlay' | 'countEndFrame'
+    'status' | 'togglePlay' | 'playFrom' | 'countEndFrame'
   >;
   readonly set: (change: Pick<StemPlayerStore, 'advanceCountEnd'>) => void;
   readonly runtimeOf: () => MixerRuntime;
@@ -25,7 +25,7 @@ interface StemSongAdvanceContext {
     bars: number,
   ) => Promise<void>;
   readonly lastBars: () => number;
-  readonly applyHeld: (held: HeldStart) => Promise<void>;
+  readonly applyHeld: (held: HeldStart) => Promise<number>;
 }
 
 type StemSongAdvance = Pick<
@@ -54,8 +54,9 @@ export function stemSongAdvance({
     load: (opened, id) => loadSession(opened, id, bars()),
     live: mixer.live,
     ready: () => get().status === 'ready',
-    play: () => {
-      get().togglePlay();
+    play: (head) => {
+      if (head === undefined) get().togglePlay();
+      else get().playFrom(head);
       set({ advanceCountEnd: get().countEndFrame });
     },
     ...(held === undefined ? {} : { prepare: () => applyHeld(held) }),

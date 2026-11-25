@@ -371,8 +371,9 @@ export function createSongPlayerStore(
             load: () => loading,
             live,
             ready: () => get().status === 'ready',
-            play: () => {
-              get().togglePlay();
+            play: (head) => {
+              if (head === undefined) get().togglePlay();
+              else get().playFrom(head);
             },
             ...(held === undefined
               ? {}
