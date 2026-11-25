@@ -26,7 +26,6 @@ vi.mock('react-native', async () => {
 vi.mock('@kitbag/core-design', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   createThemedStyles: () => () => new Proxy({}, { get: () => ({}) }),
-  useTheme: () => ({ color: { text: 'ink' } }),
   DrawnFigures: (props: Props) => {
     figures.push(props.text);
     return null;

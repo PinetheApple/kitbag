@@ -9,7 +9,6 @@ import {
   space,
   textRoles,
   textStyle,
-  useTheme,
 } from '@kitbag/core-design';
 import { practiceElapsedMs, useMetronome } from '@kitbag/core-state';
 import { useEffect, useState } from 'react';
@@ -90,7 +89,6 @@ interface PracticePillProps {
 
 export function PracticePill({ elapsedMs, onEnd }: PracticePillProps) {
   const styles = useStyles();
-  const { color } = useTheme();
   const endable = hasPracticeToEnd(elapsedMs);
   return (
     <View style={styles.centre}>
@@ -112,8 +110,7 @@ export function PracticePill({ elapsedMs, onEnd }: PracticePillProps) {
         <InlineIcon name="practice" style={styles.icon} />
         <DrawnFigures
           text={formatPracticeElapsed(elapsedMs)}
-          role={textRoles.chipValue}
-          color={color.text}
+          role="chipValue"
         />
         {endable ? (
           <View style={styles.endRow}>

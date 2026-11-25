@@ -6,7 +6,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { fontFace } from '../fontFaces.ts';
 import { textRoles } from '../roles.ts';
-import { DrawnFigures } from './DrawnFigures.tsx';
+import { buildTheme } from '../theme.ts';
+import { ThemeProvider } from '../ThemeProvider.tsx';
+import { DrawnFigures, type DrawnFiguresProps } from './DrawnFigures.tsx';
 import { drawn, drawnAs } from './svgRecorder.test-helper.ts';
 
 const display = vi.hoisted(() => ({ fontScale: 1 }));
@@ -22,17 +24,24 @@ vi.mock(
   async () => (await import('./svgRecorder.test-helper.ts')).svg,
 );
 
-const ROLE = textRoles.chipValue;
-const INK = '#123456';
+const ROLE_NAME = 'chipValue';
+const ROLE = textRoles[ROLE_NAME];
+const INK = buildTheme('dark').color.text2;
 const DOUBLE_SCALE = 2;
 
-function draw(text: string) {
+function draw(text: string): Record<string, unknown> {
   let renderer: ReturnType<typeof create> | undefined;
   act(() => {
-    renderer = create(<DrawnFigures text={text} role={ROLE} color={INK} />);
+    renderer = create(
+      <ThemeProvider mode="dark">
+        <DrawnFigures text={text} role={ROLE_NAME} color="text2" />
+      </ThemeProvider>,
+    );
   });
-  const ghost = renderer?.root.findByType('Text' as never);
-  return { ghost: ghost?.props as Record<string, unknown> };
+  return renderer?.root.findByType('Text' as never).props as Record<
+    string,
+    unknown
+  >;
 }
 
 beforeEach(() => {
@@ -55,16 +64,23 @@ describe('DrawnFigures', () => {
   });
 
   it('sizes itself from a Text that changes only when the figure count does', () => {
-    const before = draw('0:10').ghost;
-    const after = draw('0:11').ghost;
+    const before = draw('0:10');
+    const after = draw('0:11');
     expect(before.children).toBe('0:00');
+    expect(before.numberOfLines).toBe(1);
     expect(after.children).toBe(before.children);
-    expect(draw('10:00').ghost.children).toBe('00:00');
+    expect(draw('10:00').children).toBe('00:00');
   });
 
   it('scales the drawn size with the system font scale, as Text does', () => {
     display.fontScale = DOUBLE_SCALE;
     draw('0:10');
     expect(drawnAs('SvgText')[0]?.fontSize).toBe(ROLE.size * DOUBLE_SCALE);
+  });
+
+  it('refuses roles whose tracking or case the drawing would not follow', () => {
+    // @ts-expect-error tempoCaption carries tracking
+    const tracked: DrawnFiguresProps['role'] = 'tempoCaption';
+    expect(tracked).toBe('tempoCaption');
   });
 });

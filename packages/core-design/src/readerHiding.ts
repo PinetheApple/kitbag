@@ -9,3 +9,5 @@ export function readerHiding(hidden: boolean): ReaderHiding {
     accessibilityElementsHidden: hidden,
   };
 }
+
+export const READER_HIDDEN = { ...readerHiding(true), accessible: false };
