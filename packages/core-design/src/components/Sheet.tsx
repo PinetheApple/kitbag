@@ -238,6 +238,7 @@ export function Sheet({
   const {
     enter,
     returned,
+    slotAttached,
     slotLaidOut,
     style: enterStyle,
   } = useSheetEnter({ motion, open, onShown: reportShown });
@@ -308,7 +309,11 @@ export function Sheet({
           onPress={onDismiss}
         />
       </Animated.View>
-      <Animated.View style={[slotStyle, enterStyle]} onLayout={slotLaidOut}>
+      <Animated.View
+        ref={slotAttached}
+        style={[slotStyle, enterStyle]}
+        onLayout={slotLaidOut}
+      >
         {notice === undefined ? null : (
           <Animated.View style={noticeStyle}>{notice}</Animated.View>
         )}

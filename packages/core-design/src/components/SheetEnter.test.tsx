@@ -1,8 +1,12 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
-import { act } from 'react';
+import { act, createElement as h } from 'react';
 import type { HostInstance } from 'react-native';
-import type { ReactTestInstance, ReactTestRenderer } from 'react-test-renderer';
+import {
+  create,
+  type ReactTestInstance,
+  type ReactTestRenderer,
+} from 'react-test-renderer';
 import { expect, it, vi } from 'vitest';
 
 import {
@@ -18,6 +22,10 @@ import {
   WINDOW_HEIGHT,
   type Open,
 } from './sheetExit.test-helper.tsx';
+
+const { useSharedValue } = await import('react-native-reanimated');
+const { useSheetEnter } = await import('./useSheetEnter.ts');
+const { useReduceMotionMode } = await import('../useReduceMotion.ts');
 
 const DRAG_DISTANCE = 40;
 const CLOSED = { actions: false, remove: false } as const;
@@ -162,4 +170,53 @@ it('does not slide again when its slot lays out again', () => {
   layOutSlot(tree, ACTIONS);
   expect(anim.timings).toHaveLength(1);
   expect(translateY(moving(tree).slot)).toBe(0);
+});
+
+interface Probe {
+  enter?: () => void;
+}
+
+function EnterProbe({
+  probe,
+  shown,
+}: {
+  readonly probe: Probe;
+  readonly shown: () => void;
+}) {
+  const open = useSharedValue(true);
+  const { enter, slotAttached, slotLaidOut } = useSheetEnter({
+    motion: useReduceMotionMode(),
+    open,
+    onShown: shown,
+  });
+  probe.enter = enter;
+  return h('Slot', { ref: slotAttached, onLayout: slotLaidOut });
+}
+
+it('slides at once when shown again into a slot that is still laid out', () => {
+  const probe: Probe = {};
+  const shown = vi.fn();
+  let tree: ReactTestRenderer | undefined;
+  act(() => {
+    tree = create(h(EnterProbe, { probe, shown }), {
+      createNodeMock: () => ({}),
+    });
+  });
+  act(() => {
+    probe.enter?.();
+  });
+  expect(anim.timings).toEqual([]);
+  const slot = tree?.root.findByType('Slot' as never);
+  act(() => {
+    (slot?.props.onLayout as () => void)();
+  });
+  settleSlide(true);
+  expect(shown).toHaveBeenCalledOnce();
+  act(() => {
+    probe.enter?.();
+  });
+  expect(anim.timings).toHaveLength(2);
+  expect(shown).toHaveBeenCalledOnce();
+  settleSlide(true);
+  expect(shown).toHaveBeenCalledTimes(2);
 });

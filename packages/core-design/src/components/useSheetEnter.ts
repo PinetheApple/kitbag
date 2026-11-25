@@ -22,6 +22,7 @@ export function useSheetEnter({ motion, open, onShown }: SheetEnterOptions) {
   const slides = useRef(0);
   const sliding = useRef<number | null>(null);
   const waiting = useRef(false);
+  const laidOut = useRef(false);
   const shown = useRef(onShown);
   shown.current = onShown;
   const settled = useCallback((slide: number, stillOpen: boolean) => {
@@ -29,15 +30,9 @@ export function useSheetEnter({ motion, open, onShown }: SheetEnterOptions) {
     sliding.current = null;
     if (stillOpen) shown.current();
   }, []);
-  const enter = useCallback(() => {
-    slides.current += 1;
-    sliding.current = slides.current;
-    waiting.current = true;
-    enterY.value = windowHeight;
-  }, [enterY, windowHeight]);
   // A long frame could end a slide started before the content mounted, so
   // onShown would focus a field that did not exist yet.
-  const slotLaidOut = useCallback(() => {
+  const startSlide = useCallback(() => {
     const slide = sliding.current;
     if (!waiting.current || slide === null) return;
     waiting.current = false;
@@ -47,6 +42,20 @@ export function useSheetEnter({ motion, open, onShown }: SheetEnterOptions) {
       scheduleOnRN(settled, slide, open.value);
     });
   }, [enterY, motion, open, settled]);
+  const enter = useCallback(() => {
+    slides.current += 1;
+    sliding.current = slides.current;
+    waiting.current = true;
+    enterY.value = windowHeight;
+    if (laidOut.current) startSlide();
+  }, [enterY, windowHeight, startSlide]);
+  const slotLaidOut = useCallback(() => {
+    laidOut.current = true;
+    startSlide();
+  }, [startSlide]);
+  const slotAttached = useCallback((slot: unknown) => {
+    if (slot === null) laidOut.current = false;
+  }, []);
   const returned = useCallback(() => {
     if (sliding.current === null) shown.current();
   }, []);
@@ -61,5 +70,5 @@ export function useSheetEnter({ motion, open, onShown }: SheetEnterOptions) {
   const style = useAnimatedStyle(() => ({
     transform: [{ translateY: enterY.value }],
   }));
-  return { enter, returned, slotLaidOut, style };
+  return { enter, returned, slotAttached, slotLaidOut, style };
 }
