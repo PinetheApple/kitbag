@@ -93,7 +93,7 @@ describe('the Up next row', () => {
   it('keeps only Previous and Repeat, with no text, when nothing is up next', async () => {
     const p = await withQueue();
     expect(upNextLabels(p)).toEqual([]);
-    expect(p.has('Nothing queued')).toBe(false);
+    expect(p.has(QUEUE_TEXT.nothingQueued)).toBe(false);
     expect(p.has('Playback stops when this song ends')).toBe(false);
     expect(p.labelled(PREVIOUS)).toHaveLength(1);
     expect(p.labelled(QUEUE_TEXT.repeatOff)).toHaveLength(1);

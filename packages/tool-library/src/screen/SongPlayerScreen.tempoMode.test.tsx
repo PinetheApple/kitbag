@@ -5,7 +5,7 @@ import { act } from 'react';
 import type { ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { mount } from './SongPlayerScreen.mount.test-helper.ts';
+import { mount, pressBarAction } from './SongPlayerScreen.mount.test-helper.ts';
 import {
   display,
   resetScreenState,
@@ -47,11 +47,7 @@ beforeEach(resetScreenState);
 
 function openMenu(): ReactTestRenderer {
   const tree = mount();
-  const [more] = tree.root.findByType('AppBar' as never).props
-    .actions as readonly { onPress: () => void }[];
-  act(() => {
-    more?.onPress();
-  });
+  pressBarAction(tree, 'More');
   return tree;
 }
 

@@ -154,11 +154,11 @@ function PreviousKey({
 
 interface TextRowProps extends Omit<UpNextRowProps, 'songSec' | 'onPrevious'> {
   readonly previous: ReactNode;
-  readonly text: UpNextText;
+  readonly shown: UpNextText;
   readonly next: UpNextText;
 }
 
-function TextRow({ previous, text, next, onOpenSheet, onNext }: TextRowProps) {
+function TextRow({ previous, shown, next, onOpenSheet, onNext }: TextRowProps) {
   const styles = useStyles();
   const scaled = useTextScaled();
   const nextKey = <NextKey text={next} onNext={onNext} />;
@@ -168,7 +168,7 @@ function TextRow({ previous, text, next, onOpenSheet, onNext }: TextRowProps) {
       {previous}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${UP_NEXT}: ${text.title}, ${text.source}`}
+        accessibilityLabel={`${UP_NEXT}: ${shown.title}, ${shown.source}`}
         accessibilityHint="Opens the queue"
         style={styles.text}
         onPress={onOpenSheet}
@@ -177,10 +177,10 @@ function TextRow({ previous, text, next, onOpenSheet, onNext }: TextRowProps) {
           {UP_NEXT}
         </Text>
         <Text style={styles.title} numberOfLines={1}>
-          {text.title}
+          {shown.title}
         </Text>
         <Text style={styles.source} numberOfLines={1}>
-          {text.source}
+          {shown.source}
         </Text>
       </Pressable>
       {scaled ? null : <RepeatChip />}
@@ -213,7 +213,7 @@ export function UpNextRow({ songSec, onPrevious, ...presses }: UpNextRowProps) {
   return (
     <TextRow
       previous={previous}
-      text={text.shown}
+      shown={text.shown}
       next={text.next}
       {...presses}
     />

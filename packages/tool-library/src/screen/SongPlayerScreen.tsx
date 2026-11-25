@@ -58,7 +58,7 @@ export interface SongPlayerScreenProps {
   readonly onOpenSong: (songId: number) => void;
   readonly usePlayhead: UsePlayhead;
   readonly renderUpNext?: RenderUpNext;
-  readonly onOpenQueue?: () => void;
+  readonly onOpenQueue: () => void;
 }
 
 export type RenderUpNext = (songSec: SongPlayhead['songSec']) => ReactNode;

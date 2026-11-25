@@ -2,8 +2,8 @@ import {
   AppBar,
   Badge,
   createThemedStyles,
-  queueKeyLabel,
   screenBar,
+  useQueueBarAction,
   type AppBarAction,
 } from '@kitbag/core-design';
 import { useSongPlayer, useUpNextCount } from '@kitbag/core-state';
@@ -21,7 +21,7 @@ const useStyles = createThemedStyles(() => ({
 
 interface SongAppBarProps {
   readonly onBack: () => void;
-  readonly onQueue: (() => void) | undefined;
+  readonly onQueue: () => void;
   readonly onMenu: () => void;
 }
 
@@ -53,15 +53,10 @@ export function SongAppBar({ onBack, onQueue, onMenu }: SongAppBarProps) {
   const styles = useStyles();
   const { title, artist, status, bpm } = useLastOpenFacts();
   const shown = barBadge(status, bpm);
-  const queueLabel = queueKeyLabel(useUpNextCount());
+  const queue = useQueueBarAction(onQueue, useUpNextCount());
   const actions: readonly AppBarAction[] = useMemo(
-    () => [
-      ...(onQueue === undefined
-        ? []
-        : [{ icon: 'queue', label: queueLabel, onPress: onQueue } as const]),
-      { icon: 'more', label: 'More', onPress: onMenu } as const,
-    ],
-    [queueLabel, onQueue, onMenu],
+    () => [...queue, { icon: 'more', label: 'More', onPress: onMenu }],
+    [queue, onMenu],
   );
   return (
     <AppBar
