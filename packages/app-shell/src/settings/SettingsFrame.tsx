@@ -8,6 +8,7 @@ const useStyles = createThemedStyles((theme) => ({
   scroll: { flex: 1 },
   content: {
     paddingHorizontal: space.screenInset,
+    paddingBottom: space.screenInset,
     gap: space.sectionGap,
   },
   fillScreen: { flexGrow: 1 },
@@ -30,10 +31,9 @@ export function SettingsFrame({
 }: SettingsFrameProps) {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
-  const frameInset = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
-  const contentInset = useMemo(
-    () => ({ paddingBottom: space.screenInset + insets.bottom }),
-    [insets.bottom],
+  const frameInset = useMemo(
+    () => ({ paddingTop: insets.top, paddingBottom: insets.bottom }),
+    [insets.top, insets.bottom],
   );
   return (
     <View style={[styles.screen, frameInset]}>
@@ -41,7 +41,6 @@ export function SettingsFrame({
         style={styles.scroll}
         contentContainerStyle={[
           styles.content,
-          contentInset,
           fillScreen && styles.fillScreen,
         ]}
       >

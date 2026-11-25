@@ -32,6 +32,7 @@ const GROUPING_OPTIONS: readonly SegmentOption<HistoryGrouping>[] = [
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
   scroll: { flex: 1 },
+  content: { paddingBottom: space.screenInset },
   head: {
     paddingTop: practiceHistory.bodyTop,
     paddingHorizontal: space.screenInset,
@@ -78,12 +79,11 @@ export function PracticeHistoryScreen({
   const model = usePracticeHistoryScreen();
   const { actions } = model;
   const frame = useMemo(
-    () => [styles.screen, { paddingTop: insets.top }],
-    [styles.screen, insets.top],
-  );
-  const content = useMemo(
-    () => ({ paddingBottom: insets.bottom + space.screenInset }),
-    [insets.bottom],
+    () => [
+      styles.screen,
+      { paddingTop: insets.top, paddingBottom: insets.bottom },
+    ],
+    [styles.screen, insets.top, insets.bottom],
   );
   const empty = model.ready && !model.failed && model.sessions.length === 0;
   const { refresh } = model;
@@ -117,7 +117,7 @@ export function PracticeHistoryScreen({
         <ScrollView
           ref={model.scroll}
           style={styles.scroll}
-          contentContainerStyle={content}
+          contentContainerStyle={styles.content}
         >
           <View style={styles.head}>
             <Totals stats={model.stats} />

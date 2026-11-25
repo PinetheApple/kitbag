@@ -4,7 +4,7 @@ import {
   useStemDeck,
   type StemDeckStore,
 } from '@kitbag/core-state';
-import { useCallback, useEffect, useRef, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
 import { ScrollView, Text, View, type TextInputInstance } from 'react-native';
 
 import { AddressField } from './AddressField.tsx';
@@ -16,11 +16,7 @@ import {
 import { NoticeCard } from './NoticeCard.tsx';
 import { RecentServers } from './RecentServers.tsx';
 import { SCAN_TITLE, useScanLook } from './scanLook.ts';
-import {
-  useInset,
-  useStemDeckStyles,
-  type StemDeckInsets,
-} from './stemDeckStyles.ts';
+import { useStemDeckStyles, type StemDeckInsets } from './stemDeckStyles.ts';
 import { TrustSheet } from './TrustSheet.tsx';
 
 const SHARE_HINT =
@@ -163,14 +159,19 @@ export function ConnectScreen({
     },
     [connect],
   );
-  const frame = useInset(styles.screen, 'paddingTop', insets.top);
-  const content = useInset(styles.body, 'paddingBottom', insets.bottom);
+  const frame = useMemo(
+    () => [
+      styles.screen,
+      { paddingTop: insets.top, paddingBottom: insets.bottom },
+    ],
+    [styles.screen, insets.top, insets.bottom],
+  );
   return (
     <View style={frame}>
       <AppBar flush title="Connect to StemDeck" onBack={onBack} />
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={content}
+        contentContainerStyle={styles.body}
         keyboardShouldPersistTaps="handled"
       >
         <Scan onExplainCamera={onExplainCamera} />

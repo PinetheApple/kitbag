@@ -105,11 +105,22 @@ function mount(
   return tree;
 }
 
+function flat(style: unknown): Style {
+  return [style]
+    .flat(Infinity)
+    .reduce<Style>((merged, s) => ({ ...merged, ...(s as Style) }), {});
+}
+
 function scrollBottom(tree: ReactTestRenderer) {
-  const style = tree.root.findByType('ScrollView' as never).props
-    .contentContainerStyle as readonly Style[];
-  return style.reduce<Style>((merged, s) => ({ ...merged, ...s }), {})
-    .paddingBottom;
+  return flat(
+    tree.root.findByType('ScrollView' as never).props.contentContainerStyle,
+  ).paddingBottom;
+}
+
+function frameBottom(tree: ReactTestRenderer) {
+  const [frame] = tree.root.findAllByType('View' as never);
+  if (frame === undefined) throw new Error('no frame');
+  return flat(frame.props.style).paddingBottom;
 }
 
 function propOf(tree: ReactTestRenderer, type: string, name: string) {
@@ -117,10 +128,11 @@ function propOf(tree: ReactTestRenderer, type: string, name: string) {
 }
 
 describe('the Songs screen with no song playing', () => {
-  it('keeps the FAB and the list end above the navigation bar', () => {
+  it('pads the navigation bar on the frame, under the list and the FAB', () => {
     const tree = mount();
-    expect(propOf(tree, 'Fab', 'bottomInset')).toBe(NAV_BAR);
-    expect(scrollBottom(tree)).toBe(FAB_ROOM + NAV_BAR);
+    expect(frameBottom(tree)).toBe(NAV_BAR);
+    expect(propOf(tree, 'Fab', 'bottomInset') ?? 0).toBe(0);
+    expect(scrollBottom(tree)).toBe(FAB_ROOM);
   });
 });
 
@@ -138,7 +150,8 @@ describe('the Songs screen with the mini-player docked', () => {
 
   it('lifts the FAB onto the bar, which covers the navigation bar', () => {
     const tree = mount(dock);
-    expect(propOf(tree, 'Fab', 'bottomInset')).toBe(0);
+    expect(frameBottom(tree) ?? 0).toBe(0);
+    expect(propOf(tree, 'Fab', 'bottomInset') ?? 0).toBe(0);
     expect(scrollBottom(tree)).toBe(FAB_ROOM);
   });
 

@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import {
   contentStyle,
+  frameStyle,
   itKeepsSafeAreaInsetsOutOfTheScroll,
   NAV_BAR,
   renderRecorded,
@@ -133,5 +134,9 @@ describe('HomeScreen with the mini-player docked', () => {
 
   it('ends the scroll above the mini-player, not the navigation bar', () => {
     expect(contentStyle().paddingBottom).toBe(space.screenInset);
+  });
+
+  it('leaves the navigation bar to the mini-player rather than the frame', () => {
+    expect(frameStyle()?.paddingBottom ?? 0).toBe(0);
   });
 });

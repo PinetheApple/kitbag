@@ -67,7 +67,7 @@ export function contentStyle(): Style {
   return flatten(scrollView().props.contentContainerStyle as StyleProp);
 }
 
-function frameStyle(): Style | undefined {
+export function frameStyle(): Style | undefined {
   return rendered
     .slice(0, rendered.indexOf(scrollView()))
     .map((r) => flatten(r.props.style as StyleProp))
@@ -83,8 +83,12 @@ export function itKeepsSafeAreaInsetsOutOfTheScroll(screenInset: number): void {
     expect(frameStyle()?.backgroundColor).toBe(BG);
   });
 
-  it('keeps the navigation bar inset at the end of the scrolling content', () => {
-    expect(contentStyle().paddingBottom).toBe(screenInset + NAV_BAR);
+  it('pads the navigation bar on the non-scrolling frame', () => {
+    expect(frameStyle()?.paddingBottom).toBe(NAV_BAR);
+  });
+
+  it('ends the scrolling content one screen inset past the last row', () => {
+    expect(contentStyle().paddingBottom).toBe(screenInset);
   });
 
   it('lets the inset frame and its scroll view fill the screen', () => {

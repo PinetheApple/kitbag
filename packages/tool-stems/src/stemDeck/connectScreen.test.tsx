@@ -17,14 +17,28 @@ import {
 } from './stemDeckHarness.test-helper.tsx';
 
 const INSETS = { top: 0, bottom: 0 };
+const BARS = { top: 24, bottom: 16 };
 const FINGERPRINT = '4f2a91c07be355d8'.padEnd(64, '0');
 const NEW_PRINT = 'c81e0d47a9f32b66'.padEnd(64, '0');
 const DAY_MS = 86_400_000;
 
-function connectScreen(onExplainCamera = vi.fn(), onConnected = vi.fn()) {
+function flatStyle(style: unknown): Record<string, unknown> {
+  return [style]
+    .flat(Infinity)
+    .reduce<Record<string, unknown>>(
+      (merged, part) => ({ ...merged, ...(part as object) }),
+      {},
+    );
+}
+
+function connectScreen(
+  onExplainCamera = vi.fn(),
+  onConnected = vi.fn(),
+  insets = INSETS,
+) {
   return (
     <ConnectScreen
-      insets={INSETS}
+      insets={insets}
       onBack={vi.fn()}
       onConnected={onConnected}
       onExplainCamera={onExplainCamera}
@@ -99,6 +113,22 @@ describe('opening Connect', () => {
     );
     expect(screen.has(LOADING)).toBe(false);
     expect(screen.labelled(WAY_MAKER)).toHaveLength(1);
+  });
+
+  it('pads the navigation bar on the frame so the list stops above it', async () => {
+    resetStemDeck();
+    const screen = await mount(connectScreen(vi.fn(), vi.fn(), BARS));
+    const hosts = screen.hosts();
+    const frame = hosts.find(
+      (node) => flatStyle(node.props.style).paddingTop === BARS.top,
+    );
+    const scroll = hosts.find(
+      (node) => node.props.keyboardShouldPersistTaps === 'handled',
+    );
+    expect(flatStyle(frame?.props.style).paddingBottom).toBe(BARS.bottom);
+    expect(
+      flatStyle(scroll?.props.contentContainerStyle).paddingBottom ?? 0,
+    ).toBe(0);
   });
 
   it('stays on Connect when not connected', async () => {
