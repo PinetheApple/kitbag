@@ -20,6 +20,7 @@ readonly FIXTURE_STEMS_NO_GRID=e2enogrid
 readonly FIXTURE_STEMS_SECONDS=8
 # Still playing when the auto-advance flow checks it after advancing onto it.
 readonly FIXTURE_STEMS_NO_GRID_SECONDS=30
+readonly FIXTURE_STEMS_LONG_NO_GRID=e2elongnogrid
 readonly FIXTURE_BACKUP=e2estemsongs
 readonly DEVICE_DOWNLOADS=/sdcard/Download
 readonly DEFAULT_MAESTRO_HEAP=-Xmx1g
@@ -263,6 +264,7 @@ push_fixture make_click_song.py "$FIXTURE_SONG.wav" "$FIXTURE_SECONDS"
 push_fixture make_click_song.py "$FIXTURE_SOUND.wav" "$FIXTURE_SOUND_SECONDS"
 push_fixture make_stem_bundle.py "$FIXTURE_STEMS.zip" "$FIXTURE_STEMS_SECONDS"
 push_fixture make_stem_bundle.py "$FIXTURE_STEMS_NO_GRID.zip" "$FIXTURE_STEMS_NO_GRID_SECONDS" --no-grid
+push_fixture make_stem_bundle.py "$FIXTURE_STEMS_LONG_NO_GRID.zip" "$FIXTURE_SECONDS" --no-grid
 push_file "e2e/fixtures/$FIXTURE_BACKUP.json"
 
 step "Waiting for MediaProvider to index the fixtures"
@@ -286,6 +288,7 @@ MAESTRO_CLI_NO_ANALYTICS=1 \
   -e FIXTURE_SOUND="$FIXTURE_SOUND" \
   -e FIXTURE_STEMS="$FIXTURE_STEMS" \
   -e FIXTURE_STEMS_NO_GRID="$FIXTURE_STEMS_NO_GRID" \
+  -e FIXTURE_STEMS_LONG_NO_GRID="$FIXTURE_STEMS_LONG_NO_GRID" \
   -e FIXTURE_BACKUP="$FIXTURE_BACKUP" \
   "${FLOWS[@]}"
 maestro_status=$?

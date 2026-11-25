@@ -185,6 +185,14 @@ import sys, zipfile
 grid, bare = (set(zipfile.ZipFile(p).namelist()) for p in sys.argv[1:])
 sys.exit(grid - bare != {"beats.json"} or bare - grid != set())
 ' "$(find "$LAST_OUT_DIR" -name e2estems.zip)" "$(find "$LAST_OUT_DIR" -name e2enogrid.zip)"
+check "  ... and a long gridless one" adb_called "push .*e2elongnogrid.zip /sdcard/Download/"
+check "  ... as long as the fixture song, with no beat grid" python3 -I -c '
+import json, sys, wave, zipfile
+manifest = json.loads(zipfile.ZipFile(sys.argv[1]).read("manifest.json"))
+with wave.open(sys.argv[2]) as song:
+    song_seconds = song.getnframes() / song.getframerate()
+sys.exit(manifest["duration_sec"] != song_seconds or "beats.json" in zipfile.ZipFile(sys.argv[1]).namelist())
+' "$(find "$LAST_OUT_DIR" -name e2elongnogrid.zip)" "$(find "$LAST_OUT_DIR" -name e2eclick.wav)"
 check "  ... runs every flow, no subflows" test "$(maestro_flows)" -eq "$(flow_count)"
 check "  ... on the emulator" maestro_got "emulator-5554"
 check "  ... with a JUnit report" maestro_got "junit"
@@ -194,6 +202,7 @@ check "  ... and the fixture title passed in" maestro_got "FIXTURE_SONG=e2eclick
 check "  ... and the fixture sound's name" maestro_got "FIXTURE_SOUND=e2ehit"
 check "  ... and the gridded stem song's title" maestro_got "FIXTURE_STEMS=e2estems"
 check "  ... and the gridless one's" maestro_got "FIXTURE_STEMS_NO_GRID=e2enogrid"
+check "  ... and the long gridless one's" maestro_got "FIXTURE_STEMS_LONG_NO_GRID=e2elongnogrid"
 check "  ... pushes the fixture backup" adb_called "push e2e/fixtures/e2estemsongs.json /sdcard/Download/"
 check "  ... and its name passed in" maestro_got "FIXTURE_BACKUP=e2estemsongs"
 
