@@ -1,5 +1,6 @@
 export * from './tokens.ts';
 export * from './roles.ts';
+export * from './screenFrame.ts';
 export * from './theme.ts';
 export * from './fontFaces.ts';
 export * from './textStyle.ts';

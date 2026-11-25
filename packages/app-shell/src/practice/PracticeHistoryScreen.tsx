@@ -4,6 +4,7 @@ import {
   EmptyState,
   practiceHistory,
   practiceHistoryText,
+  screenFrameInsets,
   SegmentedControl,
   Snackbar,
   snackbar,
@@ -79,11 +80,8 @@ export function PracticeHistoryScreen({
   const model = usePracticeHistoryScreen();
   const { actions } = model;
   const frame = useMemo(
-    () => [
-      styles.screen,
-      { paddingTop: insets.top, paddingBottom: insets.bottom },
-    ],
-    [styles.screen, insets.top, insets.bottom],
+    () => [styles.screen, screenFrameInsets(insets)],
+    [styles.screen, insets],
   );
   const empty = model.ready && !model.failed && model.sessions.length === 0;
   const { refresh } = model;

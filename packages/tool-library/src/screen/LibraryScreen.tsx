@@ -7,6 +7,7 @@ import {
   FloatingActionButton,
   libraryList,
   queueKeyLabel,
+  screenFrameInsets,
   SearchField,
   space,
   textRoles,
@@ -348,13 +349,10 @@ export function LibraryScreen({
   const state = useViewState(view);
   const listed = state === 'list';
   const actions = useBarActions(view, onOpenSetlists, onOpenQueue);
-  const frameBottomInset = dock === undefined ? insets.bottom : 0;
+  const docked = dock !== undefined;
   const frame = useMemo(
-    () => [
-      styles.screen,
-      { paddingTop: insets.top, paddingBottom: frameBottomInset },
-    ],
-    [styles.screen, insets.top, frameBottomInset],
+    () => [styles.screen, screenFrameInsets(insets, { dockBelow: docked })],
+    [styles.screen, insets, docked],
   );
   return (
     <View style={frame}>

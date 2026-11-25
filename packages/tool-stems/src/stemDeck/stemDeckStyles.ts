@@ -2,6 +2,8 @@ import {
   createThemedStyles,
   libraryList,
   lineRatio,
+  screenFrameInsets,
+  type ScreenFrameOptions,
   size,
   space,
   textRoles,
@@ -103,8 +105,20 @@ export const useStemDeckStyles = createThemedStyles((theme) => ({
   cardText: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
 }));
 
-export type InsetEdge = 'paddingTop' | 'paddingBottom';
+export function useScreenFrame<T>(
+  style: T,
+  insets: StemDeckInsets,
+  { dockBelow = false }: ScreenFrameOptions = {},
+) {
+  return useMemo(
+    () => [style, screenFrameInsets(insets, { dockBelow })],
+    [style, insets, dockBelow],
+  );
+}
 
-export function useInset<T>(style: T, edge: InsetEdge, inset: number) {
-  return useMemo(() => [style, { [edge]: inset }], [style, edge, inset]);
+export function useDockInset<T>(style: T, bottomInset: number) {
+  return useMemo(
+    () => [style, { paddingBottom: bottomInset }],
+    [style, bottomInset],
+  );
 }

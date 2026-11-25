@@ -34,7 +34,7 @@ import {
 import { SetlistChips } from './SetlistChips.tsx';
 import { SongPickRow } from './SongPickRow.tsx';
 import {
-  useInset,
+  useScreenFrame,
   useStemDeckStyles,
   type StemDeckInsets,
 } from './stemDeckStyles.ts';
@@ -248,7 +248,7 @@ export function SongListScreen({
           displayAddress(origin),
           catalog.songs.length + catalog.unavailable,
         );
-  const frame = useInset(styles.screen, 'paddingTop', insets.top);
+  const frame = useScreenFrame(styles.screen, insets, { dockBelow: true });
   return (
     <View style={frame}>
       <AppBar

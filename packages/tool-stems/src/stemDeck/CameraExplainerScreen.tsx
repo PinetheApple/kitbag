@@ -5,7 +5,7 @@ import { View } from 'react-native';
 
 import { SCAN_TITLE, TYPE_ADDRESS, useScanLook } from './scanLook.ts';
 import {
-  useInset,
+  useScreenFrame,
   useStemDeckStyles,
   type StemDeckInsets,
 } from './stemDeckStyles.ts';
@@ -40,12 +40,11 @@ export function CameraExplainerScreen({
     typeAddress();
     onBack();
   }, [typeAddress, onBack]);
-  const frame = useInset(styles.screen, 'paddingTop', insets.top);
-  const content = useInset(styles.body, 'paddingBottom', insets.bottom);
+  const frame = useScreenFrame(styles.screen, insets);
   return (
     <View style={frame}>
       <AppBar flush title={SCAN_TITLE} onBack={onBack} />
-      <View style={content}>
+      <View style={styles.body}>
         <EmptyState
           variant="list"
           icon="qrScan"

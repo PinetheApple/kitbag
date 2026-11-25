@@ -47,7 +47,7 @@ export function renderRecorded(element: ReactElement): void {
   renderToStaticMarkup(element);
 }
 
-function flatten(style: StyleProp): Style {
+export function flatten(style: StyleProp): Style {
   if (Array.isArray(style)) {
     return (style as readonly StyleProp[]).reduce<Style>(
       (merged, s) => ({ ...merged, ...flatten(s) }),
@@ -61,6 +61,12 @@ function scrollView(): Rendered {
   const found = rendered.find((r) => r.kind === 'ScrollView');
   if (found === undefined) throw new Error('no ScrollView rendered');
   return found;
+}
+
+export function viewStyles(): Style[] {
+  return rendered
+    .filter((r) => r.kind === 'View')
+    .map((r) => flatten(r.props.style as StyleProp));
 }
 
 export function contentStyle(): Style {

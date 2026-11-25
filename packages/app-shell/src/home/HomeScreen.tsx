@@ -3,6 +3,7 @@ import {
   type AppBarAction,
   Button,
   createThemedStyles,
+  screenFrameInsets,
   space,
   ToolGrid,
   ToolRow,
@@ -158,10 +159,9 @@ export function HomeScreen() {
     [openSettings],
   );
 
-  const frameBottomInset = docked ? 0 : insets.bottom;
   const frameInset = useMemo(
-    () => ({ paddingTop: insets.top, paddingBottom: frameBottomInset }),
-    [insets.top, frameBottomInset],
+    () => screenFrameInsets(insets, { dockBelow: docked }),
+    [insets, docked],
   );
 
   const open = (tool: HomeToolEntry) => {

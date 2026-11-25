@@ -1,6 +1,7 @@
 import { themes } from '@kitbag/core-design';
 import { stemDeckStore } from '@kitbag/core-state';
 import { act } from 'react';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AddStemSongSheet } from './AddStemSongSheet.tsx';
@@ -21,15 +22,6 @@ const BARS = { top: 24, bottom: 16 };
 const FINGERPRINT = '4f2a91c07be355d8'.padEnd(64, '0');
 const NEW_PRINT = 'c81e0d47a9f32b66'.padEnd(64, '0');
 const DAY_MS = 86_400_000;
-
-function flatStyle(style: unknown): Record<string, unknown> {
-  return [style]
-    .flat(Infinity)
-    .reduce<Record<string, unknown>>(
-      (merged, part) => ({ ...merged, ...(part as object) }),
-      {},
-    );
-}
 
 function connectScreen(
   onExplainCamera = vi.fn(),
@@ -120,14 +112,19 @@ describe('opening Connect', () => {
     const screen = await mount(connectScreen(vi.fn(), vi.fn(), BARS));
     const hosts = screen.hosts();
     const frame = hosts.find(
-      (node) => flatStyle(node.props.style).paddingTop === BARS.top,
+      (node) =>
+        StyleSheet.flatten(node.props.style as StyleProp<ViewStyle>)
+          ?.paddingTop === BARS.top,
     );
-    const scroll = hosts.find(
-      (node) => node.props.keyboardShouldPersistTaps === 'handled',
-    );
-    expect(flatStyle(frame?.props.style).paddingBottom).toBe(BARS.bottom);
+    const scroll = hosts.find((node) => String(node.type) === 'ScrollView');
     expect(
-      flatStyle(scroll?.props.contentContainerStyle).paddingBottom ?? 0,
+      StyleSheet.flatten(frame?.props.style as StyleProp<ViewStyle>)
+        ?.paddingBottom,
+    ).toBe(BARS.bottom);
+    expect(
+      StyleSheet.flatten(
+        scroll?.props.contentContainerStyle as StyleProp<ViewStyle>,
+      )?.paddingBottom ?? 0,
     ).toBe(0);
   });
 

@@ -1,4 +1,9 @@
-import { AppBar, createThemedStyles, space } from '@kitbag/core-design';
+import {
+  AppBar,
+  createThemedStyles,
+  screenFrameInsets,
+  space,
+} from '@kitbag/core-design';
 import { useMemo, type ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,10 +36,7 @@ export function SettingsFrame({
 }: SettingsFrameProps) {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
-  const frameInset = useMemo(
-    () => ({ paddingTop: insets.top, paddingBottom: insets.bottom }),
-    [insets.top, insets.bottom],
-  );
+  const frameInset = useMemo(() => screenFrameInsets(insets), [insets]);
   return (
     <View style={[styles.screen, frameInset]}>
       <ScrollView

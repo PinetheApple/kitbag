@@ -17,7 +17,8 @@ import {
 } from './logic/progressText.ts';
 import { NoticeCard } from './NoticeCard.tsx';
 import {
-  useInset,
+  useDockInset,
+  useScreenFrame,
   useStemDeckStyles,
   type StemDeckInsets,
 } from './stemDeckStyles.ts';
@@ -139,7 +140,7 @@ interface DockProps {
 function Dock({ view, bottomInset, onBack, onOpenStemSongs }: DockProps) {
   const styles = useStemDeckStyles();
   const cancelImport = useStemDeck((s) => s.cancelImport);
-  const dock = useInset(styles.dock, 'paddingBottom', bottomInset);
+  const dock = useDockInset(styles.dock, bottomInset);
   if (view.running)
     return (
       <View style={dock}>
@@ -179,7 +180,7 @@ export function ImportProgressScreen({
   const importFailure = useStemDeck((s) => s.importFailure);
   const stemsOf = useStems();
   const failure = importFailure ?? view.stopped;
-  const frame = useInset(styles.screen, 'paddingTop', insets.top);
+  const frame = useScreenFrame(styles.screen, insets, { dockBelow: true });
   return (
     <View style={frame}>
       <AppBar

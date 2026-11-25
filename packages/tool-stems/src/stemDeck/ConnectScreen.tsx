@@ -4,7 +4,7 @@ import {
   useStemDeck,
   type StemDeckStore,
 } from '@kitbag/core-state';
-import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { ScrollView, Text, View, type TextInputInstance } from 'react-native';
 
 import { AddressField } from './AddressField.tsx';
@@ -16,7 +16,11 @@ import {
 import { NoticeCard } from './NoticeCard.tsx';
 import { RecentServers } from './RecentServers.tsx';
 import { SCAN_TITLE, useScanLook } from './scanLook.ts';
-import { useStemDeckStyles, type StemDeckInsets } from './stemDeckStyles.ts';
+import {
+  useScreenFrame,
+  useStemDeckStyles,
+  type StemDeckInsets,
+} from './stemDeckStyles.ts';
 import { TrustSheet } from './TrustSheet.tsx';
 
 const SHARE_HINT =
@@ -159,13 +163,7 @@ export function ConnectScreen({
     },
     [connect],
   );
-  const frame = useMemo(
-    () => [
-      styles.screen,
-      { paddingTop: insets.top, paddingBottom: insets.bottom },
-    ],
-    [styles.screen, insets.top, insets.bottom],
-  );
+  const frame = useScreenFrame(styles.screen, insets);
   return (
     <View style={frame}>
       <AppBar flush title="Connect to StemDeck" onBack={onBack} />

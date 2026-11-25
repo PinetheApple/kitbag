@@ -6,6 +6,7 @@ import {
   libraryList,
   lineRatio,
   LinearProgress,
+  screenFrameInsets,
   Snackbar,
   snackbar,
   textRoles,
@@ -125,12 +126,7 @@ export function DatabaseErrorScreen({ error }: DatabaseErrorScreenProps) {
   const copy = useSaveCopy(setNotice);
   const frame = databaseErrorFrame(retry.error);
   return (
-    <View
-      style={[
-        styles.frame,
-        { paddingTop: insets.top, paddingBottom: insets.bottom },
-      ]}
-    >
+    <View style={[styles.frame, screenFrameInsets(insets)]}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.content}>
           <DatabaseErrorMessage copy={DATABASE_ERROR_COPY[frame]} />
