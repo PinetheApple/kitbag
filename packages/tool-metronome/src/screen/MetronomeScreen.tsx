@@ -13,11 +13,7 @@ import {
   type ComponentRef,
 } from 'react';
 import { GestureDetector, ScrollView } from 'react-native-gesture-handler';
-import {
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
 import {

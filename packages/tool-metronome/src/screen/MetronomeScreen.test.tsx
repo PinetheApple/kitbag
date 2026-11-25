@@ -196,7 +196,12 @@ function renderBody(fontScale: number, running: boolean): string {
   return renderToStaticMarkup(screenElement());
 }
 
-type MeasureDone = (x: number, y: number, width: number, height: number) => void;
+type MeasureDone = (
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) => void;
 
 const zoneInWindow = { top: 0, height: 0 };
 const LOCAL_ZONE_Y = 20;
