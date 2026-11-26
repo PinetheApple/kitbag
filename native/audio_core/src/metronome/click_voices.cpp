@@ -38,6 +38,13 @@ void ClickVoices::Trigger(
       std::exp(-decay_per_second / static_cast<double>(sample_rate));
 }
 
+bool ClickVoices::sounding() const {
+  for (const Voice& voice : voices_) {
+    if (voice.active) return true;
+  }
+  return false;
+}
+
 float ClickVoices::Render() {
   double sample = 0.0;
   for (Voice& voice : voices_) {

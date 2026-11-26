@@ -49,6 +49,7 @@ class SampleVoices {
   // False when the slot is empty, so the caller can sound its fallback.
   bool Trigger(int slot, float gain);
   float Render();
+  bool sounding() const;
 
  private:
   struct SlotView {
