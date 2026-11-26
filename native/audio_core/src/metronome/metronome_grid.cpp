@@ -37,9 +37,12 @@ double Metronome::GridSeconds(
     uint64_t frame,
     uint32_t sample_rate
 ) const {
-  return (static_cast<double>(frame) - static_cast<double>(grid.anchor_frame)) /
-             sample_rate +
-         latency_offset_ms_ / kMsPerSecond;
+  const GridMapping mapping = MappingFor(grid);
+  const double since_sec =
+      (static_cast<double>(frame) - static_cast<double>(mapping.frame)) /
+      sample_rate;
+  return mapping.song_sec +
+         (since_sec + latency_offset_ms_ / kMsPerSecond) * mapping.rate;
 }
 
 // Zero is never a live generation, so the next block re-seeds the cursor.
@@ -59,7 +62,7 @@ void Metronome::ObserveGridChange(const GridView& view, uint32_t sample_rate) {
   }
 }
 
-Metronome::GridView
+GridView
 Metronome::AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate) {
   // One acquire load per block. Change is detected by generation, never by
   // address: a freed grid's address can be recycled, a generation cannot.
@@ -71,8 +74,10 @@ Metronome::AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate) {
   }
   const bool changed = view.generation != grid_state_.observed_generation;
   if (changed) ObserveGridChange(view, sample_rate);
-  const double shift_sec = std::exchange(grid_state_.pending_shift_sec, 0.0);
+  const double offset_shift_sec =
+      std::exchange(grid_state_.pending_shift_sec, 0.0);
   if (view.grid == nullptr || follow_mixer_) return view;
+  const double shift_sec = offset_shift_sec * MappingFor(*view.grid).rate;
   // Only a whole-beat backward shift clears the floor to replay (§4.7); other
   // re-seeds land past the last onset this run heard on this anchor.
   const bool replays = !changed && GridShiftReplays(*view.grid, shift_sec);
@@ -244,8 +249,10 @@ void Metronome::PublishGridMirrors(const BeatGrid& grid, double song_seconds) {
   );
   // Clamped to the same range SetTempo enforces: a beat tracker emits outlier
   // intervals by nature, and this atomic is the tempo the UI reads out.
+  const double rate =
+      follow_mixer_ ? GridMapping::kRealTime : MappingFor(grid).rate;
   current_bpm_.store(
-      Clamp(kSecondsPerMinute / interval, kMinBpm, kMaxBpm),
+      Clamp(kSecondsPerMinute * rate / interval, kMinBpm, kMaxBpm),
       std::memory_order_relaxed
   );
 }

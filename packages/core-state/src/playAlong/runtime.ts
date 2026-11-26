@@ -14,7 +14,15 @@ import {
 } from '../mediaSessions/store.ts';
 import { metronomeStore, type MetronomeActions } from '../metronome/store.ts';
 import { getNotificationPermissionStore } from '../notifications/store.ts';
+import type { DetectedGrid } from '../stemPlayer/meterOverride.ts';
 import { onSongStarting } from '../stemPlayer/songStarting.ts';
+import type { LibraryMatch } from '../tempoLadder/libraryMatch.ts';
+import { getTempoLadder } from '../tempoLadder/runtime.ts';
+import {
+  tempoLadderStore,
+  type TempoLadderStore,
+} from '../tempoLadder/store.ts';
+import { readLibraryGrid } from './libraryGrid.ts';
 
 export type PlayAlongCommands = Pick<
   KitbagCommandsSpec,
@@ -22,6 +30,9 @@ export type PlayAlongCommands = Pick<
   | 'engineRelease'
   | 'metronomeSelectSlot'
   | 'metronomeAnchorExternal'
+  | 'metronomeAnchorGrid'
+  | 'setGrid'
+  | 'clearGrid'
   | 'metronomePause'
   | 'metronomeStop'
   | 'setBeats'
@@ -43,6 +54,11 @@ export type FollowedSessions = Pick<
   'getState' | 'subscribe'
 >;
 
+export type FollowedLadder = Pick<
+  StoreApi<Pick<TempoLadderStore, 'track' | 'libraryMatch' | 'lookUp'>>,
+  'getState' | 'subscribe'
+>;
+
 type Unsubscribe = () => void;
 
 type OnStarting = (listener: () => void) => Unsubscribe;
@@ -58,6 +74,8 @@ export interface PlayAlongRuntime {
   readonly boottimeNowMs: typeof boottimeNowMs;
   readonly engineFrameAtBoottimeMs: typeof engineFrameAtBoottimeMs;
   readonly sessions: () => FollowedSessions;
+  readonly ladder: () => FollowedLadder;
+  readonly readGrid: (match: LibraryMatch) => Promise<DetectedGrid>;
   readonly sessionCommand: typeof mediaSessionCommand;
   readonly latencyOffsetMs: () => number;
   readonly onClickStarting: OnStarting;
@@ -99,6 +117,8 @@ export const nativePlayAlongRuntime: PlayAlongRuntime = {
   boottimeNowMs: () => boottimeNowMs(),
   engineFrameAtBoottimeMs: (ms) => engineFrameAtBoottimeMs(ms),
   sessions: () => getMediaSessionsStore(),
+  ladder: () => tempoLadderStore,
+  readGrid: (match) => readLibraryGrid(getTempoLadder().library, match),
   sessionCommand: (sessionId, command) => {
     mediaSessionCommand(sessionId, command);
   },

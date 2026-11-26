@@ -23,6 +23,11 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeMetronomeAnchorExternal(JN
 }
 
 JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMetronomeAnchorGrid(JNIEnv*, jobject, jdouble songPosSec, jdouble atFrame, jdouble rate) {
+  kitbag::commandMetronomeAnchorGrid(songPosSec, atFrame, rate);
+}
+
+JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetSubdivision(JNIEnv*, jobject, jint subdivision) {
   kitbag::commandSetSubdivision(subdivision);
 }
