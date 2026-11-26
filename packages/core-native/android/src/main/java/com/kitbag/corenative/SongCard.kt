@@ -38,10 +38,12 @@ internal class SongCard(
   private val post: (notification: Notification, playing: Boolean, cardNumber: Int) -> Unit,
   private val appRequests: () -> ((SongCommand, Int) -> Unit)?,
   fence: CardFence,
+  onStarting: () -> Unit,
+  private val onStarted: () -> Unit,
   private val onEnded: () -> Unit,
   private val onStopped: () -> Unit,
 ) {
-  private val controls = SongControls(MixerEngine, fence)
+  private val controls = SongControls(MixerEngine, fence, onStarting)
   private val ends = SongEndWatch(EngineTransport::engineEndCount)
   private var cardNumber = CardFence.NONE
   private var session = CardFence.NONE
@@ -101,7 +103,10 @@ internal class SongCard(
     when (outcome) {
       SongControls.Outcome.Dropped -> Unit
       SongControls.Outcome.Stopped -> onStopped()
-      is SongControls.Outcome.Ran -> refresh(outcome.expected)
+      is SongControls.Outcome.Ran -> {
+        if (outcome.started) onStarted()
+        refresh(outcome.expected)
+      }
     }
   }
 

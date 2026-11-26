@@ -164,6 +164,8 @@ export { setTrackKey, type TrackKeyCommands } from './mixerKey.ts';
 export type {
   ConstantTempoFit,
   KitbagCommandsConstants,
+  PlayAlongCardRequest,
+  PlayAlongCardShowState,
   SongTransportOrder,
   SongTransportRequest,
   SongTransportShowState,
@@ -173,6 +175,7 @@ export type {
 } from './NativeKitbagCommands';
 export { focusReaderNode } from './readerFocus';
 export {
+  PLAY_ALONG_CARD_ACTION,
   TRANSPORT_PLAYBACK,
   transportActionNamed,
   transportPlaybackNamed,

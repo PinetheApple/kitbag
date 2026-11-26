@@ -1,8 +1,11 @@
 import { MS_PER_SECOND } from '@kitbag/core-db';
-import type {
-  KB_ACCENT,
-  MediaSessionSnapshot,
-  MediaSessionStep,
+import {
+  PLAY_ALONG_CARD_ACTION,
+  type KB_ACCENT,
+  type MediaSessionSnapshot,
+  type MediaSessionStep,
+  type PlayAlongCardRequest,
+  type PlayAlongCardShowState,
 } from '@kitbag/core-native';
 
 import { configuredStore, type StoreAccess } from '../configuredStore.ts';
@@ -92,6 +95,7 @@ interface AnchorPoint {
 interface Follow {
   readonly leave: () => void;
   seen: MediaSessionSnapshot;
+  card: PlayAlongCardShowState | undefined;
   lastAnchor: AnchorPoint | undefined;
   grace: ReturnType<typeof setTimeout> | undefined;
   retry: ReturnType<typeof setTimeout> | undefined;
@@ -118,6 +122,24 @@ const trackOf = ({
   artist,
   durationMs,
 }: MediaSessionSnapshot): PlayAlongTrack => ({ title, artist, durationMs });
+
+const cardOf = ({
+  appLabel,
+  title,
+  playing,
+}: MediaSessionSnapshot): PlayAlongCardShowState => ({
+  app: appLabel,
+  title,
+  playing,
+});
+
+const sameCard = (
+  shown: PlayAlongCardShowState | undefined,
+  card: PlayAlongCardShowState,
+) =>
+  shown?.app === card.app &&
+  shown.title === card.title &&
+  shown.playing === card.playing;
 
 const sameTrack = (track: PlayAlongTrack, seen: MediaSessionSnapshot) =>
   track.title === seen.title &&
@@ -181,6 +203,13 @@ function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
     setState({ songAheadOfClickMs, lastAnchorAtBoottimeMs: now });
   };
 
+  const showCard = (current: Follow) => {
+    const card = cardOf(current.seen);
+    if (sameCard(current.card, card)) return;
+    current.card = card;
+    runtime.commands.playAlongCardShow(card);
+  };
+
   const silence = (current: Follow) => {
     if (current.lastAnchor === undefined) return;
     current.lastAnchor = undefined;
@@ -213,6 +242,7 @@ function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
 
   const followReport = (current: Follow, seen: MediaSessionSnapshot) => {
     current.seen = seen;
+    showCard(current);
     if (seen.playing) anchor();
     else silence(current);
   };
@@ -236,6 +266,11 @@ function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
     followReport(current, seen);
   };
 
+  const onCardRequest = ({ action }: PlayAlongCardRequest) => {
+    if (action === PLAY_ALONG_CARD_ACTION.stop) unlock();
+    else getState().playPause();
+  };
+
   const start = (seen: MediaSessionSnapshot): Follow => {
     const leaveSlot = enterPlayAlongSlot(
       runtime.commands,
@@ -247,14 +282,19 @@ function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
       if (state.sessions !== previous.sessions) onSessions(state.sessions);
     });
     const stopStarts = runtime.onClickStarting(unlock);
+    const stopCard = runtime.onCardRequest(onCardRequest);
+    runtime.playbackStarted();
     const ticker = setInterval(anchor, REANCHOR_INTERVAL_MS);
     return {
       seen,
+      card: undefined,
       lastAnchor: undefined,
       grace: undefined,
       retry: undefined,
       leave: () => {
         clearInterval(ticker);
+        stopCard();
+        runtime.commands.playAlongCardHide();
         stopStarts();
         stopWatching();
         leaveSlot();
@@ -267,6 +307,7 @@ function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
     follow.seen = seen;
     follow.lastAnchor = undefined;
     sourceBack(follow);
+    showCard(follow);
     setState({ lock, songAheadOfClickMs: undefined });
     runtime.sessions().getState().pick(seen.sessionId);
     anchor();
