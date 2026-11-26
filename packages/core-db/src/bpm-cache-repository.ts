@@ -4,11 +4,14 @@ import { isBpmLookupSource, type BpmLookupSource } from './bpm-lookup-source';
 import type { DatabaseHandle } from './repository';
 import { bpmCache } from './schema';
 import { songMatchKey, type SongIdentity } from './song-match-key';
-import { MS_PER_SECOND, SECONDS_PER_MINUTE } from './units';
+import {
+  HOURS_PER_DAY,
+  MINUTES_PER_HOUR,
+  MS_PER_SECOND,
+  SECONDS_PER_MINUTE,
+} from './units';
 
 const DAYS_KEPT = 7;
-const HOURS_PER_DAY = 24;
-const MINUTES_PER_HOUR = 60;
 export const BPM_CACHE_TTL_MS =
   DAYS_KEPT *
   HOURS_PER_DAY *

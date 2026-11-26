@@ -69,6 +69,7 @@ export {
 } from './bpm-lookup-source';
 export {
   artistCredits,
+  artistMatchText,
   songMatchKey,
   songMatchText,
   type SongIdentity,
