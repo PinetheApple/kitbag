@@ -20,6 +20,9 @@ const store = vi.hoisted(() => ({
   previous: vi.fn(),
   playPause: vi.fn(),
   next: vi.fn(),
+  clickPlaying: false,
+  startClick: vi.fn(),
+  stopClick: vi.fn(),
 }));
 
 vi.mock('react-native-reanimated', () => ({
@@ -37,6 +40,7 @@ vi.mock('@kitbag/core-design', async (original) => {
     PlayerDock: (props: Props) => h('div', null, props.children),
     TransportKey: capture,
     PlayPauseButton: capture,
+    PrimaryPlayButton: capture,
   };
 });
 
@@ -44,7 +48,7 @@ vi.mock('./playAlongHooks.ts', () => ({
   usePlayAlong: <T,>(selector: (state: typeof store) => T) => selector(store),
 }));
 
-const { PlayAlongDock } = await import('./PlayAlongDock.tsx');
+const { ClickDock, PlayAlongDock } = await import('./PlayAlongDock.tsx');
 
 function render(disabled = false) {
   keys.length = 0;
@@ -54,8 +58,31 @@ function render(disabled = false) {
   return keys;
 }
 
+function renderClick(clickPlaying: boolean) {
+  keys.length = 0;
+  store.clickPlaying = clickPlaying;
+  renderToStaticMarkup(createElement(ClickDock, { bottomInset: 0 }));
+  return keys;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+it('holds only the click key, sized for the dock, with no song to follow', () => {
+  const [key, ...rest] = renderClick(false);
+  expect(rest).toEqual([]);
+  expect(key).toMatchObject({ size: 'dock', glyph: 'play' });
+  expect(key?.onPress).toBe(store.startClick);
+});
+
+it('stops the click from the same key while it runs', () => {
+  const [key] = renderClick(true);
+  expect(key).toMatchObject({
+    glyph: 'stop',
+    accessibilityLabel: 'Stop the click',
+  });
+  expect(key?.onPress).toBe(store.stopClick);
 });
 
 it('drives the other app with Previous, Play/Pause and Next, and nothing else', () => {

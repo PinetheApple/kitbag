@@ -1,6 +1,7 @@
 import {
   PlayerDock,
   PlayPauseButton,
+  PrimaryPlayButton,
   stemPlayer,
   TransportKey,
 } from '@kitbag/core-design';
@@ -17,6 +18,26 @@ const styles = StyleSheet.create({
     gap: stemPlayer.transportGap,
   },
 });
+
+export function ClickDock({ bottomInset }: { readonly bottomInset: number }) {
+  const clickPlaying = usePlayAlong((s) => s.clickPlaying);
+  const startClick = usePlayAlong((s) => s.startClick);
+  const stopClick = usePlayAlong((s) => s.stopClick);
+  return (
+    <PlayerDock bottomInset={bottomInset}>
+      <View style={styles.row}>
+        <PrimaryPlayButton
+          size="dock"
+          glyph={clickPlaying ? 'stop' : 'play'}
+          accessibilityLabel={
+            clickPlaying ? 'Stop the click' : 'Start the click'
+          }
+          onPress={clickPlaying ? stopClick : startClick}
+        />
+      </View>
+    </PlayerDock>
+  );
+}
 
 export interface PlayAlongDockProps {
   readonly playing: boolean;

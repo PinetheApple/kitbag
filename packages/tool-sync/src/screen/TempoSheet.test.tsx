@@ -1,18 +1,42 @@
-import { createElement, type ReactNode } from 'react';
+// react-test-renderer is deprecated, but it alone re-renders on state with no DOM.
+/* eslint-disable @typescript-eslint/no-deprecated */
+import { act, createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { create } from 'react-test-renderer';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const ANALYSED_BPM = 171.6;
+const DEFAULT_BPM = 120;
+const TYPED_DIGITS = [9, 6];
+const TYPED_BPM = 96;
 
 const drawn = vi.hoisted(() => ({
   keypad: [] as Props[],
   readouts: [] as Props[],
   presets: [] as Props[],
 }));
-const ladder = vi.hoisted(() => ({
+interface PlayAlongView {
+  bpm: number | undefined;
+  lock: object | undefined;
+  setBpm: ReturnType<typeof vi.fn>;
+}
+const playAlong = vi.hoisted((): PlayAlongView => ({
   bpm: 0,
+  lock: undefined,
+  setBpm: vi.fn(),
+}));
+interface LadderView {
+  bpm: number | null;
+  tapsLanded: number;
+  enter: ReturnType<typeof vi.fn>;
+  tap: ReturnType<typeof vi.fn>;
+  halve: ReturnType<typeof vi.fn>;
+  double: ReturnType<typeof vi.fn>;
+}
+const ladder = vi.hoisted((): LadderView => ({
+  bpm: null,
   tapsLanded: 0,
   enter: vi.fn(),
   tap: vi.fn(),
@@ -56,6 +80,10 @@ vi.mock('@kitbag/core-design', async (original) => {
 });
 
 vi.mock('./TapPad.tsx', () => ({ TapLeds: () => null }));
+vi.mock('./playAlongHooks.ts', () => ({
+  usePlayAlong: <T,>(selector: (state: typeof playAlong) => T) =>
+    selector(playAlong),
+}));
 
 const { TempoSheet } = await import('./TempoSheet.tsx');
 
@@ -74,16 +102,71 @@ function render(onDismiss = vi.fn()) {
   return onDismiss;
 }
 
+function press(preset: string) {
+  const button = drawn.presets.find((props) =>
+    String(props.label).startsWith(preset),
+  );
+  (button?.onPress as () => void)();
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   ladder.bpm = ANALYSED_BPM;
+  playAlong.bpm = ANALYSED_BPM;
+  playAlong.lock = undefined;
+});
+
+it('sets a typed tempo through play along, which also moves a lock', () => {
+  playAlong.lock = {};
+  act(() => {
+    create(
+      createElement(TempoSheet, {
+        visible: true,
+        sourceWords: '',
+        bottomInset: 0,
+        onDismiss: vi.fn(),
+      }),
+    );
+  });
+  for (const digit of TYPED_DIGITS)
+    act(() => {
+      (drawn.keypad.at(-1)?.onDigit as (digit: number) => void)(digit);
+    });
+  act(() => {
+    (drawn.keypad.at(-1)?.onConfirm as () => void)();
+  });
+  expect(playAlong.setBpm).toHaveBeenCalledWith(TYPED_BPM);
+});
+
+it('halves the default tempo when no song gave the ladder one', () => {
+  ladder.bpm = null;
+  playAlong.bpm = DEFAULT_BPM;
+  render();
+  press('÷2');
+  expect(playAlong.setBpm).toHaveBeenCalledWith(DEFAULT_BPM / 2);
+  expect(ladder.halve).not.toHaveBeenCalled();
+});
+
+it('doubles the locked tempo through play along', () => {
+  playAlong.lock = {};
+  render();
+  press('×2');
+  expect(playAlong.setBpm).toHaveBeenCalledWith(ANALYSED_BPM * 2);
+  expect(ladder.double).not.toHaveBeenCalled();
+});
+
+it('halves on the ladder while unlocked so the source stays named', () => {
+  render();
+  press('÷2');
+  expect(ladder.halve).toHaveBeenCalledOnce();
+  expect(playAlong.setBpm).not.toHaveBeenCalled();
 });
 
 it('closes without setting a tempo when nothing was typed', () => {
   const onDismiss = render();
   const [keypad] = drawn.keypad;
   (keypad?.onConfirm as () => void)();
-  expect(ladder.enter).not.toHaveBeenCalled();
+  expect(playAlong.setBpm).not.toHaveBeenCalled();
   expect(onDismiss).toHaveBeenCalledOnce();
 });
 

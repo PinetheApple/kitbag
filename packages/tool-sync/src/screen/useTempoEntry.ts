@@ -19,6 +19,8 @@ import {
   type SetStateAction,
 } from 'react';
 
+import { usePlayAlong } from './playAlongHooks.ts';
+
 const EMPTY_ENTRY: NumpadEntry = { digits: '', untouched: false };
 
 const entryOf = (bpm: number | null) =>
@@ -35,7 +37,7 @@ function useKeys(
   { entry, setEntry, tapping, setTapping }: EntryState,
   onDone: () => void,
 ) {
-  const enter = useTempoLadder((s) => s.enter);
+  const setBpm = usePlayAlong((s) => s.setBpm);
   const onDigit = useCallback(
     (digit: number) => {
       setTapping(false);
@@ -52,26 +54,37 @@ function useKeys(
       tapping || entry.untouched
         ? undefined
         : confirmNumpadEntry(entry, BPM_BOUNDS);
-    if (typed !== undefined) enter(typed);
+    if (typed !== undefined) setBpm(typed);
     onDone();
-  }, [tapping, entry, enter, onDone]);
+  }, [tapping, entry, setBpm, onDone]);
   return { onDigit, onBackspace, onConfirm };
 }
 
-function useSteps({ setEntry, setTapping }: EntryState, bpm: number | null) {
+function useStep(
+  { setEntry, setTapping }: EntryState,
+  bpm: number | null,
+  stepped: (bpm: number) => number,
+  onLadder: () => void,
+) {
+  const setBpm = usePlayAlong((s) => s.setBpm);
+  const locked = usePlayAlong((s) => s.lock !== undefined);
+  const ladderBpm = useTempoLadder((s) => s.bpm);
+  return useCallback(() => {
+    if (bpm === null) return;
+    setEntry(entryOf(stepped(bpm)));
+    setTapping(false);
+    if (locked || ladderBpm === null) setBpm(stepped(bpm));
+    else onLadder();
+  }, [bpm, stepped, onLadder, setBpm, locked, ladderBpm, setEntry, setTapping]);
+}
+
+function useSteps(state: EntryState, bpm: number | null) {
   const tap = useTempoLadder((s) => s.tap);
   const halve = useTempoLadder((s) => s.halve);
   const double = useTempoLadder((s) => s.double);
-  const onHalve = useCallback(() => {
-    setEntry(entryOf(bpm === null ? null : halvedBpm(bpm)));
-    setTapping(false);
-    halve();
-  }, [bpm, halve, setEntry, setTapping]);
-  const onDouble = useCallback(() => {
-    setEntry(entryOf(bpm === null ? null : doubledBpm(bpm)));
-    setTapping(false);
-    double();
-  }, [bpm, double, setEntry, setTapping]);
+  const { setTapping } = state;
+  const onHalve = useStep(state, bpm, halvedBpm, halve);
+  const onDouble = useStep(state, bpm, doubledBpm, double);
   const onTap = useCallback(() => {
     setTapping(true);
     tap(boottimeNowMs());
@@ -80,7 +93,7 @@ function useSteps({ setEntry, setTapping }: EntryState, bpm: number | null) {
 }
 
 export function useTempoEntry(onDone: () => void) {
-  const bpm = useTempoLadder((s) => s.bpm);
+  const bpm = usePlayAlong((s) => s.bpm) ?? null;
   const [wasBpm, setWasBpm] = useState(bpm);
   const [entry, setEntry] = useState(() => entryOf(bpm));
   const [tapping, setTapping] = useState(false);

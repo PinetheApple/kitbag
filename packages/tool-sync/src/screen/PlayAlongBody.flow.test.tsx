@@ -46,6 +46,7 @@ const ladder = vi.hoisted(() => ({
 vi.mock('@kitbag/core-native', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   boottimeNowMs: () => NOW_MS,
+  uptimeToBoottimeMs: (uptimeMs: number) => uptimeMs,
 }));
 
 vi.mock('@kitbag/core-state', async (original) => ({
@@ -149,10 +150,10 @@ async function show(session: Session, lock: Lock) {
 }
 
 async function press(props: Props | undefined, key: string) {
-  const handler = props?.[key] as () => void;
+  const handler = props?.[key] as (event: unknown) => void;
   clear();
   await act(async () => {
-    handler();
+    handler({ nativeEvent: { timestamp: NOW_MS } });
     await Promise.resolve();
   });
 }

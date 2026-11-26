@@ -14,6 +14,22 @@ const NO_LOOKUP = { bpm: null, source: null, tried: [], looking: false };
 const SONG_BPM = 171;
 
 describe('tempoLine', () => {
+  it('names the library beat grid while the grid is offered', () => {
+    const line = tempoLine({
+      ...NO_LOOKUP,
+      bpm: SONG_BPM,
+      source: BPM_SOURCE.library,
+      offered: true,
+    });
+    expect(text(line)).toBe('from your library beat grid');
+    expect(line.rung).toBe('library');
+  });
+
+  it('keeps a typed tempo named while the grid is offered', () => {
+    const typed = { ...NO_LOOKUP, bpm: SONG_BPM, source: BPM_SOURCE.manual };
+    expect(tempoLine({ ...typed, offered: true })).toEqual(tempoLine(typed));
+  });
+
   it('names the library as the rung that found the tempo', () => {
     const line = tempoLine({
       ...NO_LOOKUP,

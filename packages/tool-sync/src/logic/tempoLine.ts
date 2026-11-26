@@ -14,6 +14,7 @@ export interface TempoLineInputs {
   readonly source: BpmSource | null;
   readonly tried: readonly LadderRung[];
   readonly looking: boolean;
+  readonly offered?: boolean;
 }
 
 export interface TempoLine {
@@ -28,6 +29,13 @@ export const NO_TEMPO_NUMERAL = '––';
 export const SET_TEMPO_HINT = 'Tap the pad or the number to set it';
 const LOOKING_UP = 'Looking up';
 const CHANGE_HINT = `${FACT_SEPARATOR}tap to change`;
+const OFFERED_GRID: TempoLine = {
+  lead: 'from your ',
+  rung: 'library',
+  tail: ' beat grid',
+  noTempo: false,
+  credit: null,
+};
 
 const RUNG_NAME: Readonly<Record<LadderRung, string>> = {
   [BPM_SOURCE.library]: 'library',
@@ -67,7 +75,10 @@ export function tempoLine({
   source,
   tried,
   looking,
+  offered = false,
 }: TempoLineInputs): TempoLine {
+  if (offered && bpm !== null && source === BPM_SOURCE.library)
+    return OFFERED_GRID;
   if (bpm !== null && source !== null) {
     return {
       ...FOUND_WORDS[source],

@@ -1,15 +1,20 @@
 import { createThemedStyles, type ScreenInsets } from '@kitbag/core-design';
+import type { MediaSessionSnapshot } from '@kitbag/core-native';
 import { soundChipLabel, useMediaSessions } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
-import { PLAY_ALONG_VIEW, playAlongView } from '../logic/playAlongView.ts';
+import {
+  PLAY_ALONG_VIEW,
+  playAlongView,
+  type PlayAlongView,
+} from '../logic/playAlongView.ts';
 import { MIN_SESSIONS_TO_CHOOSE } from '../logic/sourceRows.ts';
 import { ClickSoundSheet } from './ClickSoundSheet.tsx';
 import { PermissionExplainer } from './PermissionExplainer.tsx';
 import { PlayAlongAppBar, type SourceChipProps } from './PlayAlongAppBar.tsx';
 import { PlayAlongBody } from './PlayAlongBody.tsx';
-import { PlayAlongDock } from './PlayAlongDock.tsx';
+import { ClickDock, PlayAlongDock } from './PlayAlongDock.tsx';
 import { PlayAlongMenu } from './PlayAlongMenu.tsx';
 import {
   PATTERN_SHEET,
@@ -20,8 +25,8 @@ import { pickSource } from './pickSource.ts';
 import {
   useFollowedSession,
   usePlayAlong,
+  useLibraryWatch,
   useSessionWatchWhileLocked,
-  useSongTempo,
   useTempoLine,
 } from './playAlongHooks.ts';
 import { SourceSheet } from './SourceSheet.tsx';
@@ -154,11 +159,31 @@ function PlayAlongSheets({ sheets, followedId, bottomInset }: SheetsProps) {
   );
 }
 
+interface ScreenDockProps {
+  readonly view: PlayAlongView;
+  readonly session: MediaSessionSnapshot | undefined;
+  readonly bottomInset: number;
+}
+
+function ScreenDock({ view, session, bottomInset }: ScreenDockProps) {
+  const spacer = useMemo(() => ({ height: bottomInset }), [bottomInset]);
+  if (view === PLAY_ALONG_VIEW.song)
+    return (
+      <PlayAlongDock
+        playing={session?.playing === true}
+        disabled={session === undefined}
+        bottomInset={bottomInset}
+      />
+    );
+  if (view === PLAY_ALONG_VIEW.nothing || view === PLAY_ALONG_VIEW.denied)
+    return <ClickDock bottomInset={bottomInset} />;
+  return <View style={spacer} />;
+}
+
 function usePlayAlongView(flow: AccessFlow) {
   const access = useMediaSessions((s) => s.access);
   const session = useFollowedSession();
   const lock = usePlayAlong((s) => s.lock);
-  useSongTempo(session);
   const view = playAlongView({
     access,
     askedForAccess: flow.askedForAccess,
@@ -173,6 +198,7 @@ function usePlayAlongView(flow: AccessFlow) {
 
 export function PlayAlongScreen({ insets, onBack }: PlayAlongScreenProps) {
   useSessionWatchWhileLocked();
+  useLibraryWatch();
   const styles = useStyles();
   const flow = useAccessFlow();
   const sheets = useSheets();
@@ -180,7 +206,6 @@ export function PlayAlongScreen({ insets, onBack }: PlayAlongScreenProps) {
   const { view, explaining, showsBody, session, lock } = usePlayAlongView(flow);
   const song = view === PLAY_ALONG_VIEW.song;
   const top = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
-  const bottom = useMemo(() => ({ height: insets.bottom }), [insets.bottom]);
   return (
     <View style={[styles.screen, top]}>
       <PlayAlongAppBar
@@ -206,15 +231,7 @@ export function PlayAlongScreen({ insets, onBack }: PlayAlongScreenProps) {
           onOpenSubdivision={sheets.openSubdivision}
         />
       ) : null}
-      {song ? (
-        <PlayAlongDock
-          playing={session?.playing === true}
-          disabled={session === undefined}
-          bottomInset={insets.bottom}
-        />
-      ) : (
-        <View style={bottom} />
-      )}
+      <ScreenDock view={view} session={session} bottomInset={insets.bottom} />
       <PlayAlongSheets
         sheets={sheets}
         followedId={session?.sessionId}
