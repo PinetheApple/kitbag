@@ -31,7 +31,7 @@ vi.mock('../useAccessibilityReadout.ts', () => ({
 }));
 
 vi.mock('./Slider.tsx', () => ({ Slider: () => null }));
-vi.mock('./LiveText.tsx', () => ({ LiveText: () => null }));
+vi.mock('./DrawnLiveSlot.tsx', () => ({ DrawnLiveSlot: () => null }));
 vi.mock('./Icon.tsx', () => ({ Icon: () => null }));
 vi.mock('./LoopMarks.tsx', () => ({
   LoopMarks: () => null,

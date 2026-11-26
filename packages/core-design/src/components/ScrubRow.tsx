@@ -7,10 +7,11 @@ import { aboveFlagsPadding, loopNotePlacement } from '../loopNotePlacement.ts';
 import { textRoles } from '../roles.ts';
 import { sliderGeometry, stemPlayer } from '../stemPlayerRoles.ts';
 import { textStyle } from '../textStyle.ts';
-import { createThemedStyles } from '../ThemeProvider.tsx';
+import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { useAccessibilityReadout } from '../useAccessibilityReadout.ts';
+import { sameWidthFigures } from './drawnText.ts';
+import { DrawnLiveSlot } from './DrawnLiveSlot.tsx';
 import { Icon } from './Icon.tsx';
-import { LiveText } from './LiveText.tsx';
 import {
   LoopHandleLayer,
   LoopMarks,
@@ -30,6 +31,7 @@ export type {
 
 const SCRUB_STEP = 0.02;
 const NOT_READ = -1;
+const SPARE_MINUTE_DIGIT = '0';
 
 const useStyles = createThemedStyles((theme) => ({
   lane: {
@@ -193,6 +195,7 @@ export function ScrubRow({
   loopHandles,
 }: ScrubRowProps) {
   const styles = useStyles();
+  const theme = useTheme();
   const second = useSpokenSecond(frame);
   const slide = useCallback(
     (fraction: number) => {
@@ -222,12 +225,13 @@ export function ScrubRow({
       onLayout={layout.onLane}
     >
       <NoteLine note={note} side={layout.noteSide} onLayout={layout.onNote} />
-      <View
-        style={styles.elapsed}
-        importantForAccessibility="no-hide-descendants"
-        accessibilityElementsHidden
-      >
-        <LiveText text={frame.elapsed} role="scrubTime" align="left" />
+      <View style={styles.elapsed}>
+        <DrawnLiveSlot
+          text={frame.elapsed}
+          role="scrubTime"
+          widest={sameWidthFigures(`${SPARE_MINUTE_DIGIT}${total}`)}
+          color={theme.color.text}
+        />
       </View>
       <View testID="scrub-bar" style={styles.bar} onLayout={layout.onBar}>
         <Slider

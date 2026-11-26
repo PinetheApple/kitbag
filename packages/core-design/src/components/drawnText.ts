@@ -14,6 +14,13 @@ export const TABULAR_FIGURES = "'tnum'";
 // svg baseline at the same depth, so the drawing sits where the Text would.
 export const TEXT_LINE_TOP = 'top';
 
+const ANY_DIGIT = /\d/g;
+const SAME_WIDTH_DIGIT = '0';
+
+export function sameWidthFigures(text: string): string {
+  return text.replace(ANY_DIGIT, SAME_WIDTH_DIGIT);
+}
+
 export function drawnFont(role: PlainRoleName, fontSize: number) {
   const face = textRoles[role];
   return {

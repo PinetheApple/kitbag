@@ -1,6 +1,6 @@
 import type { ColorToken } from '../tokens.ts';
 import { useTheme } from '../ThemeProvider.tsx';
-import type { PlainRoleName } from './drawnText.ts';
+import { sameWidthFigures, type PlainRoleName } from './drawnText.ts';
 import { DrawnTextFrame } from './DrawnTextFrame.tsx';
 
 export interface DrawnFiguresProps {
@@ -8,9 +8,6 @@ export interface DrawnFiguresProps {
   readonly role: PlainRoleName;
   readonly color?: ColorToken;
 }
-
-const ANY_DIGIT = /\d/g;
-const SAME_WIDTH_DIGIT = '0';
 
 export function DrawnFigures({
   text,
@@ -21,7 +18,7 @@ export function DrawnFigures({
   return (
     <DrawnTextFrame
       role={role}
-      widest={text.replace(ANY_DIGIT, SAME_WIDTH_DIGIT)}
+      widest={sameWidthFigures(text)}
       fill={theme.color[color]}
     >
       {text}
