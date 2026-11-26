@@ -23,4 +23,5 @@ export const Stop = 'Stop';
 export const G = 'G';
 export const Line = 'Line';
 export const Text = 'SvgText';
+export const TSpan = 'TSpan';
 export const ClipPath = 'ClipPath';

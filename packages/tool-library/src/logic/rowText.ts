@@ -19,12 +19,8 @@ import {
 
 import { UNAVAILABLE_TEXT } from './notices.ts';
 
-export function formatLength(totalSeconds: number): string {
-  return formatClockSeconds(Math.round(totalSeconds));
-}
-
 export function spokenLength(totalSeconds: number): string {
-  const { hours, minutes, seconds } = clockParts(Math.round(totalSeconds));
+  const { hours, minutes, seconds } = clockParts(totalSeconds);
   const parts = [
     hours > 0 ? countLabel(hours, 'hour', 'hours') : '',
     hours > 0 || minutes > 0 ? countLabel(minutes, 'minute', 'minutes') : '',
@@ -161,7 +157,7 @@ export function rowSubtitle(
   const facts =
     note === undefined ? rowFacts(row).map((fact) => fact.text) : [note];
   const parts = [
-    ...(row.durationSec > 0 ? [formatLength(row.durationSec)] : []),
+    ...(row.durationSec > 0 ? [formatClockSeconds(row.durationSec)] : []),
     ...facts,
     ...(failure?.keptGrid === true ? [KEPT_GRID_NOTE] : []),
   ];

@@ -14,6 +14,13 @@ export const TABULAR_FIGURES = "'tnum'";
 // svg baseline at the same depth, so the drawing sits where the Text would.
 export const TEXT_LINE_TOP = 'top';
 
+const ANY_DIGIT = /\d/g;
+const SAME_WIDTH_DIGIT = '0';
+
+export function sameWidthFigures(text: string): string {
+  return text.replace(ANY_DIGIT, SAME_WIDTH_DIGIT);
+}
+
 export const ANCHOR_AT_CENTRE = 'middle';
 // "central" sets the svg baseline half the ascent-minus-descent below the anchor,
 // so the glyph's ascent-to-descent box is centred on it.
