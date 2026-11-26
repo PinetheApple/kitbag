@@ -120,15 +120,16 @@ describe('PresetButton selected', () => {
   });
 });
 
-it('hands the press event to the handler, for its touch time', () => {
-  const onPress = vi.fn();
+it('fires a press-in key on touch-down with the touch event', () => {
+  const onPressIn = vi.fn();
   const event = { nativeEvent: { timestamp: 1 } };
   presses.length = 0;
   renderToStaticMarkup(
     <ThemeProvider mode="dark">
-      <PresetButton kind="action" label={LABEL} onPress={onPress} />
+      <PresetButton kind="action" label={LABEL} onPressIn={onPressIn} />
     </ThemeProvider>,
   );
-  (presses[0]?.onPress as (pressed: unknown) => void)(event);
-  expect(onPress).toHaveBeenCalledWith(event);
+  expect(presses[0]?.onPress).toBeUndefined();
+  (presses[0]?.onPressIn as (pressed: unknown) => void)(event);
+  expect(onPressIn).toHaveBeenCalledWith(event);
 });

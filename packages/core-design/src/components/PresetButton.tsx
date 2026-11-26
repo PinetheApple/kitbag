@@ -32,9 +32,15 @@ function presetHitBox(gaps: NeighbourGaps) {
   );
 }
 
-export interface PresetButtonProps {
+type PresetPress =
+  | { readonly onPress: () => void; readonly onPressIn?: never }
+  | {
+      readonly onPressIn: (event: GestureResponderEvent) => void;
+      readonly onPress?: never;
+    };
+
+interface PresetButtonBaseProps {
   readonly label: string;
-  readonly onPress: (event: GestureResponderEvent) => void;
   readonly kind?: PresetButtonKind;
   readonly accessibilityLabel?: string;
   readonly selected?: boolean;
@@ -42,6 +48,8 @@ export interface PresetButtonProps {
    * applies to both, an omitted side has no neighbour. */
   readonly neighbourGapDp?: number | NeighbourGaps;
 }
+
+export type PresetButtonProps = PresetButtonBaseProps & PresetPress;
 
 const useStyles = createThemedStyles((theme) => ({
   presetHit: {
@@ -97,6 +105,7 @@ const useStyles = createThemedStyles((theme) => ({
 export function PresetButton({
   label,
   onPress,
+  onPressIn,
   kind = 'preset',
   accessibilityLabel,
   selected = false,
@@ -115,6 +124,7 @@ export function PresetButton({
         presetHitBox(neighbourGaps(neighbourGapDp)),
       ]}
       onPress={onPress}
+      onPressIn={onPressIn}
     >
       <View
         style={[
