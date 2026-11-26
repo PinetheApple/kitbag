@@ -21,6 +21,8 @@ void commandStandalonePause();
 void commandStandaloneStop();
 void commandStandaloneSetTempo(double bpm);
 double commandStandaloneBpm();
+void commandPlayAlongClickStop();
+void commandPlayAlongEnd();
 int32_t commandRigClickStart(double bpm, int32_t subdivision, double startFrame);
 void commandRigClickStop();
 bool commandRigClickIsActive();

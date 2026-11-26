@@ -58,6 +58,16 @@ export type SongTransportRequest = Readonly<{
   shownSession: CodegenTypes.Int32;
 }>;
 
+export type PlayAlongCardShowState = Readonly<{
+  app: string;
+  title: string | null;
+  playing: boolean;
+}>;
+
+export type PlayAlongCardRequest = Readonly<{
+  action: 'playPause' | 'stop';
+}>;
+
 export type OutputRoute = Readonly<{
   id: string;
   name: string;
@@ -252,6 +262,11 @@ export interface Spec extends TurboModule {
   /** The mixer played onto the song's last frame and stopped; read on the song card's tick, so it lags. */
   readonly onSongEnded: CodegenTypes.EventEmitter<void>;
   readonly onSongTransport: CodegenTypes.EventEmitter<SongTransportRequest>;
+  /** Play on the song notification or media session started the mixer; app starts never fire it. */
+  readonly onSongCardStarted: CodegenTypes.EventEmitter<void>;
+  playAlongCardShow(state: PlayAlongCardShowState): void;
+  playAlongCardHide(): void;
+  readonly onPlayAlongCard: CodegenTypes.EventEmitter<PlayAlongCardRequest>;
   getOutputRoute(): Promise<OutputRoute>;
   readonly onOutputRoute: CodegenTypes.EventEmitter<OutputRoute>;
   focusReaderView(viewTag: CodegenTypes.Int32): void;

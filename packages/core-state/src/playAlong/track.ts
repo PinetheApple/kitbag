@@ -1,5 +1,8 @@
 import type { SongIdentity } from '@kitbag/core-db';
-import type { MediaSessionSnapshot } from '@kitbag/core-native';
+import type {
+  MediaSessionSnapshot,
+  PlayAlongCardShowState,
+} from '@kitbag/core-native';
 
 export type PlayAlongTrack = Pick<
   MediaSessionSnapshot,
@@ -26,3 +29,21 @@ export const songOf = ({ title, artist }: PlayAlongTrack): SongIdentity => ({
   title: title ?? '',
   artist: artist ?? '',
 });
+
+export const cardOf = ({
+  appLabel,
+  title,
+  playing,
+}: MediaSessionSnapshot): PlayAlongCardShowState => ({
+  app: appLabel,
+  title,
+  playing,
+});
+
+export const sameCard = (
+  shown: PlayAlongCardShowState | undefined,
+  card: PlayAlongCardShowState,
+) =>
+  shown?.app === card.app &&
+  shown.title === card.title &&
+  shown.playing === card.playing;

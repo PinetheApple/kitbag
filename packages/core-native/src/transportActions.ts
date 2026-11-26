@@ -1,3 +1,5 @@
+import type { PlayAlongCardRequest } from './NativeKitbagCommands';
+
 export const TRANSPORT_ACTIONS = [
   'tempo_down',
   'play',
@@ -13,6 +15,11 @@ export function transportActionNamed(
 ): TransportActionName | undefined {
   return TRANSPORT_ACTIONS.find((action) => action === name);
 }
+
+export const PLAY_ALONG_CARD_ACTION = {
+  playPause: 'playPause',
+  stop: 'stop',
+} as const satisfies Record<string, PlayAlongCardRequest['action']>;
 
 export const TRANSPORT_PLAYBACK = {
   playing: 'playing',

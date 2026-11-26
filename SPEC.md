@@ -1587,13 +1587,15 @@ selected. **The acceptance criterion:** opening Play along and closing it must
 leave the standalone metronome exactly as it was, including mid-run
 (`abi_verify`, slots).
 
-**Leaving Play along while locked keeps the click following.** Kitbag runs it in
-the background under the metronome's foreground service (§5.6), so switching to
-the other app to skip a song does not drop the lock. Home and the lists show the
+**Leaving Play along while locked keeps the click following.** Following runs
+under its own foreground service of the media-playback type, so switching to the
+other app to skip a song does not drop the lock. Home and the lists show the
 docked mini-player: the Play along tile, the track's title, a line naming the
 app it is locked to, a key that pauses and resumes the other app, and a close
-key. A tap reopens Play along. The notification while away offers the other
-app's play/pause and Stop, with no tempo − or +.
+key. A tap reopens Play along. The service's notification, "Play along · ‹app›"
+on the Metronome channel, offers the other app's play/pause and Stop, with no
+tempo − or +. It has no media session, so headset buttons stay with the
+followed app.
 
 Only one mini-player shows. Starting a Kitbag song, the stem player or the
 standalone metronome ends Play along's following, since one click sounds at a
