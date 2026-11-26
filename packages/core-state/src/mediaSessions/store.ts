@@ -32,7 +32,7 @@ export interface MediaSessionsSource {
 export interface MediaSessionsRuntime {
   readonly source: MediaSessionsSource;
   readonly choose: SessionChooser;
-  readonly explainer: SeenFlagPersistence;
+  readonly explainerDeclined: SeenFlagPersistence;
 }
 
 export interface MediaSessionsStore extends SessionChoice {
@@ -58,7 +58,7 @@ const unsupported: MediaSessionsRuntime = {
     rearm: ignore,
   },
   choose: ignore,
-  explainer: { load: () => false, save: ignore },
+  explainerDeclined: { load: () => false, save: ignore },
 };
 
 const liveId = (
@@ -72,7 +72,7 @@ const liveId = (
 const mediaSessions = persistedStore<MediaSessionsRuntime, MediaSessionsStore>(
   'Media sessions',
   unsupported,
-  ({ source, choose, explainer }, commit, { getState, setState }) => {
+  ({ source, choose, explainerDeclined }, commit, { getState, setState }) => {
     const settle = (
       sessions: readonly MediaSessionSnapshot[],
       wantedId = getState().pickedId,
@@ -113,9 +113,9 @@ const mediaSessions = persistedStore<MediaSessionsRuntime, MediaSessionsStore>(
         const { chosenId } = getState();
         if (chosenId !== undefined) source.command(chosenId, command);
       },
-      explainerDeclined: explainer.load(),
+      explainerDeclined: explainerDeclined.load(),
       declineExplainer: () => {
-        commit('explainerDeclined', true, explainer.save);
+        commit('explainerDeclined', true, explainerDeclined.save);
       },
     };
   },

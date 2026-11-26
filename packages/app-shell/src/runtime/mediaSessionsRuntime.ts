@@ -23,7 +23,7 @@ configureMediaSessions({
     rearm: rearmMediaSessions,
   },
   choose: chooseSession,
-  explainer: listenerExplainerFlag,
+  explainerDeclined: listenerExplainerFlag,
 });
 
 onAppForeground(() => {

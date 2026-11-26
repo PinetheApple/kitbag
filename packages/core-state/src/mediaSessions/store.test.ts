@@ -65,7 +65,11 @@ function fakes({ enabled = true, declined = false }: FakeOptions = {}) {
     load: vi.fn(() => declined),
     save: vi.fn(),
   } satisfies SeenFlagPersistence;
-  const store = createMediaSessionsStore({ source, choose, explainer });
+  const store = createMediaSessionsStore({
+    source,
+    choose,
+    explainerDeclined: explainer,
+  });
   const push = (sessions: readonly MediaSessionSnapshot[]) => {
     deliver(sessions);
   };
