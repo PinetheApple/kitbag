@@ -6,6 +6,7 @@ namespace abi_test {
 void RunEngineClockAbiTests();
 void RunBoottimeMappingAbiTests();
 void RunExternalLockAbiTests();
+void RunReanchorNudgeAbiTests();
 
 }  // namespace abi_test
 

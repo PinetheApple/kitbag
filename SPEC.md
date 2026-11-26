@@ -1077,7 +1077,8 @@ working. Changes:
   metronome.
 - **One engine metronome, settled for this player.** The song's click and
   standalone Play preempt each other, and the standalone settings never change.
-  Play along has its own metronome slot in the same engine (§8.9).
+  Play along has its own metronome slot in the same engine (§8.9); the song's
+  click and its count-in stay on the standalone slot.
 
 ### 6.5 Acceptance
 
@@ -1542,7 +1543,9 @@ engine and not an app-side save and restore (`docs/decisions.md` 2026-09-26,
 ruling 3; #620). One click sounds at a time: switching slots suspends the other,
 and the standalone metronome resumes untouched. `kb_metronome_select_slot`
 (`kitbag_metronome_slot_api.h`) routes every `kb_metronome_*` call and read to
-the selected slot; the lock-screen card drives the standalone slot whatever is
+the selected slot. Every setting is per slot, the latency offset and custom
+sounds included, so Play along applies route calibration to its own slot. The
+lock-screen card and the song player drive the standalone slot whatever is
 selected. **The acceptance criterion:** opening Play along and closing it must
 leave the standalone metronome exactly as it was, including mid-run
 (`abi_verify`, slots).

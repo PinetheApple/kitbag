@@ -1,5 +1,6 @@
 #include "kitbag_api.h"
 
+#include <chrono>
 #include <cstdint>
 
 #include "abi_test_engine_clock.h"
@@ -23,6 +24,11 @@ constexpr uint32_t kBlockFrames[] = {
 constexpr int kBlockRounds = 60;
 constexpr int64_t kProbeDeltas[] = {-7001, 0, 1, 12345, 480000};
 constexpr int64_t kLateNs = 10'000'000;
+constexpr int64_t kHoursSuspendedNs =
+    std::chrono::nanoseconds(
+        std::chrono::hours(3) + std::chrono::microseconds(123'457)
+    )
+        .count();
 
 void TestRefusals() {
   kb_engine* engine = nullptr;
@@ -75,6 +81,38 @@ void TestExactAcrossBlocks() {
   kb_engine_destroy(engine);
 }
 
+void TestClockIsRawBoottime() {
+  const int64_t before = RawNs(kRawBoottime);
+  const int64_t read = kb_clock_boottime_ns();
+  const int64_t after = RawNs(kRawBoottime);
+  Check(
+      before <= read && read <= after,
+      "boottime: kb_clock_boottime_ns reads CLOCK_BOOTTIME"
+  );
+}
+
+void TestHoursSuspendedSubtracted() {
+  kb_engine* engine = nullptr;
+  if (kb_engine_create(&engine) != KB_OK) return;
+  kb_engine_set_suspended_ns(engine, kHoursSuspendedNs);
+  SongRig rig{
+      .engine = engine,
+      .base_ns = kitbag::MonotonicNs(),
+      .forced_offset_ns = kHoursSuspendedNs,
+  };
+  bool exact = true;
+  for (const uint32_t block : kBlockFrames) {
+    const int64_t block_start = rig.rendered;
+    rig.Render(block);
+    exact &= ProbesExact(rig, block_start);
+  }
+  Check(
+      exact,
+      "boottime: hours spent suspended are taken off before the frame is mapped"
+  );
+  kb_engine_destroy(engine);
+}
+
 void TestLatestPairWins() {
   kb_engine* engine = nullptr;
   if (kb_engine_create(&engine) != KB_OK) return;
@@ -99,6 +137,8 @@ void RunBoottimeMappingAbiTests() {
   TestRefusals();
   TestExactAcrossBlocks();
   TestLatestPairWins();
+  TestClockIsRawBoottime();
+  TestHoursSuspendedSubtracted();
 }
 
 }  // namespace abi_test

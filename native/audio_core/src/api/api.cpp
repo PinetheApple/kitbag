@@ -118,6 +118,10 @@ void kb_engine_render(kb_engine* engine, float* out, uint32_t frame_count) {
   ToEngine(engine)->RenderOffline(out, frame_count, kitbag::MonotonicNs());
 }
 
+void kb_engine_set_suspended_ns(kb_engine* engine, int64_t suspended_ns) {
+  if (engine != nullptr) ToEngine(engine)->set_suspended_ns(suspended_ns);
+}
+
 void kb_engine_render_at(
     kb_engine* engine,
     float* out,

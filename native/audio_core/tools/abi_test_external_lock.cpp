@@ -22,21 +22,22 @@ constexpr double kSongBpm = 123.0;
 constexpr double kBeatSec = kitbag::kSecondsPerMinute / kSongBpm;
 constexpr int kBeatsPerBar = 4;
 constexpr double kBarSec = kBeatSec * kBeatsPerBar;
-constexpr double kGridTolerance = 4.0;
-constexpr double kReportLag = 777.3;
+constexpr double kGridToleranceFrames = 4.0;
+constexpr double kReportLagFrames = 777.3;
 constexpr double kLeadInSec = 0.1;
+constexpr double kReanchorEverySec = 1.5;
+constexpr int kReanchorSteps = 8;
 constexpr double kAccentLevel = (kAccentAmplitude + kBeatAmplitude) / 2.0;
 
-// A song playing at speed 1: start_pos seconds in at engine frame start_frame.
 struct SongLine {
   double start_frame;
-  double start_pos;
-  double rate;
+  double start_pos_sec;
+  double frames_per_sec;
   double PosAt(double frame) const {
-    return start_pos + (frame - start_frame) / rate;
+    return start_pos_sec + (frame - start_frame) / frames_per_sec;
   }
   double FrameOfPos(double pos) const {
-    return start_frame + (pos - start_pos) * rate;
+    return start_frame + (pos - start_pos_sec) * frames_per_sec;
   }
 };
 
@@ -69,7 +70,7 @@ bool OnsetsOnBeats(
 ) {
   for (size_t i = 0; i < onsets.size() && i < beats.size(); ++i) {
     if (std::fabs(static_cast<double>(onsets[i].frame) - beats[i].frame) >
-        kGridTolerance) {
+        kGridToleranceFrames) {
       std::fprintf(
           stderr,
           "  onset %zu at %lld, beat at %.1f\n",
@@ -107,8 +108,6 @@ void RenderUntil(SongRig& rig, double frame) {
   while (static_cast<double>(rig.rendered) < frame) rig.Render(kRigBlock);
 }
 
-// The store's step: the other app reported its position at report_frame's
-// instant; map that instant to an engine frame and anchor the click on it.
 bool Reanchor(
     SongRig& rig,
     const SongLine& line,
@@ -165,9 +164,9 @@ void TestReanchorEveryFewSeconds() {
   const SongLine song{0.0, 31.37, run.Rate()};
   run.Until(kLeadInSec);
   const double first = run.Now();
-  for (double at = first; at < 12.0 * run.Rate(); at += 1.5 * run.Rate()) {
-    RenderUntil(run.rig, at);
-    run.Anchor(song, run.Now() - kReportLag);
+  for (int step = 0; step < kReanchorSteps; ++step) {
+    RenderUntil(run.rig, first + step * kReanchorEverySec * run.Rate());
+    run.Anchor(song, run.Now() - kReportLagFrames);
   }
   run.Until(13.0);
   run.Expect(song, first);
@@ -184,11 +183,11 @@ void TestSeekBack() {
   const SongLine before{0.0, 40.0, run.Rate()};
   run.Until(kLeadInSec);
   const double first = run.Now();
-  run.Anchor(before, first - kReportLag);
+  run.Anchor(before, first - kReportLagFrames);
   run.Until(3.1);
   run.Expect(before, first);
   const double seek_block = run.Now();
-  const SongLine after{seek_block - kReportLag, 12.71, run.Rate()};
+  const SongLine after{seek_block - kReportLagFrames, 12.71, run.Rate()};
   run.Anchor(after, after.start_frame);
   run.Until(6.0);
   run.Expect(after, seek_block);
@@ -205,7 +204,7 @@ void TestPauseThenResume() {
   const SongLine playing{0.0, 5.2, run.Rate()};
   run.Until(kLeadInSec);
   const double first = run.Now();
-  run.Anchor(playing, first - kReportLag);
+  run.Anchor(playing, first - kReportLagFrames);
   run.Until(2.3);
   run.Expect(playing, first);
   const double pause_block = run.Now();
@@ -213,7 +212,7 @@ void TestPauseThenResume() {
   run.Until(4.3);
   const double resume_block = run.Now();
   const SongLine resumed{
-      resume_block - kReportLag,
+      resume_block - kReportLagFrames,
       playing.PosAt(pause_block),
       run.Rate()
   };
@@ -251,7 +250,7 @@ void TestTappedDownbeatIsBeatOne() {
   const double tap_pos = kSongPhase + static_cast<double>(kTapBeat) * kBeatSec;
   run.Until(kLeadInSec);
   const double first = run.Now();
-  run.Anchor(song, first - kReportLag, kBarsBack * kBarSec - tap_pos);
+  run.Anchor(song, first - kReportLagFrames, kBarsBack * kBarSec - tap_pos);
   run.Until(5.0);
   run.Expect(song, first, kSongPhase);
   Check(

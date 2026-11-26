@@ -51,8 +51,9 @@ extern "C" {
 void kb_metronome_start(kb_engine* engine) {
   if (engine != nullptr) {
     kitbag::Engine* target = ToEngine(engine);
-    kitbag::TakeOverFromRigClick(target, target->selected_metronome_slot());
-    target->metronome().Start();
+    const int32_t slot = target->selected_metronome_slot();
+    kitbag::TakeOverFromRigClick(target, slot);
+    target->metronome(slot).Start();
   }
 }
 
@@ -113,8 +114,9 @@ void kb_metronome_anchor_external(
 ) {
   if (engine != nullptr) {
     kitbag::Engine* target = ToEngine(engine);
-    kitbag::TakeOverFromRigClick(target, target->selected_metronome_slot());
-    target->metronome().AnchorExternal(song_pos_sec, at_frame, bpm);
+    const int32_t slot = target->selected_metronome_slot();
+    kitbag::TakeOverFromRigClick(target, slot);
+    target->metronome(slot).AnchorExternal(song_pos_sec, at_frame, bpm);
   }
 }
 

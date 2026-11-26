@@ -96,6 +96,8 @@ void CheckBorrowedRun(kb_engine* borrowed, kb_engine* untouched) {
       "slots: reads follow the selected slot"
   );
   kb_metronome_select_slot(borrowed, KB_METRONOME_SLOT_STANDALONE);
+  RenderSeconds(borrowed, kRingOutSeconds);
+  RenderSeconds(untouched, kRingOutSeconds);
   const std::vector<float> after = RenderSeconds(borrowed, kTailSeconds);
   const std::vector<float> reference = RenderSeconds(untouched, kTailSeconds);
   Check(RenderPeakOf(reference) > kAudible, "slots: the reference run clicks");
@@ -180,6 +182,44 @@ void TestIdleFollowsSelectedIntent() {
   kb_engine_destroy(engine);
 }
 
+void CheckSongCountInOnStandalone(kb_engine* engine, uint64_t later) {
+  kb_metronome_slot_count_in_at(
+      engine,
+      KB_METRONOME_SLOT_STANDALONE,
+      later,
+      later / 2.0,
+      4,
+      1
+  );
+  kb_metronome_slot_stop(engine, KB_METRONOME_SLOT_PLAY_ALONG);
+  Check(
+      kb_metronome_intends_to_play(engine) == 0,
+      "slots: the song count-in leaves play along without intent"
+  );
+  kb_metronome_select_slot(engine, KB_METRONOME_SLOT_STANDALONE);
+  RenderSeconds(engine, kLeadSeconds);
+  Check(
+      kb_metronome_intends_to_play(engine) == 1 &&
+          kb_metronome_is_running(engine) == 1,
+      "slots: a slot-addressed count-in runs the standalone slot"
+  );
+}
+
+void TestIntentReadsQueuedStarts() {
+  kb_engine* engine = nullptr;
+  if (kb_engine_create(&engine) != KB_OK) return;
+  const uint64_t later = kb_engine_sample_rate(engine);
+  kb_metronome_select_slot(engine, KB_METRONOME_SLOT_PLAY_ALONG);
+  kb_metronome_start_at(engine, later);
+  Check(
+      kb_metronome_intends_to_play(engine) == 1 &&
+          kb_metronome_is_running(engine) == 0,
+      "slots: a queued start is play intent before the slot runs"
+  );
+  CheckSongCountInOnStandalone(engine, later);
+  kb_engine_destroy(engine);
+}
+
 void CheckLockScreenCalls(kb_engine* engine) {
   const auto standalone = KB_METRONOME_SLOT_STANDALONE;
   kb_metronome_slot_set_tempo(engine, standalone, kLockScreenBpm);
@@ -246,6 +286,7 @@ void RunMetronomeSlotAbiTests() {
   TestStandaloneSurvivesPlayAlong();
   TestOnlySelectedSlotSounds();
   TestIdleFollowsSelectedIntent();
+  TestIntentReadsQueuedStarts();
   TestLockScreenAddressesStandalone();
   TestOutOfRangeSlotsIgnored();
 }

@@ -46,25 +46,42 @@ kb_result kb_metronome_count_in_at(
     int32_t beats_per_bar,
     int32_t start_click
 ) {
-  if (engine == nullptr ||
+  return kb_metronome_slot_count_in_at(
+      engine,
+      kb_metronome_selected_slot(engine),
+      end_frame,
+      beat_frames,
+      beats_per_bar,
+      start_click
+  );
+}
+
+kb_result kb_metronome_slot_count_in_at(
+    kb_engine* engine,
+    int32_t slot,
+    uint64_t end_frame,
+    double beat_frames,
+    int32_t beats_per_bar,
+    int32_t start_click
+) {
+  if (engine == nullptr || !kitbag::Engine::ValidMetronomeSlot(slot) ||
       !ValidCountInAt(end_frame, beat_frames, beats_per_bar)) {
     return KB_ERROR_INVALID_ARGUMENT;
   }
   kitbag::Engine* target = ToEngine(engine);
+  kitbag::Metronome& metronome = target->metronome(slot);
   // A rollback could restore a token whose count already ended, which nothing
   // would ever clear; refusing before the claim needs none.
-  if (!target->metronome().HasCommandRoom()) return KB_ERROR_BUSY;
-  const int32_t slot = target->selected_metronome_slot();
+  if (!metronome.HasCommandRoom()) return KB_ERROR_BUSY;
   const uint32_t intent = target->ClaimMetronomeIntent(slot);
-  if (!target->metronome().CountInAt(
-          end_frame,
-          beat_frames,
-          beats_per_bar,
-          start_click != 0,
-          intent
-      )) {
-    return KB_ERROR_BUSY;
-  }
+  const bool queued = metronome.CountInAt(
+      end_frame,
+      beat_frames,
+      beats_per_bar,
+      start_click != 0,
+      intent
+  );
+  if (!queued) return KB_ERROR_BUSY;
   kitbag::StopRigClickFor(target, slot);
   return KB_OK;
 }

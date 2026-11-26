@@ -16,6 +16,12 @@ int32_t kb_metronome_selected_slot(const kb_engine* engine) {
                            : ToEngine(engine)->selected_metronome_slot();
 }
 
+int32_t kb_metronome_intends_to_play(const kb_engine* engine) {
+  if (engine == nullptr) return 0;
+  const Engine* core = ToEngine(engine);
+  return core->metronome_intent() || core->metronome().is_running() ? 1 : 0;
+}
+
 void kb_metronome_slot_start_at(
     kb_engine* engine,
     int32_t slot,

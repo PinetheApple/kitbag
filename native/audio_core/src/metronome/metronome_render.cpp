@@ -258,12 +258,13 @@ void Metronome::AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo) {
     // Read before FireConstantTempoTick: a ramp step there rewrites
     // tempo->beats_per_sample.
     const double previous = position - tempo->beats_per_sample;
-    if (CrossesTick(previous, position, subdivision_)) {
-      FireConstantTempoTick(
-          TickIndex(position, subdivision_),
-          sample_rate,
-          tempo
-      );
+    if (last_tick_ == kNoFiredTick) {
+      last_tick_ = TickIndex(previous, subdivision_);
+    }
+    const int64_t tick = TickIndex(position, subdivision_);
+    if (tick > last_tick_) {
+      last_tick_ = tick;
+      FireConstantTempoTick(tick, sample_rate, tempo);
     }
     const double poly_ticks = tempo->poly_ticks_per_beat;
     if (poly_enabled_ && CrossesTick(previous, position, poly_ticks)) {
@@ -358,6 +359,7 @@ void Metronome::Render(
       // so a clear lands where the song is, not on an instant downbeat.
       RenderGridSample(*view.grid, song, now, frame, sample_rate);
       beat_position_ += tempo.beats_per_sample;
+      last_tick_ = kNoFiredTick;
     } else if (running_) {
       AdvanceConstantTempo(sample_rate, &tempo);
     }

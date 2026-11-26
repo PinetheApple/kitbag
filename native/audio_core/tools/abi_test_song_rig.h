@@ -3,6 +3,8 @@
 
 #include "kitbag_api.h"
 
+#include <time.h>
+
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -21,6 +23,25 @@ inline constexpr int64_t kOnsetHold = 1200;
 inline constexpr int64_t kOnsetPeakWindow = 240;
 inline constexpr int kOffsetAttempts = 8;
 inline constexpr int64_t kSteadyOffsetNs = 1000;
+inline constexpr int64_t kMeasureOffset = INT64_MIN;
+#ifdef CLOCK_BOOTTIME
+inline constexpr clockid_t kRawBoottime = CLOCK_BOOTTIME;
+#else
+inline constexpr clockid_t kRawBoottime = CLOCK_MONOTONIC;
+#endif
+
+inline int64_t RawNs(clockid_t clock) {
+  timespec now{};
+  clock_gettime(clock, &now);
+  return static_cast<int64_t>(now.tv_sec) * kitbag::kNsPerSecond + now.tv_nsec;
+}
+
+inline int64_t RawSuspendedNs() {
+  const int64_t before = RawNs(CLOCK_MONOTONIC);
+  const int64_t boottime = RawNs(kRawBoottime);
+  const int64_t after = RawNs(CLOCK_MONOTONIC);
+  return boottime - before - (after - before) / 2;
+}
 
 struct Onset {
   int64_t frame;
@@ -32,6 +53,7 @@ struct Onset {
 struct SongRig {
   kb_engine* engine = nullptr;
   int64_t base_ns = 0;
+  int64_t forced_offset_ns = kMeasureOffset;
   int64_t rendered = 0;
   std::vector<Onset> onsets;
   float previous = 0.0F;
@@ -70,15 +92,17 @@ struct SongRig {
   // Retries while the boottime offset moved under the call, so a preemption
   // between the test's reads and the engine's cannot fake a wrong frame.
   bool FrameAt(double frame, int64_t* out) const {
+    if (forced_offset_ns != kMeasureOffset) {
+      const int64_t boottime = MonotonicAt(frame) + forced_offset_ns;
+      return kb_engine_frame_at_boottime(engine, boottime, out) == KB_OK;
+    }
     for (int attempt = 0; attempt < kOffsetAttempts; ++attempt) {
-      const int64_t offset = kitbag::BoottimeOffsetNs();
+      const int64_t offset = RawSuspendedNs();
       const int64_t boottime = MonotonicAt(frame) + offset;
       if (kb_engine_frame_at_boottime(engine, boottime, out) != KB_OK) {
         return false;
       }
-      if (std::llabs(kitbag::BoottimeOffsetNs() - offset) < kSteadyOffsetNs) {
-        return true;
-      }
+      if (std::llabs(RawSuspendedNs() - offset) < kSteadyOffsetNs) return true;
     }
     return false;
   }

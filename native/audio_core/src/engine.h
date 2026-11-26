@@ -107,6 +107,11 @@ class Engine {
     return render_clock_.Read(out);
   }
   bool FrameAtBoottime(int64_t boottime_ns, int64_t* out_frame) const;
+#ifdef KITBAG_BUILD_TOOLS
+  void set_suspended_ns(int64_t suspended_ns) {
+    suspended_override_ns_.store(suspended_ns, std::memory_order_relaxed);
+  }
+#endif
 
   int32_t OutputDeviceId() const;
 
@@ -198,6 +203,7 @@ class Engine {
   void RestartDevice();
   void ResolveDeviceIdReader();
   void RefreshOutputDeviceId();
+  int64_t Suspended() const;
 
   ma_device device_{};
   bool device_ready_ = false;
@@ -229,6 +235,10 @@ class Engine {
   std::atomic<bool> mixer_intent_{false};
   std::atomic<bool> rig_click_intent_{false};
   std::atomic<uint32_t> idle_grace_ms_{kDefaultIdleGraceMs};
+#ifdef KITBAG_BUILD_TOOLS
+  static constexpr int64_t kMeasureSuspended = INT64_MIN;
+  std::atomic<int64_t> suspended_override_ns_{kMeasureSuspended};
+#endif
 
   Metronome metronomes_[kMetronomeSlots];
   Tuner tuner_;

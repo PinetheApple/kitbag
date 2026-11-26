@@ -336,7 +336,6 @@ class Metronome {
   int beats_per_bar_ = 4;
   int denominator_ = kBpmReferenceDenominator;
   int subdivision_ = kMinSubdivision;
-  static_assert(kMaxSubdivision <= std::numeric_limits<uint16_t>::digits);
   uint16_t subdivision_accents_[kMaxSubdivision] = {};
   Accent accents_[kMaxBeats] = {};
   bool poly_enabled_ = false;
@@ -353,7 +352,8 @@ class Metronome {
   bool counting_in_ = false;
   double count_in_beats_ = 0.0;
   int count_in_total_bars_ = 0;
-  double beat_position_ = 0.0;  // fractional beats since start
+  double beat_position_ = 0.0;        // fractional beats since start
+  int64_t last_tick_ = kNoFiredTick;  // speaker-time subdivision tick
   bool has_pending_start_ = false;
   uint64_t pending_start_frame_ = 0;
   bool pending_start_clicks_ = true;

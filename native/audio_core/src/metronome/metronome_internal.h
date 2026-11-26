@@ -16,6 +16,9 @@
 namespace kitbag {
 namespace metronome_detail {
 
+// A re-anchor under half a tick from the heard position corrects the same
+// timeline and fires no tick twice nor skips one; further is a seek.
+constexpr double kMaxNudgeTicks = 0.5;
 // Guards against a boundary landing infinitesimally below an integer.
 constexpr double kGridEpsilon = 1e-9;
 constexpr double kNoFloorSec = -std::numeric_limits<double>::infinity();

@@ -8,6 +8,10 @@
 
 namespace kitbag {
 
+static_assert(
+    Metronome::kMaxSubdivision <= std::numeric_limits<uint16_t>::digits
+);
+
 using metronome_detail::Clamp;
 using metronome_detail::kMsPerMinute;
 using metronome_detail::kMsPerSecond;

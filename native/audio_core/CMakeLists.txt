@@ -253,6 +253,7 @@ if(KITBAG_BUILD_TOOLS)
                             tools/abi_test_engine_clock.cpp
                             tools/abi_test_boottime.cpp
                             tools/abi_test_external_lock.cpp
+                            tools/abi_test_reanchor_nudge.cpp
                             tools/abi_test_metronome_slots.cpp
                             tools/abi_test_mixer_rate.cpp)
   target_include_directories(abi_verify PRIVATE src tools tools/media)

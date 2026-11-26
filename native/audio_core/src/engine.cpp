@@ -164,10 +164,18 @@ bool Engine::IsIdle() const {
 bool Engine::FrameAtBoottime(int64_t boottime_ns, int64_t* out_frame) const {
   ClockPair pair{};
   if (!render_clock_.Read(&pair)) return false;
-  const int64_t monotonic_ns = boottime_ns - BoottimeOffsetNs();
+  const int64_t monotonic_ns = boottime_ns - Suspended();
   *out_frame =
       pair.frame + NsToFrames(monotonic_ns - pair.monotonic_ns, kSampleRate);
   return true;
+}
+
+int64_t Engine::Suspended() const {
+#ifdef KITBAG_BUILD_TOOLS
+  const int64_t forced = suspended_override_ns_.load(std::memory_order_relaxed);
+  if (forced != kMeasureSuspended) return forced;
+#endif
+  return SuspendedNs();
 }
 
 int32_t Engine::OutputDeviceId() const {

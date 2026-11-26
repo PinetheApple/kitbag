@@ -30,7 +30,8 @@ KB_EXPORT int64_t kb_clock_boottime_ns(void);
  * either side of the pair extrapolate at the engine rate. Output latency is not
  * included: the latency offset covers it. May be negative.
  * KB_ERROR_INVALID_ARGUMENT for a null engine or output or a negative
- * boottime_ns; KB_ERROR_BUSY as kb_engine_clock_pair. */
+ * boottime_ns; KB_ERROR_BUSY as kb_engine_clock_pair, so until the device has
+ * rendered: hold the engine (kb_engine_hold) before the first mapping. */
 KB_EXPORT kb_result kb_engine_frame_at_boottime(
     const kb_engine* engine,
     int64_t boottime_ns,
@@ -38,6 +39,11 @@ KB_EXPORT kb_result kb_engine_frame_at_boottime(
 );
 
 #ifdef KITBAG_BUILD_TOOLS
+/* Verify only: kb_engine_frame_at_boottime takes suspended_ns as boottime
+ * minus monotonic instead of measuring it. */
+KB_EXPORT void
+kb_engine_set_suspended_ns(kb_engine* engine, int64_t suspended_ns);
+
 /* Verify only: kb_engine_render with the clock pair stamped monotonic_ns
  * instead of the time of the call. */
 KB_EXPORT void kb_engine_render_at(

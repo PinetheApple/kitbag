@@ -6,6 +6,15 @@ namespace kitbag {
 using metronome_detail::Clamp;
 using metronome_detail::kSecondsPerMinute;
 
+namespace {
+
+bool KeepsTimeline(bool running, double heard, double next, int subdivision) {
+  return running && std::fabs(next - heard) * subdivision <
+                        metronome_detail::kMaxNudgeTicks;
+}
+
+}  // namespace
+
 void Metronome::Start() {
   commands_.Push({CommandType::kStart});
 }
@@ -52,8 +61,6 @@ void Metronome::AnchorExternal(
   commands_.Push(command);
 }
 
-// A suspended slot applies its commands and rings out what sounds; its beat
-// clock stands still, and the grid cursor re-seeds when it renders again.
 void Metronome::RenderSuspended(
     float* output,
     uint32_t frames,
@@ -119,6 +126,7 @@ void Metronome::StashPendingAnchor(const Command& command) {
 
 void Metronome::StopRun() {
   running_ = false;
+  last_tick_ = kNoFiredTick;
   has_pending_start_ = false;
   has_pending_anchor_ = false;  // a Stop cancels a queued anchor too
   // Force a re-seed next block: a cursor stranded where the pause began
@@ -135,6 +143,7 @@ void Metronome::StopRun() {
 void Metronome::BeginRun() {
   current_bar_ = -1;  // the first downbeat advances it to bar 0
   ramp_.Restart(0);
+  last_tick_ = kNoFiredTick;
   if (ramp_.enabled()) bpm_ = ramp_.start_bpm();
   // Anchors `position` at zero: nothing emits before the first frame, so a
   // positive offset would swallow every grid point it shifts past (§4.7).
@@ -201,6 +210,7 @@ void Metronome::BeginAnchorExternal(
   has_pending_anchor_ = false;
   has_pending_start_ = false;  // an anchor supersedes a deferred start
   ramp_.Disable();
+  const double heard = beat_position_ + LatencyBeats();
   bpm_ = Clamp(pending_anchor_bpm_, kMinBpm, kMaxBpm);
   const double song_seconds =
       pending_anchor_song_pos_ +
@@ -209,6 +219,13 @@ void Metronome::BeginAnchorExternal(
   // Song beats in this signature's unit, with no latency term: the per-sample
   // bias in AdvanceConstantTempo adds it back (§4.7).
   beat_position_ = song_seconds * bpm_ * BeatUnitScale() / kSecondsPerMinute;
+  const bool nudge = KeepsTimeline(
+      running_,
+      heard,
+      beat_position_ + LatencyBeats(),
+      subdivision_
+  );
+  if (!nudge) last_tick_ = kNoFiredTick;
   if (!running_) grid_state_.last_onset = {};
   running_ = true;
   running_flag_.store(true, std::memory_order_relaxed);
@@ -216,7 +233,7 @@ void Metronome::BeginAnchorExternal(
   count_in_armed_ = false;
   ReacquireGrid();
   *tempo = BlockTempoFor(sample_rate);
-  SyncBarFromPosition(tempo->beats_per_sample);
+  if (!nudge) SyncBarFromPosition(tempo->beats_per_sample);
 }
 
 }  // namespace kitbag

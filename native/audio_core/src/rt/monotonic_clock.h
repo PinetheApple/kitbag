@@ -33,9 +33,9 @@ inline int64_t BoottimeNs() {
 #endif
 }
 
-// Boottime minus monotonic: the time spent suspended. Bracketing the boottime
-// read halves the error a preemption between the reads can add.
-inline int64_t BoottimeOffsetNs() {
+// Bracketing the boottime read halves the error a preemption between the
+// reads can add.
+inline int64_t SuspendedNs() {
   const int64_t before = MonotonicNs();
   const int64_t boottime = BoottimeNs();
   const int64_t after = MonotonicNs();

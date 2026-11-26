@@ -21,7 +21,9 @@ inline const Engine* ToEngine(const kb_engine* engine) {
 // one block never show it a started metronome.
 inline void StopRigClickFor(Engine* engine, int32_t slot) {
   engine->metronome(slot).rig_click().Stop();
-  engine->SetRigClickIntent(false);
+  if (slot == engine->selected_metronome_slot()) {
+    engine->SetRigClickIntent(false);
+  }
 }
 
 inline void TakeOverFromRigClick(Engine* engine, int32_t slot) {
