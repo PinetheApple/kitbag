@@ -1,10 +1,11 @@
 import { createThemedStyles, type ScreenInsets } from '@kitbag/core-design';
-import { useMediaSessions } from '@kitbag/core-state';
+import { soundChipLabel, useMediaSessions } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { PLAY_ALONG_VIEW, playAlongView } from '../logic/playAlongView.ts';
 import { MIN_SESSIONS_TO_CHOOSE } from '../logic/sourceRows.ts';
+import { ClickSoundSheet } from './ClickSoundSheet.tsx';
 import { PermissionExplainer } from './PermissionExplainer.tsx';
 import { PlayAlongAppBar, type SourceChipProps } from './PlayAlongAppBar.tsx';
 import { PlayAlongBody } from './PlayAlongBody.tsx';
@@ -28,7 +29,13 @@ import { TempoSheet } from './TempoSheet.tsx';
 import { useAccessFlow, type AccessFlow } from './useAccessFlow.ts';
 import { useLastSeen } from './useLastSeen.ts';
 
-type OpenSheet = 'none' | 'source' | 'tempo' | 'menu' | PatternSheet;
+type OpenSheet =
+  | 'none'
+  | 'source'
+  | 'tempo'
+  | 'menu'
+  | 'sound'
+  | PatternSheet;
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
@@ -53,6 +60,9 @@ function useSheets() {
   const openMenu = useCallback(() => {
     setSheet('menu');
   }, []);
+  const openSound = useCallback(() => {
+    setSheet('sound');
+  }, []);
   const openMeter = useCallback(() => {
     setSheet(PATTERN_SHEET.meter);
   }, []);
@@ -65,6 +75,7 @@ function useSheets() {
     openSource,
     openTempo,
     openMenu,
+    openSound,
     openMeter,
     openSubdivision,
   };
@@ -103,6 +114,7 @@ function PlayAlongSheets({ sheets, followedId, bottomInset }: SheetsProps) {
   const access = useMediaSessions((s) => s.access);
   const sessions = useMediaSessions((s) => s.sessions);
   const openSettings = useMediaSessions((s) => s.openSettings);
+  const sounds = usePlayAlong((s) => s.pattern.sounds);
   const { line } = useTempoLine();
   const { close } = sheets;
   const handleAccess = useCallback(() => {
@@ -133,8 +145,15 @@ function PlayAlongSheets({ sheets, followedId, bottomInset }: SheetsProps) {
       <PlayAlongMenu
         visible={sheets.sheet === 'menu'}
         access={access === true}
+        soundLabel={soundChipLabel(sounds)}
         bottomInset={bottomInset}
+        onClickSound={sheets.openSound}
         onNotificationAccess={handleAccess}
+        onDismiss={close}
+      />
+      <ClickSoundSheet
+        visible={sheets.sheet === 'sound'}
+        bottomInset={bottomInset}
         onDismiss={close}
       />
     </>

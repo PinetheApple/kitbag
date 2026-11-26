@@ -89,6 +89,7 @@ export * from './components/SectionHeader.tsx';
 export * from './components/SegmentedControl.tsx';
 export * from './components/IconGlyph.tsx';
 export * from './components/Sheet.tsx';
+export * from './components/SoundPickerSheet.tsx';
 export * from './components/fadeToClear.ts';
 export * from './sheetRoom.ts';
 export * from './switch.ts';

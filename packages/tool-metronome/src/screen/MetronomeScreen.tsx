@@ -9,6 +9,7 @@ import {
   getPracticeSessionStore,
   pushTap,
   tapTempoBpm,
+  useHoldEngine,
   useMetronome,
   useSwipeHint,
 } from '@kitbag/core-state';
@@ -55,7 +56,6 @@ import { Transport } from './Transport.tsx';
 import { UnsavedSnackbar } from './UnsavedSnackbar.tsx';
 import { useEndPracticeOnLeave } from './useEndPracticeOnLeave.ts';
 import { useControlsFit } from './useControlsFit.ts';
-import { useHoldEngine } from './useHoldEngine.ts';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
 import { useNoteStrip } from './useMetronomeNotes.ts';
