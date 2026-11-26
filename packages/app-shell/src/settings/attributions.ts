@@ -1,3 +1,5 @@
+import { BPM_SOURCE_CREDIT, type SourceCredit } from '@kitbag/core-state';
+
 export interface Attribution {
   readonly name: string;
   readonly licence: string;
@@ -27,3 +29,10 @@ export const ATTRIBUTIONS: readonly Attribution[] = [
   { name: 'Material Design Icons', licence: 'Pictogrammers Free License' },
   { name: '@expo/vector-icons', licence: 'MIT' },
 ];
+
+export const DATA_CREDITS: readonly SourceCredit[] =
+  Object.values(BPM_SOURCE_CREDIT);
+
+export function linkText(url: string): string {
+  return url.replace(/^https?:\/\//, '');
+}
