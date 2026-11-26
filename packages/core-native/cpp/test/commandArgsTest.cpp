@@ -46,7 +46,7 @@ uint64_t playedFrom = 0;
 uint64_t startedAt = 0;
 int32_t startedSlot = -1;
 int32_t selectedSlot = -1;
-int32_t runningRead = 0;
+int32_t intentRead = 0;
 uint64_t anchoredAt = 0;
 constexpr double kSongPos = 83.25;
 constexpr double kSongBpm = 121.5;
@@ -191,12 +191,12 @@ void expectAnchorExternal() {
   expectAnchor(kEndFrame, kNaN, "");
 }
 
-void expectSelect(int32_t running, const std::string& wantCalls) {
+void expectSelect(int32_t intent, const std::string& wantCalls) {
   songCalls.clear();
-  runningRead = running;
+  intentRead = intent;
   kitbag::commandMetronomeSelectSlot(KB_METRONOME_SLOT_PLAY_ALONG);
-  if (songCalls != wantCalls) fail(("select: " + songCalls).c_str(), running, 0);
-  if (selectedSlot != KB_METRONOME_SLOT_PLAY_ALONG) fail("select slot", running, selectedSlot);
+  if (songCalls != wantCalls) fail(("select: " + songCalls).c_str(), intent, 0);
+  if (selectedSlot != KB_METRONOME_SLOT_PLAY_ALONG) fail("select slot", intent, selectedSlot);
 }
 
 }  // namespace
@@ -241,9 +241,13 @@ extern "C" int32_t kb_metronome_custom_sound_loaded(const kb_engine*, int32_t sl
   return 1;
 }
 
-extern "C" kb_result kb_metronome_count_in_at(kb_engine*, uint64_t end, double, int32_t,
-                                              int32_t startClick) {
-  songCalls += "count ";
+static const char* onSlot(int32_t slot, const char* call) {
+  return slot == KB_METRONOME_SLOT_STANDALONE ? call : "wrong-slot ";
+}
+
+extern "C" kb_result kb_metronome_slot_count_in_at(kb_engine*, int32_t slot, uint64_t end, double,
+                                                   int32_t, int32_t startClick) {
+  songCalls += onSlot(slot, "count ");
   countedEnd = end;
   countedStartClick = startClick;
   return countResult;
@@ -266,15 +270,19 @@ extern "C" void kb_metronome_select_slot(kb_engine*, int32_t slot) {
   songCalls += "select ";
   selectedSlot = slot;
 }
-extern "C" int32_t kb_metronome_is_running(const kb_engine*) { return runningRead; }
+extern "C" int32_t kb_metronome_intends_to_play(const kb_engine*) { return intentRead; }
 extern "C" void kb_metronome_anchor_external(kb_engine*, double songPos, uint64_t frame,
                                              double bpm) {
   songCalls += "anchor ";
   anchoredAt = frame;
   if (songPos != kSongPos || bpm != kSongBpm) fail("anchor args", songPos, bpm);
 }
-extern "C" void kb_metronome_stop(kb_engine*) { songCalls += "stop "; }
-extern "C" void kb_metronome_pause(kb_engine*) { songCalls += "click-pause "; }
+extern "C" void kb_metronome_slot_stop(kb_engine*, int32_t slot) {
+  songCalls += onSlot(slot, "stop ");
+}
+extern "C" void kb_metronome_slot_pause(kb_engine*, int32_t slot) {
+  songCalls += onSlot(slot, "click-pause ");
+}
 extern "C" void kb_mixer_pause(kb_engine*) { songCalls += "pause "; }
 extern "C" void kb_mixer_stop(kb_engine*) { songCalls += "mixer-stop "; }
 

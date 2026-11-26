@@ -91,7 +91,6 @@ export interface EngineClockHost extends Pick<
   readonly clock_pair_monotonic_ns: number;
 }
 
-/** Android's elapsedRealtime clock against the engine's; read at re-anchor rate. */
 export interface BoottimeClockHost {
   /** kb_clock_boottime_ns in ms: SystemClock.elapsedRealtime, fractional. */
   readonly boottime_ms: number;

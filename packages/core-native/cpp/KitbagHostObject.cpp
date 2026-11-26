@@ -81,6 +81,8 @@ ClockReading ReadClockPair(const kb_engine* engine) {
 
 using BoottimeMs = std::chrono::duration<double, std::milli>;
 constexpr const char* kFrameAtBoottimeMs = "frame_at_boottime_ms";
+// Half the int64 range: a double just under the full one can round past it.
+constexpr BoottimeMs kCastableMs = std::chrono::nanoseconds::max() / 2;
 
 double BoottimeNowMs(const kb_engine*) {
   return BoottimeMs(std::chrono::nanoseconds(kb_clock_boottime_ns())).count();
@@ -89,8 +91,7 @@ double BoottimeNowMs(const kb_engine*) {
 // NaN for an instant that cannot be cast to int64 ns or a clock with no pair yet.
 double FrameAtBoottimeMs(const kb_engine* engine, double boottime_ms) {
   const double none = std::numeric_limits<double>::quiet_NaN();
-  const BoottimeMs limit = std::chrono::nanoseconds::max() / 2;
-  if (!(boottime_ms >= 0.0 && boottime_ms < limit.count())) return none;
+  if (!(boottime_ms >= 0.0 && boottime_ms < kCastableMs.count())) return none;
   const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(BoottimeMs(boottime_ms));
   int64_t frame = 0;
   if (kb_engine_frame_at_boottime(engine, ns.count(), &frame) != KB_OK) return none;
@@ -169,7 +170,6 @@ double Read(kb_engine* engine, const std::string& prop, bool* found) {
 
 }  // namespace
 
-// The one callable: polled every second or two by play along, never per frame.
 Value FrameAtBoottimeFunction(Runtime& rt, const PropNameID& name, kb_engine* engine) {
   return facebook::jsi::Function::createFromHostFunction(
       rt, name, 1, [engine](Runtime&, const Value&, const Value* args, size_t count) {

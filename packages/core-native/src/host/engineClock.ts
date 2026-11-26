@@ -26,7 +26,7 @@ export function readEngineClockPair(
   return null;
 }
 
-/** The engine frame playing at an elapsedRealtime instant, or null before the first render. */
+/** null until the device renders: hold the engine before the first read. */
 export function readFrameAtBoottimeMs(
   host: BoottimeClockHost,
   boottimeMs: number,

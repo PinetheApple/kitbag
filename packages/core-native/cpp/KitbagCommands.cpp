@@ -49,10 +49,11 @@ std::optional<uint64_t> wholeFrame(double value) {
 int32_t queueSongCountIn(uint64_t end, double beatFrames, int32_t beatsPerBar, bool startClick) {
   const LockedEngine engine = commandEngine();
   const int32_t counted =
-      kb_metronome_count_in_at(engine, end, beatFrames, beatsPerBar, flag(startClick));
+      kb_metronome_slot_count_in_at(engine, KB_METRONOME_SLOT_STANDALONE, end, beatFrames,
+                                    beatsPerBar, flag(startClick));
   if (counted != KB_OK) return counted;
   const int32_t queued = kb_mixer_play_at(engine, end);
-  if (queued != KB_OK) kb_metronome_stop(engine);
+  if (queued != KB_OK) kb_metronome_slot_stop(engine, KB_METRONOME_SLOT_STANDALONE);
   return queued;
 }
 }  // namespace
@@ -70,15 +71,14 @@ void commandMetronomeStart(double anchorFrame) {
 void commandMetronomeStop() { kb_metronome_stop(commandEngine()); }
 void commandMetronomePause() { kb_metronome_pause(commandEngine()); }
 
-// A running slot reselected needs the device back; a stopped one leaves it to the idle rule.
 void commandMetronomeSelectSlot(int32_t slot) {
-  bool running = false;
+  bool wantsDevice = false;
   {
     const LockedEngine engine = commandEngine();
     kb_metronome_select_slot(engine, slot);
-    running = kb_metronome_is_running(engine) != 0;
+    wantsDevice = kb_metronome_intends_to_play(engine) != 0;
   }
-  if (running) commandStart();
+  if (wantsDevice) commandStart();
 }
 void commandMetronomeAnchorExternal(double songPosSec, double atFrame, double bpm) {
   const auto frame = wholeFrame(atFrame);
@@ -232,19 +232,19 @@ int32_t commandSongCountIn(double endFrame, double beatFrames, int32_t beatsPerB
   const int32_t started = commandStart();
   if (started != KB_OK) {
     const LockedEngine engine = commandEngine();
-    kb_metronome_stop(engine);
+    kb_metronome_slot_stop(engine, KB_METRONOME_SLOT_STANDALONE);
     kb_mixer_pause(engine);
   }
   return started;
 }
 void commandSongPause() {
   const LockedEngine engine = commandEngine();
-  kb_metronome_pause(engine);
+  kb_metronome_slot_pause(engine, KB_METRONOME_SLOT_STANDALONE);
   kb_mixer_pause(engine);
 }
 void commandSongStop() {
   const LockedEngine engine = commandEngine();
-  kb_metronome_stop(engine);
+  kb_metronome_slot_stop(engine, KB_METRONOME_SLOT_STANDALONE);
   kb_mixer_stop(engine);
 }
 int32_t commandMixerSetLoop(double startFrame, double endFrame) {

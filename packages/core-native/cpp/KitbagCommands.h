@@ -15,7 +15,6 @@ void commandMetronomeStop();
 void commandMetronomePause();
 void commandMetronomeSelectSlot(int32_t slot);
 void commandMetronomeAnchorExternal(double songPosSec, double atFrame, double bpm);
-// The lock-screen card's calls: always the standalone slot, whatever JS selected.
 void commandStandaloneStartNow();
 void commandStandalonePause();
 void commandStandaloneStop();
