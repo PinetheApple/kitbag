@@ -238,7 +238,9 @@ export function fakePlayAlong({
   const playbackStarted = vi.fn();
   const cardListeners = new Set<(request: PlayAlongCardRequest) => void>();
   const sessionsRead = vi.fn(() => media);
-  const latencyRead = vi.fn(() => LATENCY_MS);
+  let latencyMs = LATENCY_MS;
+  const latencyRead = vi.fn(() => latencyMs);
+  const latencyListeners = new Set<(offsetMs: number) => void>();
   const runtime: PlayAlongRuntime = {
     commands,
     boottimeNowMs: () => Date.now(),
@@ -249,6 +251,12 @@ export function fakePlayAlong({
     readGrid,
     sessionCommand,
     latencyOffsetMs: latencyRead,
+    onLatencyOffset: (listener) => {
+      latencyListeners.add(listener);
+      return () => {
+        latencyListeners.delete(listener);
+      };
+    },
     onClickStarting,
     yieldStandalone: yieldStandalone ?? loggedYield,
     onCardRequest: (listener) => {
@@ -284,6 +292,11 @@ export function fakePlayAlong({
     report: (next: readonly MediaSessionSnapshot[]) => {
       media.setState({ sessions: next });
     },
+    routeLatency: (offsetMs: number) => {
+      latencyMs = offsetMs;
+      for (const listener of [...latencyListeners]) listener(offsetMs);
+    },
+    latencyListeners: () => latencyListeners.size,
     anchors: () => commands.metronomeAnchorExternal.mock.calls,
     grids: () => commands.setGrid.mock.calls,
     gridAnchors: () => commands.metronomeAnchorGrid.mock.calls,

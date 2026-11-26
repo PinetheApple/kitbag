@@ -13,6 +13,7 @@ import { LOCK_REFUSAL, UNLOCK_REASON } from './lockOutcome.ts';
 import { REANCHOR_INTERVAL_MS } from './store.ts';
 import {
   BPM,
+  call,
   fakePlayAlong,
   LATENCY_MS,
   locked,
@@ -49,6 +50,12 @@ const BEAT_SEC = SECONDS_PER_MINUTE / BPM;
 const BAR_SEC = BEAT_SEC * BEATS;
 const HALF_BEAT_MS_AT_BPM = (BEAT_SEC * MS_PER_SECOND) / 2;
 const PRECISION = 9;
+const UNEVEN_BPM = 171;
+const UNEVEN_LIMIT_MS = 175;
+const FRACTIONAL_MS = 12.6;
+const ROUNDED_MS = 13;
+const ROUTE_LATENCY_MS = 240;
+const LATER_ROUTE_LATENCY_MS = 90;
 
 afterEach(() => {
   vi.useRealTimers();
@@ -85,9 +92,8 @@ describe('phase limit', () => {
   });
 
   it('is half a beat at the tempo the player is heard at', () => {
-    expect(phaseLimitMs(BPM, QUARTER, FAST)).toBeCloseTo(
-      HALF_BEAT_MS_AT_BPM / FAST,
-      PRECISION,
+    expect(phaseLimitMs(BPM, QUARTER, FAST)).toBe(
+      Math.trunc(HALF_BEAT_MS_AT_BPM / FAST),
     );
   });
 });
@@ -141,9 +147,8 @@ describe('phase while locked', () => {
       fakePlayAlong({ sessions: [snapshot({ speed: FAST })] }),
     );
     fake.store.getState().setPhaseOffset(FAR_MS);
-    expect(fake.store.getState().lock?.phaseOffsetMs).toBeCloseTo(
-      HALF_BEAT_MS_AT_BPM / FAST,
-      PRECISION,
+    expect(fake.store.getState().lock?.phaseOffsetMs).toBe(
+      Math.trunc(HALF_BEAT_MS_AT_BPM / FAST),
     );
   });
 
@@ -163,6 +168,39 @@ describe('phase while locked', () => {
     expect(fake.store.getState().lock?.phaseOffsetMs).toBe(
       HALF_BEAT_MS_AT_BPM / 2,
     );
+  });
+
+  it('keeps the offset whole, inside a half beat that is not', () => {
+    const fake = locked();
+    fake.store.getState().setBpm(UNEVEN_BPM);
+    fake.store.getState().setPhaseOffset(FAR_MS);
+    expect(fake.store.getState().lock?.phaseOffsetMs).toBe(UNEVEN_LIMIT_MS);
+    fake.store.getState().setPhaseOffset(-FAR_MS);
+    expect(fake.store.getState().lock?.phaseOffsetMs).toBe(-UNEVEN_LIMIT_MS);
+    fake.store.getState().setPhaseOffset(FRACTIONAL_MS);
+    expect(fake.store.getState().lock?.phaseOffsetMs).toBe(ROUNDED_MS);
+  });
+
+  it('follows a route change while it holds its slot', () => {
+    const fake = locked();
+    fake.store.getState().nudgePhase(1);
+    fake.calls.length = 0;
+    fake.routeLatency(ROUTE_LATENCY_MS);
+    const { lock, latencyOffsetMs } = fake.store.getState();
+    expect(latencyOffsetMs).toBe(ROUTE_LATENCY_MS);
+    expect((lock?.phaseOffsetMs ?? 0) + latencyOffsetMs).toBe(
+      DEFAULT_PHASE_STEP_MS + ROUTE_LATENCY_MS,
+    );
+    expect(fake.calls).toEqual([call('setLatencyOffset', ROUTE_LATENCY_MS)]);
+  });
+
+  it('stops following route changes once it leaves its slot', () => {
+    const fake = locked();
+    fake.store.getState().unlock();
+    fake.calls.length = 0;
+    fake.routeLatency(LATER_ROUTE_LATENCY_MS);
+    expect(fake.calls).toEqual([]);
+    expect(fake.latencyListeners()).toBe(0);
   });
 
   it('ignores phase edits with no lock, but keeps the step', () => {

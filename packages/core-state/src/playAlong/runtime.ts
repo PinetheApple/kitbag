@@ -97,6 +97,9 @@ export interface PlayAlongRuntime {
   readonly readGrid: (match: LibraryMatch) => Promise<DetectedGrid>;
   readonly sessionCommand: typeof mediaSessionCommand;
   readonly latencyOffsetMs: () => number;
+  readonly onLatencyOffset: (
+    listener: (offsetMs: number) => void,
+  ) => Unsubscribe;
   readonly onClickStarting: OnStarting;
   readonly yieldStandalone: () => () => void;
   readonly onCardRequest: (
@@ -144,6 +147,11 @@ export const nativePlayAlongRuntime: PlayAlongRuntime = {
     mediaSessionCommand(sessionId, command);
   },
   latencyOffsetMs: () => metronomeStore.getState().latencyOffset,
+  onLatencyOffset: (listener) =>
+    metronomeStore.subscribe((state, previous) => {
+      if (state.latencyOffset !== previous.latencyOffset)
+        listener(state.latencyOffset);
+    }),
   onClickStarting: clickStartsOf(metronomeStore, nativeSongCardStarts),
   yieldStandalone: () => metronomeStore.getState().yieldEngine(),
   onCardRequest: (listener) =>

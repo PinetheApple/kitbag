@@ -68,7 +68,9 @@ export function phaseLimitMs(
   denominator: number,
   speed: number,
 ): number {
-  return (beatSeconds(bpm * speed, denominator) * MS_PER_SECOND) / BEAT_HALVES;
+  return Math.trunc(
+    (beatSeconds(bpm * speed, denominator) * MS_PER_SECOND) / BEAT_HALVES,
+  );
 }
 
 export function clampPhase(
@@ -78,7 +80,7 @@ export function clampPhase(
   speed: number,
 ): number {
   const limit = phaseLimitMs(bpm, denominator, speed);
-  return clamp(ms, -limit, limit);
+  return clamp(Math.round(ms), -limit, limit);
 }
 
 export const wrappedShift = (shift: number, beatsPerBar: number): number =>
