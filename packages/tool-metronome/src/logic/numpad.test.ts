@@ -9,10 +9,9 @@ import {
   pressDigit,
   type NumpadEntry,
 } from './numpad.ts';
-import type { BpmBounds } from './bpmBounds.ts';
+import type { BpmBounds } from '@kitbag/core-state';
 import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
 
-// Mirrors core-state's BPM_BOUNDS shape; the screen passes the real one.
 const BOUNDS: BpmBounds = { min: 20, max: 400 };
 
 const type = (entry: NumpadEntry, digits: readonly number[]) =>

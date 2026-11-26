@@ -1,6 +1,6 @@
 import { clampUnit } from '@kitbag/core-design';
 
-import type { BpmBounds } from './bpmBounds.ts';
+import type { BpmBounds } from '@kitbag/core-state';
 
 export const SWIPE_ACTIVATE_DP = 8;
 

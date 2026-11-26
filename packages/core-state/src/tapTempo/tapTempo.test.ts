@@ -6,12 +6,11 @@ import {
   tapTimeoutMs,
   TAP_WINDOW_INTERVALS,
 } from './tapTempo.ts';
-import type { BpmBounds } from './bpmBounds.ts';
+import { BPM_BOUNDS } from '../metronome/config.ts';
 
 const MS_PER_MINUTE = 60000;
 
-// Mirrors core-state's BPM_BOUNDS shape; the screen passes the real one.
-const BOUNDS: BpmBounds = { min: 20, max: 400 };
+const BOUNDS = BPM_BOUNDS;
 const TIMEOUT = tapTimeoutMs(BOUNDS);
 
 const seriesAt = (bpm: number, count: number) =>
