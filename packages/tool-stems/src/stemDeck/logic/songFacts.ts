@@ -16,9 +16,7 @@ export function stemCount(count: number): string {
 export function songFacts(song: StemDeckSong): string {
   return [
     song.artist,
-    song.durationSec === null
-      ? null
-      : formatClockSeconds(Math.round(song.durationSec)),
+    song.durationSec === null ? null : formatClockSeconds(song.durationSec),
     stemCount(song.lanes.length),
   ]
     .filter((fact): fact is string => fact !== null)

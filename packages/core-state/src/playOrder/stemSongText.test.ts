@@ -31,6 +31,15 @@ describe('stem song text', () => {
     expect(stemSongListFacts(row())).toBe('Morrow Lane · 4:28 · D min');
   });
 
+  it('reads the length in whole seconds played, as the player clock does', () => {
+    expect(stemSongFacts(row({ durationSec: 149.6 }))).toBe(
+      '2:29 · D min · 127 BPM',
+    );
+    expect(stemSongListFacts(row({ durationSec: 149.6 }))).toBe(
+      'Morrow Lane · 2:29 · D min',
+    );
+  });
+
   it('leaves out what the song does not have', () => {
     const bare = row({ artist: null, durationSec: 0, bpm: null, key: null });
     expect(stemSongFacts(bare)).toBe('');
