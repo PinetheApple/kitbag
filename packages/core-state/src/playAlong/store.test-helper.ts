@@ -2,6 +2,7 @@ import {
   KB_METRONOME_SLOT,
   KB_RESULT,
   type MediaSessionSnapshot,
+  type PlayAlongCardRequest,
 } from '@kitbag/core-native';
 import { vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
@@ -70,6 +71,9 @@ function fakeCommands(calls: string[]) {
     setBarMute: vi.fn(logged('setBarMute')),
     setRamp: vi.fn(logged('setRamp')),
     setCountIn: vi.fn(logged('setCountIn')),
+    playAlongCardShow:
+      vi.fn<PlayAlongRuntime['commands']['playAlongCardShow']>(),
+    playAlongCardHide: vi.fn(),
   } satisfies PlayAlongRuntime['commands'];
 }
 
@@ -102,6 +106,8 @@ export function fakePlayAlong({
   let mapped = true;
   const frameAt = vi.fn((ms: number) => (mapped ? ms * FRAMES_PER_MS : null));
   const sessionCommand = vi.fn();
+  const playbackStarted = vi.fn();
+  const cardListeners = new Set<(request: PlayAlongCardRequest) => void>();
   const runtime: PlayAlongRuntime = {
     commands,
     boottimeNowMs: () => Date.now(),
@@ -111,6 +117,13 @@ export function fakePlayAlong({
     latencyOffsetMs: () => LATENCY_MS,
     onClickStarting,
     yieldStandalone: yieldStandalone ?? loggedYield,
+    onCardRequest: (listener) => {
+      cardListeners.add(listener);
+      return () => {
+        cardListeners.delete(listener);
+      };
+    },
+    playbackStarted,
   };
   return {
     store: createPlayAlongStore(runtime),
@@ -119,6 +132,10 @@ export function fakePlayAlong({
     media,
     pick,
     sessionCommand,
+    playbackStarted,
+    cardPress: (action: PlayAlongCardRequest['action']) => {
+      for (const listener of [...cardListeners]) listener({ action });
+    },
     frameAt,
     unmap: () => {
       mapped = false;
@@ -137,6 +154,21 @@ export function locked(fake = fakePlayAlong()) {
   fake.store.getState().setBpm(BPM);
   fake.store.getState().tap(START_MS);
   return fake;
+}
+
+export function fakeSongCardStarts() {
+  const listeners = new Set<() => void>();
+  return {
+    starts: (listener: () => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    play: () => {
+      for (const listener of [...listeners]) listener();
+    },
+  };
 }
 
 export function metronomeCommands() {
