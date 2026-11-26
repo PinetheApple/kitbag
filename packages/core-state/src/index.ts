@@ -615,6 +615,18 @@ export type {
   ClickAloneActions,
   ClickAloneState,
 } from './playAlong/clickAlone.ts';
+export {
+  DEFAULT_PHASE_STEP_MS,
+  PHASE_STEPS_MS,
+  type LockPhase,
+  type PhaseActions,
+  type PhaseState,
+  type PhaseStepMs,
+} from './playAlong/phase.ts';
+export {
+  UNLOCK_REASON,
+  type UnlockReason,
+} from './playAlong/lockOutcome.ts';
 export type { PlayAlongPattern } from './playAlong/pattern.ts';
 export type { PlayAlongRuntime } from './playAlong/runtime.ts';
 export { useSwipeHint } from './firstUse/useSwipeHint.ts';
