@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <limits>
 #include <string>
+#include <time.h>
 
 #include "kitbag_api.h"
 
@@ -88,6 +89,15 @@ double BoottimeNowMs(const kb_engine*) {
   return BoottimeMs(std::chrono::nanoseconds(kb_clock_boottime_ns())).count();
 }
 
+// SystemClock.uptimeMillis is CLOCK_MONOTONIC, the base of a touch event's timestamp.
+double BoottimeMinusUptimeMs(const kb_engine*) {
+  timespec uptime{};
+  clock_gettime(CLOCK_MONOTONIC, &uptime);
+  const auto uptime_ns =
+      std::chrono::seconds(uptime.tv_sec) + std::chrono::nanoseconds(uptime.tv_nsec);
+  return BoottimeMs(std::chrono::nanoseconds(kb_clock_boottime_ns()) - uptime_ns).count();
+}
+
 // NaN for an instant that cannot be cast to int64 ns or a clock with no pair yet.
 double FrameAtBoottimeMs(const kb_engine* engine, double boottime_ms) {
   const double none = std::numeric_limits<double>::quiet_NaN();
@@ -120,6 +130,7 @@ constexpr EngineProp kEngineProps[] = {
     {"clock_pair_monotonic_ns",
      [](const kb_engine* e) { return ReadClockPair(e).monotonic_ns; }},
     {"boottime_ms", BoottimeNowMs},
+    {"boottime_minus_uptime_ms", BoottimeMinusUptimeMs},
     {"mixdown_progress",
      [](const kb_engine* e) { return kb_mixdown_progress(e); }},
     {"mixdown_state",
