@@ -11,6 +11,8 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 
+internal const val SESSIONS_LOG_TAG = "KitbagSessions"
+
 data class MediaSessionInfo(
   val sessionId: String,
   val packageName: String,
@@ -58,7 +60,7 @@ class MediaSessionWatch(
   fun control(id: String, command: (MediaController.TransportControls) -> Unit) {
     handler.post {
       val controller = tracked[id]?.controller
-      if (controller == null) Log.w(TAG, "No live media session $id") else command(controller.transportControls)
+      if (controller == null) Log.w(SESSIONS_LOG_TAG, "No live media session $id") else command(controller.transportControls)
     }
   }
 
@@ -68,7 +70,7 @@ class MediaSessionWatch(
       track(manager.getActiveSessions(listenerComponent))
       true
     } catch (e: SecurityException) {
-      Log.w(TAG, "Notification listener access is off", e)
+      Log.w(SESSIONS_LOG_TAG, "Notification listener access is off", e)
       manager.removeOnActiveSessionsChangedListener(sessionsChanged)
       false
     }
@@ -87,7 +89,18 @@ class MediaSessionWatch(
   private fun follow(id: String, controller: MediaController): Tracked =
     Tracked(controller, SessionCallback(id)).also { controller.registerCallback(it.callback, handler) }
 
-  private fun send() = publish(tracked.map { (id, entry) -> info(id, entry.controller) })
+  private fun send() = publish(tracked.map { (id, entry) -> info(id, entry.controller).also(::logSession) })
+
+  private fun logSession(session: MediaSessionInfo) {
+    with(session) {
+      Log.i(
+        SESSIONS_LOG_TAG,
+        "session id=$sessionId package=$packageName playing=$playing positionMs=$positionMs " +
+          "positionUpdatedAtMs=$positionUpdatedAtMs speed=$speed " +
+          "titleLength=${title?.length ?: -1} artistLength=${artist?.length ?: -1}",
+      )
+    }
+  }
 
   private fun info(sessionId: String, controller: MediaController): MediaSessionInfo {
     val metadata = controller.metadata
@@ -134,9 +147,5 @@ class MediaSessionWatch(
       tracked.remove(id)?.let { it.controller.unregisterCallback(it.callback) }
       send()
     }
-  }
-
-  private companion object {
-    const val TAG = "KitbagMediaSessions"
   }
 }
