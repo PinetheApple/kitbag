@@ -10,9 +10,17 @@ import {
   TRANSPARENT,
 } from '@kitbag/core-design';
 
-import type { DotPalette, DotWidths } from '../logic/beatDot.ts';
+import { StyleSheet } from 'react-native';
+
+import type { DotPalette } from '../logic/beatDot.ts';
 
 const RING_REACH = metronome.dotRingGap + metronome.dotRing;
+
+interface DotWidths {
+  readonly normal: number;
+  readonly accent: number;
+  readonly silentNow: number;
+}
 
 export const DOT_WIDTHS: DotWidths = {
   normal: metronome.dotBorder,
@@ -20,14 +28,7 @@ export const DOT_WIDTHS: DotWidths = {
   silentNow: metronome.dotSilentNowBorder,
 };
 
-const EDGE = {
-  position: 'absolute',
-  top: 0,
-  right: 0,
-  bottom: 0,
-  left: 0,
-  borderRadius: radius.circle,
-} as const;
+const EDGE = { ...StyleSheet.absoluteFill, borderRadius: radius.circle };
 
 export const PULSE_MARKS = {
   mark: metronome.pulseMark,
@@ -69,7 +70,7 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
       ...EDGE,
       borderWidth: DOT_WIDTHS.accent,
     },
-    silentEdge: {
+    silentNowEdge: {
       ...EDGE,
       borderWidth: DOT_WIDTHS.silentNow,
     },

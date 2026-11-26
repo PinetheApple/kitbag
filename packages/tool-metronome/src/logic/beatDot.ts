@@ -26,17 +26,11 @@ export interface DotPalette {
   readonly clear: string;
 }
 
-export interface DotWidths {
-  readonly normal: number;
-  readonly accent: number;
-  readonly silentNow: number;
-}
-
 export interface DotLook {
   readonly fill: string;
   readonly edge: string;
   readonly accentEdge: string;
-  readonly silentEdge: string;
+  readonly silentNowEdge: string;
 }
 
 export function dotLook(
@@ -52,7 +46,7 @@ export function dotLook(
       fill: clear,
       edge: clear,
       accentEdge: clear,
-      silentEdge: palette.silentNow,
+      silentNowEdge: palette.silentNow,
     };
   }
   if (silentBar || state === 'muted') {
@@ -60,7 +54,7 @@ export function dotLook(
       fill: clear,
       edge: sounding ? palette.silentNow : palette.hollow,
       accentEdge: clear,
-      silentEdge: clear,
+      silentNowEdge: clear,
     };
   }
   const accentEdge = state === 'accented' ? palette.accent : clear;
@@ -69,16 +63,21 @@ export function dotLook(
       fill: palette.accent,
       edge: palette.accent,
       accentEdge,
-      silentEdge: clear,
+      silentNowEdge: clear,
     };
   }
   if (state === 'accented') {
-    return { fill: clear, edge: palette.accent, accentEdge, silentEdge: clear };
+    return {
+      fill: clear,
+      edge: palette.accent,
+      accentEdge,
+      silentNowEdge: clear,
+    };
   }
   return {
     fill: palette.fill,
     edge: palette.border,
     accentEdge: clear,
-    silentEdge: clear,
+    silentNowEdge: clear,
   };
 }

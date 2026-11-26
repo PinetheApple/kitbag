@@ -7,22 +7,19 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Text as SvgText } from 'react-native-svg';
 
-import { fontFace } from '../fontFaces.ts';
 import { metronome } from '../metronomeRoles.ts';
 import { READER_HIDDEN } from '../readerHiding.ts';
 import { countSquareState, type CountSquareState } from './countSquareState.ts';
 import { textRoles } from '../roles.ts';
 import { TRANSPARENT } from '../styleConstants.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
-import { TABULAR_FIGURES } from './DrawnFigures.tsx';
+import { drawnFont } from './drawnText.ts';
 
 const AnimatedSvgText = Animated.createAnimatedComponent(SvgText);
 
-const FACE = textRoles.countSquare;
-const MIDDLE = 'middle';
-// Matches a Text with includeFontPadding off centred in the square: its baseline
-// sits half the ascent-minus-descent below the centre, which "central" reproduces.
-const CENTRAL = 'central';
+const FACE_ROLE = 'countSquare';
+const ANCHOR_AT_CENTRE = 'middle';
+const BASELINE_OF_CENTRED_TEXT = 'central';
 const INK_STATES = [
   'now',
   'done',
@@ -61,12 +58,10 @@ function CountDigit({
   return (
     <AnimatedSvgText
       transform={`translate(${String(centre)} ${String(centre)})`}
-      textAnchor={MIDDLE}
-      alignmentBaseline={CENTRAL}
+      textAnchor={ANCHOR_AT_CENTRE}
+      alignmentBaseline={BASELINE_OF_CENTRED_TEXT}
       fill={fill}
-      fontFamily={fontFace(FACE.family, FACE.weight)}
-      fontSize={fontSize}
-      fontFeatureSettings={TABULAR_FIGURES}
+      {...drawnFont(FACE_ROLE, fontSize)}
       animatedProps={shown}
     >
       {digit}
@@ -84,7 +79,7 @@ export function CountSquare({ beat, side, currentBeat }: CountSquareProps) {
   const styles = useStyles();
   const { color } = useTheme();
   const box = useMemo(() => ({ width: side, height: side }), [side]);
-  const fontSize = (FACE.size * side) / metronome.countSquare;
+  const fontSize = (textRoles[FACE_ROLE].size * side) / metronome.countSquare;
   const inks: Readonly<Record<CountSquareState, string>> = {
     now: color.bg,
     done: color.text3,

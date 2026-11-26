@@ -19,19 +19,19 @@ describe('dotLook', () => {
       fill: 'transparent',
       edge: 'accent',
       accentEdge: 'accent',
-      silentEdge: 'transparent',
+      silentNowEdge: 'transparent',
     });
     expect(dotLook('normal', false, false, PALETTE)).toEqual({
       fill: 'surface3',
       edge: 'dotBorder',
       accentEdge: 'transparent',
-      silentEdge: 'transparent',
+      silentNowEdge: 'transparent',
     });
     expect(dotLook('muted', false, false, PALETTE)).toEqual({
       fill: 'transparent',
       edge: 'decor',
       accentEdge: 'transparent',
-      silentEdge: 'transparent',
+      silentNowEdge: 'transparent',
     });
   });
 
@@ -40,7 +40,7 @@ describe('dotLook', () => {
       fill: 'accent',
       edge: 'accent',
       accentEdge: 'transparent',
-      silentEdge: 'transparent',
+      silentNowEdge: 'transparent',
     });
     expect(dotLook('accented', true, false, PALETTE).accentEdge).toBe('accent');
   });
@@ -50,7 +50,7 @@ describe('dotLook', () => {
       fill: 'transparent',
       edge: 'text',
       accentEdge: 'transparent',
-      silentEdge: 'transparent',
+      silentNowEdge: 'transparent',
     });
   });
 
@@ -60,13 +60,13 @@ describe('dotLook', () => {
         fill: 'transparent',
         edge: 'decor',
         accentEdge: 'transparent',
-        silentEdge: 'transparent',
+        silentNowEdge: 'transparent',
       });
       expect(dotLook(state, true, true, PALETTE)).toEqual({
         fill: 'transparent',
         edge: 'transparent',
         accentEdge: 'transparent',
-        silentEdge: 'text',
+        silentNowEdge: 'text',
       });
     }
   });

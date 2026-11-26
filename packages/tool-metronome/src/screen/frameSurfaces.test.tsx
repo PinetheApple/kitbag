@@ -14,15 +14,26 @@ type Style = Readonly<Record<string, unknown>>;
 const styles = vi.hoisted(() => [] as Style[]);
 const fills = vi.hoisted(() => [] as Props[]);
 const countBeats = vi.hoisted(() => [] as number[]);
-const typed = vi.hoisted(() => [] as string[]);
+const nativeTexts = vi.hoisted(() => [] as string[]);
 const drawnTexts = vi.hoisted(() => [] as string[]);
+
+function recordText(props: Props): void {
+  const children = [props.children].flat();
+  nativeTexts.push(
+    children.filter((child) => typeof child === 'string').join(''),
+  );
+}
 
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
   const box = (props: Props) => h('div', null, props.children);
+  const text = (props: Props) => {
+    recordText(props);
+    return box(props);
+  };
   return {
     View: box,
-    Text: box,
+    Text: text,
     Pressable: box,
     StyleSheet: { absoluteFill: {} },
     useWindowDimensions: () => ({ fontScale: 1 }),
@@ -32,8 +43,12 @@ vi.mock('react-native', async () => {
 vi.mock('react-native-reanimated', async () => {
   const { createElement: h } = await import('react');
   const box = (props: Props) => h('div', null, props.children);
+  const text = (props: Props) => {
+    recordText(props);
+    return box(props);
+  };
   return {
-    default: { View: box, Text: box },
+    default: { View: box, Text: text },
     useAnimatedStyle: (build: () => Style) => {
       const style = build();
       styles.push(style);
@@ -55,10 +70,6 @@ vi.mock('react-native-reanimated', async () => {
 });
 
 vi.mock('@kitbag/core-design', async (original) => {
-  const typedText = (props: Props) => {
-    typed.push((props.text as { value: string }).value);
-    return null;
-  };
   return {
     ...(await original<Record<string, unknown>>()),
     CountSquare: (props: Props) => {
@@ -78,8 +89,6 @@ vi.mock('@kitbag/core-design', async (original) => {
     hitExtension: () => ({}),
     Icon: () => null,
     IconGlyph: () => null,
-    LiveSlot: typedText,
-    LiveText: typedText,
     mixHex: (from: string) => from,
     TRANSPARENT: 'clear',
     useReduceMotionValue: () => ({ value: false }),
@@ -118,7 +127,24 @@ const BAR_MUTE_ON: PracticeSettings = {
 };
 const COUNT_IN_BARS = 2;
 
-type Moment = Readonly<Record<string, number>>;
+type FrameKey = keyof (BeatDotsFrame & StatusFrame);
+type Moment = Readonly<Partial<Record<FrameKey, number>>>;
+
+const STOPPED: Readonly<Record<FrameKey, number>> = {
+  barPhase: 0,
+  currentBeat: 0,
+  currentPolyBeat: 0,
+  polyDownbeatPhase: 0,
+  barMuted: 0,
+  countingIn: 0,
+  countInBar: 0,
+  countInBarsTotal: 0,
+  barMutePosition: 0,
+  rampState: 0,
+  rampNextBpm: 0,
+  rampRemaining: 0,
+  rampStepProgress: 0,
+};
 
 interface Mode {
   readonly name: string;
@@ -212,14 +238,19 @@ const MODES: readonly Mode[] = [
 ];
 
 function frameAt(moment: Moment): BeatDotsFrame & StatusFrame {
+  const values: Readonly<Record<string, number>> = { ...STOPPED, ...moment };
   return new Proxy({} as BeatDotsFrame & StatusFrame, {
-    get: (_target, key) => ({ value: moment[String(key)] ?? 0 }),
+    get: (_target, key) => {
+      const value = values[String(key)];
+      if (value === undefined) throw new Error(`no frame value ${String(key)}`);
+      return { value };
+    },
   });
 }
 
 interface Drawn {
   readonly styles: Style[];
-  readonly typed: string[];
+  readonly nativeTexts: string[];
   readonly drawn: string[];
 }
 
@@ -227,7 +258,7 @@ function drawAt(mode: Mode, moment: Moment): Drawn {
   styles.length = 0;
   fills.length = 0;
   countBeats.length = 0;
-  typed.length = 0;
+  nativeTexts.length = 0;
   drawnTexts.length = 0;
   const frame = frameAt(moment);
   renderToStaticMarkup(
@@ -258,7 +289,11 @@ function drawAt(mode: Mode, moment: Moment): Drawn {
       }),
     ]),
   );
-  return { styles: [...styles], typed: [...typed], drawn: [...drawnTexts] };
+  return {
+    styles: [...styles],
+    nativeTexts: [...nativeTexts],
+    drawn: [...drawnTexts],
+  };
 }
 
 function keysThatMove(before: readonly Style[], after: readonly Style[]) {
@@ -293,7 +328,8 @@ describe.each(MODES)('the playing frame, $name,', (mode) => {
   it('holds every native text field still', () => {
     const before = drawAt(mode, mode.before);
     const after = drawAt(mode, mode.after);
-    expect(after.typed).toEqual(before.typed);
+    expect(before.nativeTexts).not.toEqual([]);
+    expect(after.nativeTexts).toEqual(before.nativeTexts);
   });
 });
 

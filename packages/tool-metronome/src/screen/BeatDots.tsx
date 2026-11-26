@@ -80,8 +80,8 @@ function BeatDot({
   const accentEdge = useAnimatedStyle(() => ({
     borderColor: now.value.accentEdge,
   }));
-  const silentEdge = useAnimatedStyle(() => ({
-    borderColor: now.value.silentEdge,
+  const silentNowEdge = useAnimatedStyle(() => ({
+    borderColor: now.value.silentNowEdge,
   }));
   const dashed = state === 'muted' && styles.dashed;
   const ring = useAnimatedStyle(() => ({
@@ -106,7 +106,7 @@ function BeatDot({
             <Animated.View style={[styles.ring, ring]} />
           </>
         ) : null}
-        <Animated.View style={[styles.silentEdge, dashed, silentEdge]} />
+        <Animated.View style={[styles.silentNowEdge, dashed, silentNowEdge]} />
       </View>
     </Pressable>
   );

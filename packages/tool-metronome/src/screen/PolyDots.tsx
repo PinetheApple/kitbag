@@ -76,7 +76,7 @@ const usePolyStyles = createThemedStyles((theme) => ({
   },
 }));
 
-const BRACKET_WEIGHTS = [false, true] as const;
+const BRACKET_FOR_CURRENT = [false, true] as const;
 
 interface PlacedPulse {
   readonly bar: number;
@@ -167,16 +167,16 @@ function PolyDot({
 
 interface CycleBracketProps {
   readonly span: PlacedSpan;
-  readonly now: boolean;
+  readonly current: boolean;
   readonly offset: SharedValue<number>;
   readonly cycle: SharedValue<number>;
 }
 
-function CycleBracket({ span, now, offset, cycle }: CycleBracketProps) {
+function CycleBracket({ span, current, offset, cycle }: CycleBracketProps) {
   const styles = usePolyStyles();
   const { color } = useTheme();
   const place = useMemo(() => {
-    const border = now
+    const border = current
       ? metronome.polyBracketNowBorder
       : metronome.polyBracketBorder;
     return {
@@ -186,12 +186,12 @@ function CycleBracket({ span, now, offset, cycle }: CycleBracketProps) {
       borderRightWidth: border,
       borderBottomWidth: border,
     };
-  }, [span.left, span.width, now]);
+  }, [span.left, span.width, current]);
   const look = useAnimatedStyle(() => {
     const shown =
-      offset.value === span.bar && (span.cycle === cycle.value) === now;
+      offset.value === span.bar && (span.cycle === cycle.value) === current;
     return {
-      borderColor: shown ? (now ? color.text2 : color.decor) : TRANSPARENT,
+      borderColor: shown ? (current ? color.text2 : color.decor) : TRANSPARENT,
     };
   });
   return <Animated.View style={[styles.bracket, place, look]} />;
@@ -301,11 +301,11 @@ export function PolyDots({
           <View style={[styles.besideLabel, besidePlace]}>{labelText}</View>
         )}
         {spans.flatMap((span, index) =>
-          BRACKET_WEIGHTS.map((now) => (
+          BRACKET_FOR_CURRENT.map((current) => (
             <CycleBracket
-              key={`${String(index)}-${String(now)}`}
+              key={`${String(index)}-${String(current)}`}
               span={span}
-              now={now}
+              current={current}
               offset={offset}
               cycle={cycle}
             />

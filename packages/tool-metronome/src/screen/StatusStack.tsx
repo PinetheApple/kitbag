@@ -167,23 +167,20 @@ function CountInStatus({
   const meta = useDerivedValue(() =>
     countInBarText(countInBar.value, countInBarsTotal.value),
   );
+  const ink = countInInk(theme.color.bg, theme.color.text);
   return (
     <StatusVariant
       rows={rows}
       shown="countIn"
       style={[styles.live, styles.countIn]}
     >
-      <IconGlyph
-        name="countingIn"
-        px={iconSizes.statusLive}
-        color={countInInk(theme.color.bg, theme.color.text)}
-      />
+      <IconGlyph name="countingIn" px={iconSizes.statusLive} color={ink} />
       <Text style={[styles.lead, styles.countInLead]}>Count-in</Text>
       <DrawnLiveSlot
         text={meta}
         role="statusMeta"
         widest={COUNT_IN_WIDEST}
-        color={countInInk(theme.color.bg, theme.color.text)}
+        color={ink}
         textStyle={[styles.meta, styles.countInMeta]}
         style={styles.pushRight}
       />

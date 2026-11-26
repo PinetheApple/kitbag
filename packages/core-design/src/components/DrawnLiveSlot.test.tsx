@@ -63,6 +63,7 @@ describe('DrawnLiveSlot', () => {
       alignmentBaseline: 'top',
     });
     const span = drawnAs('TSpan')[0];
+    expect(span?.children).toBe('1 of 8');
     expect(liveProps(span)).toEqual({ content: '1 of 8' });
     text.value = '2 of 8';
     expect(liveProps(span)).toEqual({ content: '2 of 8' });
