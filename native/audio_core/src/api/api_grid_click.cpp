@@ -1,3 +1,5 @@
+#include "kitbag_api.h"
+
 #include <cstdint>
 #include <span>
 
@@ -23,6 +25,10 @@ bool ValidGrouping(const int32_t* sizes, int32_t count) {
   return sum <= kitbag::Metronome::kMaxBeats;
 }
 
+bool ValidDownbeatTable(const int32_t* downbeats, int32_t count) {
+  return count == 0 || (count > 0 && downbeats != nullptr);
+}
+
 bool ValidRate(int32_t rate) {
   return rate == KB_GRID_RATE_SINGLE || rate == KB_GRID_RATE_DOUBLE ||
          rate == KB_GRID_RATE_HALF;
@@ -44,6 +50,24 @@ kb_result kb_metronome_set_grid_grouping(
   if (!metronome.HasCommandRoom()) return KB_ERROR_BUSY;
   metronome.SetGridGrouping({sizes, static_cast<size_t>(count)});
   return KB_OK;
+}
+
+kb_result kb_metronome_set_grid_downbeats(
+    kb_engine* engine,
+    const int32_t* downbeat_indices,
+    int32_t downbeat_count
+) {
+  if (engine == nullptr ||
+      !ValidDownbeatTable(downbeat_indices, downbeat_count)) {
+    return KB_ERROR_INVALID_ARGUMENT;
+  }
+  kitbag::Engine* target = ToEngine(engine);
+  const bool published = target->metronome().SetGridDownbeats(
+      {downbeat_indices, static_cast<size_t>(downbeat_count)},
+      target->frame_clock(),
+      target->is_running()
+  );
+  return published ? KB_OK : KB_ERROR_INVALID_ARGUMENT;
 }
 
 kb_result kb_metronome_set_grid_rate(kb_engine* engine, int32_t rate) {

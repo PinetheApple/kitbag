@@ -22,14 +22,18 @@ export function extrapolatedPositionMs(
   );
 }
 
+export function beatSeconds(bpm: number, denominator: number): number {
+  return (
+    (SECONDS_PER_MINUTE / bpm) * (KB_BPM_REFERENCE_DENOMINATOR / denominator)
+  );
+}
+
 export function barSeconds(
   bpm: number,
   beatsPerBar: number,
   denominator: number,
 ): number {
-  const beatSec =
-    (SECONDS_PER_MINUTE / bpm) * (KB_BPM_REFERENCE_DENOMINATOR / denominator);
-  return beatsPerBar * beatSec;
+  return beatsPerBar * beatSeconds(bpm, denominator);
 }
 
 // A negative position is silent until it reaches 0, so shift by whole bars; the
