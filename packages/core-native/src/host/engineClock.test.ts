@@ -119,7 +119,7 @@ describe('readFrameAtBoottimeMs', () => {
     return {
       boottime_ms: REPORTED_AT_MS,
       frame_at_boottime_ms: frameFor,
-      boottime_minus_uptime_ms: NO_DEEP_SLEEP_MS,
+      suspended_ms: NO_DEEP_SLEEP_MS,
     };
   }
 
@@ -150,7 +150,7 @@ describe('readUptimeToBoottimeMs', () => {
 
   function gapHost(...gaps: number[]) {
     return {
-      get boottime_minus_uptime_ms() {
+      get suspended_ms() {
         return gaps.shift() ?? Number.NaN;
       },
     };

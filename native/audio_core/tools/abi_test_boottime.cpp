@@ -1,5 +1,6 @@
 #include "kitbag_api.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 
@@ -24,6 +25,7 @@ constexpr uint32_t kBlockFrames[] = {
 constexpr int kBlockRounds = 60;
 constexpr int64_t kProbeDeltas[] = {-7001, 0, 1, 12345, 480000};
 constexpr int64_t kLateNs = 10'000'000;
+constexpr int64_t kSuspendedToleranceNs = 1'000'000;
 constexpr int64_t kHoursSuspendedNs =
     std::chrono::nanoseconds(
         std::chrono::hours(3) + std::chrono::microseconds(123'457)
@@ -91,6 +93,17 @@ void TestClockIsRawBoottime() {
   );
 }
 
+void TestSuspendedIsBoottimeMinusMonotonic() {
+  const int64_t before = RawSuspendedNs();
+  const int64_t read = kb_clock_suspended_ns();
+  const int64_t after = RawSuspendedNs();
+  Check(
+      read >= 0 && read >= std::min(before, after) - kSuspendedToleranceNs &&
+          read <= std::max(before, after) + kSuspendedToleranceNs,
+      "boottime: kb_clock_suspended_ns is CLOCK_BOOTTIME minus CLOCK_MONOTONIC"
+  );
+}
+
 void TestHoursSuspendedSubtracted() {
   kb_engine* engine = nullptr;
   if (kb_engine_create(&engine) != KB_OK) return;
@@ -138,6 +151,7 @@ void RunBoottimeMappingAbiTests() {
   TestExactAcrossBlocks();
   TestLatestPairWins();
   TestClockIsRawBoottime();
+  TestSuspendedIsBoottimeMinusMonotonic();
   TestHoursSuspendedSubtracted();
 }
 

@@ -36,10 +36,10 @@ export function readFrameAtBoottimeMs(
 }
 
 export function readUptimeToBoottimeMs(
-  host: Pick<BoottimeClockHost, 'boottime_minus_uptime_ms'>,
+  host: Pick<BoottimeClockHost, 'suspended_ms'>,
   uptimeMs: number,
 ): number {
-  return uptimeMs + host.boottime_minus_uptime_ms;
+  return uptimeMs + host.suspended_ms;
 }
 
 /** CLOCK_MONOTONIC ms at which the engine rendered frame, the base of a touch nativeEvent.timestamp. */

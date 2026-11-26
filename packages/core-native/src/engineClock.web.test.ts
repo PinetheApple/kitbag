@@ -13,7 +13,6 @@ it('has no engine clock on web', () => {
   expect(engineFrameAtBoottimeMs(1)).toBeNull();
 });
 
-it('passes a touch time through unchanged on web', () => {
-  const touchMs = 1234.5;
-  expect(uptimeToBoottimeMs(touchMs)).toBe(touchMs);
+it('has no boottime for a touch on web', () => {
+  expect(uptimeToBoottimeMs(1)).toBeNaN();
 });
