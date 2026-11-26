@@ -113,6 +113,7 @@ const lockOn = (song: typeof firstSong, at: number) => ({
   downbeatSec: 0,
   bpm: SONG_BPM,
   lockedAtBoottimeMs: at,
+  grid: undefined,
 });
 
 type Session = typeof firstSong | undefined;
