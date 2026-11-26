@@ -66,7 +66,10 @@ function fakeLadder() {
     track: null,
     libraryMatch: null,
     bpm: null,
+    source: null,
+    tapsLanded: 0,
     lookUp,
+    tap: vi.fn(),
     enter: vi.fn((bpm: number) => {
       ladder.setState({ bpm });
     }),
@@ -198,6 +201,7 @@ export function fakePlayAlong({
   downbeatsResult = () => KB_RESULT.KB_OK,
   nowFrame = () => Date.now() * FRAMES_PER_MS,
   shelf = presetShelf(),
+  ladder,
 }: {
   readonly grid?: DetectedGrid;
   readonly gridResult?: number;
@@ -207,6 +211,7 @@ export function fakePlayAlong({
   readonly yieldStandalone?: PlayAlongRuntime['yieldStandalone'];
   readonly nowFrame?: PlayAlongRuntime['nowFrame'];
   readonly shelf?: ReturnType<typeof presetShelf>;
+  readonly ladder?: FollowedLadder;
 } = {}) {
   vi.useFakeTimers({ now: START_MS });
   const calls: string[] = [];
@@ -240,7 +245,7 @@ export function fakePlayAlong({
     nowFrame,
     engineFrameAtBoottimeMs: frameAt,
     sessions: sessionsRead,
-    ladder: () => library.ladder,
+    ladder: () => ladder ?? library.ladder,
     readGrid,
     sessionCommand,
     latencyOffsetMs: latencyRead,

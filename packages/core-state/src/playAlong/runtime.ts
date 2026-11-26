@@ -64,7 +64,14 @@ export type FollowedLadder = Pick<
   StoreApi<
     Pick<
       TempoLadderStore,
-      'track' | 'libraryMatch' | 'bpm' | 'lookUp' | 'enter'
+      | 'track'
+      | 'libraryMatch'
+      | 'bpm'
+      | 'source'
+      | 'tapsLanded'
+      | 'lookUp'
+      | 'tap'
+      | 'enter'
     >
   >,
   'getState' | 'subscribe'

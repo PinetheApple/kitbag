@@ -15,6 +15,7 @@ import {
   type DetectedGrid,
 } from '../stemPlayer/meterOverride.ts';
 import type { LibraryMatch } from '../tempoLadder/libraryMatch.ts';
+import { BPM_SOURCE } from '../tempoLadder/sources.ts';
 import { sameSong } from '../tempoLadder/store.ts';
 import { firstDownbeatSec } from './libraryGrid.ts';
 import type { LockedView } from './lockedView.ts';
@@ -228,6 +229,7 @@ export function acceptAction(
       grid,
       ...gridPhase(grid),
     });
+    runtime.ladder().getState().enter(bpm, BPM_SOURCE.library);
     return LOCKED_OUTCOME;
   };
 }

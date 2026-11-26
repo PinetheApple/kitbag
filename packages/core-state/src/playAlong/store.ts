@@ -5,6 +5,9 @@ import { configuredStore, type StoreAccess } from '../configuredStore.ts';
 import { BPM_BOUNDS, clamp } from '../metronome/config.ts';
 import { DEFAULT_BPM, initialConfig } from '../metronome/store.ts';
 import type { DetectedGrid } from '../stemPlayer/meterOverride.ts';
+import { doubledBpm, halvedBpm } from '../tempoLadder/bpmSteps.ts';
+import { BPM_SOURCE } from '../tempoLadder/sources.ts';
+import { TAPS_TO_SET_TEMPO } from '../tempoLadder/store.ts';
 import {
   clickAlone,
   type ClickAloneActions,
@@ -98,6 +101,9 @@ export interface PlayAlongActions
     PhaseActions,
     TrackPresetActions {
   readonly setBpm: (bpm: number) => void;
+  readonly halveBpm: () => void;
+  readonly doubleBpm: () => void;
+  readonly tapTempo: (atMs: number) => void;
   readonly tap: (atBoottimeMs: number) => LockOutcome;
   readonly unlock: () => void;
   readonly setBeats: (beatsPerBar: number, denominator: number) => void;
@@ -253,6 +259,22 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
       showBpm(next);
       runtime.ladder().getState().enter(next);
     };
+    const stepBpm = (step: (bpm: number) => number) => () => {
+      const { bpm } = access.getState();
+      if (bpm !== undefined) setBpm(step(bpm));
+    };
+    const tapTempo = (atMs: number) => {
+      const ladder = runtime.ladder();
+      ladder.getState().tap(atMs);
+      const { tapsLanded, source, bpm } = ladder.getState();
+      if (
+        tapsLanded === TAPS_TO_SET_TEMPO &&
+        source === BPM_SOURCE.tap &&
+        bpm !== null &&
+        bpm !== access.getState().bpm
+      )
+        showBpm(bpm);
+    };
     return {
       pattern: initialPattern(),
       bpm: DEFAULT_BPM,
@@ -265,6 +287,9 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
       latencyOffsetMs: initialConfig().latencyOffset,
       ...NO_LOCK_STATE,
       setBpm,
+      halveBpm: stepBpm(halvedBpm),
+      doubleBpm: stepBpm(doubledBpm),
+      tapTempo,
       startClick: click.start,
       stopClick: click.stop,
       tap: tapAction(runtime, access, lockOn),
