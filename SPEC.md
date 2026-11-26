@@ -344,6 +344,12 @@ KB_EXPORT void kb_metronome_anchor_grid(kb_engine* engine,
                                         double song_pos_sec,
                                         uint64_t at_frame,
                                         double rate);
+
+/* Replace the set grid's downbeats, keeping its beats, anchor and mapping.
+   Refused with no grid set or a table set_grid would refuse. */
+KB_EXPORT kb_result kb_metronome_set_grid_downbeats(kb_engine* engine,
+                                                    const int32_t* downbeat_indices,
+                                                    int32_t downbeat_count);
 ```
 
 Requirements:
@@ -367,6 +373,14 @@ Requirements:
   song second 0 at its `anchor_frame`, rate 1; an anchor made before the latest
   `set_grid` is dropped. Pinned by `RunGridAnchorTests` (metronome_verify) and
   `RunGridAnchorAbiTests` (abi_verify).
+- Moving the bar-ones of a set grid is `set_grid_downbeats`, not a re-send:
+  `set_grid` would reset the mapping until the next `anchor_grid`, dropping
+  beats or sounding stray ones. The swap keeps the beats, the click epoch (so the
+  mapping, grouping and rate), the cursor and the onset floor; the current beat
+  is re-read in the new bars and the next downbeat of the new table is accented.
+  An empty table leaves the grid without downbeats, so nothing is accented
+  (#300: never invent a downbeat). Pinned by `RunGridDownbeatTests`
+  (metronome_verify) and `RunGridDownbeatAbiTests` (abi_verify).
 - `set_grid` and `anchor_external` compose with the existing latency offset so
   the click lands on the beat *at the speaker*, not at the buffer.
 - `kb_metronome_start_at`'s `start_frame` is buffer (mixer) time. The song and
@@ -1443,7 +1457,9 @@ None of this exists; the source data never leaves Kotlin.
   re-anchors with `kb_metronome_anchor_external`. A library grid lock sends the
   stored grid once per lock through `kb_metronome_set_grid`, in song seconds,
   and re-anchors with `kb_metronome_anchor_grid` (position, frame, playback
-  speed as `rate`), never by re-sending a shifted grid. The report's
+  speed as `rate`), never by re-sending a shifted grid. A downbeat shift on
+  that lock moves the bars with `kb_metronome_set_grid_downbeats`; the grid is
+  still sent once per lock. The report's
   `elapsedRealtime` instant becomes `at_frame` through
   `kb_engine_frame_at_boottime` (`kitbag_engine_clock_api.h`).
 
@@ -1548,7 +1564,8 @@ retrying the same thing.
   number with both parts named is worth the line.
 - **Downbeat shift** — `‹ beat 1 ›`. Tap on three instead of one and you are out
   by beats, not milliseconds; no ms control fixes that, and it is the more common
-  mistake.
+  mistake. On a library grid lock it moves the bars with
+  `kb_metronome_set_grid_downbeats` (§4.2), never by re-sending the grid.
 
 ### 8.7 The pattern card is the metronome's
 

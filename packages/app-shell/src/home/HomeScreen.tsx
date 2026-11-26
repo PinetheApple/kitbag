@@ -57,6 +57,7 @@ import {
   songsTileSubtext,
   stemsTileSubtext,
   LIBRARY_UNAVAILABLE_SUBTEXT,
+  PLAY_ALONG_SUBTEXT,
   UPCOMING_SUBTEXT,
   type MetronomeSummary,
 } from './subtext.ts';
@@ -116,6 +117,7 @@ function useLiveText(practice: string): Readonly<Record<string, LiveText>> {
       [TOOL_ID.tuner]: { tile: tuning, resume: tuning },
       [TOOL_ID.library]: { tile: songs, resume: songs },
       [TOOL_ID.stems]: { tile: stems, resume: stems },
+      [TOOL_ID.sync]: { tile: PLAY_ALONG_SUBTEXT, resume: PLAY_ALONG_SUBTEXT },
       [TOOL_ID.practiceHistory]: { tile: practice, resume: practice },
     };
   }, [metronome, tuning, libraryRows, libraryFailed, practice]);

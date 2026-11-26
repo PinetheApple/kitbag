@@ -1,4 +1,4 @@
-import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
+import { TEXT_PLACEHOLDER } from '@kitbag/core-design';
 
 export interface NoteStrip {
   readonly text: string;

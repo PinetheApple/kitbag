@@ -1,4 +1,4 @@
-import { countLabel } from '@kitbag/core-design';
+import { countLabel, TEXT_PLACEHOLDER } from '@kitbag/core-design';
 import { KB_COUNT_IN_OFF } from '@kitbag/core-native';
 import {
   soundLabel,
@@ -8,7 +8,6 @@ import {
 } from '@kitbag/core-state';
 
 import { countInLabel } from './countIn.ts';
-import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
 import { rampChipValue } from './trainer.ts';
 
 function modifier(
