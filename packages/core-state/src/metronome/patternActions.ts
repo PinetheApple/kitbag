@@ -15,6 +15,26 @@ import type { Denominator, MetronomeActions, MetronomeStore } from './store.ts';
 const BEATS_MIN = 1;
 const VALID_DENOMINATORS = new Set<number>(KB_DENOMINATORS);
 
+export interface Meter {
+  readonly beats: number;
+  readonly denominator: Denominator;
+}
+
+export function meterOf(
+  beatsPerBar: number,
+  denominator: number,
+  current: Denominator,
+): Meter | undefined {
+  if (!Number.isInteger(beatsPerBar) || beatsPerBar < BEATS_MIN)
+    return undefined;
+  return {
+    beats: Math.min(beatsPerBar, KB_MAX_BEATS),
+    denominator: VALID_DENOMINATORS.has(denominator)
+      ? (denominator as Denominator)
+      : current,
+  };
+}
+
 type Set = StoreApi<MetronomeStore>['setState'];
 type Get = StoreApi<MetronomeStore>['getState'];
 
@@ -36,11 +56,9 @@ export function patternActions(
 > {
   return {
     setBeats: (beatsPerBar, denominator) => {
-      if (!Number.isInteger(beatsPerBar) || beatsPerBar < BEATS_MIN) return;
-      const beats = Math.min(beatsPerBar, KB_MAX_BEATS);
-      const denom: Denominator = VALID_DENOMINATORS.has(denominator)
-        ? (denominator as Denominator)
-        : get().denominator;
+      const meter = meterOf(beatsPerBar, denominator, get().denominator);
+      if (meter === undefined) return;
+      const { beats, denominator: denom } = meter;
       const meterChanged = beats !== get().beatsPerBar;
       const accents = meterChanged ? groupStartAccents(beats) : get().accents;
       const against = get().polyAgainst;

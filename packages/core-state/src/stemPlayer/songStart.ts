@@ -3,6 +3,7 @@ import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
 import { barMeter } from './barMeter.ts';
 import { countedStart, type CountedStart } from './countedStart.ts';
 import type { MixerRuntime, StemPlayerRuntime } from './runtime.ts';
+import { songStarting } from './songStarting.ts';
 import type { StemPlayerState } from './store.ts';
 
 export type SongStartSlice = Pick<
@@ -134,6 +135,7 @@ export function songStart({
   };
 
   const play = (headFrame: number) => {
+    songStarting();
     const { commands } = runtimeOf();
     const counted = plan(headFrame);
     if (counted === null) {

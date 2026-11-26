@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { followNewGrid } from './clickActions.ts';
 import { songStart, type SongStartSlice } from './songStart.ts';
+import { onSongStarting } from './songStarting.ts';
 import type { StemPlayerStatus } from './store.ts';
 import {
   at,
@@ -83,6 +84,21 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+});
+
+describe('play', () => {
+  it('tells other Kitbag clicks a song is starting before it plays', () => {
+    const song = started();
+    const starting = vi.fn(() => {
+      expect(song.commands.mixerSeek).not.toHaveBeenCalled();
+      expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+    });
+    const stop = onSongStarting(starting);
+    song.start.play(HEAD);
+    stop();
+    song.start.play(HEAD);
+    expect(starting).toHaveBeenCalledOnce();
+  });
 });
 
 describe('stop', () => {
