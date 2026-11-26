@@ -1326,3 +1326,20 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   is rejected. **[owner, 2026-11-26]**
 
 - **2026-11-26 · Viewing a song while another plays (§6.3, §7.9, #616)** — While another song holds the listening session, a Songs or Stem songs row tap of any other song opens its player in a view state: nothing loads, the playing song plays on under its docked mini-player, and Play switches. With no session the tap opens the song as before, so nothing is disabled for a plain open (recommendation taken 2026-11-26, after device flows showed the edit rows disabled). The setlist context now ends on Play of a viewed song that is not in the setlist, not on a list tap; viewing never ends it and queued songs do not. Supersedes the list-start rule of the 2026-11-20 song queue entry and `design/kitbag-queue.html` §f. Drawn in `docs/research/mockups/616-view-states.html`. **[owner, 2026-11-26]**
+
+- **2026-11-26 · Play along design approved (§8, §12, #618)** — The owner approved the redrawn `design/kitbag-playalong.html`; §8.3–§8.10 state the rules.
+  (1) Leaving Play along while locked keeps the click following, with the docked mini-player: switching apps to skip a song would otherwise drop the lock.
+  (2) The click sound is in the overflow menu, as on the metronome, which has no sound chip on its screen.
+  (3) Previous, Play/Pause and Next only: the A-B loop is Kitbag's, and the other app owns its repeat.
+  (4) The drift strip's own stops on ±50 ms: the tuner's stops would put green at about ±3 ms on that scale.
+  (5) The phase step size is in the Phase sheet only: the on-screen row did not fit at 340 dp.
+  (6) Save for this song is in the overflow menu.
+  (7) Tap tempo is a Tap key in the Tempo sheet once a BPM is known, so the pad stays for aligning taps.
+  (8) The source chip moves to its own line above font 1.0: the bar cannot hold the title, the chip and ⋮ at 2.0.
+  (9) When drifting, the meter moves to the top of the scroll and the pad keeps its pinned slot: a pinned meter above the pad does not fit at 360 × 480.
+  (10) Podcast and audiobook rows use a new icon key, `spokenAudio`.
+  (11) With no song to follow, the click has its own play/stop key: denial degrades to a metronome, and a metronome has to start somehow.
+  (12) Kitbag is never a source.
+  (13) A bounce from Settings without the grant shows the still-off state.
+  **[owner, 2026-11-26]**
+- **2026-11-26 · Play along away state (§8.9, #618)** — The Play along mini-player has a close that ends following, as the song mini-player's close ends the song, and the notification while away offers the other app's play/pause and Stop, with no tempo − or +. **[REC taken, owner may overturn]**

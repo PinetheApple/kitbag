@@ -1077,7 +1077,7 @@ working. Changes:
   metronome.
 - **One engine metronome, settled for this player.** The song's click and
   standalone Play preempt each other, and the standalone settings never change.
-  Whether Play along gets its own metronome state is still open (§8.9).
+  Play along has its own metronome slot in the same engine (§8.9).
 
 ### 6.5 Acceptance
 
@@ -1380,14 +1380,23 @@ architecture, and the Play-policy justification. Non-negotiable.
 - **Push, don't poll.** The Kotlin builds an `eventChannel` and never calls
   `setStreamHandler`, forcing a 2s poll. A 2s poll cannot see a skip in time to
   react to it. The TurboModule emits events.
-- **Multiple sessions** — the source chip names the app and carries a live dot;
-  it opens a picker when more than one session is live. Playing sessions sort
-  first. Podcast and audiobook apps are listed but not picked by default —
-  `packageName` already comes across the channel and is read by nothing. Today
-  Dart takes `sessions.first` and never says which app won.
+- **Multiple sessions** — the source chip names the app and carries a live dot; it
+  opens the source sheet when more than one session is live. The chip sits in
+  the app bar at font scale 1.0 and on its own line under the bar above it,
+  where the bar cannot hold the title, the chip and ⋮. The sheet lists music
+  that is playing first, then paused music, then podcast and audiobook apps,
+  which can be picked but are never picked for you; their rows use the
+  `spokenAudio` icon key (MDI podcast). The order reads each session's
+  `packageName`, and the chip always names the app being followed.
+- **Kitbag is never a source.** No session whose `packageName` is Kitbag's own —
+  the song player, the stem player or the metronome — is listed or followed.
+  With only those live, Play along shows Nothing playing (§8.10).
 - **Transport controls.** `MediaController.transportControls` is imported and
-  never touched. ⏮ ⏸ ⏭ drive the *song*; there is no click transport, because
-  lock is the click's switch.
+  never touched. Previous, Play/Pause and Next in the player dock drive the
+  *song*; there is no click transport, because lock is the click's switch. There
+  is no loop key: the A-B loop is Kitbag's, and the other app owns its own repeat.
+  With no song to follow (permission denied, nothing playing, iOS not connected)
+  the dock holds the click's own play/stop key alone.
 - **Real permission flow.** Must open `ACTION_NOTIFICATION_LISTENER_SETTINGS`
   and verify on resume via `NotificationManagerCompat.getEnabledListenerPackages`.
   Today `requestPermission` returns `success(true)` unconditionally. **The Kotlin
@@ -1432,14 +1441,16 @@ which rungs were climbed is what stops the user retrying the same thing.
   non-constant tempo (§8.6).
 - **Cache.** None exists; every track change re-hits Deezer. Cache by
   (title, artist) with a TTL.
-- **Tap tempo**, fixed: taps are counted on screen (four LEDs, filling), because
+- **Tap tempo** runs on the pad when every rung failed, and from a Tap key in the
+  tempo sheet, beside ÷2 and ×2, once a BPM is known; the pad then stays for
+  aligning taps. Fixed: taps are counted on screen (four LEDs, filling), because
   `tap()` returns nothing until the fourth and gives no sign the first three
   landed — the button looks broken for three taps and then works. And it
   **averages intervals, not BPM values**: BPM is reciprocal to interval, and the
   mean of reciprocals is not the reciprocal of the mean, so averaging BPMs biases
   the result high.
 - **Manual entry** via the metronome's numpad sheet, reached the same way (tap
-  the readout), plus **÷2 and ×2** — half- and double-time is the specific way
+  the BPM card), plus **÷2 and ×2** — half- and double-time is the specific way
   BPM databases are wrong, and a wrong 85.5 for a 171 track is a lookup that
   "worked". **The 380-division slider is deleted**; dragging to a known integer
   is a fight the numpad wins.
@@ -1468,18 +1479,24 @@ which rungs were climbed is what stops the user retrying the same thing.
   Spotify and the click stops mid-bar; resume and it comes back on the beat,
   because the anchor is a position, not a stopwatch. **This is the whole
   difference between a lock and `setTempo(); start();`.**
-- **Drift meter** replaces the tap pad once locked — same slot, same weight. The
-  question changes from "where's the downbeat" to "is it still right". Quiet
-  inside ±10 ms; outside, the card ambers, the needle ambers, and `↺ Re-tap`
-  grows back into a pad. Colour is never the only signal: the needle moves, the
-  number changes, the badge text changes. "Locked · 1:12 ago" is the trust
-  signal that matters.
+- **Drift meter** replaces the tap pad once locked: it takes the pad's place, as
+  the last item of the scrolling body, with the same weight. The question
+  changes from "where's the downbeat" to "is it still right". It is the tuner
+  strip's geometry on a ±50 ms full scale with its own colour stops
+  (`DRIFT_STRIP_STOPS`): green within ±10 ms, amber by ±30 ms, red at the edges.
+  Under the strip sit the phase stepper, whose value opens the Phase sheet, and
+  Re-tap. Quiet inside ±10 ms; outside, the card ambers, the needle ambers, the
+  meter moves to the top of the scrolling body and the tap pad grows back into
+  its pinned slot. Colour is never the only signal: the needle moves, the number
+  changes, the badge text changes. "Locked · 1:12 ago" is the trust signal that
+  matters.
 - **Nudge writes the anchor, not a label.** `phaseOffsetMsProvider` is read today
   only by the text next to it.
 - **Phase has a step size**, `1 · 10 · 50` ms — 1 ms is nulling the click against
   a snare, 50 ms is catching up with Bluetooth. One granularity cannot do both:
   ±10 ms alone is forty taps to cross a Bluetooth delay, or too coarse to sit on
-  the beat.
+  the beat. The step size is set in the Phase sheet only; the screen's stepper
+  uses it.
 - **Phase range is ±half a beat** (**D5**), not ±100 ms. Phase is modular — a
   whole beat of offset is no offset. Half a beat is ±175 ms at 171 BPM and ±500 ms
   at 60, so `sync_screen.dart:365`'s `clamp(-100, 100)` is the wrong *shape* of
@@ -1495,33 +1512,50 @@ which rungs were climbed is what stops the user retrying the same thing.
 
 ### 8.7 The pattern card is the metronome's
 
-Same `− 4/4 +` stepper, same LEDs with the same tap-cycle, same subdivision
-stepper, same sound chip opening the same picker. **Play along is a metronome
-that follows a song; it should not be a second dialect for saying so.** The
-Flutter build's time signature, subdivision and volume controls are hardcoded
-(`value: 4`, `value: 1`, `value: 1.0`) with no backing state — they call the
-metronome and then snap back on release. They get real state by becoming the
-metronome's own components.
+Same meter and subdivision picker chips opening the metronome's sheets, same
+beat dots with the same tap-cycle. The click sound is an item in the overflow
+menu that opens the metronome's sound sheet, as the metronome keeps sound off
+its screen. **Play along is a metronome that follows a song; it should not be a
+second dialect for saying so.** The Flutter build's time signature, subdivision
+and volume controls are hardcoded (`value: 4`, `value: 1`, `value: 1.0`) with no
+backing state — they call the metronome and then snap back on release. They get
+real state by becoming the metronome's own components.
 
 ### 8.8 Save for this song
 
 Writes a `SongPreset` — the same object the metronome's editor edits — matched to
 the track on next play: meter, subdivision, accents, sound, and the phase nudge.
+It is an item in the overflow menu, opening a sheet that lists those fields.
 Tempo is deliberately **not** saved: it comes from the grid or the lookup, and a
 stale number is worse than none. Play along stops being a thing you re-dial every
 time.
 
 ### 8.9 Its own metronome
 
-Play along holds a metronome instance of its own. Opening it never moves your
+Play along holds a metronome slot of its own. Opening it never moves your
 standalone tempo; closing it never leaves a mess to restore.
 
-**What "its own" means natively is open** (§15). The C core's metronome is a
-singleton (`kb_metronome_*`, no handle parameter), so an instance is either a
-second engine object — a real API change with a real cost — or a state stack in
-the app layer that saves and restores around the borrow. The design cannot tell
-these apart; **the acceptance criterion can:** opening Play along and closing it
-must leave the standalone metronome exactly as it was, including mid-run.
+**"Its own" is a metronome slot inside the one native engine**, not a second
+engine and not an app-side save and restore (`docs/decisions.md` 2026-09-26,
+ruling 3; #620). One click sounds at a time: switching slots suspends the other,
+and the standalone metronome resumes untouched. The slot needs an addition to
+the §4 API, tracked in #620. **The acceptance criterion:** opening Play along
+and closing it must leave the standalone metronome exactly as it was, including
+mid-run.
+
+**Leaving Play along while locked keeps the click following.** Kitbag runs it in
+the background under the metronome's foreground service (§5.6), so switching to
+the other app to skip a song does not drop the lock. Home and the lists show the
+docked mini-player: the Play along tile, the track's title, a line naming the
+app it is locked to, a key that pauses and resumes the other app, and a close
+key. A tap reopens Play along. The notification while away offers the other
+app's play/pause and Stop, with no tempo − or +.
+
+Only one mini-player shows. Starting a Kitbag song, the stem player or the
+standalone metronome ends Play along's following, since one click sounds at a
+time. Following also ends on the mini-player's close, as the song mini-player's
+close ends the song, and when the followed session has been gone through the 10
+s hold (§8.10). Pausing the other app only silences the click; the lock stays.
 
 The single-song player (§6.4) has a narrower rule on purpose: closing a song
 restores the standalone metronome's settings intact but not its run state. A
@@ -1538,18 +1572,20 @@ playing Spotify is a phone that rings, skips, buffers and serves ads.
 | **Drifting** | Lock held, anchor stale. Does not silently unlock — a slightly-off click you can fix beats a click that vanished. One tap restores it. |
 | **Track changed** | Unlocks. New BPM looks up. Saved preset recalls if there is one. Never carries the old lock into a new song — that is a wrong click delivered with confidence. |
 | **Paused / seeked** | Click stops, lock badge stays, resumes on the beat. **Seeking backwards is the test that proves the implementation is real.** |
-| **Several apps playing** | Source chip shows a count, opens the picker. |
-| **Source went away** | Card greys, keeps last title, lock holds 10s, then drops. A short grace covers app switches and buffering. |
-| **iOS** | Spotify connect card; other apps named as unsupported. |
-| **Permission denied** | No session card; tap pad and full pattern controls. Degrades to a metronome with tap tempo. Everything not needing the grant still works, and the explainer stays one tap away rather than nagging. |
+| **Several apps playing** | Source chip shows a count, opens the source sheet. |
+| **Source went away** | Card greys, keeps last title, lock holds 10s, counted down, then drops to Nothing playing. A short grace covers app switches and buffering. |
+| **Nothing playing** | Access granted and no session but Kitbag's own (§8.3). The empty state names the reason and the next action; tap tempo, the pattern controls and the click's own play key still work. |
+| **Away** | Left Play along while locked. The click keeps following in the background and the mini-player docks on Home and the lists, until its close, another Kitbag click, or the source's 10 s hold ends it (§8.9). |
+| **iOS** | Spotify connect card; other apps named as unsupported. Until Spotify is connected the screen is the tap-tempo metronome, with the click's own play key. |
+| **Still off** | Back from the system screen without the grant. Checked on resume, so the explainer says the toggle did not take instead of opening a screen that silently does nothing. Same two buttons; after "Not now" it never nags. |
+| **Permission denied** | No session card; tap pad, full pattern controls and the click's own play key. Degrades to a metronome with tap tempo. Everything not needing the grant still works, and the explainer stays one tap away rather than nagging. |
 
-**There is no ad state** (**D10**). `kitbag-playalong.html` §04 draws one; it is
-cut. Spotify does not flag ads, and every available heuristic (duration <35 s,
-empty artist, title changing without a skip) would occasionally mute a real short
-track — interludes and intros are music. The click keeps its lock through the ad,
-is wrong for 30 s, and is right again after. Free-tier users are most users, and a
-temporarily-wrong click you can see is wrong beats a tool that silently mutes your
-practice on a guess.
+**There is no ad state** (**D10**). Spotify does not flag ads, and every
+available heuristic (duration <35 s, empty artist, title changing without a
+skip) would occasionally mute a real short track — interludes and intros are
+music. The click keeps its lock through the ad, is wrong for 30 s, and is right
+again after. Free-tier users are most users, and a temporarily-wrong click you
+can see is wrong beats a tool that silently mutes your practice on a guess.
 
 ### 8.11 Acceptance
 
@@ -1557,6 +1593,8 @@ practice on a guess.
 - Auto-lock works after one tap for a track matching an analysed song.
 - Permission denial degrades to tap-tempo — never a dead end.
 - Survives Bluetooth latency and pause/resume/skip.
+- Leaving Play along while locked keeps the click on the beat in the background;
+  ending it from outside the app leaves the standalone metronome untouched.
 
 ---
 
@@ -1809,7 +1847,7 @@ One migration note that is not obvious from the table:
 |---|---|
 | `kitbag-ui.html` | **The foundation.** Tokens, components, the 9-screen survey, key flows, and §06 experience rules. Everything below inherits from it. |
 | `kitbag-metronome.html` | Supersedes the metronome section of `kitbag-ui.html`. Adds setlists, setlist detail, preset editor, four sheets, the numpad, practice summary, notification/lock screen. |
-| `kitbag-playalong.html` | Supersedes the Play-along section. Adds the locked state, seven more states, five sheets, and a code audit. |
+| `kitbag-playalong.html` | Supersedes the Play-along section (owner-approved 2026-11-26; #618). Draws the states and sheets of §8.10, the source sheet and the away mini-player. Recorded in `docs/decisions.md`, 2026-11-26. |
 | `kitbag-settings.html` | Designs Settings, latency calibration, restore. **Supersedes exactly one §06 card** — "Settings stay contextual" — and nothing else. |
 | `kitbag-data-folder.html` | **The Data folder** (D11; #170). Supersedes, in `kitbag-settings.html`, the Data folder row's value in Settings → Data and the Storage sheet's Location line; the rest of that file stands. Adds the Data folder chooser, and draws the move (confirmation, progress, cancel, the paused banner on Home), its failures, the Songs list during a move, and songs on a missing SD card. Recorded in `docs/decisions.md`, 2026-11-19. |
 | `kitbag-metronome-b.html` ("Chosen") and `kitbag-metronome-status.html` (variant A, Q6 pulse marks, poly row) | Owner-approved layout B (#175). **Supersede the metronome screen in `kitbag-metronome.html` §02, and §03's sheets and numpad, where they differ**, except sizes and vertical layout, which the #243 frame in `kitbag-metronome.html` §02 sets. §02's setlists, setlist detail and preset editor, and §04 onward, stay binding. Recorded in `docs/decisions.md`, 2026-10-30; `docs/research/metronome-b-parity.md` is the value table. |
@@ -2043,8 +2081,8 @@ the supersession: ≤7 primary choices.)
   or the system save dialog, restore comes in through the picker. **Kitbag writes to no path of its own
   choosing.**
 - **Attributions is not optional**: `kitbag-ui.html`'s footer promises "BPM data:
-  Deezer / GetSongBPM (attribution in-app)". Licence and source are table stakes
-  for GPLv3 and, per §12.1, part of the brand.
+  GetSongBPM (attribution in-app)". Licence and source are table stakes for
+  GPLv3 and, per §12.1, part of the brand.
 - **Version reads the manifest.** Today it is a hardcoded `'0.1.0'` with an empty
   `onTap`, while the CHANGELOG claims v0.5. Neither is true.
 
@@ -2140,11 +2178,11 @@ decisions they carry are the reason the files read as they now do:
 | `kitbag-settings.html` §03 | **Data folder is not cut.** It returns as an authoritative setting; Storage becomes its companion, not its replacement. | D11 |
 | `kitbag-metronome.html` §02 | `7/4` **went back to `7/8`** — the denominator is being built, so the mock's original claim is buildable. | D1 |
 | `kitbag-metronome.html` §02 | LEDs are a **row with grouping, up to 8 per line, wrapping at a group boundary**. Resolves the file's own "knowingly untrue" flag — and the build's circle is what changes, not the mock. | D9 |
-| `kitbag-playalong.html` §04 | **Delete the ad state.** | D10 |
-| `kitbag-playalong.html` §05 | Phase sheet shows the **total** (`+190 ms total · 180 route + 10 song`). | D6 |
+| `kitbag-playalong.html` §01–§16 | **Delete the ad state.** | D10 |
+| `kitbag-playalong.html` §20 | Phase sheet shows the **total** (`+190 ms total · 180 route + 10 song`). | D6 |
 | `kitbag-metronome.html` §05 | Close both open questions: volume/latency are global (**no** preset-editor override, so the editor is already right); subdivision accents are global. | D2, D3 |
 | `kitbag-settings.html` §06 | Latency open question closed (2026-10-31): **±300 ms, clamped by the engine.** | D5 |
-| `kitbag-playalong.html` §07 | "±100 ms appears three times" closed (2026-10-31): latency ±300 ms engine-clamped, phase ±½ beat, downbeat in beats. | D5 |
+| `kitbag-playalong.html` §20 | "±100 ms appears three times" closed (2026-10-31): latency ±300 ms engine-clamped, phase ±½ beat, downbeat in beats. | D5 |
 
 **Designed, needs states:**
 
@@ -2152,7 +2190,7 @@ decisions they carry are the reason the files read as they now do:
 - **Library**: analysis failed · unsupported format · missing file.
 - Empty states as CTAs throughout.
 
-(Play-along's states are done — `kitbag-playalong.html` §04, minus the ad row.)
+(Play along's states are done: `kitbag-playalong.html` §01–§16.)
 
 **Not designed:**
 

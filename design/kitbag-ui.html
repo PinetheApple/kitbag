@@ -502,7 +502,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
       <div class="appbar"><h5>Play along</h5><span class="chip on" style="gap:5px"><i style="width:7px;height:7px;border-radius:50%;background:var(--grn);display:inline-block"></i>Spotify</span></div>
       <div class="pcard"><div class="trow"><div class="ticon">♫</div><div class="tl"><b>Blinding Lights</b><span>The Weeknd · 1:12 / 3:20</span></div><span class="ico">⏸</span></div></div>
       <div class="pcard hot">
-        <div class="crow" style="justify-content:space-between"><span class="tl"><b style="font-size:15px">171 BPM</b><span>via Deezer · tap to override</span></span><span class="badge2 ok">TEMPO SET</span></div>
+        <div class="crow" style="justify-content:space-between"><span class="tl"><b style="font-size:15px">171 BPM</b><span>via your library · tap to override</span></span><span class="badge2 ok">TEMPO SET</span></div>
       </div>
       <div class="bigtap">TAP ON A DOWNBEAT<br><span class="small" style="color:var(--tx2);font-weight:400">to lock the phase</span></div>
       <div class="crow" style="justify-content:center"><span class="btn gho">− 10 ms</span><span class="chip">phase</span><span class="btn gho">+ 10 ms</span></div>
@@ -514,7 +514,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
       <h3>Play along — sync without capture</h3>
       <ul>
         <li><b>Now-playing card</b> mirrors whatever media session is active (Spotify, YT Music…) with working transport — metadata + control, never audio capture.</li>
-        <li><b>BPM ladder</b>: Deezer → GetSongBPM → offline dump → your tap. Source shown; one tap overrides. Never authoritative, always editable.</li>
+        <li><b>BPM ladder</b>: your library → GetSongBPM (your own key) → your tap. Source shown; one tap overrides. Never authoritative, always editable.</li>
         <li><b>The tap pad is the hero</b>: tempo is known, phase isn't — one tap on any downbeat locks the click to the song. Nudge buttons trim ±10ms for Bluetooth latency.</li>
         <li><b>Auto-lock card</b> appears when title/artist matches an analyzed library song: reuse its beat grid, zero taps. The two features compound here.</li>
         <li class="src">Re-anchors from the session position every 1–2s; drift correction invisible unless it fails, then the tap pad is right there.</li>
@@ -620,7 +620,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
 
 <footer>
   <span>Kitbag · interface spec v1 · 2026-07-07</span>
-  <span>BPM data: Deezer / GetSongBPM (attribution in-app) · fonts: Space Grotesk & Inter (OFL)</span>
+  <span>BPM data: GetSongBPM (attribution in-app) · fonts: Space Grotesk & Inter (OFL)</span>
 </footer>
 </main>
 
