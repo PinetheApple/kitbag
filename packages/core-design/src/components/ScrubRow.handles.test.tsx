@@ -127,7 +127,7 @@ vi.mock('react-native-worklets', () => ({
 }));
 
 vi.mock('./Slider.tsx', () => ({ Slider: () => null }));
-vi.mock('./LiveText.tsx', () => ({ LiveText: () => null }));
+vi.mock('./DrawnLiveSlot.tsx', () => ({ DrawnLiveSlot: () => null }));
 vi.mock('./Icon.tsx', () => ({ Icon: () => null }));
 
 const { ScrubRow } = await import('./ScrubRow.tsx');
