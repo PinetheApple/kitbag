@@ -188,7 +188,11 @@ moot. Two entries survive as instructions rather than deletions:
   the migration is a good moment to, since the state layer is being rewritten.
   **Fixed for songs by #536 and #537:** a song's click sound and accents stay
   with the song and the standalone ones return when it stops, and standalone
-  edits stay off a running song click. Play along (§8.9) is not built.
+  edits stay off a running song click. Play along (§8.9) has its own engine
+  metronome slot and state store (#620); its screen is not built. Background
+  following has no foreground service of its own: hiding the metronome card
+  also drops the metronome's service. A song started from its notification
+  (Kotlin) does not end the follow.
 - **No tests** in `tool_sync`, `tool_stems`, `tool_library`. No native mixer
   test. No metronome soak/jitter harness. **The migration does not fix this and
   makes it more urgent** — see §14. **Fixed by #26 and #159** (`mixer_verify`,
@@ -2632,7 +2636,9 @@ need a phone check, tracked in #516 and the open feature issues.
   and playing the next song when one ends (#544), with Next and Previous on
   the notification and lock screen for a song played from a setlist or Up next
   (#563; its device check is owed in #382).
-- **4 has not started;** `tool-sync` is a skeleton.
+- **4 has started:** the engine's play-along metronome slot and boottime clock,
+  and Play along's state store in `core-state` (#620). `tool-sync` is still a
+  skeleton with no screen.
 - **5 is built** (#119, #127).
 - **Around the tools:** the Home hub (#111) with Arrange (#244); Settings
   (#224, #231) with Rig (#255, #268, #269), Tools (#272), backup and restore

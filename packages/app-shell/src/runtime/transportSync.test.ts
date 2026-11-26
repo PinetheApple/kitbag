@@ -32,6 +32,7 @@ const state = (over: Partial<TransportSource> = {}): TransportSource => ({
   ramp,
   practice: { playedMs: 5_000, stretchStartedAt: 1_000 },
   setlist: null,
+  following: false,
   ...over,
 });
 const shown: TransportShown = {
@@ -92,6 +93,19 @@ describe('notificationStepAfterAppChange', () => {
       kind: 'show',
       shown: { practicePlayedMs: 0, practiceStretchStartedAt: 8_000 },
     });
+  });
+
+  it('hides a running or paused card while Play along follows a song', () => {
+    const following = state({ following: true });
+    expect(notificationStepAfterAppChange(following, shown, 9_000)).toEqual({
+      kind: 'hide',
+    });
+    expect(
+      notificationStepAfterAppChange(following, pausedShown, 9_000),
+    ).toEqual({ kind: 'hide' });
+    expect(notificationStepAfterAppChange(following, undefined, 9_000)).toEqual(
+      { kind: 'none' },
+    );
   });
 
   it('hides when the app stops playback', () => {

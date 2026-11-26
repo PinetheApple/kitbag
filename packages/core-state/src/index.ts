@@ -590,6 +590,24 @@ export {
   type SessionChoice,
   type SessionChooser,
 } from './mediaSessions/store.ts';
+export {
+  configurePlayAlong,
+  createPlayAlongStore,
+  getPlayAlongStore,
+  REANCHOR_INTERVAL_MS,
+  SEEK_JUMP_MS,
+  SOURCE_GONE_HOLD_MS,
+  TAP_REFUSAL,
+  type PlayAlongActions,
+  type PlayAlongLock,
+  type PlayAlongState,
+  type PlayAlongStore,
+  type PlayAlongTrack,
+  type TapOutcome,
+  type TapRefusal,
+} from './playAlong/store.ts';
+export type { PlayAlongPattern } from './playAlong/pattern.ts';
+export type { PlayAlongRuntime } from './playAlong/runtime.ts';
 export { useSwipeHint } from './firstUse/useSwipeHint.ts';
 export {
   configureSwipeHintPersistence,

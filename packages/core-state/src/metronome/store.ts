@@ -9,7 +9,6 @@ import {
   KB_POLY_AGAINST_BAR,
   KB_RAMP_UNIT,
   KB_SUBDIVISION_BOUNDS,
-  KB_VOLUME_BOUNDS,
   acquireEngineHold,
   type KbCountInBars,
   type KbDenominator,
@@ -25,6 +24,7 @@ import {
   type MetronomeCommands,
   type NowFrame,
 } from './commands.ts';
+import { yieldableCommands } from './engineYield.ts';
 import {
   clamp,
   roundToEngineBpm,
@@ -35,6 +35,7 @@ import {
   isSoundId,
   mergeSounds,
   normalizeRamp,
+  volumeOf,
   type CountInConfig,
   type PerAccentSounds,
   type RampConfig,
@@ -104,6 +105,7 @@ export interface MetronomeActions {
   setSounds: (normal: number, accent: number) => void;
   previewSound: (sound: number, accented: boolean) => void;
   holdEngine: () => () => void;
+  yieldEngine: () => () => void;
   setVolume: (volume: number) => void;
   setLatency: (latencyMs: number) => void;
   setRamp: (config: RampConfig) => void;
@@ -186,10 +188,17 @@ interface EngineTempo {
   readonly sync: () => void;
 }
 
-function engineTempoOf(set: Set, get: Get, engineBpm: EngineBpm): EngineTempo {
+function engineTempoOf(
+  set: Set,
+  get: Get,
+  engineBpm: EngineBpm,
+  yielded: () => boolean,
+): EngineTempo {
   const read = (): number => {
     const state = get();
-    return state.running ? readEngineTempo(engineBpm, state.bpm) : state.bpm;
+    return state.running && !yielded()
+      ? readEngineTempo(engineBpm, state.bpm)
+      : state.bpm;
   };
   return {
     read,
@@ -222,7 +231,7 @@ function soundActions(
     },
 
     setVolume: (volume) => {
-      const next = clamp(volume, KB_VOLUME_BOUNDS.min, KB_VOLUME_BOUNDS.max);
+      const next = volumeOf(volume);
       set({ volume: next });
       commands.setVolume(next);
     },
@@ -351,14 +360,15 @@ export function createMetronomeStore(
   const starting = new Set<() => void>();
   // A song count keeps the click active after release, and the count's voice is
   // copied when it arms, so a running standalone takes its pattern at once.
+  const yielding = yieldableCommands(commands);
   const guard = guardSongClick(
-    commands,
+    yielding.commands,
     () => songClick.active() && !store.getState().running,
     () => store.getState(),
   );
   const engine = guard.commands;
   const store = createStore<MetronomeStore>((set, get) => {
-    const tempo = engineTempoOf(set, get, engineBpm);
+    const tempo = engineTempoOf(set, get, engineBpm, yielding.yielded);
     return {
       ...initialConfig(),
       ...patternActions(set, get, engine),
@@ -381,6 +391,7 @@ export function createMetronomeStore(
           release();
         };
       },
+      yieldEngine: yielding.yieldEngine,
       setCountInScope: (countInScope) => {
         set({ countInScope });
       },

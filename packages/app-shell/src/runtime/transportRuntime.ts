@@ -1,6 +1,7 @@
 import { getKitbagCommands, type TransportEvent } from '@kitbag/core-native';
 import {
   BPM_BOUNDS,
+  getPlayAlongStore,
   libraryStore,
   metronomeStore,
   mixerClick,
@@ -62,6 +63,7 @@ function transportSource() {
   return {
     ...metronomeStore.getState(),
     setlist: transportSetlistOf(transportSubtitle, libraryStore.getState()),
+    following: getPlayAlongStore().getState().lock !== undefined,
   };
 }
 
@@ -83,6 +85,7 @@ function syncFromApp() {
 
 metronomeStore.subscribe(syncFromApp);
 libraryStore.subscribe(syncFromApp);
+getPlayAlongStore().subscribe(syncFromApp);
 
 function resendCard() {
   if (shown === undefined) hideCard();

@@ -11,7 +11,10 @@ import type { MetronomeConfig } from '@kitbag/core-state';
 export type TransportSource = Pick<
   MetronomeConfig,
   'running' | 'bpm' | 'beatsPerBar' | 'denominator' | 'ramp' | 'practice'
-> & { readonly setlist: TransportSetlist | null };
+> & {
+  readonly setlist: TransportSetlist | null;
+  readonly following: boolean;
+};
 
 export interface TransportShown {
   readonly playback: TransportPlayback;
@@ -49,6 +52,7 @@ function shownFor(
   shown: TransportShown | undefined,
   now: number,
 ): TransportShown | undefined {
+  if (state.following) return undefined;
   if (state.running) {
     return {
       ...cardOf(state),

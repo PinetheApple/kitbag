@@ -113,7 +113,7 @@ app was deleted on 2026-07-17.
 | Path | What it is |
 |------|-----------|
 | `native/audio_core/` | The C++ realtime core: flat C ABI in `include/kitbag_api.h` and the `kitbag_*_api.h` headers beside it, miniaudio backend (SPEC.md §4). `tools/` holds the headless `*_verify` harnesses. |
-| `packages/` | The app: pnpm workspaces + Turborepo. `app-shell` (Expo Router shell, Home, Settings), `core-native` (JSI HostObject + TurboModule, the only native-binding package), `core-state` (Zustand stores), `core-db` (Drizzle on op-sqlite; `SCHEMA_VERSION` in `src/migrate.ts`, upgrade floor in SPEC.md §11.1), `core-plugin-api` (the abstract contract), `core-design` (tokens and shared components), `eslint-plugin-kitbag`, and the tools `tool-metronome`, `tool-library` (songs, stem songs, the single-song player), `tool-stems` (stem player), `tool-tuner` and `tool-sync` (play along, a skeleton). |
+| `packages/` | The app: pnpm workspaces + Turborepo. `app-shell` (Expo Router shell, Home, Settings), `core-native` (JSI HostObject + TurboModule, the only native-binding package), `core-state` (Zustand stores), `core-db` (Drizzle on op-sqlite; `SCHEMA_VERSION` in `src/migrate.ts`, upgrade floor in SPEC.md §11.1), `core-plugin-api` (the abstract contract), `core-design` (tokens and shared components), `eslint-plugin-kitbag`, and the tools `tool-metronome`, `tool-library` (songs, stem songs, the single-song player), `tool-stems` (stem player), `tool-tuner` and `tool-sync` (play along: its engine slot and `core-state` store exist; the screens and the listener UI are not built). |
 | `SPEC.md` | Product and technical spec. §17 records the locked decisions; §17.1 what is still open. |
 | `design/` | The binding HTML design specs. SPEC.md §12 gives precedence and which variant of a multi-variant file binds. |
 | `legacy/` | `android/MediaSessionPlugin.kt` + `AndroidManifest.xml`, the Flutter-era media-session detection. The port now lives in core-native (`media/MediaListenerService`, the `KitbagMediaSessions` TurboModule, #619). Reference only, never a build input; delete it once the port passes its device check. |
@@ -238,7 +238,7 @@ the tools, one issue per PR against `main`. As of 2026-11-20:
   stem songs, and its Stop ends the session; #237), the stem player with speed
   and key (#530), setlists and a play-next queue (#525), and a Settings screen
   whose issue (#170) is still open for the settings it lacks.
-- **Not started:** play along (§8); `tool-sync` is a skeleton.
+- **Play along (§8), started:** the engine's play-along slot and the `core-state` store; the screens and the listener UI are not built.
 - **Open work:** `gh issue list --state open` is the current list; among it are
   the device checks for stem setlists (#382) and stem songs on the phone
   (#134).
