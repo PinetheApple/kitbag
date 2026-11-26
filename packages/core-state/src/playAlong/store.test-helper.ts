@@ -6,7 +6,13 @@ import {
 import { vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
 
-import type { FollowedSessions, PlayAlongRuntime } from './runtime.ts';
+import type { DetectedGrid } from '../stemPlayer/meterOverride.ts';
+import type { LibraryMatch } from '../tempoLadder/libraryMatch.ts';
+import type {
+  FollowedLadder,
+  FollowedSessions,
+  PlayAlongRuntime,
+} from './runtime.ts';
 import { createPlayAlongStore } from './store.ts';
 
 export const START_MS = 1_000_000;
@@ -17,6 +23,8 @@ export const OTHER_ID = 'other';
 export const BPM = 120;
 export const PLAY_ALONG = KB_METRONOME_SLOT.KB_METRONOME_SLOT_PLAY_ALONG;
 export const STANDALONE = KB_METRONOME_SLOT.KB_METRONOME_SLOT_STANDALONE;
+export const SAMPLE_RATE = FRAMES_PER_MS * 1000;
+export const NO_GRID: DetectedGrid = { beats: [], downbeatIndices: [] };
 
 export function snapshot(
   overrides: Partial<MediaSessionSnapshot> = {},
@@ -41,6 +49,26 @@ export const call = (name: string, ...args: readonly number[]) =>
   `${name}(${args.join(',')})`;
 
 type SessionsView = ReturnType<FollowedSessions['getState']>;
+type LadderView = ReturnType<FollowedLadder['getState']>;
+
+function fakeLadder() {
+  const lookUp = vi.fn((track: LadderView['track']) => {
+    ladder.setState({ track, libraryMatch: null });
+    return Promise.resolve();
+  });
+  const ladder = createStore<LadderView>(() => ({
+    track: null,
+    libraryMatch: null,
+    lookUp,
+  }));
+  return {
+    ladder,
+    lookUp,
+    found: (libraryMatch: LibraryMatch | null) => {
+      ladder.setState({ libraryMatch });
+    },
+  };
+}
 
 function fakeCommands(calls: string[]) {
   const logged =
@@ -58,6 +86,14 @@ function fakeCommands(calls: string[]) {
     metronomeAnchorExternal: vi.fn<
       PlayAlongRuntime['commands']['metronomeAnchorExternal']
     >(logged('metronomeAnchorExternal')),
+    metronomeStart: vi.fn(logged('metronomeStart')),
+    setGrid: vi.fn<PlayAlongRuntime['commands']['setGrid']>(
+      (beats, _downbeats, anchorFrame) => {
+        calls.push(`setGrid(${String(beats.length)},${String(anchorFrame)})`);
+        return Promise.resolve<number>(KB_RESULT.KB_OK);
+      },
+    ),
+    clearGrid: vi.fn(logged('clearGrid')),
     metronomePause: vi.fn(logged('metronomePause')),
     metronomeStop: vi.fn(logged('metronomeStop')),
     setBeats: vi.fn(logged('setBeats')),
@@ -77,7 +113,9 @@ export function fakePlayAlong({
   sessions = [snapshot()],
   onClickStarting = () => () => undefined,
   yieldStandalone,
+  grid = NO_GRID,
 }: {
+  readonly grid?: DetectedGrid;
   readonly sessions?: readonly MediaSessionSnapshot[];
   readonly onClickStarting?: PlayAlongRuntime['onClickStarting'];
   readonly yieldStandalone?: PlayAlongRuntime['yieldStandalone'];
@@ -102,11 +140,16 @@ export function fakePlayAlong({
   let mapped = true;
   const frameAt = vi.fn((ms: number) => (mapped ? ms * FRAMES_PER_MS : null));
   const sessionCommand = vi.fn();
+  const library = fakeLadder();
+  const readGrid = vi.fn(() => Promise.resolve(grid));
   const runtime: PlayAlongRuntime = {
     commands,
     boottimeNowMs: () => Date.now(),
     engineFrameAtBoottimeMs: frameAt,
     sessions: () => media,
+    ladder: () => library.ladder,
+    readGrid,
+    sampleRate: () => SAMPLE_RATE,
     sessionCommand,
     latencyOffsetMs: () => LATENCY_MS,
     onClickStarting,
@@ -130,6 +173,9 @@ export function fakePlayAlong({
       media.setState({ sessions: next });
     },
     anchors: () => commands.metronomeAnchorExternal.mock.calls,
+    grids: () => commands.setGrid.mock.calls,
+    ladder: library,
+    readGrid,
   };
 }
 

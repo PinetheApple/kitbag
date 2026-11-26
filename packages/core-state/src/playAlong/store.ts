@@ -1,12 +1,25 @@
 import { MS_PER_SECOND } from '@kitbag/core-db';
-import type {
-  KB_ACCENT,
-  MediaSessionSnapshot,
-  MediaSessionStep,
+import {
+  KB_RESULT,
+  type KB_ACCENT,
+  type MediaSessionSnapshot,
+  type MediaSessionStep,
 } from '@kitbag/core-native';
 
 import { configuredStore, type StoreAccess } from '../configuredStore.ts';
 import { BPM_BOUNDS, clamp } from '../metronome/config.ts';
+import type { DetectedGrid } from '../stemPlayer/meterOverride.ts';
+import {
+  firstDownbeatSec,
+  placedBeats,
+  type GridPlacement,
+} from './libraryGrid.ts';
+import {
+  chosenSession,
+  libraryOffers,
+  type LibraryOfferActions,
+  type LibraryOfferState,
+} from './libraryOffer.ts';
 import {
   enterPlayAlongSlot,
   initialPattern,
@@ -24,6 +37,14 @@ import {
   extrapolatedPositionMs,
 } from './position.ts';
 import { nativePlayAlongRuntime, type PlayAlongRuntime } from './runtime.ts';
+import {
+  findSession,
+  sameTrack,
+  trackOf,
+  type PlayAlongTrack,
+} from './track.ts';
+
+export type { PlayAlongTrack } from './track.ts';
 
 export const REANCHOR_INTERVAL_MS = 1500;
 export const ANCHOR_RETRY_MS = 50;
@@ -35,6 +56,8 @@ export const TAP_REFUSAL = {
   noSession: 'no-session',
   paused: 'paused',
   unknownPosition: 'unknown-position',
+  noOffer: 'no-offer',
+  noGrid: 'no-grid',
 } as const;
 
 export type TapRefusal = (typeof TAP_REFUSAL)[keyof typeof TAP_REFUSAL];
@@ -43,20 +66,16 @@ export type TapOutcome =
   | { readonly locked: true }
   | { readonly locked: false; readonly reason: TapRefusal };
 
-export type PlayAlongTrack = Pick<
-  MediaSessionSnapshot,
-  'title' | 'artist' | 'durationMs'
->;
-
 export interface PlayAlongLock {
   readonly sessionId: string;
   readonly track: PlayAlongTrack;
   readonly downbeatSec: number;
   readonly bpm: number;
   readonly lockedAtBoottimeMs: number;
+  readonly grid: DetectedGrid | undefined;
 }
 
-export interface PlayAlongState {
+export interface PlayAlongState extends LibraryOfferState {
   readonly pattern: PlayAlongPattern;
   readonly bpm: number | undefined;
   readonly lock: PlayAlongLock | undefined;
@@ -65,7 +84,7 @@ export interface PlayAlongState {
   readonly sourceGoneAtBoottimeMs: number | undefined;
 }
 
-export interface PlayAlongActions {
+export interface PlayAlongActions extends LibraryOfferActions {
   readonly setBpm: (bpm: number) => void;
   readonly tap: (atBoottimeMs: number) => TapOutcome;
   readonly unlock: () => void;
@@ -93,6 +112,8 @@ interface Follow {
   readonly leave: () => void;
   seen: MediaSessionSnapshot;
   lastAnchor: AnchorPoint | undefined;
+  gridAnchorFrame: number | undefined;
+  gridSent: boolean;
   grace: ReturnType<typeof setTimeout> | undefined;
   retry: ReturnType<typeof setTimeout> | undefined;
 }
@@ -107,22 +128,6 @@ const NO_LOCK_STATE = {
   lastAnchorAtBoottimeMs: undefined,
   sourceGoneAtBoottimeMs: undefined,
 } as const satisfies Partial<PlayAlongState>;
-
-const findSession = (
-  sessions: readonly MediaSessionSnapshot[],
-  sessionId: string | undefined,
-) => sessions.find((session) => session.sessionId === sessionId);
-
-const trackOf = ({
-  title,
-  artist,
-  durationMs,
-}: MediaSessionSnapshot): PlayAlongTrack => ({ title, artist, durationMs });
-
-const sameTrack = (track: PlayAlongTrack, seen: MediaSessionSnapshot) =>
-  track.title === seen.title &&
-  track.artist === seen.artist &&
-  (track.durationMs === null || track.durationMs === seen.durationMs);
 
 function correctionMs(
   previous: AnchorPoint | undefined,
@@ -149,8 +154,40 @@ function clickPlacement(
   };
 }
 
-function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
+function follower(
+  runtime: PlayAlongRuntime,
+  { getState, setState }: Access,
+  unlocked: () => void,
+) {
   let follow: Follow | undefined;
+
+  const sendGrid = (
+    current: Follow,
+    grid: DetectedGrid,
+    placement: Omit<GridPlacement, 'anchorFrame' | 'sampleRate'>,
+  ) => {
+    const anchorFrame = (current.gridAnchorFrame ??= placement.frame);
+    current.gridSent = true;
+    const beats = placedBeats(grid.beats, {
+      ...placement,
+      anchorFrame,
+      sampleRate: runtime.sampleRate(),
+    });
+    const startOnGrid = (result: number) => {
+      const live = follow === current && current.lastAnchor !== undefined;
+      if (result === KB_RESULT.KB_OK && live && getState().lock?.grid === grid)
+        runtime.commands.metronomeStart(placement.frame);
+    };
+    void runtime.commands
+      .setGrid(beats, grid.downbeatIndices, anchorFrame)
+      .then(startOnGrid, () => undefined);
+  };
+
+  const dropGrid = (current: Follow) => {
+    if (!current.gridSent) return;
+    current.gridSent = false;
+    runtime.commands.clearGrid();
+  };
 
   const retrySoon = (current: Follow) => {
     if (current.retry !== undefined) return;
@@ -164,6 +201,7 @@ function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
     const current = follow;
     const { lock, pattern } = getState();
     if (current === undefined || lock === undefined) return;
+    if (lock.grid === undefined) dropGrid(current);
     const { seen } = current;
     if (current.grace !== undefined || !seen.playing || seen.speed <= 0) return;
     const now = runtime.boottimeNowMs();
@@ -174,8 +212,12 @@ function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
       retrySoon(current);
       return;
     }
-    const click = clickPlacement(lock, pattern, songMs, seen.speed);
-    runtime.commands.metronomeAnchorExternal(click.songSec, frame, click.bpm);
+    if (lock.grid === undefined) {
+      const click = clickPlacement(lock, pattern, songMs, seen.speed);
+      runtime.commands.metronomeAnchorExternal(click.songSec, frame, click.bpm);
+    } else {
+      sendGrid(current, lock.grid, { songMs, speed: seen.speed, frame });
+    }
     const songAheadOfClickMs = correctionMs(current.lastAnchor, now, songMs);
     current.lastAnchor = { atMs: now, songMs, speed: seen.speed };
     setState({ songAheadOfClickMs, lastAnchorAtBoottimeMs: now });
@@ -193,8 +235,10 @@ function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
     follow = undefined;
     clearTimeout(ending.grace);
     clearTimeout(ending.retry);
+    dropGrid(ending);
     ending.leave();
     setState(NO_LOCK_STATE);
+    unlocked();
   };
 
   const sourceGone = (current: Follow) => {
@@ -251,6 +295,8 @@ function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
     return {
       seen,
       lastAnchor: undefined,
+      gridAnchorFrame: undefined,
+      gridSent: false,
       grace: undefined,
       retry: undefined,
       leave: () => {
@@ -266,8 +312,9 @@ function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
     follow ??= start(seen);
     follow.seen = seen;
     follow.lastAnchor = undefined;
+    follow.gridAnchorFrame = undefined;
     sourceBack(follow);
-    setState({ lock, songAheadOfClickMs: undefined });
+    setState({ lock, songAheadOfClickMs: undefined, offer: undefined });
     runtime.sessions().getState().pick(seen.sessionId);
     anchor();
   };
@@ -349,6 +396,36 @@ function tapAction(
       downbeatSec: songMs / MS_PER_SECOND,
       bpm,
       lockedAtBoottimeMs: atBoottimeMs,
+      grid: undefined,
+    });
+    return LOCKED_OUTCOME;
+  };
+}
+
+const NO_GRID: DetectedGrid = { beats: [], downbeatIndices: [] };
+
+function acceptAction(
+  runtime: PlayAlongRuntime,
+  { getState, setState }: Access,
+  follow: ReturnType<typeof follower>,
+) {
+  return async (): Promise<TapOutcome> => {
+    const { offer } = getState();
+    if (offer === undefined) return refused(TAP_REFUSAL.noOffer);
+    const grid = await runtime.readGrid(offer.match).catch(() => NO_GRID);
+    const seen = chosenSession(runtime);
+    if (getState().offer !== offer || seen === undefined)
+      return refused(TAP_REFUSAL.noOffer);
+    if (grid.beats.length === 0) return refused(TAP_REFUSAL.noGrid);
+    const bpm = clamp(offer.match.bpm, BPM_BOUNDS.min, BPM_BOUNDS.max);
+    setState({ bpm });
+    follow.lockOn(seen, {
+      sessionId: seen.sessionId,
+      track: trackOf(seen),
+      downbeatSec: firstDownbeatSec(grid),
+      bpm,
+      lockedAtBoottimeMs: runtime.boottimeNowMs(),
+      grid,
     });
     return LOCKED_OUTCOME;
   };
@@ -358,20 +435,28 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
   'Play along',
   nativePlayAlongRuntime,
   (runtime, access) => {
-    const follow = follower(runtime, access);
+    const offers = libraryOffers(runtime, access);
+    const follow = follower(runtime, access, offers.refresh);
     return {
       pattern: initialPattern(),
       bpm: undefined,
+      offer: undefined,
       ...NO_LOCK_STATE,
       setBpm: (bpm) => {
         if (!Number.isFinite(bpm)) return;
         const next = clamp(bpm, BPM_BOUNDS.min, BPM_BOUNDS.max);
         const { lock } = access.getState();
-        access.setState({ bpm: next, lock: lock && { ...lock, bpm: next } });
+        access.setState({
+          bpm: next,
+          lock: lock && { ...lock, bpm: next, grid: undefined },
+        });
         follow.anchor();
       },
       tap: tapAction(runtime, access, follow),
       unlock: follow.unlock,
+      watchLibrary: offers.watchLibrary,
+      dismissOffer: offers.dismissOffer,
+      acceptOffer: acceptAction(runtime, access, follow),
       ...patternSetters(runtime, access, follow),
       ...transport(runtime, access),
     };

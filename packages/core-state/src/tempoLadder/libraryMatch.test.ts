@@ -50,6 +50,24 @@ describe('matchLibrary', () => {
     ).toBeNull();
   });
 
+  it.each([
+    [
+      'a featured artist in the title',
+      'Under Pressure (feat. David Bowie)',
+      'Queen',
+    ],
+    ['a short ft. tag in the title', 'Under Pressure ft. David Bowie', 'Queen'],
+    [
+      'a featured artist in the artist',
+      'Under Pressure',
+      'Queen feat. David Bowie',
+    ],
+    ['punctuation and case', 'UNDER, PRESSURE!', 'queen.'],
+    ['a dashed remaster note', 'Under Pressure - Remastered', 'Queen'],
+  ])('matches the playing track despite %s', (_, title, artist) => {
+    expect(matchLibrary({ title, artist }, [songRow({ id: 4 })])?.id).toBe(4);
+  });
+
   it('treats search wildcards in a title as text', () => {
     expect(
       matchLibrary({ title: '%', artist: 'Queen' }, [
