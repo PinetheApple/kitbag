@@ -73,6 +73,11 @@ export function phaseLimitMs(
   );
 }
 
+function wholeMs(ms: number): number {
+  const whole = Math.sign(ms) * Math.round(Math.abs(ms));
+  return whole === 0 ? 0 : whole;
+}
+
 export function clampPhase(
   ms: number,
   bpm: number,
@@ -80,7 +85,7 @@ export function clampPhase(
   speed: number,
 ): number {
   const limit = phaseLimitMs(bpm, denominator, speed);
-  return clamp(Math.round(ms), -limit, limit);
+  return clamp(wholeMs(ms), -limit, limit);
 }
 
 export const wrappedShift = (shift: number, beatsPerBar: number): number =>

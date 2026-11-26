@@ -19,6 +19,7 @@ import {
   locked,
   snapshot,
   settle,
+  STANDALONE,
 } from './store.test-helper.ts';
 
 const MATCH = { kind: 'song', id: 3, bpm: 113 } as const;
@@ -54,6 +55,9 @@ const UNEVEN_BPM = 171;
 const UNEVEN_LIMIT_MS = 175;
 const FRACTIONAL_MS = 12.6;
 const ROUNDED_MS = 13;
+const NEGATIVE_HALF_MS = -12.5;
+const NEGATIVE_ROUNDED_MS = -13;
+const NEGATIVE_FRACTION_MS = -0.3;
 const ROUTE_LATENCY_MS = 240;
 const LATER_ROUTE_LATENCY_MS = 90;
 
@@ -181,6 +185,14 @@ describe('phase while locked', () => {
     expect(fake.store.getState().lock?.phaseOffsetMs).toBe(ROUNDED_MS);
   });
 
+  it('rounds a negative offset away from zero and never to -0', () => {
+    const fake = locked();
+    fake.store.getState().setPhaseOffset(NEGATIVE_HALF_MS);
+    expect(fake.store.getState().lock?.phaseOffsetMs).toBe(NEGATIVE_ROUNDED_MS);
+    fake.store.getState().setPhaseOffset(NEGATIVE_FRACTION_MS);
+    expect(fake.store.getState().lock?.phaseOffsetMs).toBe(0);
+  });
+
   it('follows a route change while it holds its slot', () => {
     const fake = locked();
     fake.store.getState().nudgePhase(1);
@@ -192,6 +204,29 @@ describe('phase while locked', () => {
       DEFAULT_PHASE_STEP_MS + ROUTE_LATENCY_MS,
     );
     expect(fake.calls).toEqual([call('setLatencyOffset', ROUTE_LATENCY_MS)]);
+  });
+
+  it('hands the standalone slot the latest latency once it is selected again', () => {
+    const fake = locked(
+      fakePlayAlong({
+        yieldStandalone: () => () => {
+          fake.commands.setLatencyOffset(fake.latencyRead());
+        },
+      }),
+    );
+    fake.routeLatency(ROUTE_LATENCY_MS);
+    fake.calls.length = 0;
+    fake.store.getState().unlock();
+    const standalone = fake.calls.indexOf(
+      call('metronomeSelectSlot', STANDALONE),
+    );
+    expect(standalone).toBeGreaterThanOrEqual(0);
+    expect(
+      fake.calls.filter((sent) => sent.startsWith('setLatencyOffset')),
+    ).toEqual([call('setLatencyOffset', ROUTE_LATENCY_MS)]);
+    expect(
+      fake.calls.indexOf(call('setLatencyOffset', ROUTE_LATENCY_MS)),
+    ).toBeGreaterThan(standalone);
   });
 
   it('stops following route changes once it leaves its slot', () => {
