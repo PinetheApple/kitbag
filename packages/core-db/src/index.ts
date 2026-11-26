@@ -57,6 +57,22 @@ export type {
   RouteLatency,
   RouteLatencyRepository,
 } from './route-latency-repository';
+export {
+  BPM_CACHE_TTL_MS,
+  type BpmCacheRepository,
+  type CachedBpm,
+} from './bpm-cache-repository';
+export {
+  BPM_LOOKUP_SOURCE,
+  isBpmLookupSource,
+  type BpmLookupSource,
+} from './bpm-lookup-source';
+export {
+  artistCredits,
+  songMatchKey,
+  songMatchText,
+  type SongIdentity,
+} from './song-match-key';
 export type {
   BarMark,
   BundleStem,
