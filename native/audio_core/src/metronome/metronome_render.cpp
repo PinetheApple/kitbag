@@ -182,7 +182,7 @@ void Metronome::OnPolyBoundary(int poly_index, uint32_t sample_rate) {
   );
 }
 
-Metronome::BlockTempo Metronome::BlockTempoFor(uint32_t sample_rate) const {
+BlockTempo Metronome::BlockTempoFor(uint32_t sample_rate) const {
   BlockTempo tempo;
   tempo.beats_per_sample =
       bpm_ * BeatUnitScale() / (kSecondsPerMinute * sample_rate);
@@ -308,7 +308,7 @@ void Metronome::PublishBlockMirrors(
   PublishTrainerMirrors(grid != nullptr, sample_rate);
 }
 
-Metronome::GridView Metronome::BeginBlock(
+GridView Metronome::BeginBlock(
     uint64_t block_start_frame,
     uint32_t sample_rate,
     BlockTempo* tempo
@@ -318,7 +318,8 @@ Metronome::GridView Metronome::BeginBlock(
   rig_click_.BeginBlock(
       block_start_frame,
       sample_rate,
-      running_ || has_pending_start_ || has_pending_anchor_
+      running_ || has_pending_start_ || has_pending_anchor_ ||
+          grid_state_.has_pending_anchor
   );
   if (pending_preview_sound_ >= 0) {
     TriggerSound(
@@ -334,6 +335,9 @@ Metronome::GridView Metronome::BeginBlock(
   // future targets, never one already emitted (§4.2).
   if (has_pending_anchor_) {
     BeginAnchorExternal(block_start_frame, sample_rate, tempo);
+  }
+  if (grid_state_.has_pending_anchor) {
+    BeginAnchorGrid(view, block_start_frame, sample_rate);
   }
   return view;
 }

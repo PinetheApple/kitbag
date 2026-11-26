@@ -99,13 +99,37 @@ KB_EXPORT kb_result kb_metronome_set_grid_rate(kb_engine* engine, int32_t rate);
  * does not apply while anchored; the latency offset still lands the click at the
  * speaker, not the buffer.
  * A measured grid set via kb_metronome_set_grid takes precedence: while a grid
- * is set this anchor is a no-op, taking effect only after kb_metronome_clear_grid.
+ * is set this anchor is a no-op, taking effect only after kb_metronome_clear_grid;
+ * kb_metronome_anchor_grid re-anchors a grid.
  * at_frame is exact up to KB_MAX_EXACT_FRAME. */
 KB_EXPORT void kb_metronome_anchor_external(
     kb_engine* engine,
     double song_pos_sec,
     uint64_t at_frame,
     double bpm
+);
+/* Anchor the grid set by kb_metronome_set_grid to an external transport without
+ * moving it. Declares that at engine frame at_frame the song was song_pos_sec
+ * into playback, in song seconds like the grid, and that it advances rate song
+ * seconds per engine second: grid beat t sounds at engine frame
+ * at_frame + (t - song_pos_sec) * sample_rate / rate, moved earlier by the
+ * latency offset. Starts the click on the grid if it was stopped.
+ * Set the grid once per lock and re-anchor with this call; a re-anchor while
+ * playing never sounds a beat twice and never drops one. A correction under
+ * half a click interval keeps the timeline, so a beat it skips over sounds at
+ * once, late. A larger move forward is a seek and drops the beats it skips; a
+ * move back of at least one grid interval replays the beats from the new
+ * position; a shorter move back sounds no beat again.
+ * set_grid resets the mapping to song second 0 at its anchor_frame, rate 1. The
+ * anchor applies to the grid set last on the selected slot: one made before
+ * that set_grid, with no grid set, or while following the mixer is dropped,
+ * as is one with a non-finite song_pos_sec or a rate that is not finite and
+ * positive. at_frame is exact up to KB_MAX_EXACT_FRAME. */
+KB_EXPORT void kb_metronome_anchor_grid(
+    kb_engine* engine,
+    double song_pos_sec,
+    uint64_t at_frame,
+    double rate
 );
 
 #ifdef __cplusplus

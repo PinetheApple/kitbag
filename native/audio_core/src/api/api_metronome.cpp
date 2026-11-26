@@ -120,6 +120,20 @@ void kb_metronome_anchor_external(
   }
 }
 
+void kb_metronome_anchor_grid(
+    kb_engine* engine,
+    double song_pos_sec,
+    uint64_t at_frame,
+    double rate
+) {
+  if (engine != nullptr) {
+    kitbag::Engine* target = ToEngine(engine);
+    const int32_t slot = target->selected_metronome_slot();
+    kitbag::TakeOverFromRigClick(target, slot);
+    target->metronome(slot).AnchorGrid(song_pos_sec, at_frame, rate);
+  }
+}
+
 void kb_metronome_set_tempo(kb_engine* engine, double bpm) {
   kb_metronome_slot_set_tempo(engine, kb_metronome_selected_slot(engine), bpm);
 }

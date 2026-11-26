@@ -15,6 +15,7 @@ void commandMetronomeStop();
 void commandMetronomePause();
 void commandMetronomeSelectSlot(int32_t slot);
 void commandMetronomeAnchorExternal(double songPosSec, double atFrame, double bpm);
+void commandMetronomeAnchorGrid(double songPosSec, double atFrame, double rate);
 void commandStandaloneStartNow();
 void commandStandalonePause();
 void commandStandaloneStop();

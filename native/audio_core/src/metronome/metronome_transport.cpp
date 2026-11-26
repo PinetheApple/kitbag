@@ -58,6 +58,21 @@ void Metronome::AnchorExternal(
   command.value = song_pos_sec;
   command.value_b = bpm;
   command.frame = at_frame;
+  command.int_a = static_cast<int32_t>(ExternalAnchor::kConstantTempo);
+  commands_.Push(command);
+}
+
+void Metronome::AnchorGrid(
+    double song_pos_sec,
+    uint64_t at_frame,
+    double rate
+) {
+  Command command{CommandType::kAnchorExternal};
+  command.value = song_pos_sec;
+  command.value_b = rate;
+  command.frame = at_frame;
+  command.int_a = static_cast<int32_t>(ExternalAnchor::kGrid);
+  command.epoch = click_epoch_;
   commands_.Push(command);
 }
 
@@ -86,6 +101,7 @@ bool Metronome::ApplyTransportCommand(const Command& command) {
       // The most recent transport call wins: cancel a deferred start or anchor.
       has_pending_start_ = false;
       has_pending_anchor_ = false;
+      grid_state_.has_pending_anchor = false;
       BeginRun();
       return true;
     case CommandType::kStartAt:
@@ -119,10 +135,24 @@ void Metronome::DeferStart(const Command& command) {
 }
 
 void Metronome::StashPendingAnchor(const Command& command) {
+  if (command.int_a == static_cast<int32_t>(ExternalAnchor::kGrid)) {
+    StashGridAnchor(command);
+    return;
+  }
   has_pending_anchor_ = true;
   pending_anchor_song_pos_ = command.value;
   pending_anchor_bpm_ = command.value_b;
   pending_anchor_frame_ = command.frame;
+}
+
+void Metronome::StashGridAnchor(const Command& command) {
+  if (!std::isfinite(command.value) || !std::isfinite(command.value_b) ||
+      command.value_b <= 0.0) {
+    return;
+  }
+  grid_state_.has_pending_anchor = true;
+  grid_state_.pending_anchor =
+      {command.epoch, command.value, command.frame, command.value_b};
 }
 
 void Metronome::StopRun() {
@@ -130,6 +160,7 @@ void Metronome::StopRun() {
   last_tick_ = kNoFiredTick;
   has_pending_start_ = false;
   has_pending_anchor_ = false;  // a Stop cancels a queued anchor too
+  grid_state_.has_pending_anchor = false;
   // Force a re-seed next block: a cursor stranded where the pause began
   // swallows every beat the pause spanned into one off-grid click (§4.2.1).
   ReacquireGrid();

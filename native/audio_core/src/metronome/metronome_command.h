@@ -31,6 +31,8 @@ enum class MetronomeCommandType : uint8_t {
   kSetFollowMixer,
 };
 
+enum class ExternalAnchor : int32_t { kConstantTempo, kGrid };
+
 struct MetronomeCommand {
   MetronomeCommandType type;
   double value = 0.0;

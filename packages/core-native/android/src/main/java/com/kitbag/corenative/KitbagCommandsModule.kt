@@ -233,6 +233,10 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     nativeMetronomeAnchorExternal(songPosSec, atFrame, bpm)
   }
 
+  override fun metronomeAnchorGrid(songPosSec: Double, atFrame: Double, rate: Double) {
+    nativeMetronomeAnchorGrid(songPosSec, atFrame, rate)
+  }
+
   override fun setTempo(bpm: Double) {
     nativeSetTempo(bpm)
   }
@@ -518,6 +522,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeMetronomePause()
   private external fun nativeMetronomeSelectSlot(slot: Int)
   private external fun nativeMetronomeAnchorExternal(songPosSec: Double, atFrame: Double, bpm: Double)
+  private external fun nativeMetronomeAnchorGrid(songPosSec: Double, atFrame: Double, rate: Double)
   private external fun nativeSetTempo(bpm: Double)
   private external fun nativeSetGrid(
     beatTimesSec: DoubleArray,

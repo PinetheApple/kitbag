@@ -9,6 +9,17 @@
 
 namespace kitbag {
 
+// Song second song_sec falls on engine frame `frame`, and song time runs at
+// `rate` song seconds per engine second, for the grid stamped click_epoch.
+struct GridMapping {
+  static constexpr double kRealTime = 1.0;
+
+  uint32_t click_epoch = 0;
+  double song_sec = 0.0;
+  uint64_t frame = 0;
+  double rate = kRealTime;
+};
+
 // RT-owned grid cursor. Why identity is a generation and zero forces a re-seed:
 // SPEC.md §4.2.1.
 struct GridState {
@@ -29,6 +40,9 @@ struct GridState {
   double follow_seconds = 0.0;
   // Grid beats after this song second wait: the loop's wrap owns that moment.
   double fire_limit = std::numeric_limits<double>::infinity();
+  GridMapping mapping;
+  GridMapping pending_anchor;
+  bool has_pending_anchor = false;
 };
 
 }  // namespace kitbag

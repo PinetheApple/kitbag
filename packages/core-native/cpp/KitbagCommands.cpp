@@ -86,6 +86,12 @@ void commandMetronomeAnchorExternal(double songPosSec, double atFrame, double bp
   kb_metronome_anchor_external(commandEngine(), songPosSec, *frame, bpm);
   commandStart();
 }
+void commandMetronomeAnchorGrid(double songPosSec, double atFrame, double rate) {
+  const auto frame = wholeFrame(atFrame);
+  if (!frame || !std::isfinite(songPosSec) || !std::isfinite(rate) || rate <= 0.0) return;
+  kb_metronome_anchor_grid(commandEngine(), songPosSec, *frame, rate);
+  commandStart();
+}
 
 // start_at only takes effect while stopped, so a stale Resume cannot restart a running
 // click, and unlike start it keeps an anchor the app queued, which must still land.

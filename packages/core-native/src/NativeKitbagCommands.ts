@@ -102,6 +102,12 @@ export interface Spec extends TurboModule {
     atFrame: CodegenTypes.Double,
     bpm: CodegenTypes.Double,
   ): void;
+  /** kb_metronome_anchor_grid, then the device; a bad atFrame, a non-finite value or a rate not above 0 is dropped. */
+  metronomeAnchorGrid(
+    songPosSec: CodegenTypes.Double,
+    atFrame: CodegenTypes.Double,
+    rate: CodegenTypes.Double,
+  ): void;
 
   rigClickStart(
     bpm: CodegenTypes.Double,
