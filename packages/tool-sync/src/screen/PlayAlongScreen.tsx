@@ -12,7 +12,7 @@ import {
 import { MIN_SESSIONS_TO_CHOOSE } from '../logic/sourceRows.ts';
 import { ClickSoundSheet } from './ClickSoundSheet.tsx';
 import { PermissionExplainer } from './PermissionExplainer.tsx';
-import { PhaseSheet } from './PhaseSheet.tsx';
+import { PhaseSheet, type PlayAlongRoute } from './PhaseSheet.tsx';
 import { PlayAlongAppBar, type SourceChipProps } from './PlayAlongAppBar.tsx';
 import { PlayAlongBody } from './PlayAlongBody.tsx';
 import { ClickDock, PlayAlongDock } from './PlayAlongDock.tsx';
@@ -44,6 +44,7 @@ const useStyles = createThemedStyles((theme) => ({
 
 export interface PlayAlongScreenProps {
   readonly insets: ScreenInsets;
+  readonly route?: PlayAlongRoute | undefined;
   readonly onBack?: () => void;
 }
 
@@ -112,10 +113,16 @@ function patternSheet(sheet: OpenSheet): PatternSheet | null {
 interface SheetsProps {
   readonly sheets: ReturnType<typeof useSheets>;
   readonly followedId: string | undefined;
+  readonly route: PlayAlongRoute | undefined;
   readonly bottomInset: number;
 }
 
-function PlayAlongSheets({ sheets, followedId, bottomInset }: SheetsProps) {
+function PlayAlongSheets({
+  sheets,
+  followedId,
+  route,
+  bottomInset,
+}: SheetsProps) {
   const access = useMediaSessions((s) => s.access);
   const sessions = useMediaSessions((s) => s.sessions);
   const openSettings = useMediaSessions((s) => s.openSettings);
@@ -163,6 +170,7 @@ function PlayAlongSheets({ sheets, followedId, bottomInset }: SheetsProps) {
       />
       <PhaseSheet
         visible={sheets.sheet === 'phase'}
+        route={route}
         bottomInset={bottomInset}
         onDismiss={close}
       />
@@ -207,7 +215,11 @@ function usePlayAlongView(flow: AccessFlow) {
   return { view, explaining, showsBody, session, lock };
 }
 
-export function PlayAlongScreen({ insets, onBack }: PlayAlongScreenProps) {
+export function PlayAlongScreen({
+  insets,
+  route,
+  onBack,
+}: PlayAlongScreenProps) {
   useSessionWatchWhileLocked();
   useLibraryWatch();
   const styles = useStyles();
@@ -247,6 +259,7 @@ export function PlayAlongScreen({ insets, onBack }: PlayAlongScreenProps) {
       <PlayAlongSheets
         sheets={sheets}
         followedId={session?.sessionId}
+        route={route}
         bottomInset={insets.bottom}
       />
     </View>

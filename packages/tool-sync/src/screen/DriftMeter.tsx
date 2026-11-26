@@ -9,6 +9,7 @@ import {
   rowLineHeight,
   SectionHeader,
   space,
+  Stepper,
   textRoles,
   textStyle,
   TunerStrip,
@@ -32,8 +33,8 @@ import {
 } from '../logic/driftMeter.ts';
 import { NUDGE_KEYS } from './phaseKeys.ts';
 import { usePlayAlong } from './playAlongHooks.ts';
-import { Stepper } from './Stepper.tsx';
 import { useLastSeen } from './useLastSeen.ts';
+import { useStepHandlers } from './useStepHandlers.ts';
 import { useWholeSecondNow } from './useWholeSecondNow.ts';
 
 const NEEDLE_SHOWN = 1;
@@ -114,6 +115,7 @@ function MeterHead({ view }: { view: DriftView }) {
 
 function PhaseFoot({ view, phase, onRetap }: DriftMeterCardProps) {
   const styles = useStyles();
+  const nudge = useStepHandlers(phase.onNudge);
   if (!view.controls) return null;
   return (
     <View style={styles.foot}>
@@ -123,7 +125,7 @@ function PhaseFoot({ view, phase, onRetap }: DriftMeterCardProps) {
           value={phase.reading}
           valueLabel={`Phase ${phase.reading}, open phase settings`}
           keys={NUDGE_KEYS}
-          onStep={phase.onNudge}
+          {...nudge}
           onValuePress={phase.onOpen}
         />
         <Button

@@ -26,13 +26,6 @@ const cards = vi.hoisted(() => [] as Props[]);
 const buttons = vi.hoisted(() => [] as Props[]);
 const steppers = vi.hoisted(() => [] as Props[]);
 
-vi.mock('./Stepper.tsx', () => ({
-  Stepper: (props: Props) => {
-    steppers.push(props);
-    return null;
-  },
-}));
-
 vi.mock('@kitbag/core-design', async (original) => {
   const { createElement: h } = await import('react');
   return {
@@ -41,6 +34,10 @@ vi.mock('@kitbag/core-design', async (original) => {
     useTextScaled: () => false,
     Badge: (props: Props) => h('b', null, props.label as string),
     SectionHeader: (props: Props) => h('h6', null, props.label as string),
+    Stepper: (props: Props) => {
+      steppers.push(props);
+      return null;
+    },
     DrawnFigures: (props: Props) => h('i', null, props.text as string),
     Button: (props: Props) => {
       buttons.push(props);
@@ -155,9 +152,11 @@ describe('DriftMeterCard', () => {
     expect(markup).toContain('<h6>Phase</h6>');
     expect(steppers[0]).toMatchObject({
       value: '+10 ms',
-      onStep: phase.onNudge,
       onValuePress: phase.onOpen,
     });
+    (steppers[0]?.onEarlier as () => void)();
+    (steppers[0]?.onLater as () => void)();
+    expect(phase.onNudge.mock.calls).toEqual([[-1], [1]]);
   });
 
   it('keeps the phase stepper while paused', () => {

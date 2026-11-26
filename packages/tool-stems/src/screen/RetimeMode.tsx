@@ -2,15 +2,14 @@ import {
   Button,
   Card,
   createThemedStyles,
-  hitBoxStyle,
-  hitExtension,
   Icon,
   mixHex,
-  size,
   stemPlayer,
   stemSections,
   stemSectionsMix,
   stemSectionsText,
+  Stepper,
+  type StepperKeys,
   textStyle,
   useTheme,
 } from '@kitbag/core-design';
@@ -34,12 +33,12 @@ import { tapOnce } from '../logic/tapOnce.ts';
 import { useRetimeLayout, useRetimeScroll } from './retimeBodyHooks.ts';
 import { useLyricStyles } from './StageLyrics.tsx';
 
-const STEP_KEY_HIT_BOX = hitBoxStyle(
-  hitExtension(stemSections.stepperKey, stemSections.stepperHeight, {
-    left: stemSections.stepperGap,
-    right: stemSections.stepperGap,
-  }),
-);
+const SHIFT_KEYS: StepperKeys = {
+  earlier: 'decrease',
+  later: 'increase',
+  earlierLabel: 'Shift all lines earlier',
+  laterLabel: 'Shift all lines later',
+};
 const STEP_EARLIER = -1;
 const STEP_LATER = 1;
 
@@ -119,28 +118,6 @@ const useStyles = createThemedStyles((theme) => ({
     ...textStyle(stemSectionsText.shift),
     color: theme.color.text,
     flexShrink: 1,
-  },
-  stepper: {
-    minHeight: stemSections.stepperHeight,
-    paddingHorizontal: stemSections.stepperH,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: stemSections.stepperGap,
-    borderRadius: stemSections.stepperRadius,
-    borderWidth: size.stroke,
-    borderColor: theme.color.line,
-    backgroundColor: theme.color.surface2,
-  },
-  stepKey: {
-    width: stemSections.stepperKey,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepValue: {
-    ...textStyle(stemSectionsText.stepValue),
-    minWidth: stemSections.stepperValue,
-    color: theme.color.text,
-    textAlign: 'center',
   },
   note: { ...textStyle(stemSectionsText.shift), color: theme.color.text },
 }));
@@ -235,25 +212,12 @@ function ShiftRow({ steps }: { readonly steps: number }) {
   return (
     <View style={styles.shift}>
       <Text style={styles.shiftText}>Shift all lines</Text>
-      <View style={styles.stepper}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Shift all lines earlier"
-          style={[styles.stepKey, STEP_KEY_HIT_BOX]}
-          onPress={earlier}
-        >
-          <Icon name="decrease" size="lyricsChip" color="text2" />
-        </Pressable>
-        <Text style={styles.stepValue}>{shiftLabel(steps)}</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Shift all lines later"
-          style={[styles.stepKey, STEP_KEY_HIT_BOX]}
-          onPress={later}
-        >
-          <Icon name="increase" size="lyricsChip" color="text2" />
-        </Pressable>
-      </View>
+      <Stepper
+        value={shiftLabel(steps)}
+        keys={SHIFT_KEYS}
+        onEarlier={earlier}
+        onLater={later}
+      />
     </View>
   );
 }

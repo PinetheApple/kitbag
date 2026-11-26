@@ -3,15 +3,18 @@ import {
   Button,
   createThemedStyles,
   DrawnFigures,
+  Icon,
   SectionHeader,
   SegmentedControl,
   NumpadReadout,
   Sheet,
   size,
+  Stepper,
   sliderGeometry,
   space,
   textRoles,
   textStyle,
+  type IconName,
 } from '@kitbag/core-design';
 import {
   formatOffsetMs,
@@ -30,10 +33,11 @@ import {
   PHASE_STEP_OPTIONS,
   phaseThumbFraction,
   phaseTotal,
+  routeLine,
 } from '../logic/phaseView.ts';
 import { useFollowedSession, usePlayAlong } from './playAlongHooks.ts';
 import { DOWNBEAT_KEYS, NUDGE_KEYS } from './phaseKeys.ts';
-import { Stepper } from './Stepper.tsx';
+import { useStepHandlers } from './useStepHandlers.ts';
 
 const TITLE = 'Phase';
 const THUMB = sliderGeometry.level.thumb;
@@ -42,8 +46,19 @@ const TRACK = sliderGeometry.level.track;
 export const DOWNBEAT_UNAVAILABLE =
   'Downbeat shift is not available for this beat grid';
 
+export interface PlayAlongRoute {
+  readonly icon: IconName;
+  readonly label: string;
+}
+
 const useStyles = createThemedStyles((theme) => ({
   group: { gap: space.controlGap },
+  start: { alignItems: 'flex-start' },
+  route: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.controlGap,
+  },
   scale: { height: THUMB, marginHorizontal: THUMB / 2 },
   track: {
     position: 'absolute',
@@ -121,7 +136,7 @@ function PhaseRange({ offsetMs, limitMs }: PhaseRangeProps) {
 
 function NudgeGroup({ reading }: { readonly reading: string }) {
   const styles = useStyles();
-  const nudgePhase = usePlayAlong((s) => s.nudgePhase);
+  const nudge = useStepHandlers(usePlayAlong((s) => s.nudgePhase));
   const stepMs = usePlayAlong((s) => s.phaseStepMs);
   const setPhaseStep = usePlayAlong((s) => s.setPhaseStep);
   const handleStep = useCallback(
@@ -134,12 +149,9 @@ function NudgeGroup({ reading }: { readonly reading: string }) {
   return (
     <View style={styles.group}>
       <SectionHeader label="Nudge" />
-      <Stepper
-        tone="on"
-        value={reading}
-        keys={NUDGE_KEYS}
-        onStep={nudgePhase}
-      />
+      <View style={styles.start}>
+        <Stepper tone="on" value={reading} keys={NUDGE_KEYS} {...nudge} />
+      </View>
       <SegmentedControl
         size="large"
         options={PHASE_STEP_OPTIONS}
@@ -153,7 +165,7 @@ function NudgeGroup({ reading }: { readonly reading: string }) {
 
 function DownbeatGroup({ lock }: { readonly lock: PlayAlongLock }) {
   const styles = useStyles();
-  const shiftDownbeat = usePlayAlong((s) => s.shiftDownbeat);
+  const shift = useStepHandlers(usePlayAlong((s) => s.shiftDownbeat));
   const available = lock.downbeatShiftAvailable;
   return (
     <View style={styles.group}>
@@ -167,14 +179,35 @@ function DownbeatGroup({ lock }: { readonly lock: PlayAlongLock }) {
           keys={DOWNBEAT_KEYS}
           disabled={!available}
           {...(available ? {} : { accessibilityLabel: DOWNBEAT_UNAVAILABLE })}
-          onStep={shiftDownbeat}
+          {...shift}
         />
       </View>
     </View>
   );
 }
 
-function OffsetGroup({ phaseOffsetMs }: { readonly phaseOffsetMs: number }) {
+interface OffsetGroupProps {
+  readonly phaseOffsetMs: number;
+  readonly route: PlayAlongRoute | undefined;
+}
+
+function RouteLine({
+  route,
+  routeMs,
+}: {
+  readonly route: PlayAlongRoute;
+  readonly routeMs: number;
+}) {
+  const styles = useStyles();
+  return (
+    <View style={styles.route}>
+      <Icon name={route.icon} size="action" color="text2" />
+      <Text style={styles.parts}>{routeLine(route.label, routeMs)}</Text>
+    </View>
+  );
+}
+
+function OffsetGroup({ phaseOffsetMs, route }: OffsetGroupProps) {
   const styles = useStyles();
   const routeMs = usePlayAlong((s) => s.latencyOffsetMs);
   const total = phaseTotal(routeMs, phaseOffsetMs);
@@ -189,6 +222,9 @@ function OffsetGroup({ phaseOffsetMs }: { readonly phaseOffsetMs: number }) {
         <DrawnFigures text={total.total} role="factChip" />
         <Text style={styles.parts}>{total.parts}</Text>
       </View>
+      {route === undefined ? null : (
+        <RouteLine route={route} routeMs={routeMs} />
+      )}
     </View>
   );
 }
@@ -227,12 +263,14 @@ function ResetAction() {
 
 export interface PhaseSheetProps {
   readonly visible: boolean;
+  readonly route: PlayAlongRoute | undefined;
   readonly bottomInset: number;
   readonly onDismiss: () => void;
 }
 
 export function PhaseSheet({
   visible,
+  route,
   bottomInset,
   onDismiss,
 }: PhaseSheetProps) {
@@ -250,7 +288,7 @@ export function PhaseSheet({
         <>
           <PhaseReadout lock={lock} />
           <DownbeatGroup lock={lock} />
-          <OffsetGroup phaseOffsetMs={lock.phaseOffsetMs} />
+          <OffsetGroup phaseOffsetMs={lock.phaseOffsetMs} route={route} />
         </>
       )}
     </Sheet>

@@ -61,6 +61,9 @@ export function phaseTotal(
   };
 }
 
+export const routeLine = (label: string, routeMs: number): string =>
+  `Route: ${label}, ${signedPlain(routeMs)} ms, set in Settings`;
+
 export const downbeatLabel = (shift: number): string =>
   `Beat ${String(shift + FIRST_BEAT)}`;
 

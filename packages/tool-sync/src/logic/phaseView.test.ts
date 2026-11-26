@@ -9,6 +9,7 @@ import {
   PHASE_STEP_OPTIONS,
   phaseThumbFraction,
   phaseTotal,
+  routeLine,
 } from './phaseView.ts';
 
 const LIMIT_AT_171 = 30000 / 171;
@@ -89,5 +90,16 @@ describe('heardSpeed', () => {
     expect(heardSpeed({ speed: 1.5 })).toBe(1.5);
     expect(heardSpeed({ speed: 0 })).toBe(1);
     expect(heardSpeed(undefined)).toBe(1);
+  });
+});
+
+describe('routeLine', () => {
+  it('names the route, its latency and where it is set', () => {
+    expect(routeLine('Bluetooth', 180)).toBe(
+      'Route: Bluetooth, 180 ms, set in Settings',
+    );
+    expect(routeLine('Phone speaker', -20)).toBe(
+      'Route: Phone speaker, −20 ms, set in Settings',
+    );
   });
 });

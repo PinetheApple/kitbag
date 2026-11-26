@@ -22,13 +22,6 @@ const seen = vi.hoisted(() => ({
   readouts: [] as Props[],
 }));
 
-vi.mock('./Stepper.tsx', () => ({
-  Stepper: (props: Props) => {
-    seen.steppers.push(props);
-    return null;
-  },
-}));
-
 vi.mock('@kitbag/core-design', async (original) => {
   const { createElement: h } = await import('react');
   return {
@@ -39,6 +32,11 @@ vi.mock('@kitbag/core-design', async (original) => {
       return h('section', null, props.titleAction as ReactNode, props.children);
     },
     SectionHeader: (props: Props) => h('h6', null, props.label as string),
+    Icon: (props: Props) => h('em', null, props.name as string),
+    Stepper: (props: Props) => {
+      seen.steppers.push(props);
+      return null;
+    },
     DrawnFigures: (props: Props) => h('i', null, props.text as string),
     NumpadReadout: (props: Props) => {
       seen.readouts.push(props);
@@ -85,14 +83,21 @@ const lock = {
   downbeatShiftAvailable: true,
 };
 
-function drawn(visible = true) {
+const BLUETOOTH = { icon: 'routeBluetooth', label: 'Bluetooth' } as const;
+
+function drawn(visible = true, route: typeof BLUETOOTH | null = BLUETOOTH) {
   seen.sheets.length = 0;
   seen.steppers.length = 0;
   seen.segments.length = 0;
   seen.buttons.length = 0;
   seen.readouts.length = 0;
   return renderToStaticMarkup(
-    createElement(PhaseSheet, { visible, bottomInset: 0, onDismiss: vi.fn() }),
+    createElement(PhaseSheet, {
+      visible,
+      route: route ?? undefined,
+      bottomInset: 0,
+      onDismiss: vi.fn(),
+    }),
   );
 }
 
@@ -120,11 +125,10 @@ describe('PhaseSheet', () => {
 
   it('nudges with the sheet stepper at the chosen step', () => {
     drawn();
-    expect(nudgeStepper()).toMatchObject({
-      value: '+10 ms',
-      onStep: playAlong.nudgePhase,
-      tone: 'on',
-    });
+    expect(nudgeStepper()).toMatchObject({ value: '+10 ms', tone: 'on' });
+    (nudgeStepper()?.onEarlier as () => void)();
+    (nudgeStepper()?.onLater as () => void)();
+    expect(playAlong.nudgePhase.mock.calls).toEqual([[-1], [1]]);
     expect(seen.segments[0]).toMatchObject({ selected: '10' });
   });
 
@@ -140,8 +144,10 @@ describe('PhaseSheet', () => {
     expect(downbeatStepper()).toMatchObject({
       value: 'Beat 3',
       disabled: false,
-      onStep: playAlong.shiftDownbeat,
     });
+    (downbeatStepper()?.onEarlier as () => void)();
+    (downbeatStepper()?.onLater as () => void)();
+    expect(playAlong.shiftDownbeat.mock.calls).toEqual([[-1], [1]]);
   });
 
   it('disables and announces the downbeat shift when the grid has none', () => {
@@ -157,6 +163,17 @@ describe('PhaseSheet', () => {
     const markup = drawn();
     expect(markup).toContain('<i>+190 ms total</i>');
     expect(markup).toContain('· 180 route + 10 song');
+  });
+
+  it('names the live route with its latency under the total', () => {
+    const markup = drawn();
+    expect(markup).toContain('<em>routeBluetooth</em>');
+    expect(markup).toContain('Route: Bluetooth, 180 ms, set in Settings');
+  });
+
+  it('leaves the route line out when the route is unknown', () => {
+    const markup = drawn(true, null);
+    expect(markup).not.toContain('Route:');
   });
 
   it('resets phase and downbeat from the title action', () => {

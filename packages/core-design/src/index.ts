@@ -87,6 +87,7 @@ export * from './components/PresetButton.tsx';
 export * from './components/PrimaryPlayButton.tsx';
 export * from './components/SectionHeader.tsx';
 export * from './components/SegmentedControl.tsx';
+export * from './components/Stepper.tsx';
 export * from './components/IconGlyph.tsx';
 export * from './components/Sheet.tsx';
 export * from './components/SoundPickerSheet.tsx';

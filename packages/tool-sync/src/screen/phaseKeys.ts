@@ -1,4 +1,8 @@
-import type { StepperKeys } from './Stepper.tsx';
+import type { StepperKeys } from '@kitbag/core-design';
+import type { BeatDirection } from '@kitbag/core-state';
+
+export const EARLIER: BeatDirection = -1;
+export const LATER: BeatDirection = 1;
 
 export const NUDGE_KEYS: StepperKeys = {
   earlier: 'decrease',

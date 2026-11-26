@@ -1,18 +1,12 @@
-import {
-  createThemedStyles,
-  hitBoxStyle,
-  hitExtension,
-  Icon,
-  opacity,
-  size,
-  stemSections,
-  stemSectionsText,
-  textStyle,
-  type IconName,
-} from '@kitbag/core-design';
-import type { BeatDirection } from '@kitbag/core-state';
-import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
+
+import type { IconName } from '../icons.ts';
+import { opacity, size } from '../roles.ts';
+import { stemSections, stemSectionsText } from '../stemPlayerRoles.ts';
+import { textStyle } from '../textStyle.ts';
+import { createThemedStyles } from '../ThemeProvider.tsx';
+import { hitBoxStyle, hitExtension } from '../touchTarget.ts';
+import { Icon } from './Icon.tsx';
 
 const KEY_HIT_BOX = hitBoxStyle(
   hitExtension(stemSections.stepperKey, stemSections.stepperHeight, {
@@ -20,8 +14,6 @@ const KEY_HIT_BOX = hitBoxStyle(
     right: stemSections.stepperGap,
   }),
 );
-const EARLIER: BeatDirection = -1;
-const LATER: BeatDirection = 1;
 
 const useStyles = createThemedStyles((theme) => ({
   stepper: {
@@ -29,7 +21,6 @@ const useStyles = createThemedStyles((theme) => ({
     paddingHorizontal: stemSections.stepperH,
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     gap: stemSections.stepperGap,
     borderRadius: stemSections.stepperRadius,
     borderWidth: size.stroke,
@@ -66,7 +57,8 @@ export interface StepperKeys {
 export interface StepperProps {
   readonly value: string;
   readonly keys: StepperKeys;
-  readonly onStep: (direction: BeatDirection) => void;
+  readonly onEarlier: () => void;
+  readonly onLater: () => void;
   readonly onValuePress?: () => void;
   readonly valueLabel?: string;
   readonly accessibilityLabel?: string;
@@ -98,19 +90,14 @@ function StepperValue({
 
 export function Stepper({
   keys,
-  onStep,
+  onEarlier,
+  onLater,
   tone = 'plain',
   disabled = false,
   accessibilityLabel,
   ...value
 }: StepperProps) {
   const styles = useStyles();
-  const handleEarlier = useCallback(() => {
-    onStep(EARLIER);
-  }, [onStep]);
-  const handleLater = useCallback(() => {
-    onStep(LATER);
-  }, [onStep]);
   return (
     <View
       accessibilityLabel={accessibilityLabel}
@@ -127,7 +114,7 @@ export function Stepper({
         accessibilityState={{ disabled }}
         disabled={disabled}
         style={[styles.key, KEY_HIT_BOX]}
-        onPress={handleEarlier}
+        onPress={onEarlier}
       >
         <Icon name={keys.earlier} size="lyricsChip" color="text2" />
       </Pressable>
@@ -138,7 +125,7 @@ export function Stepper({
         accessibilityState={{ disabled }}
         disabled={disabled}
         style={[styles.key, KEY_HIT_BOX]}
-        onPress={handleLater}
+        onPress={onLater}
       >
         <Icon name={keys.later} size="lyricsChip" color="text2" />
       </Pressable>

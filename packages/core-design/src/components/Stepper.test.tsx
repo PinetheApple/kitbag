@@ -20,27 +20,34 @@ vi.mock('react-native', async () => {
   };
 });
 
-vi.mock('@kitbag/core-design', async (original) => ({
-  ...(await original<Record<string, unknown>>()),
+vi.mock('./Icon.tsx', () => ({ Icon: () => null }));
+vi.mock('../ThemeProvider.tsx', () => ({
   createThemedStyles: () => () => ({}),
-  Icon: () => null,
 }));
 
 const { Stepper } = await import('./Stepper.tsx');
-const { NUDGE_KEYS } = await import('./phaseKeys.ts');
+
+const KEYS = {
+  earlier: 'decrease',
+  later: 'increase',
+  earlierLabel: 'Earlier',
+  laterLabel: 'Later',
+} as const;
 
 function drawn(props: Partial<Parameters<typeof Stepper>[0]> = {}) {
   presses.length = 0;
-  const onStep = vi.fn();
+  const onEarlier = vi.fn();
+  const onLater = vi.fn();
   const markup = renderToStaticMarkup(
     createElement(Stepper, {
       value: '+10 ms',
-      keys: NUDGE_KEYS,
-      onStep,
+      keys: KEYS,
+      onEarlier,
+      onLater,
       ...props,
     }),
   );
-  return { markup, onStep };
+  return { markup, onEarlier, onLater };
 }
 
 const pressOn = (label: string) => {
@@ -54,10 +61,12 @@ beforeEach(() => {
 
 describe('Stepper', () => {
   it('steps back with the earlier key and forward with the later key', () => {
-    const { onStep } = drawn();
-    pressOn(NUDGE_KEYS.earlierLabel);
-    pressOn(NUDGE_KEYS.laterLabel);
-    expect(onStep.mock.calls).toEqual([[-1], [1]]);
+    const { onEarlier, onLater } = drawn();
+    pressOn(KEYS.earlierLabel);
+    expect(onEarlier).toHaveBeenCalledOnce();
+    expect(onLater).not.toHaveBeenCalled();
+    pressOn(KEYS.laterLabel);
+    expect(onLater).toHaveBeenCalledOnce();
   });
 
   it('shows its value, pressable only when it opens something', () => {
