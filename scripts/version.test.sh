@@ -191,28 +191,32 @@ expect "an off-main tag with no main commits after it: nothing to release" "$EXI
 
 echo "next — bounds"
 expect "patch 99 overflow refuses" "$EXIT_OUT_OF_BOUNDS" "raise" version_in "$(fixture_after 0.1.0 v0.1.99 'fix: a')" next
-expect "minor 99 overflow refuses" "$EXIT_OUT_OF_BOUNDS" "raise" version_in "$(fixture_after 0.1.0 v0.99.3 'feat: a')" next
+expect_stdout "feat after minor 99 stays on 0.x" 0.100.0 version_in "$(fixture_after 0.1.0 v0.99.5 'feat: a')" next
+expect "minor 999 overflow refuses" "$EXIT_OUT_OF_BOUNDS" "raise" version_in "$(fixture_after 0.1.0 v0.999.3 'feat: a')" next
 expect_stdout "feat after patch 99 is in bounds" 0.2.0 version_in "$(fixture_after 0.1.0 v0.1.99 'feat: a')" next
 expect_stdout "breaking after 1.99.x is in bounds" 2.0.0 version_in "$(fixture_after 0.1.0 v1.99.99 'feat!: a')" next
-expect "out-of-bounds floor refuses" "$EXIT_OUT_OF_BOUNDS" "" version_in "$(make_fixture 0.100.0)" next
+expect "out-of-bounds floor refuses" "$EXIT_OUT_OF_BOUNDS" "" version_in "$(make_fixture 0.1000.0)" next
 
 echo "code — the versionCode formula"
 code_fixture=$(make_fixture 0.1.0)
 expect_stdout "0.1.0 is 100" 100 version_in "$code_fixture" code 0.1.0
-expect_stdout "1.2.3 is 10203" 10203 version_in "$code_fixture" code 1.2.3
-expect_stdout "a v-tag is accepted" 10203 version_in "$code_fixture" code v1.2.3
-expect "--help documents the formula" "$EXIT_USAGE" "major*10000" version_in "$code_fixture" code --help
+expect_stdout "1.2.3 is 100203" 100203 version_in "$code_fixture" code 1.2.3
+expect_stdout "a v-tag is accepted" 100203 version_in "$code_fixture" code v1.2.3
+expect_stdout "0.99.5 keeps its published code" 9905 version_in "$code_fixture" code v0.99.5
+expect_stdout "0.100.0 is 10000" 10000 version_in "$code_fixture" code 0.100.0
+expect_stdout "0.999.99 is 99999" 99999 version_in "$code_fixture" code 0.999.99
+expect "--help documents the formula" "$EXIT_USAGE" "major*100000" version_in "$code_fixture" code --help
 expect "0.0.0 refuses" "$EXIT_OUT_OF_BOUNDS" "" version_in "$code_fixture" code 0.0.0
 expect "patch 100 refuses" "$EXIT_OUT_OF_BOUNDS" "" version_in "$code_fixture" code 0.1.100
-expect "minor 100 refuses" "$EXIT_OUT_OF_BOUNDS" "" version_in "$code_fixture" code 0.100.0
-expect "above the Android cap refuses" "$EXIT_OUT_OF_BOUNDS" "" version_in "$code_fixture" code 210000.0.1
+expect "minor 1000 refuses" "$EXIT_OUT_OF_BOUNDS" "" version_in "$code_fixture" code 0.1000.0
+expect "above the Android cap refuses" "$EXIT_OUT_OF_BOUNDS" "" version_in "$code_fixture" code 21000.0.1
 expect "code rejects non-semver" "$EXIT_USAGE" "" version_in "$code_fixture" code 1.2
 expect "code rejects a non-v tag" "$EXIT_USAGE" "" version_in "$code_fixture" code changelog-base
 
 # Under the bounds, semver order must equal versionCode order or an update
 # would refuse to install over its predecessor.
-for pair in 0.0.1:0.0.2 0.0.99:0.1.0 0.1.99:0.2.0 0.98.99:0.99.0 0.99.99:1.0.0 1.0.99:1.1.0 1.99.99:2.0.0 \
-  9.99.99:10.0.0 209999.99.99:210000.0.0; do
+for pair in 0.0.1:0.0.2 0.0.99:0.1.0 0.1.99:0.2.0 0.98.99:0.99.0 0.99.5:0.100.0 0.99.99:0.100.0 0.999.99:1.0.0 \
+  1.0.99:1.1.0 1.999.99:2.0.0 9.999.99:10.0.0 20999.999.99:21000.0.0; do
   lower=${pair%%:*}
   higher=${pair##*:}
   lo=$(version_in "$code_fixture" code "$lower")
