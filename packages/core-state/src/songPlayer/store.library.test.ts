@@ -1,15 +1,20 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { createStore } from 'zustand/vanilla';
 
 import {
   importOne,
   setup,
   SONG_PATH,
 } from '../songLibrary/store.test-helper.ts';
+import type { LibraryStore } from '../library/store.ts';
+import { bindLibraryRemovals } from '../playOrder/libraryRemovals.ts';
+import { shownSongOf } from '../playOrder/nowPlaying.ts';
+import type { PlayOrderStore } from '../playOrder/store.ts';
 import { removeMissingRows } from '../storage/missingRows.ts';
 import { BARS, fakeSongRuntime, songStore } from './store.test-helper.ts';
 
-async function playingFromTheLibrary() {
-  const { store: library, records } = setup();
+async function playingFromTheLibrary(queued = false) {
+  const { store: library, records, files } = setup();
   const row = await importOne(library);
   const fake = fakeSongRuntime();
   fake.records.readSong.mockImplementation(() => records.readSong(row.id));
@@ -18,7 +23,28 @@ async function playingFromTheLibrary() {
   await session.loaded;
   session.hold.release();
   player.getState().togglePlay();
-  return { library, row, player, fake };
+  fake.engine.playing = true;
+  const refresh = () => Promise.resolve();
+  const next = vi.fn();
+  bindLibraryRemovals(
+    library,
+    createStore(() => ({ refresh }) as unknown as LibraryStore),
+    createStore(() => ({ refresh }) as unknown as PlayOrderStore),
+    {
+      heard: createStore(() => ({ heard: [] })),
+      repeat: createStore(() => ({ played: [] })),
+      player: {
+        shown: () => shownSongOf(null, player.getState().songId),
+        pauseIfSounding: () => player.getState().pauseIfSounding(),
+        hasNext: () => queued,
+        next,
+        close: () => {
+          player.getState().close();
+        },
+      },
+    },
+  );
+  return { library, row, player, fake, next, files };
 }
 
 type Playing = Awaited<ReturnType<typeof playingFromTheLibrary>>;
@@ -49,9 +75,30 @@ describe('the library changing the song that plays on behind the bar', () => {
     const playing = await playingFromTheLibrary();
     await remove(playing);
     const { commands } = playing.fake;
-    expect(playing.player.getState().songId).toBeNull();
+    await vi.waitFor(() => {
+      expect(playing.player.getState().songId).toBeNull();
+    });
     expect(commands.mixerStop).toHaveBeenCalledOnce();
     expect(commands.engineRelease).toHaveBeenCalledOnce();
+  });
+
+  it('hands over to the next song when Songs deletes it', async () => {
+    const playing = await playingFromTheLibrary(true);
+    await deleteOnSongs(playing);
+    await vi.waitFor(() => {
+      expect(playing.next).toHaveBeenCalledExactlyOnceWith('song', true);
+    });
+  });
+
+  it('pauses the song before its file is deleted', async () => {
+    const playing = await playingFromTheLibrary(true);
+    await deleteOnSongs(playing);
+    const [paused] = playing.fake.commands.mixerPause.mock.invocationCallOrder;
+    const { deleteSongFolder } = playing.files;
+    expect(deleteSongFolder).toHaveBeenCalledOnce();
+    expect(paused).toBeLessThan(
+      deleteSongFolder.mock.invocationCallOrder[0] ?? 0,
+    );
   });
 
   it('shows a rename on the bar', async () => {

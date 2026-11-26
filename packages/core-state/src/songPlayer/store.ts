@@ -319,10 +319,7 @@ export function createSongPlayerStore(
         (candidate): candidate is LibrarySongRow =>
           candidate.kind === 'song' && candidate.id === songId,
       );
-      if (row === undefined) {
-        endAsGone();
-        return;
-      }
+      if (row === undefined) return;
       card.named(namesOf(row));
       void reread(mixer.current(), songId);
     };
@@ -363,7 +360,7 @@ export function createSongPlayerStore(
         const opened = begin(songId, bars);
         return { hold: mixer.hold(opened), loaded: loading };
       },
-      takeOver: (songId, bars, held) =>
+      takeOver: (songId, bars, held, start) =>
         startSong(
           {
             ends,
@@ -380,6 +377,7 @@ export function createSongPlayerStore(
               : { prepare: () => applyHeldStart(held, loops.setLoop, get) }),
           },
           songId,
+          start,
         ),
       handOver: mixer.handOver,
       ...presses.actions,

@@ -992,6 +992,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   playing, and re-reads those facts; if the song is gone by then, the player shows it as
   gone. The bar hides while another screen covers Home or Songs and returns only once its
   own screen has finished appearing, so it cannot be tapped mid-pop. **[recorded]**
+  **Amended 2026-11-26 (#612):** deleting the song the mini-player shows, single or stem, pauses
+  it at once and moves on as Next does, keeping the play state: a playing song hands over playing,
+  a paused one opens the next song paused. With nothing next the mini-player closes. A tap on
+  the mini-player does nothing once its song has left the library.
 
 - **2026-11-07 · A single song is a one-track mixer song (§4.1, §6.3, #297)** — The song
   player drives `kb_mixer_*` with the song on track 0, plus `setGrid` and

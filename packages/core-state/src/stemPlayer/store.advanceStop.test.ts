@@ -8,7 +8,7 @@ import {
 } from '../playOrder/autoAdvance.test-helper.ts';
 import { ADVANCE, type Advance } from '../playOrder/order.ts';
 import type { SkipResult, Undo } from '../playOrder/store.ts';
-import { ADVANCE_OUTCOME } from './songEnd.ts';
+import { ADVANCE_OUTCOME, START } from './songEnd.ts';
 import {
   at,
   BARS,
@@ -135,6 +135,10 @@ async function followingPlayOrder() {
         loopHeld: () => false,
         advanceTo: player.advanceTo,
         takeOver: (id) => player.takeOver(id, 0),
+        paused: {
+          advanceTo: (id) => player.advanceTo(id, START.paused),
+          takeOver: (id) => player.takeOver(id, 0, undefined, START.paused),
+        },
         handOver: player.handOver,
         stillEnded: player.songStillEnded,
         stopAdvancing: player.stopAdvancing,
@@ -187,5 +191,48 @@ describe('a card Stop before the advance opens anything', () => {
     expect(song.commitNext).not.toHaveBeenCalled();
     expect(song.records.readStemSet).not.toHaveBeenCalled();
     expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+  });
+});
+
+describe('pausing before a deleted stem song is moved off', () => {
+  it('pauses a sounding song and says it was sounding', async () => {
+    const song = await followingPlayOrder();
+    expect(song.store.getState().pauseIfSounding()).toBe(true);
+    expect(song.commands.mixerPause).toHaveBeenCalledOnce();
+  });
+
+  it('leaves a paused song alone and says it was not sounding', async () => {
+    const song = await followingPlayOrder();
+    song.engine.playing = false;
+    expect(song.store.getState().pauseIfSounding()).toBe(false);
+    expect(song.commands.mixerPause).not.toHaveBeenCalled();
+  });
+
+  it('cancels a count-in and counts it as sounding', async () => {
+    const song = await followingPlayOrder();
+    song.store.getState().pauseIfSounding();
+    song.engine.playing = false;
+    song.countInBars.mockReturnValue(1);
+    song.store.getState().togglePlay();
+    expect(song.commands.songCountIn).toHaveBeenCalledOnce();
+    expect(song.store.getState().pauseIfSounding()).toBe(true);
+    expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+  });
+});
+
+describe('Next that keeps the song paused', () => {
+  it('opens the next stem song ready without playing or counting in', async () => {
+    const song = await followingPlayOrder();
+    song.engine.playing = false;
+    song.store.getState().pressNextPaused();
+    await song.peekAnswered();
+    await vi.waitFor(() => {
+      expect(song.store.getState()).toMatchObject({
+        status: 'ready',
+        setId: NEXT_SET_ID,
+      });
+    });
+    expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+    expect(song.commands.songCountIn).not.toHaveBeenCalled();
   });
 });

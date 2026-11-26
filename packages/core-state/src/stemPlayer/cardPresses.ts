@@ -28,6 +28,9 @@ export function cardPresses(session: () => number, ends: SongEnds) {
       pressNext: () => {
         ends.pressedNext(session(), ADVANCE_CAUSE.nextInApp);
       },
+      pressNextPaused: () => {
+        ends.pressedNext(session(), ADVANCE_CAUSE.nextPaused);
+      },
       pressPrevious: () => {
         previous.pressed(session(), true);
       },

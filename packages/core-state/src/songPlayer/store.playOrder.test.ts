@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ADVANCE_CAUSE, ADVANCE_OUTCOME } from '../stemPlayer/songEnd.ts';
+import {
+  ADVANCE_CAUSE,
+  ADVANCE_OUTCOME,
+  START,
+} from '../stemPlayer/songEnd.ts';
 import { RATE } from '../stemPlayer/store.test-helper.ts';
 import { secondsToFrames } from '../stemPlayer/time.ts';
 import {
@@ -87,6 +91,20 @@ describe('a single song in the play order', () => {
     expect(fake.commands.songTransportShow).toHaveBeenCalledWith(
       expect.objectContaining({ title: songRecord().title }),
     );
+  });
+
+  it('takes over paused, ready but not started', async () => {
+    const fake = fakeSongRuntime();
+    const player = songStore(fake);
+    expect(
+      await player.getState().takeOver(SONG_ID, BARS, undefined, START.paused),
+    ).toBe(ADVANCE_OUTCOME.paused);
+    expect(player.getState()).toMatchObject({
+      songId: SONG_ID,
+      status: 'ready',
+    });
+    expect(fake.commands.mixerPlay).not.toHaveBeenCalled();
+    expect(fake.commands.songCountIn).not.toHaveBeenCalled();
   });
 
   it('lets the play order move on from a song that will not open, then gives up', async () => {

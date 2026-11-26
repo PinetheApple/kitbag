@@ -27,6 +27,7 @@ export function restingPlayer(): AdvancingPlayer {
     replay: vi.fn(),
     loopHeld: vi.fn(() => false),
     takeOver: vi.fn(() => Promise.resolve(ADVANCE_OUTCOME.playing)),
+    paused: { takeOver: vi.fn(() => Promise.resolve(ADVANCE_OUTCOME.paused)) },
     handOver: vi.fn(),
     stillEnded: vi.fn(() => true),
     stopAdvancing: vi.fn(),

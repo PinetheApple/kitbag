@@ -19,6 +19,7 @@ const players = vi.hoisted(() => ({
     { source: string; song: { kind: string; id: number } } | undefined,
   spot: null as { setlistName: string; number: number; of: number } | null,
   upNextCount: 0,
+  librarySongs: { stems: new Map(), songs: new Map() },
   togglePlay: vi.fn(),
   stopSongAndSession: vi.fn(),
 }));
@@ -56,10 +57,7 @@ vi.mock('@kitbag/core-state', async (original) => {
     useUpNext: () => players.next,
     useStemSongs: () =>
       new Map([[QUEUED_ID, { id: QUEUED_ID, title: 'King of Kings' }]]),
-    useLibrarySongs: () => ({
-      stems: new Map([[QUEUED_ID, { id: QUEUED_ID, title: 'King of Kings' }]]),
-      songs: new Map(),
-    }),
+    useLibrarySongs: () => players.librarySongs,
   };
 });
 
@@ -135,6 +133,14 @@ function fromGig(entries: number) {
   players.spot = { setlistName: 'Sunday worship', number: 2, of: entries };
 }
 
+const inLibrary = {
+  stems: new Map([
+    [QUEUED_ID, { id: QUEUED_ID, title: 'King of Kings' }],
+    [SET_ID, { id: SET_ID, title: 'Echo' }],
+  ]),
+  songs: new Map([[SONG_ID, { id: SONG_ID, title: 'Everlong' }]]),
+};
+
 function mount(): ReactTestRenderer {
   let tree: ReactTestRenderer | undefined;
   act(() => {
@@ -159,6 +165,7 @@ beforeEach(() => {
   players.next = undefined;
   players.spot = null;
   players.upNextCount = 0;
+  players.librarySongs = inLibrary;
   givenSong();
 });
 
@@ -225,6 +232,12 @@ describe('the mini-player', () => {
     (bar(mount()).onOpen as () => void)();
     expect(onOpenSong).toHaveBeenCalledExactlyOnceWith(SONG_ID);
   });
+
+  it('ignores a tap once the song has left the library', () => {
+    players.librarySongs = { ...inLibrary, songs: new Map() };
+    (bar(mount()).onOpen as () => void)();
+    expect(onOpenSong).not.toHaveBeenCalled();
+  });
 });
 
 describe('the mini-player for a stem song', () => {
@@ -262,6 +275,13 @@ describe('the mini-player for a stem song', () => {
     (bar(mount()).onOpen as () => void)();
     expect(onOpenStemSet).toHaveBeenCalledExactlyOnceWith(SET_ID);
     expect(onOpenSong).not.toHaveBeenCalled();
+  });
+
+  it('ignores a tap once the stem song has left the library', () => {
+    givenStemSong();
+    players.librarySongs = { ...inLibrary, stems: new Map() };
+    (bar(mount()).onOpen as () => void)();
+    expect(onOpenStemSet).not.toHaveBeenCalled();
   });
 
   it('plays and pauses the stem song', () => {
