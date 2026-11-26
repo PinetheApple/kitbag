@@ -11,6 +11,11 @@ import {
 import { configuredStore, type StoreAccess } from '../configuredStore.ts';
 import { BPM_BOUNDS, clamp } from '../metronome/config.ts';
 import type { DetectedGrid } from '../stemPlayer/meterOverride.ts';
+import {
+  clickAlone,
+  type ClickAloneActions,
+  type ClickAloneState,
+} from './clickAlone.ts';
 import { engineGrid } from './engineGrid.ts';
 import {
   acceptAction,
@@ -20,7 +25,6 @@ import {
   type LibraryOfferState,
 } from './libraryOffer.ts';
 import {
-  enterPlayAlongSlot,
   initialPattern,
   withAccents,
   withMeter,
@@ -43,6 +47,8 @@ import {
   type LockRefusal,
 } from './lockOutcome.ts';
 import { nativePlayAlongRuntime, type PlayAlongRuntime } from './runtime.ts';
+import { playAlongSlot, type PlayAlongSlot } from './slot.ts';
+import { songTempo, startingBpm } from './songTempo.ts';
 import {
   cardOf,
   findSession,
@@ -73,7 +79,7 @@ export interface PlayAlongLock {
   readonly grid: DetectedGrid | undefined;
 }
 
-export interface PlayAlongState extends LibraryOfferState {
+export interface PlayAlongState extends LibraryOfferState, ClickAloneState {
   readonly pattern: PlayAlongPattern;
   readonly bpm: number | undefined;
   readonly lock: PlayAlongLock | undefined;
@@ -83,7 +89,8 @@ export interface PlayAlongState extends LibraryOfferState {
   readonly lastRefusal: LockRefusal | undefined;
 }
 
-export interface PlayAlongActions extends LibraryOfferActions {
+export interface PlayAlongActions
+  extends LibraryOfferActions, ClickAloneActions {
   readonly setBpm: (bpm: number) => void;
   readonly tap: (atBoottimeMs: number) => LockOutcome;
   readonly unlock: () => void;
@@ -148,10 +155,16 @@ function clickPlacement(
   };
 }
 
+interface FollowHooks {
+  readonly locking: () => void;
+  readonly unlocked: () => void;
+}
+
 function follower(
   runtime: PlayAlongRuntime,
   { getState, setState }: Access,
-  unlocked: () => void,
+  slot: PlayAlongSlot,
+  { locking, unlocked }: FollowHooks,
 ) {
   let follow: Follow | undefined;
 
@@ -280,16 +293,10 @@ function follower(
   };
 
   const start = (seen: MediaSessionSnapshot): Follow => {
-    const leaveSlot = enterPlayAlongSlot(
-      runtime.commands,
-      getState().pattern,
-      runtime.latencyOffsetMs(),
-      runtime.yieldStandalone,
-    );
+    slot.enter();
     const stopWatching = runtime.sessions().subscribe((state, previous) => {
       if (state.sessions !== previous.sessions) onSessions(state.sessions);
     });
-    const stopStarts = runtime.onClickStarting(unlock);
     const stopCard = runtime.onCardRequest(onCardRequest);
     runtime.playbackStarted();
     const ticker = setInterval(anchor, REANCHOR_INTERVAL_MS);
@@ -303,14 +310,14 @@ function follower(
         clearInterval(ticker);
         stopCard();
         runtime.commands.playAlongCardHide();
-        stopStarts();
         stopWatching();
-        leaveSlot();
+        slot.leave();
       },
     };
   };
 
   const lockOn = (seen: MediaSessionSnapshot, lock: PlayAlongLock) => {
+    locking();
     follow ??= start(seen);
     follow.seen = seen;
     follow.lastAnchor = undefined;
@@ -326,7 +333,7 @@ function follower(
     anchor();
   };
 
-  return { anchor, unlock, lockOn, following: () => follow !== undefined };
+  return { anchor, unlock, lockOn };
 }
 
 function transport(runtime: PlayAlongRuntime, { getState }: Access) {
@@ -356,11 +363,12 @@ function patternSetters(
   runtime: PlayAlongRuntime,
   { getState, setState }: Access,
   follow: ReturnType<typeof follower>,
+  slot: PlayAlongSlot,
 ) {
   const apply = (edit: PatternEdit | undefined) => {
     if (edit === undefined) return;
     setState({ pattern: edit.pattern });
-    if (follow.following()) edit.send(runtime.commands);
+    if (slot.held()) edit.send(runtime.commands);
   };
   const pattern = () => getState().pattern;
   return {
@@ -413,29 +421,57 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
   nativePlayAlongRuntime,
   (runtime, access) => {
     const offers = libraryOffers(runtime, access);
-    const follow = follower(runtime, access, offers.refresh);
+    const slot = playAlongSlot(
+      runtime,
+      () => access.getState().pattern,
+      () => {
+        follow.unlock();
+        click.stop();
+      },
+    );
+    const click = clickAlone(runtime, access, slot, () =>
+      Boolean(chosenSession(runtime)),
+    );
+    const follow = follower(runtime, access, slot, {
+      locking: click.handOver,
+      unlocked: offers.refresh,
+    });
+    const setBpm = (bpm: number) => {
+      if (!Number.isFinite(bpm)) return;
+      const next = clamp(bpm, BPM_BOUNDS.min, BPM_BOUNDS.max);
+      const { lock } = access.getState();
+      access.setState({
+        bpm: next,
+        lock: lock && { ...lock, bpm: next, grid: undefined },
+      });
+      click.retempo(next);
+      follow.anchor();
+    };
+    const watchTempo = songTempo(runtime, access, setBpm, click.stop);
     return {
       pattern: initialPattern(),
-      bpm: undefined,
+      bpm: startingBpm(runtime),
       offer: undefined,
       lastRefusal: undefined,
+      clickPlaying: false,
       ...NO_LOCK_STATE,
-      setBpm: (bpm) => {
-        if (!Number.isFinite(bpm)) return;
-        const next = clamp(bpm, BPM_BOUNDS.min, BPM_BOUNDS.max);
-        const { lock } = access.getState();
-        access.setState({
-          bpm: next,
-          lock: lock && { ...lock, bpm: next, grid: undefined },
-        });
-        follow.anchor();
-      },
+      setBpm,
+      startClick: click.start,
+      stopClick: click.stop,
       tap: tapAction(runtime, access, follow),
       unlock: follow.unlock,
-      watchLibrary: offers.watchLibrary,
+      watchLibrary: () => {
+        const stopOffers = offers.watchLibrary();
+        const stopTempo = watchTempo();
+        return () => {
+          stopTempo();
+          stopOffers();
+          click.stop();
+        };
+      },
       dismissOffer: offers.dismissOffer,
       acceptOffer: acceptAction(runtime, access, follow.lockOn),
-      ...patternSetters(runtime, access, follow),
+      ...patternSetters(runtime, access, follow, slot),
       ...transport(runtime, access),
     };
   },

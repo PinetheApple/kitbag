@@ -53,12 +53,13 @@ type LadderView = ReturnType<FollowedLadder['getState']>;
 
 function fakeLadder() {
   const lookUp = vi.fn((track: LadderView['track']) => {
-    ladder.setState({ track, libraryMatch: null });
+    ladder.setState({ track, libraryMatch: null, bpm: null });
     return Promise.resolve();
   });
   const ladder = createStore<LadderView>(() => ({
     track: null,
     libraryMatch: null,
+    bpm: null,
     lookUp,
   }));
   return {
@@ -66,6 +67,9 @@ function fakeLadder() {
     lookUp,
     found: (libraryMatch: LibraryMatch | null) => {
       ladder.setState({ libraryMatch });
+    },
+    tempo: (bpm: number | null) => {
+      ladder.setState({ bpm });
     },
   };
 }
@@ -95,6 +99,8 @@ function fakeCommands(calls: string[], gridResult: number) {
     }),
     clearGrid: vi.fn(logged('clearGrid')),
     metronomePause: vi.fn(logged('metronomePause')),
+    metronomeStart: vi.fn(logged('metronomeStart')),
+    setTempo: vi.fn(logged('setTempo')),
     metronomeStop: vi.fn(logged('metronomeStop')),
     setBeats: vi.fn(logged('setBeats')),
     setAccent: vi.fn(logged('setAccent')),
@@ -152,6 +158,7 @@ export function fakePlayAlong({
   const runtime: PlayAlongRuntime = {
     commands,
     boottimeNowMs: () => Date.now(),
+    nowFrame: () => Date.now() * FRAMES_PER_MS,
     engineFrameAtBoottimeMs: frameAt,
     sessions: () => media,
     ladder: () => library.ladder,

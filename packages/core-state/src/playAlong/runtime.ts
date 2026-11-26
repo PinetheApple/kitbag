@@ -2,6 +2,7 @@ import {
   boottimeNowMs,
   engineFrameAtBoottimeMs,
   getKitbagCommands,
+  getKitbagHostObject,
   mediaSessionCommand,
   type KitbagCommandsSpec,
   type PlayAlongCardRequest,
@@ -34,7 +35,9 @@ export type PlayAlongCommands = Pick<
   | 'setGrid'
   | 'clearGrid'
   | 'metronomePause'
+  | 'metronomeStart'
   | 'metronomeStop'
+  | 'setTempo'
   | 'setBeats'
   | 'setAccent'
   | 'setSubdivision'
@@ -55,7 +58,7 @@ export type FollowedSessions = Pick<
 >;
 
 export type FollowedLadder = Pick<
-  StoreApi<Pick<TempoLadderStore, 'track' | 'libraryMatch' | 'lookUp'>>,
+  StoreApi<Pick<TempoLadderStore, 'track' | 'libraryMatch' | 'bpm' | 'lookUp'>>,
   'getState' | 'subscribe'
 >;
 
@@ -72,6 +75,7 @@ const unsubscriber =
 export interface PlayAlongRuntime {
   readonly commands: PlayAlongCommands;
   readonly boottimeNowMs: typeof boottimeNowMs;
+  readonly nowFrame: () => number;
   readonly engineFrameAtBoottimeMs: typeof engineFrameAtBoottimeMs;
   readonly sessions: () => FollowedSessions;
   readonly ladder: () => FollowedLadder;
@@ -115,6 +119,7 @@ export const nativePlayAlongRuntime: PlayAlongRuntime = {
     return getKitbagCommands();
   },
   boottimeNowMs: () => boottimeNowMs(),
+  nowFrame: () => getKitbagHostObject().frames_rendered,
   engineFrameAtBoottimeMs: (ms) => engineFrameAtBoottimeMs(ms),
   sessions: () => getMediaSessionsStore(),
   ladder: () => tempoLadderStore,
