@@ -2,11 +2,11 @@ import {
   Badge,
   Card,
   createThemedStyles,
-  DrawnFigures,
   rowLineHeight,
   space,
   textRoles,
   textStyle,
+  useTextScaled,
 } from '@kitbag/core-design';
 import { useCallback } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
@@ -18,8 +18,20 @@ import {
 } from '../logic/tempoLine.ts';
 
 const useStyles = createThemedStyles((theme) => ({
-  top: { flexDirection: 'row', alignItems: 'center', gap: space.rowGap },
+  top: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: space.rowGap,
+  },
   side: { flex: 1, gap: space.controlGap },
+  sideOwnLine: { flexBasis: '100%' },
+  numeral: {
+    ...textStyle(textRoles.tempoNumeralTight),
+    includeFontPadding: false,
+    color: theme.color.text,
+  },
+  noTempo: { color: theme.color.text3 },
   caption: {
     ...textStyle(textRoles.tempoCaption),
     color: theme.color.text2,
@@ -69,6 +81,7 @@ function CreditLink({
 
 export function BpmCard({ bpm, line, onOpenTempo }: BpmCardProps) {
   const styles = useStyles();
+  const scaled = useTextScaled();
   const numeral = bpm === null ? NO_TEMPO_NUMERAL : shownBpm(bpm);
   const spoken = `Tempo ${bpm === null ? 'not set' : `${numeral} BPM`}. ${line.lead}${line.rung}`;
   return (
@@ -80,12 +93,10 @@ export function BpmCard({ bpm, line, onOpenTempo }: BpmCardProps) {
         style={styles.top}
         onPress={onOpenTempo}
       >
-        <DrawnFigures
-          text={numeral}
-          role="tempoNumeralTight"
-          color={bpm === null ? 'text3' : 'text'}
-        />
-        <View style={styles.side}>
+        <Text style={[styles.numeral, bpm === null && styles.noTempo]}>
+          {numeral}
+        </Text>
+        <View style={[styles.side, scaled && styles.sideOwnLine]}>
           <Text style={styles.caption}>BPM</Text>
           {line.noTempo ? <Badge label="No tempo" tone="warning" /> : null}
           <Text style={styles.line}>
