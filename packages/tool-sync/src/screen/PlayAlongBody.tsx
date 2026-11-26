@@ -2,6 +2,8 @@ import {
   createThemedStyles,
   fadeToClear,
   metronome,
+  snackbar,
+  Snackbar,
   space,
   usePlayerScroll,
 } from '@kitbag/core-design';
@@ -13,17 +15,25 @@ import {
   useTempoLadder,
   type PlayAlongLock,
 } from '@kitbag/core-state';
-import { useCallback, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { DRIFT_STATE, driftState } from '../logic/driftMeter.ts';
+import { lockLayout, METER_PLACE } from '../logic/lockLayout.ts';
 import { trackClock } from '../logic/nowPlaying.ts';
 import { PLAY_ALONG_VIEW, type PlayAlongView } from '../logic/playAlongView.ts';
 import { TAP_PAD_MODE, tapPadCopy } from '../logic/tapPad.ts';
 import { BpmCard } from './BpmCard.tsx';
+import { DriftMeter } from './DriftMeter.tsx';
 import { NotFollowingRow, NothingPlaying } from './NoSong.tsx';
 import { NowPlayingCard } from './NowPlayingCard.tsx';
-import { useSongPositionMs, useTempoLine } from './playAlongHooks.ts';
+import {
+  usePlayAlong,
+  useSongPositionMs,
+  useTempoLine,
+} from './playAlongHooks.ts';
 import { TapPad } from './TapPad.tsx';
+import { useNewTrack } from './useNewTrack.ts';
 
 export const SCROLL_FADE_ID = 'play-along-scroll-fade';
 
@@ -79,23 +89,66 @@ export interface PlayAlongBodyProps extends SongCardProps {
   readonly onOpenTempo: () => void;
 }
 
-function useTapPad(following: boolean, locked: boolean) {
+const NEW_TRACK_NOTICE = 'New track. The click stopped until you tap.';
+
+interface PadInputs {
+  readonly following: boolean;
+  readonly locked: boolean;
+  readonly retap: boolean;
+  readonly onLanded: () => void;
+}
+
+function useTapPad({ following, locked, retap, onLanded }: PadInputs) {
   const bpm = useTempoLadder((s) => s.bpm);
   const source = useTempoLadder((s) => s.source);
   const tapsLanded = useTempoLadder((s) => s.tapsLanded);
   const copy = tapPadCopy({
     following,
     locked,
+    retap,
     songBpm: bpm,
     tappedBpm: source === BPM_SOURCE.tap ? bpm : null,
     tapsLanded,
   });
   const onTap = useCallback(() => {
     const now = boottimeNowMs();
-    if (copy.mode === TAP_PAD_MODE.tempo) tempoLadderStore.getState().tap(now);
-    else getPlayAlongStore().getState().tap(now);
-  }, [copy.mode]);
+    if (copy.mode === TAP_PAD_MODE.tempo) {
+      tempoLadderStore.getState().tap(now);
+      return;
+    }
+    if (getPlayAlongStore().getState().tap(now).locked) onLanded();
+  }, [copy.mode, onLanded]);
   return { copy, tapsLanded, onTap };
+}
+
+function useLockedPad(
+  session: MediaSessionSnapshot | undefined,
+  lock: PlayAlongLock | undefined,
+) {
+  const [retapping, setRetapping] = useState(false);
+  const [padHeld, setPadHeld] = useState(false);
+  const songAheadOfClickMs = usePlayAlong((s) => s.songAheadOfClickMs);
+  const sourceGoneAtMs = usePlayAlong((s) => s.sourceGoneAtBoottimeMs);
+  const drifting =
+    driftState({
+      songAheadOfClickMs,
+      playing: session?.playing === true,
+      sourceGoneAtMs,
+    }) === DRIFT_STATE.drift;
+  const locked = lock !== undefined;
+  const retap = locked && (drifting || retapping);
+  const layout = lockLayout({ locked, drifting, retapping: retap, padHeld });
+  const onRetap = useCallback(() => {
+    setRetapping(true);
+  }, []);
+  const onLanded = useCallback(() => {
+    setRetapping(false);
+    setPadHeld(true);
+  }, []);
+  const onRelease = useCallback(() => {
+    setPadHeld(false);
+  }, []);
+  return { layout, retap, onRetap, onLanded, onRelease };
 }
 
 function NoSong({
@@ -131,23 +184,51 @@ export function PlayAlongBody(props: PlayAlongBodyProps) {
   const styles = useStyles();
   const { view, session, lock, onOpenTempo } = props;
   const hasSong = view === PLAY_ALONG_VIEW.song;
-  const pad = useTapPad(hasSong && session !== undefined, lock !== undefined);
+  const locked = useLockedPad(session, lock);
+  const pad = useTapPad({
+    following: hasSong && session !== undefined,
+    locked: lock !== undefined,
+    retap: locked.retap,
+    onLanded: locked.onLanded,
+  });
+  const track = useNewTrack(session, lock);
   const { bpm, line } = useTempoLine();
+  const meter =
+    lock === undefined ? null : (
+      <DriftMeter lock={lock} session={session} onRetap={locked.onRetap} />
+    );
+  const { layout } = locked;
   return (
     <>
       <FadedScroll>
         <View style={styles.body}>
+          {layout.meter === METER_PLACE.first ? meter : null}
           {hasSong ? (
             <SongCard session={session} lock={lock} />
           ) : (
             <NoSong view={view} onExplainAgain={props.onExplainAgain} />
           )}
-          <BpmCard bpm={bpm} line={line} onOpenTempo={onOpenTempo} />
+          <BpmCard
+            bpm={bpm}
+            line={line}
+            newTrack={track.newTrack}
+            onOpenTempo={onOpenTempo}
+          />
+          {layout.meter === METER_PLACE.last ? meter : null}
         </View>
+        {track.noticeShown ? (
+          <Snackbar
+            message={NEW_TRACK_NOTICE}
+            bottom={snackbar.aboveDock}
+            onTimeout={track.hideNotice}
+          />
+        ) : null}
       </FadedScroll>
-      <View style={styles.pad}>
-        <TapPad {...pad} />
-      </View>
+      {layout.pad ? (
+        <View style={styles.pad}>
+          <TapPad {...pad} onRelease={locked.onRelease} />
+        </View>
+      ) : null}
     </>
   );
 }

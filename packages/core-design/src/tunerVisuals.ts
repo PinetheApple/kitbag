@@ -16,10 +16,29 @@ export const TUNER_STRIP_STOPS: readonly GradientStop[] = [
   { token: 'red', at: 1 },
 ];
 
-export function tunerStripGradient(
+export const DRIFT_STRIP_SCALE = {
+  fullScaleMs: 50,
+  inTimeMs: 10,
+  offBeatMs: 30,
+} as const;
+
+const driftAt = (ms: number) =>
+  (DRIFT_STRIP_SCALE.fullScaleMs + ms) / (2 * DRIFT_STRIP_SCALE.fullScaleMs);
+
+export const DRIFT_STRIP_STOPS: readonly GradientStop[] = [
+  { token: 'red', at: driftAt(-DRIFT_STRIP_SCALE.fullScaleMs) },
+  { token: 'amber', at: driftAt(-DRIFT_STRIP_SCALE.offBeatMs) },
+  { token: 'green', at: driftAt(-DRIFT_STRIP_SCALE.inTimeMs) },
+  { token: 'green', at: driftAt(DRIFT_STRIP_SCALE.inTimeMs) },
+  { token: 'amber', at: driftAt(DRIFT_STRIP_SCALE.offBeatMs) },
+  { token: 'red', at: driftAt(DRIFT_STRIP_SCALE.fullScaleMs) },
+];
+
+export function stripGradient(
   color: Readonly<Record<ColorToken, string>>,
+  gradientStops: readonly GradientStop[],
 ): string {
-  const stops = TUNER_STRIP_STOPS.map(
+  const stops = gradientStops.map(
     ({ token, at }) => `${color[token]} ${asPercent(at)}`,
   );
   return `linear-gradient(90deg, ${stops.join(', ')})`;

@@ -82,9 +82,10 @@ export interface TapPadProps {
   readonly copy: TapPadCopy;
   readonly tapsLanded: number;
   readonly onTap: () => void;
+  readonly onRelease: () => void;
 }
 
-export function TapPad({ copy, tapsLanded, onTap }: TapPadProps) {
+export function TapPad({ copy, tapsLanded, onTap, onRelease }: TapPadProps) {
   const styles = useStyles();
   const theme = useTheme();
   const padStyle = useCallback(
@@ -101,6 +102,7 @@ export function TapPad({ copy, tapsLanded, onTap }: TapPadProps) {
       accessibilityHint={copy.hint}
       style={padStyle}
       onPressIn={onTap}
+      onPressOut={onRelease}
     >
       {copy.mode === TAP_PAD_MODE.tempo ? (
         <TapLeds landed={tapsLanded} />

@@ -20,8 +20,11 @@ vi.mock('react-native', async () => {
 
 const NOW_MS = 5000;
 const SONG_BPM = 171;
+const DRIFT_MS = 38;
+const GONE_AT_MS = 4000;
 
 const pads = vi.hoisted(() => [] as Props[]);
+const order = vi.hoisted(() => [] as string[]);
 const ladder = vi.hoisted(() => ({
   state: {
     bpm: null as number | null,
@@ -32,7 +35,11 @@ const ladder = vi.hoisted(() => ({
     tap: vi.fn(),
   },
 }));
-const playAlong = vi.hoisted(() => ({ tap: vi.fn() }));
+const playAlong = vi.hoisted(() => ({
+  tap: vi.fn(() => ({ locked: true })),
+  songAheadOfClickMs: undefined as number | undefined,
+  sourceGoneAtBoottimeMs: undefined as number | undefined,
+}));
 
 vi.mock('@kitbag/core-native', async (original) => ({
   ...(await original<Record<string, unknown>>()),
@@ -62,8 +69,24 @@ vi.mock('./TapPad.tsx', () => ({
     return null;
   },
 }));
-vi.mock('./BpmCard.tsx', () => ({ BpmCard: () => null }));
-vi.mock('./NowPlayingCard.tsx', () => ({ NowPlayingCard: () => null }));
+vi.mock('./BpmCard.tsx', () => ({
+  BpmCard: () => {
+    order.push('bpm');
+    return null;
+  },
+}));
+vi.mock('./NowPlayingCard.tsx', () => ({
+  NowPlayingCard: () => {
+    order.push('song');
+    return null;
+  },
+}));
+vi.mock('./DriftMeter.tsx', () => ({
+  DriftMeter: () => {
+    order.push('meter');
+    return null;
+  },
+}));
 vi.mock('./NoSong.tsx', () => ({
   NothingPlaying: () => null,
   NotFollowingRow: () => null,
@@ -71,6 +94,8 @@ vi.mock('./NoSong.tsx', () => ({
 vi.mock('./playAlongHooks.ts', () => ({
   useSongPositionMs: () => null,
   useTempoLine: () => ({ bpm: null, line: {} }),
+  usePlayAlong: <T,>(selector: (state: typeof playAlong) => T) =>
+    selector(playAlong),
 }));
 
 const { PlayAlongBody } = await import('./PlayAlongBody.tsx');
@@ -97,12 +122,13 @@ const lock = {
   lockedAtBoottimeMs: 0,
 };
 
-function tapPad(
+function draw(
   view: (typeof PLAY_ALONG_VIEW)[keyof typeof PLAY_ALONG_VIEW],
   locked = false,
   followed: typeof session | undefined = session,
 ) {
   pads.length = 0;
+  order.length = 0;
   renderToStaticMarkup(
     createElement(PlayAlongBody, {
       view,
@@ -112,6 +138,10 @@ function tapPad(
       onOpenTempo: vi.fn(),
     }),
   );
+}
+
+function tapPad(...args: Parameters<typeof draw>) {
+  draw(...args);
   const [pad] = pads;
   if (pad === undefined) throw new Error('no tap pad drawn');
   return pad as Props & { readonly onTap: () => void };
@@ -120,6 +150,8 @@ function tapPad(
 beforeEach(() => {
   vi.clearAllMocks();
   ladder.state.bpm = null;
+  playAlong.songAheadOfClickMs = undefined;
+  playAlong.sourceGoneAtBoottimeMs = undefined;
 });
 
 describe('the tap pad', () => {
@@ -136,16 +168,10 @@ describe('the tap pad', () => {
     expect(playAlong.tap).not.toHaveBeenCalled();
   });
 
-  it('re-locks on a tap once locked', () => {
+  it('re-locks on a tap once the lock drifted', () => {
     ladder.state.bpm = SONG_BPM;
+    playAlong.songAheadOfClickMs = DRIFT_MS;
     tapPad(PLAY_ALONG_VIEW.song, true).onTap();
-    expect(playAlong.tap).toHaveBeenCalledWith(NOW_MS);
-    expect(ladder.state.tap).not.toHaveBeenCalled();
-  });
-
-  it('keeps the lock tempo while the followed app is gone', () => {
-    ladder.state.bpm = SONG_BPM;
-    tapPad(PLAY_ALONG_VIEW.song, true, undefined).onTap();
     expect(playAlong.tap).toHaveBeenCalledWith(NOW_MS);
     expect(ladder.state.tap).not.toHaveBeenCalled();
   });
@@ -155,5 +181,39 @@ describe('the tap pad', () => {
     tapPad(PLAY_ALONG_VIEW.denied).onTap();
     expect(ladder.state.tap).toHaveBeenCalledWith(NOW_MS);
     expect(playAlong.tap).not.toHaveBeenCalled();
+  });
+});
+
+describe('the drift meter', () => {
+  it('takes the pad slot as the last item of the body once locked', () => {
+    ladder.state.bpm = SONG_BPM;
+    draw(PLAY_ALONG_VIEW.song, true);
+    expect(order).toEqual(['song', 'bpm', 'meter']);
+    expect(pads).toHaveLength(0);
+  });
+
+  it('moves to the top and gives the pad back on drift', () => {
+    ladder.state.bpm = SONG_BPM;
+    playAlong.songAheadOfClickMs = DRIFT_MS;
+    draw(PLAY_ALONG_VIEW.song, true);
+    expect(order).toEqual(['meter', 'song', 'bpm']);
+    expect(pads).toHaveLength(1);
+    expect(pads[0]?.copy).toMatchObject({ title: 'Re-tap on a downbeat' });
+  });
+
+  it('stays last with no pad while the followed app is gone', () => {
+    ladder.state.bpm = SONG_BPM;
+    playAlong.songAheadOfClickMs = DRIFT_MS;
+    playAlong.sourceGoneAtBoottimeMs = GONE_AT_MS;
+    draw(PLAY_ALONG_VIEW.song, true, undefined);
+    expect(order).toEqual(['song', 'bpm', 'meter']);
+    expect(pads).toHaveLength(0);
+  });
+
+  it('is not drawn before a lock', () => {
+    ladder.state.bpm = SONG_BPM;
+    draw(PLAY_ALONG_VIEW.song);
+    expect(order).not.toContain('meter');
+    expect(pads).toHaveLength(1);
   });
 });
