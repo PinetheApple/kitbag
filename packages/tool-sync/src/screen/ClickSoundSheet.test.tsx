@@ -44,9 +44,8 @@ vi.mock('./playAlongHooks.ts', () => ({
 }));
 
 const { SOUND_OPTIONS, SOUND_PICKER_HINT } = await import('@kitbag/core-state');
-const { ClickSoundSheet, changePlayAlongSounds } = await import(
-  './ClickSoundSheet.tsx'
-);
+const { ClickSoundSheet, changePlayAlongSounds } =
+  await import('./ClickSoundSheet.tsx');
 
 function render(visible = true) {
   renderToStaticMarkup(

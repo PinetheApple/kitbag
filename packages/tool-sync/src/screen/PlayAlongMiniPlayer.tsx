@@ -60,5 +60,7 @@ function LockedMiniPlayer({ lock, bottomInset, onOpen }: LockedProps) {
 
 export function PlayAlongMiniPlayer(props: PlayAlongMiniPlayerProps) {
   const lock = usePlayAlong((s) => s.lock);
-  return lock === undefined ? null : <LockedMiniPlayer lock={lock} {...props} />;
+  return lock === undefined ? null : (
+    <LockedMiniPlayer lock={lock} {...props} />
+  );
 }

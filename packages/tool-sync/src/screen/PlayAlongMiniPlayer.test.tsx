@@ -41,9 +41,8 @@ vi.mock('./usePlayAlongProgress.ts', () => ({
   },
 }));
 
-const { PlayAlongMiniPlayer, useLockedSubtext } = await import(
-  './PlayAlongMiniPlayer.tsx'
-);
+const { PlayAlongMiniPlayer, useLockedSubtext } =
+  await import('./PlayAlongMiniPlayer.tsx');
 
 function Subtext() {
   world.subtext = useLockedSubtext();
@@ -83,7 +82,7 @@ describe('the Play along mini-player', () => {
     expect(bar?.detail).toBe('Play along · locked to Spotify');
   });
 
-  it("pauses the other app, reopens Play along and ends following on close", () => {
+  it('pauses the other app, reopens Play along and ends following on close', () => {
     const bar = render();
     expect(bar?.onTogglePlay).toBe(world.store.playPause);
     expect(bar?.onOpen).toBe(onOpen);
