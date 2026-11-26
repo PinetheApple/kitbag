@@ -2,8 +2,7 @@ import {
   Badge,
   Card,
   createThemedStyles,
-  fontFamily,
-  metronome,
+  DrawnFigures,
   rowLineHeight,
   space,
   textRoles,
@@ -12,21 +11,14 @@ import {
 import { useCallback } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 
-import { NO_TEMPO_NUMERAL, type TempoLine } from '../logic/tempoLine.ts';
-
-const NUMERAL_ROLE = {
-  family: fontFamily.display,
-  weight: 700,
-  size: metronome.tempoNumeralTight,
-  tabular: true,
-} as const;
-
-const RUNG_WEIGHT = '600';
+import {
+  NO_TEMPO_NUMERAL,
+  shownBpm,
+  type TempoLine,
+} from '../logic/tempoLine.ts';
 
 const useStyles = createThemedStyles((theme) => ({
   top: { flexDirection: 'row', alignItems: 'center', gap: space.rowGap },
-  numeral: { ...textStyle(NUMERAL_ROLE), color: theme.color.text },
-  numeralEmpty: { color: theme.color.text3 },
   side: { flex: 1, gap: space.controlGap },
   caption: {
     ...textStyle(textRoles.tempoCaption),
@@ -37,7 +29,7 @@ const useStyles = createThemedStyles((theme) => ({
     lineHeight: rowLineHeight.subtitle,
     color: theme.color.text2,
   },
-  rung: { fontWeight: RUNG_WEIGHT },
+  rung: textStyle(textRoles.rowSubtitleStrong),
   credit: {
     ...textStyle(textRoles.rowSubtitle),
     lineHeight: rowLineHeight.subtitle,
@@ -77,7 +69,7 @@ function CreditLink({
 
 export function BpmCard({ bpm, line, onOpenTempo }: BpmCardProps) {
   const styles = useStyles();
-  const numeral = bpm === null ? NO_TEMPO_NUMERAL : String(bpm);
+  const numeral = bpm === null ? NO_TEMPO_NUMERAL : shownBpm(bpm);
   const spoken = `Tempo ${bpm === null ? 'not set' : `${numeral} BPM`}. ${line.lead}${line.rung}`;
   return (
     <Card>
@@ -88,9 +80,11 @@ export function BpmCard({ bpm, line, onOpenTempo }: BpmCardProps) {
         style={styles.top}
         onPress={onOpenTempo}
       >
-        <Text style={[styles.numeral, bpm === null && styles.numeralEmpty]}>
-          {numeral}
-        </Text>
+        <DrawnFigures
+          text={numeral}
+          role="tempoNumeralTight"
+          color={bpm === null ? 'text3' : 'text'}
+        />
         <View style={styles.side}>
           <Text style={styles.caption}>BPM</Text>
           {line.noTempo ? <Badge label="No tempo" tone="warning" /> : null}

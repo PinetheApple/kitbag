@@ -1,25 +1,22 @@
-import { createThemedStyles } from '@kitbag/core-design';
-import {
-  getMediaSessionsStore,
-  getPlayAlongStore,
-  useMediaSessions,
-  useTempoLadder,
-} from '@kitbag/core-state';
+import { createThemedStyles, type ScreenInsets } from '@kitbag/core-design';
+import { useMediaSessions } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { PLAY_ALONG_VIEW, playAlongView } from '../logic/playAlongView.ts';
-import { tempoLine } from '../logic/tempoLine.ts';
+import { MIN_SESSIONS_TO_CHOOSE } from '../logic/sourceRows.ts';
 import { PermissionExplainer } from './PermissionExplainer.tsx';
 import { PlayAlongAppBar, type SourceChipProps } from './PlayAlongAppBar.tsx';
 import { PlayAlongBody } from './PlayAlongBody.tsx';
 import { PlayAlongDock } from './PlayAlongDock.tsx';
 import { PlayAlongMenu } from './PlayAlongMenu.tsx';
+import { pickSource } from './pickSource.ts';
 import {
   useFollowedSession,
   usePlayAlong,
-  useSessionWatch,
+  useSessionWatchWhileLocked,
   useSongTempo,
+  useTempoLine,
 } from './playAlongHooks.ts';
 import { SourceSheet } from './SourceSheet.tsx';
 import { TempoSheet } from './TempoSheet.tsx';
@@ -28,19 +25,12 @@ import { useLastSeen } from './useLastSeen.ts';
 
 type OpenSheet = 'none' | 'source' | 'tempo' | 'menu';
 
-const MIN_SESSIONS_TO_CHOOSE = 2;
-
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
 }));
 
-export interface ShellMeasuredInsets {
-  readonly top: number;
-  readonly bottom: number;
-}
-
 export interface PlayAlongScreenProps {
-  readonly insets: ShellMeasuredInsets;
+  readonly insets: ScreenInsets;
   readonly onBack?: () => void;
 }
 
@@ -61,18 +51,11 @@ function useSheets() {
   return { sheet, close, openSource, openTempo, openMenu };
 }
 
-function pickSource(sessionId: string): void {
-  const { lock, unlock } = getPlayAlongStore().getState();
-  if (lock !== undefined && lock.sessionId !== sessionId) unlock();
-  getMediaSessionsStore().getState().pick(sessionId);
-}
-
 function useSourceChip(onOpen: () => void): SourceChipProps | null {
   const session = useFollowedSession();
   const count = useMediaSessions((s) => s.sessions.length);
   const appLabel = useLastSeen(session?.appLabel);
   const locked = usePlayAlong((s) => s.lock !== undefined);
-  const open = count >= MIN_SESSIONS_TO_CHOOSE ? onOpen : undefined;
   return useMemo(() => {
     if (appLabel === undefined || (session === undefined && !locked))
       return null;
@@ -80,9 +63,9 @@ function useSourceChip(onOpen: () => void): SourceChipProps | null {
       appLabel,
       count,
       greyed: session === undefined,
-      onPress: open ?? (() => undefined),
+      onPress: count >= MIN_SESSIONS_TO_CHOOSE ? onOpen : null,
     };
-  }, [appLabel, count, session, locked, open]);
+  }, [appLabel, count, session, locked, onOpen]);
 }
 
 interface SheetsProps {
@@ -95,7 +78,7 @@ function PlayAlongSheets({ sheets, followedId, bottomInset }: SheetsProps) {
   const access = useMediaSessions((s) => s.access);
   const sessions = useMediaSessions((s) => s.sessions);
   const openSettings = useMediaSessions((s) => s.openSettings);
-  const line = tempoLine(useTempoLadder((s) => s));
+  const { line } = useTempoLine();
   const { close } = sheets;
   const handleAccess = useCallback(() => {
     close();
@@ -141,16 +124,17 @@ function usePlayAlongView(flow: AccessFlow) {
   });
   const explaining =
     view === PLAY_ALONG_VIEW.explainer || view === PLAY_ALONG_VIEW.stillOff;
-  return { view, explaining, session, lock };
+  const showsBody = !explaining && view !== PLAY_ALONG_VIEW.checking;
+  return { view, explaining, showsBody, session, lock };
 }
 
 export function PlayAlongScreen({ insets, onBack }: PlayAlongScreenProps) {
-  useSessionWatch();
+  useSessionWatchWhileLocked();
   const styles = useStyles();
   const flow = useAccessFlow();
   const sheets = useSheets();
   const source = useSourceChip(sheets.openSource);
-  const { view, explaining, session, lock } = usePlayAlongView(flow);
+  const { view, explaining, showsBody, session, lock } = usePlayAlongView(flow);
   const song = view === PLAY_ALONG_VIEW.song;
   const top = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
   const bottom = useMemo(() => ({ height: insets.bottom }), [insets.bottom]);
@@ -159,11 +143,7 @@ export function PlayAlongScreen({ insets, onBack }: PlayAlongScreenProps) {
       <PlayAlongAppBar
         onBack={onBack}
         source={song ? source : null}
-        onMenu={
-          explaining || view === PLAY_ALONG_VIEW.checking
-            ? null
-            : sheets.openMenu
-        }
+        onMenu={showsBody ? sheets.openMenu : null}
       />
       {explaining ? (
         <PermissionExplainer
@@ -172,7 +152,7 @@ export function PlayAlongScreen({ insets, onBack }: PlayAlongScreenProps) {
           onNotNow={flow.notNow}
         />
       ) : null}
-      {explaining || view === PLAY_ALONG_VIEW.checking ? null : (
+      {showsBody ? (
         <PlayAlongBody
           view={view}
           session={session}
@@ -180,7 +160,7 @@ export function PlayAlongScreen({ insets, onBack }: PlayAlongScreenProps) {
           onExplainAgain={flow.explainAgain}
           onOpenTempo={sheets.openTempo}
         />
-      )}
+      ) : null}
       {song ? (
         <PlayAlongDock
           playing={session?.playing === true}

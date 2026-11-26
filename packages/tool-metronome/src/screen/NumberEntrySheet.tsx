@@ -1,19 +1,16 @@
 import {
-  confirmEntry,
-  createThemedStyles,
-  displayDigits,
-  entryLabel,
+  confirmNumpadEntry,
+  numpadBoundsHint,
+  numpadDigits,
+  numpadEntryLabel,
   NumpadKeypad,
-  openEntry,
-  pressBackspace,
-  pressDigit,
+  NumpadReadout,
+  openNumpadEntry,
+  pressNumpadBackspace,
+  pressNumpadDigit,
   Sheet,
-  SheetHint,
-  textRoles,
-  textStyle,
 } from '@kitbag/core-design';
 import { useCallback, useState } from 'react';
-import { Text, View } from 'react-native';
 
 import type { BpmBounds } from '@kitbag/core-state';
 
@@ -29,14 +26,6 @@ interface NumberEntrySheetProps {
   readonly onDismiss: () => void;
 }
 
-const useStyles = createThemedStyles((theme) => ({
-  entry: {
-    ...textStyle(textRoles.sheetNumeral),
-    color: theme.color.text,
-    textAlign: 'center',
-  },
-}));
-
 export function NumberEntrySheet({
   visible,
   title,
@@ -48,28 +37,27 @@ export function NumberEntrySheet({
   onConfirm,
   onDismiss,
 }: NumberEntrySheetProps) {
-  const styles = useStyles();
-  const [entry, setEntry] = useState(() => openEntry(value));
+  const [entry, setEntry] = useState(() => openNumpadEntry(value));
 
   const handleDigit = useCallback(
     (digit: number) => {
-      setEntry((current) => pressDigit(current, digit, bounds));
+      setEntry((current) => pressNumpadDigit(current, digit, bounds));
     },
     [bounds],
   );
 
   const handleBackspace = useCallback(() => {
-    setEntry(pressBackspace);
+    setEntry(pressNumpadBackspace);
   }, []);
 
   const handleConfirm = useCallback(() => {
-    const typed = confirmEntry(entry, bounds);
+    const typed = confirmNumpadEntry(entry, bounds);
     if (typed !== undefined) onConfirm(typed);
     onDismiss();
   }, [entry, bounds, onConfirm, onDismiss]);
 
   const handleShow = useCallback(() => {
-    setEntry(openEntry(value));
+    setEntry(openNumpadEntry(value));
   }, [value]);
 
   return (
@@ -82,18 +70,11 @@ export function NumberEntrySheet({
       onShow={handleShow}
       onDismiss={onDismiss}
     >
-      <View>
-        <Text
-          style={styles.entry}
-          accessibilityLiveRegion="polite"
-          accessibilityLabel={entryLabel(entry, title, unit)}
-        >
-          {displayDigits(entry)}
-        </Text>
-        <SheetHint centered size="large">
-          {bounds.min} – {bounds.max} {unit}
-        </SheetHint>
-      </View>
+      <NumpadReadout
+        digits={numpadDigits(entry)}
+        accessibilityLabel={numpadEntryLabel(entry, title, unit)}
+        hint={numpadBoundsHint(bounds, unit)}
+      />
       <NumpadKeypad
         size="large"
         onDigit={handleDigit}

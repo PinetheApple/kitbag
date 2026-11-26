@@ -8,7 +8,9 @@ import {
   useTempoLadder,
   type PlayAlongStore,
 } from '@kitbag/core-state';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+
+import { tempoLine, type TempoLine } from '../logic/tempoLine.ts';
 
 const TICK_MS = 1000;
 
@@ -28,7 +30,7 @@ export function useFollowedSession(): MediaSessionSnapshot | undefined {
   );
 }
 
-function releaseWhenUnlocked(stop: () => void): void {
+export function releaseWhenUnlocked(stop: () => void): void {
   const playAlong = getPlayAlongStore();
   if (playAlong.getState().lock === undefined) {
     stop();
@@ -41,8 +43,7 @@ function releaseWhenUnlocked(stop: () => void): void {
   });
 }
 
-// A lock follows the song after the screen closes, so the sessions stay watched.
-export function useSessionWatch(): void {
+export function useSessionWatchWhileLocked(): void {
   useEffect(() => {
     const stop = getMediaSessionsStore().getState().watch();
     return () => {
@@ -66,22 +67,52 @@ export function useSongTempo(session: MediaSessionSnapshot | undefined): void {
   }, [bpm]);
 }
 
+export function msToNextSecond(
+  session: MediaSessionSnapshot,
+  nowMs: number,
+): number {
+  const positionMs = extrapolatedPositionMs(session, nowMs) ?? 0;
+  const songMsLeft = TICK_MS - (((positionMs % TICK_MS) + TICK_MS) % TICK_MS);
+  return session.speed > 0 ? songMsLeft / session.speed : TICK_MS;
+}
+
+export function useTempoLine(): {
+  readonly bpm: number | null;
+  readonly line: TempoLine;
+} {
+  const bpm = useTempoLadder((s) => s.bpm);
+  const source = useTempoLadder((s) => s.source);
+  const tried = useTempoLadder((s) => s.tried);
+  const looking = useTempoLadder((s) => s.looking);
+  return useMemo(
+    () => ({ bpm, line: tempoLine({ bpm, source, tried, looking }) }),
+    [bpm, source, tried, looking],
+  );
+}
+
 export function useSongPositionMs(
   session: MediaSessionSnapshot | undefined,
 ): number | null {
   const [now, setNow] = useState(boottimeNowMs);
-  const playing = session?.playing === true;
 
   useEffect(() => {
     setNow(boottimeNowMs());
-    if (!playing) return;
-    const tick = setInterval(() => {
-      setNow(boottimeNowMs());
-    }, TICK_MS);
-    return () => {
-      clearInterval(tick);
+    if (session?.playing !== true) return;
+    let tick: ReturnType<typeof setTimeout> | undefined;
+    const schedule = () => {
+      tick = setTimeout(
+        () => {
+          setNow(boottimeNowMs());
+          schedule();
+        },
+        msToNextSecond(session, boottimeNowMs()),
+      );
     };
-  }, [playing, session?.positionUpdatedAtMs]);
+    schedule();
+    return () => {
+      clearTimeout(tick);
+    };
+  }, [session]);
 
   return session === undefined ? null : extrapolatedPositionMs(session, now);
 }

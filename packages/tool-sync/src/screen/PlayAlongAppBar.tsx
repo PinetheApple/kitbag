@@ -5,9 +5,11 @@ import {
   CHIP_HEIGHT,
   createThemedStyles,
   KeyBadge,
+  opacity,
   screenBar,
   size,
   space,
+  StatusPill,
   unshared,
   useTextScaled,
   type AppBarAction,
@@ -26,18 +28,14 @@ const useStyles = createThemedStyles(() => ({
   barChip: { marginRight: screenBar.chipEnd },
   line: { flexDirection: 'row', paddingBottom: space.controlGap },
   badge: { top: -size.keyBadgeOffset, right: -size.keyBadgeOffset },
+  greyed: { opacity: opacity.muted },
 }));
 
 export interface SourceChipProps {
   readonly appLabel: string;
   readonly count: number;
   readonly greyed: boolean;
-  readonly onPress: () => void;
-}
-
-function sourceLabel(appLabel: string, count: number): string {
-  if (count < 2) return `Following ${appLabel}`;
-  return `Following ${appLabel}, ${String(count)} apps playing. Change source`;
+  readonly onPress: (() => void) | null;
 }
 
 function SourceChip({
@@ -48,6 +46,12 @@ function SourceChip({
   inBar,
 }: SourceChipProps & { readonly inBar: boolean }) {
   const styles = useStyles();
+  if (onPress === null)
+    return (
+      <View style={[inBar && styles.barChip, greyed && styles.greyed]}>
+        <StatusPill liveDot label={appLabel} />
+      </View>
+    );
   return (
     <View style={inBar ? styles.barChip : null}>
       <Chip
@@ -55,13 +59,11 @@ function SourceChip({
         trailingIcon="caretDown"
         label={appLabel}
         muted={greyed}
-        accessibilityLabel={sourceLabel(appLabel, count)}
+        accessibilityLabel={`Following ${appLabel}, ${String(count)} apps playing. Change source`}
         neighbourGapDp={inBar ? BAR_CHIP_GAPS : LINE_CHIP_GAPS}
         onPress={onPress}
       />
-      {count < 2 ? null : (
-        <KeyBadge label={String(count)} style={styles.badge} />
-      )}
+      <KeyBadge label={String(count)} style={styles.badge} />
     </View>
   );
 }

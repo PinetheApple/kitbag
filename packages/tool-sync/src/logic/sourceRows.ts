@@ -3,12 +3,15 @@ import type { MediaSessionSnapshot } from '@kitbag/core-native';
 
 export type SourceIcon = 'song' | 'spokenAudio';
 
+export const MIN_SESSIONS_TO_CHOOSE = 2;
+
 export interface SourceRow {
   readonly sessionId: string;
   readonly appLabel: string;
   readonly detail: string;
   readonly icon: SourceIcon;
   readonly followed: boolean;
+  readonly live: boolean;
 }
 
 const RANK = { playingMusic: 0, pausedMusic: 1, spokenWord: 2 } as const;
@@ -42,5 +45,6 @@ export function sourceRows(
       detail: detailOf(session),
       icon: session.spokenWord ? 'spokenAudio' : 'song',
       followed: session.sessionId === followedId,
+      live: session.playing && !session.spokenWord,
     }));
 }

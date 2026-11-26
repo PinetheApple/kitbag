@@ -1,6 +1,8 @@
 import { FACT_SEPARATOR } from '@kitbag/core-design';
 import { TAPS_TO_SET_TEMPO } from '@kitbag/core-state';
 
+import { shownBpm } from './tempoLine.ts';
+
 export const TAP_PAD_MODE = {
   align: 'align',
   landed: 'landed',
@@ -23,7 +25,7 @@ export interface TapPadCopy {
   readonly hint: string;
 }
 
-const TAP_TEMPO_TITLE = 'Tap four times on the beat';
+export const TAP_TEMPO_TITLE = 'Tap four times on the beat';
 
 export function tapsLeftHint(tapsLanded: number): string {
   const left = TAPS_TO_SET_TEMPO - tapsLanded;
@@ -34,12 +36,12 @@ function tempoHint({ tappedBpm, tapsLanded }: TapPadInputs): string {
   if (tapsLanded > 0 && tapsLanded < TAPS_TO_SET_TEMPO)
     return tapsLeftHint(tapsLanded);
   if (tappedBpm !== null)
-    return `${String(tappedBpm)} BPM${FACT_SEPARATOR}tap again to change`;
+    return `${shownBpm(tappedBpm)} BPM${FACT_SEPARATOR}tap again to change`;
   return 'Taps light up as they land';
 }
 
 export function tapPadCopy(inputs: TapPadInputs): TapPadCopy {
-  if (inputs.following && inputs.locked)
+  if (inputs.locked)
     return {
       mode: TAP_PAD_MODE.landed,
       title: 'Locked on beat 1',

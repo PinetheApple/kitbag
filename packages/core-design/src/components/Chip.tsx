@@ -23,6 +23,7 @@ import {
   type NeighbourGaps,
 } from '../touchTarget.ts';
 import { Icon } from './Icon.tsx';
+import { LiveDot } from './LiveDot.tsx';
 
 export const CHIP_HEIGHT =
   textRoles.chip.size + (inset.chipV + size.stroke) * 2;
@@ -118,12 +119,6 @@ const useStyles = createThemedStyles((theme) => ({
     paddingVertical: 0,
   },
   largeLabel: textStyle(textRoles.chipLarge),
-  liveDot: {
-    width: size.liveDot,
-    height: size.liveDot,
-    borderRadius: radius.circle,
-    backgroundColor: theme.color.green,
-  },
 }));
 
 function ChipFace({
@@ -140,7 +135,7 @@ function ChipFace({
   const glyphSize = large ? 'chipLarge' : 'chip';
   return (
     <>
-      {liveDot ? <View style={styles.liveDot} /> : null}
+      {liveDot ? <LiveDot /> : null}
       {icon === undefined ? null : (
         <Icon name={icon} size={glyphSize} color={glyphColor} />
       )}

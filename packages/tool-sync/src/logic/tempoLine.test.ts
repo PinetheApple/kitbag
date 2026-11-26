@@ -1,7 +1,12 @@
 import { BPM_SOURCE } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
-import { SET_TEMPO_HINT, tempoLine, type TempoLine } from './tempoLine.ts';
+import {
+  SET_TEMPO_HINT,
+  shownBpm,
+  tempoLine,
+  type TempoLine,
+} from './tempoLine.ts';
 
 const text = (line: TempoLine) => line.lead + line.rung + line.tail;
 
@@ -45,7 +50,7 @@ describe('tempoLine', () => {
       ...NO_LOOKUP,
       tried: [BPM_SOURCE.library, BPM_SOURCE.getSongBpm],
     });
-    expect(text(line)).toBe('Not found · Library, GetSongBPM');
+    expect(text(line)).toBe('Not found · library, GetSongBPM');
     expect(line.noTempo).toBe(true);
   });
 
@@ -55,12 +60,25 @@ describe('tempoLine', () => {
     expect(line.noTempo).toBe(false);
   });
 
-  it('does not report a failure while a lookup is still running', () => {
+  it('says the lookup is running instead of reporting a failure', () => {
     const line = tempoLine({
       ...NO_LOOKUP,
       tried: [BPM_SOURCE.library],
       looking: true,
     });
+    expect(text(line)).toBe('Looking up · library');
     expect(line.noTempo).toBe(false);
+  });
+
+  it('names only the library when that was the one rung tried', () => {
+    const line = tempoLine({ ...NO_LOOKUP, tried: [BPM_SOURCE.library] });
+    expect(text(line)).toBe('Not found · library');
+  });
+});
+
+describe('shownBpm', () => {
+  it('rounds an analysed or halved tempo for display', () => {
+    expect(shownBpm(85.5)).toBe('86');
+    expect(shownBpm(171.4)).toBe('171');
   });
 });

@@ -9,6 +9,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import {
   iconSizes,
+  opacity,
   pauseGlyphPath,
   playGlyphPath,
   playGlyphPathLarge,
@@ -110,6 +111,7 @@ const useStyles = createThemedStyles((theme) => ({
     width: stemPlayer.playButton,
     height: stemPlayer.playButton,
   },
+  disabled: { opacity: opacity.muted },
   dockGlyphBox: {
     transform: [{ scale: iconSizes.dockPlay / size.playGlyphBox }],
   },
@@ -172,6 +174,7 @@ export interface PlayPauseButtonProps {
   readonly pauseLabel: string;
   readonly onPress: () => void;
   readonly size?: TransportKeySize;
+  readonly disabled?: boolean;
 }
 
 // Glyphs follow the engine's playing flag on the UI thread; only the spoken
@@ -199,6 +202,7 @@ export function PlayPauseButton({
   pauseLabel,
   onPress,
   size: buttonSize = 'standard',
+  disabled = false,
 }: PlayPauseButtonProps) {
   const styles = useStyles();
   const dock = buttonSize === 'dock';
@@ -207,7 +211,13 @@ export function PlayPauseButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={isPlaying ? pauseLabel : playLabel}
-      style={[styles.button, dock && styles.dockButton]}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      style={[
+        styles.button,
+        dock && styles.dockButton,
+        disabled && styles.disabled,
+      ]}
       onPress={onPress}
     >
       <View style={[styles.glyphBox, dock && styles.dockGlyphBox]}>

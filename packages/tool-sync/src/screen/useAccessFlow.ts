@@ -1,5 +1,6 @@
-import { useMediaSessions } from '@kitbag/core-state';
-import { useCallback, useState } from 'react';
+import { getMediaSessionsStore, useMediaSessions } from '@kitbag/core-state';
+import { useCallback, useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 
 export interface AccessFlow {
   readonly askedForAccess: boolean;
@@ -9,13 +10,44 @@ export interface AccessFlow {
   readonly explainAgain: () => void;
 }
 
+const FOREGROUND = 'active';
+
+function useStillOffOnReturn(
+  awaiting: boolean,
+  onReturn: (stillOff: boolean) => void,
+): void {
+  useEffect(() => {
+    if (!awaiting) return;
+    const listener = AppState.addEventListener('change', (state) => {
+      if (state !== FOREGROUND) return;
+      const sessions = getMediaSessionsStore();
+      void sessions
+        .getState()
+        .refresh()
+        .then(() => {
+          onReturn(sessions.getState().access === false);
+        });
+    });
+    return () => {
+      listener.remove();
+    };
+  }, [awaiting, onReturn]);
+}
+
 export function useAccessFlow(): AccessFlow {
   const openSettings = useMediaSessions((s) => s.openSettings);
+  const [awaiting, setAwaiting] = useState(false);
   const [askedForAccess, setAskedForAccess] = useState(false);
   const [declined, setDeclined] = useState(false);
 
+  const onReturn = useCallback((stillOff: boolean) => {
+    setAwaiting(false);
+    setAskedForAccess(stillOff);
+  }, []);
+  useStillOffOnReturn(awaiting, onReturn);
+
   const openAccess = useCallback(() => {
-    setAskedForAccess(true);
+    setAwaiting(true);
     openSettings().catch(() => undefined);
   }, [openSettings]);
   const notNow = useCallback(() => {

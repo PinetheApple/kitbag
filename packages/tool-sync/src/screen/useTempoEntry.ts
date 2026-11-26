@@ -1,8 +1,8 @@
 import {
-  confirmEntry,
-  openEntry,
-  pressBackspace,
-  pressDigit,
+  confirmNumpadEntry,
+  openNumpadEntry,
+  pressNumpadBackspace,
+  pressNumpadDigit,
   type NumpadEntry,
 } from '@kitbag/core-design';
 import { boottimeNowMs } from '@kitbag/core-native';
@@ -22,7 +22,7 @@ import {
 const EMPTY_ENTRY: NumpadEntry = { digits: '', untouched: false };
 
 const entryOf = (bpm: number | null) =>
-  bpm === null ? EMPTY_ENTRY : openEntry(bpm);
+  bpm === null ? EMPTY_ENTRY : openNumpadEntry(Math.round(bpm));
 
 interface EntryState {
   readonly entry: NumpadEntry;
@@ -39,16 +39,19 @@ function useKeys(
   const onDigit = useCallback(
     (digit: number) => {
       setTapping(false);
-      setEntry((current) => pressDigit(current, digit, BPM_BOUNDS));
+      setEntry((current) => pressNumpadDigit(current, digit, BPM_BOUNDS));
     },
     [setEntry, setTapping],
   );
   const onBackspace = useCallback(() => {
     setTapping(false);
-    setEntry(pressBackspace);
+    setEntry(pressNumpadBackspace);
   }, [setEntry, setTapping]);
   const onConfirm = useCallback(() => {
-    const typed = tapping ? undefined : confirmEntry(entry, BPM_BOUNDS);
+    const typed =
+      tapping || entry.untouched
+        ? undefined
+        : confirmNumpadEntry(entry, BPM_BOUNDS);
     if (typed !== undefined) enter(typed);
     onDone();
   }, [tapping, entry, enter, onDone]);
@@ -59,39 +62,37 @@ function useSteps({ setEntry, setTapping }: EntryState, bpm: number | null) {
   const tap = useTempoLadder((s) => s.tap);
   const halve = useTempoLadder((s) => s.halve);
   const double = useTempoLadder((s) => s.double);
-  const step = useCallback(
-    (stepped: (value: number) => number, apply: () => void) => () => {
-      if (bpm !== null) setEntry(openEntry(stepped(bpm)));
-      setTapping(false);
-      apply();
-    },
-    [bpm, setEntry, setTapping],
-  );
+  const onHalve = useCallback(() => {
+    setEntry(entryOf(bpm === null ? null : halvedBpm(bpm)));
+    setTapping(false);
+    halve();
+  }, [bpm, halve, setEntry, setTapping]);
+  const onDouble = useCallback(() => {
+    setEntry(entryOf(bpm === null ? null : doubledBpm(bpm)));
+    setTapping(false);
+    double();
+  }, [bpm, double, setEntry, setTapping]);
   const onTap = useCallback(() => {
     setTapping(true);
     tap(boottimeNowMs());
   }, [setTapping, tap]);
-  return {
-    onHalve: step(halvedBpm, halve),
-    onDouble: step(doubledBpm, double),
-    onTap,
-  };
+  return { onHalve, onDouble, onTap };
 }
 
 export function useTempoEntry(onDone: () => void) {
   const bpm = useTempoLadder((s) => s.bpm);
-  const [shownBpm, setShownBpm] = useState(bpm);
+  const [wasBpm, setWasBpm] = useState(bpm);
   const [entry, setEntry] = useState(() => entryOf(bpm));
   const [tapping, setTapping] = useState(false);
   const state: EntryState = { entry, setEntry, tapping, setTapping };
   const onShow = useCallback(() => {
-    setShownBpm(bpm);
+    setWasBpm(bpm);
     setEntry(entryOf(bpm));
     setTapping(false);
   }, [bpm]);
   return {
     bpm,
-    shownBpm,
+    wasBpm,
     entry,
     tapping,
     onShow,

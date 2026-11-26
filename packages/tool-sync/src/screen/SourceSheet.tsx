@@ -23,6 +23,7 @@ function SourceRowView({ row, onPick }: SourceRowViewProps) {
       icon={row.icon}
       title={row.appLabel}
       subtitle={row.detail}
+      liveDot={row.live}
       active={row.followed}
       trailing={
         row.followed ? (

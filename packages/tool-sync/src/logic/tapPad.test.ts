@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   TAP_PAD_MODE,
+  TAP_TEMPO_TITLE,
   tapPadCopy,
   tapsLeftHint,
   type TapPadInputs,
@@ -50,6 +51,17 @@ describe('tapPadCopy', () => {
     expect(tapPadCopy({ ...idle, songBpm: SONG_BPM }).mode).toBe(
       TAP_PAD_MODE.tempo,
     );
+  });
+
+  it('keeps the lock on the pad while the followed app is gone', () => {
+    const copy = tapPadCopy({ ...idle, locked: true, songBpm: SONG_BPM });
+    expect(copy.mode).toBe(TAP_PAD_MODE.landed);
+  });
+
+  it('counts the same taps in its title as the tempo needs', () => {
+    const FOUR = 4;
+    expect(TAPS_TO_SET_TEMPO).toBe(FOUR);
+    expect(TAP_TEMPO_TITLE).toContain('four');
   });
 
   it('says taps light up before the first one lands', () => {

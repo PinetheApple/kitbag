@@ -1,5 +1,4 @@
 import {
-  opacity,
   PlayerDock,
   PlayPauseButton,
   stemPlayer,
@@ -21,7 +20,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: stemPlayer.transportGap,
   },
-  disabled: { opacity: opacity.muted },
 });
 
 export interface PlayAlongDockProps {
@@ -54,18 +52,14 @@ export function PlayAlongDock({
           accessibilityLabel="Previous track"
           onPress={previous}
         />
-        <View
-          pointerEvents={disabled ? 'none' : 'auto'}
-          style={disabled ? styles.disabled : null}
-        >
-          <PlayPauseButton
-            size="dock"
-            playing={shown}
-            playLabel="Play the song"
-            pauseLabel="Pause the song"
-            onPress={playPause}
-          />
-        </View>
+        <PlayPauseButton
+          size="dock"
+          playing={shown}
+          disabled={disabled}
+          playLabel="Play the song"
+          pauseLabel="Pause the song"
+          onPress={playPause}
+        />
         <TransportKey
           size="dock"
           icon="next"

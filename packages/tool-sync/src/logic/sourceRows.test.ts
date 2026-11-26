@@ -57,6 +57,11 @@ describe('sourceRows', () => {
     expect(rows.map((row) => row.icon)).toEqual(['song', 'spokenAudio']);
   });
 
+  it('puts the live dot only on music that is playing', () => {
+    const rows = sourceRows([podcast, paused, playing], undefined);
+    expect(rows.map((row) => row.live)).toEqual([true, false, false]);
+  });
+
   it('marks only the followed session', () => {
     const rows = sourceRows([playing, paused], 'YT Music');
     expect(rows.map((row) => row.followed)).toEqual([false, true]);

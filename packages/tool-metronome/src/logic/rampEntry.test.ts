@@ -1,7 +1,7 @@
 import {
-  confirmEntry,
-  openEntry,
-  pressDigit,
+  confirmNumpadEntry,
+  openNumpadEntry,
+  pressNumpadDigit,
   type NumpadEntry,
 } from '@kitbag/core-design';
 import type { BpmBounds } from '@kitbag/core-state';
@@ -14,10 +14,10 @@ const RAMP = { startBpm: 100, targetBpm: 140, loop: false };
 
 const typeInto = (field: RampBpmField, digits: readonly number[]) => {
   const entry = digits.reduce<NumpadEntry>(
-    (current, digit) => pressDigit(current, digit, BOUNDS),
-    openEntry(RAMP[field]),
+    (current, digit) => pressNumpadDigit(current, digit, BOUNDS),
+    openNumpadEntry(RAMP[field]),
   );
-  const typed = confirmEntry(entry, BOUNDS);
+  const typed = confirmNumpadEntry(entry, BOUNDS);
   return typed === undefined ? RAMP : withRampBpm(RAMP, field, typed);
 };
 

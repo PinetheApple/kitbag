@@ -1,7 +1,7 @@
 import {
-  confirmEntry,
-  openEntry,
-  pressDigit,
+  confirmNumpadEntry,
+  openNumpadEntry,
+  pressNumpadDigit,
   type NumpadEntry,
 } from '@kitbag/core-design';
 import {
@@ -51,10 +51,10 @@ function typeInto(
 ): PracticeValues {
   const { bounds, value } = practiceEntry(field, values);
   const entry = digits.reduce<NumpadEntry>(
-    (current, digit) => pressDigit(current, digit, bounds),
-    openEntry(value),
+    (current, digit) => pressNumpadDigit(current, digit, bounds),
+    openNumpadEntry(value),
   );
-  const typed = confirmEntry(entry, bounds);
+  const typed = confirmNumpadEntry(entry, bounds);
   return typed === undefined ? values : withPracticeEntry(values, field, typed);
 }
 

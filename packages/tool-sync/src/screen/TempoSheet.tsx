@@ -1,15 +1,14 @@
 import {
   createThemedStyles,
-  displayDigits,
-  entryLabel,
   FACT_SEPARATOR,
+  numpadBoundsHint,
+  numpadDigits,
+  numpadEntryLabel,
   NumpadKeypad,
+  NumpadReadout,
   PresetButton,
   Sheet,
-  SheetHint,
   space,
-  textRoles,
-  textStyle,
   type NumpadEntry,
 } from '@kitbag/core-design';
 import {
@@ -19,23 +18,17 @@ import {
   TAPS_TO_SET_TEMPO,
   useTempoLadder,
 } from '@kitbag/core-state';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { tapsLeftHint } from '../logic/tapPad.ts';
-import { NO_TEMPO_NUMERAL } from '../logic/tempoLine.ts';
+import { NO_TEMPO_NUMERAL, shownBpm } from '../logic/tempoLine.ts';
 import { TapLeds } from './TapPad.tsx';
 import { useTempoEntry } from './useTempoEntry.ts';
 
 const TITLE = 'Tempo';
 const UNIT = 'BPM';
 
-const useStyles = createThemedStyles((theme) => ({
-  entry: {
-    ...textStyle(textRoles.sheetNumeral),
-    color: theme.color.text,
-    textAlign: 'center',
-  },
-  tapping: { alignItems: 'center', gap: space.controlGap },
+const useStyles = createThemedStyles(() => ({
   presets: { flexDirection: 'row', gap: space.controlGap },
 }));
 
@@ -45,36 +38,24 @@ interface TapReadoutProps {
 }
 
 function TapReadout({ bpm, tapsLanded }: TapReadoutProps) {
-  const styles = useStyles();
   const set = tapsLanded >= TAPS_TO_SET_TEMPO && bpm !== null;
   return (
-    <View style={styles.tapping}>
-      <Text style={styles.entry} accessibilityLiveRegion="polite">
-        {set ? String(bpm) : NO_TEMPO_NUMERAL}
-      </Text>
+    <NumpadReadout
+      digits={set ? shownBpm(bpm) : NO_TEMPO_NUMERAL}
+      hint={set ? `${shownBpm(bpm)} ${UNIT}` : tapsLeftHint(tapsLanded)}
+    >
       <TapLeds landed={tapsLanded} />
-      <SheetHint centered size="large">
-        {set ? `${String(bpm)} ${UNIT}` : tapsLeftHint(tapsLanded)}
-      </SheetHint>
-    </View>
+    </NumpadReadout>
   );
 }
 
 function TypedReadout({ entry }: { readonly entry: NumpadEntry }) {
-  const styles = useStyles();
   return (
-    <View>
-      <Text
-        style={styles.entry}
-        accessibilityLiveRegion="polite"
-        accessibilityLabel={entryLabel(entry, TITLE, UNIT)}
-      >
-        {displayDigits(entry)}
-      </Text>
-      <SheetHint centered size="large">
-        {BPM_BOUNDS.min} – {BPM_BOUNDS.max} {UNIT}
-      </SheetHint>
-    </View>
+    <NumpadReadout
+      digits={numpadDigits(entry)}
+      accessibilityLabel={numpadEntryLabel(entry, TITLE, UNIT)}
+      hint={numpadBoundsHint(BPM_BOUNDS, UNIT)}
+    />
   );
 }
 
@@ -87,18 +68,20 @@ interface StepPresetsProps {
 
 function StepPresets({ bpm, onHalve, onDouble, onTap }: StepPresetsProps) {
   const styles = useStyles();
+  const half = bpm === null ? '' : shownBpm(halvedBpm(bpm));
+  const twice = bpm === null ? '' : shownBpm(doubledBpm(bpm));
   return (
     <View style={styles.presets}>
       {bpm === null ? null : (
         <>
           <PresetButton
-            label={`÷2${FACT_SEPARATOR}${String(halvedBpm(bpm))}`}
-            accessibilityLabel={`Half time, ${String(halvedBpm(bpm))} ${UNIT}`}
+            label={`÷2${FACT_SEPARATOR}${half}`}
+            accessibilityLabel={`Half time, ${half} ${UNIT}`}
             onPress={onHalve}
           />
           <PresetButton
-            label={`×2${FACT_SEPARATOR}${String(doubledBpm(bpm))}`}
-            accessibilityLabel={`Double time, ${String(doubledBpm(bpm))} ${UNIT}`}
+            label={`×2${FACT_SEPARATOR}${twice}`}
+            accessibilityLabel={`Double time, ${twice} ${UNIT}`}
             onPress={onDouble}
           />
         </>
@@ -128,13 +111,13 @@ export function TempoSheet({
 }: TempoSheetProps) {
   const tempo = useTempoEntry(onDismiss);
   const tapsLanded = useTempoLadder((s) => s.tapsLanded);
-  const { shownBpm } = tempo;
+  const { wasBpm } = tempo;
   return (
     <Sheet
       visible={visible}
       title={TITLE}
       titleDetail={
-        shownBpm === null ? undefined : `was ${String(shownBpm)} ${sourceWords}`
+        wasBpm === null ? undefined : `was ${shownBpm(wasBpm)} ${sourceWords}`
       }
       dismissLabel="Close tempo entry"
       bottomInset={bottomInset}

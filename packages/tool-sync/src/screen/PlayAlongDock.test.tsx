@@ -69,7 +69,8 @@ it('drives the other app with Previous, Play/Pause and Next, and nothing else', 
 });
 
 it('disables the song keys while the followed app is gone', () => {
-  const [previous, , next] = render(true);
+  const [previous, play, next] = render(true);
   expect(previous?.disabled).toBe(true);
+  expect(play?.disabled).toBe(true);
   expect(next?.disabled).toBe(true);
 });

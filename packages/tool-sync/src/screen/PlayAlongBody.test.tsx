@@ -13,6 +13,7 @@ vi.mock('react-native', async () => {
     View: host,
     Text: host,
     Pressable: host,
+    ScrollView: host,
     StyleSheet: { create: <T,>(styles: T) => styles },
   };
 });
@@ -63,11 +64,14 @@ vi.mock('./TapPad.tsx', () => ({
 }));
 vi.mock('./BpmCard.tsx', () => ({ BpmCard: () => null }));
 vi.mock('./NowPlayingCard.tsx', () => ({ NowPlayingCard: () => null }));
-vi.mock('./NoSongCard.tsx', () => ({
+vi.mock('./NoSong.tsx', () => ({
   NothingPlaying: () => null,
   NotFollowingRow: () => null,
 }));
-vi.mock('./playAlongHooks.ts', () => ({ useSongPositionMs: () => null }));
+vi.mock('./playAlongHooks.ts', () => ({
+  useSongPositionMs: () => null,
+  useTempoLine: () => ({ bpm: null, line: {} }),
+}));
 
 const { PlayAlongBody } = await import('./PlayAlongBody.tsx');
 
@@ -96,12 +100,13 @@ const lock = {
 function tapPad(
   view: (typeof PLAY_ALONG_VIEW)[keyof typeof PLAY_ALONG_VIEW],
   locked = false,
+  followed: typeof session | undefined = session,
 ) {
   pads.length = 0;
   renderToStaticMarkup(
     createElement(PlayAlongBody, {
       view,
-      session: view === PLAY_ALONG_VIEW.song ? session : undefined,
+      session: view === PLAY_ALONG_VIEW.song ? followed : undefined,
       lock: locked ? lock : undefined,
       onExplainAgain: vi.fn(),
       onOpenTempo: vi.fn(),
@@ -134,6 +139,13 @@ describe('the tap pad', () => {
   it('re-locks on a tap once locked', () => {
     ladder.state.bpm = SONG_BPM;
     tapPad(PLAY_ALONG_VIEW.song, true).onTap();
+    expect(playAlong.tap).toHaveBeenCalledWith(NOW_MS);
+    expect(ladder.state.tap).not.toHaveBeenCalled();
+  });
+
+  it('keeps the lock tempo while the followed app is gone', () => {
+    ladder.state.bpm = SONG_BPM;
+    tapPad(PLAY_ALONG_VIEW.song, true, undefined).onTap();
     expect(playAlong.tap).toHaveBeenCalledWith(NOW_MS);
     expect(ladder.state.tap).not.toHaveBeenCalled();
   });
