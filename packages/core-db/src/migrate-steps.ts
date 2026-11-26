@@ -7,6 +7,7 @@ import {
   MIGRATE_V15_TO_V16,
   MIGRATE_V16_TO_V17,
 } from './migrate-stems';
+import { MIGRATE_V30_TO_V31 } from './migrate-presets';
 
 const UUID4_SQL =
   "lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || " +
@@ -394,6 +395,7 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V27_TO_V28,
   ...MIGRATE_V28_TO_V29,
   ...MIGRATE_V29_TO_V30,
+  ...MIGRATE_V30_TO_V31,
 ];
 
 export const MIGRATE_V7_TO_V8: readonly string[] = [

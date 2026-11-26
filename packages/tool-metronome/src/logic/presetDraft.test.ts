@@ -3,7 +3,7 @@ import {
   KB_POLY_AGAINST_BAR,
   KB_RAMP_UNIT,
 } from '@kitbag/core-native';
-import type { SongPreset } from '@kitbag/core-state';
+import { DEFAULT_BPM, type SongPreset } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import { songPreset } from './fixtures.test-helper.ts';
@@ -107,6 +107,20 @@ describe('preset draft', () => {
     });
   });
 
+  it('starts a song that saves no tempo at the default tempo', () => {
+    const draft = draftFrom({
+      ...PRESET,
+      bpm: null,
+      rampStartBpm: null,
+      rampEndBpm: null,
+    });
+    expect(draft.bpm).toBe(DEFAULT_BPM);
+    expect(draft.ramp).toMatchObject({
+      startBpm: DEFAULT_BPM,
+      targetBpm: DEFAULT_BPM,
+    });
+  });
+
   it('never saves an empty name or blank notes', () => {
     const edit = editFrom({ ...draftFrom(PRESET), name: '  ', notes: ' ' });
     expect(edit.name).toBe('Untitled');
@@ -131,6 +145,16 @@ describe('row subtitles', () => {
         countInBars: 0,
       }),
     ).toBe('96 · 3/4 · Woodblock');
+  });
+
+  it('leaves the tempo out for a song that saves none', () => {
+    const untimed = { ...PRESET, bpm: null, notes: null, countInBars: 0 };
+    expect(songSubtitle({ ...untimed, rampEnabled: false })).toBe(
+      '3/4 · Woodblock',
+    );
+    expect(songSubtitle({ ...untimed, rampStartBpm: null })).toBe(
+      '3/4 · Woodblock',
+    );
   });
 
   it('names played songs only for the set on stage', () => {

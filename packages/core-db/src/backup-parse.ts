@@ -105,7 +105,7 @@ function readPresetMusic(r: Reader) {
   return {
     uuid: r.uuid('uuid'),
     name: r.string('name'),
-    bpm: r.number('bpm'),
+    bpm: r.nullableNumber('bpm'),
     beatsPerBar: r.count('beatsPerBar'),
     subdivision: r.count('subdivision'),
     denominator: r.count('denominator'),

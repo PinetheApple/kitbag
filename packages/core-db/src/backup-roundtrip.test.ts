@@ -84,6 +84,18 @@ describe('backup round trip', () => {
     });
   });
 
+  it('restores a preset that saves no tempo', async () => {
+    const source = openBackupDatabase();
+    const { opener } = await seed(source);
+    await source.presets.update(opener.id, { bpm: null });
+    const target = openBackupDatabase();
+    expect((await restoreAll(target, await source.backup.export())).ok).toBe(
+      true,
+    );
+    const restored = await target.presets.list();
+    expect(restored.find((row) => row.uuid === opener.uuid)?.bpm).toBeNull();
+  });
+
   it('links a restored preset to its restored library song', async () => {
     const source = openBackupDatabase();
     await seed(source);

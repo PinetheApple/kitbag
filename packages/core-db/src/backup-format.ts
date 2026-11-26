@@ -57,7 +57,7 @@ export interface LibrarySongRecord
 export interface SongPresetRecord {
   uuid: string;
   name: string;
-  bpm: number;
+  bpm: number | null;
   beatsPerBar: number;
   subdivision: number;
   denominator: number;

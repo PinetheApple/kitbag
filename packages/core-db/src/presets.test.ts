@@ -98,6 +98,12 @@ describe('song preset repository', () => {
     });
   });
 
+  it('stores a preset that saves no tempo', async () => {
+    const { presets } = setup();
+    const created = await presets.create({ ...EVERY_FIELD, bpm: null });
+    expect((await presets.get(created.id))?.bpm).toBeNull();
+  });
+
   it('round-trips every field on update', async () => {
     const { presets } = setup();
     const created = await presets.create(EVERY_FIELD);

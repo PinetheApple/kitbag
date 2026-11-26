@@ -102,12 +102,13 @@ export function rampUnitOf(value: number): KB_RAMP_UNIT {
 
 function rampOf(
   preset: StretchSettingsFields,
+  tempo: number,
   current: RampConfig,
 ): RampConfig {
   return {
     enabled: preset.rampEnabled,
-    startBpm: preset.rampStartBpm ?? preset.bpm,
-    targetBpm: preset.rampEndBpm ?? preset.bpm,
+    startBpm: preset.rampStartBpm ?? tempo,
+    targetBpm: preset.rampEndBpm ?? tempo,
     stepBpm: preset.rampStep,
     interval: preset.rampLength ?? current.interval,
     unit: rampUnitOf(preset.rampUnit),
@@ -123,9 +124,10 @@ function songSettingsOf(
   preset: StretchSettingsFields,
   current: MetronomeConfig,
 ): SongSettings {
-  const ramp = rampOf(preset, current.ramp);
+  const tempo = preset.bpm ?? current.bpm;
+  const ramp = rampOf(preset, tempo, current.ramp);
   return {
-    bpm: roundToEngineBpm(preset.bpm),
+    bpm: roundToEngineBpm(tempo),
     beatsPerBar: preset.beatsPerBar,
     denominator: preset.denominator,
     subdivision: preset.subdivision,
@@ -192,7 +194,7 @@ export function applyPreset(
 ): void {
   const store = metronome();
   const song = songSettingsOf(preset, store);
-  applyMetronomeSettings(store, { ...song, bpm: preset.bpm });
+  applyMetronomeSettings(store, { ...song, bpm: preset.bpm ?? store.bpm });
   if (store.countInScope === COUNT_IN_SCOPE.perSong)
     store.setCountIn({ ...store.countIn, bars: song.countInBars });
 }
