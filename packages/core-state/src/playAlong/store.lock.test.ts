@@ -33,6 +33,7 @@ function tapped(fake = fakePlayAlong()) {
 describe('tap to align', () => {
   it('refuses a tap with no tempo and leaves the engine alone', () => {
     const fake = fakePlayAlong();
+    fake.store.getState().watchLibrary();
     expect(fake.store.getState().tap(START_MS)).toEqual({
       locked: false,
       reason: LOCK_REFUSAL.noBpm,

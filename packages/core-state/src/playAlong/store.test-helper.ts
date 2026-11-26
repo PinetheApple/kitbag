@@ -160,12 +160,13 @@ export function fakePlayAlong({
   const readGrid = vi.fn(() => Promise.resolve(grid));
   const playbackStarted = vi.fn();
   const cardListeners = new Set<(request: PlayAlongCardRequest) => void>();
+  const sessionsRead = vi.fn(() => media);
   const runtime: PlayAlongRuntime = {
     commands,
     boottimeNowMs: () => Date.now(),
     nowFrame,
     engineFrameAtBoottimeMs: frameAt,
-    sessions: () => media,
+    sessions: sessionsRead,
     ladder: () => library.ladder,
     readGrid,
     sessionCommand,
@@ -182,6 +183,7 @@ export function fakePlayAlong({
   };
   return {
     store: createPlayAlongStore(runtime),
+    sessionsRead,
     calls,
     commands,
     media,

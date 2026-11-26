@@ -3,6 +3,7 @@ import type { KB_ACCENT, MediaSessionStep } from '@kitbag/core-native';
 
 import { configuredStore, type StoreAccess } from '../configuredStore.ts';
 import { BPM_BOUNDS, clamp } from '../metronome/config.ts';
+import { DEFAULT_BPM } from '../metronome/store.ts';
 import type { DetectedGrid } from '../stemPlayer/meterOverride.ts';
 import {
   clickAlone,
@@ -37,7 +38,7 @@ import {
 import { extrapolatedPositionMs } from './position.ts';
 import { nativePlayAlongRuntime, type PlayAlongRuntime } from './runtime.ts';
 import { playAlongSlot, type PlayAlongSlot } from './slot.ts';
-import { songTempo, startingBpm } from './songTempo.ts';
+import { songTempo } from './songTempo.ts';
 import { findSession, trackOf, type PlayAlongTrack } from './track.ts';
 
 export type { PlayAlongTrack } from './track.ts';
@@ -202,7 +203,7 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
     };
     return {
       pattern: initialPattern(),
-      bpm: startingBpm(runtime),
+      bpm: DEFAULT_BPM,
       offer: undefined,
       lastRefusal: undefined,
       clickPlaying: false,

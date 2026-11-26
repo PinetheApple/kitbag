@@ -200,8 +200,11 @@ describe('the tempo on a track change', () => {
     stop();
   });
 
-  it('starts with no tempo while a song is there but not yet looked up', () => {
-    expect(fakePlayAlong().store.getState().bpm).toBeUndefined();
+  it('shows no tempo once watched while a song has none yet', () => {
+    const fake = fakePlayAlong();
+    const stop = fake.store.getState().watchLibrary();
+    expect(fake.store.getState().bpm).toBeUndefined();
+    stop();
   });
 
   it('keeps a typed tempo when the app reports the same track paused', () => {

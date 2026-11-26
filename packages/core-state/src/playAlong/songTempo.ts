@@ -20,9 +20,6 @@ const sameIdentity = (
   a?.artist === b?.artist &&
   a?.durationMs === b?.durationMs;
 
-export const startingBpm = (runtime: PlayAlongRuntime) =>
-  chosenSession(runtime) === undefined ? DEFAULT_BPM : undefined;
-
 export function songTempo(
   runtime: PlayAlongRuntime,
   { getState, setState }: StoreAccess<LockedView>,

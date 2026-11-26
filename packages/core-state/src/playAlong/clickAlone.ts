@@ -18,8 +18,6 @@ export function clickAlone(
   { getState, setState }: StoreAccess<ClickAloneState & LockedView>,
   slot: PlayAlongSlot,
 ) {
-  const { commands } = runtime;
-
   const stop = () => {
     if (!getState().clickPlaying) return;
     setState({ clickPlaying: false });
@@ -32,8 +30,8 @@ export function clickAlone(
     if (chosenSession(runtime) !== undefined) return;
     slot.enter(stop);
     try {
-      commands.setTempo(bpm);
-      commands.metronomeStart(runtime.nowFrame());
+      runtime.commands.setTempo(bpm);
+      runtime.commands.metronomeStart(runtime.nowFrame());
     } catch (error) {
       slot.leave();
       throw error;
@@ -56,7 +54,7 @@ export function clickAlone(
     stop,
     watch,
     retempo: (bpm: number) => {
-      if (getState().clickPlaying) commands.setTempo(bpm);
+      if (getState().clickPlaying) runtime.commands.setTempo(bpm);
     },
   };
 }
