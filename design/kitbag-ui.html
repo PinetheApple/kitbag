@@ -514,7 +514,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
       <h3>Play along — sync without capture</h3>
       <ul>
         <li><b>Now-playing card</b> mirrors whatever media session is active (Spotify, YT Music…) with working transport — metadata + control, never audio capture.</li>
-        <li><b>BPM ladder</b>: your library → GetSongBPM → offline dump → your tap. Source shown; one tap overrides. Never authoritative, always editable.</li>
+        <li><b>BPM ladder</b>: your library → GetSongBPM (your own key) → your tap. Source shown; one tap overrides. Never authoritative, always editable.</li>
         <li><b>The tap pad is the hero</b>: tempo is known, phase isn't — one tap on any downbeat locks the click to the song. Nudge buttons trim ±10ms for Bluetooth latency.</li>
         <li><b>Auto-lock card</b> appears when title/artist matches an analyzed library song: reuse its beat grid, zero taps. The two features compound here.</li>
         <li class="src">Re-anchors from the session position every 1–2s; drift correction invisible unless it fails, then the tap pad is right there.</li>
