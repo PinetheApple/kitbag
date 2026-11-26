@@ -269,27 +269,27 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeFollowMixer(JNIEnv*, jobje
 // Must not need the JS thread (SPEC §5.8): the service calls these directly.
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_EngineTransport_nativeStart(JNIEnv*, jobject) {
-  kitbag::commandMetronomeStartNow();
+  kitbag::commandStandaloneStartNow();
 }
 
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_EngineTransport_nativePause(JNIEnv*, jobject) {
-  kitbag::commandMetronomePause();
+  kitbag::commandStandalonePause();
 }
 
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_EngineTransport_nativeStop(JNIEnv*, jobject) {
-  kitbag::commandMetronomeStop();
+  kitbag::commandStandaloneStop();
 }
 
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_EngineTransport_nativeSetTempo(JNIEnv*, jobject, jdouble bpm) {
-  kitbag::commandSetTempo(bpm);
+  kitbag::commandStandaloneSetTempo(bpm);
 }
 
 JNIEXPORT jdouble JNICALL
 Java_com_kitbag_corenative_EngineTransport_nativeCurrentBpm(JNIEnv*, jobject) {
-  return kb_metronome_current_bpm(kitbag::kitbagEngine());
+  return kitbag::commandStandaloneBpm();
 }
 
 JNIEXPORT void JNICALL

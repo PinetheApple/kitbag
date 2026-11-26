@@ -11,9 +11,16 @@ void commandStop();
 int32_t commandHold();
 void commandRelease();
 void commandMetronomeStart(double anchorFrame);
-void commandMetronomeStartNow();
 void commandMetronomeStop();
 void commandMetronomePause();
+void commandMetronomeSelectSlot(int32_t slot);
+void commandMetronomeAnchorExternal(double songPosSec, double atFrame, double bpm);
+// The lock-screen card's calls: always the standalone slot, whatever JS selected.
+void commandStandaloneStartNow();
+void commandStandalonePause();
+void commandStandaloneStop();
+void commandStandaloneSetTempo(double bpm);
+double commandStandaloneBpm();
 int32_t commandRigClickStart(double bpm, int32_t subdivision, double startFrame);
 void commandRigClickStop();
 bool commandRigClickIsActive();

@@ -91,13 +91,24 @@ export interface EngineClockHost extends Pick<
   readonly clock_pair_monotonic_ns: number;
 }
 
+/** Android's elapsedRealtime clock against the engine's; read at re-anchor rate. */
+export interface BoottimeClockHost {
+  /** kb_clock_boottime_ns in ms: SystemClock.elapsedRealtime, fractional. */
+  readonly boottime_ms: number;
+  /** kb_engine_frame_at_boottime for an elapsedRealtime ms; NaN while it returns non-OK. */
+  frame_at_boottime_ms(boottimeMs: number): number;
+}
+
 /** The mixdown export's polled state; read a few times a second, not per frame. */
 export interface MixdownHost {
   readonly mixdown_progress: number;
   readonly mixdown_state: number;
 }
 
-type InstalledHost = KitbagHostObject & EngineClockHost & MixdownHost;
+type InstalledHost = KitbagHostObject &
+  EngineClockHost &
+  BoottimeClockHost &
+  MixdownHost;
 
 interface HostGlobal {
   [KITBAG_HOST_OBJECT_KEY]?: InstalledHost;
@@ -109,6 +120,10 @@ export function getKitbagHostObject(): KitbagHostObject {
 }
 
 export function getEngineClockHost(): EngineClockHost {
+  return installedHost();
+}
+
+export function getBoottimeClockHost(): BoottimeClockHost {
   return installedHost();
 }
 

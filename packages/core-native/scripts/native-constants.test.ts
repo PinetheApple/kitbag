@@ -53,6 +53,7 @@ const realSources: NativeSources = {
   mixdownHeader: read('include', 'kitbag_mixdown_api.h'),
   clickSoundHeader: read('include', 'kitbag_click_sound_api.h'),
   constantTempoHeader: read('include', 'kitbag_constant_tempo_api.h'),
+  metronomeSlotHeader: read('include', 'kitbag_metronome_slot_api.h'),
 };
 
 describe('parseDefineInt', () => {

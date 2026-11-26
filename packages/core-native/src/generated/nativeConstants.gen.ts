@@ -187,6 +187,13 @@ export const KB_MIXDOWN_STATE = {
 } as const;
 export type KB_MIXDOWN_STATE = (typeof KB_MIXDOWN_STATE)[keyof typeof KB_MIXDOWN_STATE];
 
+/** kb_metronome_slot enum (kb_metronome_select_slot): which metronome the kb_metronome_* calls address. */
+export const KB_METRONOME_SLOT = {
+  KB_METRONOME_SLOT_STANDALONE: 0,
+  KB_METRONOME_SLOT_PLAY_ALONG: 1,
+} as const;
+export type KB_METRONOME_SLOT = (typeof KB_METRONOME_SLOT)[keyof typeof KB_METRONOME_SLOT];
+
 /** Mixdown WAV channels (KB_MIXDOWN_CHANNELS); its rate is the engine's. */
 export const KB_MIXDOWN_CHANNELS = 2;
 

@@ -3,9 +3,10 @@ import { describe, expect, it } from 'vitest';
 import {
   type EngineClockPair,
   readEngineClockPair,
+  readFrameAtBoottimeMs,
   renderedFrameToMonotonicMs,
 } from './engineClock.ts';
-import type { EngineClockHost } from './KitbagHostObject.ts';
+import type { BoottimeClockHost, EngineClockHost } from './KitbagHostObject.ts';
 
 const ENGINE_RATE = 48_000;
 const OTHER_RATE = 44_100;
@@ -105,5 +106,33 @@ describe('readEngineClockPair', () => {
 
   it('reports no pair before the first render callback', () => {
     expect(readEngineClockPair(steadyHost(Number.NaN, Number.NaN))).toBeNull();
+  });
+});
+
+describe('readFrameAtBoottimeMs', () => {
+  const REPORTED_AT_MS = 98_765_432.125;
+  const MAPPED_FRAME = 4_740_741;
+
+  function mappingHost(frameFor: (ms: number) => number): BoottimeClockHost {
+    return { boottime_ms: REPORTED_AT_MS, frame_at_boottime_ms: frameFor };
+  }
+
+  it('passes the instant through and returns its frame', () => {
+    const asked: number[] = [];
+    const host = mappingHost((ms) => {
+      asked.push(ms);
+      return MAPPED_FRAME;
+    });
+    expect(readFrameAtBoottimeMs(host, REPORTED_AT_MS)).toBe(MAPPED_FRAME);
+    expect(asked).toEqual([REPORTED_AT_MS]);
+  });
+
+  it('reports no frame before the first render callback', () => {
+    expect(
+      readFrameAtBoottimeMs(
+        mappingHost(() => Number.NaN),
+        REPORTED_AT_MS,
+      ),
+    ).toBeNull();
   });
 });

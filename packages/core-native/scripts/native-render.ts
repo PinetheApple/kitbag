@@ -139,6 +139,8 @@ ${renderEnum('KB_RAMP_UNIT', c.rampUnit)}
 ${renderEnum('KB_RAMP_STATE', c.rampState)}
 /** kb_mixdown_state enum. */
 ${renderEnum('KB_MIXDOWN_STATE', c.mixdownState)}
+/** kb_metronome_slot enum (kb_metronome_select_slot): which metronome the kb_metronome_* calls address. */
+${renderEnum('KB_METRONOME_SLOT', c.metronomeSlot)}
 /** Mixdown WAV channels (KB_MIXDOWN_CHANNELS); its rate is the engine's. */
 export const KB_MIXDOWN_CHANNELS = ${String(c.mixdownChannels)};
 

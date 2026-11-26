@@ -94,6 +94,7 @@ export function collectConstants(sources: NativeSources): NativeConstants {
     rampUnit: parseEnum(sources.apiHeader, 'kb_ramp_unit'),
     rampState: parseEnum(sources.apiHeader, 'kb_ramp_state'),
     mixdownState: parseEnum(sources.mixdownHeader, 'kb_mixdown_state'),
+    metronomeSlot: parseEnum(sources.metronomeSlotHeader, 'kb_metronome_slot'),
     mixdownChannels: parseDefineInt(
       sources.mixdownHeader,
       'KB_MIXDOWN_CHANNELS',

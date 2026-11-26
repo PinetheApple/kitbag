@@ -94,6 +94,14 @@ export interface Spec extends TurboModule {
   metronomeStart(anchorFrame: CodegenTypes.Double): void;
   metronomeStop(): void;
   metronomePause(): void;
+  /** A KB_METRONOME_SLOT; every later metronome command and read addresses it. */
+  metronomeSelectSlot(slot: CodegenTypes.Int32): void;
+  /** kb_metronome_anchor_external, then the device; a bad atFrame or a non-finite value is dropped. */
+  metronomeAnchorExternal(
+    songPosSec: CodegenTypes.Double,
+    atFrame: CodegenTypes.Double,
+    bpm: CodegenTypes.Double,
+  ): void;
 
   rigClickStart(
     bpm: CodegenTypes.Double,

@@ -67,17 +67,48 @@ void commandMetronomeStart(double anchorFrame) {
   kb_metronome_start_at(commandEngine(), static_cast<uint64_t>(anchorFrame));
   commandStart();
 }
-// start_at only takes effect while stopped, so a stale Resume cannot restart a running
-// click, and unlike start it keeps an anchor the app queued, which must still land.
-void commandMetronomeStartNow() {
+void commandMetronomeStop() { kb_metronome_stop(commandEngine()); }
+void commandMetronomePause() { kb_metronome_pause(commandEngine()); }
+
+// A running slot reselected needs the device back; a stopped one leaves it to the idle rule.
+void commandMetronomeSelectSlot(int32_t slot) {
+  bool running = false;
   {
     const LockedEngine engine = commandEngine();
-    kb_metronome_start_at(engine, kb_engine_frames_rendered(engine));
+    kb_metronome_select_slot(engine, slot);
+    running = kb_metronome_is_running(engine) != 0;
+  }
+  if (running) commandStart();
+}
+void commandMetronomeAnchorExternal(double songPosSec, double atFrame, double bpm) {
+  const auto frame = wholeFrame(atFrame);
+  if (!frame || !std::isfinite(songPosSec) || !std::isfinite(bpm)) return;
+  kb_metronome_anchor_external(commandEngine(), songPosSec, *frame, bpm);
+  commandStart();
+}
+
+// start_at only takes effect while stopped, so a stale Resume cannot restart a running
+// click, and unlike start it keeps an anchor the app queued, which must still land.
+void commandStandaloneStartNow() {
+  {
+    const LockedEngine engine = commandEngine();
+    kb_metronome_slot_start_at(engine, KB_METRONOME_SLOT_STANDALONE,
+                               kb_engine_frames_rendered(engine));
   }
   commandStart();
 }
-void commandMetronomeStop() { kb_metronome_stop(commandEngine()); }
-void commandMetronomePause() { kb_metronome_pause(commandEngine()); }
+void commandStandalonePause() {
+  kb_metronome_slot_pause(commandEngine(), KB_METRONOME_SLOT_STANDALONE);
+}
+void commandStandaloneStop() {
+  kb_metronome_slot_stop(commandEngine(), KB_METRONOME_SLOT_STANDALONE);
+}
+void commandStandaloneSetTempo(double bpm) {
+  kb_metronome_slot_set_tempo(commandEngine(), KB_METRONOME_SLOT_STANDALONE, bpm);
+}
+double commandStandaloneBpm() {
+  return kb_metronome_slot_current_bpm(kitbagEngine(), KB_METRONOME_SLOT_STANDALONE);
+}
 
 int32_t commandRigClickStart(double bpm, int32_t subdivision, double startFrame) {
   constexpr double kExactFrameLimit = static_cast<double>(int64_t{1} << 53);

@@ -44,6 +44,12 @@ uint64_t countedEnd = 0;
 int32_t countedStartClick = -1;
 uint64_t playedFrom = 0;
 uint64_t startedAt = 0;
+int32_t startedSlot = -1;
+int32_t selectedSlot = -1;
+int32_t runningRead = 0;
+uint64_t anchoredAt = 0;
+constexpr double kSongPos = 83.25;
+constexpr double kSongBpm = 121.5;
 constexpr uint64_t kRenderedFrames = 96000;
 
 void fail(const char* what, double track, double value) {
@@ -163,9 +169,34 @@ void expectSongTransport(void (*command)(), const char* what, const std::string&
 
 void expectServiceStartCannotRestart() {
   songCalls.clear();
-  kitbag::commandMetronomeStartNow();
+  kitbag::commandStandaloneStartNow();
   if (songCalls != "start-at start ") fail(("service start: " + songCalls).c_str(), 0, 0);
   if (startedAt != kRenderedFrames) fail("service start frame", 0, static_cast<double>(startedAt));
+  if (startedSlot != KB_METRONOME_SLOT_STANDALONE) fail("service start slot", 0, startedSlot);
+}
+
+void expectAnchor(double atFrame, double bpm, const std::string& wantCalls) {
+  songCalls.clear();
+  kitbag::commandMetronomeAnchorExternal(kSongPos, atFrame, bpm);
+  if (songCalls != wantCalls) fail(("anchor: " + songCalls).c_str(), atFrame, bpm);
+}
+
+void expectAnchorExternal() {
+  expectAnchor(kEndFrame, kSongBpm, "anchor start ");
+  if (static_cast<double>(anchoredAt) != kEndFrame) fail("anchor frame", kEndFrame, 0);
+  expectAnchor(kNaN, kSongBpm, "");
+  expectAnchor(-1, kSongBpm, "");
+  expectAnchor(kEndFrame + 0.5, kSongBpm, "");
+  expectAnchor(kBeyondExactFrame, kSongBpm, "");
+  expectAnchor(kEndFrame, kNaN, "");
+}
+
+void expectSelect(int32_t running, const std::string& wantCalls) {
+  songCalls.clear();
+  runningRead = running;
+  kitbag::commandMetronomeSelectSlot(KB_METRONOME_SLOT_PLAY_ALONG);
+  if (songCalls != wantCalls) fail(("select: " + songCalls).c_str(), running, 0);
+  if (selectedSlot != KB_METRONOME_SLOT_PLAY_ALONG) fail("select slot", running, selectedSlot);
 }
 
 }  // namespace
@@ -226,9 +257,21 @@ extern "C" kb_result kb_mixer_play_at(kb_engine*, uint64_t start) {
 
 extern "C" uint64_t kb_engine_frames_rendered(const kb_engine*) { return kRenderedFrames; }
 extern "C" void kb_metronome_start(kb_engine*) { songCalls += "restart "; }
-extern "C" void kb_metronome_start_at(kb_engine*, uint64_t frame) {
+extern "C" void kb_metronome_slot_start_at(kb_engine*, int32_t slot, uint64_t frame) {
   songCalls += "start-at ";
+  startedSlot = slot;
   startedAt = frame;
+}
+extern "C" void kb_metronome_select_slot(kb_engine*, int32_t slot) {
+  songCalls += "select ";
+  selectedSlot = slot;
+}
+extern "C" int32_t kb_metronome_is_running(const kb_engine*) { return runningRead; }
+extern "C" void kb_metronome_anchor_external(kb_engine*, double songPos, uint64_t frame,
+                                             double bpm) {
+  songCalls += "anchor ";
+  anchoredAt = frame;
+  if (songPos != kSongPos || bpm != kSongBpm) fail("anchor args", songPos, bpm);
 }
 extern "C" void kb_metronome_stop(kb_engine*) { songCalls += "stop "; }
 extern "C" void kb_metronome_pause(kb_engine*) { songCalls += "click-pause "; }
@@ -275,6 +318,9 @@ int main() {
   expectSongTransport(kitbag::commandSongStop, "song stop", "stop mixer-stop ");
 
   expectServiceStartCannotRestart();
+  expectAnchorExternal();
+  expectSelect(1, "select start ");
+  expectSelect(0, "select ");
 
   return failures == 0 ? 0 : 1;
 }

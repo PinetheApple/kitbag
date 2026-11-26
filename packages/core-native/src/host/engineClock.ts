@@ -1,4 +1,4 @@
-import type { EngineClockHost } from './KitbagHostObject.ts';
+import type { BoottimeClockHost, EngineClockHost } from './KitbagHostObject.ts';
 
 export type EngineClockPair = Readonly<{
   frame: number;
@@ -24,6 +24,15 @@ export function readEngineClockPair(
     }
   }
   return null;
+}
+
+/** The engine frame playing at an elapsedRealtime instant, or null before the first render. */
+export function readFrameAtBoottimeMs(
+  host: BoottimeClockHost,
+  boottimeMs: number,
+): number | null {
+  const frame = host.frame_at_boottime_ms(boottimeMs);
+  return Number.isNaN(frame) ? null : frame;
 }
 
 /** CLOCK_MONOTONIC ms at which the engine rendered frame, the base of a touch nativeEvent.timestamp. */
