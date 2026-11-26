@@ -60,7 +60,14 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
     layout: '1x1',
     summary: 'Mix and loop imported stems',
   },
-  { id: TOOL_ID.sync, name: 'Play along', icon: 'playAlong', layout: 'row' },
+  {
+    id: TOOL_ID.sync,
+    name: 'Play along',
+    icon: 'playAlong',
+    homeTile: { label: 'Play along', route: '/sync' },
+    layout: 'row',
+    summary: 'Needs notification access',
+  },
   {
     id: TOOL_ID.practiceHistory,
     name: 'Practice history',

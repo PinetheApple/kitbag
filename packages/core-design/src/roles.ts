@@ -1,3 +1,4 @@
+import { metronome } from './metronomeRoles.ts';
 import { fontFamily, ledRadius, radii, type TypeRole } from './tokens.ts';
 
 export const space = {
@@ -303,6 +304,7 @@ export const textRoles = {
   hint: { family: body, weight: 400, size: 11.5 },
   rowTitle: { family: display, weight: 500, size: 14.5 },
   rowSubtitle: { family: body, weight: 400, size: 12 },
+  rowSubtitleStrong: { family: body, weight: 600, size: 12 },
   dragIndex: { family: display, weight: 400, size: 11.5, tabular: true },
   editValue: { family: display, weight: 400, size: 13.5 },
   levelReadout: { family: display, weight: 500, size: 13.5, tabular: true },
@@ -360,6 +362,12 @@ export const textRoles = {
   stepValueSuffix: { family: display, weight: 500, size: 11 },
   legend: { family: body, weight: 400, size: 12.5 },
   countSquare: { family: display, weight: 700, size: 26, tabular: true },
+  tempoNumeralTight: {
+    family: display,
+    weight: 700,
+    size: metronome.tempoNumeralTight,
+    tabular: true,
+  },
   keyBadge: { family: display, weight: 700, size: 10.5, tabular: true },
   coachTitle: { family: display, weight: 600, size: 15 },
   coachBody: { family: body, weight: 400, size: 13.5 },

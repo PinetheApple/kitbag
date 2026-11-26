@@ -1,7 +1,5 @@
-import type { LedState } from '@kitbag/core-design';
+import { TEXT_PLACEHOLDER, type LedState } from '@kitbag/core-design';
 import { KB_ACCENT } from '@kitbag/core-native';
-
-import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
 
 export function ledStateFor(accent: KB_ACCENT): LedState {
   if (accent === KB_ACCENT.KB_ACCENT_ACCENTED) return 'accented';

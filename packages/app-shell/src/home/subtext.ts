@@ -16,6 +16,7 @@ export const UPCOMING_SUBTEXT = 'Coming soon';
 export const MORE_TOOLS_TITLE = 'More tools';
 export const MORE_TOOLS_HINT = 'To make one a Home tile, tap Edit on Home.';
 export const LIBRARY_UNAVAILABLE_SUBTEXT = 'Library unavailable';
+export const PLAY_ALONG_SUBTEXT = 'Sync to Spotify & more';
 
 export interface MetronomeSummary {
   readonly bpm: number;
