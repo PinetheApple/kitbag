@@ -79,7 +79,7 @@ describe('picking a file', () => {
   it.each([
     [
       'a newer version',
-      '{"format":"kitbag-backup","version":5}',
+      '{"format":"kitbag-backup","version":6}',
       'unsupportedVersion',
     ],
     ['malformed JSON', '{not json', 'malformedFile'],

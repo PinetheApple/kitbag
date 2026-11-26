@@ -36,10 +36,14 @@ type LoggedField =
   | 'barMuteMuteBars'
   | 'countInBars';
 
-export type StretchSettingsFields = Pick<SongPreset, LoggedField> &
+type LoggedPresetFields = Omit<Pick<SongPreset, LoggedField>, 'bpm'> & {
+  bpm: number;
+};
+
+export type StretchSettingsFields = LoggedPresetFields &
   Parameters<typeof presetBase64>[0];
 
-export type LoggedSettings = Pick<SongPreset, LoggedField> &
+export type LoggedSettings = LoggedPresetFields &
   ReturnType<typeof presetBase64>;
 
 export interface LoggedCountIn {
