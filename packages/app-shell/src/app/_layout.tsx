@@ -9,6 +9,7 @@ import '@/runtime/stemPlayerRuntime';
 import '@/runtime/songPlayerRuntime';
 import '@/runtime/dataFolderRuntime';
 import '@/runtime/tunerRuntime';
+import '@/runtime/mediaSessionsRuntime';
 import '@/runtime/lastToolRuntime';
 import '@/runtime/homeLayoutRuntime';
 import '@/runtime/swipeHintRuntime';

@@ -141,6 +141,12 @@ export {
 } from './appChrome';
 export type { AppNightMode, AppVersion } from './appChromeTypes.ts';
 export { getOutputRoute, watchOutputRoute } from './outputRoute';
+export {
+  isNotificationListenerEnabled,
+  mediaSessionCommand,
+  openNotificationListenerSettings,
+  subscribeMediaSessions,
+} from './mediaSessions/source';
 export type {
   MediaSessionCommand,
   MediaSessionSnapshot,

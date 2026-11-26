@@ -541,6 +541,17 @@ export {
   type NotificationReason,
   type NotificationStatus,
 } from './notifications/store.ts';
+export { useMediaSessions } from './mediaSessions/useMediaSessions.ts';
+export {
+  configureMediaSessions,
+  createMediaSessionsStore,
+  getMediaSessionsStore,
+  type MediaSessionsRuntime,
+  type MediaSessionsSource,
+  type MediaSessionsStore,
+  type SessionChoice,
+  type SessionChooser,
+} from './mediaSessions/store.ts';
 export { useSwipeHint } from './firstUse/useSwipeHint.ts';
 export {
   configureSwipeHintPersistence,
