@@ -198,7 +198,7 @@ export function PlayAlongBody(props: PlayAlongBodyProps) {
   const { session, lock } = props;
   const drift = useDriftInputs(session);
   const locked = useLockedPad(lock, drift);
-  const track = useNewTrack(lock);
+  const track = useNewTrack(session, lock);
   const meter =
     lock === undefined ? null : (
       <DriftMeter

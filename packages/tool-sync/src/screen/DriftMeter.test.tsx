@@ -54,8 +54,13 @@ vi.mock('@kitbag/core-design', async (original) => {
   };
 });
 
+vi.mock('./playAlongHooks.ts', () => ({
+  usePlayAlong: <T,>(selector: (state: { nudgePhase: () => void }) => T) =>
+    selector({ nudgePhase: vi.fn() }),
+}));
+
 const { DRIFT_STRIP_STOPS } = await import('@kitbag/core-design');
-const { DriftMeterCard } = await import('./DriftMeter.tsx');
+const { DriftMeter, DriftMeterCard } = await import('./DriftMeter.tsx');
 
 const locked: DriftView = {
   state: DRIFT_STATE.locked,
@@ -168,5 +173,36 @@ describe('DriftMeterCard', () => {
     const markup = drawn(drift);
     expect(markup).not.toContain('Phase');
     expect(steppers).toHaveLength(0);
+  });
+});
+
+describe('DriftMeter', () => {
+  it('shows a nudge clamped at the half-beat limit in whole milliseconds', () => {
+    steppers.length = 0;
+    renderToStaticMarkup(
+      createElement(DriftMeter, {
+        lock: {
+          sessionId: 'spotify',
+          track: { title: 'Song', artist: 'Artist', durationMs: null },
+          downbeatSec: 0,
+          bpm: 171,
+          lockedAtBoottimeMs: 0,
+          grid: undefined,
+          phaseOffsetMs: 30000 / 171,
+          downbeatShift: 0,
+          downbeatShiftAvailable: true,
+          gridDownbeats: undefined,
+        },
+        session: undefined,
+        drift: {
+          songAheadOfClickMs: 0,
+          playing: true,
+          sourceGoneAtMs: undefined,
+        },
+        onRetap: vi.fn(),
+        onOpenPhase: vi.fn(),
+      }),
+    );
+    expect(steppers[0]).toMatchObject({ value: '+175 ms' });
   });
 });

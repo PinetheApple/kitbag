@@ -2,27 +2,27 @@ import { Pressable, Text, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
 import { opacity, size } from '../roles.ts';
-import { stemSections, stemSectionsText } from '../stemPlayerRoles.ts';
+import { stepper, stepperText } from '../stepperRoles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { hitBoxStyle, hitExtension } from '../touchTarget.ts';
 import { Icon } from './Icon.tsx';
 
 const KEY_HIT_BOX = hitBoxStyle(
-  hitExtension(stemSections.stepperKey, stemSections.stepperHeight, {
-    left: stemSections.stepperGap,
-    right: stemSections.stepperGap,
+  hitExtension(stepper.key, stepper.height, {
+    left: stepper.gap,
+    right: stepper.gap,
   }),
 );
 
 const useStyles = createThemedStyles((theme) => ({
   stepper: {
-    minHeight: stemSections.stepperHeight,
-    paddingHorizontal: stemSections.stepperH,
+    minHeight: stepper.height,
+    paddingHorizontal: stepper.inset,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: stemSections.stepperGap,
-    borderRadius: stemSections.stepperRadius,
+    gap: stepper.gap,
+    borderRadius: stepper.radius,
     borderWidth: size.stroke,
     borderColor: theme.color.line,
     backgroundColor: theme.color.surface2,
@@ -32,14 +32,14 @@ const useStyles = createThemedStyles((theme) => ({
     backgroundColor: theme.activeControlFill,
   },
   key: {
-    width: stemSections.stepperKey,
-    minHeight: stemSections.stepperKey,
+    width: stepper.key,
+    minHeight: stepper.key,
     alignItems: 'center',
     justifyContent: 'center',
   },
   value: {
-    ...textStyle(stemSectionsText.stepValue),
-    minWidth: stemSections.stepperValue,
+    ...textStyle(stepperText.value),
+    minWidth: stepper.value,
     color: theme.color.text,
     textAlign: 'center',
   },
@@ -61,9 +61,9 @@ export interface StepperProps {
   readonly onLater: () => void;
   readonly onValuePress?: () => void;
   readonly valueLabel?: string;
-  readonly accessibilityLabel?: string;
   readonly tone?: 'plain' | 'on';
   readonly disabled?: boolean;
+  readonly disabledHint?: string;
 }
 
 function StepperValue({
@@ -94,13 +94,16 @@ export function Stepper({
   onLater,
   tone = 'plain',
   disabled = false,
-  accessibilityLabel,
-  ...value
+  disabledHint,
+  ...display
 }: StepperProps) {
   const styles = useStyles();
+  const keyHint =
+    disabled && disabledHint !== undefined
+      ? { accessibilityHint: disabledHint }
+      : {};
   return (
     <View
-      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}
       style={[
         styles.stepper,
@@ -112,17 +115,19 @@ export function Stepper({
         accessibilityRole="button"
         accessibilityLabel={keys.earlierLabel}
         accessibilityState={{ disabled }}
+        {...keyHint}
         disabled={disabled}
         style={[styles.key, KEY_HIT_BOX]}
         onPress={onEarlier}
       >
         <Icon name={keys.earlier} size="lyricsChip" color="text2" />
       </Pressable>
-      <StepperValue {...value} tone={tone} />
+      <StepperValue {...display} tone={tone} />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={keys.laterLabel}
         accessibilityState={{ disabled }}
+        {...keyHint}
         disabled={disabled}
         style={[styles.key, KEY_HIT_BOX]}
         onPress={onLater}

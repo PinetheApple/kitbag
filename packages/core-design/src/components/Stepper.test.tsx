@@ -82,4 +82,17 @@ describe('Stepper', () => {
     drawn({ disabled: true });
     expect(presses.map((p) => p.disabled)).toEqual([true, true]);
   });
+
+  it('gives disabled keys the reason as their hint', () => {
+    drawn({ disabled: true, disabledHint: 'Not available' });
+    expect(presses.map((p) => p.accessibilityHint)).toEqual([
+      'Not available',
+      'Not available',
+    ]);
+    drawn({ disabledHint: 'Not available' });
+    expect(presses.map((p) => p.accessibilityHint)).toEqual([
+      undefined,
+      undefined,
+    ]);
+  });
 });

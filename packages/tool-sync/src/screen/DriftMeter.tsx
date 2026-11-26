@@ -16,11 +16,7 @@ import {
   useTextScaled,
 } from '@kitbag/core-design';
 import type { MediaSessionSnapshot } from '@kitbag/core-native';
-import {
-  formatOffsetMs,
-  type BeatDirection,
-  type PlayAlongLock,
-} from '@kitbag/core-state';
+import { type BeatDirection, type PlayAlongLock } from '@kitbag/core-state';
 import { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
@@ -31,6 +27,7 @@ import {
   type DriftStateInputs,
   type DriftView,
 } from '../logic/driftMeter.ts';
+import { phaseReading } from '../logic/phaseView.ts';
 import { NUDGE_KEYS } from './phaseKeys.ts';
 import { usePlayAlong } from './playAlongHooks.ts';
 import { useLastSeen } from './useLastSeen.ts';
@@ -209,7 +206,7 @@ export function DriftMeter({
     nowMs,
   });
   const phase = {
-    reading: formatOffsetMs(lock.phaseOffsetMs),
+    reading: phaseReading(lock.phaseOffsetMs),
     onNudge: nudgePhase,
     onOpen: onOpenPhase,
   };

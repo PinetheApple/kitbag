@@ -54,6 +54,10 @@ vi.mock('@kitbag/core-design', async (original) => {
 });
 
 const BPM = 171;
+const NORMAL_SPEED = 1;
+const FAST_SPEED = 1.5;
+
+const followed = vi.hoisted(() => ({ speed: 1 }));
 
 const playAlong = vi.hoisted(() => ({
   lock: undefined as Record<string, unknown> | undefined,
@@ -69,7 +73,7 @@ const playAlong = vi.hoisted(() => ({
 vi.mock('./playAlongHooks.ts', () => ({
   usePlayAlong: <T,>(selector: (state: typeof playAlong) => T) =>
     selector(playAlong),
-  useFollowedSession: () => ({ speed: 1 }),
+  useFollowedSession: () => followed,
 }));
 
 const { PhaseSheet } = await import('./PhaseSheet.tsx');
@@ -108,6 +112,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   playAlong.lock = lock;
   playAlong.phaseStepMs = 10;
+  followed.speed = NORMAL_SPEED;
 });
 
 describe('PhaseSheet', () => {
@@ -155,8 +160,24 @@ describe('PhaseSheet', () => {
     drawn();
     expect(downbeatStepper()).toMatchObject({
       disabled: true,
-      accessibilityLabel: DOWNBEAT_UNAVAILABLE,
+      disabledHint: DOWNBEAT_UNAVAILABLE,
     });
+  });
+
+  it('reads a nudge clamped at the half-beat limit in whole milliseconds', () => {
+    playAlong.lock = { ...lock, phaseOffsetMs: 30000 / 171 };
+    const markup = drawn();
+    expect(seen.readouts[0]).toMatchObject({ digits: '+175 ms' });
+    expect(nudgeStepper()).toMatchObject({ value: '+175 ms' });
+    expect(markup).toContain('<i>+355 ms total</i>');
+  });
+
+  it('measures the range and the tempo at the speed the app plays', () => {
+    followed.speed = FAST_SPEED;
+    const markup = drawn();
+    expect(markup).toContain('−½ beat · −117 ms');
+    expect(markup).toContain('+117 ms · +½ beat');
+    expect(markup).toContain('at 257 BPM');
   });
 
   it('adds the route latency and the song nudge into one total', () => {

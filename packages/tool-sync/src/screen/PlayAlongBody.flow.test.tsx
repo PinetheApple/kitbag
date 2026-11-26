@@ -4,6 +4,8 @@ import { act, createElement, type ReactNode } from 'react';
 import { create, type ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { UNLOCK_REASON } from '@kitbag/core-state';
+
 import { PLAY_ALONG_VIEW } from '../logic/playAlongView.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
@@ -110,6 +112,12 @@ const firstSong = {
   spokenWord: false,
 };
 const nextSong = { ...firstSong, title: 'Levitating', artist: 'Dua Lipa' };
+const otherApp = {
+  ...firstSong,
+  sessionId: 'youtube',
+  packageName: 'youtube',
+  appLabel: 'YouTube',
+};
 
 const lockOn = (song: typeof firstSong, at: number) => ({
   sessionId: song.sessionId,
@@ -178,7 +186,7 @@ beforeEach(() => {
   playAlong.unlockReason = undefined;
 });
 
-const TRACK_CHANGED = 'track-changed';
+const TRACK_CHANGED = UNLOCK_REASON.trackChanged;
 
 describe('re-tap from the drift meter', () => {
   it('brings the pad back, re-locks on a tap and gives the slot back on lift', async () => {
@@ -226,6 +234,14 @@ describe('a lock that ends', () => {
     expect(seen.notices).toEqual([
       'New track. The click stopped until you tap.',
     ]);
+  });
+
+  it('drops the new-track badge once another app is followed', async () => {
+    await show(firstSong, lockOn(firstSong, 0));
+    playAlong.unlockReason = TRACK_CHANGED;
+    await show(nextSong, undefined);
+    await show(otherApp, undefined);
+    expect(seen.bpmCards.at(-1)).toMatchObject({ newTrack: false });
   });
 
   it('says nothing when the followed app went away', async () => {

@@ -1,13 +1,19 @@
-import { useLastTool, useRouteLatency } from '@kitbag/core-state';
-import { PlayAlongScreen } from '@kitbag/tool-sync';
+import type { OutputRoute } from '@kitbag/core-native';
+import { routeTitle, useLastTool, useRouteLatency } from '@kitbag/core-state';
+import { PlayAlongScreen, type PlayAlongRoute } from '@kitbag/tool-sync';
 import { useEffect, useMemo } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
 import { useBackOrHome } from '@/runtime/backOrHome';
-import { playAlongRoute } from '@/settings/routeIcon';
 import { routeLatency } from '@/settings/rigRuntime';
+import { ROUTE_ICON } from '@/settings/routeIcon';
+
+function playAlongRoute(live: OutputRoute | null): PlayAlongRoute | undefined {
+  if (live === null) return undefined;
+  return { icon: ROUTE_ICON[live.kind], label: routeTitle(live) };
+}
 
 function SyncRoute() {
   const insets = useSafeAreaInsets();

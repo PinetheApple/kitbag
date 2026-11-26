@@ -5,6 +5,7 @@ import {
   downbeatLabel,
   heardSpeed,
   phaseRangeEnds,
+  phaseReading,
   phaseStepFromOption,
   PHASE_STEP_OPTIONS,
   phaseThumbFraction,
@@ -101,5 +102,21 @@ describe('routeLine', () => {
     expect(routeLine('Phone speaker', -20)).toBe(
       'Route: Phone speaker, −20 ms, set in Settings',
     );
+  });
+});
+
+describe('phaseReading', () => {
+  it('reads a clamped limit as whole milliseconds', () => {
+    expect(phaseReading(30000 / 171)).toBe('+175 ms');
+    expect(phaseReading(-30000 / 171)).toBe('−175 ms');
+  });
+});
+
+describe('phaseTotal at the limit', () => {
+  it('adds and names whole milliseconds', () => {
+    expect(phaseTotal(180, 30000 / 171)).toEqual({
+      total: '+355 ms total',
+      parts: '· 180 route + 175 song',
+    });
   });
 });

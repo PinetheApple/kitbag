@@ -1,4 +1,8 @@
-import { FACT_SEPARATOR, type SegmentOption } from '@kitbag/core-design';
+import {
+  clampUnit,
+  FACT_SEPARATOR,
+  type SegmentOption,
+} from '@kitbag/core-design';
 import type { MediaSessionSnapshot } from '@kitbag/core-native';
 import {
   formatOffsetMs,
@@ -43,9 +47,11 @@ export function phaseRangeEnds(limitMs: number): {
 
 export function phaseThumbFraction(offsetMs: number, limitMs: number): number {
   if (limitMs <= 0) return CENTRE;
-  const fraction = CENTRE + (offsetMs / limitMs) * CENTRE;
-  return Math.min(1, Math.max(0, fraction));
+  return clampUnit(CENTRE + (offsetMs / limitMs) * CENTRE);
 }
+
+export const phaseReading = (ms: number): string =>
+  formatOffsetMs(Math.round(ms));
 
 const signedPlain = (ms: number): string =>
   ms < 0 ? `${MINUS}${String(-ms)}` : String(ms);
@@ -54,10 +60,12 @@ export function phaseTotal(
   routeMs: number,
   songMs: number,
 ): { readonly total: string; readonly parts: string } {
-  const join = songMs < 0 ? MINUS : '+';
+  const route = Math.round(routeMs);
+  const song = Math.round(songMs);
+  const join = song < 0 ? MINUS : '+';
   return {
-    total: `${formatOffsetMs(routeMs + songMs)} total`,
-    parts: `· ${signedPlain(routeMs)} route ${join} ${String(Math.abs(songMs))} song`,
+    total: `${formatOffsetMs(route + song)} total`,
+    parts: `· ${signedPlain(route)} route ${join} ${String(Math.abs(song))} song`,
   };
 }
 

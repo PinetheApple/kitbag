@@ -16,11 +16,7 @@ import {
   textStyle,
   type IconName,
 } from '@kitbag/core-design';
-import {
-  formatOffsetMs,
-  phaseLimitMs,
-  type PlayAlongLock,
-} from '@kitbag/core-state';
+import { phaseLimitMs, type PlayAlongLock } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 
@@ -29,6 +25,7 @@ import {
   downbeatLabel,
   heardSpeed,
   phaseRangeEnds,
+  phaseReading,
   phaseStepFromOption,
   PHASE_STEP_OPTIONS,
   phaseThumbFraction,
@@ -178,7 +175,7 @@ function DownbeatGroup({ lock }: { readonly lock: PlayAlongLock }) {
           value={downbeatLabel(lock.downbeatShift)}
           keys={DOWNBEAT_KEYS}
           disabled={!available}
-          {...(available ? {} : { accessibilityLabel: DOWNBEAT_UNAVAILABLE })}
+          disabledHint={DOWNBEAT_UNAVAILABLE}
           {...shift}
         />
       </View>
@@ -233,7 +230,7 @@ function PhaseReadout({ lock }: { readonly lock: PlayAlongLock }) {
   const denominator = usePlayAlong((s) => s.pattern.denominator);
   const speed = heardSpeed(useFollowedSession());
   const limitMs = phaseLimitMs(lock.bpm, denominator, speed);
-  const reading = formatOffsetMs(lock.phaseOffsetMs);
+  const reading = phaseReading(lock.phaseOffsetMs);
   return (
     <>
       <NumpadReadout
