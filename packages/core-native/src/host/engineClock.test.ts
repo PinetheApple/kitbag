@@ -4,6 +4,7 @@ import {
   type EngineClockPair,
   readEngineClockPair,
   readFrameAtBoottimeMs,
+  readUptimeToBoottimeMs,
   renderedFrameToMonotonicMs,
 } from './engineClock.ts';
 import type { BoottimeClockHost, EngineClockHost } from './KitbagHostObject.ts';
@@ -112,9 +113,14 @@ describe('readEngineClockPair', () => {
 describe('readFrameAtBoottimeMs', () => {
   const REPORTED_AT_MS = 98_765_432.125;
   const MAPPED_FRAME = 4_740_741;
+  const NO_DEEP_SLEEP_MS = 0;
 
   function mappingHost(frameFor: (ms: number) => number): BoottimeClockHost {
-    return { boottime_ms: REPORTED_AT_MS, frame_at_boottime_ms: frameFor };
+    return {
+      boottime_ms: REPORTED_AT_MS,
+      frame_at_boottime_ms: frameFor,
+      suspended_ms: NO_DEEP_SLEEP_MS,
+    };
   }
 
   it('passes the instant through and returns its frame', () => {
@@ -134,5 +140,33 @@ describe('readFrameAtBoottimeMs', () => {
         REPORTED_AT_MS,
       ),
     ).toBeNull();
+  });
+});
+
+describe('readUptimeToBoottimeMs', () => {
+  const TOUCH_UPTIME_MS = 7_200_123.5;
+  const AWAKE_GAP_MS = 0.25;
+  const AFTER_DEEP_SLEEP_GAP_MS = 3_600_000.25;
+
+  function gapHost(...gaps: number[]) {
+    return {
+      get suspended_ms() {
+        return gaps.shift() ?? Number.NaN;
+      },
+    };
+  }
+
+  it('adds the time the device spent in deep sleep', () => {
+    expect(
+      readUptimeToBoottimeMs(gapHost(AFTER_DEEP_SLEEP_GAP_MS), TOUCH_UPTIME_MS),
+    ).toBe(TOUCH_UPTIME_MS + AFTER_DEEP_SLEEP_GAP_MS);
+  });
+
+  it('reads the gap again on every call, since a deep sleep widens it', () => {
+    const host = gapHost(AWAKE_GAP_MS, AFTER_DEEP_SLEEP_GAP_MS);
+    readUptimeToBoottimeMs(host, TOUCH_UPTIME_MS);
+    expect(readUptimeToBoottimeMs(host, TOUCH_UPTIME_MS)).toBe(
+      TOUCH_UPTIME_MS + AFTER_DEEP_SLEEP_GAP_MS,
+    );
   });
 });

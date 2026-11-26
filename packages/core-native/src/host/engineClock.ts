@@ -35,6 +35,13 @@ export function readFrameAtBoottimeMs(
   return Number.isNaN(frame) ? null : frame;
 }
 
+export function readUptimeToBoottimeMs(
+  host: Pick<BoottimeClockHost, 'suspended_ms'>,
+  uptimeMs: number,
+): number {
+  return uptimeMs + host.suspended_ms;
+}
+
 /** CLOCK_MONOTONIC ms at which the engine rendered frame, the base of a touch nativeEvent.timestamp. */
 export function renderedFrameToMonotonicMs(
   frame: number,

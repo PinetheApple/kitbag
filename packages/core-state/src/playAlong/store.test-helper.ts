@@ -53,19 +53,26 @@ type LadderView = ReturnType<FollowedLadder['getState']>;
 
 function fakeLadder() {
   const lookUp = vi.fn((track: LadderView['track']) => {
-    ladder.setState({ track, libraryMatch: null });
+    ladder.setState({ track, libraryMatch: null, bpm: null });
     return Promise.resolve();
   });
   const ladder = createStore<LadderView>(() => ({
     track: null,
     libraryMatch: null,
+    bpm: null,
     lookUp,
+    enter: vi.fn((bpm: number) => {
+      ladder.setState({ bpm });
+    }),
   }));
   return {
     ladder,
     lookUp,
     found: (libraryMatch: LibraryMatch | null) => {
       ladder.setState({ libraryMatch });
+    },
+    tempo: (bpm: number | null) => {
+      ladder.setState({ bpm });
     },
   };
 }
@@ -95,6 +102,8 @@ function fakeCommands(calls: string[], gridResult: number) {
     }),
     clearGrid: vi.fn(logged('clearGrid')),
     metronomePause: vi.fn(logged('metronomePause')),
+    metronomeStart: vi.fn(logged('metronomeStart')),
+    setTempo: vi.fn(logged('setTempo')),
     metronomeStop: vi.fn(logged('metronomeStop')),
     setBeats: vi.fn(logged('setBeats')),
     setAccent: vi.fn(logged('setAccent')),
@@ -118,12 +127,14 @@ export function fakePlayAlong({
   yieldStandalone,
   grid = NO_GRID,
   gridResult = KB_RESULT.KB_OK,
+  nowFrame = () => Date.now() * FRAMES_PER_MS,
 }: {
   readonly grid?: DetectedGrid;
   readonly gridResult?: number;
   readonly sessions?: readonly MediaSessionSnapshot[];
   readonly onClickStarting?: PlayAlongRuntime['onClickStarting'];
   readonly yieldStandalone?: PlayAlongRuntime['yieldStandalone'];
+  readonly nowFrame?: PlayAlongRuntime['nowFrame'];
 } = {}) {
   vi.useFakeTimers({ now: START_MS });
   const calls: string[] = [];
@@ -149,11 +160,13 @@ export function fakePlayAlong({
   const readGrid = vi.fn(() => Promise.resolve(grid));
   const playbackStarted = vi.fn();
   const cardListeners = new Set<(request: PlayAlongCardRequest) => void>();
+  const sessionsRead = vi.fn(() => media);
   const runtime: PlayAlongRuntime = {
     commands,
     boottimeNowMs: () => Date.now(),
+    nowFrame,
     engineFrameAtBoottimeMs: frameAt,
-    sessions: () => media,
+    sessions: sessionsRead,
     ladder: () => library.ladder,
     readGrid,
     sessionCommand,
@@ -170,6 +183,7 @@ export function fakePlayAlong({
   };
   return {
     store: createPlayAlongStore(runtime),
+    sessionsRead,
     calls,
     commands,
     media,

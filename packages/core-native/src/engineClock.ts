@@ -6,6 +6,7 @@ import {
   type EngineClockPair,
   readEngineClockPair,
   readFrameAtBoottimeMs,
+  readUptimeToBoottimeMs,
 } from './host/engineClock.ts';
 
 export function getEngineClockPair(): EngineClockPair | null {
@@ -18,4 +19,8 @@ export function boottimeNowMs(): number {
 
 export function engineFrameAtBoottimeMs(boottimeMs: number): number | null {
   return readFrameAtBoottimeMs(getBoottimeClockHost(), boottimeMs);
+}
+
+export function uptimeToBoottimeMs(uptimeMs: number): number {
+  return readUptimeToBoottimeMs(getBoottimeClockHost(), uptimeMs);
 }
