@@ -1,10 +1,12 @@
 package com.kitbag.corenative.transport
 
 import com.kitbag.corenative.transport.SongAction.NEXT
+import com.kitbag.corenative.transport.SongAction.PAUSE
 import com.kitbag.corenative.transport.SongAction.PLAY
 import com.kitbag.corenative.transport.SongAction.PREVIOUS
 import com.kitbag.corenative.transport.SongAction.STOP
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -54,6 +56,23 @@ class SongControlsTest {
     val card = fence.issue()
     assertTrue(press(card, songA, PLAY) is SongControls.Outcome.Ran)
     assertEquals(listOf(SongCommand.Play), engine.calls)
+  }
+
+  @Test
+  fun `a play from the card that starts the song reports the start`() {
+    val card = fence.issue()
+    val outcome = press(card, songA, PLAY) as SongControls.Outcome.Ran
+    assertTrue(outcome.started)
+  }
+
+  @Test
+  fun `a play while playing, a pause and a count-in play report no start`() {
+    val card = fence.issue()
+    engine.playing = true
+    assertFalse((press(card, songA, PLAY) as SongControls.Outcome.Ran).started)
+    assertFalse((press(card, songA, PAUSE) as SongControls.Outcome.Ran).started)
+    engine.playing = false
+    assertFalse((press(card, songA, PLAY, countingIn = true) as SongControls.Outcome.Ran).started)
   }
 
   @Test

@@ -1,6 +1,7 @@
 <resources>
   <string name="kitbag_metronome_channel">Metronome</string>
   <string name="kitbag_songs_channel">Songs</string>
+  <string name="kitbag_play_along_title">Play along · %1$s</string>
   <string name="kitbag_action_play">Play</string>
   <string name="kitbag_action_pause">Pause</string>
   <string name="kitbag_action_stop">Stop</string>

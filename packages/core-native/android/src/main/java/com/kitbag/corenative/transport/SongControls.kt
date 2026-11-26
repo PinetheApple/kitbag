@@ -14,7 +14,7 @@ class SongControls(private val engine: SongEngine, private val fence: CardFence)
 
     data object Stopped : Outcome
 
-    data class Ran(val expected: SongProgress) : Outcome
+    data class Ran(val expected: SongProgress, val started: Boolean) : Outcome
   }
 
   fun press(
@@ -49,11 +49,12 @@ class SongControls(private val engine: SongEngine, private val fence: CardFence)
     } ?: Outcome.Dropped
 
   private fun runCommands(transport: SongTransport, progress: () -> SongProgress, commands: List<SongCommand>): Outcome {
-    var expected = progress()
+    val before = progress()
+    var expected = before
     for (command in commands) {
       engine.execute(command)
       expected = transport.applied(expected, command)
     }
-    return Outcome.Ran(expected)
+    return Outcome.Ran(expected, started = !before.shownPlaying && expected.playing)
   }
 }

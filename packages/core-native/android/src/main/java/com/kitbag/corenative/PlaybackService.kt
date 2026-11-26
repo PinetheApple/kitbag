@@ -1,13 +1,10 @@
 package com.kitbag.corenative
 
 import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -61,8 +58,14 @@ class PlaybackService : Service() {
   override fun onCreate() {
     super.onCreate()
     running = true
-    createChannels()
-    card = MetronomeCard(this, ::openSession, CHANNEL_ID, launchIntent(), ::actionIntent)
+    CardNotifications.createChannels(this)
+    card = MetronomeCard(
+      this,
+      ::openSession,
+      CardNotifications.METRONOME_CHANNEL_ID,
+      CardNotifications.launchIntent(this),
+      ::actionIntent,
+    )
   }
 
   override fun onDestroy() {
@@ -137,12 +140,13 @@ class PlaybackService : Service() {
     val songCard = song ?: SongCard(
       this,
       ::openSession,
-      SONG_CHANNEL_ID,
-      launchIntent(),
+      CardNotifications.SONG_CHANNEL_ID,
+      CardNotifications.launchIntent(this),
       ::songIntent,
       ::postSong,
       { songRequestListener },
       fences.song,
+      { songStartedListener?.invoke() },
       { songEndedListener?.invoke() },
     ) { songStopped() }.also { song = it }
     songCard.show(
@@ -278,28 +282,6 @@ class PlaybackService : Service() {
     open.release()
   }
 
-  // Android keeps a channel's importance once created, so raising it takes a new ID.
-  private fun createChannels() {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-    val manager = getSystemService(NotificationManager::class.java)
-    RETIRED_CHANNEL_IDS.forEach(manager::deleteNotificationChannel)
-    manager.createNotificationChannel(silentChannel(CHANNEL_ID, R.string.kitbag_metronome_channel))
-    manager.createNotificationChannel(silentChannel(SONG_CHANNEL_ID, R.string.kitbag_songs_channel))
-  }
-
-  private fun silentChannel(id: String, name: Int): NotificationChannel =
-    NotificationChannel(id, getString(name), NotificationManager.IMPORTANCE_DEFAULT).apply {
-      setSound(null, null)
-      enableVibration(false)
-      setShowBadge(false)
-      lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-    }
-
-  private fun launchIntent(): PendingIntent? =
-    packageManager.getLaunchIntentForPackage(packageName)?.let {
-      PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_IMMUTABLE)
-    }
-
   private fun actionIntent(action: TransportAction): PendingIntent =
     PendingIntent.getService(
       this,
@@ -342,7 +324,6 @@ class PlaybackService : Service() {
   }
 
   companion object {
-    private const val CHANNEL_ID = "kitbag_metronome_card"
     private const val NOTIFICATION_ID = 1
     private const val SESSION_TAG = "KitbagMetronome"
     private const val LOG_TAG = "KitbagPlayback"
@@ -355,8 +336,6 @@ class PlaybackService : Service() {
     private const val ACTION_SONG = "com.kitbag.corenative.SONG"
     private const val ACTION_SONG_ORDER = "com.kitbag.corenative.SONG_ORDER"
     private const val ACTION_SONG_SEEKED = "com.kitbag.corenative.SONG_SEEKED"
-    private const val SONG_CHANNEL_ID = "kitbag_songs_card"
-    private val RETIRED_CHANNEL_IDS = listOf("kitbag_metronome", "kitbag_songs")
     private const val EXTRA_TITLE = "title"
     private const val EXTRA_ARTIST = "artist"
     private const val EXTRA_DURATION_FRAMES = "durationFrames"
@@ -393,6 +372,8 @@ class PlaybackService : Service() {
     @Volatile var songStoppedListener: (() -> Unit)? = null
 
     @Volatile var songEndedListener: (() -> Unit)? = null
+
+    @Volatile var songStartedListener: (() -> Unit)? = null
 
     @Volatile var songRequestListener: ((SongCommand, Int) -> Unit)? = null
 
