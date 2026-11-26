@@ -12,6 +12,7 @@ import {
 import { MIN_SESSIONS_TO_CHOOSE } from '../logic/sourceRows.ts';
 import { ClickSoundSheet } from './ClickSoundSheet.tsx';
 import { PermissionExplainer } from './PermissionExplainer.tsx';
+import { PhaseSheet } from './PhaseSheet.tsx';
 import { PlayAlongAppBar, type SourceChipProps } from './PlayAlongAppBar.tsx';
 import { PlayAlongBody } from './PlayAlongBody.tsx';
 import { ClickDock, PlayAlongDock } from './PlayAlongDock.tsx';
@@ -34,7 +35,8 @@ import { TempoSheet } from './TempoSheet.tsx';
 import { useAccessFlow, type AccessFlow } from './useAccessFlow.ts';
 import { useLastSeen } from './useLastSeen.ts';
 
-type OpenSheet = 'none' | 'source' | 'tempo' | 'menu' | 'sound' | PatternSheet;
+type OpenSheet =
+  'none' | 'source' | 'tempo' | 'menu' | 'sound' | 'phase' | PatternSheet;
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
@@ -62,6 +64,9 @@ function useSheets() {
   const openSound = useCallback(() => {
     setSheet('sound');
   }, []);
+  const openPhase = useCallback(() => {
+    setSheet('phase');
+  }, []);
   const openMeter = useCallback(() => {
     setSheet(PATTERN_SHEET.meter);
   }, []);
@@ -75,6 +80,7 @@ function useSheets() {
     openTempo,
     openMenu,
     openSound,
+    openPhase,
     openMeter,
     openSubdivision,
   };
@@ -155,6 +161,11 @@ function PlayAlongSheets({ sheets, followedId, bottomInset }: SheetsProps) {
         bottomInset={bottomInset}
         onDismiss={close}
       />
+      <PhaseSheet
+        visible={sheets.sheet === 'phase'}
+        bottomInset={bottomInset}
+        onDismiss={close}
+      />
     </>
   );
 }
@@ -229,6 +240,7 @@ export function PlayAlongScreen({ insets, onBack }: PlayAlongScreenProps) {
           onOpenTempo={sheets.openTempo}
           onOpenMeter={sheets.openMeter}
           onOpenSubdivision={sheets.openSubdivision}
+          onOpenPhase={sheets.openPhase}
         />
       ) : null}
       <ScreenDock view={view} session={session} bottomInset={insets.bottom} />

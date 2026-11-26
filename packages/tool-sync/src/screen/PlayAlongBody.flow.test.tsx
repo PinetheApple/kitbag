@@ -28,11 +28,13 @@ const seen = vi.hoisted(() => ({
   meters: [] as Props[],
   bpmCards: [] as Props[],
   notices: [] as string[],
+  hideNotice: undefined as (() => void) | undefined,
 }));
 const playAlong = vi.hoisted(() => ({
   tap: vi.fn(() => ({ locked: true })),
   songAheadOfClickMs: undefined as number | undefined,
   sourceGoneAtBoottimeMs: undefined as number | undefined,
+  unlockReason: undefined as string | undefined,
 }));
 const ladder = vi.hoisted(() => ({
   bpm: 171,
@@ -62,6 +64,7 @@ vi.mock('@kitbag/core-design', async (original) => ({
   createThemedStyles: () => () => ({}),
   Snackbar: (props: Props) => {
     seen.notices.push(props.message as string);
+    seen.hideNotice = props.onTimeout as () => void;
     return null;
   },
 }));
@@ -115,6 +118,10 @@ const lockOn = (song: typeof firstSong, at: number) => ({
   bpm: SONG_BPM,
   lockedAtBoottimeMs: at,
   grid: undefined,
+  phaseOffsetMs: 0,
+  downbeatShift: 0,
+  downbeatShiftAvailable: true,
+  gridDownbeats: undefined,
 });
 
 type Session = typeof firstSong | undefined;
@@ -131,6 +138,7 @@ function element(session: Session, lock: Lock) {
     onOpenTempo: vi.fn(),
     onOpenMeter: vi.fn(),
     onOpenSubdivision: vi.fn(),
+    onOpenPhase: vi.fn(),
   });
 }
 
@@ -167,7 +175,10 @@ beforeEach(() => {
   seen.notices.length = 0;
   playAlong.songAheadOfClickMs = undefined;
   playAlong.sourceGoneAtBoottimeMs = undefined;
+  playAlong.unlockReason = undefined;
 });
+
+const TRACK_CHANGED = 'track-changed';
 
 describe('re-tap from the drift meter', () => {
   it('brings the pad back, re-locks on a tap and gives the slot back on lift', async () => {
@@ -209,6 +220,7 @@ describe('re-tap from the drift meter', () => {
 describe('a lock that ends', () => {
   it('names the new track and says the click stopped when the song changes', async () => {
     await show(firstSong, lockOn(firstSong, 0));
+    playAlong.unlockReason = TRACK_CHANGED;
     await show(nextSong, undefined);
     expect(seen.bpmCards.at(-1)).toMatchObject({ newTrack: true });
     expect(seen.notices).toEqual([
@@ -225,8 +237,50 @@ describe('a lock that ends', () => {
 
   it('drops the new-track badge once the next song is locked', async () => {
     await show(firstSong, lockOn(firstSong, 0));
+    playAlong.unlockReason = TRACK_CHANGED;
     await show(nextSong, undefined);
+    playAlong.unlockReason = undefined;
     await show(nextSong, lockOn(nextSong, NOW_MS));
     expect(seen.bpmCards.at(-1)).toMatchObject({ newTrack: false });
+  });
+
+  it('says the click stopped again when a later lock also ends on a new track', async () => {
+    await show(firstSong, lockOn(firstSong, 0));
+    playAlong.unlockReason = TRACK_CHANGED;
+    await show(nextSong, undefined);
+    await act(async () => {
+      seen.hideNotice?.();
+      await Promise.resolve();
+    });
+    seen.notices.length = 0;
+    playAlong.unlockReason = undefined;
+    await show(nextSong, lockOn(nextSong, NOW_MS));
+    playAlong.unlockReason = TRACK_CHANGED;
+    await show(firstSong, undefined);
+    expect(seen.bpmCards.at(-1)).toMatchObject({ newTrack: true });
+    expect(seen.notices).toEqual([
+      'New track. The click stopped until you tap.',
+    ]);
+  });
+
+  it('opens the phase sheet from the meter', async () => {
+    const onOpenPhase = vi.fn();
+    clear();
+    await act(async () => {
+      renderer = create(
+        createElement(PlayAlongBody, {
+          view: PLAY_ALONG_VIEW.song,
+          session: firstSong,
+          lock: lockOn(firstSong, 0),
+          onExplainAgain: vi.fn(),
+          onOpenTempo: vi.fn(),
+          onOpenMeter: vi.fn(),
+          onOpenSubdivision: vi.fn(),
+          onOpenPhase,
+        }),
+      );
+      await Promise.resolve();
+    });
+    expect(lastMeter()?.onOpenPhase).toBe(onOpenPhase);
   });
 });

@@ -7,6 +7,7 @@ import {
   DrawnFigures,
   opacity,
   rowLineHeight,
+  SectionHeader,
   space,
   textRoles,
   textStyle,
@@ -14,7 +15,11 @@ import {
   useTextScaled,
 } from '@kitbag/core-design';
 import type { MediaSessionSnapshot } from '@kitbag/core-native';
-import type { PlayAlongLock } from '@kitbag/core-state';
+import {
+  formatOffsetMs,
+  type BeatDirection,
+  type PlayAlongLock,
+} from '@kitbag/core-state';
 import { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
@@ -25,6 +30,9 @@ import {
   type DriftStateInputs,
   type DriftView,
 } from '../logic/driftMeter.ts';
+import { NUDGE_KEYS } from './phaseKeys.ts';
+import { usePlayAlong } from './playAlongHooks.ts';
+import { Stepper } from './Stepper.tsx';
 import { useLastSeen } from './useLastSeen.ts';
 import { useWholeSecondNow } from './useWholeSecondNow.ts';
 
@@ -51,7 +59,14 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text2,
   },
   muted: { opacity: opacity.muted },
-  foot: { flexDirection: 'row', justifyContent: 'flex-end' },
+  foot: { gap: space.controlGap },
+  footRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space.controlGap,
+  },
 }));
 
 function StatusLine({ view, inline }: { view: DriftView; inline: boolean }) {
@@ -97,32 +112,49 @@ function MeterHead({ view }: { view: DriftView }) {
   );
 }
 
-function RetapFoot({ view, onRetap }: DriftMeterCardProps) {
+function PhaseFoot({ view, phase, onRetap }: DriftMeterCardProps) {
   const styles = useStyles();
   if (!view.controls) return null;
   return (
     <View style={styles.foot}>
-      <Button
-        variant="tonal"
-        size="prompt"
-        icon="tapAlong"
-        iconSize="control"
-        label="Re-tap"
-        accessibilityLabel="Re-tap on a downbeat"
-        disabled={!view.retapEnabled}
-        disabledLook="faded"
-        onPress={onRetap}
-      />
+      <SectionHeader label="Phase" />
+      <View style={styles.footRow}>
+        <Stepper
+          value={phase.reading}
+          valueLabel={`Phase ${phase.reading}, open phase settings`}
+          keys={NUDGE_KEYS}
+          onStep={phase.onNudge}
+          onValuePress={phase.onOpen}
+        />
+        <Button
+          variant="tonal"
+          size="prompt"
+          icon="tapAlong"
+          iconSize="control"
+          label="Re-tap"
+          accessibilityLabel="Re-tap on a downbeat"
+          disabled={!view.retapEnabled}
+          disabledLook="faded"
+          onPress={onRetap}
+        />
+      </View>
     </View>
   );
 }
 
+export interface PhaseFootProps {
+  readonly reading: string;
+  readonly onNudge: (direction: BeatDirection) => void;
+  readonly onOpen: () => void;
+}
+
 export interface DriftMeterCardProps {
   readonly view: DriftView;
+  readonly phase: PhaseFootProps;
   readonly onRetap: () => void;
 }
 
-export function DriftMeterCard({ view, onRetap }: DriftMeterCardProps) {
+export function DriftMeterCard({ view, phase, onRetap }: DriftMeterCardProps) {
   const styles = useStyles();
   const needle = useSharedValue(view.needle);
   const shown = useSharedValue(NEEDLE_SHOWN);
@@ -142,7 +174,7 @@ export function DriftMeterCard({ view, onRetap }: DriftMeterCardProps) {
             needleColor={drifting ? 'amber' : 'text'}
           />
         </View>
-        <RetapFoot view={view} onRetap={onRetap} />
+        <PhaseFoot view={view} phase={phase} onRetap={onRetap} />
       </View>
     </Card>
   );
@@ -153,9 +185,17 @@ export interface DriftMeterProps {
   readonly session: MediaSessionSnapshot | undefined;
   readonly drift: DriftStateInputs;
   readonly onRetap: () => void;
+  readonly onOpenPhase: () => void;
 }
 
-export function DriftMeter({ lock, session, drift, onRetap }: DriftMeterProps) {
+export function DriftMeter({
+  lock,
+  session,
+  drift,
+  onRetap,
+  onOpenPhase,
+}: DriftMeterProps) {
+  const nudgePhase = usePlayAlong((s) => s.nudgePhase);
   const appLabel = useLastSeen(session?.appLabel);
   const nowMs = useWholeSecondNow(
     drift.sourceGoneAtMs ?? lock.lockedAtBoottimeMs,
@@ -166,5 +206,10 @@ export function DriftMeter({ lock, session, drift, onRetap }: DriftMeterProps) {
     appLabel,
     nowMs,
   });
-  return <DriftMeterCard view={view} onRetap={onRetap} />;
+  const phase = {
+    reading: formatOffsetMs(lock.phaseOffsetMs),
+    onNudge: nudgePhase,
+    onOpen: onOpenPhase,
+  };
+  return <DriftMeterCard view={view} phase={phase} onRetap={onRetap} />;
 }
