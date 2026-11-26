@@ -15,6 +15,7 @@ const MINUTE_TWELVE_MS = 72 * MS_PER_SECOND;
 const SMALL_DRIFT_MS = 2.4;
 const BIG_DRIFT_MS = 38;
 const EARLY_DRIFT_MS = -12;
+const JUST_OVER_IN_TIME_MS = 10.4;
 const GONE_AT_MS = 50_000;
 const THREE_SECONDS_GONE_MS = 3 * MS_PER_SECOND;
 const PART_OF_A_SECOND_MS = 400;
@@ -112,6 +113,29 @@ describe('driftMeterView', () => {
       nowMs: GONE_AT_MS + SOURCE_GONE_HOLD_MS + MS_PER_SECOND,
     });
     expect(over.figures).toBe('0');
+  });
+});
+
+describe('drift decided on the shown reading', () => {
+  it('stays locked at 10.4 ms, which reads as +10 ms', () => {
+    const view = driftMeterView({
+      ...quiet,
+      songAheadOfClickMs: JUST_OVER_IN_TIME_MS,
+    });
+    expect(view.state).toBe(DRIFT_STATE.locked);
+    expect(view.reading).toBe('+10 ms');
+  });
+});
+
+describe('re-tap', () => {
+  it('is offered only while the click sounds in time', () => {
+    expect(driftMeterView(quiet).retapEnabled).toBe(true);
+    const paused = driftMeterView({ ...quiet, playing: false });
+    expect(paused.controls).toBe(true);
+    expect(paused.retapEnabled).toBe(false);
+    const holding = driftMeterView({ ...quiet, sourceGoneAtMs: GONE_AT_MS });
+    expect(holding.controls).toBe(true);
+    expect(holding.retapEnabled).toBe(false);
   });
 });
 

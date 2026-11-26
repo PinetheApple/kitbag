@@ -23,7 +23,9 @@ import { NowPlayingCard } from './NowPlayingCard.tsx';
 import { useSongPositionMs, useTempoLine } from './playAlongHooks.ts';
 import { TapPad } from './TapPad.tsx';
 import { useNewTrack, type NewTrack } from './useNewTrack.ts';
-import { useLockedPad, useTapPad } from './usePadSlot.ts';
+import { useDriftInputs } from './useDriftInputs.ts';
+import { useLockedPad } from './useLockedPad.ts';
+import { useTapPad } from './useTapPad.ts';
 
 export const SCROLL_FADE_ID = 'play-along-scroll-fade';
 
@@ -165,20 +167,38 @@ function BodyCards(props: BodyCardsProps) {
   );
 }
 
-export function PlayAlongBody(props: PlayAlongBodyProps) {
+interface PinnedPadProps extends PlayAlongBodyProps {
+  readonly locked: ReturnType<typeof useLockedPad>;
+}
+
+function PinnedPad({ view, session, lock, locked }: PinnedPadProps) {
   const styles = useStyles();
-  const { view, session, lock } = props;
-  const locked = useLockedPad(session, lock);
   const pad = useTapPad({
     following: view === PLAY_ALONG_VIEW.song && session !== undefined,
     locked: lock !== undefined,
     retap: locked.retap,
     onLanded: locked.onLanded,
   });
+  return (
+    <View style={styles.pad}>
+      <TapPad {...pad} onRelease={locked.onRelease} />
+    </View>
+  );
+}
+
+export function PlayAlongBody(props: PlayAlongBodyProps) {
+  const { session, lock } = props;
+  const drift = useDriftInputs(session);
+  const locked = useLockedPad(lock, drift);
   const track = useNewTrack(session, lock);
   const meter =
     lock === undefined ? null : (
-      <DriftMeter lock={lock} session={session} onRetap={locked.onRetap} />
+      <DriftMeter
+        lock={lock}
+        session={session}
+        drift={drift}
+        onRetap={locked.onRetap}
+      />
     );
   return (
     <>
@@ -191,11 +211,7 @@ export function PlayAlongBody(props: PlayAlongBodyProps) {
           silenced={locked.silenced}
         />
       </FadedScroll>
-      {locked.layout.pad ? (
-        <View style={styles.pad}>
-          <TapPad {...pad} onRelease={locked.onRelease} />
-        </View>
-      ) : null}
+      {locked.layout.pad ? <PinnedPad {...props} locked={locked} /> : null}
     </>
   );
 }

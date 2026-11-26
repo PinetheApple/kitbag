@@ -1,23 +1,23 @@
-import { SubdivisionSheet as SubdivisionPicker } from '@kitbag/core-design';
+import { SubdivisionSheet } from '@kitbag/core-design';
 import { KB_SUBDIVISION_BOUNDS } from '@kitbag/core-native';
 import { useMetronome } from '@kitbag/core-state';
 
-interface SubdivisionSheetProps {
+interface MetronomeSubdivisionSheetProps {
   readonly visible: boolean;
   readonly bottomInset: number;
   readonly onDismiss: () => void;
 }
 
-export function SubdivisionSheet({
+export function MetronomeSubdivisionSheet({
   visible,
   bottomInset,
   onDismiss,
-}: SubdivisionSheetProps) {
+}: MetronomeSubdivisionSheetProps) {
   const subdivision = useMetronome((s) => s.subdivision);
   const denominator = useMetronome((s) => s.denominator);
   const setSubdivision = useMetronome((s) => s.setSubdivision);
   return (
-    <SubdivisionPicker
+    <SubdivisionSheet
       visible={visible}
       bottomInset={bottomInset}
       subdivision={subdivision}

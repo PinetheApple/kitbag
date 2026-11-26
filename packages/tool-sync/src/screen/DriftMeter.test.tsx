@@ -17,6 +17,8 @@ vi.mock('react-native-reanimated', () => ({
 }));
 
 const strips = vi.hoisted(() => [] as Props[]);
+const cards = vi.hoisted(() => [] as Props[]);
+const buttons = vi.hoisted(() => [] as Props[]);
 
 vi.mock('@kitbag/core-design', async (original) => {
   const { createElement: h } = await import('react');
@@ -26,7 +28,14 @@ vi.mock('@kitbag/core-design', async (original) => {
     useTextScaled: () => false,
     Badge: (props: Props) => h('b', null, props.label as string),
     DrawnFigures: (props: Props) => h('i', null, props.text as string),
-    Button: (props: Props) => h('button', null, props.label as string),
+    Button: (props: Props) => {
+      buttons.push(props);
+      return h('button', null, props.label as string);
+    },
+    Card: (props: Props) => {
+      cards.push(props);
+      return h('section', null, props.children);
+    },
     TunerStrip: (props: Props) => {
       strips.push(props);
       return null;
@@ -47,6 +56,7 @@ const locked: DriftView = {
   needle: 0.04,
   muted: false,
   controls: true,
+  retapEnabled: true,
 };
 
 const drift: DriftView = {
@@ -58,10 +68,24 @@ const drift: DriftView = {
   tail: '',
   reading: '+38 ms',
   controls: false,
+  retapEnabled: false,
+};
+
+const paused: DriftView = {
+  ...locked,
+  state: DRIFT_STATE.paused,
+  lead: 'Paused · resumes on the beat',
+  figures: null,
+  tail: '',
+  reading: '0 ms',
+  muted: true,
+  retapEnabled: false,
 };
 
 function drawn(view: DriftView) {
   strips.length = 0;
+  cards.length = 0;
+  buttons.length = 0;
   return renderToStaticMarkup(
     createElement(DriftMeterCard, { view, onRetap: vi.fn() }),
   );
@@ -93,5 +117,19 @@ describe('DriftMeterCard', () => {
     expect(markup).toContain('DRIFT');
     expect(markup).not.toContain('Re-tap');
     expect(strips[0]).toMatchObject({ needleColor: 'amber' });
+  });
+
+  it('draws a warning card border on drift and a plain one when quiet', () => {
+    drawn(drift);
+    expect(cards[0]).toMatchObject({ borderTone: 'warning' });
+    drawn(locked);
+    expect(cards[0]?.borderTone).toBeUndefined();
+  });
+
+  it('shows Re-tap disabled while paused, and enabled while locked', () => {
+    drawn(paused);
+    expect(buttons[0]).toMatchObject({ label: 'Re-tap', disabled: true });
+    drawn(locked);
+    expect(buttons[0]).toMatchObject({ disabled: false });
   });
 });

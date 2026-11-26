@@ -2,12 +2,11 @@ import type { MediaSessionSnapshot } from '@kitbag/core-native';
 import type { PlayAlongLock } from '@kitbag/core-state';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { endedByTrackChange } from '../logic/trackChange.ts';
-
-type Track = Pick<MediaSessionSnapshot, 'sessionId' | 'title' | 'artist'>;
-
-const sameTrack = (a: Track, b: Track) =>
-  a.sessionId === b.sessionId && a.title === b.title && a.artist === b.artist;
+import {
+  endedByTrackChange,
+  sameTrack,
+  type PlayingTrack,
+} from '../logic/trackChange.ts';
 
 export interface NewTrack {
   readonly newTrack: boolean;
@@ -19,7 +18,9 @@ export function useNewTrack(
   session: MediaSessionSnapshot | undefined,
   lock: PlayAlongLock | undefined,
 ): NewTrack {
-  const [changedTo, setChangedTo] = useState<Track | undefined>(undefined);
+  const [changedTo, setChangedTo] = useState<PlayingTrack | undefined>(
+    undefined,
+  );
   const [noticeShown, setNoticeShown] = useState(false);
   const previous = useRef(lock);
 

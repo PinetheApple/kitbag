@@ -16,6 +16,15 @@ export function ledStateFor(accent: KB_ACCENT): AccentLedState {
   return 'normal';
 }
 
+export function ledStatesFor(
+  accents: readonly KB_ACCENT[],
+  beatCount: number,
+): AccentLedState[] {
+  return Array.from({ length: beatCount }, (_unused, beat) =>
+    ledStateFor(accents[beat] ?? KB_ACCENT.KB_ACCENT_NORMAL),
+  );
+}
+
 // MIN_LEDS_PER_ROW is no branch: the group sizes and the ceiling keep every
 // filled row above it.
 export function layoutBeatLeds(

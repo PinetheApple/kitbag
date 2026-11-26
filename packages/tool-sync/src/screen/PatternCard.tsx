@@ -6,11 +6,10 @@ import {
   PickerChips,
   space,
 } from '@kitbag/core-design';
-import { KB_ACCENT } from '@kitbag/core-native';
 import {
   getPlayAlongStore,
   layoutBeatLeds,
-  ledStateFor,
+  ledStatesFor,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
@@ -55,10 +54,7 @@ export function PatternCard({
     [beatsPerBar],
   );
   const states = useMemo(
-    () =>
-      Array.from({ length: beatsPerBar }, (_unused, beat) =>
-        ledStateFor(accents[beat] ?? KB_ACCENT.KB_ACCENT_NORMAL),
-      ),
+    () => ledStatesFor(accents, beatsPerBar),
     [accents, beatsPerBar],
   );
   const handleLayout = useCallback((event: LayoutChangeEvent) => {

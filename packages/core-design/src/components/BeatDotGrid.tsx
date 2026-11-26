@@ -141,25 +141,65 @@ export interface BeatDotGridProps {
   readonly children?: ReactNode;
 }
 
-export function BeatDotGrid({
-  lines,
-  states,
-  subdivision,
-  width,
-  density,
-  frame,
-  onCycle,
-  style,
-  children,
-}: BeatDotGridProps) {
+interface BeatCellContext {
+  readonly dotSize: number;
+  readonly palette: DotPalette;
+  readonly currentBeat: SharedValue<number>;
+  readonly barMuted: SharedValue<number>;
+  readonly barPulse: SharedValue<number>;
+  readonly subdivision: number;
+  readonly linePitchGap: number;
+  readonly onCycle: (beat: number) => void;
+}
+
+interface BeatCellProps {
+  readonly beat: number;
+  readonly position: BeatPosition;
+  readonly state: LedState;
+  readonly cell: BeatCellContext;
+}
+
+function BeatCell({ beat, position, state, cell }: BeatCellProps) {
   const styles = useBeatDotStyles();
-  const theme = useTheme();
-  const palette = useMemo(() => dotPalette(theme.color), [theme.color]);
-  const { dotSize, lineGap } = beatDotGeometry(lines, width, density);
-  const linePitchGap = BEAT_LABEL_HEIGHT + lineGap;
-  const lineSpacing = useMemo(() => ({ gap: lineGap }), [lineGap]);
-  const { barPhase, currentBeat, barMuted } = frame;
-  const beatCount = states.length;
+  return (
+    <>
+      <BeatDot
+        beat={beat}
+        state={state}
+        dotSize={cell.dotSize}
+        palette={cell.palette}
+        currentBeat={cell.currentBeat}
+        barMuted={cell.barMuted}
+        gaps={dotGaps(position, cell.linePitchGap)}
+        onPress={cell.onCycle}
+      />
+      <PulseMarks
+        beat={beat}
+        pulsesPerBeat={cell.subdivision}
+        dotSize={cell.dotSize}
+        silentBeat={state === 'muted'}
+        barPulse={cell.barPulse}
+        barMuted={cell.barMuted}
+        palette={cell.palette}
+      />
+      <Text
+        style={styles.marker}
+        accessible={false}
+        importantForAccessibility="no"
+        accessibilityElementsHidden
+      >
+        {beatMarker(beat)}
+      </Text>
+    </>
+  );
+}
+
+function useBarPulse(
+  frame: BeatDotGridFrame,
+  beatCount: number,
+  subdivision: number,
+): SharedValue<number> {
+  const { barPhase, currentBeat } = frame;
   const barPulse = useSharedValue(NO_PULSE);
   useAnimatedReaction(
     () =>
@@ -169,53 +209,51 @@ export function BeatDotGrid({
     },
     [beatCount, subdivision],
   );
-  const renderDot = useCallback(
-    (beat: number, position: BeatPosition) => {
-      const state = states[beat] ?? 'normal';
-      return (
-        <>
-          <BeatDot
-            beat={beat}
-            state={state}
-            dotSize={dotSize}
-            palette={palette}
-            currentBeat={currentBeat}
-            barMuted={barMuted}
-            gaps={dotGaps(position, linePitchGap)}
-            onPress={onCycle}
-          />
-          <PulseMarks
-            beat={beat}
-            pulsesPerBeat={subdivision}
-            dotSize={dotSize}
-            silentBeat={state === 'muted'}
-            barPulse={barPulse}
-            barMuted={barMuted}
-            palette={palette}
-          />
-          <Text
-            style={styles.marker}
-            accessible={false}
-            importantForAccessibility="no"
-            accessibilityElementsHidden
-          >
-            {beatMarker(beat)}
-          </Text>
-        </>
-      );
-    },
-    [
-      states,
+  return barPulse;
+}
+
+export function BeatDotGrid(props: BeatDotGridProps) {
+  const { lines, states, subdivision, frame, onCycle, style, children } = props;
+  const styles = useBeatDotStyles();
+  const theme = useTheme();
+  const palette = useMemo(() => dotPalette(theme.color), [theme.color]);
+  const geometry = beatDotGeometry(lines, props.width, props.density);
+  const { dotSize, lineGap } = geometry;
+  const lineSpacing = useMemo(() => ({ gap: lineGap }), [lineGap]);
+  const barPulse = useBarPulse(frame, states.length, subdivision);
+  const { currentBeat, barMuted } = frame;
+  const cell = useMemo<BeatCellContext>(
+    () => ({
       dotSize,
       palette,
       currentBeat,
       barMuted,
-      onCycle,
-      styles,
-      subdivision,
       barPulse,
-      linePitchGap,
+      subdivision,
+      linePitchGap: BEAT_LABEL_HEIGHT + lineGap,
+      onCycle,
+    }),
+    [
+      dotSize,
+      palette,
+      currentBeat,
+      barMuted,
+      barPulse,
+      subdivision,
+      lineGap,
+      onCycle,
     ],
+  );
+  const renderDot = useCallback(
+    (beat: number, position: BeatPosition) => (
+      <BeatCell
+        beat={beat}
+        position={position}
+        state={states[beat] ?? 'normal'}
+        cell={cell}
+      />
+    ),
+    [states, cell],
   );
   return (
     <Animated.View style={[styles.lines, lineSpacing, style]}>

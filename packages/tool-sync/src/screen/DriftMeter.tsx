@@ -1,13 +1,12 @@
 import {
   Badge,
   Button,
+  Card,
   createThemedStyles,
   DRIFT_STRIP_STOPS,
   DrawnFigures,
   opacity,
-  radii,
   rowLineHeight,
-  size,
   space,
   textRoles,
   textStyle,
@@ -23,38 +22,30 @@ import { useSharedValue } from 'react-native-reanimated';
 import {
   DRIFT_STATE,
   driftMeterView,
+  type DriftStateInputs,
   type DriftView,
 } from '../logic/driftMeter.ts';
-import { usePlayAlong } from './playAlongHooks.ts';
 import { useLastSeen } from './useLastSeen.ts';
 import { useWholeSecondNow } from './useWholeSecondNow.ts';
 
 const NEEDLE_SHOWN = 1;
 
 const useStyles = createThemedStyles((theme) => ({
-  card: {
-    gap: space.sectionGap,
-    padding: space.cardPadding,
-    borderRadius: radii.card,
-    borderWidth: size.stroke,
-    borderColor: theme.color.line,
-    backgroundColor: theme.color.surface1,
-  },
-  warning: { borderColor: theme.feedback.warning.cardBorder },
+  stack: { gap: space.sectionGap },
   head: { gap: space.controlGap },
   top: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.controlGap,
   },
-  when: {
+  status: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
   },
   inline: { flex: 1, minWidth: 0 },
   spacer: { flex: 1 },
-  whenText: {
+  statusText: {
     ...textStyle(textRoles.rowSubtitle),
     lineHeight: rowLineHeight.subtitle,
     color: theme.color.text2,
@@ -63,16 +54,16 @@ const useStyles = createThemedStyles((theme) => ({
   foot: { flexDirection: 'row', justifyContent: 'flex-end' },
 }));
 
-function When({ view, inline }: { view: DriftView; inline: boolean }) {
+function StatusLine({ view, inline }: { view: DriftView; inline: boolean }) {
   const styles = useStyles();
   return (
-    <View style={[styles.when, inline && styles.inline]}>
-      <Text style={styles.whenText}>{view.lead}</Text>
+    <View style={[styles.status, inline && styles.inline]}>
+      <Text style={styles.statusText}>{view.lead}</Text>
       {view.figures === null ? null : (
         <DrawnFigures text={view.figures} role="rowSubtitle" color="text2" />
       )}
       {view.tail === '' ? null : (
-        <Text style={styles.whenText}>{view.tail}</Text>
+        <Text style={styles.statusText}>{view.tail}</Text>
       )}
     </View>
   );
@@ -90,14 +81,38 @@ function MeterHead({ view }: { view: DriftView }) {
     <View accessible accessibilityLabel={spoken(view)} style={styles.head}>
       <View style={styles.top}>
         <Badge label={view.badge.label} tone={view.badge.tone} />
-        {ownLine ? <View style={styles.spacer} /> : <When view={view} inline />}
+        {ownLine ? (
+          <View style={styles.spacer} />
+        ) : (
+          <StatusLine view={view} inline />
+        )}
         <DrawnFigures
           text={view.reading}
           role="factChip"
           color={drifting ? 'amberInk' : 'text'}
         />
       </View>
-      {ownLine ? <When view={view} inline={false} /> : null}
+      {ownLine ? <StatusLine view={view} inline={false} /> : null}
+    </View>
+  );
+}
+
+function RetapFoot({ view, onRetap }: DriftMeterCardProps) {
+  const styles = useStyles();
+  if (!view.controls) return null;
+  return (
+    <View style={styles.foot}>
+      <Button
+        variant="tonal"
+        size="prompt"
+        icon="tapAlong"
+        iconSize="control"
+        label="Re-tap"
+        accessibilityLabel="Re-tap on a downbeat"
+        disabled={!view.retapEnabled}
+        disabledLook="faded"
+        onPress={onRetap}
+      />
     </View>
   );
 }
@@ -116,49 +131,38 @@ export function DriftMeterCard({ view, onRetap }: DriftMeterCardProps) {
     needle.value = view.needle;
   }, [needle, view.needle]);
   return (
-    <View style={[styles.card, drifting && styles.warning]}>
-      <MeterHead view={view} />
-      <View style={view.muted ? styles.muted : null}>
-        <TunerStrip
-          needle={needle}
-          active={shown}
-          stops={DRIFT_STRIP_STOPS}
-          needleColor={drifting ? 'amber' : 'text'}
-        />
-      </View>
-      {view.controls ? (
-        <View style={styles.foot}>
-          <Button
-            variant="tonal"
-            size="prompt"
-            icon="tapAlong"
-            iconSize="control"
-            label="Re-tap"
-            accessibilityLabel="Re-tap on a downbeat"
-            onPress={onRetap}
+    <Card {...(drifting ? { borderTone: 'warning' as const } : {})}>
+      <View style={styles.stack}>
+        <MeterHead view={view} />
+        <View style={view.muted ? styles.muted : null}>
+          <TunerStrip
+            needle={needle}
+            active={shown}
+            stops={DRIFT_STRIP_STOPS}
+            needleColor={drifting ? 'amber' : 'text'}
           />
         </View>
-      ) : null}
-    </View>
+        <RetapFoot view={view} onRetap={onRetap} />
+      </View>
+    </Card>
   );
 }
 
 export interface DriftMeterProps {
   readonly lock: PlayAlongLock;
   readonly session: MediaSessionSnapshot | undefined;
+  readonly drift: DriftStateInputs;
   readonly onRetap: () => void;
 }
 
-export function DriftMeter({ lock, session, onRetap }: DriftMeterProps) {
-  const songAheadOfClickMs = usePlayAlong((s) => s.songAheadOfClickMs);
-  const sourceGoneAtMs = usePlayAlong((s) => s.sourceGoneAtBoottimeMs);
+export function DriftMeter({ lock, session, drift, onRetap }: DriftMeterProps) {
   const appLabel = useLastSeen(session?.appLabel);
-  const nowMs = useWholeSecondNow(sourceGoneAtMs ?? lock.lockedAtBoottimeMs);
+  const nowMs = useWholeSecondNow(
+    drift.sourceGoneAtMs ?? lock.lockedAtBoottimeMs,
+  );
   const view = driftMeterView({
+    ...drift,
     lockedAtMs: lock.lockedAtBoottimeMs,
-    songAheadOfClickMs,
-    playing: session?.playing === true,
-    sourceGoneAtMs,
     appLabel,
     nowMs,
   });

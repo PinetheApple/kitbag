@@ -1,13 +1,14 @@
 import {
   BeatDotGrid,
   beatDotGeometry,
+  type BeatDotGridFrame,
   MAX_DOTS_PER_LINE,
   useBeatDotStyles,
   widestLineWidth,
   type ScreenDensity,
 } from '@kitbag/core-design';
-import { KB_ACCENT, type KB_ACCENT as Accent } from '@kitbag/core-native';
-import { layoutBeatLeds, ledStateFor } from '@kitbag/core-state';
+import type { KB_ACCENT } from '@kitbag/core-native';
+import { layoutBeatLeds, ledStatesFor } from '@kitbag/core-state';
 import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
@@ -15,12 +16,9 @@ import { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import { CountInSquares } from './CountInSquares.tsx';
 import { PolyDots } from './PolyDots.tsx';
 
-export interface BeatDotsFrame {
-  readonly barPhase: SharedValue<number>;
-  readonly currentBeat: SharedValue<number>;
+export interface BeatDotsFrame extends BeatDotGridFrame {
   readonly currentPolyBeat: SharedValue<number>;
   readonly polyDownbeatPhase: SharedValue<number>;
-  readonly barMuted: SharedValue<number>;
   readonly countingIn: SharedValue<number>;
 }
 
@@ -29,7 +27,7 @@ interface BeatDotsProps {
   readonly subdivision: number;
   readonly polyBeats: number | null;
   readonly polyAgainst: number;
-  readonly accents: readonly Accent[];
+  readonly accents: readonly KB_ACCENT[];
   readonly width: number;
   readonly density: ScreenDensity;
   readonly frame: BeatDotsFrame;
@@ -52,10 +50,7 @@ export function BeatDots({
     [beatCount],
   );
   const states = useMemo(
-    () =>
-      Array.from({ length: beatCount }, (_unused, beat) =>
-        ledStateFor(accents[beat] ?? KB_ACCENT.KB_ACCENT_NORMAL),
-      ),
+    () => ledStatesFor(accents, beatCount),
     [accents, beatCount],
   );
   const { metrics, dotSize, lineGap } = beatDotGeometry(lines, width, density);

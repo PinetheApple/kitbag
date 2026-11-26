@@ -30,7 +30,6 @@ export function widestLineWidth(
   }, 0);
 }
 
-/** One dot size for the whole bar: the largest that fits its fullest line. */
 export function beatDotSize(
   lines: readonly BeatLine[],
   width: number,

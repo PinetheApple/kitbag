@@ -100,6 +100,7 @@ export {
 export {
   layoutBeatLeds,
   ledStateFor,
+  ledStatesFor,
   type AccentLedState,
   type LedRowLayout,
 } from './metronome/ledLayout.ts';
