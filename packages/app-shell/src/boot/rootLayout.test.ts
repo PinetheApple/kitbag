@@ -21,6 +21,7 @@ vi.mock('@/runtime/songPlayerRuntime', () => ({}));
 vi.mock('@/runtime/dataFolderRuntime', () => ({}));
 vi.mock('@/runtime/tunerRuntime', () => ({}));
 vi.mock('@/runtime/mediaSessionsRuntime', () => ({}));
+vi.mock('@/runtime/tempoLadderRuntime', () => ({}));
 vi.mock('@/runtime/lastToolRuntime', () => ({}));
 vi.mock('@/runtime/homeLayoutRuntime', () => ({}));
 vi.mock('@/runtime/swipeHintRuntime', () => ({}));

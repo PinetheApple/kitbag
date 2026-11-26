@@ -1,8 +1,8 @@
+import { TEXT_PLACEHOLDER } from '@kitbag/core-design';
 import { KB_ACCENT } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
 import { beatLabel, beatMarker, dotLook, ledStateFor } from './beatDot.ts';
-import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
 
 const PALETTE = {
   accent: 'accent',

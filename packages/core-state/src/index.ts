@@ -66,6 +66,7 @@ export {
   tapTimeoutMs,
 } from './tapTempo/tapTempo.ts';
 export { useTempoLadder } from './tempoLadder/useTempoLadder.ts';
+export { doubledBpm, halvedBpm } from './tempoLadder/bpmSteps.ts';
 export {
   tempoLadderStore,
   TAPS_TO_SET_TEMPO,
@@ -633,6 +634,7 @@ export {
   type TrackPresetState,
 } from './playAlong/trackPreset.ts';
 export type { PlayAlongPattern } from './playAlong/pattern.ts';
+export { extrapolatedPositionMs } from './playAlong/position.ts';
 export type { PlayAlongRuntime } from './playAlong/runtime.ts';
 export { useSwipeHint } from './firstUse/useSwipeHint.ts';
 export {

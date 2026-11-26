@@ -35,6 +35,8 @@ export * from './components/useQueueNotices.ts';
 export * from './components/useQueuePresses.ts';
 export * from './components/useQueueBarAction.ts';
 export * from './separator.ts';
+export * from './numpadEntry.ts';
+export * from './textPlaceholder.ts';
 export * from './queueText.ts';
 export * from './queueRoles.ts';
 export * from './setlistPickText.ts';
