@@ -1,4 +1,4 @@
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type GestureResponderEvent } from 'react-native';
 
 import {
   inset,
@@ -34,7 +34,7 @@ function presetHitBox(gaps: NeighbourGaps) {
 
 export interface PresetButtonProps {
   readonly label: string;
-  readonly onPress: () => void;
+  readonly onPress: (event: GestureResponderEvent) => void;
   readonly kind?: PresetButtonKind;
   readonly accessibilityLabel?: string;
   readonly selected?: boolean;
