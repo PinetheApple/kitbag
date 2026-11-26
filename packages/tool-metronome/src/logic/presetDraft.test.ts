@@ -121,6 +121,14 @@ describe('preset draft', () => {
     });
   });
 
+  it('saves no tempo for a song that has none unless the tempo is changed', () => {
+    const draft = draftFrom({ ...PRESET, bpm: null });
+    expect(editFrom(draft).bpm).toBeNull();
+    expect(editFrom({ ...draft, bpm: draft.bpm + 1 }).bpm).toBe(
+      DEFAULT_BPM + 1,
+    );
+  });
+
   it('never saves an empty name or blank notes', () => {
     const edit = editFrom({ ...draftFrom(PRESET), name: '  ', notes: ' ' });
     expect(edit.name).toBe('Untitled');

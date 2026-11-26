@@ -29,6 +29,14 @@ import type {
 
 export type PresetFields = Omit<NewSongPreset, 'name' | 'id'>;
 
+type PresetSettings = Omit<StretchSettingsFields, 'bpm'> &
+  Pick<SongPreset, 'bpm'>;
+
+export const presetTempo = (
+  preset: Pick<SongPreset, 'bpm'>,
+  live: Pick<MetronomeConfig, 'bpm'>,
+): number => preset.bpm ?? live.bpm;
+
 export function byteList(value: unknown): number[] {
   if (value instanceof ArrayBuffer) return Array.from(new Uint8Array(value));
   if (value instanceof Uint8Array || Array.isArray(value)) {
@@ -101,7 +109,7 @@ export function rampUnitOf(value: number): KB_RAMP_UNIT {
 }
 
 function rampOf(
-  preset: StretchSettingsFields,
+  preset: PresetSettings,
   tempo: number,
   current: RampConfig,
 ): RampConfig {
@@ -121,10 +129,10 @@ interface SongSettings extends MetronomeSettingsInput {
 }
 
 function songSettingsOf(
-  preset: StretchSettingsFields,
+  preset: PresetSettings,
   current: MetronomeConfig,
 ): SongSettings {
-  const tempo = preset.bpm ?? current.bpm;
+  const tempo = presetTempo(preset, current);
   const ramp = rampOf(preset, tempo, current.ramp);
   return {
     bpm: roundToEngineBpm(tempo),
@@ -189,12 +197,12 @@ export function isLoadedSongUnsaved(
 }
 
 export function applyPreset(
-  preset: StretchSettingsFields,
+  preset: PresetSettings,
   metronome: () => MetronomeStore,
 ): void {
   const store = metronome();
   const song = songSettingsOf(preset, store);
-  applyMetronomeSettings(store, { ...song, bpm: preset.bpm ?? store.bpm });
+  applyMetronomeSettings(store, { ...song, bpm: presetTempo(preset, store) });
   if (store.countInScope === COUNT_IN_SCOPE.perSong)
     store.setCountIn({ ...store.countIn, bars: song.countInBars });
 }

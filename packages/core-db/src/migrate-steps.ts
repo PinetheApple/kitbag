@@ -8,6 +8,7 @@ import {
   MIGRATE_V16_TO_V17,
 } from './migrate-stems';
 import { MIGRATE_V30_TO_V31 } from './migrate-presets';
+import { rebuildTable } from './migrate-rebuild';
 
 const UUID4_SQL =
   "lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || " +
@@ -308,7 +309,9 @@ export const MIGRATE_V23_TO_V24: readonly string[] = [
 
 // song_preset_id loses NOT NULL and gains a CHECK, which SQLite can only do by rebuilding.
 export const MIGRATE_V24_TO_V25: readonly string[] = [
-  `CREATE TABLE setlist_items_next (
+  ...rebuildTable(
+    'setlist_items',
+    `CREATE TABLE setlist_items_next (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   setlist_id INTEGER NOT NULL REFERENCES setlists (id) ON DELETE CASCADE,
   song_preset_id INTEGER REFERENCES song_presets (id) ON DELETE CASCADE,
@@ -316,13 +319,8 @@ export const MIGRATE_V24_TO_V25: readonly string[] = [
   stem_set_id INTEGER REFERENCES stem_sets (id) ON DELETE CASCADE,
   CONSTRAINT setlist_items_one_entry CHECK ((song_preset_id IS NULL) <> (stem_set_id IS NULL))
 )`,
-  `INSERT INTO setlist_items_next (id, setlist_id, song_preset_id, position)
-   SELECT id, setlist_id, song_preset_id, position FROM setlist_items`,
-  "DELETE FROM sqlite_sequence WHERE name = 'setlist_items_next'",
-  `INSERT INTO sqlite_sequence (name, seq)
-   SELECT 'setlist_items_next', seq FROM sqlite_sequence WHERE name = 'setlist_items'`,
-  'DROP TABLE setlist_items',
-  'ALTER TABLE setlist_items_next RENAME TO setlist_items',
+    ['id', 'setlist_id', 'song_preset_id', 'position'],
+  ),
   `CREATE TABLE play_queue (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   stem_set_id INTEGER NOT NULL UNIQUE REFERENCES stem_sets (id) ON DELETE CASCADE,
@@ -348,7 +346,8 @@ export const MIGRATE_V27_TO_V28: readonly string[] = [
   'ALTER TABLE songs ADD COLUMN speed REAL NOT NULL DEFAULT 1',
 ];
 
-export const MIGRATE_V28_TO_V29: readonly string[] = [
+export const MIGRATE_V28_TO_V29: readonly string[] = rebuildTable(
+  'play_queue',
   `CREATE TABLE play_queue_next (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   stem_set_id INTEGER UNIQUE REFERENCES stem_sets (id) ON DELETE CASCADE,
@@ -356,14 +355,8 @@ export const MIGRATE_V28_TO_V29: readonly string[] = [
   position INTEGER NOT NULL,
   CONSTRAINT play_queue_one_song CHECK ((stem_set_id IS NULL) <> (song_id IS NULL))
 )`,
-  `INSERT INTO play_queue_next (id, stem_set_id, position)
-   SELECT id, stem_set_id, position FROM play_queue`,
-  "DELETE FROM sqlite_sequence WHERE name = 'play_queue_next'",
-  `INSERT INTO sqlite_sequence (name, seq)
-   SELECT 'play_queue_next', seq FROM sqlite_sequence WHERE name = 'play_queue'`,
-  'DROP TABLE play_queue',
-  'ALTER TABLE play_queue_next RENAME TO play_queue',
-];
+  ['id', 'stem_set_id', 'position'],
+);
 
 export const MIGRATE_V29_TO_V30: readonly string[] = [
   'ALTER TABLE songs ADD COLUMN tempo_mode TEXT',

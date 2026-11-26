@@ -57,22 +57,6 @@ describe('timeline text', () => {
     ).toBe('Ramp 100 → 124 BPM, +4 every 4 bars');
   });
 
-  it('reads an open ramp end from the played tempo when the song saves none', () => {
-    const ramp = entry();
-    const settings = {
-      rampEnabled: true,
-      rampStartBpm: null,
-      rampEndBpm: 124,
-      rampStep: 4,
-      rampLength: 4,
-      rampUnit: 0,
-      bpm: null,
-    };
-    expect(
-      tempoText({ ...ramp, stretch: { ...ramp.stretch, settings } } as never),
-    ).toBe('Ramp 96 → 124 BPM, +4 every 4 bars');
-  });
-
   it('rounds a pause to minutes', () => {
     expect(pauseText(2 * MINUTE + 10 * SECOND)).toBe('Paused · 2 min');
     expect(pauseText(40 * SECOND)).toBe('Paused · 40 s');

@@ -11,7 +11,8 @@ import type { TempoMode } from './tempo-mode';
 import { MS_PER_SECOND } from './units';
 
 export const BACKUP_FORMAT = 'kitbag-backup';
-export const BACKUP_VERSION = 4;
+export const BACKUP_VERSION = 5;
+export const OLDEST_RESTORABLE_BACKUP_VERSION = 4;
 
 export const CATEGORIES = [
   'librarySongs',

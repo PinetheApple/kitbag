@@ -56,10 +56,9 @@ export function positionText(
     : `${String(position)} of ${String(total)}`;
 }
 
-function rampText(settings: LoggedSettings, playedBpm: number): string {
-  const tempo = settings.bpm ?? playedBpm;
-  const from = settings.rampStartBpm ?? tempo;
-  const to = settings.rampEndBpm ?? tempo;
+function rampText(settings: LoggedSettings): string {
+  const from = settings.rampStartBpm ?? settings.bpm;
+  const to = settings.rampEndBpm ?? settings.bpm;
   const range = `Ramp ${String(from)} → ${bpmText(to)}`;
   const words = RAMP_UNIT_WORDS[settings.rampUnit];
   if (settings.rampLength === null || words === undefined) return range;
@@ -69,7 +68,7 @@ function rampText(settings: LoggedSettings, playedBpm: number): string {
 
 export function tempoText(entry: TimelineStretch): string {
   const { settings } = entry.stretch;
-  if (settings?.rampEnabled === true) return rampText(settings, entry.startBpm);
+  if (settings?.rampEnabled === true) return rampText(settings);
   const changes = entry.tempoChanges.map(
     ({ atMs, bpm }) => `${String(Math.round(bpm))} from ${playClock(atMs)}`,
   );

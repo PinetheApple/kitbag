@@ -33,6 +33,7 @@ export interface PresetDraft {
   readonly name: string;
   readonly notes: string;
   readonly bpm: number;
+  readonly tempoFromSong: boolean;
   readonly beatsPerBar: number;
   readonly denominator: number;
   readonly subdivision: number;
@@ -80,6 +81,7 @@ export function draftFrom(preset: SongPreset): PresetDraft {
     name: preset.name,
     notes: preset.notes ?? '',
     bpm,
+    tempoFromSong: preset.bpm === null,
     beatsPerBar: preset.beatsPerBar,
     denominator: preset.denominator,
     subdivision: preset.subdivision,
@@ -100,6 +102,9 @@ export function draftFrom(preset: SongPreset): PresetDraft {
   };
 }
 
+const savedTempo = ({ bpm, tempoFromSong }: PresetDraft) =>
+  tempoFromSong && bpm === DEFAULT_BPM ? null : bpm;
+
 function trainerEdit({ ramp, barMute }: PresetDraft): PresetEdit {
   return {
     rampEnabled: ramp.enabled,
@@ -119,7 +124,7 @@ export function editFrom(draft: PresetDraft): PresetEdit {
   return {
     name: draft.name.trim() === '' ? 'Untitled' : draft.name.trim(),
     notes: draft.notes.trim() === '' ? null : draft.notes,
-    bpm: draft.bpm,
+    bpm: savedTempo(draft),
     beatsPerBar: draft.beatsPerBar,
     denominator: draft.denominator,
     subdivision: draft.subdivision,

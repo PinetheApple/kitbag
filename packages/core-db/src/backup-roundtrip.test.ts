@@ -259,7 +259,7 @@ describe('backup round trip', () => {
     const file = JSON.parse(
       await database.backup.export(['tunings']),
     ) as Record<string, unknown>;
-    expect(file).toMatchObject({ version: 4, categories: ['tunings'] });
+    expect(file).toMatchObject({ version: 5, categories: ['tunings'] });
     expect(file.setlists).toBeUndefined();
   });
 });

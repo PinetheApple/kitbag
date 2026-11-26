@@ -1,3 +1,4 @@
+import { rebuildTable } from './migrate-rebuild';
 import { POLY_AGAINST_BAR, RAMP_UNITS } from './preset-rules';
 
 const PRESET_COLUMNS = [
@@ -33,10 +34,11 @@ const PRESET_COLUMNS = [
   'poly_accents',
   'ramp_step',
   'poly_against',
-].join(', ');
+];
 
 // bpm loses NOT NULL, which SQLite can only do by rebuilding.
-export const MIGRATE_V30_TO_V31: readonly string[] = [
+export const MIGRATE_V30_TO_V31: readonly string[] = rebuildTable(
+  'song_presets',
   `CREATE TABLE song_presets_next (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
@@ -71,11 +73,5 @@ export const MIGRATE_V30_TO_V31: readonly string[] = [
   ramp_step REAL NOT NULL DEFAULT 1,
   poly_against INTEGER NOT NULL DEFAULT ${String(POLY_AGAINST_BAR)}
 )`,
-  `INSERT INTO song_presets_next (${PRESET_COLUMNS})
-   SELECT ${PRESET_COLUMNS} FROM song_presets`,
-  "DELETE FROM sqlite_sequence WHERE name = 'song_presets_next'",
-  `INSERT INTO sqlite_sequence (name, seq)
-   SELECT 'song_presets_next', seq FROM sqlite_sequence WHERE name = 'song_presets'`,
-  'DROP TABLE song_presets',
-  'ALTER TABLE song_presets_next RENAME TO song_presets',
-];
+  PRESET_COLUMNS,
+);
