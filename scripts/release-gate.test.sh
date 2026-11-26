@@ -118,6 +118,9 @@ expect "versionCode off the formula rejected" "$EXIT_REJECTED" "versionCode" "$A
 apk_reports 0.1.0 100
 expect "versionCode equal to the previous tag rejected" "$EXIT_REJECTED" "versionCode" "$APK" 0.1.0 v0.1.0
 expect "versionCode below the previous tag rejected" "$EXIT_REJECTED" "versionCode" "$APK" 0.1.0 v0.3.0
+apk_reports 0.100.0 10000
+expect "minor 100 installs over v0.99.5" "$EXIT_OK" "above v0.99.5's 9905" "$APK" 0.100.0 v0.99.5
+apk_reports 0.1.0 100
 
 sdk "$SDK_NO_AAPT2"
 expect "missing aapt2 fails" "$EXIT_CANNOT_CHECK" "aapt2" "$APK" 0.1.0

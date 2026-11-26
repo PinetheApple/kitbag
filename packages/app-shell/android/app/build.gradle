@@ -86,11 +86,11 @@ def kitbagSemver = kitbagVersionName =~ /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d
 if (!kitbagSemver.matches()) {
     throw new GradleException("kitbag: version must be major.minor.patch, got '${kitbagVersionName}'")
 }
-def kitbagMaxMinor = 99
+def kitbagMaxMinor = 999
 def kitbagMaxPatch = 99
 def kitbagMinVersionCode = 1
 def kitbagMaxVersionCode = 2100000000L
-def kitbagCodePerMajor = 10000
+def kitbagCodePerMajor = 100000
 def kitbagCodePerMinor = 100
 def kitbagMajor = kitbagSemver.group(1).toLong()
 def kitbagMinor = kitbagSemver.group(2).toLong()

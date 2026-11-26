@@ -10,9 +10,9 @@ readonly SEMVER_CORE='(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)'
 readonly SEMVER_RE="^${SEMVER_CORE}\$"
 readonly TAG_PREFIX=v
 readonly TAG_RE="^${TAG_PREFIX}${SEMVER_CORE}\$"
-readonly MAX_MINOR=99
+readonly MAX_MINOR=999
 readonly MAX_PATCH=99
-readonly CODE_PER_MAJOR=10000
+readonly CODE_PER_MAJOR=100000
 readonly CODE_PER_MINOR=100
 readonly MIN_VERSION_CODE=1
 readonly MAX_VERSION_CODE=2100000000
@@ -143,7 +143,7 @@ next_version() {
     version_at_least "$candidate" "$floor" || candidate=$floor
   fi
   version_code "$candidate" >/dev/null ||
-    die "next version ${candidate} is out of bounds (minor and patch <= ${MAX_MINOR}); raise the floor in ${APP_JSON} with 'scripts/version.sh set' in a PR" "$EXIT_OUT_OF_BOUNDS"
+    die "next version ${candidate} is out of bounds (minor <= ${MAX_MINOR}, patch <= ${MAX_PATCH}); raise the floor in ${APP_JSON} with 'scripts/version.sh set' in a PR" "$EXIT_OUT_OF_BOUNDS"
   echo "$candidate"
 }
 
@@ -195,7 +195,7 @@ case ${1-} in
     version=${version#"$TAG_PREFIX"}
     require_semver "$version"
     version_code "$version" ||
-      die "${version} is out of bounds (minor and patch <= ${MAX_MINOR}, versionCode ${MIN_VERSION_CODE}..${MAX_VERSION_CODE})" "$EXIT_OUT_OF_BOUNDS"
+      die "${version} is out of bounds (minor <= ${MAX_MINOR}, patch <= ${MAX_PATCH}, versionCode ${MIN_VERSION_CODE}..${MAX_VERSION_CODE})" "$EXIT_OUT_OF_BOUNDS"
     ;;
   *)
     usage >&2
