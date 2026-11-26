@@ -3,8 +3,9 @@ import { join } from 'node:path';
 
 import { expect, it } from 'vitest';
 
-import { TRANSPORT_PLAYBACK } from './transportActions';
+import { PLAY_ALONG_CARD_ACTION, TRANSPORT_PLAYBACK } from './transportActions';
 import type {
+  PlayAlongCardShowState,
   SongTransportOrder,
   SongTransportRequest,
   SongTransportShowState,
@@ -69,6 +70,12 @@ const songOrderKeys = Object.keys({
   next: true,
 } satisfies Record<keyof SongTransportOrder, true>);
 
+const playAlongShowKeys = Object.keys({
+  app: true,
+  title: true,
+  playing: true,
+} satisfies Record<keyof PlayAlongCardShowState, true>);
+
 function keysIn(start: string, pattern: RegExp): string[] {
   const from = moduleSource.indexOf(start);
   const body = moduleSource.slice(from, moduleSource.indexOf('\n  }\n', from));
@@ -117,4 +124,28 @@ it('names playback as the Kotlin Playback entries do', () => {
   const entries = /enum class Playback \{([^;]+);/.exec(modelSource)?.[1] ?? '';
   const names = entries.split(',').map((entry) => entry.trim().toLowerCase());
   expect(names.sort()).toEqual(Object.values(TRANSPORT_PLAYBACK).sort());
+});
+
+it('the module reads exactly the Play along card fields', () => {
+  const read = keysIn(
+    'override fun playAlongCardShow',
+    /state\.get\w+\("(\w+)"/g,
+  );
+  expect(read.sort()).toEqual([...playAlongShowKeys].sort());
+});
+
+it('names the Play along card actions as the Kotlin entries do', () => {
+  const serviceSource = readFileSync(
+    join(
+      import.meta.dirname,
+      '../android/src/main/java/com/kitbag/corenative/PlayAlongService.kt',
+    ),
+    'utf8',
+  );
+  const entries =
+    /enum class PlayAlongCardAction\(val wire: String\) \{([^;]+);/.exec(
+      serviceSource,
+    )?.[1] ?? '';
+  const wires = [...entries.matchAll(/\("(\w+)"\)/g)].map((m) => m[1]);
+  expect(wires.sort()).toEqual(Object.values(PLAY_ALONG_CARD_ACTION).sort());
 });

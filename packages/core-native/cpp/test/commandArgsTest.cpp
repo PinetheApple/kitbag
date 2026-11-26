@@ -48,8 +48,10 @@ int32_t startedSlot = -1;
 int32_t selectedSlot = -1;
 int32_t intentRead = 0;
 uint64_t anchoredAt = 0;
+uint64_t gridAnchoredAt = 0;
 constexpr double kSongPos = 83.25;
 constexpr double kSongBpm = 121.5;
+constexpr double kSongRate = 1.25;
 constexpr uint64_t kRenderedFrames = 96000;
 
 void fail(const char* what, double track, double value) {
@@ -191,12 +193,38 @@ void expectAnchorExternal() {
   expectAnchor(kEndFrame, kNaN, "");
 }
 
+void expectGridAnchor(double atFrame, double rate, const std::string& wantCalls) {
+  songCalls.clear();
+  kitbag::commandMetronomeAnchorGrid(kSongPos, atFrame, rate);
+  if (songCalls != wantCalls) fail(("grid anchor: " + songCalls).c_str(), atFrame, rate);
+}
+
+void expectAnchorGrid() {
+  expectGridAnchor(kEndFrame, kSongRate, "grid-anchor start ");
+  if (static_cast<double>(gridAnchoredAt) != kEndFrame) fail("grid anchor frame", kEndFrame, 0);
+  expectGridAnchor(kNaN, kSongRate, "");
+  expectGridAnchor(-1, kSongRate, "");
+  expectGridAnchor(kEndFrame + 0.5, kSongRate, "");
+  expectGridAnchor(kBeyondExactFrame, kSongRate, "");
+  expectGridAnchor(kEndFrame, kNaN, "");
+  expectGridAnchor(kEndFrame, 0.0, "");
+  expectGridAnchor(kEndFrame, -kSongRate, "");
+}
+
 void expectSelect(int32_t intent, const std::string& wantCalls) {
   songCalls.clear();
   intentRead = intent;
   kitbag::commandMetronomeSelectSlot(KB_METRONOME_SLOT_PLAY_ALONG);
   if (songCalls != wantCalls) fail(("select: " + songCalls).c_str(), intent, 0);
   if (selectedSlot != KB_METRONOME_SLOT_PLAY_ALONG) fail("select slot", intent, selectedSlot);
+}
+
+void expectPlayAlongStops() {
+  expectSongTransport(kitbag::commandPlayAlongClickStop, "play along click stop",
+                      "stop-play-along ");
+  selectedSlot = -1;
+  expectSongTransport(kitbag::commandPlayAlongEnd, "play along end", "stop-play-along select ");
+  if (selectedSlot != KB_METRONOME_SLOT_STANDALONE) fail("play along end slot", 0, selectedSlot);
 }
 
 }  // namespace
@@ -277,8 +305,14 @@ extern "C" void kb_metronome_anchor_external(kb_engine*, double songPos, uint64_
   anchoredAt = frame;
   if (songPos != kSongPos || bpm != kSongBpm) fail("anchor args", songPos, bpm);
 }
+extern "C" void kb_metronome_anchor_grid(kb_engine*, double songPos, uint64_t frame,
+                                         double rate) {
+  songCalls += "grid-anchor ";
+  gridAnchoredAt = frame;
+  if (songPos != kSongPos || rate != kSongRate) fail("grid anchor args", songPos, rate);
+}
 extern "C" void kb_metronome_slot_stop(kb_engine*, int32_t slot) {
-  songCalls += onSlot(slot, "stop ");
+  songCalls += slot == KB_METRONOME_SLOT_PLAY_ALONG ? "stop-play-along " : onSlot(slot, "stop ");
 }
 extern "C" void kb_metronome_slot_pause(kb_engine*, int32_t slot) {
   songCalls += onSlot(slot, "click-pause ");
@@ -327,8 +361,10 @@ int main() {
 
   expectServiceStartCannotRestart();
   expectAnchorExternal();
+  expectAnchorGrid();
   expectSelect(1, "select start ");
   expectSelect(0, "select ");
+  expectPlayAlongStops();
 
   return failures == 0 ? 0 : 1;
 }

@@ -26,6 +26,9 @@ data class MediaSessionInfo(
   val speed: Float,
 )
 
+internal fun <T> List<T>.fromOtherApps(ownPackage: String, packageOf: (T) -> String): List<T> =
+  filterNot { packageOf(it) == ownPackage }
+
 class MediaSessionWatch(
   private val context: Context,
   private val publish: (sessions: List<MediaSessionInfo>) -> Unit,
@@ -77,7 +80,7 @@ class MediaSessionWatch(
 
   private fun track(controllers: List<MediaController>) {
     val next = LinkedHashMap<String, Tracked>()
-    controllers.forEach { controller ->
+    controllers.fromOtherApps(context.packageName) { it.packageName }.forEach { controller ->
       val id = idOf(controller)
       if (id !in next) next[id] = tracked.remove(id) ?: follow(id, controller)
     }

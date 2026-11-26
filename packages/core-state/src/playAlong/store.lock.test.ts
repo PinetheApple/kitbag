@@ -1,7 +1,7 @@
 import { MS_PER_SECOND } from '@kitbag/core-db';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { TAP_REFUSAL } from './store.ts';
+import { LOCK_REFUSAL } from './store.ts';
 import {
   BPM,
   FRAMES_PER_MS,
@@ -35,7 +35,7 @@ describe('tap to align', () => {
     const fake = fakePlayAlong();
     expect(fake.store.getState().tap(START_MS)).toEqual({
       locked: false,
-      reason: TAP_REFUSAL.noBpm,
+      reason: LOCK_REFUSAL.noBpm,
     });
     expect(fake.store.getState().lock).toBeUndefined();
     expect(fake.calls).toEqual([]);
@@ -46,7 +46,7 @@ describe('tap to align', () => {
     fake.store.getState().setBpm(BPM);
     expect(fake.store.getState().tap(START_MS)).toEqual({
       locked: false,
-      reason: TAP_REFUSAL.noSession,
+      reason: LOCK_REFUSAL.noSession,
     });
   });
 
@@ -55,7 +55,7 @@ describe('tap to align', () => {
     fake.store.getState().setBpm(BPM);
     expect(fake.store.getState().tap(START_MS)).toEqual({
       locked: false,
-      reason: TAP_REFUSAL.unknownPosition,
+      reason: LOCK_REFUSAL.unknownPosition,
     });
     expect(fake.calls).toEqual([]);
   });
@@ -67,7 +67,7 @@ describe('tap to align', () => {
     fake.store.getState().setBpm(BPM);
     expect(fake.store.getState().tap(START_MS)).toEqual({
       locked: false,
-      reason: TAP_REFUSAL.paused,
+      reason: LOCK_REFUSAL.paused,
     });
     expect(fake.calls).toEqual([]);
   });

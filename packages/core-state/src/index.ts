@@ -605,15 +605,20 @@ export {
   REANCHOR_INTERVAL_MS,
   SEEK_JUMP_MS,
   SOURCE_GONE_HOLD_MS,
-  TAP_REFUSAL,
+  LOCK_REFUSAL,
   type PlayAlongActions,
   type PlayAlongLock,
   type PlayAlongState,
   type PlayAlongStore,
   type PlayAlongTrack,
-  type TapOutcome,
-  type TapRefusal,
+  type LockOutcome,
+  type LockRefusal,
 } from './playAlong/store.ts';
+export type {
+  LibraryOffer,
+  LibraryOfferActions,
+  LibraryOfferState,
+} from './playAlong/libraryOffer.ts';
 export type { PlayAlongPattern } from './playAlong/pattern.ts';
 export { extrapolatedPositionMs } from './playAlong/position.ts';
 export type { PlayAlongRuntime } from './playAlong/runtime.ts';

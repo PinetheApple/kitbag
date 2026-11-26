@@ -44,6 +44,17 @@ inline bool HasDownbeats(const BeatGrid& grid) {
   return !grid.bars.empty() && grid.bars.back().bar != GridBar::kNoBar;
 }
 
+struct BlockTempo {
+  double beats_per_sample = 0.0;
+  double latency_beats = 0.0;
+  double poly_ticks_per_beat = 1.0;
+};
+
+struct GridView {
+  const BeatGrid* grid = nullptr;
+  uint64_t generation = 0;
+};
+
 struct GridOnset {
   double song_sec = -std::numeric_limits<double>::infinity();
   uint64_t anchor_frame = 0;

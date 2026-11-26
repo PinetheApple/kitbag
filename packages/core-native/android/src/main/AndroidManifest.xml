@@ -26,6 +26,10 @@
         android:exported="false"
         android:foregroundServiceType="mediaPlayback" />
     <service
+        android:name="com.kitbag.corenative.PlayAlongService"
+        android:exported="false"
+        android:foregroundServiceType="mediaPlayback" />
+    <service
         android:name="com.kitbag.corenative.stemdeck.StemDeckImportService"
         android:exported="false"
         android:foregroundServiceType="dataSync" />
