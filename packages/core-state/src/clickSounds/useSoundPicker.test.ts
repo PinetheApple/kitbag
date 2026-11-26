@@ -19,10 +19,6 @@ vi.mock('../metronome/useHoldEngine.ts', () => ({
     hooks.held.push(active);
   },
 }));
-vi.mock('../metronome/useMetronome.ts', () => ({
-  useMetronome: <T,>(select: (state: object) => T) =>
-    select({ previewSound: hooks.previewSound }),
-}));
 
 const SOUNDS: PerAccentSounds = { normal: 1, accent: 4 };
 const PICKED = 3;
@@ -30,7 +26,7 @@ const PICKED = 3;
 function usePickedSounds(role: SoundRole) {
   hooks.role = role;
   const onChange = vi.fn<(update: SoundsUpdate) => void>();
-  useSoundPicker(true, onChange).pick(PICKED);
+  useSoundPicker(true, onChange, hooks.previewSound).pick(PICKED);
   const [update] = onChange.mock.calls[0] ?? [];
   return update?.(SOUNDS);
 }
@@ -46,14 +42,14 @@ describe('useSoundPicker', () => {
     expect(usePickedSounds(SOUND_ROLE.accent)).toEqual({ normal: 1, accent: PICKED });
   });
 
-  it('previews the picked sound as the role it was picked for', () => {
+  it('previews the picked sound through the given preview, as its role', () => {
     usePickedSounds(SOUND_ROLE.accent);
     expect(hooks.previewSound).toHaveBeenCalledExactlyOnceWith(PICKED, true);
   });
 
   it('holds the engine only while the sheet is open', () => {
-    useSoundPicker(false, vi.fn());
-    useSoundPicker(true, vi.fn());
+    useSoundPicker(false, vi.fn(), vi.fn());
+    useSoundPicker(true, vi.fn(), vi.fn());
     expect(hooks.held).toEqual([false, true]);
   });
 });

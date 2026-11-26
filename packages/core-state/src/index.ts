@@ -925,6 +925,7 @@ export { useClickSounds } from './clickSounds/useClickSounds.ts';
 export {
   useSoundPicker,
   type SoundPicker,
+  type SoundPreview,
   type SoundsUpdate,
 } from './clickSounds/useSoundPicker.ts';
 export type {

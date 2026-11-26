@@ -9,6 +9,11 @@ const seen = vi.hoisted(() => ({
   picker: { role: 'accent', setRole: vi.fn(), pick: vi.fn() },
   visible: [] as boolean[],
   onChanges: [] as unknown[],
+  previews: [] as unknown[],
+}));
+const metronome = vi.hoisted(() => ({
+  previewSound: vi.fn(),
+  previewSelectedSlot: vi.fn(),
 }));
 const store = vi.hoisted(() => ({
   pattern: { sounds: { normal: 1, accent: 4 } },
@@ -25,9 +30,12 @@ vi.mock('@kitbag/core-design', async (original) => ({
 vi.mock('@kitbag/core-state', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   getPlayAlongStore: () => ({ getState: () => store }),
-  useSoundPicker: (visible: boolean, onChange: unknown) => {
+  useMetronome: <T,>(select: (state: typeof metronome) => T) =>
+    select(metronome),
+  useSoundPicker: (visible: boolean, onChange: unknown, preview: unknown) => {
     seen.visible.push(visible);
     seen.onChanges.push(onChange);
+    seen.previews.push(preview);
     return seen.picker;
   },
 }));
@@ -54,6 +62,7 @@ function render(visible = true) {
 beforeEach(() => {
   seen.visible.length = 0;
   seen.onChanges.length = 0;
+  seen.previews.length = 0;
   vi.clearAllMocks();
 });
 
@@ -80,5 +89,10 @@ describe('the Play along click sound sheet', () => {
   it('writes a picked sound to the play along store, keeping the other role', () => {
     changePlayAlongSounds((sounds) => ({ ...sounds, accent: 2 }));
     expect(store.setSounds).toHaveBeenCalledExactlyOnceWith(1, 2);
+  });
+
+  it('previews on the selected slot, which sounds while the standalone has yielded', () => {
+    render();
+    expect(seen.previews).toEqual([metronome.previewSelectedSlot]);
   });
 });

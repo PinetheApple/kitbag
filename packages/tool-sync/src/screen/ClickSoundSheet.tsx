@@ -5,6 +5,7 @@ import {
   SOUND_PICKER_HINT,
   SOUND_ROLE_OPTIONS,
   soundPickerLabel,
+  useMetronome,
   useSoundPicker,
   type SoundsUpdate,
 } from '@kitbag/core-state';
@@ -29,9 +30,11 @@ export function ClickSoundSheet({
   onDismiss,
 }: ClickSoundSheetProps) {
   const sounds = usePlayAlong((s) => s.pattern.sounds);
+  const preview = useMetronome((s) => s.previewSelectedSlot);
   const { role, setRole, pick } = useSoundPicker(
     visible,
     changePlayAlongSounds,
+    preview,
   );
   return (
     <SoundPickerSheet

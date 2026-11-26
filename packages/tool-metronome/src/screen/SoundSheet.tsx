@@ -7,6 +7,7 @@ import {
   SOUND_ROLE_OPTIONS,
   soundPickerLabel,
   type SoundsUpdate,
+  useMetronome,
   useSoundPicker,
 } from '@kitbag/core-state';
 import { useCallback } from 'react';
@@ -29,7 +30,12 @@ export function MetronomeSoundSheet({
   sounds,
   onChange,
 }: MetronomeSoundSheetProps) {
-  const { role, setRole, pick } = useSoundPicker(visible, onChange);
+  const previewSound = useMetronome((s) => s.previewSound);
+  const { role, setRole, pick } = useSoundPicker(
+    visible,
+    onChange,
+    previewSound,
+  );
   const importHint = useImportHint();
   const menu = useCustomSoundMenu();
   const handleRemoved = useCallback(
