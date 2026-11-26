@@ -185,41 +185,7 @@ describe('the Up next row', () => {
   });
 });
 
-describe('the Up next row under font scale', () => {
-  const repeatChips = (p: Player) => p.labelled(QUEUE_TEXT.repeatOff);
-  const labelLines = (p: Player) =>
-    p.renderer.root.find(
-      (node) => String(node.type) === 'Text' && node.props.children === UP_NEXT,
-    ).props.numberOfLines as unknown;
-
-  it('keeps the repeat chip in the row beside the text at the design size', async () => {
-    const p = await withQueue(NIGHT_BUS);
-    expect(withTestId(p, REPEAT_LINE_ID)).toEqual([]);
-    expect(repeatChips(p)).toHaveLength(1);
-  });
-
-  it('gives the repeat chip its own line at 2.0 and keeps the label on one', async () => {
-    display.fontScale = 2;
-    const p = await withQueue(NIGHT_BUS);
-    const [line] = withTestId(p, REPEAT_LINE_ID);
-    const inLine = line?.findAll(
-      (node) =>
-        typeof node.type === 'string' &&
-        node.props.accessibilityLabel === QUEUE_TEXT.repeatOff,
-    );
-    expect(repeatChips(p)).toHaveLength(1);
-    expect(inLine).toHaveLength(1);
-    expect(labelLines(p)).toBe(1);
-  });
-
-  it('keeps Previous and the repeat chip on one line at 2.0 with nothing up next', async () => {
-    display.fontScale = 2;
-    const p = await withQueue();
-    expect(withTestId(p, REPEAT_LINE_ID)).toEqual([]);
-    expect(repeatChips(p)).toHaveLength(1);
-    expect(p.labelled(PREVIOUS)).toHaveLength(1);
-  });
-
+describe('the Up next row at the design size', () => {
   it("gives a metronome entry's repeat chip and Open their own line at the design size", async () => {
     metronomeEntryOnStage();
     const p = await withQueue();
@@ -240,19 +206,45 @@ describe('the Up next row under font scale', () => {
     expect(labelledIn(row, QUEUE_TEXT.repeatOff)).toHaveLength(1);
     expect(labelledIn(row, 'Next: Night Bus')).toHaveLength(1);
   });
+});
+
+describe('the Up next row under font scale', () => {
+  const repeatChips = (p: Player) => p.labelled(QUEUE_TEXT.repeatOff);
+  const labelLines = (p: Player) =>
+    p.renderer.root.find(
+      (node) => String(node.type) === 'Text' && node.props.children === UP_NEXT,
+    ).props.numberOfLines as unknown;
+
+  it('keeps the repeat chip in the row beside the text at the design size', async () => {
+    const p = await withQueue(NIGHT_BUS);
+    expect(withTestId(p, REPEAT_LINE_ID)).toEqual([]);
+    expect(repeatChips(p)).toHaveLength(1);
+  });
+
+  it('gives the repeat chip its own line at 2.0 and keeps the label on one', async () => {
+    display.fontScale = 2;
+    const p = await withQueue(NIGHT_BUS);
+    const [line] = withTestId(p, REPEAT_LINE_ID);
+    expect(repeatChips(p)).toHaveLength(1);
+    expect(labelledIn(line, QUEUE_TEXT.repeatOff)).toHaveLength(1);
+    expect(labelLines(p)).toBe(1);
+  });
+
+  it('keeps Previous and the repeat chip on one line at 2.0 with nothing up next', async () => {
+    display.fontScale = 2;
+    const p = await withQueue();
+    expect(withTestId(p, REPEAT_LINE_ID)).toEqual([]);
+    expect(repeatChips(p)).toHaveLength(1);
+    expect(p.labelled(PREVIOUS)).toHaveLength(1);
+  });
 
   it("moves a metronome entry's Open beside the repeat chip at 2.0", async () => {
     metronomeEntryOnStage();
     display.fontScale = 2;
     const p = await withQueue();
     const [line] = withTestId(p, REPEAT_LINE_ID);
-    const openInLine = line?.findAll(
-      (node) =>
-        typeof node.type === 'string' &&
-        node.props.accessibilityLabel === QUEUE_TEXT.open,
-    );
     expect(p.labelled(QUEUE_TEXT.open)).toHaveLength(1);
-    expect(openInLine).toHaveLength(1);
+    expect(labelledIn(line, QUEUE_TEXT.open)).toHaveLength(1);
   });
 });
 
