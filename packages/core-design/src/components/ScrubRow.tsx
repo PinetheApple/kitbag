@@ -150,15 +150,36 @@ export interface PlayerFrame extends ScrubFrame {
   readonly playing: SharedValue<number>;
 }
 
+interface ShownSecond {
+  readonly second: number;
+  readonly playing: boolean;
+}
+
+// While playing, a description change per second keeps the window from going
+// idle; a seek is a jump of more than one second.
+function speaksNow(now: ShownSecond, before: ShownSecond): boolean {
+  'worklet';
+  if (now.playing) return Math.abs(now.second - before.second) > 1;
+  return now.second !== before.second || before.playing;
+}
+
 // Unread, the reaction parks on NOT_READ, so a service turning on is itself a
 // change and commits the shown second rather than waiting for the next one.
-function useSpokenSecond(frame: ScrubFrame): number {
+function useSpokenSecond(frame: PlayerFrame): number {
   const reading = useAccessibilityReadout();
   const [second, setSecond] = useState(0);
   useAnimatedReaction(
-    () => (reading ? Math.max(0, frame.second.value) : NOT_READ),
+    (): ShownSecond | typeof NOT_READ =>
+      reading
+        ? {
+            second: Math.max(0, frame.second.value),
+            playing: frame.playing.value !== 0,
+          }
+        : NOT_READ,
     (now, before) => {
-      if (now !== NOT_READ && now !== before) scheduleOnRN(setSecond, now);
+      if (now === NOT_READ) return;
+      if (before === null || before === NOT_READ || speaksNow(now, before))
+        scheduleOnRN(setSecond, now.second);
     },
     [reading],
   );
@@ -166,7 +187,7 @@ function useSpokenSecond(frame: ScrubFrame): number {
 }
 
 export interface ScrubRowProps {
-  readonly frame: ScrubFrame;
+  readonly frame: PlayerFrame;
   readonly durationFrames: number;
   readonly total: string;
   readonly spokenPosition: (second: number) => string;
