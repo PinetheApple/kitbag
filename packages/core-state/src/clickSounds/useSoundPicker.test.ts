@@ -12,7 +12,7 @@ const hooks = vi.hoisted(() => ({
 
 vi.mock('react', () => ({
   useState: () => [hooks.role, vi.fn()],
-  useCallback: <T,>(callback: T) => callback,
+  useCallback: <T>(callback: T) => callback,
 }));
 vi.mock('../metronome/useHoldEngine.ts', () => ({
   useHoldEngine: (active: boolean) => {
@@ -38,8 +38,14 @@ beforeEach(() => {
 
 describe('useSoundPicker', () => {
   it('changes only the role being picked for', () => {
-    expect(usePickedSounds(SOUND_ROLE.normal)).toEqual({ normal: PICKED, accent: 4 });
-    expect(usePickedSounds(SOUND_ROLE.accent)).toEqual({ normal: 1, accent: PICKED });
+    expect(usePickedSounds(SOUND_ROLE.normal)).toEqual({
+      normal: PICKED,
+      accent: 4,
+    });
+    expect(usePickedSounds(SOUND_ROLE.accent)).toEqual({
+      normal: 1,
+      accent: PICKED,
+    });
   });
 
   it('previews the picked sound through the given preview, as its role', () => {

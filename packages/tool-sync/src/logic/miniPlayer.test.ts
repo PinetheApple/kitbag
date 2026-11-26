@@ -12,7 +12,9 @@ import { UNKNOWN_TITLE } from './nowPlaying.ts';
 const NOW = 50_000;
 const DURATION = 200_000;
 
-function session(change: Partial<MediaSessionSnapshot> = {}): MediaSessionSnapshot {
+function session(
+  change: Partial<MediaSessionSnapshot> = {},
+): MediaSessionSnapshot {
   return {
     sessionId: 's',
     packageName: 'com.spotify.music',
@@ -52,7 +54,10 @@ describe('progressPlan', () => {
     ['no length', session({ durationMs: null })],
     ['no position', session({ positionMs: null })],
   ])('draws nothing with %s', (_case, followed) => {
-    expect(progressPlan(followed, NOW)).toEqual({ from: 0, msToEnd: undefined });
+    expect(progressPlan(followed, NOW)).toEqual({
+      from: 0,
+      msToEnd: undefined,
+    });
   });
 
   it('stops at the end of the song', () => {
@@ -75,8 +80,8 @@ describe('the locked mini-player text', () => {
   });
 
   it('falls back to an unknown title', () => {
-    expect(
-      lockedTitle({ title: null, artist: null, durationMs: null }),
-    ).toBe(UNKNOWN_TITLE);
+    expect(lockedTitle({ title: null, artist: null, durationMs: null })).toBe(
+      UNKNOWN_TITLE,
+    );
   });
 });

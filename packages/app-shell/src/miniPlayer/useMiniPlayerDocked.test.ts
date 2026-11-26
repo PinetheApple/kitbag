@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const shown = vi.hoisted(() => ({ song: false, playAlong: false, settled: true }));
+const shown = vi.hoisted(() => ({
+  song: false,
+  playAlong: false,
+  settled: true,
+}));
 
 vi.mock('@kitbag/tool-library', () => ({
   useMiniPlayerShown: () => shown.song,
@@ -10,9 +14,8 @@ vi.mock('@kitbag/tool-sync', () => ({
 }));
 vi.mock('./useDockSettled', () => ({ useDockSettled: () => shown.settled }));
 
-const { useAnyMiniPlayerDocked, useSongMiniPlayerDocked } = await import(
-  './useMiniPlayerDocked.ts'
-);
+const { useAnyMiniPlayerDocked, useSongMiniPlayerDocked } =
+  await import('./useMiniPlayerDocked.ts');
 
 function useDockedWhere(song: boolean, playAlong: boolean, settled = true) {
   Object.assign(shown, { song, playAlong, settled });
@@ -29,6 +32,9 @@ describe('where a mini-player docks', () => {
   });
 
   it('docks nothing before the screen settles', () => {
-    expect(useDockedWhere(true, true, false)).toEqual({ lists: false, player: false });
+    expect(useDockedWhere(true, true, false)).toEqual({
+      lists: false,
+      player: false,
+    });
   });
 });

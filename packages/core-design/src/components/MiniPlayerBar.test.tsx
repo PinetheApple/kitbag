@@ -88,7 +88,9 @@ function render(playing: number, queued = true) {
         playLabel="Play Everlong"
         pauseLabel="Pause Everlong"
         closeLabel="Stop Everlong"
-        queue={queued ? { label: 'Queue, 2 up next', onPress: onQueue } : undefined}
+        queue={
+          queued ? { label: 'Queue, 2 up next', onPress: onQueue } : undefined
+        }
         bottomInset={0}
         {...handlers}
       />

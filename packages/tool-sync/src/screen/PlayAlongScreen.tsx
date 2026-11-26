@@ -29,13 +29,7 @@ import { TempoSheet } from './TempoSheet.tsx';
 import { useAccessFlow, type AccessFlow } from './useAccessFlow.ts';
 import { useLastSeen } from './useLastSeen.ts';
 
-type OpenSheet =
-  | 'none'
-  | 'source'
-  | 'tempo'
-  | 'menu'
-  | 'sound'
-  | PatternSheet;
+type OpenSheet = 'none' | 'source' | 'tempo' | 'menu' | 'sound' | PatternSheet;
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
