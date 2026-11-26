@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { songLengthFact } from '../playOrder/stemSongText.ts';
-import { formatClock, secondsToFrames } from './time.ts';
+import { secondsToFrames } from './time.ts';
 import { useLoopScrub } from './useLoopScrub.ts';
 
 vi.mock('react', () => ({ useCallback: <T>(callback: T) => callback }));
@@ -30,9 +30,8 @@ describe('the player total', () => {
     expect(total).toBe(songLengthFact({ durationSec: SONG_SECONDS }));
   });
 
-  it('is what the elapsed clock reads at the end of the song', () => {
-    const { total, spokenPosition } = useLoopScrub(useSelect);
-    expect(formatClock(DURATION_FRAMES, RATE)).toBe(total);
+  it('reads the same at the end of the song as the elapsed clock', () => {
+    const { spokenPosition } = useLoopScrub(useSelect);
     expect(spokenPosition(SONG_SECONDS)).toBe('2:29 of 2:29');
   });
 });

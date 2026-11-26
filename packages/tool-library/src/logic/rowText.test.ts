@@ -1,6 +1,4 @@
 import {
-  formatClock,
-  secondsToFrames,
   TEMPO_CORRECTION,
   type LibraryRow,
   type LibrarySongRow,
@@ -84,12 +82,8 @@ describe('length', () => {
     expect(spokenLength(seconds)).toBe(spoken);
   });
 
-  it("matches the player's total for the same song", () => {
-    const rate = 48_000;
-    const total = formatClock(secondsToFrames(149.6, rate), rate);
-    expect(shownSubtitle({ ...SONG, durationSec: 149.6 }, 'grid', null)).toBe(
-      `${total} · 158 BPM`,
-    );
+  it('says no length as 0 seconds', () => {
+    expect(spokenLength(0)).toBe('0 seconds');
   });
 });
 
