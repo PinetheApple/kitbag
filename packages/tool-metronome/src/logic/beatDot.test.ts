@@ -12,57 +12,61 @@ const PALETTE = {
   silentNow: 'text',
   clear: 'transparent',
 };
-const WIDTHS = { normal: 2, accent: 5, silentNow: 4 };
 
 describe('dotLook', () => {
   it('tells the three states apart by shape at rest', () => {
-    expect(dotLook('accented', false, false, PALETTE, WIDTHS)).toEqual({
-      backgroundColor: 'transparent',
-      borderColor: 'accent',
-      borderWidth: 5,
+    expect(dotLook('accented', false, false, PALETTE)).toEqual({
+      fill: 'transparent',
+      edge: 'accent',
+      accentEdge: 'accent',
+      silentNowEdge: 'transparent',
     });
-    expect(dotLook('normal', false, false, PALETTE, WIDTHS)).toEqual({
-      backgroundColor: 'surface3',
-      borderColor: 'dotBorder',
-      borderWidth: 2,
+    expect(dotLook('normal', false, false, PALETTE)).toEqual({
+      fill: 'surface3',
+      edge: 'dotBorder',
+      accentEdge: 'transparent',
+      silentNowEdge: 'transparent',
     });
-    expect(dotLook('muted', false, false, PALETTE, WIDTHS)).toEqual({
-      backgroundColor: 'transparent',
-      borderColor: 'decor',
-      borderWidth: 2,
+    expect(dotLook('muted', false, false, PALETTE)).toEqual({
+      fill: 'transparent',
+      edge: 'decor',
+      accentEdge: 'transparent',
+      silentNowEdge: 'transparent',
     });
   });
 
   it('fills the sounding dot and keeps the accent ring width', () => {
-    expect(dotLook('normal', true, false, PALETTE, WIDTHS)).toEqual({
-      backgroundColor: 'accent',
-      borderColor: 'accent',
-      borderWidth: 2,
+    expect(dotLook('normal', true, false, PALETTE)).toEqual({
+      fill: 'accent',
+      edge: 'accent',
+      accentEdge: 'transparent',
+      silentNowEdge: 'transparent',
     });
-    expect(dotLook('accented', true, false, PALETTE, WIDTHS).borderWidth).toBe(
-      5,
-    );
+    expect(dotLook('accented', true, false, PALETTE).accentEdge).toBe('accent');
   });
 
   it('keeps a muted beat hollow when current, outlining it in text', () => {
-    expect(dotLook('muted', true, false, PALETTE, WIDTHS)).toEqual({
-      backgroundColor: 'transparent',
-      borderColor: 'text',
-      borderWidth: 2,
+    expect(dotLook('muted', true, false, PALETTE)).toEqual({
+      fill: 'transparent',
+      edge: 'text',
+      accentEdge: 'transparent',
+      silentNowEdge: 'transparent',
     });
   });
 
   it('hollows every dot in a muted bar, the sounding one thickest', () => {
     for (const state of ['accented', 'normal', 'muted'] as const) {
-      expect(dotLook(state, false, true, PALETTE, WIDTHS)).toEqual({
-        backgroundColor: 'transparent',
-        borderColor: 'decor',
-        borderWidth: 2,
+      expect(dotLook(state, false, true, PALETTE)).toEqual({
+        fill: 'transparent',
+        edge: 'decor',
+        accentEdge: 'transparent',
+        silentNowEdge: 'transparent',
       });
-      expect(dotLook(state, true, true, PALETTE, WIDTHS)).toEqual({
-        backgroundColor: 'transparent',
-        borderColor: 'text',
-        borderWidth: 4,
+      expect(dotLook(state, true, true, PALETTE)).toEqual({
+        fill: 'transparent',
+        edge: 'transparent',
+        accentEdge: 'transparent',
+        silentNowEdge: 'text',
       });
     }
   });

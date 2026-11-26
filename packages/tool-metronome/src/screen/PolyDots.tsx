@@ -76,66 +76,53 @@ const usePolyStyles = createThemedStyles((theme) => ({
   },
 }));
 
+const BRACKET_FOR_CURRENT = [false, true] as const;
+
 interface PlacedPulse {
+  readonly bar: number;
   readonly left: number;
   readonly slot: number;
   readonly cycle: number;
 }
 
-type PulseColumn = readonly (PlacedPulse | null)[];
-
 interface PlacedSpan {
+  readonly bar: number;
   readonly left: number;
   readonly width: number;
   readonly cycle: number;
 }
 
-type SpanColumn = readonly (PlacedSpan | null)[];
-
-function columnsOf<Item, Placed>(
-  rows: readonly (readonly Item[])[],
-  place: (item: Item) => Placed,
-): readonly (readonly (Placed | null)[])[] {
-  const count = Math.max(...rows.map((row) => row.length));
-  return Array.from({ length: count }, (_u, index) =>
-    rows.map((row) => {
-      const item = row[index];
-      return item === undefined ? null : place(item);
-    }),
-  );
-}
-
-function pulseColumns(
+function placedPulses(
   ratio: PolyRatio,
   row: PolyRowGeometry,
   size: number,
-): readonly PulseColumn[] {
-  return columnsOf(
-    polyBarTable(ratio).map((bar) => bar.pulses),
-    (pulse) => ({
+): readonly PlacedPulse[] {
+  return polyBarTable(ratio).flatMap((table, bar) =>
+    table.pulses.map((pulse) => ({
+      bar,
       left: polyX(pulse.beat, ratio.beatsPerBar, row) - size / 2,
       slot: pulse.slot,
       cycle: pulse.cycle,
-    }),
+    })),
   );
 }
 
-function spanColumns(
+function placedSpans(
   ratio: PolyRatio,
   row: PolyRowGeometry,
   areaWidth: number,
-): readonly SpanColumn[] {
-  return columnsOf(
-    polyBarTable(ratio).map((bar) => bar.spans),
-    (span) => ({
+): readonly PlacedSpan[] {
+  return polyBarTable(ratio).flatMap((table, bar) =>
+    table.spans.map((span) => ({
+      bar,
       ...polySpanInArea(span, ratio.beatsPerBar, row, areaWidth),
       cycle: span.cycle,
-    }),
+    })),
   );
 }
 
 interface PolyDotProps {
-  readonly column: PulseColumn;
+  readonly pulse: PlacedPulse;
   readonly size: number;
   readonly offset: SharedValue<number>;
   readonly cycle: SharedValue<number>;
@@ -143,7 +130,7 @@ interface PolyDotProps {
 }
 
 function PolyDot({
-  column,
+  pulse,
   size,
   offset,
   cycle,
@@ -152,55 +139,62 @@ function PolyDot({
   const styles = usePolyStyles();
   const { color } = useTheme();
   const palette = useMemo(() => dotPalette(color), [color]);
-  const box = useMemo(
-    () => ({ top: (metronome.polyDot - size) / 2, width: size, height: size }),
-    [size],
+  const ring = pulse.slot === 0;
+  const place = useMemo(
+    () => ({
+      top: (metronome.polyDot - size) / 2,
+      left: pulse.left,
+      width: size,
+      height: size,
+      borderWidth: ring ? metronome.dotRing : metronome.dotBorder,
+    }),
+    [size, pulse.left, ring],
   );
   const look = useAnimatedStyle(() => {
-    const pulse = column[offset.value] ?? null;
-    if (pulse === null) return { opacity: 0 };
+    if (offset.value !== pulse.bar) {
+      return { backgroundColor: TRANSPARENT, borderColor: TRANSPARENT };
+    }
     const sounding =
       pulse.slot === currentPolyBeat.value && pulse.cycle === cycle.value;
-    const ring = pulse.slot === 0;
     const rest = ring ? TRANSPARENT : palette.fill;
     return {
-      opacity: 1,
-      left: pulse.left,
       backgroundColor: sounding ? color.text2 : rest,
       borderColor: sounding || ring ? color.text2 : palette.border,
-      borderWidth: ring ? metronome.dotRing : metronome.dotBorder,
     };
   });
-  return <Animated.View style={[styles.dot, box, look]} />;
+  return <Animated.View style={[styles.dot, place, look]} />;
 }
 
 interface CycleBracketProps {
-  readonly column: SpanColumn;
+  readonly span: PlacedSpan;
+  readonly current: boolean;
   readonly offset: SharedValue<number>;
   readonly cycle: SharedValue<number>;
 }
 
-function CycleBracket({ column, offset, cycle }: CycleBracketProps) {
+function CycleBracket({ span, current, offset, cycle }: CycleBracketProps) {
   const styles = usePolyStyles();
   const { color } = useTheme();
-  const look = useAnimatedStyle(() => {
-    const span = column[offset.value] ?? null;
-    if (span === null) return { opacity: 0 };
-    const now = span.cycle === cycle.value;
-    const border = now
+  const place = useMemo(() => {
+    const border = current
       ? metronome.polyBracketNowBorder
       : metronome.polyBracketBorder;
     return {
-      opacity: 1,
       left: span.left,
       width: span.width,
-      borderColor: now ? color.text2 : color.decor,
       borderLeftWidth: border,
       borderRightWidth: border,
       borderBottomWidth: border,
     };
+  }, [span.left, span.width, current]);
+  const look = useAnimatedStyle(() => {
+    const shown =
+      offset.value === span.bar && (span.cycle === cycle.value) === current;
+    return {
+      borderColor: shown ? (current ? color.text2 : color.decor) : TRANSPARENT,
+    };
   });
-  return <Animated.View style={[styles.bracket, look]} />;
+  return <Animated.View style={[styles.bracket, place, look]} />;
 }
 
 export interface PolyDotsFrame {
@@ -250,12 +244,12 @@ export function PolyDots({
     [lineWidth, dotSize],
   );
   const size = polyDotSize(ratio, row, metronome.polyDot);
-  const columns = useMemo(
-    () => pulseColumns(ratio, row, size),
+  const pulses = useMemo(
+    () => placedPulses(ratio, row, size),
     [ratio, row, size],
   );
   const spans = useMemo(
-    () => spanColumns(ratio, row, areaWidth),
+    () => placedSpans(ratio, row, areaWidth),
     [ratio, row, areaWidth],
   );
   const { offset, cycle } = usePolyFrame(frame, against);
@@ -306,18 +300,21 @@ export function PolyDots({
         {place === 'above' ? null : (
           <View style={[styles.besideLabel, besidePlace]}>{labelText}</View>
         )}
-        {spans.map((column, index) => (
-          <CycleBracket
-            key={index}
-            column={column}
-            offset={offset}
-            cycle={cycle}
-          />
-        ))}
-        {columns.map((column, index) => (
+        {spans.flatMap((span, index) =>
+          BRACKET_FOR_CURRENT.map((current) => (
+            <CycleBracket
+              key={`${String(index)}-${String(current)}`}
+              span={span}
+              current={current}
+              offset={offset}
+              cycle={cycle}
+            />
+          )),
+        )}
+        {pulses.map((pulse, index) => (
           <PolyDot
             key={index}
-            column={column}
+            pulse={pulse}
             size={size}
             offset={offset}
             cycle={cycle}

@@ -11,6 +11,7 @@ import { Pressable, Text, View } from 'react-native';
 import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   type SharedValue,
 } from 'react-native-reanimated';
@@ -36,7 +37,7 @@ import {
 } from '../logic/belowTempo.ts';
 import { NO_PULSE, soundingPulse } from '../logic/pulseMarks.ts';
 import type { ScreenDensity } from '../logic/screenDensity.ts';
-import { dotPalette, DOT_WIDTHS, useBeatDotStyles } from './beatDotStyles.ts';
+import { dotPalette, useBeatDotStyles } from './beatDotStyles.ts';
 import { BeatGrid, type BeatPosition } from './BeatGrid.tsx';
 import { CountInSquares } from './CountInSquares.tsx';
 import { PolyDots } from './PolyDots.tsx';
@@ -69,15 +70,20 @@ function BeatDot({
     () => hitBoxStyle(hitExtension(dotSize, dotSize, gaps)),
     [dotSize, gaps],
   );
-  const look = useAnimatedStyle(() =>
-    dotLook(
-      state,
-      currentBeat.value === beat,
-      barMuted.value !== 0,
-      palette,
-      DOT_WIDTHS,
-    ),
+  const now = useDerivedValue(() =>
+    dotLook(state, currentBeat.value === beat, barMuted.value !== 0, palette),
   );
+  const look = useAnimatedStyle(() => ({
+    backgroundColor: now.value.fill,
+    borderColor: now.value.edge,
+  }));
+  const accentEdge = useAnimatedStyle(() => ({
+    borderColor: now.value.accentEdge,
+  }));
+  const silentNowEdge = useAnimatedStyle(() => ({
+    borderColor: now.value.silentNowEdge,
+  }));
+  const dashed = state === 'muted' && styles.dashed;
   const ring = useAnimatedStyle(() => ({
     borderColor: currentBeat.value === beat ? palette.accent : palette.clear,
   }));
@@ -93,12 +99,14 @@ function BeatDot({
       onPress={handlePress}
     >
       <View style={box}>
-        <Animated.View
-          style={[styles.dot, box, state === 'muted' && styles.dashed, look]}
-        />
+        <Animated.View style={[styles.dot, box, dashed, look]} />
         {state === 'accented' ? (
-          <Animated.View style={[styles.ring, ring]} />
+          <>
+            <Animated.View style={[styles.accentEdge, accentEdge]} />
+            <Animated.View style={[styles.ring, ring]} />
+          </>
         ) : null}
+        <Animated.View style={[styles.silentNowEdge, dashed, silentNowEdge]} />
       </View>
     </Pressable>
   );

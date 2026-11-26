@@ -84,6 +84,8 @@ export const useStatusStyles = createThemedStyles((theme) => ({
   detail: {
     ...textStyle(textRoles.status),
     color: theme.color.text,
+  },
+  grow: {
     flex: 1,
   },
   meta: {
