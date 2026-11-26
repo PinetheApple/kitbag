@@ -74,10 +74,12 @@ export const nativePlayAlongRuntime: PlayAlongRuntime = {
   get commands() {
     return getKitbagCommands();
   },
-  boottimeNowMs,
-  engineFrameAtBoottimeMs,
-  sessions: getMediaSessionsStore,
-  sessionCommand: mediaSessionCommand,
+  boottimeNowMs: () => boottimeNowMs(),
+  engineFrameAtBoottimeMs: (ms) => engineFrameAtBoottimeMs(ms),
+  sessions: () => getMediaSessionsStore(),
+  sessionCommand: (sessionId, command) => {
+    mediaSessionCommand(sessionId, command);
+  },
   latencyOffsetMs: () => metronomeStore.getState().latencyOffset,
   onClickStarting: clickStartsOf(metronomeStore),
   yieldStandalone: () => metronomeStore.getState().yieldEngine(),
