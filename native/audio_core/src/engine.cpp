@@ -84,7 +84,7 @@ bool Engine::StartLocked() {
   }
   StopWatchdog();
   ReleaseRetired();
-  metronome_.DropQueuedPreviews();
+  for (Metronome& metronome : metronomes_) metronome.DropQueuedPreviews();
   stopped_unexpectedly_.store(false, std::memory_order_relaxed);
   const bool started = ma_device_start(&device_) == MA_SUCCESS;
   // Set only after the device is live, so a publisher that reads this can never
@@ -147,7 +147,7 @@ void Engine::StopDevice() {
 // Control thread only, device stopped: the retire lists belong to the
 // publishing thread, so the watchdog leaves them for the next Start or Stop.
 void Engine::ReleaseRetired() {
-  metronome_.ReleaseRetired();
+  for (Metronome& metronome : metronomes_) metronome.ReleaseRetired();
   mixer_.ReleaseRetiredSources();
   player_.ReleaseRetiredSources();
 }
@@ -155,8 +155,27 @@ void Engine::ReleaseRetired() {
 // The mirrors cover a stop still queued in the ring, the intents a start.
 bool Engine::IsIdle() const {
   return holders_ == 0 && !metronome_intent() && !mixer_intent_.load() &&
-         !rig_click_intent_.load() && !metronome_.is_running() &&
-         !mixer_.is_playing() && !metronome_.rig_click().is_active();
+         !rig_click_intent_.load() && !metronome().is_running() &&
+         !mixer_.is_playing() && !metronome().rig_click().is_active();
+}
+
+// CLOCK_BOOTTIME is not in every arm64 vDSO, so the callback stamps only
+// CLOCK_MONOTONIC and the conversion runs here, off the audio thread.
+bool Engine::FrameAtBoottime(int64_t boottime_ns, int64_t* out_frame) const {
+  ClockPair pair{};
+  if (!render_clock_.Read(&pair)) return false;
+  const int64_t monotonic_ns = boottime_ns - Suspended();
+  *out_frame =
+      pair.frame + NsToFrames(monotonic_ns - pair.monotonic_ns, kSampleRate);
+  return true;
+}
+
+int64_t Engine::Suspended() const {
+#ifdef KITBAG_BUILD_TOOLS
+  const int64_t forced = suspended_override_ns_.load(std::memory_order_relaxed);
+  if (forced != kMeasureSuspended) return forced;
+#endif
+  return SuspendedNs();
 }
 
 int32_t Engine::OutputDeviceId() const {
@@ -299,15 +318,15 @@ void Engine::DataCallback(
 ) {
   (void)input;
   auto* engine = static_cast<Engine*>(device->pUserData);
-  engine->Render(static_cast<float*>(output), frame_count);
+  engine->Render(static_cast<float*>(output), frame_count, MonotonicNs());
 }
 
 // Scratch covers kMaxBlockFrames; the read-ahead behind it is sized for the
 // whole callback (ReserveCallbackFrames), so slicing never outruns a ring.
-void Engine::Render(float* output, uint32_t frame_count) {
+void Engine::Render(float* output, uint32_t frame_count, int64_t monotonic_ns) {
   render_clock_.Publish(
       static_cast<int64_t>(frames_rendered_.load(std::memory_order_relaxed)),
-      MonotonicNs()
+      monotonic_ns
   );
   while (frame_count > 0) {
     const uint32_t slice =
@@ -329,21 +348,48 @@ void Engine::RenderSlice(float* output, uint32_t frame_count) {
   mixer_.Process(output, frame_count, block_start_frame);
   player_.Render(output, frame_count);
 
-  metronome_.Render(
-      output,
-      frame_count,
-      kSampleRate,
-      kChannelCount,
-      block_start_frame,
-      &mixer_.song_clock()
-  );
-  uint32_t ended = metronome_.TakeEndedIntent();
-  if (ended != Metronome::kNoIntent) {
-    metronome_intent_.compare_exchange_strong(ended, Metronome::kNoIntent);
+  const int32_t selected = selected_metronome_slot();
+  for (int32_t slot = 0; slot < kMetronomeSlots; ++slot) {
+    RenderMetronome(
+        slot,
+        slot == selected,
+        output,
+        frame_count,
+        block_start_frame
+    );
   }
 
   // seq_cst pairs with RtPublisher's swap; see rt_publisher.h.
   frames_rendered_.fetch_add(frame_count, kTickOrder);
+}
+
+void Engine::RenderMetronome(
+    int32_t slot,
+    bool selected,
+    float* output,
+    uint32_t frame_count,
+    uint64_t block_start_frame
+) {
+  Metronome& metronome = metronomes_[slot];
+  if (selected) {
+    metronome.Render(
+        output,
+        frame_count,
+        kSampleRate,
+        kChannelCount,
+        block_start_frame,
+        &mixer_.song_clock()
+    );
+  } else {
+    metronome.RenderSuspended(output, frame_count, kChannelCount);
+  }
+  uint32_t ended = metronome.TakeEndedIntent();
+  if (ended != Metronome::kNoIntent) {
+    metronome_intents_[slot].compare_exchange_strong(
+        ended,
+        Metronome::kNoIntent
+    );
+  }
 }
 
 }  // namespace kitbag

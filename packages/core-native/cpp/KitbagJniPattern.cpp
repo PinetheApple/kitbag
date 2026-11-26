@@ -13,6 +13,16 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetBeats(JNIEnv*, jobject,
 }
 
 JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMetronomeSelectSlot(JNIEnv*, jobject, jint slot) {
+  kitbag::commandMetronomeSelectSlot(slot);
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMetronomeAnchorExternal(JNIEnv*, jobject, jdouble songPosSec, jdouble atFrame, jdouble bpm) {
+  kitbag::commandMetronomeAnchorExternal(songPosSec, atFrame, bpm);
+}
+
+JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetSubdivision(JNIEnv*, jobject, jint subdivision) {
   kitbag::commandSetSubdivision(subdivision);
 }

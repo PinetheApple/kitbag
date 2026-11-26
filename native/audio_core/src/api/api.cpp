@@ -4,6 +4,7 @@
 #include "kitbag_api.h"
 
 #include "api/api_engine.h"
+#include "rt/monotonic_clock.h"
 
 namespace {
 constexpr const char* kVersion = "0.1.0";
@@ -85,6 +86,23 @@ kb_result kb_engine_clock_pair(
   return KB_OK;
 }
 
+int64_t kb_clock_boottime_ns(void) {
+  return kitbag::BoottimeNs();
+}
+
+kb_result kb_engine_frame_at_boottime(
+    const kb_engine* engine,
+    int64_t boottime_ns,
+    int64_t* out_frame
+) {
+  if (engine == nullptr || out_frame == nullptr || boottime_ns < 0) {
+    return KB_ERROR_INVALID_ARGUMENT;
+  }
+  return ToEngine(engine)->FrameAtBoottime(boottime_ns, out_frame)
+             ? KB_OK
+             : KB_ERROR_BUSY;
+}
+
 int32_t kb_engine_output_device_id(const kb_engine* engine) {
   return engine == nullptr ? KB_NO_OUTPUT_DEVICE_ID
                            : ToEngine(engine)->OutputDeviceId();
@@ -97,7 +115,22 @@ void kb_engine_render(kb_engine* engine, float* out, uint32_t frame_count) {
   // second thread in Render would race the non-atomic mixer/player/metronome
   // state. Relaxed atomic load — no alloc, lock or syscall.
   if (ToEngine(engine)->is_running()) return;
-  ToEngine(engine)->RenderOffline(out, frame_count);
+  ToEngine(engine)->RenderOffline(out, frame_count, kitbag::MonotonicNs());
+}
+
+void kb_engine_set_suspended_ns(kb_engine* engine, int64_t suspended_ns) {
+  if (engine != nullptr) ToEngine(engine)->set_suspended_ns(suspended_ns);
+}
+
+void kb_engine_render_at(
+    kb_engine* engine,
+    float* out,
+    uint32_t frame_count,
+    int64_t monotonic_ns
+) {
+  if (engine == nullptr || out == nullptr || frame_count == 0) return;
+  if (ToEngine(engine)->is_running()) return;
+  ToEngine(engine)->RenderOffline(out, frame_count, monotonic_ns);
 }
 
 void kb_engine_reserve_render_frames(kb_engine* engine, uint32_t frames) {

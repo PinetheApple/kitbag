@@ -49,10 +49,11 @@ std::optional<uint64_t> wholeFrame(double value) {
 int32_t queueSongCountIn(uint64_t end, double beatFrames, int32_t beatsPerBar, bool startClick) {
   const LockedEngine engine = commandEngine();
   const int32_t counted =
-      kb_metronome_count_in_at(engine, end, beatFrames, beatsPerBar, flag(startClick));
+      kb_metronome_slot_count_in_at(engine, KB_METRONOME_SLOT_STANDALONE, end, beatFrames,
+                                    beatsPerBar, flag(startClick));
   if (counted != KB_OK) return counted;
   const int32_t queued = kb_mixer_play_at(engine, end);
-  if (queued != KB_OK) kb_metronome_stop(engine);
+  if (queued != KB_OK) kb_metronome_slot_stop(engine, KB_METRONOME_SLOT_STANDALONE);
   return queued;
 }
 }  // namespace
@@ -67,17 +68,47 @@ void commandMetronomeStart(double anchorFrame) {
   kb_metronome_start_at(commandEngine(), static_cast<uint64_t>(anchorFrame));
   commandStart();
 }
-// start_at only takes effect while stopped, so a stale Resume cannot restart a running
-// click, and unlike start it keeps an anchor the app queued, which must still land.
-void commandMetronomeStartNow() {
+void commandMetronomeStop() { kb_metronome_stop(commandEngine()); }
+void commandMetronomePause() { kb_metronome_pause(commandEngine()); }
+
+void commandMetronomeSelectSlot(int32_t slot) {
+  bool wantsDevice = false;
   {
     const LockedEngine engine = commandEngine();
-    kb_metronome_start_at(engine, kb_engine_frames_rendered(engine));
+    kb_metronome_select_slot(engine, slot);
+    wantsDevice = kb_metronome_intends_to_play(engine) != 0;
+  }
+  if (wantsDevice) commandStart();
+}
+void commandMetronomeAnchorExternal(double songPosSec, double atFrame, double bpm) {
+  const auto frame = wholeFrame(atFrame);
+  if (!frame || !std::isfinite(songPosSec) || !std::isfinite(bpm)) return;
+  kb_metronome_anchor_external(commandEngine(), songPosSec, *frame, bpm);
+  commandStart();
+}
+
+// start_at only takes effect while stopped, so a stale Resume cannot restart a running
+// click, and unlike start it keeps an anchor the app queued, which must still land.
+void commandStandaloneStartNow() {
+  {
+    const LockedEngine engine = commandEngine();
+    kb_metronome_slot_start_at(engine, KB_METRONOME_SLOT_STANDALONE,
+                               kb_engine_frames_rendered(engine));
   }
   commandStart();
 }
-void commandMetronomeStop() { kb_metronome_stop(commandEngine()); }
-void commandMetronomePause() { kb_metronome_pause(commandEngine()); }
+void commandStandalonePause() {
+  kb_metronome_slot_pause(commandEngine(), KB_METRONOME_SLOT_STANDALONE);
+}
+void commandStandaloneStop() {
+  kb_metronome_slot_stop(commandEngine(), KB_METRONOME_SLOT_STANDALONE);
+}
+void commandStandaloneSetTempo(double bpm) {
+  kb_metronome_slot_set_tempo(commandEngine(), KB_METRONOME_SLOT_STANDALONE, bpm);
+}
+double commandStandaloneBpm() {
+  return kb_metronome_slot_current_bpm(kitbagEngine(), KB_METRONOME_SLOT_STANDALONE);
+}
 
 int32_t commandRigClickStart(double bpm, int32_t subdivision, double startFrame) {
   constexpr double kExactFrameLimit = static_cast<double>(int64_t{1} << 53);
@@ -201,19 +232,19 @@ int32_t commandSongCountIn(double endFrame, double beatFrames, int32_t beatsPerB
   const int32_t started = commandStart();
   if (started != KB_OK) {
     const LockedEngine engine = commandEngine();
-    kb_metronome_stop(engine);
+    kb_metronome_slot_stop(engine, KB_METRONOME_SLOT_STANDALONE);
     kb_mixer_pause(engine);
   }
   return started;
 }
 void commandSongPause() {
   const LockedEngine engine = commandEngine();
-  kb_metronome_pause(engine);
+  kb_metronome_slot_pause(engine, KB_METRONOME_SLOT_STANDALONE);
   kb_mixer_pause(engine);
 }
 void commandSongStop() {
   const LockedEngine engine = commandEngine();
-  kb_metronome_stop(engine);
+  kb_metronome_slot_stop(engine, KB_METRONOME_SLOT_STANDALONE);
   kb_mixer_stop(engine);
 }
 int32_t commandMixerSetLoop(double startFrame, double endFrame) {

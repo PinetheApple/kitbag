@@ -9,6 +9,7 @@ namespace kitbag {
 
 inline constexpr double kMinBpm = 20.0;
 inline constexpr double kMaxBpm = 400.0;
+inline constexpr int64_t kNoFiredTick = std::numeric_limits<int64_t>::min();
 
 enum class Accent : uint8_t { kMuted = 0, kNormal = 1, kAccented = 2 };
 

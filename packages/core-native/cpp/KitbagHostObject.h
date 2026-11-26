@@ -14,7 +14,8 @@ namespace kitbag {
 inline constexpr const char* kHostObjectKey = "__KitbagHostObject";
 
 // Number-valued properties, not methods: a callable would allocate a
-// jsi::Function per worklet frame (SPEC §13.3).
+// jsi::Function per worklet frame (SPEC §13.3). frame_at_boottime_ms is the
+// exception, read at play along's re-anchor rate.
 class KitbagHostObject : public facebook::jsi::HostObject {
  public:
   explicit KitbagHostObject(kb_engine* engine) : engine_(engine) {}

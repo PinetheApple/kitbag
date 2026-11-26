@@ -225,6 +225,14 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     nativeMetronomePause()
   }
 
+  override fun metronomeSelectSlot(slot: Double) {
+    nativeMetronomeSelectSlot(slot.toInt())
+  }
+
+  override fun metronomeAnchorExternal(songPosSec: Double, atFrame: Double, bpm: Double) {
+    nativeMetronomeAnchorExternal(songPosSec, atFrame, bpm)
+  }
+
   override fun setTempo(bpm: Double) {
     nativeSetTempo(bpm)
   }
@@ -508,6 +516,8 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeRigClickStop()
   private external fun nativeRigClickIsActive(): Boolean
   private external fun nativeMetronomePause()
+  private external fun nativeMetronomeSelectSlot(slot: Int)
+  private external fun nativeMetronomeAnchorExternal(songPosSec: Double, atFrame: Double, bpm: Double)
   private external fun nativeSetTempo(bpm: Double)
   private external fun nativeSetGrid(
     beatTimesSec: DoubleArray,

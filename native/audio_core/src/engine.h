@@ -8,6 +8,7 @@
 #include <thread>
 
 #include "kitbag_engine_hold_api.h"
+#include "kitbag_metronome_slot_api.h"
 #include "media/decoder.h"
 #include "metronome/metronome.h"
 #include "miniaudio.h"
@@ -28,6 +29,11 @@ class Engine {
   static constexpr uint32_t kSampleRate = 48000;
   static constexpr uint32_t kChannelCount = 2;
   static constexpr uint32_t kDefaultIdleGraceMs = 2000;
+  static constexpr int32_t kMetronomeSlots = KB_METRONOME_SLOT_PLAY_ALONG + 1;
+
+  static bool ValidMetronomeSlot(int32_t slot) {
+    return slot >= 0 && slot < kMetronomeSlots;
+  }
 
   Engine() = default;
   ~Engine();
@@ -43,18 +49,24 @@ class Engine {
   void ResetHolders();
   int32_t holders() const;
   bool idle() const;
-  void SetMetronomeIntent(bool playing) {
+  void SelectMetronomeSlot(int32_t slot) {
+    if (ValidMetronomeSlot(slot)) selected_slot_.store(slot);
+  }
+  int32_t selected_metronome_slot() const {
+    return selected_slot_.load();
+  }
+  void SetMetronomeIntent(int32_t slot, bool playing) {
     if (playing) {
-      ClaimMetronomeIntent();
+      ClaimMetronomeIntent(slot);
     } else {
-      metronome_intent_.store(Metronome::kNoIntent);
+      metronome_intents_[slot].store(Metronome::kNoIntent);
     }
   }
   // A fresh token per claim, so a count's end clears only the intent it set.
-  uint32_t ClaimMetronomeIntent() {
+  uint32_t ClaimMetronomeIntent(int32_t slot) {
     uint32_t token = intent_tokens_.fetch_add(1) + 1;
     if (token == Metronome::kNoIntent) token = intent_tokens_.fetch_add(1) + 1;
-    metronome_intent_.store(token);
+    metronome_intents_[slot].store(token);
     return token;
   }
   void SetMixerIntent(bool playing) {
@@ -67,7 +79,8 @@ class Engine {
     return rig_click_intent_.load();
   }
   bool metronome_intent() const {
-    return metronome_intent_.load() != Metronome::kNoIntent;
+    return metronome_intents_[selected_metronome_slot()].load() !=
+           Metronome::kNoIntent;
   }
   bool mixer_intent() const {
     return mixer_intent_.load();
@@ -93,6 +106,12 @@ class Engine {
   bool ReadRenderClock(ClockPair* out) const {
     return render_clock_.Read(out);
   }
+  bool FrameAtBoottime(int64_t boottime_ns, int64_t* out_frame) const;
+#ifdef KITBAG_BUILD_TOOLS
+  void set_suspended_ns(int64_t suspended_ns) {
+    suspended_override_ns_.store(suspended_ns, std::memory_order_relaxed);
+  }
+#endif
 
   int32_t OutputDeviceId() const;
 
@@ -103,15 +122,22 @@ class Engine {
   }
 
   // Offline pull backing kb_engine_render; see its contract in kitbag_api.h.
-  void RenderOffline(float* output, uint32_t frame_count) {
-    Render(output, frame_count);
+  void
+  RenderOffline(float* output, uint32_t frame_count, int64_t monotonic_ns) {
+    Render(output, frame_count, monotonic_ns);
   }
 
   Metronome& metronome() {
-    return metronome_;
+    return metronomes_[selected_metronome_slot()];
   }
   const Metronome& metronome() const {
-    return metronome_;
+    return metronomes_[selected_metronome_slot()];
+  }
+  Metronome& metronome(int32_t slot) {
+    return metronomes_[slot];
+  }
+  const Metronome& metronome(int32_t slot) const {
+    return metronomes_[slot];
   }
 
   Tuner& tuner() {
@@ -157,8 +183,15 @@ class Engine {
       ma_uint32 frame_count
   );
   static void OnNotification(const ma_device_notification* notification);
-  void Render(float* output, uint32_t frame_count);
+  void Render(float* output, uint32_t frame_count, int64_t monotonic_ns);
   void RenderSlice(float* output, uint32_t frame_count);
+  void RenderMetronome(
+      int32_t slot,
+      bool selected,
+      float* output,
+      uint32_t frame_count,
+      uint64_t block_start_frame
+  );
   bool StartLocked();
   void StopDevice();
   void ReleaseRetired();
@@ -170,6 +203,7 @@ class Engine {
   void RestartDevice();
   void ResolveDeviceIdReader();
   void RefreshOutputDeviceId();
+  int64_t Suspended() const;
 
   ma_device device_{};
   bool device_ready_ = false;
@@ -195,13 +229,18 @@ class Engine {
   // takes it. The watchdog only try-locks, so Stop can join it while holding.
   mutable std::mutex lifecycle_mutex_;
   int32_t holders_ = 0;
-  std::atomic<uint32_t> metronome_intent_{Metronome::kNoIntent};
+  std::atomic<int32_t> selected_slot_{KB_METRONOME_SLOT_STANDALONE};
+  std::atomic<uint32_t> metronome_intents_[kMetronomeSlots] = {};
   std::atomic<uint32_t> intent_tokens_{Metronome::kNoIntent};
   std::atomic<bool> mixer_intent_{false};
   std::atomic<bool> rig_click_intent_{false};
   std::atomic<uint32_t> idle_grace_ms_{kDefaultIdleGraceMs};
+#ifdef KITBAG_BUILD_TOOLS
+  static constexpr int64_t kMeasureSuspended = INT64_MIN;
+  std::atomic<int64_t> suspended_override_ns_{kMeasureSuspended};
+#endif
 
-  Metronome metronome_;
+  Metronome metronomes_[kMetronomeSlots];
   Tuner tuner_;
   Decoder decoder_;
   Mixer mixer_{kSampleRate};

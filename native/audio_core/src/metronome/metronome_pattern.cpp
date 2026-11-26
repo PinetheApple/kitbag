@@ -88,6 +88,7 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
     case CommandType::kSetSubdivision:
       subdivision_ = Clamp(command.int_a, kMinSubdivision, kMaxSubdivision);
       grid_state_.resync_sub = true;
+      last_tick_ = kNoFiredTick;
       return true;
     case CommandType::kSetSubdivisionAccents:
       SetSubdivisionAccentRow(command.int_a, command.int_b);

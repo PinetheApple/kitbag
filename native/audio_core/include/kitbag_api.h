@@ -184,6 +184,7 @@ KB_EXPORT int32_t kb_metronome_counting_in(const kb_engine* engine);
 
 #include "kitbag_click_sound_api.h"
 #include "kitbag_metronome_poly_api.h"
+#include "kitbag_metronome_slot_api.h"
 #include "kitbag_metronome_subdivision_api.h"
 #include "kitbag_metronome_trainer_api.h"
 #include "kitbag_rig_click_api.h"

@@ -57,6 +57,8 @@ export interface NativeSources {
   readonly clickSoundHeader: string;
   /** native/audio_core/include/kitbag_constant_tempo_api.h — the fit's bpm range. */
   readonly constantTempoHeader: string;
+  /** native/audio_core/include/kitbag_metronome_slot_api.h — kb_metronome_slot. */
+  readonly metronomeSlotHeader: string;
 }
 
 export interface NativeConstants {
@@ -90,6 +92,7 @@ export interface NativeConstants {
   readonly rampUnit: readonly EnumMember[];
   readonly rampState: readonly EnumMember[];
   readonly mixdownState: readonly EnumMember[];
+  readonly metronomeSlot: readonly EnumMember[];
   readonly mixdownChannels: number;
   readonly mixdownBitsPerSample: number;
   readonly customSoundSlots: number;

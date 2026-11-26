@@ -19,6 +19,9 @@ extern "C" {
  * kb_metronome_start_at, kb_metronome_count_in_at,
  * kb_metronome_anchor_external, kb_mixer_play or kb_mixer_play_at is called,
  * not when the callback applies it, and cleared by the matching stop or pause.
+ * The metronome's intent and mirrors are the selected slot's
+ * (kitbag_metronome_slot_api.h): a suspended slot neither keeps the device nor
+ * loses its intent.
  * The mixer's intent outlasts the end of a song until kb_mixer_stop or
  * kb_mixer_pause. The player is not covered: kb_player_play
  * sets no intent and does not keep the device.

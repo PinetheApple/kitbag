@@ -2,11 +2,16 @@
 
 #include <algorithm>
 #include <cassert>
+#include <limits>
 
 #include "metronome/grid_bars.h"
 #include "metronome/metronome_internal.h"
 
 namespace kitbag {
+
+static_assert(
+    Metronome::kMaxSubdivision <= std::numeric_limits<uint16_t>::digits
+);
 
 using metronome_detail::Clamp;
 using metronome_detail::kMsPerMinute;
