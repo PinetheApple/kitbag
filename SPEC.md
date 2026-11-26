@@ -1077,7 +1077,7 @@ working. Changes:
   metronome.
 - **One engine metronome, settled for this player.** The song's click and
   standalone Play preempt each other, and the standalone settings never change.
-  Whether Play along gets its own metronome state is still open (§8.9).
+  Play along has its own metronome slot in the same engine (§8.9).
 
 ### 6.5 Acceptance
 
@@ -1534,12 +1534,12 @@ time.
 Play along holds a metronome instance of its own. Opening it never moves your
 standalone tempo; closing it never leaves a mess to restore.
 
-**What "its own" means natively is open** (§15). The C core's metronome is a
-singleton (`kb_metronome_*`, no handle parameter), so an instance is either a
-second engine object — a real API change with a real cost — or a state stack in
-the app layer that saves and restores around the borrow. The design cannot tell
-these apart; **the acceptance criterion can:** opening Play along and closing it
-must leave the standalone metronome exactly as it was, including mid-run.
+**"Its own" is a metronome slot inside the one native engine**, not a second
+engine and not an app-side save and restore (`docs/decisions.md` 2026-09-26,
+ruling 3; #620). One click sounds at a time: switching slots suspends the other,
+and the standalone metronome resumes untouched. **The acceptance criterion:**
+opening Play along and closing it must leave the standalone metronome exactly as
+it was, including mid-run.
 
 **Leaving Play along while locked keeps the click following.** Kitbag runs it in
 the background under the metronome's foreground service (§5.6), so switching to

@@ -1326,3 +1326,19 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   is rejected. **[owner, 2026-11-26]**
 
 - **2026-11-26 · Viewing a song while another plays (§6.3, §7.9, #616)** — While another song holds the listening session, a Songs or Stem songs row tap of any other song opens its player in a view state: nothing loads, the playing song plays on under its docked mini-player, and Play switches. With no session the tap opens the song as before, so nothing is disabled for a plain open (recommendation taken 2026-11-26, after device flows showed the edit rows disabled). The setlist context now ends on Play of a viewed song that is not in the setlist, not on a list tap; viewing never ends it and queued songs do not. Supersedes the list-start rule of the 2026-11-20 song queue entry and `design/kitbag-queue.html` §f. Drawn in `docs/research/mockups/616-view-states.html`. **[owner, 2026-11-26]**
+
+- **2026-11-26 · Play along design approved (§8, §12, #618)** — The owner approved the redrawn `design/kitbag-playalong.html` and every recommendation in its question list:
+  (1) leaving Play along while locked keeps the click following in the background, with the docked mini-player on Home and the lists;
+  (2) the click sound is an overflow menu item opening the metronome's sound sheet;
+  (3) the transport is Previous, Play/Pause and Next only, with no loop key;
+  (4) the drift meter is the tuner strip on a ±50 ms full scale: green within ±10 ms, amber by ±30 ms, red at the edges;
+  (5) the phase step size is set only in the Phase sheet;
+  (6) Save for this song is an overflow menu item;
+  (7) once a BPM is known, tap tempo is a Tap key in the Tempo sheet beside ÷2 and ×2;
+  (8) the source chip sits in the app bar at font 1.0 and on its own line above 1.0;
+  (9) when drifting at short heights the meter moves to the top of the scroll and the pad keeps its pinned slot;
+  (10) podcast and audiobook rows use a new icon key, `spokenAudio` (MDI podcast);
+  (11) with no song to follow, the click has its own play/stop key in the dock;
+  (12) Kitbag's own player is never a source;
+  (13) the "still off" state after a bounce from Settings stays.
+  **[owner, 2026-11-26]**
