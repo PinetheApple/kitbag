@@ -1,4 +1,6 @@
-import type { BpmBounds } from './bpmBounds.ts';
+import { MS_PER_SECOND, SECONDS_PER_MINUTE } from '@kitbag/core-db';
+
+import type { BpmBounds } from '../metronome/config.ts';
 
 // A finger keeping the slowest legal tempo will not land every interval
 // exactly, and a series must survive that wobble.
@@ -6,7 +8,7 @@ const TIMEOUT_SLACK = 1.5;
 
 export const TAP_WINDOW_INTERVALS = 4;
 
-const MS_PER_MINUTE = 60000;
+const MS_PER_MINUTE = SECONDS_PER_MINUTE * MS_PER_SECOND;
 const MIN_TAPS_FOR_TEMPO = 2;
 
 // Derived from the slowest legal tempo: a fixed 2 s would sit at 30 BPM and put

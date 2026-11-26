@@ -26,9 +26,9 @@ import {
   type NowFrame,
 } from './commands.ts';
 import {
-  BPM_BOUNDS,
   clamp,
   roundToEngineBpm,
+  withinBpmBounds,
   initialAccents,
   isBuiltInSoundId,
   isCountInBars,
@@ -261,7 +261,7 @@ function tempoActions(
 > {
   return {
     setTempo: (bpm) => {
-      const next = clamp(bpm, BPM_BOUNDS.min, BPM_BOUNDS.max);
+      const next = withinBpmBounds(bpm);
       set((s) => ({ bpm: next, ramp: { ...s.ramp, enabled: false } }));
       commands.setTempo(next);
     },

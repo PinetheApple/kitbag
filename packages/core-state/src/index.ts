@@ -58,7 +58,7 @@ export {
   withoutSound,
 } from './metronome/config.ts';
 export { beatGroupSizes, groupStartAccents } from './metronome/meterGroups.ts';
-export type { BpmBounds } from './tapTempo/bpmBounds.ts';
+export type { BpmBounds } from './metronome/config.ts';
 export {
   pushTap,
   TAP_WINDOW_INTERVALS,

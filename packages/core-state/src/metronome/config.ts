@@ -17,6 +17,11 @@ const SECONDS_PER_MINUTE = 60;
 
 export const BPM_BOUNDS = KB_BPM_BOUNDS;
 
+export interface BpmBounds {
+  readonly min: number;
+  readonly max: number;
+}
+
 export interface RampConfig {
   readonly enabled: boolean;
   readonly startBpm: number;
@@ -67,6 +72,10 @@ export function clamp(value: number, min: number, max: number): number {
 
 export function roundToEngineBpm(bpm: number): number {
   return clamp(Math.round(bpm), KB_BPM_BOUNDS.min, KB_BPM_BOUNDS.max);
+}
+
+export function withinBpmBounds(bpm: number): number {
+  return clamp(bpm, KB_BPM_BOUNDS.min, KB_BPM_BOUNDS.max);
 }
 
 export function isBuiltInSoundId(id: number): boolean {

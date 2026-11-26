@@ -1,7 +1,5 @@
-// Tap-to-type tempo numpad (SPEC §5.2, design §03): "out-of-range clamps on
-// confirm rather than blocking the keypress". So a keypress is never rejected
-// for being wrong, only for having nowhere left to go, and the range bites once,
-// at confirm.
+// A keypress is rejected only when no digit fits; the range clamps once, at
+// confirm.
 
 import type { BpmBounds } from '@kitbag/core-state';
 import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';

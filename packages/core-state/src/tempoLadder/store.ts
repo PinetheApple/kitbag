@@ -1,9 +1,9 @@
 import type { SongIdentity } from '@kitbag/core-db';
 import { createStore } from 'zustand/vanilla';
 
-import { BPM_BOUNDS } from '../metronome/config.ts';
+import { BPM_BOUNDS, withinBpmBounds } from '../metronome/config.ts';
 import { pushTap, tapTempoBpm } from '../tapTempo/tapTempo.ts';
-import { doubledBpm, halvedBpm, withinBpmBounds } from './bpmSteps.ts';
+import { doubledBpm, halvedBpm } from './bpmSteps.ts';
 import { climbLadder, type TempoLookup } from './ladder.ts';
 import { getTempoLadder, type TempoLadderRuntime } from './runtime.ts';
 import { BPM_SOURCE, type BpmSource } from './sources.ts';
