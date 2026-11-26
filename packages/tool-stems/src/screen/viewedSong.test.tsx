@@ -1,6 +1,11 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
-import { QUEUE_TEXT, SheetHost, ThemeProvider } from '@kitbag/core-design';
+import {
+  opacity,
+  QUEUE_TEXT,
+  SheetHost,
+  ThemeProvider,
+} from '@kitbag/core-design';
 import {
   ARRIVAL,
   arrivalStore,
@@ -192,6 +197,26 @@ describe('a stem song viewed while another plays', () => {
   it('shows no missing-stems error before Play', async () => {
     await playingThenViewed();
     expect(texts()).not.toContain(STEMS_MISSING);
+  });
+
+  it('draws its stem rows at full strength before Play', async () => {
+    await playingThenViewed();
+    const names = stemViewStore.getState().stems.map((row) => row.name);
+    const greyed = hosts().filter((node) => {
+      const style = Object.assign(
+        {},
+        ...([node.props.style].flat(Infinity) as object[]),
+      ) as { opacity?: number };
+      return style.opacity === opacity.muted;
+    });
+    const greyedNames = greyed.flatMap((node) =>
+      node
+        .findAll((child) => String(child.type) === 'Text')
+        .flatMap((text) => text.children)
+        .filter((child) => typeof child === 'string' && names.includes(child)),
+    );
+    expect(names).not.toEqual([]);
+    expect(greyedNames).toEqual([]);
   });
 
   it('shows the missing-stems error once Play cannot open them', async () => {
