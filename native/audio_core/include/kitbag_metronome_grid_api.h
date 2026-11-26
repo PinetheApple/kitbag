@@ -114,12 +114,11 @@ KB_EXPORT void kb_metronome_anchor_external(
  * seconds per engine second: grid beat t sounds at engine frame
  * at_frame + (t - song_pos_sec) * sample_rate / rate, moved earlier by the
  * latency offset. Starts the click on the grid if it was stopped.
- * Set the grid once per lock and re-anchor with this call; a re-anchor while
- * playing never sounds a beat twice and never drops one. A correction under
- * half a click interval keeps the timeline, so a beat it skips over sounds at
- * once, late. A larger move forward is a seek and drops the beats it skips; a
- * move back of at least one grid interval replays the beats from the new
- * position; a shorter move back sounds no beat again.
+ * Set the grid once per lock and re-anchor with this call. A correction under
+ * half a click interval never sounds a beat twice and never drops one: a beat
+ * it skips over sounds at once, late. A larger move forward is a seek and drops
+ * the beats it skips; a move back of at least one grid interval replays the
+ * beats from the new position; any other move back sounds no beat again.
  * set_grid resets the mapping to song second 0 at its anchor_frame, rate 1. The
  * anchor applies to the grid set last on the selected slot: one made before
  * that set_grid, with no grid set, or while following the mixer is dropped,

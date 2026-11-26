@@ -3,14 +3,14 @@
 #include <cstdio>
 #include <vector>
 
-#include "metronome/metronome_internal.h"
+#include "metronome/grid_state.h"
 #include "metronome_test_audio.h"
 #include "zero_clock.h"
 
 namespace metronome_test {
 namespace {
 
-using kitbag::metronome_detail::kMaxNudgeTicks;
+using kitbag::GridMapping;
 using kitbag_test::kZeroClock;
 
 constexpr int kAnchorGridBeats = 12;
@@ -19,17 +19,19 @@ constexpr double kIntervalSec = 0.5;
 // so the model and the engine cannot round one beat to different frames.
 constexpr double kBeatPhaseSec = 0.5 / kSampleRate;
 constexpr int64_t kRenderFrames = int64_t{4} * kSampleRate;
-constexpr double kRealTime = 1.0;
 constexpr double kFastRate = 1.25;
 constexpr int kEighths = 2;
 constexpr double kSampleTolerance = 1e-6;
+// SPEC.md §4.2: under half a click interval a correction keeps the timeline.
+constexpr double kTimelineKeptBelowTicks = 0.5;
+constexpr int64_t kNoMismatch = -1;
 
 struct Correction {
   const char* name;
   double at_sec;
   double shift_sec;
   int subdivision = 1;
-  double rate = kRealTime;
+  double rate = GridMapping::kRealTime;
 };
 
 constexpr Correction kCorrections[] = {
@@ -46,6 +48,9 @@ constexpr Correction kCorrections[] = {
     {"+300 ms, a seek past a beat", 2.300, 0.300},
     {"back 0.6 s, a seek that replays", 2.100, -0.600},
     {"rate 1.25 from 10 ms after a beat", 2.010, 0.0, 1, kFastRate},
+    {"-300 ms, 50 ms after a beat", 2.050, -0.300},
+    {"-400 ms x2, 30 ms after a beat", 2.030, -0.400, kEighths},
+    {"+20 ms x2, 10 ms before an eighth", 2.240, 0.020, kEighths},
 };
 
 struct Click {
@@ -74,16 +79,18 @@ std::vector<Click> ExpectedClicks(const Correction& correction) {
   const double next =
       static_cast<double>(swap) / kSampleRate + correction.shift_sec;
   const int sub = correction.subdivision;
-  const bool nudge =
-      std::fabs(correction.shift_sec) * sub < kMaxNudgeTicks * kIntervalSec;
+  const bool nudge = std::fabs(correction.shift_sec) * sub <
+                     kTimelineKeptBelowTicks * kIntervalSec;
   const bool replays = correction.shift_sec <= -kIntervalSec;
   std::vector<Click> clicks;
   for (int tick = 0; tick < kAnchorGridBeats * sub; ++tick) {
     const double song = TickSec(tick, sub);
-    const int64_t before = FireFrame(song, 0.0, 0, kRealTime);
+    const int64_t before = FireFrame(song, 0.0, 0, GridMapping::kRealTime);
     const bool fired = before < swap;
     if (fired) clicks.push_back({before, tick % sub == 0});
-    if ((fired && !replays) || (!nudge && song < next)) continue;
+    const bool already_heard = fired && !replays;
+    const bool seeked_past = !nudge && song < next;
+    if (already_heard || seeked_past) continue;
     const int64_t after = FireFrame(song, next, swap, correction.rate);
     clicks.push_back({std::max(swap, after), tick % sub == 0});
   }
@@ -97,7 +104,7 @@ void Lock(kitbag::Metronome& metronome, int subdivision) {
       kZeroClock,
       true
   );
-  metronome.AnchorGrid(0.0, 0, kRealTime);
+  metronome.AnchorGrid(0.0, 0, GridMapping::kRealTime);
 }
 
 std::vector<float> RenderCorrected(const Correction& correction) {
@@ -126,9 +133,10 @@ std::vector<float> RenderUnswapped(int subdivision) {
 }
 
 std::vector<float> Canon(const std::vector<float>& left, int tick, int sub) {
-  const int64_t from = FireFrame(TickSec(tick, sub), 0.0, 0, kRealTime);
+  const int64_t from =
+      FireFrame(TickSec(tick, sub), 0.0, 0, GridMapping::kRealTime);
   const int64_t length =
-      FireFrame(TickSec(tick + 1, sub), 0.0, 0, kRealTime) - from;
+      FireFrame(TickSec(tick + 1, sub), 0.0, 0, GridMapping::kRealTime) - from;
   return {left.begin() + from, left.begin() + from + length};
 }
 
@@ -158,13 +166,24 @@ int64_t FirstMismatch(
       return static_cast<int64_t>(i);
     }
   }
-  return rendered.size() == expected.size() ? -1 : 0;
+  return kNoMismatch;
 }
 
 void TestCorrectionPlaysEachTickOnce(const Correction& correction) {
   const std::vector<float> rendered = RenderCorrected(correction);
-  const int64_t mismatch = FirstMismatch(rendered, Synthesize(correction));
-  if (mismatch >= 0) {
+  const std::vector<double> expected = Synthesize(correction);
+  const bool same_length = rendered.size() == expected.size();
+  if (!same_length) {
+    std::fprintf(
+        stderr,
+        "  %s: rendered %zu samples, expected %zu\n",
+        correction.name,
+        rendered.size(),
+        expected.size()
+    );
+  }
+  const int64_t mismatch = FirstMismatch(rendered, expected);
+  if (mismatch != kNoMismatch) {
     std::fprintf(
         stderr,
         "  %s: first wrong sample at %.4f s (frame %lld)\n",
@@ -174,7 +193,7 @@ void TestCorrectionPlaysEachTickOnce(const Correction& correction) {
     );
   }
   Check(
-      mismatch < 0,
+      same_length && mismatch == kNoMismatch,
       "anchor_grid: a re-anchor while playing sounds every tick the model "
       "expects, sample for sample, and no other"
   );

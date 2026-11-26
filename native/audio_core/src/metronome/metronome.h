@@ -193,6 +193,9 @@ class Metronome {
   void DeferStart(const Command& command);
   void StashPendingAnchor(const Command& command);
   void StashGridAnchor(const Command& command);
+  void ClearPendingAnchors();
+  bool HasPendingAnchor() const;
+  bool ApplySettingCommand(const Command& command);
   bool ApplyClockCommand(const Command& command);
   bool ApplyTrainerCommand(const Command& command);
   bool ApplyPatternCommand(const Command& command);
@@ -270,10 +273,13 @@ class Metronome {
   );
   void
   BeginAnchorExternal(uint64_t now, uint32_t sample_rate, BlockTempo* tempo);
-  void
-  BeginAnchorGrid(const GridView& view, uint64_t now, uint32_t sample_rate);
+  void ApplyPendingGridAnchor(
+      const GridView& view,
+      uint64_t now,
+      uint32_t sample_rate
+  );
   void StartOnGrid(const GridView& view, double song_seconds);
-  bool GridNudges(const BeatGrid& grid, double shift_sec) const;
+  bool KeepsGridTimeline(const BeatGrid& grid, double shift_sec) const;
   GridMapping MappingFor(const BeatGrid& grid) const;
   // From the latency-shifted position, so an anchor lands on the song's bar.
   void SyncBarFromPosition(double beats_per_sample);
@@ -354,7 +360,7 @@ class Metronome {
   uint32_t ended_intent_ = kNoIntent;
   CountInSchedule count_in_at_;
   // Held until the render loop knows block_start_frame. The last drained wins.
-  bool has_pending_anchor_ = false;
+  bool has_pending_tempo_anchor_ = false;
   double pending_anchor_song_pos_ = 0.0;
   double pending_anchor_bpm_ = kDefaultBpm;
   uint64_t pending_anchor_frame_ = 0;

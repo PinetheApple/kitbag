@@ -44,14 +44,12 @@ inline bool HasDownbeats(const BeatGrid& grid) {
   return !grid.bars.empty() && grid.bars.back().bar != GridBar::kNoBar;
 }
 
-// Per-block tempo derivatives, recomputed whenever bpm_ changes mid-block.
 struct BlockTempo {
   double beats_per_sample = 0.0;
   double latency_beats = 0.0;
   double poly_ticks_per_beat = 1.0;
 };
 
-// The block's grid and its identity, from one acquire load (SPEC.md §4.2.1).
 struct GridView {
   const BeatGrid* grid = nullptr;
   uint64_t generation = 0;

@@ -12,6 +12,7 @@ enum class MetronomeCommandType : uint8_t {
   kStop,
   kPause,
   kAnchorExternal,
+  kAnchorGrid,
   kSetTempo,
   kSetBeats,
   kSetSubdivision,
@@ -30,8 +31,6 @@ enum class MetronomeCommandType : uint8_t {
   kSetLatencyOffset,
   kSetFollowMixer,
 };
-
-enum class ExternalAnchor : int32_t { kConstantTempo, kGrid };
 
 struct MetronomeCommand {
   MetronomeCommandType type;

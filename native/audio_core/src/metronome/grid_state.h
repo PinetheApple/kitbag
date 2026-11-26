@@ -4,13 +4,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <optional>
 
 #include "metronome/metronome_types.h"
 
 namespace kitbag {
 
-// Song second song_sec falls on engine frame `frame`, and song time runs at
-// `rate` song seconds per engine second, for the grid stamped click_epoch.
 struct GridMapping {
   static constexpr double kRealTime = 1.0;
 
@@ -41,8 +40,7 @@ struct GridState {
   // Grid beats after this song second wait: the loop's wrap owns that moment.
   double fire_limit = std::numeric_limits<double>::infinity();
   GridMapping mapping;
-  GridMapping pending_anchor;
-  bool has_pending_anchor = false;
+  std::optional<GridMapping> pending_grid_anchor;
 };
 
 }  // namespace kitbag

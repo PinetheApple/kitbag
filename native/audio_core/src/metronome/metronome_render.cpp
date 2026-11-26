@@ -318,8 +318,7 @@ GridView Metronome::BeginBlock(
   rig_click_.BeginBlock(
       block_start_frame,
       sample_rate,
-      running_ || has_pending_start_ || has_pending_anchor_ ||
-          grid_state_.has_pending_anchor
+      running_ || has_pending_start_ || HasPendingAnchor()
   );
   if (pending_preview_sound_ >= 0) {
     TriggerSound(
@@ -333,11 +332,11 @@ GridView Metronome::BeginBlock(
   const GridView view = AcquireGrid(block_start_frame, sample_rate);
   // Applied at block start, before any click this block: a re-anchor moves only
   // future targets, never one already emitted (§4.2).
-  if (has_pending_anchor_) {
+  if (has_pending_tempo_anchor_) {
     BeginAnchorExternal(block_start_frame, sample_rate, tempo);
   }
-  if (grid_state_.has_pending_anchor) {
-    BeginAnchorGrid(view, block_start_frame, sample_rate);
+  if (grid_state_.pending_grid_anchor) {
+    ApplyPendingGridAnchor(view, block_start_frame, sample_rate);
   }
   return view;
 }

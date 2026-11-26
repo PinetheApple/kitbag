@@ -35,6 +35,7 @@ constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
 // Half a sample in keeps every beat off a rounding boundary.
 std::vector<double> Beats(double sample_rate) {
   std::vector<double> beats;
+  beats.reserve(kBeats);
   for (int i = 0; i < kBeats; ++i) {
     beats.push_back(kFirstBeatSec + kIntervalSec * i + 0.5 / sample_rate);
   }
