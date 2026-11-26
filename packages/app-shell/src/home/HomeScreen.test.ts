@@ -20,6 +20,8 @@ const home = vi.hoisted(() => ({
   moreCounts: [] as number[],
   moreItems: [] as MoreItem[][],
   push: vi.fn<(href: string) => void>(),
+  rows: [] as { readonly title: string; readonly subtitle: string }[],
+  lockedSubtext: undefined as string | undefined,
 }));
 
 const dock = vi.hoisted(() => ({
@@ -66,7 +68,10 @@ vi.mock('@kitbag/core-design', async (original) => {
       home.tiles.push(props.tiles);
       return null;
     },
-    ToolRow: () => null,
+    ToolRow: (props: { readonly title: string; readonly subtitle: string }) => {
+      home.rows.push(props);
+      return null;
+    },
     createThemedStyles: (await import('../safeAreaInsets.test-helper.ts'))
       .createThemedStylesMock,
   };
@@ -89,6 +94,10 @@ vi.mock('@kitbag/core-state', async (original) => {
 vi.mock('@kitbag/tool-tuner', () => ({
   DEFAULT_TUNING: {},
   tuningLabel: () => 'Standard',
+}));
+
+vi.mock('@kitbag/tool-sync', () => ({
+  useLockedSubtext: () => home.lockedSubtext,
 }));
 
 vi.mock('expo-router', () => ({
@@ -131,6 +140,7 @@ vi.mock('./MoreToolsSheet.tsx', () => ({
 
 const { HomeScreen } = await import('./HomeScreen.tsx');
 const { TOOL_ID } = await import('./registry.ts');
+const { PLAY_ALONG_SUBTEXT } = await import('./subtext.ts');
 
 describe('HomeScreen safe-area insets', () => {
   beforeAll(() => {
@@ -207,5 +217,22 @@ describe('HomeScreen tiles and More tools', () => {
       count: 1,
       more: [TOOL_ID.practiceHistory],
     });
+  });
+});
+
+describe('HomeScreen Play along row', () => {
+  const syncSubtitle = (locked: string | undefined) => {
+    home.lockedSubtext = locked;
+    home.rows.length = 0;
+    renderRecorded(createElement(HomeScreen));
+    return home.rows.find((row) => row.title === 'Play along')?.subtitle;
+  };
+
+  it('names the lock while Play along follows a song', () => {
+    expect(syncSubtitle('Locked · Spotify')).toBe('Locked · Spotify');
+  });
+
+  it('says what Play along does while nothing is locked', () => {
+    expect(syncSubtitle(undefined)).toBe(PLAY_ALONG_SUBTEXT);
   });
 });

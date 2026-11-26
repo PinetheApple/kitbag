@@ -20,6 +20,7 @@ import {
   useTuner,
   visibleTiles,
 } from '@kitbag/core-state';
+import { useLockedSubtext } from '@kitbag/tool-sync';
 import { DEFAULT_TUNING, tuningLabel } from '@kitbag/tool-tuner';
 import { useRouter, type Href } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -101,6 +102,7 @@ function useLiveText(practice: string): Readonly<Record<string, LiveText>> {
   const tuning = tuningLabel(useTuner((s) => s.tuning) ?? DEFAULT_TUNING);
   const libraryRows = useSongLibrary((s) => s.rows);
   const libraryFailed = useSongLibrary((s) => s.failed);
+  const playAlong = useLockedSubtext() ?? PLAY_ALONG_SUBTEXT;
   return useMemo(() => {
     const library = summarize(libraryRows);
     const songs = libraryFailed
@@ -117,10 +119,10 @@ function useLiveText(practice: string): Readonly<Record<string, LiveText>> {
       [TOOL_ID.tuner]: { tile: tuning, resume: tuning },
       [TOOL_ID.library]: { tile: songs, resume: songs },
       [TOOL_ID.stems]: { tile: stems, resume: stems },
-      [TOOL_ID.sync]: { tile: PLAY_ALONG_SUBTEXT, resume: PLAY_ALONG_SUBTEXT },
+      [TOOL_ID.sync]: { tile: playAlong, resume: playAlong },
       [TOOL_ID.practiceHistory]: { tile: practice, resume: practice },
     };
-  }, [metronome, tuning, libraryRows, libraryFailed, practice]);
+  }, [metronome, tuning, libraryRows, libraryFailed, playAlong, practice]);
 }
 
 function useArrangement(isOn: ToolOnTest) {

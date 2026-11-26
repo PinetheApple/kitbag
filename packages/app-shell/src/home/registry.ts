@@ -10,6 +10,8 @@ export const TOOL_ID = {
   practiceHistory: 'practiceHistory',
 } as const;
 
+export const PLAY_ALONG_ROUTE = '/sync';
+
 export type HomeLayout = ToolTileSize | 'row';
 
 export type ToolOnTest = (toolId: string) => boolean;
@@ -64,7 +66,7 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
     id: TOOL_ID.sync,
     name: 'Play along',
     icon: 'playAlong',
-    homeTile: { label: 'Play along', route: '/sync' },
+    homeTile: { label: 'Play along', route: PLAY_ALONG_ROUTE },
     layout: 'row',
     summary: 'Needs notification access',
   },
