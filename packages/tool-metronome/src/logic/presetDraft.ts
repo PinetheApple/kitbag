@@ -102,8 +102,11 @@ export function draftFrom(preset: SongPreset): PresetDraft {
   };
 }
 
-const savedTempo = ({ bpm, tempoFromSong }: PresetDraft) =>
-  tempoFromSong && bpm === DEFAULT_BPM ? null : bpm;
+export const keepsSongTempo = ({ bpm, tempoFromSong }: PresetDraft) =>
+  tempoFromSong && bpm === DEFAULT_BPM;
+
+const savedTempo = (draft: PresetDraft) =>
+  keepsSongTempo(draft) ? null : draft.bpm;
 
 function trainerEdit({ ramp, barMute }: PresetDraft): PresetEdit {
   return {

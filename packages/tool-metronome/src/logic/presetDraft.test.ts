@@ -11,6 +11,7 @@ import { withRampUnit } from './rampUnit.ts';
 import {
   draftFrom,
   editFrom,
+  keepsSongTempo,
   withBeats,
   withCycledAccent,
   withCycledPolyAccent,
@@ -129,6 +130,15 @@ describe('preset draft', () => {
     );
   });
 
+  it('keeps the song’s tempo only until the tempo is changed', () => {
+    const draft = draftFrom({ ...PRESET, bpm: null });
+    expect(keepsSongTempo(draft)).toBe(true);
+    expect(keepsSongTempo({ ...draft, bpm: draft.bpm + 1 })).toBe(false);
+    expect(keepsSongTempo(draftFrom({ ...PRESET, bpm: DEFAULT_BPM }))).toBe(
+      false,
+    );
+  });
+
   it('never saves an empty name or blank notes', () => {
     const edit = editFrom({ ...draftFrom(PRESET), name: '  ', notes: ' ' });
     expect(edit.name).toBe('Untitled');
@@ -155,13 +165,13 @@ describe('row subtitles', () => {
     ).toBe('96 · 3/4 · Woodblock');
   });
 
-  it('leaves the tempo out for a song that saves none', () => {
+  it('reads the tempo as the song’s for a song that saves none', () => {
     const untimed = { ...PRESET, bpm: null, notes: null, countInBars: 0 };
     expect(songSubtitle({ ...untimed, rampEnabled: false })).toBe(
-      '3/4 · Woodblock',
+      'Tempo from the song · 3/4 · Woodblock',
     );
     expect(songSubtitle({ ...untimed, rampStartBpm: null })).toBe(
-      '3/4 · Woodblock',
+      'Tempo from the song · 3/4 · Woodblock',
     );
   });
 

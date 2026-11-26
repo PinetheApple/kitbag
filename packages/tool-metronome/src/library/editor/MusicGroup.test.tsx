@@ -3,11 +3,12 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 import { songPreset } from '../../logic/fixtures.test-helper.ts';
-import { draftFrom } from '../../logic/presetDraft.ts';
+import { draftFrom, type PresetDraft } from '../../logic/presetDraft.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const rows = vi.hoisted(() => [] as Props[]);
+const steppers = vi.hoisted(() => [] as Props[]);
 const display = vi.hoisted(() => ({ scaled: false }));
 
 vi.mock('@kitbag/core-design', async (original) => {
@@ -21,6 +22,11 @@ vi.mock('@kitbag/core-design', async (original) => {
       return passThrough(props);
     },
     EditTextInput: () => null,
+    SegmentedControl: () => null,
+    StepControl: (props: Props) => {
+      steppers.push(props);
+      return null;
+    },
     useTextScaled: () => display.scaled,
   };
 });
@@ -30,7 +36,11 @@ vi.mock('react-native-reanimated', () => ({
 }));
 vi.mock('../../screen/BeatLeds.tsx', () => ({ BeatLeds: () => null }));
 
-const { IdentityGroup } = await import('./MusicGroup.tsx');
+const { IdentityGroup, MusicGroup } = await import('./MusicGroup.tsx');
+
+function editorFor(draft: PresetDraft) {
+  return { draft, dirty: false, update: vi.fn(), save: vi.fn() };
+}
 
 function singleLineByLabel(scaled: boolean): Record<string, unknown> {
   display.scaled = scaled;
@@ -54,5 +64,37 @@ describe('preset editor identity rows', () => {
 
   it('let the inputs take their own line once the text grows', () => {
     expect(singleLineByLabel(true)).toEqual({ Name: false, Notes: false });
+  });
+});
+
+function tempoField(draft: PresetDraft): Props | undefined {
+  steppers.length = 0;
+  renderToStaticMarkup(createElement(MusicGroup, { editor: editorFor(draft) }));
+  return steppers.find((props) => props.label === 'Tempo');
+}
+
+describe('preset editor tempo row', () => {
+  const untimed = draftFrom(songPreset({ bpm: null }));
+
+  it('shows the song’s tempo for a song that saves none', () => {
+    expect(tempoField(untimed)).toMatchObject({
+      value: 'Tempo from the song',
+      accessibilityValue: 'Tempo from the song',
+    });
+  });
+
+  it('shows the number once the tempo is changed', () => {
+    const changed = { ...untimed, bpm: untimed.bpm + 1 };
+    expect(tempoField(changed)).toMatchObject({
+      value: String(changed.bpm),
+      accessibilityValue: `${String(changed.bpm)} BPM`,
+    });
+  });
+
+  it('shows a saved tempo as before', () => {
+    expect(tempoField(draftFrom(songPreset({ bpm: 96 })))).toMatchObject({
+      value: '96',
+      accessibilityValue: '96 BPM',
+    });
   });
 });

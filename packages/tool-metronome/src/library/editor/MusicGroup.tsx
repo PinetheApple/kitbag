@@ -18,6 +18,7 @@ import { View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
 import {
+  keepsSongTempo,
   withBeats,
   withCycledAccent,
   withNextDenominator,
@@ -25,6 +26,7 @@ import {
   withPolyBeats,
 } from '../../logic/presetDraft.ts';
 import { polyAgainstLabel } from '../../logic/polyRow.ts';
+import { TEMPO_FROM_SONG } from '../../logic/songSummary.ts';
 import { subdivisionLabel } from '../../logic/subdivision.ts';
 import { BeatLeds } from '../../screen/BeatLeds.tsx';
 
@@ -201,13 +203,20 @@ function PolyRows({ editor }: { readonly editor: PresetEditor }) {
   );
 }
 
+const SONG_TEMPO_FIELD = {
+  display: TEMPO_FROM_SONG,
+  spoken: TEMPO_FROM_SONG,
+} as const;
+
 function TempoRow({ editor }: { readonly editor: PresetEditor }) {
+  const songTempo = keepsSongTempo(editor.draft) ? SONG_TEMPO_FIELD : {};
   return (
     <EditRow label="Tempo">
       <StepField
         update={editor.update}
         field="bpm"
         value={editor.draft.bpm}
+        {...songTempo}
         label="Tempo"
         unit="BPM"
         min={BPM_BOUNDS.min}
