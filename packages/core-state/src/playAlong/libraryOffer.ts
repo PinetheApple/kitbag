@@ -4,7 +4,7 @@ import type { StoreAccess } from '../configuredStore.ts';
 import type { LibraryMatch } from '../tempoLadder/libraryMatch.ts';
 import { sameSong } from '../tempoLadder/store.ts';
 import type { PlayAlongRuntime } from './runtime.ts';
-import type { TapOutcome } from './store.ts';
+import type { LockOutcome } from './lockOutcome.ts';
 import {
   findSession,
   sameTrack,
@@ -25,7 +25,7 @@ export interface LibraryOfferState {
 
 export interface LibraryOfferActions {
   readonly watchLibrary: () => () => void;
-  readonly acceptOffer: () => Promise<TapOutcome>;
+  readonly acceptOffer: () => Promise<LockOutcome>;
   readonly dismissOffer: () => void;
 }
 
@@ -33,7 +33,7 @@ type OfferAccess = StoreAccess<
   LibraryOfferState & { readonly lock: object | undefined }
 >;
 
-const offerOf = (offer: LibraryOffer, seen: MediaSessionSnapshot) =>
+const isOfferFor = (offer: LibraryOffer, seen: MediaSessionSnapshot) =>
   offer.sessionId === seen.sessionId && sameTrack(offer.track, seen);
 
 const sameMatch = (a: LibraryMatch, b: LibraryMatch) =>
@@ -64,7 +64,7 @@ export function libraryOffers(
 
   const offerNow = (): LibraryOffer | undefined => {
     const seen = chosenSession(runtime);
-    if (dismissed !== undefined && !(seen && offerOf(dismissed, seen)))
+    if (dismissed !== undefined && !(seen && isOfferFor(dismissed, seen)))
       dismissed = undefined;
     if (seen === undefined || dismissed !== undefined) return undefined;
     if (getState().lock !== undefined) return undefined;

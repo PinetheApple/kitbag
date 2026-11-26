@@ -6,6 +6,7 @@ import {
 import { vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
 
+import { NO_GRID } from '../songPlayer/songGrid.ts';
 import type { DetectedGrid } from '../stemPlayer/meterOverride.ts';
 import type { LibraryMatch } from '../tempoLadder/libraryMatch.ts';
 import type {
@@ -23,8 +24,6 @@ export const OTHER_ID = 'other';
 export const BPM = 120;
 export const PLAY_ALONG = KB_METRONOME_SLOT.KB_METRONOME_SLOT_PLAY_ALONG;
 export const STANDALONE = KB_METRONOME_SLOT.KB_METRONOME_SLOT_STANDALONE;
-export const SAMPLE_RATE = FRAMES_PER_MS * 1000;
-export const NO_GRID: DetectedGrid = { beats: [], downbeatIndices: [] };
 
 export function snapshot(
   overrides: Partial<MediaSessionSnapshot> = {},
@@ -70,7 +69,7 @@ function fakeLadder() {
   };
 }
 
-function fakeCommands(calls: string[]) {
+function fakeCommands(calls: string[], gridResult: number) {
   const logged =
     (name: string) =>
     (...args: unknown[]) => {
@@ -86,13 +85,13 @@ function fakeCommands(calls: string[]) {
     metronomeAnchorExternal: vi.fn<
       PlayAlongRuntime['commands']['metronomeAnchorExternal']
     >(logged('metronomeAnchorExternal')),
-    metronomeStart: vi.fn(logged('metronomeStart')),
-    setGrid: vi.fn<PlayAlongRuntime['commands']['setGrid']>(
-      (beats, _downbeats, anchorFrame) => {
-        calls.push(`setGrid(${String(beats.length)},${String(anchorFrame)})`);
-        return Promise.resolve<number>(KB_RESULT.KB_OK);
-      },
-    ),
+    metronomeAnchorGrid: vi.fn<
+      PlayAlongRuntime['commands']['metronomeAnchorGrid']
+    >(logged('metronomeAnchorGrid')),
+    setGrid: vi.fn<PlayAlongRuntime['commands']['setGrid']>((beats) => {
+      calls.push(`setGrid(${String(beats.length)})`);
+      return Promise.resolve(gridResult);
+    }),
     clearGrid: vi.fn(logged('clearGrid')),
     metronomePause: vi.fn(logged('metronomePause')),
     metronomeStop: vi.fn(logged('metronomeStop')),
@@ -114,8 +113,10 @@ export function fakePlayAlong({
   onClickStarting = () => () => undefined,
   yieldStandalone,
   grid = NO_GRID,
+  gridResult = KB_RESULT.KB_OK,
 }: {
   readonly grid?: DetectedGrid;
+  readonly gridResult?: number;
   readonly sessions?: readonly MediaSessionSnapshot[];
   readonly onClickStarting?: PlayAlongRuntime['onClickStarting'];
   readonly yieldStandalone?: PlayAlongRuntime['yieldStandalone'];
@@ -128,7 +129,7 @@ export function fakePlayAlong({
       calls.push('standaloneReturned()');
     };
   };
-  const commands = fakeCommands(calls);
+  const commands = fakeCommands(calls, gridResult);
   const pick = vi.fn((sessionId: string) => {
     media.setState({ chosenId: sessionId });
   });
@@ -149,7 +150,6 @@ export function fakePlayAlong({
     sessions: () => media,
     ladder: () => library.ladder,
     readGrid,
-    sampleRate: () => SAMPLE_RATE,
     sessionCommand,
     latencyOffsetMs: () => LATENCY_MS,
     onClickStarting,
@@ -174,6 +174,7 @@ export function fakePlayAlong({
     },
     anchors: () => commands.metronomeAnchorExternal.mock.calls,
     grids: () => commands.setGrid.mock.calls,
+    gridAnchors: () => commands.metronomeAnchorGrid.mock.calls,
     ladder: library,
     readGrid,
   };

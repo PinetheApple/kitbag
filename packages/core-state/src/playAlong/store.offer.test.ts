@@ -1,7 +1,8 @@
 import { MS_PER_SECOND } from '@kitbag/core-db';
+import { KB_RESULT } from '@kitbag/core-native';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { REANCHOR_INTERVAL_MS, TAP_REFUSAL } from './store.ts';
+import { LOCK_REFUSAL, REANCHOR_INTERVAL_MS } from './store.ts';
 import {
   BPM,
   fakePlayAlong,
@@ -19,7 +20,10 @@ const DRIFTING = {
   downbeatIndices: [0, 4],
 };
 const AHEAD_MS = 20;
-const ANCHOR_FRAME = START_MS * FRAMES_PER_MS;
+const FAST = 1.25;
+const NOW_FRAME = START_MS * FRAMES_PER_MS;
+const REANCHORED_SEC = SONG_SEC + REANCHOR_INTERVAL_MS / MS_PER_SECOND;
+const REANCHORED_FRAME = (START_MS + REANCHOR_INTERVAL_MS) * FRAMES_PER_MS;
 
 afterEach(() => {
   vi.useRealTimers();
@@ -39,16 +43,6 @@ async function accepted(fake = offered()) {
   const outcome = await fake.store.getState().acceptOffer();
   await settle();
   return { ...fake, outcome };
-}
-
-const placed = (shiftSec = 0) =>
-  DRIFTING.beats.map((beat) => beat - SONG_SEC + shiftSec);
-
-function expectBeats(actual: readonly number[] | undefined, want: number[]) {
-  expect(actual).toHaveLength(want.length);
-  want.forEach((beat, i) => {
-    expect(actual?.[i]).toBeCloseTo(beat, 9);
-  });
 }
 
 describe('the library offer', () => {
@@ -141,56 +135,115 @@ describe('the library offer', () => {
 });
 
 describe('accepting the offer', () => {
-  it('locks on the stored beat grid, not a constant tempo', async () => {
+  it('sends the stored beat grid in song seconds, not a constant tempo', async () => {
     const { outcome, store, grids, anchors, readGrid } = await accepted();
     expect(outcome).toEqual({ locked: true });
     expect(readGrid).toHaveBeenCalledWith(MATCH);
     expect(anchors()).toEqual([]);
-    const [beats, downbeats, anchorFrame] = grids()[0] ?? [];
-    expectBeats(beats, placed());
+    const [beats, downbeats] = grids()[0] ?? [];
+    expect(beats).toEqual(DRIFTING.beats);
     expect(downbeats).toEqual(DRIFTING.downbeatIndices);
-    expect(anchorFrame).toBe(ANCHOR_FRAME);
     expect(store.getState().lock?.grid).toEqual(DRIFTING);
     expect(store.getState().bpm).toBe(MATCH.bpm);
     expect(store.getState().offer).toBeUndefined();
   });
 
-  it('starts the click only after the grid is in', async () => {
-    const { calls } = await accepted();
-    const gridAt = calls.findIndex((entry) => entry.startsWith('setGrid('));
-    const startAt = calls.indexOf(`metronomeStart(${String(ANCHOR_FRAME)})`);
-    expect(gridAt).toBeGreaterThanOrEqual(0);
-    expect(startAt).toBeGreaterThan(gridAt);
+  it('anchors the grid to the song only once the grid is in', async () => {
+    const fake = offered();
+    let gridIn: ((result: number) => void) | undefined;
+    fake.commands.setGrid.mockImplementationOnce(
+      () =>
+        new Promise<number>((resolve) => {
+          gridIn = resolve;
+        }),
+    );
+    await fake.store.getState().acceptOffer();
+    await settle();
+    expect(fake.grids()).toHaveLength(1);
+    expect(fake.gridAnchors()).toEqual([]);
+    gridIn?.(KB_RESULT.KB_OK);
+    await settle();
+    expect(fake.gridAnchors()).toEqual([[SONG_SEC, NOW_FRAME, 1]]);
+    expect(fake.commands.metronomeAnchorExternal).not.toHaveBeenCalled();
   });
 
-  it('keeps a drifting grid on the beat across re-anchors', async () => {
+  it('re-anchors on the cadence without sending the grid again', async () => {
     const fake = await accepted();
     vi.advanceTimersByTime(REANCHOR_INTERVAL_MS);
     await settle();
-    const [beats, , anchorFrame] = fake.grids()[1] ?? [];
-    expectBeats(beats, placed());
-    expect(anchorFrame).toBe(ANCHOR_FRAME);
+    expect(fake.grids()).toHaveLength(1);
+    expect(fake.gridAnchors()).toHaveLength(2);
+    const [songSec, frame, rate] = fake.gridAnchors()[1] ?? [];
+    expect(songSec).toBeCloseTo(REANCHORED_SEC, 9);
+    expect(frame).toBe(REANCHORED_FRAME);
+    expect(rate).toBe(1);
+    expect(fake.anchors()).toEqual([]);
   });
 
-  it('moves the grid with the song when the song runs ahead', async () => {
+  it('re-anchors to where the song is when it runs ahead', async () => {
     const fake = await accepted();
     vi.advanceTimersByTime(REANCHOR_INTERVAL_MS);
     fake.report([
       snapshot({
-        positionMs: SONG_SEC * MS_PER_SECOND + REANCHOR_INTERVAL_MS + AHEAD_MS,
+        positionMs: REANCHORED_SEC * MS_PER_SECOND + AHEAD_MS,
         positionUpdatedAtMs: START_MS + REANCHOR_INTERVAL_MS,
       }),
     ]);
     await settle();
-    expectBeats(fake.grids().at(-1)?.[0], placed(-AHEAD_MS / MS_PER_SECOND));
+    expect(fake.grids()).toHaveLength(1);
+    expect(fake.gridAnchors().at(-1)?.[0]).toBeCloseTo(
+      REANCHORED_SEC + AHEAD_MS / MS_PER_SECOND,
+      9,
+    );
     expect(fake.store.getState().songAheadOfClickMs).toBeCloseTo(AHEAD_MS, 9);
+  });
+
+  it('runs the grid at the song speed', async () => {
+    const fake = await accepted(
+      offered(
+        fakePlayAlong({
+          grid: DRIFTING,
+          sessions: [snapshot({ speed: FAST })],
+        }),
+      ),
+    );
+    expect(fake.gridAnchors()).toEqual([[SONG_SEC, NOW_FRAME, FAST]]);
+  });
+
+  it('pauses with the song and resumes on the same grid', async () => {
+    const fake = await accepted();
+    fake.report([snapshot({ playing: false, speed: 0 })]);
+    expect(fake.commands.metronomePause).toHaveBeenCalledOnce();
+    vi.advanceTimersByTime(REANCHOR_INTERVAL_MS);
+    fake.report([
+      snapshot({ positionUpdatedAtMs: START_MS + REANCHOR_INTERVAL_MS }),
+    ]);
+    await settle();
+    expect(fake.grids()).toHaveLength(1);
+    expect(fake.gridAnchors()).toHaveLength(2);
+    expect(fake.gridAnchors()[1]?.[0]).toBeCloseTo(SONG_SEC, 9);
+  });
+
+  it('never anchors a grid the engine refused', async () => {
+    const fake = await accepted(
+      offered(
+        fakePlayAlong({
+          grid: DRIFTING,
+          gridResult: KB_RESULT.KB_ERROR_INVALID_ARGUMENT,
+        }),
+      ),
+    );
+    vi.advanceTimersByTime(REANCHOR_INTERVAL_MS);
+    await settle();
+    expect(fake.gridAnchors()).toEqual([]);
+    expect(fake.anchors()).toEqual([]);
   });
 
   it('refuses with no offer on screen', async () => {
     const fake = fakePlayAlong({ grid: DRIFTING });
     expect(await fake.store.getState().acceptOffer()).toEqual({
       locked: false,
-      reason: TAP_REFUSAL.noOffer,
+      reason: LOCK_REFUSAL.noOffer,
     });
     expect(fake.calls).toEqual([]);
   });
@@ -199,7 +252,7 @@ describe('accepting the offer', () => {
     const fake = offered(fakePlayAlong());
     expect(await fake.store.getState().acceptOffer()).toEqual({
       locked: false,
-      reason: TAP_REFUSAL.noGrid,
+      reason: LOCK_REFUSAL.noGrid,
     });
     expect(fake.store.getState().lock).toBeUndefined();
   });
@@ -210,7 +263,7 @@ describe('accepting the offer', () => {
     fake.report([snapshot({ title: 'Next song' })]);
     expect(await accepting).toEqual({
       locked: false,
-      reason: TAP_REFUSAL.noOffer,
+      reason: LOCK_REFUSAL.noOffer,
     });
     expect(fake.store.getState().lock).toBeUndefined();
   });

@@ -2,7 +2,6 @@ import {
   boottimeNowMs,
   engineFrameAtBoottimeMs,
   getKitbagCommands,
-  getKitbagHostObject,
   mediaSessionCommand,
   type KitbagCommandsSpec,
 } from '@kitbag/core-native';
@@ -29,7 +28,7 @@ export type PlayAlongCommands = Pick<
   | 'engineRelease'
   | 'metronomeSelectSlot'
   | 'metronomeAnchorExternal'
-  | 'metronomeStart'
+  | 'metronomeAnchorGrid'
   | 'setGrid'
   | 'clearGrid'
   | 'metronomePause'
@@ -65,7 +64,6 @@ export interface PlayAlongRuntime {
   readonly sessions: () => FollowedSessions;
   readonly ladder: () => FollowedLadder;
   readonly readGrid: (match: LibraryMatch) => Promise<DetectedGrid>;
-  readonly sampleRate: () => number;
   readonly sessionCommand: typeof mediaSessionCommand;
   readonly latencyOffsetMs: () => number;
   readonly onClickStarting: (listener: () => void) => Unsubscribe;
@@ -99,7 +97,6 @@ export const nativePlayAlongRuntime: PlayAlongRuntime = {
   sessions: () => getMediaSessionsStore(),
   ladder: () => tempoLadderStore,
   readGrid: (match) => readLibraryGrid(getTempoLadder().library, match),
-  sampleRate: () => getKitbagHostObject().engine_sample_rate,
   sessionCommand: (sessionId, command) => {
     mediaSessionCommand(sessionId, command);
   },
