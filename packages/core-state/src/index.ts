@@ -606,6 +606,11 @@ export {
   type TapOutcome,
   type TapRefusal,
 } from './playAlong/store.ts';
+export type {
+  LibraryOffer,
+  LibraryOfferActions,
+  LibraryOfferState,
+} from './playAlong/libraryOffer.ts';
 export type { PlayAlongPattern } from './playAlong/pattern.ts';
 export type { PlayAlongRuntime } from './playAlong/runtime.ts';
 export { useSwipeHint } from './firstUse/useSwipeHint.ts';
