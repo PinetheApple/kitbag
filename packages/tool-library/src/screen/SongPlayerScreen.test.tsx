@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-deprecated */
 import {
   meterCopy,
+  QUEUE_TEXT,
   screenBar,
   tempoSheetCopy,
   space,
@@ -346,6 +347,8 @@ describe('the player menu', () => {
   ])('offers no Re-analyse for a song %s', (_case, failure) => {
     failWith(failure);
     expect(menuLabels(openMenu())).toEqual([
+      QUEUE_TEXT.playNext,
+      QUEUE_TEXT.addToQueue,
       SONG_SPEED_TEXT.reset,
       'Meter',
       'Tempo',
@@ -357,6 +360,8 @@ describe('the player menu', () => {
 
   it('lists Re-analyse, Meter, Tempo correction, Count-in and Stop', () => {
     expect(menuLabels(openMenu())).toEqual([
+      QUEUE_TEXT.playNext,
+      QUEUE_TEXT.addToQueue,
       SONG_SPEED_TEXT.reset,
       REANALYZE_LABEL,
       'Meter',

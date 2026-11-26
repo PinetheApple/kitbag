@@ -11,6 +11,8 @@ import {
   speedKeyCopy,
   speedPercentText,
   useSongPlayer,
+  useSongViewing,
+  useViewPlayLabel,
 } from '@kitbag/core-state';
 import { useCallback, useState, type ReactNode } from 'react';
 
@@ -18,13 +20,15 @@ import { SongSpeedSheet } from './SongSpeedSheet.tsx';
 
 export interface SongTransportProps {
   readonly playing: PlayerFrame['playing'];
-  readonly bottomInset: number;
+  readonly dockInset: number;
+  readonly sheetInset: number;
   readonly upNext?: ReactNode;
 }
 
 export function SongTransport({
   playing,
-  bottomInset,
+  dockInset,
+  sheetInset,
   upNext,
 }: SongTransportProps) {
   const loop = useSongPlayer((s) => s.loop);
@@ -32,6 +36,8 @@ export function SongTransport({
   const togglePlay = useSongPlayer((s) => s.togglePlay);
   const skip = useSongPlayer((s) => s.skip);
   const markLoop = useSongPlayer((s) => s.markLoop);
+  const title = useSongPlayer((s) => s.title);
+  const playLabel = useViewPlayLabel(title, useSongViewing());
   const [speedOpen, setSpeedOpen] = useState(false);
   const onLoop = useCallback(() => {
     void markLoop();
@@ -45,7 +51,7 @@ export function SongTransport({
   const speedText = speedPercentText(speed);
   return (
     <>
-      <PlayerDock bottomInset={bottomInset}>
+      <PlayerDock bottomInset={dockInset}>
         {upNext}
         <PlayerTransport
           playing={playing}
@@ -55,6 +61,7 @@ export function SongTransport({
           onLoop={onLoop}
           onSkip={skip}
           onTogglePlay={togglePlay}
+          {...(playLabel === undefined ? {} : { playLabel })}
           extraKey={
             <TransportKey
               size="dock"
@@ -68,7 +75,7 @@ export function SongTransport({
       </PlayerDock>
       <SongSpeedSheet
         visible={speedOpen}
-        bottomInset={bottomInset}
+        bottomInset={sheetInset}
         onClose={closeSpeed}
       />
     </>

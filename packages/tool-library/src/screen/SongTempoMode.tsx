@@ -1,6 +1,7 @@
 import { TempoModeSheet } from '@kitbag/core-design';
 import {
   tempoSheetView,
+  useLiveSongPlayer,
   useSongPlayer,
   type TempoMode,
 } from '@kitbag/core-state';
@@ -19,7 +20,7 @@ export function SongTempoMode({
 }: SongTempoModeProps) {
   const tempo = useSongPlayer((s) => s.tempo);
   const mode = useSongPlayer((s) => s.tempoMode);
-  const setTempoMode = useSongPlayer((s) => s.setTempoMode);
+  const setTempoMode = useLiveSongPlayer((s) => s.setTempoMode);
   const view = useMemo(
     () => tempoSheetView(tempo, mode, 'song'),
     [tempo, mode],

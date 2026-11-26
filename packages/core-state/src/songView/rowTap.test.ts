@@ -41,10 +41,19 @@ describe('a Songs or Stem songs row tap', () => {
     );
   });
 
-  it('views the song when its player failed or nothing is open', () => {
+  it('opens the song live when no song holds the session', () => {
     expect(rowTap({ kind: 'song', id: SHOWN }, songOpen('failed'))).toBe(
-      ROW_TAP.view,
+      ROW_TAP.asIs,
     );
-    expect(rowTap({ kind: 'song', id: SHOWN }, closed)).toBe(ROW_TAP.view);
+    expect(rowTap({ kind: 'song', id: OTHER }, closed)).toBe(ROW_TAP.asIs);
+    expect(rowTap({ kind: 'stems', id: OTHER }, closed)).toBe(ROW_TAP.asIs);
+  });
+
+  it('views a song while a stem song holds the session', () => {
+    const stems: OpenPlayers = {
+      ...closed,
+      stems: { status: 'loading', setId: SHOWN },
+    };
+    expect(rowTap({ kind: 'song', id: OTHER }, stems)).toBe(ROW_TAP.view);
   });
 });

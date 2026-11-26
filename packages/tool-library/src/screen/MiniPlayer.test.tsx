@@ -51,6 +51,10 @@ vi.mock('@kitbag/core-state', async (original) => {
       select(players.song),
     useStemPlayer: (select: (state: unknown) => unknown) =>
       select(players.stem),
+    useLiveSongPlayer: (select: (state: unknown) => unknown) =>
+      select(players.song),
+    useLiveStemPlayer: (select: (state: unknown) => unknown) =>
+      select(players.stem),
     useLibrary: (select: (state: unknown) => unknown) =>
       select(players.library),
     useStage: () => players.stage,

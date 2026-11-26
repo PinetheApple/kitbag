@@ -72,8 +72,8 @@ vi.mock('@kitbag/core-state', async (original) => ({
   analysisFailure: () => null,
   rowFilesOf: () => null,
   useLibrary: () => () => undefined,
-  useStemPlayer: () => null,
-  useSongPlayer: () => null,
+  useLiveStemPlayer: () => null,
+  useLiveSongPlayer: () => null,
   useShownSongId: () => null,
   useShownStemSetId: () => null,
 }));

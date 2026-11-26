@@ -39,3 +39,9 @@ export * from './songLibrary/rowKey.ts';
 export { stemSongTitle } from './playOrder/stemSongText.ts';
 export { upNextTitle } from './playOrder/queuedSongText.ts';
 export { songShown, stemShown } from './playOrder/shown.ts';
+export { ROW_TAP, rowTap, type RowTap } from './songView/rowTap.ts';
+export {
+  VIEW_ONLY_REASON,
+  viewOnlyReason,
+  viewPlayLabel,
+} from './songView/viewText.ts';

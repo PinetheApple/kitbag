@@ -13,8 +13,10 @@ import {
 import {
   bpmFact,
   clickKeyLabel,
+  useLiveSongPlayer,
   useSongLibrary,
   useSongPlayer,
+  useSongViewing,
 } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
@@ -52,7 +54,8 @@ export function SongLockCard({ songId }: { readonly songId: number }) {
   const badge = useSongPlayer(lockBadgeOf);
   const speed = useSongPlayer((s) => s.speed);
   const bpm = bpmFact(useSongPlayer((s) => playedBpm(s.bpm, s.speed)));
-  const toggleClick = useSongPlayer((s) => s.toggleClick);
+  const toggleClick = useLiveSongPlayer((s) => s.toggleClick);
+  const viewing = useSongViewing();
   const reanalyze = useSongLibrary((s) => s.reanalyze);
   const failure = useSongFailure(songId);
   const onToggle = useCallback(() => {
@@ -91,6 +94,7 @@ export function SongLockCard({ songId }: { readonly songId: number }) {
           active={click}
           accessibilityLabel={clickKeyLabel(click)}
           neighbourGapDp={NO_NEIGHBOURS}
+          disabled={viewing}
           onPress={onToggle}
         />
       ) : null}

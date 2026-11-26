@@ -29,6 +29,7 @@ export * from './readerHiding.ts';
 export * from './meterText.ts';
 export * from './tempoText.ts';
 export * from './components/useAfterSheetClosed.ts';
+export * from './components/SheetBridge.tsx';
 export * from './components/useNotice.ts';
 export * from './components/useQueueNotices.ts';
 export * from './components/useQueuePresses.ts';

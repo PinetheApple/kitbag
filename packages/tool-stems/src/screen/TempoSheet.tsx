@@ -8,7 +8,10 @@ import {
   tempoModeLabel,
   tempoSheetView,
   tempoUnavailable,
+  useLiveStemPlayer,
   useStemPlayer,
+  useStemViewing,
+  viewOnlyReason,
   type TempoMode,
 } from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
@@ -23,7 +26,8 @@ const useStyles = createThemedStyles((theme) => ({
 
 export function TempoRow({ onOpen }: { readonly onOpen: () => void }) {
   const styles = useStyles();
-  const reason = useStemPlayer((s) => tempoUnavailable(s.tempo, 'stems'));
+  const unavailable = useStemPlayer((s) => tempoUnavailable(s.tempo, 'stems'));
+  const reason = viewOnlyReason(unavailable, useStemViewing());
   const mode = useStemPlayer((s) => s.tempoMode);
   return (
     <View style={styles.divided}>
@@ -45,7 +49,7 @@ export interface TempoSheetProps {
 export function TempoSheet({ visible, bottomInset, onClose }: TempoSheetProps) {
   const tempo = useStemPlayer((s) => s.tempo);
   const mode = useStemPlayer((s) => s.tempoMode);
-  const setTempoMode = useStemPlayer((s) => s.setTempoMode);
+  const setTempoMode = useLiveStemPlayer((s) => s.setTempoMode);
   const view = useMemo(
     () => tempoSheetView(tempo, mode, 'stems'),
     [tempo, mode],

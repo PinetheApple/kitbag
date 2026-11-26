@@ -5,7 +5,11 @@ import {
   stemPlayer,
   textRoles,
 } from '@kitbag/core-design';
-import { useStemPlayer } from '@kitbag/core-state';
+import {
+  useLiveStemPlayer,
+  useStemPlayer,
+  useStemViewing,
+} from '@kitbag/core-state';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BackHandler, ScrollView, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
@@ -54,7 +58,8 @@ function MasterRow({
   const styles = useStyles();
   const stemStyles = useStemStyles();
   const gain = useStemPlayer((s) => s.masterGain);
-  const setMasterGain = useStemPlayer((s) => s.setMasterGain);
+  const setMasterGain = useLiveStemPlayer((s) => s.setMasterGain);
+  const viewing = useStemViewing();
   return (
     <View style={expanded ? stemStyles.expanded : stemStyles.rowFrame}>
       <View
@@ -73,11 +78,12 @@ function MasterRow({
           label="Master"
           gain={gain}
           open={expanded}
+          disabled={viewing}
           onPress={onExpand}
         />
         <View style={styles.toggleRoom} />
       </View>
-      {expanded ? (
+      {expanded && !viewing ? (
         <GainFader label="Master" gain={gain} onGain={setMasterGain} />
       ) : null}
     </View>

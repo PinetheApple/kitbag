@@ -19,7 +19,12 @@ function openId({ song, stems }: OpenPlayers, kind: QueuedSong['kind']) {
   return ATTACHABLE.has(song.status) ? song.songId : null;
 }
 
+function sessionHeld({ song, stems }: OpenPlayers): boolean {
+  return ATTACHABLE.has(song.status) || ATTACHABLE.has(stems.status);
+}
+
 export function rowTap(tapped: QueuedSong, players: OpenPlayers): RowTap {
+  if (!sessionHeld(players)) return ROW_TAP.asIs;
   return openId(players, tapped.kind) === tapped.id
     ? ROW_TAP.asIs
     : ROW_TAP.view;

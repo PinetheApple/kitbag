@@ -14,8 +14,8 @@ import {
   useSetlistSpot,
   useShownSongId,
   useShownStemSetId,
-  useSongPlayer,
-  useStemPlayer,
+  useLiveSongPlayer,
+  useLiveStemPlayer,
   useStemSongs,
   useUpNext,
   useUpNextCount,
@@ -37,8 +37,8 @@ export interface MiniPlayerProps {
 }
 
 export function useMiniPlayerShown(): boolean {
-  const song = useSongPlayer(songShown);
-  const stem = useStemPlayer(stemShown);
+  const song = useLiveSongPlayer(songShown);
+  const stem = useLiveStemPlayer(stemShown);
   return song || stem;
 }
 
@@ -101,14 +101,14 @@ interface SongProps extends BarProps {
 }
 
 function SongMiniPlayer({ songId, onOpenSong, ...bar }: SongProps) {
-  const title = useSongPlayer((s) => s.title);
-  const artist = useSongPlayer((s) => s.artist);
-  const click = useSongPlayer((s) => s.click);
-  const speed = useSongPlayer((s) => s.speed);
-  const engineRate = useSongPlayer((s) => s.engineRate);
-  const durationFrames = useSongPlayer((s) => s.durationFrames);
-  const loopEnd = useSongPlayer(loopEndFrames);
-  const onTogglePlay = useSongPlayer((s) => s.togglePlay);
+  const title = useLiveSongPlayer((s) => s.title);
+  const artist = useLiveSongPlayer((s) => s.artist);
+  const click = useLiveSongPlayer((s) => s.click);
+  const speed = useLiveSongPlayer((s) => s.speed);
+  const engineRate = useLiveSongPlayer((s) => s.engineRate);
+  const durationFrames = useLiveSongPlayer((s) => s.durationFrames);
+  const loopEnd = useLiveSongPlayer(loopEndFrames);
+  const onTogglePlay = useLiveSongPlayer((s) => s.togglePlay);
   const { songs } = useLibrarySongs();
   const onOpen = useCallback(() => {
     if (songs.has(songId)) onOpenSong(songId);
@@ -133,8 +133,8 @@ function useNextTitle(): string | null {
 }
 
 function useStemTitle(setId: number): string {
-  const title = useStemPlayer((s) => s.title);
-  const loading = useStemPlayer((s) => s.status === 'loading');
+  const title = useLiveStemPlayer((s) => s.title);
+  const loading = useLiveStemPlayer((s) => s.status === 'loading');
   const stems = useStemSongs();
   return loading ? stemSongTitle(setId, stems) : title;
 }
@@ -146,11 +146,11 @@ interface StemProps extends BarProps {
 
 function StemMiniPlayer({ setId, onOpenStemSet, ...bar }: StemProps) {
   const title = useStemTitle(setId);
-  const artist = useStemPlayer((s) => s.artist);
-  const engineRate = useStemPlayer((s) => s.engineRate);
-  const durationFrames = useStemPlayer((s) => s.durationFrames);
-  const loopEnd = useStemPlayer(loopEndFrames);
-  const onTogglePlay = useStemPlayer((s) => s.togglePlay);
+  const artist = useLiveStemPlayer((s) => s.artist);
+  const engineRate = useLiveStemPlayer((s) => s.engineRate);
+  const durationFrames = useLiveStemPlayer((s) => s.durationFrames);
+  const loopEnd = useLiveStemPlayer(loopEndFrames);
+  const onTogglePlay = useLiveStemPlayer((s) => s.togglePlay);
   const spot = useSetlistSpot(setId);
   const next = useNextTitle();
   const { stems } = useLibrarySongs();

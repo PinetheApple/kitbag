@@ -63,6 +63,9 @@ vi.mock('./hardwareBack', () => ({
 }));
 vi.mock('../readerFocus', () => ({ focusReaderOn }));
 vi.mock('./SheetHost.tsx', () => ({ useSheetPortal: () => portal }));
+vi.mock('./SheetBridge.tsx', () => ({
+  useSheetBridge: () => (node: unknown) => node,
+}));
 vi.mock('../useReduceMotion.ts', () => ({
   useReduceMotionMode: () => 'system',
 }));

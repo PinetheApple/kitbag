@@ -5,10 +5,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
-import { useLibraryRoutes } from '@/runtime/libraryRoutes';
+import { useViewedPlayerDock } from '@/miniPlayer/useViewedPlayerDock';
+import {
+  followParams,
+  useLibraryRoutes,
+  VIEW_SONG,
+  type FollowParams,
+} from '@/runtime/libraryRoutes';
 
 interface StemRouteNavigation {
-  readonly setParams: (params: { readonly id: string }) => void;
+  readonly setParams: (params: FollowParams) => void;
 }
 
 function StemPlayerRoute() {
@@ -16,16 +22,21 @@ function StemPlayerRoute() {
   const routes = useLibraryRoutes();
   const navigation = useNavigation<StemRouteNavigation>();
   const focused = useIsFocused();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{
+    id: string;
+    [VIEW_SONG]?: string;
+  }>();
+  const dock = useViewedPlayerDock();
   const follow = useCallback(
     (stemSetId: number) => {
-      navigation.setParams({ id: String(stemSetId) });
+      navigation.setParams(followParams(stemSetId));
     },
     [navigation],
   );
   return (
     <StemPlayerScreen
-      setId={Number(id)}
+      setId={Number(params.id)}
+      view={params[VIEW_SONG] !== undefined}
       focused={focused}
       insets={insets}
       onBack={routes.back}
@@ -33,6 +44,7 @@ function StemPlayerRoute() {
       onOpenSong={routes.replaceSong}
       onOpenMetronome={routes.toMetronome}
       onOpenSetlist={routes.openSetlist}
+      {...dock}
     />
   );
 }

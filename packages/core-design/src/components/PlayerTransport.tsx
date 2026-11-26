@@ -24,6 +24,7 @@ export interface PlayerTransportProps {
   readonly onSkip: (seconds: number) => void;
   readonly onTogglePlay: () => void;
   readonly extraKey?: ReactNode;
+  readonly playLabel?: string;
 }
 
 export function PlayerTransport({
@@ -35,6 +36,7 @@ export function PlayerTransport({
   onSkip,
   onTogglePlay,
   extraKey,
+  playLabel = 'Play',
 }: PlayerTransportProps) {
   const back = useCallback(() => {
     onSkip(-skipSeconds);
@@ -60,7 +62,7 @@ export function PlayerTransport({
       <PlayPauseButton
         size="dock"
         playing={playing}
-        playLabel="Play"
+        playLabel={playLabel}
         pauseLabel="Pause"
         onPress={onTogglePlay}
       />

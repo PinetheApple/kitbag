@@ -14,7 +14,11 @@ import {
   textStyle,
   useTheme,
 } from '@kitbag/core-design';
-import { NO_LINE, useStemPlayer, type RetimeState } from '@kitbag/core-state';
+import {
+  NO_LINE,
+  useLiveStemPlayer,
+  type RetimeState,
+} from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
 import {
   Pressable,
@@ -156,7 +160,7 @@ function RetimeLines({
 }: RetimeLinesProps) {
   const styles = useStyles();
   const lyricStyles = useLyricStyles();
-  const lines = useStemPlayer((s) => s.lyrics.lines);
+  const lines = useLiveStemPlayer((s) => s.lyrics.lines);
   const { done, current, next } = useMemo(
     () => retimePreview(lines, retime.taps, retime.nextLine),
     [lines, retime],
@@ -199,7 +203,7 @@ interface TapPadProps {
 function TapPad({ allTapped, pinned }: TapPadProps) {
   const styles = useStyles();
   const theme = useTheme();
-  const tapRetime = useStemPlayer((s) => s.tapRetime);
+  const tapRetime = useLiveStemPlayer((s) => s.tapRetime);
   const pad = useMemo(() => tapOnce(tapRetime), [tapRetime]);
   const title = allTapped ? 'All lines tapped' : 'Tap as this line starts';
   return (
@@ -221,7 +225,7 @@ function TapPad({ allTapped, pinned }: TapPadProps) {
 
 function ShiftRow({ steps }: { readonly steps: number }) {
   const styles = useStyles();
-  const shiftRetime = useStemPlayer((s) => s.shiftRetime);
+  const shiftRetime = useLiveStemPlayer((s) => s.shiftRetime);
   const earlier = useCallback(() => {
     shiftRetime(STEP_EARLIER);
   }, [shiftRetime]);
@@ -256,7 +260,7 @@ function ShiftRow({ steps }: { readonly steps: number }) {
 
 function RetimeFailureCard() {
   const styles = useStyles();
-  const failed = useStemPlayer((s) => s.retimeFailure !== null);
+  const failed = useLiveStemPlayer((s) => s.retimeFailure !== null);
   if (!failed) return null;
   return (
     <Card emphasis="danger" statusIcon="failure" statusLabel="Failed">
@@ -275,7 +279,7 @@ function RetimeControls({
   readonly pinned: boolean;
 }) {
   const styles = useStyles();
-  const undoRetimeTap = useStemPlayer((s) => s.undoRetimeTap);
+  const undoRetimeTap = useLiveStemPlayer((s) => s.undoRetimeTap);
   return (
     <>
       <TapPad allTapped={retime.nextLine === NO_LINE} pinned={pinned} />
@@ -364,7 +368,7 @@ function ScrollingRetime({ retime }: { readonly retime: Recording }) {
 
 export function RetimeBody() {
   const styles = useStyles();
-  const retime = useStemPlayer((s) => s.retime);
+  const retime = useLiveStemPlayer((s) => s.retime);
   const layout = useRetimeLayout();
   if (retime.kind !== 'recording') return null;
   if (layout.mode === 'scrolling') return <ScrollingRetime retime={retime} />;

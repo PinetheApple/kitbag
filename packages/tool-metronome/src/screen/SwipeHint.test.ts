@@ -10,7 +10,8 @@ const back = vi.hoisted(() => ({
 }));
 const focusReaderOn = vi.hoisted(() => vi.fn());
 
-vi.mock('react', () => ({
+vi.mock('react', async (original) => ({
+  createContext: (await original<typeof import('react')>()).createContext,
   useEffect: (effect: () => (() => void) | undefined) => {
     back.effects.push(effect);
   },

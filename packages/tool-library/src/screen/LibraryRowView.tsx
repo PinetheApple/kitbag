@@ -23,10 +23,12 @@ import {
   withAlpha,
 } from '@kitbag/core-design';
 import {
+  rowTap,
   songBadge,
-  useLibrary,
-  useStemPlayer,
+  useLiveSongPlayer,
+  useLiveStemPlayer,
   type LibraryRow,
+  type RowTap,
   type SongBadge,
 } from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
@@ -164,9 +166,20 @@ export interface LibraryRowViewProps {
   readonly selected: boolean;
   readonly moving: boolean;
   readonly onActions: (row: LibraryRow) => void;
-  readonly onOpenStemSet: (id: number) => void;
-  readonly onOpenSong: (id: number) => void;
+  readonly onOpenStemSet: (id: number, tap: RowTap) => void;
+  readonly onOpenSong: (id: number, tap: RowTap) => void;
   readonly onUnavailable: (row: LibraryRow) => void;
+}
+
+function useRowTap(row: LibraryRow): RowTap {
+  const songStatus = useLiveSongPlayer((s) => s.status);
+  const songId = useLiveSongPlayer((s) => s.songId);
+  const stemStatus = useLiveStemPlayer((s) => s.status);
+  const setId = useLiveStemPlayer((s) => s.setId);
+  return rowTap(row, {
+    song: { status: songStatus, songId },
+    stems: { status: stemStatus, setId },
+  });
 }
 
 function useRowPlace(row: LibraryRow, moving: boolean): RowPlace {
@@ -197,10 +210,7 @@ export function LibraryRowView({
   const place = useRowPlace(row, moving);
   const away = place === 'unavailable';
   const playing = useNowPlaying(row);
-  const endSetlistSession = useLibrary((s) => s.endSetlistSession);
-  const openStemSetId = useStemPlayer((s) =>
-    s.status === 'ready' ? s.setId : null,
-  );
+  const tap = useRowTap(row);
   const openActions = useCallback(() => {
     onActions(row);
   }, [onActions, row]);
@@ -209,19 +219,9 @@ export function LibraryRowView({
       onUnavailable(row);
       return;
     }
-    const reopens = row.kind === 'stems' && row.id === openStemSetId;
-    endSetlistSession(reopens ? row.id : undefined);
-    if (row.kind === 'stems') onOpenStemSet(row.id);
-    else onOpenSong(row.id);
-  }, [
-    away,
-    endSetlistSession,
-    openStemSetId,
-    onUnavailable,
-    onOpenStemSet,
-    onOpenSong,
-    row,
-  ]);
+    if (row.kind === 'stems') onOpenStemSet(row.id, tap);
+    else onOpenSong(row.id, tap);
+  }, [away, tap, onUnavailable, onOpenStemSet, onOpenSong, row]);
   const shownBadges = rowBadges(row, status, place);
   const gridIcon = showsGridIcon(row, place);
   const badges =

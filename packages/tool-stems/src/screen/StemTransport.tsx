@@ -3,7 +3,10 @@ import {
   clickKeyLabel,
   loopKeyLabel,
   SKIP_SECONDS,
+  useLiveStemPlayer,
   useStemPlayer,
+  useStemViewing,
+  useViewPlayLabel,
 } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import type { SharedValue } from 'react-native-reanimated';
@@ -19,7 +22,10 @@ export function StemTransport({
   const togglePlay = useStemPlayer((s) => s.togglePlay);
   const skip = useStemPlayer((s) => s.skip);
   const markLoop = useStemPlayer((s) => s.markLoop);
-  const toggleClick = useStemPlayer((s) => s.toggleClick);
+  const toggleClick = useLiveStemPlayer((s) => s.toggleClick);
+  const viewing = useStemViewing();
+  const title = useStemPlayer((s) => s.title);
+  const playLabel = useViewPlayLabel(title, viewing);
   const onLoop = useCallback(() => {
     void markLoop();
   }, [markLoop]);
@@ -35,12 +41,13 @@ export function StemTransport({
       onLoop={onLoop}
       onSkip={skip}
       onTogglePlay={togglePlay}
+      {...(playLabel === undefined ? {} : { playLabel })}
       extraKey={
         <TransportKey
           size="dock"
           icon="metronome"
           selected={click}
-          disabled={!hasGrid}
+          disabled={!hasGrid || viewing}
           accessibilityLabel={clickKeyLabel(click)}
           onPress={onClick}
         />

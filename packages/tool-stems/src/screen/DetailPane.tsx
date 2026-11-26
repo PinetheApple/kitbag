@@ -9,8 +9,14 @@ import {
   hitBoxStyle,
   hitExtension,
   minTouchTargetDp,
+  opacity,
 } from '@kitbag/core-design';
-import { lyricLineAt, useStemPlayer } from '@kitbag/core-state';
+import {
+  lyricLineAt,
+  useLiveStemPlayer,
+  useStemPlayer,
+  useStemViewing,
+} from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
@@ -29,6 +35,7 @@ const CHIP_HIT_BOX = hitBoxStyle(
 
 const useStyles = createThemedStyles((theme) => ({
   lyricSlot: { flexGrow: 1, minHeight: LYRIC_FLOOR },
+  off: { opacity: opacity.muted },
   lyricFrame: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   head: {
     minHeight: stemSections.headMinHeight,
@@ -93,7 +100,8 @@ const useStyles = createThemedStyles((theme) => ({
 function LyricsHead({ synced }: { readonly synced: boolean }) {
   const styles = useStyles();
   const lines = useStemPlayer((s) => s.lyrics.lines);
-  const beginRetime = useStemPlayer((s) => s.beginRetime);
+  const beginRetime = useLiveStemPlayer((s) => s.beginRetime);
+  const viewing = useStemViewing();
   const playheadSeconds = useStemPlayer((s) => s.playheadSeconds);
   const open = useCallback(() => {
     beginRetime(lyricLineAt(lines, playheadSeconds()));
@@ -104,7 +112,9 @@ function LyricsHead({ synced }: { readonly synced: boolean }) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={synced ? 'Retime lyrics' : 'Tap along to sync'}
-        style={CHIP_HIT_BOX}
+        accessibilityState={{ disabled: viewing }}
+        disabled={viewing}
+        style={viewing ? [CHIP_HIT_BOX, styles.off] : CHIP_HIT_BOX}
         onPress={open}
       >
         <View style={styles.chip}>

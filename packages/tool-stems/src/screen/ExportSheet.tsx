@@ -9,7 +9,7 @@ import {
 } from '@kitbag/core-design';
 import {
   formatClockSeconds,
-  useStemPlayer,
+  useLiveStemPlayer,
   type ExportSummary,
 } from '@kitbag/core-state';
 import { Fragment, useCallback, useRef, useState } from 'react';
@@ -59,8 +59,8 @@ export function ExportSheet({
   onClose,
 }: ExportSheetProps) {
   const styles = useStyles();
-  const readExportSummary = useStemPlayer((s) => s.readExportSummary);
-  const startExport = useStemPlayer((s) => s.startExport);
+  const readExportSummary = useLiveStemPlayer((s) => s.readExportSummary);
+  const startExport = useLiveStemPlayer((s) => s.startExport);
   const [summary, setSummary] = useState<ExportSummary | null>(null);
   const reads = useRef(0);
   const handleShow = useCallback(() => {

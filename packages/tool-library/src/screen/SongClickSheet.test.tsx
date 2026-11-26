@@ -23,6 +23,7 @@ const NO_CUSTOM_SOUNDS = vi.hoisted(() => ({ sounds: [], unavailable: [] }));
 
 const song = vi.hoisted(() => ({
   state: {},
+  viewing: false,
   setClickSounds: vi.fn(),
   cycleClickAccent: vi.fn(),
   setClickCountIn: vi.fn(),
@@ -59,6 +60,9 @@ vi.mock('@kitbag/core-design', async (original) => {
 vi.mock('@kitbag/core-state', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   useSongPlayer: (select: (state: unknown) => unknown) => select(song.state),
+  useLiveSongPlayer: (select: (state: unknown) => unknown) =>
+    select(song.state),
+  useSongViewing: () => song.viewing,
   useClickSounds: (select: (state: unknown) => unknown) =>
     select(NO_CUSTOM_SOUNDS),
   useMetronome: (select: (state: unknown) => unknown) =>

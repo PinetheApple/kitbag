@@ -7,7 +7,7 @@ import {
   stemSections,
   type NeighbourGaps,
 } from '@kitbag/core-design';
-import { useStemPlayer } from '@kitbag/core-state';
+import { useLiveStemPlayer } from '@kitbag/core-state';
 import { useCallback, useEffect } from 'react';
 import { View } from 'react-native';
 
@@ -31,11 +31,11 @@ interface RetimeBarProps {
 
 export function RetimeBar({ onAskReset, onAskLeave }: RetimeBarProps) {
   const styles = useStyles();
-  const lines = useStemPlayer((s) => s.lyrics.lines);
-  const retime = useStemPlayer((s) => s.retime);
-  const retimed = useStemPlayer((s) => s.lyrics.retimed);
-  const cancelRetime = useStemPlayer((s) => s.cancelRetime);
-  const commitRetime = useStemPlayer((s) => s.commitRetime);
+  const lines = useLiveStemPlayer((s) => s.lyrics.lines);
+  const retime = useLiveStemPlayer((s) => s.retime);
+  const retimed = useLiveStemPlayer((s) => s.lyrics.retimed);
+  const cancelRetime = useLiveStemPlayer((s) => s.cancelRetime);
+  const commitRetime = useLiveStemPlayer((s) => s.commitRetime);
   const unsaved = hasUnsavedRetime(retime);
   const close = useCallback(() => {
     if (unsaved) onAskLeave();
@@ -78,7 +78,7 @@ export function RetimeBar({ onAskReset, onAskLeave }: RetimeBarProps) {
 }
 
 export function ResetDialog({ onClose }: { readonly onClose: () => void }) {
-  const resetRetime = useStemPlayer((s) => s.resetRetime);
+  const resetRetime = useLiveStemPlayer((s) => s.resetRetime);
   const confirm = useCallback(() => {
     onClose();
     void resetRetime();
@@ -96,8 +96,8 @@ export function ResetDialog({ onClose }: { readonly onClose: () => void }) {
 }
 
 export function LeaveDialog({ onClose }: { readonly onClose: () => void }) {
-  const retime = useStemPlayer((s) => s.retime);
-  const cancelRetime = useStemPlayer((s) => s.cancelRetime);
+  const retime = useLiveStemPlayer((s) => s.retime);
+  const cancelRetime = useLiveStemPlayer((s) => s.cancelRetime);
   const body = leaveRetimeBody(retime);
   if (body === null) return null;
   return (

@@ -62,8 +62,10 @@ vi.mock('@kitbag/core-state', async (original) => {
     analysisFailure: () => null,
     rowFilesOf: () => null,
     useLibrary: () => () => undefined,
-    useSongPlayer: (select: (state: unknown) => unknown) => select(now.song),
-    useStemPlayer: (select: (state: unknown) => unknown) => select(now.stem),
+    useLiveSongPlayer: (select: (state: unknown) => unknown) =>
+      select(now.song),
+    useLiveStemPlayer: (select: (state: unknown) => unknown) =>
+      select(now.stem),
   };
 });
 

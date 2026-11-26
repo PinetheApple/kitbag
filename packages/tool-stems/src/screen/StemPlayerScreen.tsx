@@ -1,4 +1,4 @@
-import { useLibrary, useStemPlayer } from '@kitbag/core-state';
+import { useLibrary, useLiveStemPlayer } from '@kitbag/core-state';
 import { useCallback, useState } from 'react';
 
 import { PlayerScreen, type StemPlayerScreenProps } from './PlayerScreen.tsx';
@@ -22,7 +22,7 @@ export function StemPlayerScreen(props: StemPlayerScreenProps) {
   const { setId, focused, onOpenStemSet } = props;
   const [reopenCount, setReopenCount] = useState(0);
   const displaced = useDisplacedByMetronomeSong(focused);
-  const close = useStemPlayer((s) => s.close);
+  const close = useLiveStemPlayer((s) => s.close);
   const open = useCallback(
     (stemSetId: number) => {
       if (stemSetId !== setId) {
@@ -36,5 +36,12 @@ export function StemPlayerScreen(props: StemPlayerScreenProps) {
   );
   // The metronome song took the stage; remounting on Back reopens this song.
   if (displaced) return null;
-  return <PlayerScreen key={reopenCount} {...props} onOpenStemSet={open} />;
+  return (
+    <PlayerScreen
+      key={reopenCount}
+      {...props}
+      view={reopenCount === 0 && props.view === true}
+      onOpenStemSet={open}
+    />
+  );
 }

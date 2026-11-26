@@ -1,5 +1,6 @@
 import {
   BeatWaveform,
+  BridgedProvider,
   Card,
   createThemedStyles,
   PlayerScroll,
@@ -8,14 +9,19 @@ import {
   songPlayer,
   space,
   stemPlayer,
+  useNotice,
   type ScrubFrame,
 } from '@kitbag/core-design';
 import {
   framesToSeconds,
   loopEndFrames,
+  SongSourceContext,
   useFocusedMixerHold,
+  useLiveSongPlayer,
   useLoopScrub,
+  useSongHeldFrame,
   useSongPlayer,
+  useSongSource,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -59,6 +65,9 @@ export interface SongPlayerScreenProps {
   readonly usePlayhead: UsePlayhead;
   readonly renderUpNext?: RenderUpNext;
   readonly onOpenQueue: () => void;
+  readonly onOpenSetlist: (setlistId: number) => void;
+  readonly view?: boolean;
+  readonly renderMiniPlayer?: (onOpenQueue: () => void) => ReactNode;
 }
 
 export type RenderUpNext = (songSec: SongPlayhead['songSec']) => ReactNode;
@@ -117,6 +126,8 @@ interface BodyProps {
   readonly usePlayhead: UsePlayhead;
   readonly clickSheet: SongClickSheetState;
   readonly renderUpNext: RenderUpNext | undefined;
+  readonly viewing: boolean;
+  readonly dockInset: number;
 }
 
 function Body({
@@ -132,13 +143,16 @@ function Body({
   usePlayhead,
   clickSheet,
   renderUpNext,
+  viewing,
+  dockInset,
 }: BodyProps) {
   const styles = useStyles();
   const status = useSongPlayer((s) => s.status);
   const rate = useSongPlayer((s) => s.engineRate);
   const frames = useSongPlayer((s) => s.durationFrames);
   const loopEnd = useSongPlayer(loopEndFrames);
-  const playhead = usePlayhead(rate, frames, loopEnd);
+  const held = useSongHeldFrame(viewing);
+  const playhead = usePlayhead(rate, frames, loopEnd, { heldFrame: held });
   const scrub = useLoopScrub(useSongPlayer);
   const handles = useLoopHandles();
   if (status !== 'ready')
@@ -166,8 +180,9 @@ function Body({
         </View>
         <SongTransport
           playing={playhead.playing}
-          bottomInset={bottom}
-          upNext={renderUpNext?.(playhead.songSec)}
+          dockInset={dockInset}
+          sheetInset={bottom}
+          upNext={viewing ? null : renderUpNext?.(playhead.songSec)}
         />
       </PlayerScroll>
       <SongClickSheet
@@ -175,11 +190,53 @@ function Body({
         bottomInset={bottom}
         onDismiss={clickSheet.close}
       />
+      {viewing ? null : (
+        <LiveSheets
+          songId={songId}
+          bottom={bottom}
+          meterOpen={meterOpen}
+          tempoModeOpen={tempoModeOpen}
+          tempoOpen={tempoOpen}
+          onCloseMeter={onCloseMeter}
+          onCloseTempoMode={onCloseTempoMode}
+          onCloseTempo={onCloseTempo}
+          playheadSeconds={playhead.songSec}
+        />
+      )}
+    </>
+  );
+}
+
+type LiveSheetsProps = Pick<
+  BodyProps,
+  | 'songId'
+  | 'bottom'
+  | 'meterOpen'
+  | 'tempoModeOpen'
+  | 'tempoOpen'
+  | 'onCloseMeter'
+  | 'onCloseTempoMode'
+  | 'onCloseTempo'
+> & { readonly playheadSeconds: SongPlayhead['songSec'] };
+
+function LiveSheets({
+  songId,
+  bottom,
+  meterOpen,
+  tempoModeOpen,
+  tempoOpen,
+  onCloseMeter,
+  onCloseTempoMode,
+  onCloseTempo,
+  playheadSeconds,
+}: LiveSheetsProps) {
+  return (
+    <>
       <SongMeter
         songId={songId}
         visible={meterOpen}
         bottomInset={bottom}
-        playheadSeconds={playhead.songSec}
+        playheadSeconds={playheadSeconds}
         onClose={onCloseMeter}
       />
       <SongTempoMode
@@ -197,7 +254,11 @@ function Body({
   );
 }
 
-export function SongPlayerScreen({
+type ContentProps = Omit<SongPlayerScreenProps, 'view'> & {
+  readonly viewing: boolean;
+};
+
+function SongPlayerContent({
   songId,
   focused,
   insets,
@@ -207,20 +268,25 @@ export function SongPlayerScreen({
   usePlayhead,
   renderUpNext,
   onOpenQueue,
-}: SongPlayerScreenProps) {
+  onOpenSetlist,
+  renderMiniPlayer,
+  viewing,
+}: ContentProps) {
   const styles = useStyles();
-  const open = useSongPlayer((s) => s.open);
+  const open = useLiveSongPlayer((s) => s.open);
   const acquire = useCallback(
     () => open(songId, songPlayer.waveBars).hold,
     [open, songId],
   );
-  useFocusedMixerHold(focused, acquire);
+  const following = focused && !viewing;
+  useFocusedMixerHold(following, acquire);
   const follow = useMemo(
     () => ({ songId, onOpenStemSet, onOpenSong }),
     [songId, onOpenStemSet, onOpenSong],
   );
-  const { leave, markLeft } = useLeaveOnStop(focused, onBack, songId);
-  useFollowQueueArrivals(focused, follow, markLeft);
+  const { leave, markLeft } = useLeaveOnStop(following, onBack, songId);
+  useFollowQueueArrivals(following, follow, markLeft);
+  const notice = useNotice();
   const [menuOpen, setMenuOpen] = useState(false);
   const openMenu = useCallback(() => {
     setMenuOpen(true);
@@ -255,6 +321,7 @@ export function SongPlayerScreen({
     openClick(CLICK_GROUP.countIn);
   }, [openClick]);
   const padding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
+  const docked = viewing && renderMiniPlayer !== undefined;
   return (
     <View style={[styles.screen, padding]}>
       <SongAppBar onBack={leave} onQueue={onOpenQueue} onMenu={openMenu} />
@@ -271,19 +338,37 @@ export function SongPlayerScreen({
         usePlayhead={usePlayhead}
         clickSheet={clickSheet}
         renderUpNext={renderUpNext}
+        viewing={viewing}
+        dockInset={docked ? 0 : insets.bottom}
       />
+      {docked ? renderMiniPlayer(onOpenQueue) : null}
       <SongPlayerMenu
         songId={songId}
         visible={menuOpen}
         bottomInset={insets.bottom}
+        notice={notice}
         onDismiss={closeMenu}
         onBack={leave}
         onMeter={openMeter}
         onTempoMode={openTempoMode}
         onTempoCorrection={openTempo}
         onCountIn={openCountIn}
+        onOpenQueue={onOpenQueue}
+        onOpenSetlist={onOpenSetlist}
       />
-      <EndedSetlistSnackbar />
+      <EndedSetlistSnackbar notice={notice} />
     </View>
+  );
+}
+
+export function SongPlayerScreen({
+  view = false,
+  ...props
+}: SongPlayerScreenProps) {
+  const source = useSongSource(props.songId, view, songPlayer.waveBars);
+  return (
+    <BridgedProvider context={SongSourceContext} value={source}>
+      <SongPlayerContent {...props} viewing={source.viewing} />
+    </BridgedProvider>
   );
 }

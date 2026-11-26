@@ -7,7 +7,13 @@ import {
   textRoles,
   Waveform,
 } from '@kitbag/core-design';
-import { isSetApart, keyText, useStemPlayer } from '@kitbag/core-state';
+import {
+  isSetApart,
+  keyText,
+  useLiveStemPlayer,
+  useStemPlayer,
+  useStemViewing,
+} from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
@@ -60,7 +66,8 @@ export function StemRowView({
   const setGain = useStemPlayer((s) => s.setGain);
   const toggleMute = useStemPlayer((s) => s.toggleMute);
   const solo = useStemPlayer((s) => s.solo);
-  const renameStem = useStemPlayer((s) => s.renameStem);
+  const renameStem = useLiveStemPlayer((s) => s.renameStem);
+  const viewing = useStemViewing();
   const [editing, setEditing] = useState(false);
   const startRename = useCallback(() => {
     setEditing(true);
@@ -99,7 +106,7 @@ export function StemRowView({
       style={[
         expanded ? stemStyles.expanded : stemStyles.rowFrame,
         stemStyles.divider,
-        !row.loaded && styles.missing,
+        !row.loaded && !viewing && styles.missing,
       ]}
     >
       <View
@@ -124,7 +131,7 @@ export function StemRowView({
             <Pressable
               style={[styles.nameHit, nameWidth]}
               onPress={expand}
-              onLongPress={startRename}
+              {...(viewing ? {} : { onLongPress: startRename })}
             >
               <DesignFloorOneLineText
                 text={row.name}
@@ -153,7 +160,7 @@ export function StemRowView({
           gain={row.volume}
           open={expanded}
           onPress={expand}
-          onRename={startRename}
+          {...(viewing ? {} : { onRename: startRename })}
         />
         <StemToggle
           kind="mute"

@@ -20,7 +20,7 @@ import {
   exportBlock,
   exportFailureCopy,
   megabytes,
-  useStemPlayer,
+  useLiveStemPlayer,
   type ExportCopy,
   type ExportFailure,
   type ExportSong,
@@ -53,7 +53,7 @@ const useStyles = createThemedStyles((theme) => ({
 }));
 
 function useOtherSong(song: ExportSong): string | null {
-  const openId = useStemPlayer((s) => s.setId);
+  const openId = useLiveStemPlayer((s) => s.setId);
   return openId === song.setId ? null : song.title;
 }
 
@@ -71,7 +71,7 @@ function RunningCard({ song }: { readonly song: ExportSong }) {
   const styles = useStyles();
   const theme = useTheme();
   const percent = useMixdownProgress(true);
-  const cancelExport = useStemPlayer((s) => s.cancelExport);
+  const cancelExport = useLiveStemPlayer((s) => s.cancelExport);
   const otherSong = useOtherSong(song);
   return (
     <Card emphasis="activeGroup">
@@ -101,7 +101,7 @@ function RunningCard({ song }: { readonly song: ExportSong }) {
 }
 
 function DismissButton() {
-  const dismissExport = useStemPlayer((s) => s.dismissExport);
+  const dismissExport = useLiveStemPlayer((s) => s.dismissExport);
   return (
     <Button
       variant="ghost"
@@ -113,7 +113,7 @@ function DismissButton() {
 }
 
 function useShare() {
-  const shareExport = useStemPlayer((s) => s.shareExport);
+  const shareExport = useLiveStemPlayer((s) => s.shareExport);
   return useCallback(() => {
     void shareExport();
   }, [shareExport]);
@@ -180,8 +180,8 @@ interface FailedCardProps {
 }
 
 function RetryButton() {
-  const startExport = useStemPlayer((s) => s.startExport);
-  const block = useStemPlayer(exportBlock);
+  const startExport = useLiveStemPlayer((s) => s.startExport);
+  const block = useLiveStemPlayer(exportBlock);
   const reason =
     block === null || block === 'running' ? null : exportBlockReason(block);
   const retry = useCallback(() => {
@@ -222,7 +222,7 @@ function FailedCard({ song, failure, bytes }: FailedCardProps) {
 }
 
 export function ExportNotice() {
-  const exportState = useStemPlayer((s) => s.exportState);
+  const exportState = useLiveStemPlayer((s) => s.exportState);
   switch (exportState.kind) {
     case 'running':
       return <RunningCard song={exportState.song} />;
@@ -247,8 +247,10 @@ export function ExportNotice() {
 }
 
 export function ExportCancelledSnackbar() {
-  const cancelled = useStemPlayer((s) => s.exportState.kind === 'cancelled');
-  const dismissExport = useStemPlayer((s) => s.dismissExport);
+  const cancelled = useLiveStemPlayer(
+    (s) => s.exportState.kind === 'cancelled',
+  );
+  const dismissExport = useLiveStemPlayer((s) => s.dismissExport);
   if (!cancelled) return null;
   return (
     <Snackbar

@@ -2,16 +2,22 @@ import { createElement, type ComponentType } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const nav = vi.hoisted(() => ({
-  focused: false,
-  navigate: vi.fn(),
-  topSetParams: vi.fn(),
-  ownSetParams: vi.fn(),
-}));
+const nav = vi.hoisted(() => {
+  const params: Record<string, string> = { id: '4' };
+  return {
+    focused: false,
+    params,
+    navigate: vi.fn(),
+    topSetParams: vi.fn(),
+    ownSetParams: vi.fn(),
+  };
+});
 const screens = vi.hoisted(() => ({
   props: [] as {
     readonly focused?: boolean;
+    readonly view?: boolean;
     readonly onOpenStemSet?: (stemSetId: number) => void;
+    readonly onOpenSong?: (songId: number) => void;
     readonly renderUpNext?: (songSec: unknown) => unknown;
     readonly onOpenQueue?: () => void;
   }[],
@@ -23,7 +29,7 @@ vi.mock('expo-router', () => ({
   useRouter: () => ({ navigate: nav.navigate, setParams: nav.topSetParams }),
   useNavigation: () => ({ setParams: nav.ownSetParams }),
   useIsFocused: () => nav.focused,
-  useLocalSearchParams: () => ({ id: '4' }),
+  useLocalSearchParams: () => nav.params,
 }));
 vi.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0 }),
@@ -33,6 +39,10 @@ vi.mock('@/home/registry', () => ({
 }));
 vi.mock('@/home/ToolGate', () => ({
   gated: (_id: string, route: ComponentType) => route,
+}));
+
+vi.mock('@/miniPlayer/useViewedPlayerDock', () => ({
+  useViewedPlayerDock: () => ({}),
 }));
 
 vi.mock('@/queue/useQueueSheet', () => ({
@@ -59,7 +69,8 @@ const ROUTES = {
   song: (await import('../app/library/[id].tsx')).default,
   stems: (await import('../app/stems/[id].tsx')).default,
 };
-const { useLibraryRoutes } = await import('./libraryRoutes.ts');
+const { useLibraryRoutes, VIEW_SONG } = await import('./libraryRoutes.ts');
+const { ROW_TAP } = await import('@kitbag/core-state');
 
 function routes() {
   let captured: ReturnType<typeof useLibraryRoutes> | undefined;
@@ -74,6 +85,7 @@ function routes() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  nav.params = { id: '4' };
   screens.props = [];
   screens.upNext = [];
 });
@@ -83,6 +95,14 @@ describe.each(Object.entries(ROUTES))('the %s player route', (_name, route) => {
     nav.focused = focused;
     renderToStaticMarkup(createElement(route));
     expect(screens.props.at(-1)?.focused).toBe(focused);
+  });
+
+  it('opens the song in view only when the row tap asked for it', () => {
+    renderToStaticMarkup(createElement(route));
+    expect(screens.props.at(-1)?.view).toBe(false);
+    nav.params = { id: '4', [VIEW_SONG]: '1' };
+    renderToStaticMarkup(createElement(route));
+    expect(screens.props.at(-1)?.view).toBe(true);
   });
 });
 
@@ -121,6 +141,19 @@ describe('the stem player following the next song', () => {
   });
 });
 
+describe('a viewed player following the song that plays on', () => {
+  it.each([
+    ['stems', () => screens.props.at(-1)?.onOpenStemSet?.(9)],
+    ['song', () => screens.props.at(-1)?.onOpenSong?.(9)],
+  ] as const)('drops the view request from the %s route', (name, follow) => {
+    nav.params = { id: '4', [VIEW_SONG]: '1' };
+    renderToStaticMarkup(createElement(ROUTES[name]));
+    follow();
+    const [params] = nav.ownSetParams.mock.lastCall as [object];
+    expect(params).toStrictEqual({ id: '9', [VIEW_SONG]: undefined });
+  });
+});
+
 describe('opening a player', () => {
   it('calls navigate for a stem song', () => {
     routes().openStemSet(4);
@@ -130,5 +163,20 @@ describe('opening a player', () => {
   it('calls navigate for a song', () => {
     routes().openSong(4);
     expect(nav.navigate).toHaveBeenCalledWith('/library/4');
+  });
+
+  it('opens a row tap that views as it is or in view', () => {
+    routes().openSong(4, ROW_TAP.asIs);
+    expect(nav.navigate).toHaveBeenLastCalledWith('/library/4');
+    routes().openSong(4, ROW_TAP.view);
+    expect(nav.navigate).toHaveBeenLastCalledWith({
+      pathname: '/library/[id]',
+      params: { id: '4', [VIEW_SONG]: '1' },
+    });
+    routes().openStemSet(4, ROW_TAP.view);
+    expect(nav.navigate).toHaveBeenLastCalledWith({
+      pathname: '/stems/[id]',
+      params: { id: '4', [VIEW_SONG]: '1' },
+    });
   });
 });

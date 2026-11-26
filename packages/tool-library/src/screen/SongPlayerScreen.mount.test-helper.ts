@@ -21,6 +21,7 @@ export const onBack = vi.fn();
 export const onOpenStemSet = vi.fn();
 export const onOpenSong = vi.fn();
 export const onOpenQueue = vi.fn();
+export const onOpenSetlist = vi.fn();
 
 const playhead = () => ({}) as never;
 
@@ -36,6 +37,7 @@ export function screen(
     onOpenStemSet,
     onOpenSong,
     onOpenQueue,
+    onOpenSetlist,
     usePlayhead: playhead,
     ...routes,
   });

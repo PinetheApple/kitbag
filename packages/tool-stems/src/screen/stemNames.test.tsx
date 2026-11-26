@@ -28,6 +28,8 @@ vi.mock('@kitbag/core-state', () => ({
       stems: NAMES.map((name) => ({ name, loaded: true, muted: false })),
       masterGain: 1,
     }),
+  useLiveStemPlayer: () => undefined,
+  useStemViewing: () => false,
   isSetApart: () => false,
   keyText: String,
 }));

@@ -1,18 +1,18 @@
 import type { QueuedSong } from '@kitbag/core-db';
 
 import { songPlayerStore } from '../songPlayer/store.ts';
-import { useSongPlayer } from '../songPlayer/useSongPlayer.ts';
+import { useLiveSongPlayer } from '../songPlayer/useSongPlayer.ts';
 import { stemPlayerStore } from '../stemPlayer/store.ts';
-import { useStemPlayer } from '../stemPlayer/useStemPlayer.ts';
+import { useLiveStemPlayer } from '../stemPlayer/useStemPlayer.ts';
 import type { PlayerKind } from './order.ts';
 import { songShown, stemShown } from './shown.ts';
 
 export function useShownSongId(): number | null {
-  return useSongPlayer((s) => (songShown(s) ? s.songId : null));
+  return useLiveSongPlayer((s) => (songShown(s) ? s.songId : null));
 }
 
 export function useShownStemSetId(): number | null {
-  return useStemPlayer((s) => (stemShown(s) ? s.setId : null));
+  return useLiveStemPlayer((s) => (stemShown(s) ? s.setId : null));
 }
 
 export function playingKind(): PlayerKind | null {
@@ -38,8 +38,8 @@ export function shownSong(): QueuedSong | null {
 }
 
 export function useShownLoopHeld(): boolean {
-  const stems = useStemPlayer((s) => stemShown(s) && s.loop.kind === 'on');
-  const single = useSongPlayer((s) => songShown(s) && s.loop.kind === 'on');
+  const stems = useLiveStemPlayer((s) => stemShown(s) && s.loop.kind === 'on');
+  const single = useLiveSongPlayer((s) => songShown(s) && s.loop.kind === 'on');
   return stems || single;
 }
 

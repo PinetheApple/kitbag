@@ -15,6 +15,9 @@ export type Props = Record<string, unknown> & {
 };
 
 export const display = {
+  viewing: false,
+  playing: null as string | null,
+  heldFrame: 0,
   speed: 1,
   scaled: false,
   upNextCount: 0,
@@ -29,6 +32,7 @@ export const library = {
 };
 export const commands = {
   close: vi.fn(),
+  saveForSong: vi.fn(),
   reanalyze: vi.fn(),
   save: vi.fn(() => Promise.resolve(true)),
   dismissMeterNotice: vi.fn(),
@@ -52,6 +56,10 @@ export const transport = {
   setSpeed: vi.fn(),
   resetSpeed: vi.fn(),
 };
+export const queue = {
+  playNext: vi.fn(() => Promise.resolve(true)),
+  addToQueue: vi.fn(() => Promise.resolve(true)),
+};
 export const mixer = {
   session: 0,
   opens: 0,
@@ -61,6 +69,8 @@ export const mixer = {
 
 export function resetScreenState() {
   vi.clearAllMocks();
+  display.viewing = false;
+  display.playing = null;
   display.speed = 1;
   display.scaled = false;
   display.upNextCount = 0;
@@ -101,7 +111,27 @@ export async function coreDesignMock(original: <T>() => Promise<T>) {
   const actual = await original<{
     PLAYER_SCROLL_ID: string;
     usePlayerScroll: () => Record<string, unknown>;
+    QUEUE_TEXT: { playNext: string };
+    useQueueKeys: (
+      presses: unknown,
+      queued: boolean,
+    ) => { playNext: () => void; addToQueue: () => void; addLabel: string };
   }>();
+  const QueueMenuRows = (props: Props) => {
+    const keys = actual.useQueueKeys(props.presses, props.queued === true);
+    return [
+      createElement('MenuRow', {
+        key: 'next',
+        label: actual.QUEUE_TEXT.playNext,
+        onPress: keys.playNext,
+      }),
+      createElement('MenuRow', {
+        key: 'add',
+        label: keys.addLabel,
+        onPress: keys.addToQueue,
+      }),
+    ];
+  };
   const PlayerScroll = (props: Props) =>
     createElement(
       'ScrollView',
@@ -133,6 +163,7 @@ export async function coreDesignMock(original: <T>() => Promise<T>) {
       createElement('SheetHint', null, props.children),
     Badge: (props: Props) => createElement('Badge', { label: props.label }),
     MenuRow: (props: Props) => createElement('MenuRow', props),
+    QueueMenuRows,
     MeterRow: (props: Props) => createElement('MeterRow', props),
     MeterSheet: (props: Props) => createElement('MeterSheet', props),
     TempoModeRow: (props: Props) => createElement('TempoModeRow', props),
@@ -193,6 +224,9 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
     tempoUnavailable,
     TEMPO_MODE,
     TEMPO_SOURCE,
+    VIEW_ONLY_REASON,
+    viewOnlyReason,
+    viewPlayLabel,
   } = await original<{
     useFocusedMixerHold: unknown;
     playerSongBadge: unknown;
@@ -222,6 +256,9 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
     tempoUnavailable: unknown;
     TEMPO_MODE: unknown;
     TEMPO_SOURCE: unknown;
+    VIEW_ONLY_REASON: unknown;
+    viewOnlyReason: unknown;
+    viewPlayLabel: (title: string, playing: string) => string;
   }>();
   const open = () => {
     const mine = ++mixer.session;
@@ -239,6 +276,41 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
     };
   };
   const { createStore } = await import('zustand/vanilla');
+  const { createContext } = await import('react');
+  const songState = (select: (state: unknown) => unknown) =>
+    select({
+      status: display.status,
+      speed: display.speed,
+      ...display.song,
+      click: false,
+      durationFrames: SONG_SECONDS * ENGINE_RATE,
+      engineRate: ENGINE_RATE,
+      ...display.analysis,
+      loop: { kind: 'off' },
+      meterOverride: meter.override,
+      detected: { meter: 4, barOneSeconds: 2.3 },
+      meterNotice: meter.notice,
+      dismissMeterNotice: commands.dismissMeterNotice,
+      meterOverrideChanged: vi.fn(),
+      tempoCorrection: tempo.correction,
+      tempo: songTempo.tempo,
+      tempoMode: songTempo.mode,
+      setTempoMode: songTempo.setTempoMode,
+      detectedBpm: 104,
+      tempoCorrectionChanged: vi.fn(),
+      tempoCorrectionSettled: vi.fn(),
+      playheadBeatSeconds: () => null,
+      clickSettings: {
+        countInBars: 0,
+        sounds: { normal: 1, accent: 0 },
+        accents: [2, 1, 1, 1],
+        dirty: false,
+      },
+      open,
+      close: commands.close,
+      saveForSong: commands.saveForSong,
+      ...transport,
+    });
   return {
     ARRIVAL: { arriving: 'arriving' },
     arrivalStore: createStore(() => ({ arrival: null })),
@@ -298,38 +370,21 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
         saveSongMeterOverride: commands.save,
         saveSongTempoCorrection: commands.save,
       }),
-    useSongPlayer: (select: (state: unknown) => unknown) =>
-      select({
-        status: display.status,
-        speed: display.speed,
-        ...display.song,
-        click: false,
-        durationFrames: SONG_SECONDS * ENGINE_RATE,
-        engineRate: ENGINE_RATE,
-        ...display.analysis,
-        loop: { kind: 'off' },
-        meterOverride: meter.override,
-        detected: { meter: 4, barOneSeconds: 2.3 },
-        meterNotice: meter.notice,
-        dismissMeterNotice: commands.dismissMeterNotice,
-        meterOverrideChanged: vi.fn(),
-        tempoCorrection: tempo.correction,
-        tempo: songTempo.tempo,
-        tempoMode: songTempo.mode,
-        setTempoMode: songTempo.setTempoMode,
-        detectedBpm: 104,
-        tempoCorrectionChanged: vi.fn(),
-        tempoCorrectionSettled: vi.fn(),
-        playheadBeatSeconds: () => null,
-        clickSettings: {
-          countInBars: 0,
-          sounds: { normal: 1, accent: 0 },
-          accents: [2, 1, 1, 1],
-          dirty: false,
-        },
-        open,
-        close: commands.close,
-        ...transport,
-      }),
+    useSongPlayer: songState,
+    useLiveSongPlayer: songState,
+    SongSourceContext: createContext(null),
+    useSongSource: () => ({ store: null, viewing: display.viewing }),
+    useSongViewing: () => display.viewing,
+    useSongHeldFrame: (viewing: boolean) =>
+      viewing ? display.heldFrame : null,
+    useViewPlayLabel: (title: string, viewing: boolean) =>
+      viewing && display.playing !== null
+        ? viewPlayLabel(title, display.playing)
+        : undefined,
+    VIEW_ONLY_REASON,
+    viewOnlyReason,
+    useIsQueued: () => false,
+    useQueueRefresh: () => undefined,
+    useQueueSong: () => queue,
   };
 }

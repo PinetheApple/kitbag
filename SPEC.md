@@ -1028,9 +1028,20 @@ working. Changes:
   (§7.9), built from the same parts; `design/kitbag-queue.html` §e binds it
   here too, with no separate mockup. The app bar carries the same Queue icon as
   the stem player, before ⋮ (#613).
-- Tapping the Songs row of the song the mini-player is showing opens the player
-  on that song as it is, still playing if it was. Any other row tap on Songs
-  opens the player paused.
+- Tapping the Songs or Stem songs row of the open song opens its player as it
+  is, still playing if it was. While another song holds the session (the
+  mini-player shows it, playing or paused), any other row tap opens that
+  song's player in a **view state** (owner, 2026-11-26; #616;
+  `docs/research/mockups/616-view-states.html`): nothing loads into the engine
+  and the playing song plays on, its mini-player docked under the transport.
+  Speed, key, mix and click settings save per song at once; seek and A-B set a
+  held start and loop. Up next and Stop are hidden; Export mix, master level,
+  meter, tempo, retime and the click toggle wait for Play, unless the row has
+  its own reason (no beat grid), which shows instead. With no song holding the
+  session a row tap opens the song live, as before. Play stops the other
+  song and starts this one there, and the screen becomes its player; its spoken
+  label names both songs. The song player's ⋮ menu carries Play next and Add to
+  queue.
 - **Stop** lives in the player's overflow menu, with Re-analyse under the same
   rule. Stop ends the listening session (§7.9) and removes the mini-player. Stop
   in the song's media notification does the same.
@@ -1283,14 +1294,16 @@ phone. That page defines the format; this spec does not copy it.
   sheet, as does the Up next row of either player.
 - **Play next** puts a song first in Next in queue; **Add to queue** puts it
   last; a song already queued offers Move to end of queue instead. Both are in
-  the row menus of the Songs and Stem songs lists and in the stem player's ⋮
-  menu. Queued rows reorder by drag and go by ✕ or a swipe; "Clear queue" asks
+  the row menus of the Songs and Stem songs lists and in both players' ⋮
+  menus. Queued rows reorder by drag and go by ✕ or a swipe; "Clear queue" asks
   first and removes queued songs only.
 - **Setlist context.** A setlist is started in this listening session when the
   user loads one of its entries, metronome or stem song, during this app run;
   a setlist pinned in an earlier run is not started until then. "Next from:
-  <setlist>" shows only for a started setlist. Starting a song from a list
-  (Songs, Stem songs, search) ends it; starting another setlist replaces it;
+  <setlist>" shows only for a started setlist. Play on a viewed song that is
+  not in the setlist ends it; a list tap, viewing a song or a queued song
+  playing does not (owner, 2026-11-26; #616). Starting another setlist
+  replaces it;
   queued songs stay either way. Its rows keep setlist order, and ✕ skips an
   entry this time without editing the setlist. A listening session ends with
   Stop (the mini-player's close or the notification) or when the app closes.
