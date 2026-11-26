@@ -6,6 +6,7 @@ import { NO_GRID } from '../songPlayer/songGrid.ts';
 import type { LibraryMatch } from '../tempoLadder/libraryMatch.ts';
 import { sameSong } from '../tempoLadder/store.ts';
 import { firstDownbeatSec } from './libraryGrid.ts';
+import type { LockedView } from './lockedView.ts';
 import {
   LOCK_REFUSAL,
   LOCKED_OUTCOME,
@@ -38,9 +39,7 @@ export interface LibraryOfferActions {
   readonly dismissOffer: () => void;
 }
 
-type OfferAccess = StoreAccess<
-  LibraryOfferState & { readonly lock: object | undefined }
->;
+type OfferAccess = StoreAccess<LibraryOfferState & LockedView>;
 
 const isOfferFor = (offer: LibraryOffer, seen: MediaSessionSnapshot) =>
   offer.sessionId === seen.sessionId && sameTrack(offer.track, seen);

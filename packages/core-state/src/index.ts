@@ -619,6 +619,10 @@ export type {
   LibraryOfferActions,
   LibraryOfferState,
 } from './playAlong/libraryOffer.ts';
+export type {
+  ClickAloneActions,
+  ClickAloneState,
+} from './playAlong/clickAlone.ts';
 export type { PlayAlongPattern } from './playAlong/pattern.ts';
 export { extrapolatedPositionMs } from './playAlong/position.ts';
 export type { PlayAlongRuntime } from './playAlong/runtime.ts';
