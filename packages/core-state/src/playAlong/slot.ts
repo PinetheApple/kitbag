@@ -1,9 +1,8 @@
-import type { PlayAlongPattern } from './pattern.ts';
-import { enterPlayAlongSlot } from './pattern.ts';
+import { enterPlayAlongSlot, type PlayAlongPattern } from './pattern.ts';
 import type { PlayAlongRuntime } from './runtime.ts';
 
 export interface PlayAlongSlot {
-  readonly enter: () => void;
+  readonly enter: (otherClickStarting: () => void) => void;
   readonly leave: () => void;
   readonly held: () => boolean;
 }
@@ -11,11 +10,10 @@ export interface PlayAlongSlot {
 export function playAlongSlot(
   runtime: PlayAlongRuntime,
   pattern: () => PlayAlongPattern,
-  ended: () => void,
 ): PlayAlongSlot {
   let leaving: (() => void) | undefined;
   return {
-    enter: () => {
+    enter: (otherClickStarting) => {
       if (leaving !== undefined) return;
       const leaveSlot = enterPlayAlongSlot(
         runtime.commands,
@@ -23,7 +21,7 @@ export function playAlongSlot(
         runtime.latencyOffsetMs(),
         runtime.yieldStandalone,
       );
-      const stopStarts = runtime.onClickStarting(ended);
+      const stopStarts = runtime.onClickStarting(otherClickStarting);
       leaving = () => {
         stopStarts();
         leaveSlot();

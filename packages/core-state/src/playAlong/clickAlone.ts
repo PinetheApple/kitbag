@@ -1,4 +1,6 @@
 import type { StoreAccess } from '../configuredStore.ts';
+import { chosenSession } from './libraryOffer.ts';
+import type { LockedView } from './lockedView.ts';
 import type { PlayAlongRuntime } from './runtime.ts';
 import type { PlayAlongSlot } from './slot.ts';
 
@@ -11,40 +13,48 @@ export interface ClickAloneActions {
   readonly stopClick: () => void;
 }
 
-type ClickAccess = StoreAccess<
-  ClickAloneState & {
-    readonly bpm: number | undefined;
-    readonly lock: object | undefined;
-  }
->;
-
 export function clickAlone(
   runtime: PlayAlongRuntime,
-  { getState, setState }: ClickAccess,
+  { getState, setState }: StoreAccess<ClickAloneState & LockedView>,
   slot: PlayAlongSlot,
-  hasSong: () => boolean,
 ) {
   const { commands } = runtime;
-  return {
-    start: () => {
-      const { bpm, clickPlaying, lock } = getState();
-      if (clickPlaying || lock !== undefined || bpm === undefined) return;
-      if (hasSong()) return;
-      slot.enter();
+
+  const stop = () => {
+    if (!getState().clickPlaying) return;
+    setState({ clickPlaying: false });
+    slot.leave();
+  };
+
+  const start = () => {
+    const { bpm, clickPlaying, lock } = getState();
+    if (clickPlaying || lock !== undefined || bpm === undefined) return;
+    if (chosenSession(runtime) !== undefined) return;
+    slot.enter(stop);
+    try {
       commands.setTempo(bpm);
       commands.metronomeStart(runtime.nowFrame());
-      setState({ clickPlaying: true });
-    },
-    stop: () => {
-      if (!getState().clickPlaying) return;
-      setState({ clickPlaying: false });
+    } catch (error) {
       slot.leave();
-    },
-    handOver: () => {
-      if (!getState().clickPlaying) return;
-      commands.metronomeStop();
-      setState({ clickPlaying: false });
-    },
+      throw error;
+    }
+    setState({ clickPlaying: true });
+  };
+
+  const watch = () => {
+    const stopWatching = runtime.sessions().subscribe(() => {
+      if (chosenSession(runtime) !== undefined) stop();
+    });
+    return () => {
+      stopWatching();
+      stop();
+    };
+  };
+
+  return {
+    start,
+    stop,
+    watch,
     retempo: (bpm: number) => {
       if (getState().clickPlaying) commands.setTempo(bpm);
     },

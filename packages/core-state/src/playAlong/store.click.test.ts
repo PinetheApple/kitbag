@@ -15,6 +15,9 @@ import {
 
 const TAPPED_BPM = 96;
 const TRIPLET = 3;
+const TYPED_BPM = 100;
+const FOUND_BPM = 120;
+const NO_HOST = 'no host object';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -80,7 +83,11 @@ describe('the click alone, with no song to follow', () => {
     );
     for (const listener of [...starting]) listener();
     expect(fake.store.getState().clickPlaying).toBe(false);
-    expect(fake.calls.at(-3)).toBe(call('metronomeSelectSlot', STANDALONE));
+    expect(fake.calls.slice(-3)).toEqual([
+      call('metronomeSelectSlot', STANDALONE),
+      'standaloneReturned()',
+      'engineRelease()',
+    ]);
     expect(starting.size).toBe(0);
   });
 
@@ -120,38 +127,50 @@ describe('the click alone, with no song to follow', () => {
     stop();
   });
 
+  it('gives way to a song, then lets a tap lock take the slot afresh', () => {
+    const fake = clickAlone();
+    const stop = fake.store.getState().watchLibrary();
+    songAppears(fake);
+    expect(fake.store.getState().clickPlaying).toBe(false);
+    const holds = (name: string) =>
+      fake.calls.filter((entry) => entry === name).length;
+    expect(holds('engineHold()')).toBe(1);
+    expect(holds('engineRelease()')).toBe(1);
+    expect(holds('standaloneReturned()')).toBe(1);
+    fake.calls.length = 0;
+    fake.store.getState().setBpm(BPM);
+    expect(fake.store.getState().tap(START_MS).locked).toBe(true);
+    expect(fake.calls.slice(0, 3)).toEqual([
+      'yieldStandalone()',
+      'engineHold()',
+      call('metronomeSelectSlot', PLAY_ALONG),
+    ]);
+    expect(fake.anchors()).toHaveLength(1);
+    stop();
+  });
+
+  it('rolls the slot back when the engine cannot be read', () => {
+    const fake = fakePlayAlong({
+      sessions: [],
+      nowFrame: () => {
+        throw new Error(NO_HOST);
+      },
+    });
+    expect(() => {
+      fake.store.getState().startClick();
+    }).toThrow(NO_HOST);
+    expect(fake.store.getState().clickPlaying).toBe(false);
+    expect(fake.calls.slice(-3)).toEqual([
+      call('metronomeSelectSlot', STANDALONE),
+      'standaloneReturned()',
+      'engineRelease()',
+    ]);
+  });
+
   it('stops when the screen stops watching', () => {
     const fake = clickAlone();
     fake.store.getState().watchLibrary()();
     expect(fake.store.getState().clickPlaying).toBe(false);
-  });
-
-  it('hands its slot to a tap lock without leaving it', () => {
-    const fake = clickAlone();
-    songAppears(fake);
-    fake.calls.length = 0;
-    fake.store.getState().setBpm(BPM);
-    expect(fake.store.getState().tap(START_MS).locked).toBe(true);
-    expect(fake.store.getState().clickPlaying).toBe(false);
-    expect(fake.calls).not.toContain('yieldStandalone()');
-    expect(fake.calls).not.toContain(call('metronomeSelectSlot', STANDALONE));
-    expect(fake.calls.indexOf('metronomeStop()')).toBeLessThan(
-      fake.calls.findIndex((entry) =>
-        entry.startsWith('metronomeAnchorExternal'),
-      ),
-    );
-    expect(fake.calls).toContain('metronomeStop()');
-  });
-
-  it('leaves the slot once when the lock that replaced it ends', () => {
-    const fake = clickAlone();
-    songAppears(fake);
-    fake.store.getState().setBpm(BPM);
-    fake.store.getState().tap(START_MS);
-    fake.store.getState().unlock();
-    expect(fake.calls.filter((entry) => entry === 'engineRelease()')).toEqual([
-      'engineRelease()',
-    ]);
   });
 });
 
@@ -183,6 +202,72 @@ describe('the tempo on a track change', () => {
 
   it('starts with no tempo while a song is there but not yet looked up', () => {
     expect(fakePlayAlong().store.getState().bpm).toBeUndefined();
+  });
+
+  it('keeps a typed tempo when the app reports the same track paused', () => {
+    const fake = fakePlayAlong();
+    const stop = fake.store.getState().watchLibrary();
+    fake.store.getState().setBpm(TYPED_BPM);
+    fake.report([snapshot({ playing: false })]);
+    expect(fake.store.getState().bpm).toBe(TYPED_BPM);
+    stop();
+  });
+
+  it('keeps a typed tempo over a found one across a report', () => {
+    const fake = fakePlayAlong();
+    const stop = fake.store.getState().watchLibrary();
+    fake.ladder.tempo(FOUND_BPM);
+    fake.store.getState().setBpm(TYPED_BPM);
+    fake.report([snapshot({ positionMs: 20_000 })]);
+    expect(fake.store.getState().bpm).toBe(TYPED_BPM);
+    stop();
+  });
+
+  it('hands a typed tempo to the tempo ladder, its one owner', () => {
+    const fake = fakePlayAlong();
+    fake.store.getState().setBpm(TYPED_BPM);
+    expect(fake.ladder.ladder.getState().bpm).toBe(TYPED_BPM);
+  });
+
+  it('keeps a tempo typed while locked once the lock ends on the same track', () => {
+    const fake = fakePlayAlong();
+    const stop = fake.store.getState().watchLibrary();
+    fake.ladder.tempo(FOUND_BPM);
+    fake.store.getState().tap(START_MS);
+    fake.store.getState().setBpm(TYPED_BPM);
+    fake.store.getState().unlock();
+    fake.report([snapshot({ playing: false })]);
+    expect(fake.store.getState().bpm).toBe(TYPED_BPM);
+    stop();
+  });
+
+  it('clears the tempo for an untitled next track', () => {
+    const fake = fakePlayAlong();
+    const stop = fake.store.getState().watchLibrary();
+    fake.ladder.tempo(FOUND_BPM);
+    fake.report([snapshot({ title: null })]);
+    expect(fake.store.getState().bpm).toBeUndefined();
+    stop();
+  });
+
+  it('ignores a ladder tempo for another song', () => {
+    const fake = fakePlayAlong();
+    const stop = fake.store.getState().watchLibrary();
+    fake.ladder.ladder.setState({ track: { title: 'Other', artist: 'Band' } });
+    fake.ladder.tempo(FOUND_BPM);
+    expect(fake.store.getState().bpm).toBeUndefined();
+    stop();
+  });
+
+  it('never moves a locked tempo from the ladder', () => {
+    const fake = fakePlayAlong();
+    const stop = fake.store.getState().watchLibrary();
+    fake.store.getState().setBpm(BPM);
+    fake.store.getState().tap(START_MS);
+    fake.ladder.tempo(FOUND_BPM + TYPED_BPM);
+    expect(fake.store.getState().lock?.bpm).toBe(BPM);
+    expect(fake.store.getState().bpm).toBe(BPM);
+    stop();
   });
 
   it('falls back to the default tempo once no song is left', () => {

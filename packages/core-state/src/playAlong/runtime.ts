@@ -58,7 +58,12 @@ export type FollowedSessions = Pick<
 >;
 
 export type FollowedLadder = Pick<
-  StoreApi<Pick<TempoLadderStore, 'track' | 'libraryMatch' | 'bpm' | 'lookUp'>>,
+  StoreApi<
+    Pick<
+      TempoLadderStore,
+      'track' | 'libraryMatch' | 'bpm' | 'lookUp' | 'enter'
+    >
+  >,
   'getState' | 'subscribe'
 >;
 

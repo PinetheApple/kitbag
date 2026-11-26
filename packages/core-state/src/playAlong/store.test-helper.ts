@@ -61,6 +61,9 @@ function fakeLadder() {
     libraryMatch: null,
     bpm: null,
     lookUp,
+    enter: vi.fn((bpm: number) => {
+      ladder.setState({ bpm });
+    }),
   }));
   return {
     ladder,
@@ -124,12 +127,14 @@ export function fakePlayAlong({
   yieldStandalone,
   grid = NO_GRID,
   gridResult = KB_RESULT.KB_OK,
+  nowFrame = () => Date.now() * FRAMES_PER_MS,
 }: {
   readonly grid?: DetectedGrid;
   readonly gridResult?: number;
   readonly sessions?: readonly MediaSessionSnapshot[];
   readonly onClickStarting?: PlayAlongRuntime['onClickStarting'];
   readonly yieldStandalone?: PlayAlongRuntime['yieldStandalone'];
+  readonly nowFrame?: PlayAlongRuntime['nowFrame'];
 } = {}) {
   vi.useFakeTimers({ now: START_MS });
   const calls: string[] = [];
@@ -158,7 +163,7 @@ export function fakePlayAlong({
   const runtime: PlayAlongRuntime = {
     commands,
     boottimeNowMs: () => Date.now(),
-    nowFrame: () => Date.now() * FRAMES_PER_MS,
+    nowFrame,
     engineFrameAtBoottimeMs: frameAt,
     sessions: () => media,
     ladder: () => library.ladder,
