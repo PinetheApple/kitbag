@@ -1,0 +1,20 @@
+{
+  "search": [
+    {
+      "id": "gsb-1",
+      "title": "Under the Bridge",
+      "tempo": "84",
+      "artist": {
+        "name": "Red Hot Chili Peppers"
+      }
+    },
+    {
+      "id": "gsb-2",
+      "title": "Under Pressure",
+      "tempo": "114",
+      "artist": {
+        "name": "Queen"
+      }
+    }
+  ]
+}
