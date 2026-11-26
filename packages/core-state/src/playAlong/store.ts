@@ -23,6 +23,7 @@ import {
   refused,
   type LockOutcome,
   type LockRefusal,
+  type UnlockReason,
 } from './lockOutcome.ts';
 import {
   initialPattern,
@@ -36,6 +37,15 @@ import {
 } from './pattern.ts';
 import { extrapolatedPositionMs } from './position.ts';
 import { nativePlayAlongRuntime, type PlayAlongRuntime } from './runtime.ts';
+import {
+  DEFAULT_PHASE_STEP_MS,
+  fittedPhase,
+  UNSHIFTED_PHASE,
+  type LockPhase,
+  type PhaseActions,
+  type PhaseState,
+} from './phase.ts';
+import { phaseActions } from './phaseActions.ts';
 import { playAlongSlot, type PlayAlongSlot } from './slot.ts';
 import { songTempo, startingBpm } from './songTempo.ts';
 import { findSession, trackOf, type PlayAlongTrack } from './track.ts';
@@ -54,7 +64,7 @@ export {
   SOURCE_GONE_HOLD_MS,
 } from './follower.ts';
 
-export interface PlayAlongLock {
+export interface PlayAlongLock extends LockPhase {
   readonly sessionId: string;
   readonly track: PlayAlongTrack;
   readonly downbeatSec: number;
@@ -63,7 +73,8 @@ export interface PlayAlongLock {
   readonly grid: DetectedGrid | undefined;
 }
 
-export interface PlayAlongState extends LibraryOfferState, ClickAloneState {
+export interface PlayAlongState
+  extends LibraryOfferState, ClickAloneState, PhaseState {
   readonly pattern: PlayAlongPattern;
   readonly bpm: number | undefined;
   readonly lock: PlayAlongLock | undefined;
@@ -71,10 +82,11 @@ export interface PlayAlongState extends LibraryOfferState, ClickAloneState {
   readonly lastAnchorAtBoottimeMs: number | undefined;
   readonly sourceGoneAtBoottimeMs: number | undefined;
   readonly lastRefusal: LockRefusal | undefined;
+  readonly unlockReason: UnlockReason | undefined;
 }
 
 export interface PlayAlongActions
-  extends LibraryOfferActions, ClickAloneActions {
+  extends LibraryOfferActions, ClickAloneActions, PhaseActions {
   readonly setBpm: (bpm: number) => void;
   readonly tap: (atBoottimeMs: number) => LockOutcome;
   readonly unlock: () => void;
@@ -130,6 +142,11 @@ function patternSetters(
   return {
     setBeats: (beatsPerBar: number, denominator: number) => {
       apply(withMeter(pattern(), beatsPerBar, denominator));
+      const { lock } = getState();
+      if (lock !== undefined)
+        setState({
+          lock: { ...lock, ...fittedPhase(lock, lock.bpm, pattern()) },
+        });
       follow.anchor();
     },
     setSubdivision: (subdivision: number) => {
@@ -167,6 +184,7 @@ function tapAction(
       bpm,
       lockedAtBoottimeMs: atBoottimeMs,
       grid: undefined,
+      ...UNSHIFTED_PHASE,
     });
     return LOCKED_OUTCOME;
   };
@@ -177,17 +195,28 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
   nativePlayAlongRuntime,
   (runtime, access) => {
     const offers = libraryOffers(runtime, access);
-    const slot = playAlongSlot(runtime, () => access.getState().pattern);
+    const slot = playAlongSlot(
+      runtime,
+      () => access.getState().pattern,
+      (latencyOffsetMs) => {
+        access.setState({ latencyOffsetMs });
+      },
+    );
     const click = clickAlone(runtime, access, slot);
     const follow = follower(runtime, access, slot, () => {
       offers.refresh();
       tempo.resync();
     });
     const showBpm = (next: number) => {
-      const { lock } = access.getState();
+      const { lock, pattern } = access.getState();
       access.setState({
         bpm: next,
-        lock: lock && { ...lock, bpm: next, grid: undefined },
+        lock: lock && {
+          ...lock,
+          ...fittedPhase(lock, next, pattern),
+          bpm: next,
+          grid: undefined,
+        },
       });
       click.retempo(next);
       follow.anchor();
@@ -205,13 +234,19 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
       bpm: startingBpm(runtime),
       offer: undefined,
       lastRefusal: undefined,
+      unlockReason: undefined,
       clickPlaying: false,
+      phaseStepMs: DEFAULT_PHASE_STEP_MS,
+      latencyOffsetMs: runtime.latencyOffsetMs(),
       ...NO_LOCK_STATE,
       setBpm,
       startClick: click.start,
       stopClick: click.stop,
       tap: tapAction(runtime, access, follow),
-      unlock: follow.unlock,
+      unlock: () => {
+        follow.unlock();
+      },
+      ...phaseActions(access, follow.anchor),
       watchLibrary: () => {
         const stopOffers = offers.watchLibrary();
         const stopTempo = tempo.watch();

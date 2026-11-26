@@ -81,6 +81,8 @@ describe('tap to align', () => {
       downbeatSec: TAP_SONG_SEC,
       bpm: BPM,
       lockedAtBoottimeMs: START_MS + TAP_AFTER_MS,
+      phaseOffsetMs: 0,
+      downbeatShift: 0,
     });
   });
 

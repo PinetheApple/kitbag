@@ -8,13 +8,19 @@ import {
 
 import type { StoreAccess } from '../configuredStore.ts';
 import { engineGrid } from './engineGrid.ts';
-import { LOCK_REFUSAL } from './lockOutcome.ts';
+import {
+  LOCK_REFUSAL,
+  UNLOCK_REASON,
+  type UnlockReason,
+} from './lockOutcome.ts';
 import type { PlayAlongPattern } from './pattern.ts';
+import { downbeatSecOf, shiftedGrid } from './phase.ts';
 import {
   barSeconds,
   engineSongSeconds,
   extrapolatedPositionMs,
 } from './position.ts';
+import type { DetectedGrid } from '../stemPlayer/meterOverride.ts';
 import type { PlayAlongRuntime } from './runtime.ts';
 import type { PlayAlongSlot } from './slot.ts';
 import type { PlayAlongLock, PlayAlongState, PlayAlongStore } from './store.ts';
@@ -68,8 +74,14 @@ function clickPlacement(
 ) {
   const bar = barSeconds(lock.bpm, pattern.beatsPerBar, pattern.denominator);
   const songSec = songMs / MS_PER_SECOND;
+  const downbeatSec = downbeatSecOf(
+    lock.downbeatSec,
+    lock.downbeatShift,
+    lock.bpm,
+    pattern,
+  );
   return {
-    songSec: engineSongSeconds(songSec, lock.downbeatSec, bar) / speed,
+    songSec: engineSongSeconds(songSec, downbeatSec, bar) / speed,
     bpm: lock.bpm * speed,
   };
 }
@@ -83,6 +95,22 @@ export function follower(
   let follow: Follow | undefined;
 
   const grids = engineGrid(runtime.commands);
+  let shifted:
+    { source: DetectedGrid; shift: number; grid: DetectedGrid } | undefined;
+
+  const engineGridOf = (lock: PlayAlongLock, grid: DetectedGrid) => {
+    const shift = lock.downbeatShift;
+    if (shift === 0) return grid;
+    if (shifted?.source !== grid || shifted.shift !== shift) {
+      const { beatsPerBar } = getState().pattern;
+      shifted = {
+        source: grid,
+        shift,
+        grid: shiftedGrid(grid, shift, beatsPerBar),
+      };
+    }
+    return shifted.grid;
+  };
 
   const gridRejected = () => {
     unlock();
@@ -90,9 +118,13 @@ export function follower(
   };
 
   const syncGrid = (lock: PlayAlongLock) => {
-    if (lock.grid === undefined) grids.drop();
-    else if (!grids.holds(lock.grid))
-      grids.send(lock.grid, { accepted: anchor, rejected: gridRejected });
+    if (lock.grid === undefined) {
+      grids.drop();
+      return;
+    }
+    const grid = engineGridOf(lock, lock.grid);
+    if (!grids.holds(grid))
+      grids.send(grid, { accepted: anchor, rejected: gridRejected });
   };
 
   const placeClick = (
@@ -101,8 +133,9 @@ export function follower(
     frame: number,
     speed: number,
   ): boolean => {
-    if (lock.grid !== undefined) return grids.anchor(songMs, frame, speed);
-    const click = clickPlacement(lock, getState().pattern, songMs, speed);
+    const phasedMs = songMs + lock.phaseOffsetMs * speed;
+    if (lock.grid !== undefined) return grids.anchor(phasedMs, frame, speed);
+    const click = clickPlacement(lock, getState().pattern, phasedMs, speed);
     runtime.commands.metronomeAnchorExternal(click.songSec, frame, click.bpm);
     return true;
   };
@@ -149,7 +182,7 @@ export function follower(
     runtime.commands.metronomePause();
   };
 
-  const unlock = () => {
+  const unlock = (reason?: UnlockReason) => {
     const ending = follow;
     if (ending === undefined) return;
     follow = undefined;
@@ -157,14 +190,16 @@ export function follower(
     clearTimeout(ending.retry);
     grids.drop();
     ending.leave();
-    setState(NO_LOCK_STATE);
+    setState({ ...NO_LOCK_STATE, unlockReason: reason });
     unlocked();
   };
 
   const sourceGone = (current: Follow) => {
     if (current.grace !== undefined) return;
     silence(current);
-    current.grace = setTimeout(unlock, SOURCE_GONE_HOLD_MS);
+    current.grace = setTimeout(() => {
+      unlock();
+    }, SOURCE_GONE_HOLD_MS);
     setState({ sourceGoneAtBoottimeMs: runtime.boottimeNowMs() });
   };
 
@@ -193,7 +228,7 @@ export function follower(
     }
     sourceBack(current);
     if (!sameTrack(lock.track, seen)) {
-      unlock();
+      unlock(UNLOCK_REASON.trackChanged);
       return;
     }
     if (lock.track.durationMs !== seen.durationMs)
@@ -207,7 +242,9 @@ export function follower(
   };
 
   const start = (seen: MediaSessionSnapshot): Follow => {
-    slot.enter(unlock);
+    slot.enter(() => {
+      unlock();
+    });
     const stopWatching = runtime.sessions().subscribe((state, previous) => {
       if (state.sessions !== previous.sessions) onSessions(state.sessions);
     });
@@ -241,6 +278,7 @@ export function follower(
       songAheadOfClickMs: undefined,
       offer: undefined,
       lastRefusal: undefined,
+      unlockReason: undefined,
     });
     runtime.sessions().getState().pick(seen.sessionId);
     anchor();
