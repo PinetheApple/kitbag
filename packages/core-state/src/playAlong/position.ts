@@ -33,7 +33,7 @@ export function barSeconds(
 }
 
 // A negative position is silent until it reaches 0, so shift by whole bars; the
-// shift is fixed per downbeat so a re-anchor never reads as a jump.
+// shift is fixed for a given downbeat and bar so a re-anchor never reads as a jump.
 export function engineSongSeconds(
   songSec: number,
   downbeatSec: number,

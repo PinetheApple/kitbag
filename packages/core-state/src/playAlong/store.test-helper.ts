@@ -1,4 +1,8 @@
-import { KB_RESULT, type MediaSessionSnapshot } from '@kitbag/core-native';
+import {
+  KB_METRONOME_SLOT,
+  KB_RESULT,
+  type MediaSessionSnapshot,
+} from '@kitbag/core-native';
 import { vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
 
@@ -10,6 +14,9 @@ export const FRAMES_PER_MS = 48;
 export const LATENCY_MS = 180;
 export const SESSION_ID = 'player';
 export const OTHER_ID = 'other';
+export const BPM = 120;
+export const PLAY_ALONG = KB_METRONOME_SLOT.KB_METRONOME_SLOT_PLAY_ALONG;
+export const STANDALONE = KB_METRONOME_SLOT.KB_METRONOME_SLOT_STANDALONE;
 
 export function snapshot(
   overrides: Partial<MediaSessionSnapshot> = {},
@@ -59,18 +66,30 @@ function fakeCommands(calls: string[]) {
     setSounds: vi.fn(logged('setSounds')),
     setVolume: vi.fn(logged('setVolume')),
     setLatencyOffset: vi.fn(logged('setLatencyOffset')),
+    setPoly: vi.fn(logged('setPoly')),
+    setBarMute: vi.fn(logged('setBarMute')),
+    setRamp: vi.fn(logged('setRamp')),
+    setCountIn: vi.fn(logged('setCountIn')),
   } satisfies PlayAlongRuntime['commands'];
 }
 
 export function fakePlayAlong({
   sessions = [snapshot()],
   onClickStarting = () => () => undefined,
+  yieldStandalone,
 }: {
   readonly sessions?: readonly MediaSessionSnapshot[];
   readonly onClickStarting?: PlayAlongRuntime['onClickStarting'];
+  readonly yieldStandalone?: PlayAlongRuntime['yieldStandalone'];
 } = {}) {
   vi.useFakeTimers({ now: START_MS });
   const calls: string[] = [];
+  const loggedYield = () => {
+    calls.push('yieldStandalone()');
+    return () => {
+      calls.push('standaloneReturned()');
+    };
+  };
   const commands = fakeCommands(calls);
   const pick = vi.fn((sessionId: string) => {
     media.setState({ chosenId: sessionId });
@@ -91,6 +110,7 @@ export function fakePlayAlong({
     sessionCommand,
     latencyOffsetMs: () => LATENCY_MS,
     onClickStarting,
+    yieldStandalone: yieldStandalone ?? loggedYield,
   };
   return {
     store: createPlayAlongStore(runtime),
@@ -110,5 +130,37 @@ export function fakePlayAlong({
       media.setState({ sessions: next });
     },
     anchors: () => commands.metronomeAnchorExternal.mock.calls,
+  };
+}
+
+export function locked(fake = fakePlayAlong()) {
+  fake.store.getState().setBpm(BPM);
+  fake.store.getState().tap(START_MS);
+  return fake;
+}
+
+export function metronomeCommands() {
+  return {
+    start: vi.fn(() => Promise.resolve(0)),
+    metronomeStart: vi.fn(),
+    metronomeStop: vi.fn(),
+    metronomePause: vi.fn(),
+    setTempo: vi.fn(),
+    setBeats: vi.fn(),
+    setSubdivision: vi.fn(),
+    setSubdivisionAccents: vi.fn(),
+    setAccent: vi.fn(),
+    setPoly: vi.fn(),
+    setPolyAccent: vi.fn(),
+    setPolyAgainst: vi.fn(),
+    setSounds: vi.fn(),
+    previewSound: vi.fn(),
+    setCountIn: vi.fn(),
+    setVolume: vi.fn(),
+    setLatencyOffset: vi.fn(),
+    setRamp: vi.fn(),
+    setBarMute: vi.fn(),
+    engineHold: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
+    engineRelease: vi.fn(),
   };
 }

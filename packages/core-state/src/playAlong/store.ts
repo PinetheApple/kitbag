@@ -26,12 +26,14 @@ import {
 import { nativePlayAlongRuntime, type PlayAlongRuntime } from './runtime.ts';
 
 export const REANCHOR_INTERVAL_MS = 1500;
+export const ANCHOR_RETRY_MS = 50;
 export const SEEK_JUMP_MS = 1000;
 export const SOURCE_GONE_HOLD_MS = 10_000;
 
 export const TAP_REFUSAL = {
   noBpm: 'no-bpm',
   noSession: 'no-session',
+  paused: 'paused',
   unknownPosition: 'unknown-position',
 } as const;
 
@@ -58,7 +60,7 @@ export interface PlayAlongState {
   readonly pattern: PlayAlongPattern;
   readonly bpm: number | undefined;
   readonly lock: PlayAlongLock | undefined;
-  readonly driftMs: number | undefined;
+  readonly songAheadOfClickMs: number | undefined;
   readonly lastAnchorAtBoottimeMs: number | undefined;
   readonly sourceGoneAtBoottimeMs: number | undefined;
 }
@@ -81,20 +83,27 @@ export type PlayAlongStore = PlayAlongState & PlayAlongActions;
 
 type Access = StoreAccess<PlayAlongStore>;
 
+interface AnchorPoint {
+  readonly atMs: number;
+  readonly songMs: number;
+  readonly speed: number;
+}
+
 interface Follow {
   readonly leave: () => void;
   seen: MediaSessionSnapshot;
-  sounding: boolean;
+  lastAnchor: AnchorPoint | undefined;
   grace: ReturnType<typeof setTimeout> | undefined;
+  retry: ReturnType<typeof setTimeout> | undefined;
 }
 
-const LOCKED: TapOutcome = { locked: true };
+const LOCKED_OUTCOME: TapOutcome = { locked: true };
 
 const refused = (reason: TapRefusal): TapOutcome => ({ locked: false, reason });
 
-const UNLOCKED = {
+const NO_LOCK_STATE = {
   lock: undefined,
-  driftMs: undefined,
+  songAheadOfClickMs: undefined,
   lastAnchorAtBoottimeMs: undefined,
   sourceGoneAtBoottimeMs: undefined,
 } as const satisfies Partial<PlayAlongState>;
@@ -113,50 +122,68 @@ const trackOf = ({
 const sameTrack = (track: PlayAlongTrack, seen: MediaSessionSnapshot) =>
   track.title === seen.title &&
   track.artist === seen.artist &&
-  track.durationMs === seen.durationMs;
+  (track.durationMs === null || track.durationMs === seen.durationMs);
 
-function reportedJumpMs(
-  previous: MediaSessionSnapshot,
-  seen: MediaSessionSnapshot,
-): number | undefined {
-  if (!previous.playing || seen.positionMs === null) return undefined;
-  if (seen.positionUpdatedAtMs === previous.positionUpdatedAtMs)
-    return undefined;
-  const expected = extrapolatedPositionMs(previous, seen.positionUpdatedAtMs);
-  return expected === null ? undefined : seen.positionMs - expected;
+function correctionMs(
+  previous: AnchorPoint | undefined,
+  atMs: number,
+  songMs: number,
+): number {
+  if (previous === undefined) return 0;
+  const implied = previous.songMs + (atMs - previous.atMs) * previous.speed;
+  const correction = songMs - implied;
+  return Math.abs(correction) > SEEK_JUMP_MS ? 0 : correction;
 }
 
-const isSeek = (jumpMs: number) => Math.abs(jumpMs) > SEEK_JUMP_MS;
+function clickPlacement(
+  lock: PlayAlongLock,
+  pattern: PlayAlongPattern,
+  songMs: number,
+  speed: number,
+) {
+  const bar = barSeconds(lock.bpm, pattern.beatsPerBar, pattern.denominator);
+  const songSec = songMs / MS_PER_SECOND;
+  return {
+    songSec: engineSongSeconds(songSec, lock.downbeatSec, bar) / speed,
+    bpm: lock.bpm * speed,
+  };
+}
 
 function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
   let follow: Follow | undefined;
 
+  const retrySoon = (current: Follow) => {
+    if (current.retry !== undefined) return;
+    current.retry = setTimeout(() => {
+      current.retry = undefined;
+      if (follow === current) anchor();
+    }, ANCHOR_RETRY_MS);
+  };
+
   const anchor = () => {
+    const current = follow;
     const { lock, pattern } = getState();
-    if (
-      lock === undefined ||
-      !follow?.seen.playing ||
-      follow.grace !== undefined
-    )
-      return;
+    if (current === undefined || lock === undefined) return;
+    const { seen } = current;
+    if (current.grace !== undefined || !seen.playing || seen.speed <= 0) return;
     const now = runtime.boottimeNowMs();
-    const songMs = extrapolatedPositionMs(follow.seen, now);
+    const songMs = extrapolatedPositionMs(seen, now);
+    if (songMs === null) return;
     const frame = runtime.engineFrameAtBoottimeMs(now);
-    if (songMs === null || frame === null) return;
-    const bar = barSeconds(lock.bpm, pattern.beatsPerBar, pattern.denominator);
-    const songSec = songMs / MS_PER_SECOND;
-    runtime.commands.metronomeAnchorExternal(
-      engineSongSeconds(songSec, lock.downbeatSec, bar),
-      frame,
-      lock.bpm,
-    );
-    follow.sounding = true;
-    setState({ lastAnchorAtBoottimeMs: now });
+    if (frame === null) {
+      retrySoon(current);
+      return;
+    }
+    const click = clickPlacement(lock, pattern, songMs, seen.speed);
+    runtime.commands.metronomeAnchorExternal(click.songSec, frame, click.bpm);
+    const songAheadOfClickMs = correctionMs(current.lastAnchor, now, songMs);
+    current.lastAnchor = { atMs: now, songMs, speed: seen.speed };
+    setState({ songAheadOfClickMs, lastAnchorAtBoottimeMs: now });
   };
 
   const silence = (current: Follow) => {
-    if (!current.sounding) return;
-    current.sounding = false;
+    if (current.lastAnchor === undefined) return;
+    current.lastAnchor = undefined;
     runtime.commands.metronomePause();
   };
 
@@ -165,8 +192,9 @@ function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
     if (ending === undefined) return;
     follow = undefined;
     clearTimeout(ending.grace);
+    clearTimeout(ending.retry);
     ending.leave();
-    setState(UNLOCKED);
+    setState(NO_LOCK_STATE);
   };
 
   const sourceGone = (current: Follow) => {
@@ -183,17 +211,10 @@ function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
     setState({ sourceGoneAtBoottimeMs: undefined });
   };
 
-  const seenNow = (current: Follow, seen: MediaSessionSnapshot) => {
-    const previous = current.seen;
+  const followReport = (current: Follow, seen: MediaSessionSnapshot) => {
     current.seen = seen;
-    if (!seen.playing) {
-      silence(current);
-      return;
-    }
-    const jump = reportedJumpMs(previous, seen);
-    if (jump !== undefined)
-      setState({ driftMs: isSeek(jump) ? undefined : jump });
-    anchor();
+    if (seen.playing) anchor();
+    else silence(current);
   };
 
   const onSessions = (sessions: readonly MediaSessionSnapshot[]) => {
@@ -206,8 +227,13 @@ function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
       return;
     }
     sourceBack(current);
-    if (sameTrack(lock.track, seen)) seenNow(current, seen);
-    else unlock();
+    if (!sameTrack(lock.track, seen)) {
+      unlock();
+      return;
+    }
+    if (lock.track.durationMs !== seen.durationMs)
+      setState({ lock: { ...lock, track: trackOf(seen) } });
+    followReport(current, seen);
   };
 
   const start = (seen: MediaSessionSnapshot): Follow => {
@@ -215,6 +241,7 @@ function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
       runtime.commands,
       getState().pattern,
       runtime.latencyOffsetMs(),
+      runtime.yieldStandalone,
     );
     const stopWatching = runtime.sessions().subscribe((state, previous) => {
       if (state.sessions !== previous.sessions) onSessions(state.sessions);
@@ -223,8 +250,9 @@ function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
     const ticker = setInterval(anchor, REANCHOR_INTERVAL_MS);
     return {
       seen,
-      sounding: false,
+      lastAnchor: undefined,
       grace: undefined,
+      retry: undefined,
       leave: () => {
         clearInterval(ticker);
         stopStarts();
@@ -237,8 +265,9 @@ function follower(runtime: PlayAlongRuntime, { getState, setState }: Access) {
   const lockOn = (seen: MediaSessionSnapshot, lock: PlayAlongLock) => {
     follow ??= start(seen);
     follow.seen = seen;
+    follow.lastAnchor = undefined;
     sourceBack(follow);
-    setState({ lock, driftMs: undefined });
+    setState({ lock, songAheadOfClickMs: undefined });
     runtime.sessions().getState().pick(seen.sessionId);
     anchor();
   };
@@ -269,7 +298,7 @@ function transport(runtime: PlayAlongRuntime, { getState }: Access) {
   };
 }
 
-function patternActions(
+function patternSetters(
   runtime: PlayAlongRuntime,
   { getState, setState }: Access,
   follow: ReturnType<typeof follower>,
@@ -311,6 +340,7 @@ function tapAction(
     const { sessions, chosenId } = runtime.sessions().getState();
     const seen = findSession(sessions, chosenId);
     if (seen === undefined) return refused(TAP_REFUSAL.noSession);
+    if (!seen.playing) return refused(TAP_REFUSAL.paused);
     const songMs = extrapolatedPositionMs(seen, atBoottimeMs);
     if (songMs === null) return refused(TAP_REFUSAL.unknownPosition);
     follow.lockOn(seen, {
@@ -320,7 +350,7 @@ function tapAction(
       bpm,
       lockedAtBoottimeMs: atBoottimeMs,
     });
-    return LOCKED;
+    return LOCKED_OUTCOME;
   };
 }
 
@@ -332,7 +362,7 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
     return {
       pattern: initialPattern(),
       bpm: undefined,
-      ...UNLOCKED,
+      ...NO_LOCK_STATE,
       setBpm: (bpm) => {
         if (!Number.isFinite(bpm)) return;
         const next = clamp(bpm, BPM_BOUNDS.min, BPM_BOUNDS.max);
@@ -342,7 +372,7 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
       },
       tap: tapAction(runtime, access, follow),
       unlock: follow.unlock,
-      ...patternActions(runtime, access, follow),
+      ...patternSetters(runtime, access, follow),
       ...transport(runtime, access),
     };
   },

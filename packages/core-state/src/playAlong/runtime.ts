@@ -28,6 +28,10 @@ export type PlayAlongCommands = Pick<
   | 'setSounds'
   | 'setVolume'
   | 'setLatencyOffset'
+  | 'setPoly'
+  | 'setBarMute'
+  | 'setRamp'
+  | 'setCountIn'
 >;
 
 export type FollowedSessions = Pick<
@@ -45,6 +49,7 @@ export interface PlayAlongRuntime {
   readonly sessionCommand: typeof mediaSessionCommand;
   readonly latencyOffsetMs: () => number;
   readonly onClickStarting: (listener: () => void) => Unsubscribe;
+  readonly yieldStandalone: () => () => void;
 }
 
 type StartingMetronome = Pick<
@@ -75,4 +80,5 @@ export const nativePlayAlongRuntime: PlayAlongRuntime = {
   sessionCommand: mediaSessionCommand,
   latencyOffsetMs: () => metronomeStore.getState().latencyOffset,
   onClickStarting: clickStartsOf(metronomeStore),
+  yieldStandalone: () => metronomeStore.getState().yieldEngine(),
 };

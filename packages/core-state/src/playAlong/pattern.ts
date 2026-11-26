@@ -1,12 +1,16 @@
 import {
   KB_METRONOME_SLOT,
-  KB_SUBDIVISION_BOUNDS,
-  KB_VOLUME_BOUNDS,
   acquireEngineHold,
   type KB_ACCENT,
 } from '@kitbag/core-native';
 
-import { clamp, mergeSounds, resizeAccents } from '../metronome/config.ts';
+import {
+  isBuiltInSoundId,
+  mergeSounds,
+  resizeAccents,
+  subdivisionOf,
+  volumeOf,
+} from '../metronome/config.ts';
 import { groupStartAccents } from '../metronome/meterGroups.ts';
 import { meterOf } from '../metronome/patternActions.ts';
 import { initialConfig, type MetronomeConfig } from '../metronome/store.ts';
@@ -25,6 +29,11 @@ export type PlayAlongPattern = Pick<
 type PatternCommands = Pick<
   PlayAlongCommands,
   'setBeats' | 'setAccent' | 'setSubdivision' | 'setSounds' | 'setVolume'
+>;
+
+type SlotResetCommands = Pick<
+  PlayAlongCommands,
+  'setPoly' | 'setBarMute' | 'setRamp' | 'setCountIn'
 >;
 
 export interface PatternEdit {
@@ -47,10 +56,27 @@ function sendAccents(
   });
 }
 
+function resetExtras(commands: SlotResetCommands): void {
+  const { polyBeats, barMute, ramp, countIn } = initialConfig();
+  commands.setPoly(false, polyBeats);
+  commands.setBarMute(false, barMute.playBars, barMute.muteBars);
+  commands.setRamp(
+    false,
+    ramp.startBpm,
+    ramp.targetBpm,
+    ramp.stepBpm,
+    ramp.interval,
+    ramp.unit,
+    ramp.loop,
+  );
+  commands.setCountIn(countIn.bars, countIn.distinct, countIn.sound);
+}
+
 function sendPattern(
-  commands: PatternCommands,
+  commands: PatternCommands & SlotResetCommands,
   pattern: PlayAlongPattern,
 ): void {
+  resetExtras(commands);
   commands.setBeats(pattern.beatsPerBar, pattern.denominator);
   sendAccents(commands, pattern.accents);
   commands.setSubdivision(pattern.subdivision);
@@ -62,7 +88,9 @@ export function enterPlayAlongSlot(
   commands: PlayAlongCommands,
   pattern: PlayAlongPattern,
   latencyOffsetMs: number,
+  yieldStandalone: () => () => void,
 ): () => void {
+  const standaloneReturns = yieldStandalone();
   const release = acquireEngineHold(commands);
   commands.metronomeSelectSlot(KB_METRONOME_SLOT.KB_METRONOME_SLOT_PLAY_ALONG);
   sendPattern(commands, pattern);
@@ -72,6 +100,7 @@ export function enterPlayAlongSlot(
     commands.metronomeSelectSlot(
       KB_METRONOME_SLOT.KB_METRONOME_SLOT_STANDALONE,
     );
+    standaloneReturns();
     release();
   };
 }
@@ -105,11 +134,7 @@ export function withSubdivision(
   pattern: PlayAlongPattern,
   subdivision: number,
 ): PatternEdit {
-  const next = clamp(
-    Math.trunc(subdivision),
-    KB_SUBDIVISION_BOUNDS.min,
-    KB_SUBDIVISION_BOUNDS.max,
-  );
+  const next = subdivisionOf(subdivision);
   return {
     pattern: { ...pattern, subdivision: next },
     send: (commands) => {
@@ -136,7 +161,7 @@ export function withSounds(
   normal: number,
   accent: number,
 ): PatternEdit | undefined {
-  const sounds = mergeSounds(pattern.sounds, normal, accent);
+  const sounds = mergeSounds(pattern.sounds, normal, accent, isBuiltInSoundId);
   if (sounds === undefined) return undefined;
   return {
     pattern: { ...pattern, sounds },
@@ -150,7 +175,7 @@ export function withVolume(
   pattern: PlayAlongPattern,
   volume: number,
 ): PatternEdit {
-  const next = clamp(volume, KB_VOLUME_BOUNDS.min, KB_VOLUME_BOUNDS.max);
+  const next = volumeOf(volume);
   return {
     pattern: { ...pattern, volume: next },
     send: (commands) => {

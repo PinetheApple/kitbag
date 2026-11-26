@@ -9,6 +9,8 @@ import {
   KB_RAMP_SECONDS_BOUNDS,
   KB_RAMP_UNIT,
   KB_SOUND_NAMES,
+  KB_SUBDIVISION_BOUNDS,
+  KB_VOLUME_BOUNDS,
   isCustomSoundId,
   type KbCountInBars,
 } from '@kitbag/core-native';
@@ -36,11 +38,12 @@ export function mergeSounds(
   prev: PerAccentSounds,
   normal: number,
   accent: number,
+  allowed: (id: number) => boolean = isSoundId,
 ): PerAccentSounds | undefined {
-  if (!isSoundId(normal) && !isSoundId(accent)) return undefined;
+  if (!allowed(normal) && !allowed(accent)) return undefined;
   return {
-    normal: isSoundId(normal) ? normal : prev.normal,
-    accent: isSoundId(accent) ? accent : prev.accent,
+    normal: allowed(normal) ? normal : prev.normal,
+    accent: allowed(accent) ? accent : prev.accent,
   };
 }
 
@@ -63,6 +66,18 @@ export interface CountInConfig {
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+export function subdivisionOf(subdivision: number): number {
+  return clamp(
+    Math.trunc(subdivision),
+    KB_SUBDIVISION_BOUNDS.min,
+    KB_SUBDIVISION_BOUNDS.max,
+  );
+}
+
+export function volumeOf(volume: number): number {
+  return clamp(volume, KB_VOLUME_BOUNDS.min, KB_VOLUME_BOUNDS.max);
 }
 
 export function roundToEngineBpm(bpm: number): number {

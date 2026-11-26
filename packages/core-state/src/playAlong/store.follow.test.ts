@@ -1,4 +1,4 @@
-import { KB_METRONOME_SLOT, KB_RESULT } from '@kitbag/core-native';
+import { customSoundId, KB_DEFAULT_SOUNDS } from '@kitbag/core-native';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createMetronomeStore } from '../metronome/store.ts';
@@ -8,12 +8,12 @@ import {
   call,
   fakePlayAlong,
   LATENCY_MS,
-  START_MS,
+  locked,
+  metronomeCommands,
+  PLAY_ALONG,
+  STANDALONE,
 } from './store.test-helper.ts';
 
-const BPM = 120;
-const PLAY_ALONG = KB_METRONOME_SLOT.KB_METRONOME_SLOT_PLAY_ALONG;
-const STANDALONE = KB_METRONOME_SLOT.KB_METRONOME_SLOT_STANDALONE;
 const SEVEN = 7;
 const EIGHTH = 8;
 const SUBDIVISION = 3;
@@ -24,42 +24,11 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function locked(fake = fakePlayAlong()) {
-  fake.store.getState().setBpm(BPM);
-  fake.store.getState().tap(START_MS);
-  return fake;
-}
-
-function metronomeCommands() {
-  return {
-    start: vi.fn(() => Promise.resolve(0)),
-    metronomeStart: vi.fn(),
-    metronomeStop: vi.fn(),
-    metronomePause: vi.fn(),
-    setTempo: vi.fn(),
-    setBeats: vi.fn(),
-    setSubdivision: vi.fn(),
-    setSubdivisionAccents: vi.fn(),
-    setAccent: vi.fn(),
-    setPoly: vi.fn(),
-    setPolyAccent: vi.fn(),
-    setPolyAgainst: vi.fn(),
-    setSounds: vi.fn(),
-    previewSound: vi.fn(),
-    setCountIn: vi.fn(),
-    setVolume: vi.fn(),
-    setLatencyOffset: vi.fn(),
-    setRamp: vi.fn(),
-    setBarMute: vi.fn(),
-    engineHold: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
-    engineRelease: vi.fn(),
-  };
-}
-
 describe('Play along holding its own metronome slot', () => {
   it('holds the engine, selects its slot, then applies its pattern and calibration', () => {
     const { calls } = locked();
-    expect(calls.slice(0, 2)).toEqual([
+    expect(calls.slice(0, 3)).toEqual([
+      'yieldStandalone()',
       'engineHold()',
       call('metronomeSelectSlot', PLAY_ALONG),
     ]);
@@ -68,7 +37,13 @@ describe('Play along holding its own metronome slot', () => {
         'setBeats(4,4)',
         'setSubdivision(1)',
         call('setLatencyOffset', LATENCY_MS),
+        'setPoly(false,3)',
+        'setBarMute(false,4,4)',
+        'setCountIn(0,true,1)',
       ]),
+    );
+    expect(calls.find((c) => c.startsWith('setRamp('))).toMatch(
+      /^setRamp\(false,/,
     );
     expect(
       calls.findIndex((c) => c.startsWith('metronomeAnchorExternal')),
@@ -99,6 +74,12 @@ describe('Play along holding its own metronome slot', () => {
     expect(fake.calls).toEqual([call('setSounds', SOUND, SOUND)]);
   });
 
+  it('keeps its own sounds to the built-in ones', () => {
+    const fake = fakePlayAlong();
+    fake.store.getState().setSounds(customSoundId(0), customSoundId(1));
+    expect(fake.store.getState().pattern.sounds).toEqual(KB_DEFAULT_SOUNDS);
+  });
+
   it('re-anchors when the meter changes while locked', () => {
     const fake = locked();
     const before = fake.anchors().length;
@@ -113,6 +94,7 @@ describe('Play along holding its own metronome slot', () => {
     expect(fake.calls).toEqual([
       'metronomeStop()',
       call('metronomeSelectSlot', STANDALONE),
+      'standaloneReturned()',
       'engineRelease()',
     ]);
     expect(fake.store.getState().lock).toBeUndefined();

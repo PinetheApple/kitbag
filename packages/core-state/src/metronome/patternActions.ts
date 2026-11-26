@@ -2,12 +2,11 @@ import {
   KB_DENOMINATORS,
   KB_MAX_BEATS,
   KB_POLY_BEATS_BOUNDS,
-  KB_SUBDIVISION_BOUNDS,
 } from '@kitbag/core-native';
 import type { StoreApi } from 'zustand/vanilla';
 
 import type { MetronomeCommands } from './commands.ts';
-import { clamp, cycleAccentValue, resizeAccents } from './config.ts';
+import { cycleAccentValue, resizeAccents, subdivisionOf } from './config.ts';
 import { groupStartAccents } from './meterGroups.ts';
 import { normalizePolyAgainst, stepPolyAgainst } from './polyAgainst.ts';
 import type { Denominator, MetronomeActions, MetronomeStore } from './store.ts';
@@ -73,11 +72,7 @@ export function patternActions(
     },
 
     setSubdivision: (subdivision) => {
-      const next = clamp(
-        Math.trunc(subdivision),
-        KB_SUBDIVISION_BOUNDS.min,
-        KB_SUBDIVISION_BOUNDS.max,
-      );
+      const next = subdivisionOf(subdivision);
       set({ subdivision: next });
       commands.setSubdivision(next);
     },

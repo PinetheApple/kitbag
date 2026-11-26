@@ -1,17 +1,18 @@
-import { KB_METRONOME_SLOT } from '@kitbag/core-native';
+import { MS_PER_SECOND } from '@kitbag/core-db';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { TAP_REFUSAL } from './store.ts';
 import {
+  BPM,
   FRAMES_PER_MS,
   fakePlayAlong,
   OTHER_ID,
+  PLAY_ALONG,
   SESSION_ID,
   snapshot,
   START_MS,
 } from './store.test-helper.ts';
 
-const BPM = 120;
 const TAP_AFTER_MS = 300;
 const TAP_SONG_SEC = 10.3;
 const LATE_MS = 40;
@@ -59,6 +60,18 @@ describe('tap to align', () => {
     expect(fake.calls).toEqual([]);
   });
 
+  it('refuses a tap while the song is paused', () => {
+    const fake = fakePlayAlong({
+      sessions: [snapshot({ playing: false, speed: 0 })],
+    });
+    fake.store.getState().setBpm(BPM);
+    expect(fake.store.getState().tap(START_MS)).toEqual({
+      locked: false,
+      reason: TAP_REFUSAL.paused,
+    });
+    expect(fake.calls).toEqual([]);
+  });
+
   it('records the tapped song position as the downbeat and locks', () => {
     const { store, outcome } = tapped();
     expect(outcome).toEqual({ locked: true });
@@ -86,7 +99,7 @@ describe('tap to align', () => {
     fake.store.getState().tap(START_MS + TAP_AFTER_MS);
     const [songSec, frame] = fake.anchors()[0] ?? [];
     expect(songSec).toBeCloseTo(
-      FOUR_FOUR_BARS_BACK * FOUR_FOUR_BAR_SEC + LATE_MS / 1000,
+      FOUR_FOUR_BARS_BACK * FOUR_FOUR_BAR_SEC + LATE_MS / MS_PER_SECOND,
       9,
     );
     expect(frame).toBe((START_MS + TAP_AFTER_MS + LATE_MS) * FRAMES_PER_MS);
@@ -119,12 +132,13 @@ describe('tap to align', () => {
     const fake = tapped();
     vi.advanceTimersByTime(TAP_AFTER_MS);
     fake.store.getState().tap(START_MS + 2 * TAP_AFTER_MS);
-    expect(fake.store.getState().lock?.downbeatSec).toBeCloseTo(10.6, 9);
+    expect(fake.store.getState().lock?.downbeatSec).toBeCloseTo(
+      TAP_SONG_SEC + TAP_AFTER_MS / MS_PER_SECOND,
+      9,
+    );
     expect(fake.commands.engineHold).toHaveBeenCalledOnce();
     expect(fake.commands.metronomeSelectSlot).toHaveBeenCalledOnce();
-    expect(fake.commands.metronomeSelectSlot).toHaveBeenCalledWith(
-      KB_METRONOME_SLOT.KB_METRONOME_SLOT_PLAY_ALONG,
-    );
+    expect(fake.commands.metronomeSelectSlot).toHaveBeenCalledWith(PLAY_ALONG);
   });
 
   it('re-anchors at once when the tempo changes while locked', () => {
