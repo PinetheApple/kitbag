@@ -48,6 +48,11 @@ import {
 } from './phase.ts';
 import { phaseActions } from './phaseActions.ts';
 import { playAlongSlot, type PlayAlongSlot } from './slot.ts';
+import {
+  trackPresets,
+  type TrackPresetActions,
+  type TrackPresetState,
+} from './trackPreset.ts';
 import { songTempo } from './songTempo.ts';
 import { findSession, trackOf, type PlayAlongTrack } from './track.ts';
 
@@ -75,7 +80,7 @@ export interface PlayAlongLock extends LockPhase {
 }
 
 export interface PlayAlongState
-  extends LibraryOfferState, ClickAloneState, PhaseState {
+  extends LibraryOfferState, ClickAloneState, PhaseState, TrackPresetState {
   readonly pattern: PlayAlongPattern;
   readonly bpm: number | undefined;
   readonly lock: PlayAlongLock | undefined;
@@ -87,7 +92,11 @@ export interface PlayAlongState
 }
 
 export interface PlayAlongActions
-  extends LibraryOfferActions, ClickAloneActions, PhaseActions {
+  extends
+    LibraryOfferActions,
+    ClickAloneActions,
+    PhaseActions,
+    TrackPresetActions {
   readonly setBpm: (bpm: number) => void;
   readonly tap: (atBoottimeMs: number) => LockOutcome;
   readonly unlock: () => void;
@@ -171,7 +180,7 @@ function patternSetters(
 function tapAction(
   runtime: PlayAlongRuntime,
   { getState }: Access,
-  follow: ReturnType<typeof follower>,
+  lockOn: ReturnType<typeof follower>['lockOn'],
 ) {
   return (atBoottimeMs: number): LockOutcome => {
     const { bpm } = getState();
@@ -181,7 +190,7 @@ function tapAction(
     if (!seen.playing) return refused(LOCK_REFUSAL.paused);
     const songMs = extrapolatedPositionMs(seen, atBoottimeMs);
     if (songMs === null) return refused(LOCK_REFUSAL.unknownPosition);
-    follow.lockOn(seen, {
+    lockOn(seen, {
       sessionId: seen.sessionId,
       track: trackOf(seen),
       downbeatSec: songMs / MS_PER_SECOND,
@@ -231,6 +240,13 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
       follow.anchor();
     };
     const tempo = songTempo(runtime, access, showBpm);
+    const phase = phaseActions(access, follow.anchor, follow.heardSpeed);
+    const presets = trackPresets(runtime, access, access.getState);
+    const lockOn: typeof follow.lockOn = (seen, lock) => {
+      follow.lockOn(seen, lock);
+      const savedPhaseMs = presets.savedPhaseMs();
+      if (savedPhaseMs !== undefined) phase.setPhaseOffset(savedPhaseMs);
+    };
     const setBpm = (bpm: number) => {
       if (!Number.isFinite(bpm)) return;
       const next = clamp(bpm, BPM_BOUNDS.min, BPM_BOUNDS.max);
@@ -245,27 +261,31 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
       lastRefusal: undefined,
       unlockReason: undefined,
       clickPlaying: false,
+      savedForTrack: false,
       phaseStepMs: DEFAULT_PHASE_STEP_MS,
       latencyOffsetMs: initialConfig().latencyOffset,
       ...NO_LOCK_STATE,
       setBpm,
       startClick: click.start,
       stopClick: click.stop,
-      tap: tapAction(runtime, access, follow),
+      tap: tapAction(runtime, access, lockOn),
       unlock: follow.unlock,
-      ...phaseActions(access, follow.anchor, follow.heardSpeed),
+      ...phase,
+      saveForTrack: presets.saveForTrack,
       watchLibrary: () => {
         const stopOffers = offers.watchLibrary();
         const stopTempo = tempo.watch();
         const stopClick = click.watch();
+        const stopPresets = presets.watch();
         return () => {
+          stopPresets();
           stopClick();
           stopTempo();
           stopOffers();
         };
       },
       dismissOffer: offers.dismissOffer,
-      acceptOffer: acceptAction(runtime, access, follow.lockOn),
+      acceptOffer: acceptAction(runtime, access, lockOn),
       ...patternSetters(runtime, access, follow, slot),
       ...transport(runtime, access),
     };
