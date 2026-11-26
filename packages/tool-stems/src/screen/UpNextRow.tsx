@@ -170,11 +170,11 @@ function TextRow({ previous, shown, next, onOpenSheet, onNext }: TextRowProps) {
   const styles = useStyles();
   const scaled = useTextScaled();
   const nextKey = <NextKey text={next} onNext={onNext} />;
-  const openOnRepeatLine = scaled && next.metronome;
+  const twoLines = scaled || next.metronome;
   const line = (
     <View
       testID={UP_NEXT_ROW_ID}
-      style={[styles.row, !scaled && styles.divided]}
+      style={[styles.row, !twoLines && styles.divided]}
     >
       {previous}
       <Pressable
@@ -194,17 +194,17 @@ function TextRow({ previous, shown, next, onOpenSheet, onNext }: TextRowProps) {
           {shown.source}
         </Text>
       </Pressable>
-      {scaled ? null : <RepeatChip />}
-      {openOnRepeatLine ? null : nextKey}
+      {twoLines ? null : <RepeatChip />}
+      {next.metronome ? null : nextKey}
     </View>
   );
-  if (!scaled) return line;
+  if (!twoLines) return line;
   return (
     <View style={styles.divided}>
       {line}
       <View testID={REPEAT_LINE_ID} style={styles.repeatLine}>
         <RepeatChip />
-        {openOnRepeatLine ? nextKey : null}
+        {next.metronome ? nextKey : null}
       </View>
     </View>
   );
