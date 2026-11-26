@@ -106,7 +106,7 @@ export function StemRowView({
       style={[
         expanded ? stemStyles.expanded : stemStyles.rowFrame,
         stemStyles.divider,
-        !row.loaded && styles.missing,
+        !row.loaded && !viewing && styles.missing,
       ]}
     >
       <View

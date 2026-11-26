@@ -9,6 +9,7 @@ import {
   VIEW_ONLY_REASON,
   type MixerHold,
 } from '@kitbag/core-state';
+import { KB_RESULT } from '@kitbag/core-native';
 import { act, type ReactElement } from 'react';
 import { Text } from 'react-native';
 import {
@@ -32,6 +33,7 @@ const VIEWED = SET_ID + 1;
 const VIEWED_TITLE = 'Way Maker';
 const DOCKED = 'docked mini-player';
 const MENU = 'Player menu';
+const STEMS_MISSING = 'No stem files could be opened. Nothing will play.';
 const MASTER = 'Master volume, 0 dB, expand';
 
 const routes = {
@@ -185,6 +187,18 @@ describe('a stem song viewed while another plays', () => {
     });
     expect(routes.onOpenStemSet).not.toHaveBeenCalled();
     expect(routes.onOpenSong).not.toHaveBeenCalled();
+  });
+
+  it('shows no missing-stems error before Play', async () => {
+    await playingThenViewed();
+    expect(texts()).not.toContain(STEMS_MISSING);
+  });
+
+  it('shows the missing-stems error once Play cannot open them', async () => {
+    const { fake, playing } = await playingThenViewed();
+    fake.commands.loadTrack.mockResolvedValue(KB_RESULT.KB_ERROR_INTERNAL);
+    await press(`Play ${VIEWED_TITLE}. Stops ${playing}.`);
+    expect(texts()).toContain(STEMS_MISSING);
   });
 
   it('switches to the viewed song on Play and becomes its player', async () => {

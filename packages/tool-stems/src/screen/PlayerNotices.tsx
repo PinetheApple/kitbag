@@ -6,7 +6,7 @@ import {
   textStyle,
 } from '@kitbag/core-design';
 import { KB_MAX_TRACKS } from '@kitbag/core-native';
-import { useStemPlayer } from '@kitbag/core-state';
+import { useStemPlayer, useStemViewing } from '@kitbag/core-state';
 import { Text } from 'react-native';
 
 import { ExportNotice } from './ExportNotice.tsx';
@@ -25,8 +25,9 @@ export function Notices() {
   const styles = useNoteStyles();
   const overLimit = useStemPlayer((s) => s.overLimit);
   const stemCount = useStemPlayer((s) => s.stems.length);
-  const unloaded = useStemPlayer(
-    (s) => s.stems.filter((row) => !row.loaded).length,
+  const viewing = useStemViewing();
+  const unloaded = useStemPlayer((s) =>
+    viewing ? 0 : s.stems.filter((row) => !row.loaded).length,
   );
   return (
     <>
