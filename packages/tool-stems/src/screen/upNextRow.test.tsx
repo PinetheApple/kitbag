@@ -72,6 +72,14 @@ const previousOff = (p: Player) =>
   (p.byLabel(PREVIOUS).props.accessibilityState as { disabled: boolean })
     .disabled;
 
+type Host = ReturnType<typeof withTestId>[number];
+
+const labelledIn = (node: Host | undefined, label: string) =>
+  node?.findAll(
+    (host) =>
+      typeof host.type === 'string' && host.props.accessibilityLabel === label,
+  ) ?? [];
+
 const upNextLabels = (p: Player) =>
   p.renderer.root.findAll(
     (node) => String(node.type) === 'Text' && node.props.children === UP_NEXT,
@@ -210,6 +218,27 @@ describe('the Up next row under font scale', () => {
     expect(withTestId(p, REPEAT_LINE_ID)).toEqual([]);
     expect(repeatChips(p)).toHaveLength(1);
     expect(p.labelled(PREVIOUS)).toHaveLength(1);
+  });
+
+  it("gives a metronome entry's repeat chip and Open their own line at the design size", async () => {
+    metronomeEntryOnStage();
+    const p = await withQueue();
+    const [row] = withTestId(p, UP_NEXT_ROW_ID);
+    const [line] = withTestId(p, REPEAT_LINE_ID);
+    expect(labelledIn(line, QUEUE_TEXT.open)).toHaveLength(1);
+    expect(labelledIn(line, QUEUE_TEXT.repeatOff)).toHaveLength(1);
+    expect(labelledIn(row, QUEUE_TEXT.open)).toEqual([]);
+    expect(labelledIn(row, QUEUE_TEXT.repeatOff)).toEqual([]);
+    expect(labelledIn(row, PREVIOUS)).toHaveLength(1);
+    expect(p.has('Gig · 1 of 1 · metronome')).toBe(true);
+  });
+
+  it('keeps a song entry on one line at the design size', async () => {
+    const p = await withQueue(NIGHT_BUS);
+    const [row] = withTestId(p, UP_NEXT_ROW_ID);
+    expect(withTestId(p, REPEAT_LINE_ID)).toEqual([]);
+    expect(labelledIn(row, QUEUE_TEXT.repeatOff)).toHaveLength(1);
+    expect(labelledIn(row, 'Next: Night Bus')).toHaveLength(1);
   });
 
   it("moves a metronome entry's Open beside the repeat chip at 2.0", async () => {
