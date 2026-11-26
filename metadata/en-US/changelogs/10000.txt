@@ -1,0 +1,3 @@
+• Home's More tools row now lists the tools you've hidden from Home ("More tools · 2 tools") in a sheet, and disappears when every tool is a tile. Settings > Tools only turns tools on and off; you choose Home tiles with Edit on Home.
+• No user-facing change: a test fixture is longer so an automated check no longer races a song's end.
+More: https://github.com/PinetheApple/kitbag/releases/tag/v0.100.0
