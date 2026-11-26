@@ -1,6 +1,7 @@
 import type { MediaSessionSnapshot } from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { SeenFlagPersistence } from '../firstUse/store.ts';
 import {
   createMediaSessionsStore,
   type MediaSessionsSource,
@@ -36,7 +37,12 @@ async function settle(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-function fakes({ enabled = true }: { readonly enabled?: boolean } = {}) {
+interface FakeOptions {
+  readonly enabled?: boolean;
+  readonly declined?: boolean;
+}
+
+function fakes({ enabled = true, declined = false }: FakeOptions = {}) {
   let deliver: (sessions: readonly MediaSessionSnapshot[]) => void = () =>
     undefined;
   const unsubscribe = vi.fn();
@@ -55,11 +61,15 @@ function fakes({ enabled = true }: { readonly enabled?: boolean } = {}) {
   const choose = vi.fn<SessionChooser>(
     (sessions, { pickedId }) => pickedId ?? sessions[0]?.sessionId,
   );
-  const store = createMediaSessionsStore({ source, choose });
+  const explainer = {
+    load: vi.fn(() => declined),
+    save: vi.fn(),
+  } satisfies SeenFlagPersistence;
+  const store = createMediaSessionsStore({ source, choose, explainer });
   const push = (sessions: readonly MediaSessionSnapshot[]) => {
     deliver(sessions);
   };
-  return { store, source, choose, unsubscribe, push };
+  return { store, source, choose, explainer, unsubscribe, push };
 }
 
 describe('media sessions store', () => {
@@ -178,5 +188,23 @@ describe('media sessions store', () => {
       sessions: [],
       chosenId: undefined,
     });
+  });
+
+  it('offers the access explainer on a fresh install', () => {
+    const { store } = fakes();
+    expect(store.getState().explainerDeclined).toBe(false);
+  });
+
+  it('remembers a "Not now" from an earlier launch', () => {
+    const { store } = fakes({ declined: true });
+    expect(store.getState().explainerDeclined).toBe(true);
+  });
+
+  it('saves "Not now" once, however often it is tapped', () => {
+    const { store, explainer } = fakes();
+    store.getState().declineExplainer();
+    store.getState().declineExplainer();
+    expect(store.getState().explainerDeclined).toBe(true);
+    expect(explainer.save).toHaveBeenCalledOnce();
   });
 });
