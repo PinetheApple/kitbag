@@ -19,7 +19,7 @@ vi.mock('@kitbag/core-design', async (original) => ({
 vi.mock('./playAlongHooks.ts', () => ({
   useFollowedSession: () => undefined,
   usePlayAlong: <T,>(selector: (state: Record<string, unknown>) => T) =>
-    selector({ lock: undefined }),
+    selector({ lock: undefined, pattern: { sounds: [] } }),
   useSessionWatchWhileLocked: () => undefined,
   useSongTempo: () => undefined,
   useTempoLine: () => ({ bpm: null, line: { lead: '', rung: '' } }),
@@ -36,6 +36,7 @@ vi.mock('./PatternSheets.tsx', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   PatternSheets: () => null,
 }));
+vi.mock('./ClickSoundSheet.tsx', () => ({ ClickSoundSheet: () => null }));
 vi.mock('./SourceSheet.tsx', () => ({ SourceSheet: () => null }));
 vi.mock('./TempoSheet.tsx', () => ({ TempoSheet: () => null }));
 
