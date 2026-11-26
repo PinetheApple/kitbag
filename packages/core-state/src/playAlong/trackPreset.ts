@@ -1,4 +1,11 @@
-import type { SongPreset, SongPresetRepository } from '@kitbag/core-db';
+import {
+  MS_PER_SECOND,
+  SAME_SONG_DURATION_TOLERANCE_SEC,
+  songMatchKey,
+  type SongIdentity,
+  type SongPreset,
+  type SongPresetRepository,
+} from '@kitbag/core-db';
 import type { MediaSessionSnapshot } from '@kitbag/core-native';
 
 import type { StoreAccess } from '../configuredStore.ts';
@@ -6,7 +13,6 @@ import {
   accentsOf,
   perAccentSoundsOf,
   presetFromMetronome,
-  toBlob,
 } from '../library/presetMapping.ts';
 import { initialConfig } from '../metronome/store.ts';
 import { sameSong } from '../tempoLadder/store.ts';
@@ -14,10 +20,11 @@ import { chosenSession } from './libraryOffer.ts';
 import type { PlayAlongPattern } from './pattern.ts';
 import type { PlayAlongRuntime } from './runtime.ts';
 import type { PlayAlongStore } from './store.ts';
-import { songOf } from './track.ts';
+import { findSession, sameTrack, songOf } from './track.ts';
 
 export const SAVE_REFUSAL = {
   notLocked: 'not-locked',
+  noTrackIdentity: 'no-track-identity',
   writeFailed: 'write-failed',
 } as const;
 
@@ -28,7 +35,7 @@ export type SaveOutcome =
   | { readonly saved: false; readonly reason: SaveRefusal };
 
 export interface TrackPresetState {
-  readonly savedForTrack: boolean;
+  readonly hasSavedPreset: boolean;
 }
 
 export interface TrackPresetActions {
@@ -40,10 +47,11 @@ export type TrackPresets = Pick<
   'list' | 'create' | 'update' | 'forLibrarySong' | 'saveForLibrarySong'
 >;
 
-type PatternSetters = Pick<
-  PlayAlongStore,
-  'setBeats' | 'setSubdivision' | 'setAccents' | 'setSounds'
->;
+interface TrackIdentity {
+  readonly song: SongIdentity;
+  readonly source: string;
+  readonly lengthSeconds: number | null;
+}
 
 const SAVED: SaveOutcome = { saved: true };
 
@@ -52,43 +60,77 @@ const refusedSave = (reason: SaveRefusal): SaveOutcome => ({
   reason,
 });
 
-const patternFields = (pattern: PlayAlongPattern, phaseOffsetMs: number) => ({
-  beatsPerBar: pattern.beatsPerBar,
-  denominator: pattern.denominator,
-  subdivision: pattern.subdivision,
-  accents: toBlob(pattern.accents),
-  perAccentSounds: toBlob([pattern.sounds.normal, pattern.sounds.accent]),
-  sound: pattern.sounds.normal,
-  phaseNudge: phaseOffsetMs,
-});
-
-function newPreset(
-  seen: MediaSessionSnapshot,
-  pattern: PlayAlongPattern,
-  phaseOffsetMs: number,
-) {
+function identityOf(seen: MediaSessionSnapshot): TrackIdentity | undefined {
   const song = songOf(seen);
+  if (songMatchKey(song).title === '') return undefined;
   return {
-    ...presetFromMetronome({ ...initialConfig(), ...pattern }),
-    ...patternFields(pattern, phaseOffsetMs),
-    bpm: null,
-    name: song.title,
-    title: song.title,
-    artist: song.artist,
+    song,
+    source: seen.packageName,
+    lengthSeconds:
+      seen.durationMs === null ? null : seen.durationMs / MS_PER_SECOND,
   };
 }
 
-const matchesTrack = (preset: SongPreset, seen: MediaSessionSnapshot) =>
-  preset.title !== null &&
-  sameSong({ title: preset.title, artist: preset.artist ?? '' }, songOf(seen));
+function sameLength(a: number | null, b: number | null): boolean {
+  if (a === null || b === null) return a === b;
+  return Math.abs(a - b) <= SAME_SONG_DURATION_TOLERANCE_SEC;
+}
+
+const sameIdentity = (
+  a: TrackIdentity | undefined,
+  b: TrackIdentity | undefined,
+): boolean =>
+  a === undefined || b === undefined
+    ? a === b
+    : sameSong(a.song, b.song) &&
+      a.source === b.source &&
+      sameLength(a.lengthSeconds, b.lengthSeconds);
+
+const presetIdentity = (preset: SongPreset): TrackIdentity | undefined =>
+  preset.title === null || preset.source === null
+    ? undefined
+    : {
+        song: { title: preset.title, artist: preset.artist ?? '' },
+        source: preset.source,
+        lengthSeconds: preset.lengthSeconds,
+      };
+
+function patternFields(pattern: PlayAlongPattern, phaseOffsetMs: number) {
+  const fields = presetFromMetronome({ ...initialConfig(), ...pattern });
+  return {
+    beatsPerBar: fields.beatsPerBar,
+    denominator: fields.denominator,
+    subdivision: fields.subdivision,
+    accents: fields.accents,
+    perAccentSounds: fields.perAccentSounds,
+    sound: fields.sound,
+    phaseNudge: phaseOffsetMs,
+  };
+}
+
+const newPreset = (
+  identity: TrackIdentity,
+  pattern: PlayAlongPattern,
+  phaseOffsetMs: number,
+) => ({
+  ...presetFromMetronome({ ...initialConfig(), ...pattern }),
+  phaseNudge: phaseOffsetMs,
+  bpm: null,
+  name: identity.song.title,
+  title: identity.song.title,
+  artist: identity.song.artist,
+  source: identity.source,
+  lengthSeconds: identity.lengthSeconds,
+});
 
 export function trackPresets(
   runtime: PlayAlongRuntime,
   { getState, setState }: StoreAccess<PlayAlongStore>,
-  setters: () => PatternSetters,
 ) {
-  let recalledFor: MediaSessionSnapshot | undefined;
+  let recalledFor: TrackIdentity | undefined;
+  let appliedId: number | undefined;
   let savedPhaseMs: number | undefined;
+  let saving: Promise<SaveOutcome> = Promise.resolve(SAVED);
 
   const linkedSongId = (seen: MediaSessionSnapshot) => {
     const { track, libraryMatch } = runtime.ladder().getState();
@@ -97,83 +139,127 @@ export function trackPresets(
     return libraryMatch.id;
   };
 
-  const presetFor = async (seen: MediaSessionSnapshot) => {
+  const presetFor = async (
+    identity: TrackIdentity,
+    songId: number | undefined,
+  ) => {
     const presets = runtime.presets();
-    const songId = linkedSongId(seen);
     const linked =
       songId === undefined ? undefined : await presets.forLibrarySong(songId);
     if (linked !== undefined) return linked;
-    return (await presets.list()).find((preset) => matchesTrack(preset, seen));
+    return (await presets.list()).find(
+      (preset) =>
+        (songId === undefined || preset.librarySongId === null) &&
+        sameIdentity(presetIdentity(preset), identity),
+    );
   };
 
-  const write = async (seen: MediaSessionSnapshot, phaseOffsetMs: number) => {
+  const write = async (
+    seen: MediaSessionSnapshot,
+    identity: TrackIdentity,
+    phaseOffsetMs: number,
+  ) => {
     const { pattern } = getState();
     const presets = runtime.presets();
-    const existing = await presetFor(seen);
-    if (existing !== undefined) {
-      await presets.update(existing.id, patternFields(pattern, phaseOffsetMs));
-      return;
-    }
-    const values = newPreset(seen, pattern, phaseOffsetMs);
     const songId = linkedSongId(seen);
-    if (songId === undefined) await presets.create(values);
-    else await presets.saveForLibrarySong(songId, values);
+    const existing = await presetFor(identity, songId);
+    if (existing !== undefined) {
+      const join =
+        songId !== undefined && existing.librarySongId === null
+          ? { librarySongId: songId }
+          : {};
+      await presets.update(existing.id, {
+        ...patternFields(pattern, phaseOffsetMs),
+        ...join,
+      });
+      return existing.id;
+    }
+    const values = newPreset(identity, pattern, phaseOffsetMs);
+    const created =
+      songId === undefined
+        ? await presets.create(values)
+        : await presets.saveForLibrarySong(songId, values);
+    return created.id;
   };
 
-  const saveForTrack = async (): Promise<SaveOutcome> => {
+  const save = async (): Promise<SaveOutcome> => {
     const { lock } = getState();
-    const seen = chosenSession(runtime);
-    if (lock === undefined || seen === undefined)
+    if (lock === undefined) return refusedSave(SAVE_REFUSAL.notLocked);
+    const seen = findSession(
+      runtime.sessions().getState().sessions,
+      lock.sessionId,
+    );
+    if (seen === undefined || !sameTrack(lock.track, seen))
       return refusedSave(SAVE_REFUSAL.notLocked);
+    const identity = identityOf(seen);
+    if (identity === undefined)
+      return refusedSave(SAVE_REFUSAL.noTrackIdentity);
     try {
-      await write(seen, lock.phaseOffsetMs);
+      appliedId = await write(seen, identity, lock.phaseOffsetMs);
     } catch {
       return refusedSave(SAVE_REFUSAL.writeFailed);
     }
     savedPhaseMs = lock.phaseOffsetMs;
-    setState({ savedForTrack: true });
+    setState({ hasSavedPreset: true });
     return SAVED;
   };
 
-  const apply = (preset: SongPreset) => {
-    const pattern = setters();
-    pattern.setBeats(preset.beatsPerBar, preset.denominator);
-    pattern.setSubdivision(preset.subdivision);
-    pattern.setAccents(accentsOf(preset.accents));
-    const sounds = perAccentSoundsOf(preset.perAccentSounds, preset.sound);
-    pattern.setSounds(sounds.normal, sounds.accent);
-    savedPhaseMs = preset.phaseNudge;
+  const saveForTrack = () => {
+    saving = saving.then(save, save);
+    return saving;
   };
 
-  const recall = async () => {
+  const apply = (preset: SongPreset) => {
+    const store = getState();
+    store.setBeats(preset.beatsPerBar, preset.denominator);
+    store.setSubdivision(preset.subdivision);
+    store.setAccents(accentsOf(preset.accents));
+    const sounds = perAccentSoundsOf(preset.perAccentSounds, preset.sound);
+    store.setSounds(sounds.normal, sounds.accent);
+    savedPhaseMs = preset.phaseNudge;
+    appliedId = preset.id;
+  };
+
+  const recall = async (
+    seen: MediaSessionSnapshot,
+    identity: TrackIdentity,
+  ) => {
+    const preset = await presetFor(identity, linkedSongId(seen)).catch(
+      () => undefined,
+    );
+    if (recalledFor !== identity || preset === undefined) return;
+    if (preset.id !== appliedId) apply(preset);
+    setState({ hasSavedPreset: true });
+  };
+
+  const onTrack = (force: boolean) => {
     const seen = chosenSession(runtime);
-    if (seen === undefined) return;
+    const identity = seen && identityOf(seen);
     if (
+      !force &&
       recalledFor !== undefined &&
-      sameSong(songOf(recalledFor), songOf(seen))
+      sameIdentity(recalledFor, identity)
     )
       return;
-    recalledFor = seen;
-    savedPhaseMs = undefined;
-    setState({ savedForTrack: false });
-    const preset = await presetFor(seen).catch(() => undefined);
-    if (recalledFor !== seen || preset === undefined) return;
-    apply(preset);
-    setState({ savedForTrack: true });
+    if (!sameIdentity(recalledFor, identity)) {
+      appliedId = undefined;
+      savedPhaseMs = undefined;
+      setState({ hasSavedPreset: false });
+    }
+    recalledFor = identity;
+    if (seen !== undefined && identity !== undefined)
+      void recall(seen, identity);
   };
 
   const watch = () => {
     recalledFor = undefined;
     const stopSessions = runtime.sessions().subscribe(() => {
-      void recall();
+      onTrack(false);
     });
     const stopLadder = runtime.ladder().subscribe((state, previous) => {
-      if (state.libraryMatch !== previous.libraryMatch) {
-        recalledFor = undefined;
-        void recall();
-      }
+      if (state.libraryMatch !== previous.libraryMatch) onTrack(true);
     });
-    void recall();
+    onTrack(true);
     return () => {
       stopSessions();
       stopLadder();

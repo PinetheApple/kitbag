@@ -28,6 +28,7 @@ export const LATENCY_MS = 180;
 export const SESSION_ID = 'player';
 export const OTHER_ID = 'other';
 export const BPM = 120;
+const SETTLE_TURNS = 8;
 export const PLAY_ALONG = KB_METRONOME_SLOT.KB_METRONOME_SLOT_PLAY_ALONG;
 export const STANDALONE = KB_METRONOME_SLOT.KB_METRONOME_SLOT_STANDALONE;
 
@@ -136,6 +137,10 @@ function fakeCommands(
   } satisfies PlayAlongRuntime['commands'];
 }
 
+export async function settle() {
+  for (let turn = 0; turn < SETTLE_TURNS; turn++) await Promise.resolve();
+}
+
 export function presetShelf(rows: readonly Partial<SongPreset>[] = []) {
   const saved = new Map<number, SongPreset>();
   const row = (id: number, values: object) =>
@@ -169,8 +174,13 @@ export function presetShelf(rows: readonly Partial<SongPreset>[] = []) {
     ),
   );
   const saveForLibrarySong = vi.fn(
-    (songId: number, values: LinkedPresetValues) =>
-      create({ ...values, librarySongId: songId }),
+    async (songId: number, values: LinkedPresetValues) => {
+      const linked = await forLibrarySong(songId);
+      if (linked === undefined)
+        return create({ ...values, librarySongId: songId });
+      await update(linked.id, values);
+      return saved.get(linked.id) ?? linked;
+    },
   );
   const list = vi.fn(() => Promise.resolve([...saved.values()]));
   return {

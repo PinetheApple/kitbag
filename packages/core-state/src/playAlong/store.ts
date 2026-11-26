@@ -241,7 +241,7 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
     };
     const tempo = songTempo(runtime, access, showBpm);
     const phase = phaseActions(access, follow.anchor, follow.heardSpeed);
-    const presets = trackPresets(runtime, access, access.getState);
+    const presets = trackPresets(runtime, access);
     const lockOn: typeof follow.lockOn = (seen, lock) => {
       follow.lockOn(seen, lock);
       const savedPhaseMs = presets.savedPhaseMs();
@@ -261,7 +261,7 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
       lastRefusal: undefined,
       unlockReason: undefined,
       clickPlaying: false,
-      savedForTrack: false,
+      hasSavedPreset: false,
       phaseStepMs: DEFAULT_PHASE_STEP_MS,
       latencyOffsetMs: initialConfig().latencyOffset,
       ...NO_LOCK_STATE,
