@@ -128,6 +128,7 @@ const lock = {
   downbeatSec: 0,
   bpm: SONG_BPM,
   lockedAtBoottimeMs: 0,
+  grid: undefined,
 };
 
 function draw(

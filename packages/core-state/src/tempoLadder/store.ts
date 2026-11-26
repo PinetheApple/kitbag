@@ -28,7 +28,10 @@ const UNKNOWN = {
   tapsLanded: 0,
 };
 
-function sameTrack(left: SongIdentity | null, right: SongIdentity): boolean {
+export function sameSong(
+  left: SongIdentity | null,
+  right: SongIdentity,
+): boolean {
   if (left === null) return false;
   const ours = songMatchKey(left);
   const theirs = songMatchKey(right);
@@ -54,7 +57,7 @@ export function createTempoLadderStore(runtime: () => TempoLadderRuntime) {
       set({ bpm: withinBpmBounds(bpm), source });
     };
     const lookUp = async (track: SongIdentity) => {
-      if (sameTrack(get().track, track)) return;
+      if (sameSong(get().track, track)) return;
       latestLookup += 1;
       const lookup = latestLookup;
       taps = [];

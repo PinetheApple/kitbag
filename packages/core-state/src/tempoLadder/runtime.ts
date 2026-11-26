@@ -7,7 +7,10 @@ import type { OnlineBpmLookup } from './onlineBpmLookup.ts';
 
 export interface TempoLadderRuntime {
   readonly cache: BpmCacheRepository;
-  readonly library: Pick<SongLibraryRepository, 'list'>;
+  readonly library: Pick<
+    SongLibraryRepository,
+    'list' | 'readSong' | 'readStemSet'
+  >;
   readonly onlineLookups: () => readonly OnlineBpmLookup[];
 }
 

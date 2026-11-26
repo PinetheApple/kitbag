@@ -336,6 +336,14 @@ KB_EXPORT void kb_metronome_anchor_external(kb_engine* engine,
                                             double song_pos_sec,
                                             uint64_t at_frame,
                                             double bpm);
+
+/* Anchor the set grid to an external transport without moving it.
+   Declares: at engine frame at_frame, the song was song_pos_sec in, advancing
+   rate song seconds per engine second. Re-callable; must not glitch the click. */
+KB_EXPORT void kb_metronome_anchor_grid(kb_engine* engine,
+                                        double song_pos_sec,
+                                        uint64_t at_frame,
+                                        double rate);
 ```
 
 Requirements:
@@ -346,6 +354,19 @@ Requirements:
   non-constant-tempo songs work, which a single `setTempo` cannot.
 - Re-anchoring mid-playback must be glitch-free (no double-click, no dropped
   beat).
+- A grid that follows an external transport is set once, in song seconds, and
+  re-anchored with `anchor_grid`, which changes only the song→engine mapping
+  (§4.2.2: beat `t` lands on `F + (t − P) × sr / rate`). Re-sending a moved grid
+  through `set_grid` is not a re-anchor: the cursor re-seeks against grid times
+  that moved, so a small correction double-clicks or drops a beat. Under
+  `anchor_grid` the onset floor stays in song seconds. A correction under half a
+  click interval keeps the timeline, as `anchor_external` does: no beat sounds
+  twice and a beat it skips over sounds at once, late. A larger move forward is
+  a seek and drops the beats it skips; a move back of at least one grid interval
+  replays from the new position (§4.7's rule). `set_grid` resets the mapping to
+  song second 0 at its `anchor_frame`, rate 1; an anchor made before the latest
+  `set_grid` is dropped. Pinned by `RunGridAnchorTests` (metronome_verify) and
+  `RunGridAnchorAbiTests` (abi_verify).
 - `set_grid` and `anchor_external` compose with the existing latency offset so
   the click lands on the beat *at the speaker*, not at the buffer.
 - `kb_metronome_start_at`'s `start_frame` is buffer (mixer) time. The song and
@@ -643,8 +664,8 @@ clamp. Both are now fixed and pinned by
 - **Under a grid a mid-run change jumps the click with the song** (owner,
   2026-10-31, #245). Grid mode reads the offset through `GridSeconds`, so a change
   moves the song position the click is on. Every change re-seeks the cursor, and
-  on the engine clock no re-seek (a republished grid and `anchor_external`
-  included) lands on a beat or subdivision tick at or before the last one heard
+  on the engine clock no re-seek (a republished grid, `anchor_external` and
+  `anchor_grid` included) lands on a beat or subdivision tick at or before the last one heard
   this run on the same grid anchor. The follow-mixer clock has no such floor: its
   loop wraps and song seeks replay beats by design. Forward, the crossed beats are
   dropped: the next click is the first beat at or after the new position, on its
@@ -1418,7 +1439,11 @@ None of this exists; the source data never leaves Kotlin.
   `getPlaybackSpeed()` — it currently reads raw `position` only, and the
   extrapolation needs both.
 - Extrapolate `pos + (now - lastUpdate) * speed`.
-- Re-anchor every 1–2s via `kb_metronome_anchor_external` (§4.2). The report's
+- Re-anchor every 1–2s (§4.2). A constant-tempo lock (tap, a single BPM)
+  re-anchors with `kb_metronome_anchor_external`. A library grid lock sends the
+  stored grid once per lock through `kb_metronome_set_grid`, in song seconds,
+  and re-anchors with `kb_metronome_anchor_grid` (position, frame, playback
+  speed as `rate`), never by re-sending a shifted grid. The report's
   `elapsedRealtime` instant becomes `at_frame` through
   `kb_engine_frame_at_boottime` (`kitbag_engine_clock_api.h`).
 
@@ -1478,7 +1503,8 @@ retrying the same thing.
   library song, a card appears with a `Lock` button — **one tap, not zero.** The
   original flow promised zero taps; a tool that starts clicking at you unasked is
   a tool you stop trusting. It feeds the stored per-beat grid to
-  `kb_metronome_set_grid`, so non-constant tempo works — which no BPM number can
+  `kb_metronome_set_grid` once and re-anchors it with `kb_metronome_anchor_grid`
+  (§8.4), so non-constant tempo works — which no BPM number can
   do. This is ~90% built and unused: `sync_screen.dart:63` confirms
   `match.beatGrid != null`, then `:64` uses only `match.bpm` and discards the
   grid one line later.
@@ -1561,13 +1587,15 @@ selected. **The acceptance criterion:** opening Play along and closing it must
 leave the standalone metronome exactly as it was, including mid-run
 (`abi_verify`, slots).
 
-**Leaving Play along while locked keeps the click following.** Kitbag runs it in
-the background under the metronome's foreground service (§5.6), so switching to
-the other app to skip a song does not drop the lock. Home and the lists show the
+**Leaving Play along while locked keeps the click following.** Following runs
+under its own foreground service of the media-playback type, so switching to the
+other app to skip a song does not drop the lock. Home and the lists show the
 docked mini-player: the Play along tile, the track's title, a line naming the
 app it is locked to, a key that pauses and resumes the other app, and a close
-key. A tap reopens Play along. The notification while away offers the other
-app's play/pause and Stop, with no tempo − or +.
+key. A tap reopens Play along. The service's notification, "Play along · ‹app›"
+on the Metronome channel, offers the other app's play/pause and Stop, with no
+tempo − or +. It has no media session, so headset buttons stay with the
+followed app.
 
 Only one mini-player shows. Starting a Kitbag song, the stem player or the
 standalone metronome ends Play along's following, since one click sounds at a

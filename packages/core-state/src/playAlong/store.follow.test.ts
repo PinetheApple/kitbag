@@ -7,6 +7,7 @@ import { clickStartsOf } from './runtime.ts';
 import {
   call,
   fakePlayAlong,
+  fakeSongCardStarts,
   LATENCY_MS,
   locked,
   metronomeCommands,
@@ -114,7 +115,9 @@ describe('another Kitbag click ends the follow', () => {
     const metronome = createMetronomeStore(commands, () => 0);
     const before = metronome.getState();
     const fake = locked(
-      fakePlayAlong({ onClickStarting: clickStartsOf(metronome) }),
+      fakePlayAlong({
+        onClickStarting: clickStartsOf(metronome, fakeSongCardStarts().starts),
+      }),
     );
     let selectedFirst = false;
     commands.metronomeStart.mockImplementation(() => {
@@ -132,21 +135,36 @@ describe('another Kitbag click ends the follow', () => {
   it('starting a Kitbag song unlocks', () => {
     const metronome = createMetronomeStore(metronomeCommands(), () => 0);
     const fake = locked(
-      fakePlayAlong({ onClickStarting: clickStartsOf(metronome) }),
+      fakePlayAlong({
+        onClickStarting: clickStartsOf(metronome, fakeSongCardStarts().starts),
+      }),
     );
     songStarting();
     expect(fake.store.getState().lock).toBeUndefined();
     expect(fake.calls).toContain(call('metronomeSelectSlot', STANDALONE));
   });
 
+  it('starting a Kitbag song from its notification or lock-screen card unlocks', () => {
+    const metronome = createMetronomeStore(metronomeCommands(), () => 0);
+    const card = fakeSongCardStarts();
+    const fake = locked(
+      fakePlayAlong({ onClickStarting: clickStartsOf(metronome, card.starts) }),
+    );
+    card.play();
+    expect(fake.store.getState().lock).toBeUndefined();
+    expect(fake.calls).toContain(call('metronomeSelectSlot', STANDALONE));
+  });
+
   it('stops listening once the follow has ended', () => {
     const metronome = createMetronomeStore(metronomeCommands(), () => 0);
+    const card = fakeSongCardStarts();
     const fake = locked(
-      fakePlayAlong({ onClickStarting: clickStartsOf(metronome) }),
+      fakePlayAlong({ onClickStarting: clickStartsOf(metronome, card.starts) }),
     );
     fake.store.getState().unlock();
     fake.calls.length = 0;
     songStarting();
+    card.play();
     metronome.getState().start();
     expect(fake.calls).toEqual([]);
   });

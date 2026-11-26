@@ -38,6 +38,7 @@ const useStyles = createThemedStyles((theme) => ({
     justifyContent: 'center',
     gap: space.sectionGap,
     paddingVertical: space.sectionGap,
+    paddingHorizontal: space.screenInset,
   },
   head: { alignItems: 'center', gap: libraryList.emptyGap },
   mark: {

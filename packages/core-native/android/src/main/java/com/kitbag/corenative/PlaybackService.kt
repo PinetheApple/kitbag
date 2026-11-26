@@ -1,20 +1,16 @@
 package com.kitbag.corenative
 
 import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
-import androidx.core.content.ContextCompat
 import com.kitbag.corenative.transport.CardEffect
 import com.kitbag.corenative.transport.CardEvent
 import com.kitbag.corenative.transport.CardFence
@@ -60,14 +56,19 @@ class PlaybackService : Service() {
 
   override fun onCreate() {
     super.onCreate()
-    running = true
-    createChannels()
-    card = MetronomeCard(this, ::openSession, CHANNEL_ID, launchIntent(), ::actionIntent)
+    starts.running = true
+    CardNotifications.createChannels(this)
+    card = MetronomeCard(
+      this,
+      ::openSession,
+      CardNotifications.METRONOME_CHANNEL_ID,
+      CardNotifications.launchIntent(this),
+      ::actionIntent,
+    )
   }
 
   override fun onDestroy() {
-    running = false
-    startRequested = false
+    starts.stopped()
     clock.removeCallbacks(tick)
     song?.release()
     poster.finish()
@@ -137,12 +138,14 @@ class PlaybackService : Service() {
     val songCard = song ?: SongCard(
       this,
       ::openSession,
-      SONG_CHANNEL_ID,
-      launchIntent(),
+      CardNotifications.SONG_CHANNEL_ID,
+      CardNotifications.launchIntent(this),
       ::songIntent,
       ::postSong,
       { songRequestListener },
       fences.song,
+      { if (PlayAlongService.following) EngineTransport.stopPlayAlongClick() },
+      { songStartedListener?.invoke() },
       { songEndedListener?.invoke() },
     ) { songStopped() }.also { song = it }
     songCard.show(
@@ -278,28 +281,6 @@ class PlaybackService : Service() {
     open.release()
   }
 
-  // Android keeps a channel's importance once created, so raising it takes a new ID.
-  private fun createChannels() {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-    val manager = getSystemService(NotificationManager::class.java)
-    RETIRED_CHANNEL_IDS.forEach(manager::deleteNotificationChannel)
-    manager.createNotificationChannel(silentChannel(CHANNEL_ID, R.string.kitbag_metronome_channel))
-    manager.createNotificationChannel(silentChannel(SONG_CHANNEL_ID, R.string.kitbag_songs_channel))
-  }
-
-  private fun silentChannel(id: String, name: Int): NotificationChannel =
-    NotificationChannel(id, getString(name), NotificationManager.IMPORTANCE_DEFAULT).apply {
-      setSound(null, null)
-      enableVibration(false)
-      setShowBadge(false)
-      lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-    }
-
-  private fun launchIntent(): PendingIntent? =
-    packageManager.getLaunchIntentForPackage(packageName)?.let {
-      PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_IMMUTABLE)
-    }
-
   private fun actionIntent(action: TransportAction): PendingIntent =
     PendingIntent.getService(
       this,
@@ -342,7 +323,6 @@ class PlaybackService : Service() {
   }
 
   companion object {
-    private const val CHANNEL_ID = "kitbag_metronome_card"
     private const val NOTIFICATION_ID = 1
     private const val SESSION_TAG = "KitbagMetronome"
     private const val LOG_TAG = "KitbagPlayback"
@@ -355,8 +335,6 @@ class PlaybackService : Service() {
     private const val ACTION_SONG = "com.kitbag.corenative.SONG"
     private const val ACTION_SONG_ORDER = "com.kitbag.corenative.SONG_ORDER"
     private const val ACTION_SONG_SEEKED = "com.kitbag.corenative.SONG_SEEKED"
-    private const val SONG_CHANNEL_ID = "kitbag_songs_card"
-    private val RETIRED_CHANNEL_IDS = listOf("kitbag_metronome", "kitbag_songs")
     private const val EXTRA_TITLE = "title"
     private const val EXTRA_ARTIST = "artist"
     private const val EXTRA_DURATION_FRAMES = "durationFrames"
@@ -384,15 +362,15 @@ class PlaybackService : Service() {
     private const val EXTRA_METRONOME_CARD = "metronomeCard"
     private val fences = CardFences()
 
-    @Volatile private var running = false
-
-    @Volatile private var startRequested = false
+    private val starts = ForegroundStarts(LOG_TAG)
 
     @Volatile var listener: ((TransportChange) -> Unit)? = null
 
     @Volatile var songStoppedListener: (() -> Unit)? = null
 
     @Volatile var songEndedListener: (() -> Unit)? = null
+
+    @Volatile var songStartedListener: (() -> Unit)? = null
 
     @Volatile var songRequestListener: ((SongCommand, Int) -> Unit)? = null
 
@@ -408,7 +386,7 @@ class PlaybackService : Service() {
       cardNumber: Int,
     ) {
       val playing = state.playback == Playback.PLAYING
-      if (!running && !playing) return
+      if (!starts.running && !playing) return
       val intent = Intent(context, PlaybackService::class.java)
         .setAction(ACTION_SHOW)
         .putExtra(EXTRA_PLAYBACK, state.playback.wire)
@@ -423,13 +401,13 @@ class PlaybackService : Service() {
         .putExtra(EXTRA_CARD_NUMBER, cardNumber)
         .putExtra(EXTRA_METRONOME_CARD, fences.showMetronome())
       state.subtitle?.let { intent.putExtra(EXTRA_SUBTITLE, it) }
-      start(context, intent)
+      starts.start(context, intent)
     }
 
     // Sent while a show's start is still pending too: it queues behind that show, so no card is left stuck.
     fun hide(context: Context) =
       fences.hideMetronome {
-        if (running || startRequested) {
+        if (starts.live) {
           context.startService(Intent(context, PlaybackService::class.java).setAction(ACTION_HIDE))
         }
       }
@@ -457,12 +435,12 @@ class PlaybackService : Service() {
         .putExtra(EXTRA_RESTART_FROM_FRAME, song.restartFromFrame)
         .putExtra(EXTRA_SKIP_SECONDS, song.skipSeconds)
         .putExtra(EXTRA_SONG_CARD, fences.song.issue())
-      start(context, intent)
+      starts.start(context, intent)
     }
 
     fun orderSong(context: Context, order: SongOrder) {
       songOrder = order
-      if (!running && !startRequested) return
+      if (!starts.live) return
       context.startService(
         Intent(context, PlaybackService::class.java)
           .setAction(ACTION_SONG_ORDER)
@@ -472,7 +450,7 @@ class PlaybackService : Service() {
 
     // The card reads the engine only on its tick, so a seek the app makes is published at once.
     fun seekedSong(context: Context, positionFrames: Long) {
-      if (!running && !startRequested) return
+      if (!starts.live) return
       context.startService(
         Intent(context, PlaybackService::class.java)
           .setAction(ACTION_SONG_SEEKED)
@@ -482,20 +460,10 @@ class PlaybackService : Service() {
 
     fun hideSong(context: Context) {
       fences.song.withdraw()
-      if (!running && !startRequested) return
+      if (!starts.live) return
       context.startService(Intent(context, PlaybackService::class.java).setAction(ACTION_SONG_HIDE))
     }
 
-    // An update to a live service needs no new foreground start, which Android 12+
-    // refuses from the background.
-    private fun start(context: Context, intent: Intent) {
-      if (running) {
-        context.startService(intent)
-      } else {
-        ContextCompat.startForegroundService(context, intent)
-        startRequested = true
-      }
-    }
   }
 }
 

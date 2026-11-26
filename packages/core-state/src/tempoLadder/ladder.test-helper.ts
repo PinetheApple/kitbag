@@ -34,7 +34,11 @@ export function ladderRuntime(
 ): TempoLadderRuntime {
   return {
     cache: fields.cache ?? memoryCache().cache,
-    library: { list: () => Promise.resolve([...(fields.rows ?? [])]) },
+    library: {
+      list: () => Promise.resolve([...(fields.rows ?? [])]),
+      readSong: () => Promise.resolve(undefined),
+      readStemSet: () => Promise.resolve(undefined),
+    },
     onlineLookups: () =>
       fields.lookups ??
       defaultOnlineLookups(fields.httpGet ?? offline, fields.key),

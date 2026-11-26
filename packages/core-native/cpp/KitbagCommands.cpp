@@ -86,6 +86,12 @@ void commandMetronomeAnchorExternal(double songPosSec, double atFrame, double bp
   kb_metronome_anchor_external(commandEngine(), songPosSec, *frame, bpm);
   commandStart();
 }
+void commandMetronomeAnchorGrid(double songPosSec, double atFrame, double rate) {
+  const auto frame = wholeFrame(atFrame);
+  if (!frame || !std::isfinite(songPosSec) || !std::isfinite(rate) || rate <= 0.0) return;
+  kb_metronome_anchor_grid(commandEngine(), songPosSec, *frame, rate);
+  commandStart();
+}
 
 // start_at only takes effect while stopped, so a stale Resume cannot restart a running
 // click, and unlike start it keeps an anchor the app queued, which must still land.
@@ -108,6 +114,15 @@ void commandStandaloneSetTempo(double bpm) {
 }
 double commandStandaloneBpm() {
   return kb_metronome_slot_current_bpm(kitbagEngine(), KB_METRONOME_SLOT_STANDALONE);
+}
+
+void commandPlayAlongClickStop() {
+  kb_metronome_slot_stop(commandEngine(), KB_METRONOME_SLOT_PLAY_ALONG);
+}
+void commandPlayAlongEnd() {
+  const LockedEngine engine = commandEngine();
+  kb_metronome_slot_stop(engine, KB_METRONOME_SLOT_PLAY_ALONG);
+  kb_metronome_select_slot(engine, KB_METRONOME_SLOT_STANDALONE);
 }
 
 int32_t commandRigClickStart(double bpm, int32_t subdivision, double startFrame) {

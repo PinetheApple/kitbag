@@ -8,6 +8,7 @@ const lock = {
   downbeatSec: 0,
   bpm: 171,
   lockedAtBoottimeMs: 0,
+  grid: undefined,
 };
 
 const playing = {
