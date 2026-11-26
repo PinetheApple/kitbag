@@ -86,6 +86,7 @@ vi.mock('@kitbag/core-design', async (original) => {
       drawnTexts.push((props.text as { value: string }).value);
       return null;
     },
+    LabelLineSpacer: () => null,
     FillBar: (props: Props) => {
       fills.push(props);
       return null;

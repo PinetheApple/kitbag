@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { fontFace } from '../fontFaces.ts';
 import { textRoles } from '../roles.ts';
-import { DrawnLineLabel } from './DrawnLineLabel.tsx';
+import { DrawnLineLabel, LabelLineSpacer } from './DrawnLineLabel.tsx';
 import { drawn, drawnAs } from './svgRecorder.test-helper.ts';
 
 const display = vi.hoisted(() => ({ fontScale: 1 }));
@@ -85,6 +85,34 @@ describe('DrawnLineLabel', () => {
     expect(drawnAs('SvgText')[0]?.transform).toBe(
       `translate(${String(WIDTH / 2)} ${String((LINE * SMALL_SCALE) / 2)})`,
     );
+  });
+
+  it('keeps tabular figures for a tabular role', () => {
+    act(() => {
+      create(
+        <DrawnLineLabel
+          text="1"
+          role="statusMeta"
+          lineHeight={LINE}
+          width={WIDTH}
+          color={INK}
+        />,
+      );
+    });
+    expect(drawnAs('SvgText')[0]?.fontFeatureSettings).toBe("'tnum'");
+  });
+
+  it('holds the same grown line as a spacer, drawing nothing', () => {
+    display.fontScale = DOUBLE_SCALE;
+    let renderer: ReturnType<typeof create> | undefined;
+    act(() => {
+      renderer = create(<LabelLineSpacer lineHeight={LINE} width={WIDTH} />);
+    });
+    expect(renderer?.root.findByType('View' as never).props.style).toEqual({
+      width: WIDTH,
+      height: LINE * DOUBLE_SCALE,
+    });
+    expect(drawn).toEqual([]);
   });
 
   it('holds the line with nothing drawn for a blank label', () => {

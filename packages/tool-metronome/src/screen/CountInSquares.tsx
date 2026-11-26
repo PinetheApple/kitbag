@@ -1,9 +1,4 @@
-import {
-  CountSquare,
-  DrawnLineLabel,
-  metronome,
-  TRANSPARENT,
-} from '@kitbag/core-design';
+import { CountSquare, LabelLineSpacer, metronome } from '@kitbag/core-design';
 import { KB_STOPPED_BEAT } from '@kitbag/core-native';
 import { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
@@ -45,12 +40,9 @@ export function CountInSquares({
       <>
         <CountSquare beat={beat} side={dotSize} currentBeat={countBeat} />
         <View style={styles.pulseRow} />
-        <DrawnLineLabel
-          text=""
-          role="beatMarker"
+        <LabelLineSpacer
           lineHeight={metronome.beatMarkerLineHeight}
           width={dotSize}
-          color={TRANSPARENT}
         />
       </>
     ),
