@@ -152,3 +152,26 @@ describe('tap to align', () => {
     expect(fake.store.getState().lock?.bpm).toBe(BPM / 2);
   });
 });
+
+describe('a tempo entered while locked', () => {
+  const ENTERED_BPM = 100;
+  const FOUND_BPM = 130;
+
+  it('hands the entered tempo to the tempo ladder', () => {
+    const fake = tapped();
+    fake.store.getState().setBpm(ENTERED_BPM);
+    expect(fake.ladder.ladder.getState().enter).toHaveBeenLastCalledWith(
+      ENTERED_BPM,
+    );
+    expect(fake.ladder.ladder.getState().bpm).toBe(ENTERED_BPM);
+  });
+
+  it('keeps the locked tempo when the ladder finds another', () => {
+    const fake = tapped();
+    fake.store.getState().watchLibrary();
+    fake.store.getState().setBpm(ENTERED_BPM);
+    fake.ladder.tempo(FOUND_BPM);
+    expect(fake.store.getState().lock?.bpm).toBe(ENTERED_BPM);
+    expect(fake.store.getState().bpm).toBe(ENTERED_BPM);
+  });
+});

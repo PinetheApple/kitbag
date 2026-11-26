@@ -251,8 +251,7 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
       if (!Number.isFinite(bpm)) return;
       const next = clamp(bpm, BPM_BOUNDS.min, BPM_BOUNDS.max);
       showBpm(next);
-      if (access.getState().lock === undefined)
-        runtime.ladder().getState().enter(next);
+      runtime.ladder().getState().enter(next);
     };
     return {
       pattern: initialPattern(),
