@@ -1,4 +1,5 @@
 import argparse
+import functools
 import json
 import math
 import struct
@@ -45,15 +46,27 @@ STEMS_DIR = 'stems/'
 STEM_EXTENSION = '.flac'
 
 
-def crc(data: bytes, poly: int, width: int) -> int:
+@functools.cache
+def crc_table(poly: int, width: int) -> tuple[int, ...]:
     top = 1 << (width - 1)
     mask = (1 << width) - 1
-    value = 0
-    for byte in data:
-        value ^= byte << (width - BYTE_BITS)
+    table = []
+    for byte in range(1 << BYTE_BITS):
+        value = byte << (width - BYTE_BITS)
         for _ in range(BYTE_BITS):
             value = ((value << 1) ^ poly) if value & top else value << 1
             value &= mask
+        table.append(value)
+    return tuple(table)
+
+
+def crc(data: bytes, poly: int, width: int) -> int:
+    table = crc_table(poly, width)
+    shift = width - BYTE_BITS
+    mask = (1 << width) - 1
+    value = 0
+    for byte in data:
+        value = ((value << BYTE_BITS) & mask) ^ table[(value >> shift) ^ byte]
     return value
 
 

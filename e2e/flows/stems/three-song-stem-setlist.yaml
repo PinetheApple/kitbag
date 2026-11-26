@@ -14,7 +14,7 @@ env:
 - runFlow:
     file: ../../subflows/import-stem-song.yaml
     env:
-      STEM_SONG: ${FIXTURE_STEMS_NO_GRID}
+      STEM_SONG: ${FIXTURE_STEMS_LONG_NO_GRID}
 - runFlow:
     file: ../../subflows/add-stem-song-to-setlist.yaml
     env:
@@ -22,7 +22,7 @@ env:
 - runFlow:
     file: ../../subflows/add-stem-song-to-setlist.yaml
     env:
-      STEM_SONG: ${FIXTURE_STEMS_NO_GRID}
+      STEM_SONG: ${FIXTURE_STEMS_LONG_NO_GRID}
 - runFlow:
     file: ../../subflows/add-stem-song-to-setlist.yaml
     env:
@@ -40,18 +40,18 @@ env:
     env:
       BPM: 120
 - assertVisible: '1\. ${FIXTURE_STEMS}, stem song.*'
-- assertVisible: '2\. ${FIXTURE_STEMS_NO_GRID}, stem song.*'
+- assertVisible: '2\. ${FIXTURE_STEMS_LONG_NO_GRID}, stem song.*'
 - assertVisible: '3\. ${FIXTURE_STEMS}, stem song.*'
 - assertVisible: '4\. New song, 120 · .*'
 - tapOn: 'Play from 1'
 - extendedWaitUntil:
-    visible: 'Up next: ${FIXTURE_STEMS_NO_GRID}, ${SETLIST} · 2 of 4'
+    visible: 'Up next: ${FIXTURE_STEMS_LONG_NO_GRID}, ${SETLIST} · 2 of 4'
     timeout: 20000
 - assertVisible: 'Play'
 - runFlow:
     file: ../../subflows/tap-while-playing.yaml
     env:
-      TARGET: 'Next: ${FIXTURE_STEMS_NO_GRID}'
+      TARGET: 'Next: ${FIXTURE_STEMS_LONG_NO_GRID}'
 - extendedWaitUntil:
     visible: 'Up next: ${FIXTURE_STEMS}, ${SETLIST} · 3 of 4'
     timeout: 20000
@@ -65,11 +65,11 @@ env:
     visible: 'Play'
     timeout: 10000
 - back
-- assertVisible: '2\. ${FIXTURE_STEMS_NO_GRID}, stem song.*, now loaded'
+- assertVisible: '2\. ${FIXTURE_STEMS_LONG_NO_GRID}, stem song.*, now loaded'
 - back
 - back
 - extendedWaitUntil:
-    visible: '${FIXTURE_STEMS_NO_GRID}, Setlist ${SETLIST}, song 2 of 4'
+    visible: '${FIXTURE_STEMS_LONG_NO_GRID}, Setlist ${SETLIST}, song 2 of 4'
     timeout: 10000
 - tapOn: 'Next song, ${FIXTURE_STEMS}'
 - extendedWaitUntil:
