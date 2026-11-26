@@ -58,6 +58,13 @@ export {
   withoutSound,
 } from './metronome/config.ts';
 export { beatGroupSizes, groupStartAccents } from './metronome/meterGroups.ts';
+export type { BpmBounds } from './tapTempo/bpmBounds.ts';
+export {
+  pushTap,
+  TAP_WINDOW_INTERVALS,
+  tapTempoBpm,
+  tapTimeoutMs,
+} from './tapTempo/tapTempo.ts';
 export { layoutBeatLeds, type LedRowLayout } from './metronome/ledLayout.ts';
 export { countInBarsFromOption } from './metronome/countInOption.ts';
 export {

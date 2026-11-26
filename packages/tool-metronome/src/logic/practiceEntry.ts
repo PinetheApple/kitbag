@@ -11,10 +11,9 @@ import {
   normalizePolyAgainst,
   rampIntervalBounds,
   type BarMuteConfig,
+  type BpmBounds,
   type RampConfig,
 } from '@kitbag/core-state';
-
-import type { BpmBounds } from './bpmBounds.ts';
 import { RAMP_BPM_ENTRY, withRampBpm, type RampBpmField } from './rampEntry.ts';
 import { rampUnitLabel } from './rampUnit.ts';
 
