@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { BpmBounds } from './bpmBounds.ts';
+import type { BpmBounds } from '@kitbag/core-state';
 import {
   confirmEntry,
   openEntry,

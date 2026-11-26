@@ -9,7 +9,7 @@ import {
 import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import type { BpmBounds } from '../logic/bpmBounds.ts';
+import type { BpmBounds } from '@kitbag/core-state';
 import {
   confirmEntry,
   displayDigits,

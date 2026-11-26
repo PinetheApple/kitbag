@@ -1424,21 +1424,27 @@ None of this exists; the source data never leaves Kotlin.
 
 ### 8.5 BPM ladder
 
-**The ladder is Deezer → library beat grid → tap**, plus GetSongBPM if the user
-supplied their own key (**D7**). Source always shown, always overridable, never
-authoritative. The card says "via Deezer · tap to change"; when the ladder fails
-it names **every rung that was tried** ("Not found · Deezer"), because saying
-which rungs were climbed is what stops the user retrying the same thing.
+**The ladder is library beat grid → GetSongBPM → tap**, with GetSongBPM only if
+the user supplied their own key (**D7**). Source always shown, always overridable,
+never authoritative. The card says "via GetSongBPM · tap to change"; when the
+ladder fails it names **every rung that was tried** ("Not found · Library,
+GetSongBPM"), because saying which rungs were climbed is what stops the user
+retrying the same thing.
 
-- **Match scoring.** Deezer's lookup returns the first result with nonzero BPM
+- **Deezer is dropped** (owner decision, 2026-11-26). Its developer terms forbid
+  a local copy of its data, and its track search returns nothing in the owner's
+  region. Network rungs sit behind one source interface, so a source can be
+  added without touching the ladder.
+- **Match scoring.** The old lookup returned the first result with nonzero BPM
   despite a comment claiming similarity matching. Score title+artist; reject
   below threshold rather than returning a wrong-song BPM.
 - **GetSongBPM is opt-in** (**D7**). A Settings row takes a personal key. No
   proxy — that is a server, a cost, a privacy surface and a single point of
   failure an offline-first GPL app should not acquire. **Never ship a shared key
   in a public repo.** Attribution obligations apply in-app and in the store
-  listing whenever the tier is used. Recorded honestly: almost nobody will supply
-  a key, so in practice the ladder is the three rungs above.
+  listing whenever the tier is used: a visible link to getsongbpm.com wherever
+  its BPM is shown. Recorded honestly: almost nobody will supply a key, so in
+  practice the ladder is library grid → tap.
 - **The offline dump is dropped** (**D8**). Delete the AcousticBrainz stub that
   returns `null` and the source it advertises at `bpm_lookup_service.dart:21`. The
   bundled 2022 dump the original research specced is not shipped and not
@@ -1446,8 +1452,9 @@ which rungs were climbed is what stops the user retrying the same thing.
 - **The library beat grid is a real rung, and the best one.** A matched analysed
   song gives per-beat spacing, not a single number — the only rung that handles
   non-constant tempo (§8.6).
-- **Cache.** None exists; every track change re-hits Deezer. Cache by
-  (title, artist) with a TTL.
+- **Cache.** GetSongBPM hits are cached as title + artist → BPM only, with a
+  short TTL, so changing back to a song does not look it up again. Misses are
+  not cached; a library match is always read live.
 - **Tap tempo** runs on the pad when every rung failed, and from a Tap key in the
   tempo sheet, beside ÷2 and ×2, once a BPM is known; the pad then stays for
   aligning taps. Fixed: taps are counted on screen (four LEDs, filling), because
@@ -2777,17 +2784,20 @@ surface and a single point of failure an offline-first GPL app should not acquir
 No shared key in a public repo, ever.
 
 **Recorded honestly: realistically almost nobody will do this**, so in practice
-the ladder is D8's. The tier exists for the user who wants it and costs nothing to
-leave available. Attribution obligations still apply when the tier is used.
+the ladder is library grid → tap. The tier exists for the user who wants it and
+costs nothing to leave available. Attribution still applies when the tier is
+used: a visible link to getsongbpm.com. Since 2026-11-26 it is the only network
+source (Deezer dropped, §8.5); results are cached as title + artist → BPM with a
+short TTL.
 
 ### D8 — Drop the offline dump tier.
 
 The AcousticBrainz 2022 dump is not bundled and not downloaded. Delete the stub
 that returns `null` and the source it advertises at `bpm_lookup_service.dart:21`.
 
-**The ladder is now: Deezer → library beat grid → tap** (→ GetSongBPM if the user
-supplied a key). Three rungs, all honest. The tap pad was always the real fallback
-and always works.
+**The ladder is now: library beat grid → GetSongBPM (if the user supplied a key)
+→ tap** (Deezer dropped 2026-11-26, §8.5). All rungs honest. The tap pad was
+always the real fallback and always works.
 
 ### D9 — Beat LEDs are a **row**. Grouping is gained.
 
@@ -2933,7 +2943,7 @@ Genuinely unresolved. None block work; four are confirmations.
 | Notification-listener grant friction + Play review | App fully usable without it; clear explainer; policy form ready |
 | iOS sync is Spotify-only, forever | State it plainly in-UI; it is a platform limit, not a bug |
 | Tuner mic problem may be a device/OS issue, not ours | §10.1 research gate before committing to implementation |
-| BPM APIs disappear | Multi-source ladder + offline dump + tap always works |
+| BPM APIs disappear | Library grid + tap always work; network sources sit behind one interface |
 | F-Droid rejects the Expo-shaped project (§13.8) | Verify policy in Phase 0, before the toolchain is locked |
 | **Rewriting twice** | Phase 1 before Phase 3 — the un-wastable work first. The stack decision does not change which work that is. |
 | **The rewrite silently loses working behaviour** | §2.1 is the port checklist; §14's tests are the proof. A rewrite with no tests cannot show it kept anything. |

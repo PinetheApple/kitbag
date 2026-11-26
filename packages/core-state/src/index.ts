@@ -58,6 +58,44 @@ export {
   withoutSound,
 } from './metronome/config.ts';
 export { beatGroupSizes, groupStartAccents } from './metronome/meterGroups.ts';
+export type { BpmBounds } from './metronome/config.ts';
+export {
+  pushTap,
+  TAP_WINDOW_INTERVALS,
+  tapTempoBpm,
+  tapTimeoutMs,
+} from './tapTempo/tapTempo.ts';
+export { useTempoLadder } from './tempoLadder/useTempoLadder.ts';
+export {
+  tempoLadderStore,
+  TAPS_TO_SET_TEMPO,
+  type TempoLadderStore,
+} from './tempoLadder/store.ts';
+export {
+  configureTempoLadder,
+  type TempoLadderRuntime,
+} from './tempoLadder/runtime.ts';
+export type { TempoLookup } from './tempoLadder/ladder.ts';
+export type { LibraryMatch } from './tempoLadder/libraryMatch.ts';
+export {
+  LOOKUP_TIMEOUT_MS,
+  type HttpGet,
+  type HttpResponse,
+} from './tempoLadder/http.ts';
+export type { OnlineBpmLookup } from './tempoLadder/onlineBpmLookup.ts';
+export { defaultOnlineLookups } from './tempoLadder/onlineLookups.ts';
+export { getSongBpmLookup } from './tempoLadder/getSongBpm.ts';
+export {
+  BPM_SOURCE,
+  BPM_SOURCE_CREDIT,
+  BPM_SOURCE_LABEL,
+  NOT_FOUND_TEXT,
+  notFoundText,
+  sourceText,
+  type BpmSource,
+  type LadderRung,
+  type SourceCredit,
+} from './tempoLadder/sources.ts';
 export { layoutBeatLeds, type LedRowLayout } from './metronome/ledLayout.ts';
 export { countInBarsFromOption } from './metronome/countInOption.ts';
 export {

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import type { BpmBounds } from './bpmBounds.ts';
+import type { BpmBounds } from '@kitbag/core-state';
 import {
   clampBpm,
   FINE_DP_PER_BPM,

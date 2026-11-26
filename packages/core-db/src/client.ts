@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/op-sqlite';
 
 import { attempt } from './attempt';
 import { createBackupService } from './backup';
+import { createBpmCacheRepository } from './bpm-cache-repository';
 import type { ClickSoundFiles } from './click-sound-files';
 import { createClickSoundRepository } from './click-sound-repository';
 import { DatabaseOpenError } from './database-open-error';
@@ -117,6 +118,7 @@ export function connectDatabase(
     clickSounds: createClickSoundRepository(handle),
     practice: createPracticeRepository(handle),
     routeLatency: createRouteLatencyRepository(handle),
+    bpmCache: createBpmCacheRepository(handle),
     preferences: createPreferences(
       (sql, params) => connection.executeSync(sql, params).rows,
       handle.transactor,

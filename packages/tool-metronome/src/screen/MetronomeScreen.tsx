@@ -2,6 +2,8 @@ import { metronome, readerHiding, space } from '@kitbag/core-design';
 import {
   BPM_BOUNDS,
   getPracticeSessionStore,
+  pushTap,
+  tapTempoBpm,
   useMetronome,
   useSwipeHint,
 } from '@kitbag/core-state';
@@ -27,7 +29,6 @@ import {
 import { endPractice, summarySheetOnMount } from '../logic/practiceSummary.ts';
 import { practiceBadgeCount, restLegend } from '../logic/statusRows.ts';
 import { showSwipeHint } from '../logic/swipeHint.ts';
-import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatDots, BeatLegend } from './BeatDots.tsx';
 import { MetronomeAppBar } from './MetronomeAppBar.tsx';
 import { useMetronomeScreenStyles } from './metronomeScreenStyles.ts';
