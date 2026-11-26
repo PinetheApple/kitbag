@@ -14,6 +14,7 @@ import com.facebook.react.bridge.WritableMap
 import com.kitbag.corenative.media.MediaListenerService
 import com.kitbag.corenative.media.MediaSessionInfo
 import com.kitbag.corenative.media.MediaSessionWatch
+import com.kitbag.corenative.media.SESSIONS_LOG_TAG
 
 class KitbagMediaSessionsModule(reactContext: ReactApplicationContext) :
   NativeKitbagMediaSessionsSpec(reactContext) {
@@ -72,7 +73,7 @@ class KitbagMediaSessionsModule(reactContext: ReactApplicationContext) :
       reactApplicationContext.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
       true
     } catch (e: ActivityNotFoundException) {
-      Log.w(TAG, "No screen for ${intent.action}", e)
+      Log.w(SESSIONS_LOG_TAG, "No screen for ${intent.action}", e)
       false
     }
 
@@ -100,9 +101,5 @@ class KitbagMediaSessionsModule(reactContext: ReactApplicationContext) :
 
   private fun WritableMap.putNullableDouble(key: String, value: Double?) {
     if (value == null) putNull(key) else putDouble(key, value)
-  }
-
-  private companion object {
-    const val TAG = "KitbagMediaSessions"
   }
 }
