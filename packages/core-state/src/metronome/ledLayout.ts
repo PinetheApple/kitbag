@@ -1,3 +1,5 @@
+import { KB_ACCENT } from '@kitbag/core-native';
+
 import { beatGroupSizes } from './meterGroups.ts';
 
 export const MIN_LEDS_PER_ROW = 4;
@@ -5,6 +7,14 @@ export const MIN_LEDS_PER_ROW = 4;
 export const MAX_LEDS_PER_ROW = 7;
 
 export type LedRowLayout = readonly (readonly number[])[];
+
+export type AccentLedState = 'accented' | 'normal' | 'muted';
+
+export function ledStateFor(accent: KB_ACCENT): AccentLedState {
+  if (accent === KB_ACCENT.KB_ACCENT_ACCENTED) return 'accented';
+  if (accent === KB_ACCENT.KB_ACCENT_MUTED) return 'muted';
+  return 'normal';
+}
 
 // MIN_LEDS_PER_ROW is no branch: the group sizes and the ceiling keep every
 // filled row above it.

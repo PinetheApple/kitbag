@@ -66,6 +66,10 @@ vi.mock('./PlayAlongAppBar.tsx', () => ({ PlayAlongAppBar: () => null }));
 vi.mock('./PlayAlongMenu.tsx', () => ({ PlayAlongMenu: () => null }));
 vi.mock('./SourceSheet.tsx', () => ({ SourceSheet: () => null }));
 vi.mock('./TempoSheet.tsx', () => ({ TempoSheet: () => null }));
+vi.mock('./PatternSheets.tsx', () => ({
+  PATTERN_SHEET: { meter: 'meter', subdivision: 'subdivision' },
+  PatternSheets: () => null,
+}));
 
 const { PlayAlongScreen } = await import('./PlayAlongScreen.tsx');
 

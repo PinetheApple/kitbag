@@ -1,4 +1,4 @@
-import { signatureLabel } from '@kitbag/core-design';
+import { signatureLabel } from './meterText.ts';
 
 export const MIN_BEATS = 1;
 
@@ -35,11 +35,11 @@ export function commonMeters(
   );
 }
 
-export function meterLabel(meter: Meter): string {
+export function timeSignatureLabel(meter: Meter): string {
   return signatureLabel(meter.beats, meter.denominator);
 }
 
-export function spokenMeter(meter: Meter): string {
+export function spokenTimeSignature(meter: Meter): string {
   return `${String(meter.beats)} over ${String(meter.denominator)}`;
 }
 

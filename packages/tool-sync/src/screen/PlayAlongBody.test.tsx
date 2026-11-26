@@ -25,6 +25,7 @@ const GONE_AT_MS = 4000;
 
 const pads = vi.hoisted(() => [] as Props[]);
 const order = vi.hoisted(() => [] as string[]);
+const patterns = vi.hoisted(() => [] as Props[]);
 const ladder = vi.hoisted(() => ({
   state: {
     bpm: null as number | null,
@@ -81,6 +82,13 @@ vi.mock('./NowPlayingCard.tsx', () => ({
     return null;
   },
 }));
+vi.mock('./PatternCard.tsx', () => ({
+  PatternCard: (props: Props) => {
+    order.push('pattern');
+    patterns.push(props);
+    return null;
+  },
+}));
 vi.mock('./DriftMeter.tsx', () => ({
   DriftMeter: () => {
     order.push('meter');
@@ -129,6 +137,7 @@ function draw(
 ) {
   pads.length = 0;
   order.length = 0;
+  patterns.length = 0;
   renderToStaticMarkup(
     createElement(PlayAlongBody, {
       view,
@@ -136,6 +145,8 @@ function draw(
       lock: locked ? lock : undefined,
       onExplainAgain: vi.fn(),
       onOpenTempo: vi.fn(),
+      onOpenMeter: vi.fn(),
+      onOpenSubdivision: vi.fn(),
     }),
   );
 }
@@ -188,7 +199,7 @@ describe('the drift meter', () => {
   it('takes the pad slot as the last item of the body once locked', () => {
     ladder.state.bpm = SONG_BPM;
     draw(PLAY_ALONG_VIEW.song, true);
-    expect(order).toEqual(['song', 'bpm', 'meter']);
+    expect(order).toEqual(['song', 'bpm', 'pattern', 'meter']);
     expect(pads).toHaveLength(0);
   });
 
@@ -196,7 +207,7 @@ describe('the drift meter', () => {
     ladder.state.bpm = SONG_BPM;
     playAlong.songAheadOfClickMs = DRIFT_MS;
     draw(PLAY_ALONG_VIEW.song, true);
-    expect(order).toEqual(['meter', 'song', 'bpm']);
+    expect(order).toEqual(['meter', 'song', 'bpm', 'pattern']);
     expect(pads).toHaveLength(1);
     expect(pads[0]?.copy).toMatchObject({ title: 'Re-tap on a downbeat' });
   });
@@ -206,7 +217,7 @@ describe('the drift meter', () => {
     playAlong.songAheadOfClickMs = DRIFT_MS;
     playAlong.sourceGoneAtBoottimeMs = GONE_AT_MS;
     draw(PLAY_ALONG_VIEW.song, true, undefined);
-    expect(order).toEqual(['song', 'bpm', 'meter']);
+    expect(order).toEqual(['song', 'bpm', 'pattern', 'meter']);
     expect(pads).toHaveLength(0);
   });
 
@@ -215,5 +226,19 @@ describe('the drift meter', () => {
     draw(PLAY_ALONG_VIEW.song);
     expect(order).not.toContain('meter');
     expect(pads).toHaveLength(1);
+  });
+});
+
+describe('the pattern card', () => {
+  it('greys the dots while the locked song is paused', () => {
+    ladder.state.bpm = SONG_BPM;
+    draw(PLAY_ALONG_VIEW.song, true, { ...session, playing: false });
+    expect(patterns[0]).toMatchObject({ following: true, muted: true });
+  });
+
+  it('keeps the dots lit while the click follows', () => {
+    ladder.state.bpm = SONG_BPM;
+    draw(PLAY_ALONG_VIEW.song, true);
+    expect(patterns[0]).toMatchObject({ following: true, muted: false });
   });
 });

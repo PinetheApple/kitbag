@@ -10,6 +10,11 @@ import { PlayAlongAppBar, type SourceChipProps } from './PlayAlongAppBar.tsx';
 import { PlayAlongBody } from './PlayAlongBody.tsx';
 import { PlayAlongDock } from './PlayAlongDock.tsx';
 import { PlayAlongMenu } from './PlayAlongMenu.tsx';
+import {
+  PATTERN_SHEET,
+  PatternSheets,
+  type PatternSheet,
+} from './PatternSheets.tsx';
 import { pickSource } from './pickSource.ts';
 import {
   useFollowedSession,
@@ -23,7 +28,7 @@ import { TempoSheet } from './TempoSheet.tsx';
 import { useAccessFlow, type AccessFlow } from './useAccessFlow.ts';
 import { useLastSeen } from './useLastSeen.ts';
 
-type OpenSheet = 'none' | 'source' | 'tempo' | 'menu';
+type OpenSheet = 'none' | 'source' | 'tempo' | 'menu' | PatternSheet;
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
@@ -48,7 +53,21 @@ function useSheets() {
   const openMenu = useCallback(() => {
     setSheet('menu');
   }, []);
-  return { sheet, close, openSource, openTempo, openMenu };
+  const openMeter = useCallback(() => {
+    setSheet(PATTERN_SHEET.meter);
+  }, []);
+  const openSubdivision = useCallback(() => {
+    setSheet(PATTERN_SHEET.subdivision);
+  }, []);
+  return {
+    sheet,
+    close,
+    openSource,
+    openTempo,
+    openMenu,
+    openMeter,
+    openSubdivision,
+  };
 }
 
 function useSourceChip(onOpen: () => void): SourceChipProps | null {
@@ -66,6 +85,12 @@ function useSourceChip(onOpen: () => void): SourceChipProps | null {
       onPress: count >= MIN_SESSIONS_TO_CHOOSE ? onOpen : null,
     };
   }, [appLabel, count, session, locked, onOpen]);
+}
+
+function patternSheet(sheet: OpenSheet): PatternSheet | null {
+  return sheet === PATTERN_SHEET.meter || sheet === PATTERN_SHEET.subdivision
+    ? sheet
+    : null;
 }
 
 interface SheetsProps {
@@ -97,6 +122,11 @@ function PlayAlongSheets({ sheets, followedId, bottomInset }: SheetsProps) {
       <TempoSheet
         visible={sheets.sheet === 'tempo'}
         sourceWords={line.lead + line.rung}
+        bottomInset={bottomInset}
+        onDismiss={close}
+      />
+      <PatternSheets
+        open={patternSheet(sheets.sheet)}
         bottomInset={bottomInset}
         onDismiss={close}
       />
@@ -159,6 +189,8 @@ export function PlayAlongScreen({ insets, onBack }: PlayAlongScreenProps) {
           lock={lock}
           onExplainAgain={flow.explainAgain}
           onOpenTempo={sheets.openTempo}
+          onOpenMeter={sheets.openMeter}
+          onOpenSubdivision={sheets.openSubdivision}
         />
       ) : null}
       {song ? (

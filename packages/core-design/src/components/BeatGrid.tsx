@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
-import type { LedRowLayout } from '@kitbag/core-state';
 
+import type { BeatLine } from '../beatDotLayout.ts';
 import { useBeatDotStyles } from './beatDotStyles.ts';
 
 export interface Edge {
@@ -21,7 +21,7 @@ const edge = (index: number, count: number): Edge => ({
 });
 
 interface BeatGridProps {
-  readonly lines: readonly LedRowLayout[];
+  readonly lines: readonly BeatLine[];
   readonly renderBeat: (beat: number, position: BeatPosition) => ReactNode;
 }
 

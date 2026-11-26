@@ -6,6 +6,7 @@ import {
   metronome,
   minTouchTargetDp,
   radius,
+  type ScreenDensity,
   size,
   space,
   textRoles,
@@ -28,7 +29,6 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import type { ScreenDensity } from '../logic/screenDensity.ts';
 import { tempoArrowDelta, type TempoArrow } from '../logic/tempoArrows.ts';
 import { tempoMarking } from '../logic/tempoMarking.ts';
 import { BarSweep } from './BarSweep.tsx';
