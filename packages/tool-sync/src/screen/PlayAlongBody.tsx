@@ -1,22 +1,21 @@
 import {
   createThemedStyles,
-  fadeToClear,
-  metronome,
   snackbar,
   Snackbar,
   space,
-  usePlayerScroll,
 } from '@kitbag/core-design';
 import type { MediaSessionSnapshot } from '@kitbag/core-native';
 import type { PlayAlongLock } from '@kitbag/core-state';
 import type { ReactNode } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View, type LayoutChangeEvent } from 'react-native';
 
 import { METER_PLACE, type LockLayout } from '../logic/lockLayout.ts';
+import { PAD_SLOT_BOTTOM } from '../logic/padFit.ts';
 import { trackClock } from '../logic/nowPlaying.ts';
 import { PLAY_ALONG_VIEW, type PlayAlongView } from '../logic/playAlongView.ts';
 import { BpmCard } from './BpmCard.tsx';
 import { DriftMeter } from './DriftMeter.tsx';
+import { FadedScroll } from './FadedScroll.tsx';
 import { LibraryOfferCard } from './LibraryOfferCard.tsx';
 import { PatternCard } from './PatternCard.tsx';
 import { NotFollowingRow, NothingPlaying } from './NoSong.tsx';
@@ -28,33 +27,21 @@ import {
 } from './playAlongHooks.ts';
 import { TapPad } from './TapPad.tsx';
 import { useNewTrack, type NewTrack } from './useNewTrack.ts';
+import { usePadFit } from './usePadFit.ts';
 import { useDriftInputs } from './useDriftInputs.ts';
 import { useLockedPad } from './useLockedPad.ts';
 import { useTapPad } from './useTapPad.ts';
 
-export const SCROLL_FADE_ID = 'play-along-scroll-fade';
-
-const useStyles = createThemedStyles((theme) => ({
-  scrollBox: { flex: 1 },
-  scroll: { flex: 1 },
-  content: { flexGrow: 1 },
+const useStyles = createThemedStyles(() => ({
+  region: { flex: 1 },
   body: {
     gap: space.sectionGap,
     paddingHorizontal: space.screenInset,
     paddingBottom: space.sectionGap,
   },
-  fade: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: metronome.scrollFade,
-    pointerEvents: 'none',
-    ...fadeToClear(theme.color.bg, 'to top'),
-  },
   pad: {
     paddingHorizontal: space.screenInset,
-    paddingBottom: space.sectionGap,
+    paddingBottom: PAD_SLOT_BOTTOM,
   },
 }));
 
@@ -98,33 +85,6 @@ function NoSong({
   return <NotFollowingRow onPress={onExplainAgain} />;
 }
 
-interface FadedScrollProps {
-  readonly children: ReactNode;
-  readonly overlay: ReactNode;
-}
-
-function FadedScroll({ children, overlay }: FadedScrollProps) {
-  const styles = useStyles();
-  const scroll = usePlayerScroll();
-  return (
-    <View style={styles.scrollBox}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={scroll.scrollEnabled}
-        persistentScrollbar
-        {...scroll}
-      >
-        {children}
-      </ScrollView>
-      {scroll.scrollEnabled ? (
-        <View testID={SCROLL_FADE_ID} style={styles.fade} />
-      ) : null}
-      {overlay}
-    </View>
-  );
-}
-
 function NewTrackNotice({ track }: { readonly track: NewTrack }) {
   if (!track.noticeShown) return null;
   return (
@@ -141,6 +101,7 @@ interface BodyCardsProps extends PlayAlongBodyProps {
   readonly meter: ReactNode;
   readonly newTrack: boolean;
   readonly silenced: boolean;
+  readonly onBpmCardLayout: (event: LayoutChangeEvent) => void;
 }
 
 function BodyCards(props: BodyCardsProps) {
@@ -156,12 +117,14 @@ function BodyCards(props: BodyCardsProps) {
       ) : (
         <NoSong view={view} onExplainAgain={props.onExplainAgain} />
       )}
-      <BpmCard
-        bpm={bpm}
-        line={line}
-        newTrack={props.newTrack}
-        onOpenTempo={props.onOpenTempo}
-      />
+      <View onLayout={props.onBpmCardLayout}>
+        <BpmCard
+          bpm={bpm}
+          line={line}
+          newTrack={props.newTrack}
+          onOpenTempo={props.onOpenTempo}
+        />
+      </View>
       {offered && lock === undefined ? <LibraryOfferCard /> : null}
       <PatternCard
         following={lock !== undefined}
@@ -176,9 +139,10 @@ function BodyCards(props: BodyCardsProps) {
 
 interface PinnedPadProps extends PlayAlongBodyProps {
   readonly locked: ReturnType<typeof useLockedPad>;
+  readonly fit: ReturnType<typeof usePadFit>;
 }
 
-function PinnedPad({ view, session, lock, locked }: PinnedPadProps) {
+function PinnedPad({ view, session, lock, locked, fit }: PinnedPadProps) {
   const styles = useStyles();
   const pad = useTapPad({
     following: view === PLAY_ALONG_VIEW.song && session !== undefined,
@@ -187,8 +151,8 @@ function PinnedPad({ view, session, lock, locked }: PinnedPadProps) {
     onLanded: locked.onLanded,
   });
   return (
-    <View style={styles.pad}>
-      <TapPad {...pad} onRelease={locked.onRelease} />
+    <View style={styles.pad} onLayout={fit.onSlot}>
+      <TapPad {...pad} minHeight={fit.padHeight} onRelease={locked.onRelease} />
     </View>
   );
 }
@@ -198,6 +162,8 @@ export function PlayAlongBody(props: PlayAlongBodyProps) {
   const drift = useDriftInputs(session);
   const locked = useLockedPad(lock, drift);
   const track = useNewTrack(session, lock);
+  const fit = usePadFit();
+  const styles = useStyles();
   const meter =
     lock === undefined ? null : (
       <DriftMeter
@@ -208,7 +174,7 @@ export function PlayAlongBody(props: PlayAlongBodyProps) {
       />
     );
   return (
-    <>
+    <View style={styles.region} onLayout={fit.onRegion}>
       <FadedScroll overlay={<NewTrackNotice track={track} />}>
         <BodyCards
           {...props}
@@ -216,9 +182,12 @@ export function PlayAlongBody(props: PlayAlongBodyProps) {
           meter={meter}
           newTrack={track.newTrack}
           silenced={locked.silenced}
+          onBpmCardLayout={fit.onBpmCard}
         />
       </FadedScroll>
-      {locked.layout.pad ? <PinnedPad {...props} locked={locked} /> : null}
-    </>
+      {locked.layout.pad ? (
+        <PinnedPad {...props} locked={locked} fit={fit} />
+      ) : null}
+    </View>
   );
 }

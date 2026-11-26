@@ -84,17 +84,25 @@ export interface TapPadProps {
   readonly tapsLanded: number;
   readonly onTap: (event: GestureResponderEvent) => void;
   readonly onRelease: () => void;
+  readonly minHeight?: number | null;
 }
 
-export function TapPad({ copy, tapsLanded, onTap, onRelease }: TapPadProps) {
+export function TapPad({
+  copy,
+  tapsLanded,
+  onTap,
+  onRelease,
+  minHeight,
+}: TapPadProps) {
   const styles = useStyles();
   const theme = useTheme();
   const padStyle = useCallback(
     ({ pressed }: PressableStateCallbackType) => [
       styles.pad,
+      typeof minHeight === 'number' && { minHeight },
       pressed && styles.pressed,
     ],
-    [styles],
+    [styles, minHeight],
   );
   return (
     <Pressable

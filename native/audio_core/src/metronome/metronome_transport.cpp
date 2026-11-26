@@ -41,6 +41,12 @@ bool Metronome::CountInAt(
   return commands_.Push(command);
 }
 
+uint32_t Metronome::TakeEndedIntent() {
+  const uint32_t ended = ended_intent_;
+  ended_intent_ = kNoIntent;
+  return ended;
+}
+
 void Metronome::Stop() {
   commands_.Push({CommandType::kStop});
 }

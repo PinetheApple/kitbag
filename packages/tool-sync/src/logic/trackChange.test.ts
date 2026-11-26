@@ -9,6 +9,10 @@ const lock = {
   bpm: 171,
   lockedAtBoottimeMs: 0,
   grid: undefined,
+  phaseOffsetMs: 0,
+  downbeatShift: 0,
+  downbeatShiftAvailable: true,
+  gridDownbeats: undefined,
 };
 
 const playing = {

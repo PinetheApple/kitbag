@@ -77,7 +77,11 @@ function fakeLadder() {
   };
 }
 
-function fakeCommands(calls: string[], gridResult: number) {
+function fakeCommands(
+  calls: string[],
+  gridResult: number,
+  downbeatsResult: () => number,
+) {
   const logged =
     (name: string) =>
     (...args: unknown[]) => {
@@ -93,6 +97,12 @@ function fakeCommands(calls: string[], gridResult: number) {
     metronomeAnchorExternal: vi.fn<
       PlayAlongRuntime['commands']['metronomeAnchorExternal']
     >(logged('metronomeAnchorExternal')),
+    metronomeSetGridDownbeats: vi.fn<
+      PlayAlongRuntime['commands']['metronomeSetGridDownbeats']
+    >((downbeats) => {
+      calls.push(`metronomeSetGridDownbeats(${downbeats.join(' ')})`);
+      return Promise.resolve(downbeatsResult());
+    }),
     metronomeAnchorGrid: vi.fn<
       PlayAlongRuntime['commands']['metronomeAnchorGrid']
     >(logged('metronomeAnchorGrid')),
@@ -127,10 +137,12 @@ export function fakePlayAlong({
   yieldStandalone,
   grid = NO_GRID,
   gridResult = KB_RESULT.KB_OK,
+  downbeatsResult = () => KB_RESULT.KB_OK,
   nowFrame = () => Date.now() * FRAMES_PER_MS,
 }: {
   readonly grid?: DetectedGrid;
   readonly gridResult?: number;
+  readonly downbeatsResult?: () => number;
   readonly sessions?: readonly MediaSessionSnapshot[];
   readonly onClickStarting?: PlayAlongRuntime['onClickStarting'];
   readonly yieldStandalone?: PlayAlongRuntime['yieldStandalone'];
@@ -144,7 +156,7 @@ export function fakePlayAlong({
       calls.push('standaloneReturned()');
     };
   };
-  const commands = fakeCommands(calls, gridResult);
+  const commands = fakeCommands(calls, gridResult, downbeatsResult);
   const pick = vi.fn((sessionId: string) => {
     media.setState({ chosenId: sessionId });
   });
@@ -161,6 +173,7 @@ export function fakePlayAlong({
   const playbackStarted = vi.fn();
   const cardListeners = new Set<(request: PlayAlongCardRequest) => void>();
   const sessionsRead = vi.fn(() => media);
+  const latencyRead = vi.fn(() => LATENCY_MS);
   const runtime: PlayAlongRuntime = {
     commands,
     boottimeNowMs: () => Date.now(),
@@ -170,7 +183,7 @@ export function fakePlayAlong({
     ladder: () => library.ladder,
     readGrid,
     sessionCommand,
-    latencyOffsetMs: () => LATENCY_MS,
+    latencyOffsetMs: latencyRead,
     onClickStarting,
     yieldStandalone: yieldStandalone ?? loggedYield,
     onCardRequest: (listener) => {
@@ -184,6 +197,7 @@ export function fakePlayAlong({
   return {
     store: createPlayAlongStore(runtime),
     sessionsRead,
+    latencyRead,
     calls,
     commands,
     media,

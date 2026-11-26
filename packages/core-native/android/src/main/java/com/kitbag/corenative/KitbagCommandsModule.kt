@@ -310,6 +310,11 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     promise.resolve(nativeSetGridRate(rate.toInt()))
   }
 
+  override fun metronomeSetGridDownbeats(downbeatIndices: ReadableArray, promise: Promise) {
+    val indices = IntArray(downbeatIndices.size()) { i -> downbeatIndices.getInt(i) }
+    promise.resolve(nativeSetGridDownbeats(indices))
+  }
+
   override fun metronomeFollowMixer(enabled: Boolean) {
     nativeFollowMixer(enabled)
   }
@@ -569,6 +574,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeSetBeats(beatsPerBar: Int, denominator: Int)
   private external fun nativeSetGridGrouping(sizes: IntArray): Int
   private external fun nativeSetGridRate(rate: Int): Int
+  private external fun nativeSetGridDownbeats(indices: IntArray): Int
   private external fun nativeSetSubdivision(subdivision: Int)
   private external fun nativeSetSubdivisionAccents(subdivision: Int, slotMask: Int)
   private external fun nativeSetAccent(beatIndex: Int, accent: Int)
