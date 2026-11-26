@@ -125,9 +125,7 @@ class Metronome {
       FrameClock clock,
       bool engine_running
   );
-  // Same beats, click epoch and anchor: the mapping, cursor and onset floor
-  // hold. False, publishing nothing, with no grid set or an invalid table.
-  bool SetGridDownbeats(
+  [[nodiscard]] bool SetGridDownbeats(
       std::span<const int32_t> downbeats,
       FrameClock clock,
       bool engine_running

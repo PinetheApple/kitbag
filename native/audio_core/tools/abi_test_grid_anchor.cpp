@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "abi_test_engine_clock.h"
+#include "abi_test_grid_beats.h"
 #include "abi_test_render.h"
 #include "check.h"
 
@@ -32,14 +33,8 @@ constexpr int64_t kSilentTriggerFrames = 1;
 constexpr double kBpmTolerance = 1e-6;
 constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
 
-// Half a sample in keeps every beat off a rounding boundary.
 std::vector<double> Beats(double sample_rate) {
-  std::vector<double> beats;
-  beats.reserve(kBeats);
-  for (int i = 0; i < kBeats; ++i) {
-    beats.push_back(kFirstBeatSec + kIntervalSec * i + 0.5 / sample_rate);
-  }
-  return beats;
+  return GridBeats(sample_rate, kFirstBeatSec, kIntervalSec, kBeats);
 }
 
 kb_engine* GridEngine() {

@@ -1,9 +1,11 @@
 #include "kitbag_api.h"
 
 #include <cstdint>
+#include <iterator>
 #include <vector>
 
 #include "abi_test_engine_clock.h"
+#include "abi_test_grid_beats.h"
 #include "abi_test_render.h"
 #include "check.h"
 
@@ -21,25 +23,16 @@ constexpr double kAfterOldDownbeatSec = 1.01;
 constexpr double kAfterNextBeatSec = 1.51;
 constexpr int32_t kOldTable[] = {0, 4, 8};
 constexpr int32_t kNewTable[] = {1, 5, 9};
-constexpr int32_t kTableSize = 3;
+constexpr auto kTableSize = static_cast<int32_t>(std::size(kNewTable));
 constexpr int32_t kOldDownbeatInNewBar = 3;
 constexpr int32_t kNewDownbeatPosition = 0;
-
-// Half a sample in keeps every beat off a rounding boundary.
-std::vector<double> Beats(double sample_rate) {
-  std::vector<double> beats;
-  beats.reserve(kBeats);
-  for (int i = 0; i < kBeats; ++i) {
-    beats.push_back(kIntervalSec * i + 0.5 / sample_rate);
-  }
-  return beats;
-}
 
 kb_engine* LockedEngine() {
   kb_engine* engine = nullptr;
   if (kb_engine_create(&engine) != KB_OK) return nullptr;
   kb_metronome_select_slot(engine, KB_METRONOME_SLOT_PLAY_ALONG);
-  const std::vector<double> beats = Beats(kb_engine_sample_rate(engine));
+  const std::vector<double> beats =
+      GridBeats(kb_engine_sample_rate(engine), 0.0, kIntervalSec, kBeats);
   kb_metronome_set_grid(engine, beats.data(), kBeats, kOldTable, kTableSize, 0);
   kb_metronome_anchor_grid(engine, kLockSongSec, 0, kRealTime);
   return engine;
@@ -106,6 +99,8 @@ void TestShiftRebarsInPlace() {
 
 }  // namespace
 
+// Audio is identical whether a swap re-bars in place or re-seeks; only the
+// current_beat mirror tells the bars-only path apart.
 void RunGridDownbeatAbiTests() {
   TestRefusesWithoutAGrid();
   TestRefusesBadTables();

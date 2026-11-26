@@ -53,6 +53,7 @@ void Metronome::ReacquireGrid() {
 
 // Song bars stop at a clear; constant tempo counts bars from beat_position_.
 bool Metronome::ObserveGridChange(const GridView& view, uint32_t sample_rate) {
+  if (view.generation == grid_state_.observed_generation) return false;
   grid_state_.observed_generation = view.generation;
   const uint32_t epoch = view.grid == nullptr ? 0 : view.grid->click_epoch;
   const bool same_grid =
@@ -90,8 +91,7 @@ Metronome::AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate) {
     view.grid = &node->value;
     view.generation = node->generation;
   }
-  const bool changed = view.generation != grid_state_.observed_generation &&
-                       ObserveGridChange(view, sample_rate);
+  const bool changed = ObserveGridChange(view, sample_rate);
   const double offset_shift_sec =
       std::exchange(grid_state_.pending_shift_sec, 0.0);
   if (view.grid == nullptr || follow_mixer_) return view;
