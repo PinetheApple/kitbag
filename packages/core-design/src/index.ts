@@ -59,6 +59,7 @@ export * from './components/EmptyState.tsx';
 export * from './components/FloatingActionButton.tsx';
 export * from './components/GroupTiles.tsx';
 export * from './components/Icon.tsx';
+export * from './components/KeyBadge.tsx';
 export * from './components/ListRow.tsx';
 export * from './components/LinearProgress.tsx';
 export * from './components/LiveSlot.tsx';

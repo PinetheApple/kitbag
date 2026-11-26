@@ -9,11 +9,24 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@kitbag/core-db": "workspace:*",
+    "@kitbag/core-design": "workspace:*",
     "@kitbag/core-native": "workspace:*",
     "@kitbag/core-plugin-api": "workspace:*",
     "@kitbag/core-state": "workspace:*"
   },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-native": ">=0.88",
+    "react-native-reanimated": ">=4",
+    "react-native-worklets": ">=0.13"
+  },
   "devDependencies": {
+    "@types/react": "~19.3.0",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-reanimated": "4.7.2",
+    "react-native-worklets": "0.13.0",
     "vitest": "^5.1.0"
   }
 }
