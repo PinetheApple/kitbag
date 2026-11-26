@@ -8,6 +8,15 @@
   <uses-feature android:name="android.hardware.camera" android:required="false" />
   <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
+  <queries>
+    <intent>
+      <action android:name="android.media.browse.MediaBrowserService" />
+    </intent>
+    <intent>
+      <action android:name="androidx.media3.session.MediaSessionService" />
+    </intent>
+  </queries>
+
   <application
       android:usesCleartextTraffic="true"
       android:fullBackupContent="@xml/kitbag_backup_rules"
@@ -24,6 +33,14 @@
         android:name="com.kitbag.corenative.library.move.DataFolderMoveService"
         android:exported="false"
         android:foregroundServiceType="dataSync" />
+    <service
+        android:name="com.kitbag.corenative.media.MediaListenerService"
+        android:exported="false"
+        android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+      <intent-filter>
+        <action android:name="android.service.notification.NotificationListenerService" />
+      </intent-filter>
+    </service>
     <activity
         android:name="com.kitbag.corenative.stemdeck.qr.QrScanActivity"
         android:exported="false"
