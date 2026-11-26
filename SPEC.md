@@ -2049,8 +2049,8 @@ the supersession: ≤7 primary choices.)
 - **Data moves through the system.** Backup goes out through the share sheet
   or the system save dialog, restore comes in through the picker. **Kitbag writes to no path of its own
   choosing.**
-- **Attributions is not optional**: `kitbag-ui.html`'s footer promises "BPM data:
-  … (attribution in-app)"; with Deezer dropped (§8.5) that is GetSongBPM. Licence and source are table stakes
+- **Attributions is not optional**: the BPM source is credited in-app; with
+  Deezer dropped (§8.5) that is GetSongBPM, with its link. Licence and source are table stakes
   for GPLv3 and, per §12.1, part of the brand.
 - **Version reads the manifest.** Today it is a hardcoded `'0.1.0'` with an empty
   `onTap`, while the CHANGELOG claims v0.5. Neither is true.
