@@ -1,10 +1,19 @@
 import type { MediaSessionSnapshot } from '@kitbag/core-native';
 
 import type { StoreAccess } from '../configuredStore.ts';
+import { BPM_BOUNDS, clamp } from '../metronome/config.ts';
+import { NO_GRID } from '../songPlayer/songGrid.ts';
 import type { LibraryMatch } from '../tempoLadder/libraryMatch.ts';
 import { sameSong } from '../tempoLadder/store.ts';
+import { firstDownbeatSec } from './libraryGrid.ts';
+import {
+  LOCK_REFUSAL,
+  LOCKED_OUTCOME,
+  refused,
+  type LockOutcome,
+} from './lockOutcome.ts';
 import type { PlayAlongRuntime } from './runtime.ts';
-import type { LockOutcome } from './lockOutcome.ts';
+import type { PlayAlongLock, PlayAlongStore } from './store.ts';
 import {
   findSession,
   sameTrack,
@@ -62,10 +71,14 @@ export function libraryOffers(
   let dismissed: LibraryOffer | undefined;
   let lookedUp: MediaSessionSnapshot | undefined;
 
-  const offerNow = (): LibraryOffer | undefined => {
-    const seen = chosenSession(runtime);
+  const forgetStaleDismissal = (seen: MediaSessionSnapshot | undefined) => {
     if (dismissed !== undefined && !(seen && isOfferFor(dismissed, seen)))
       dismissed = undefined;
+  };
+
+  const offerNow = (
+    seen: MediaSessionSnapshot | undefined,
+  ): LibraryOffer | undefined => {
     if (seen === undefined || dismissed !== undefined) return undefined;
     if (getState().lock !== undefined) return undefined;
     const { track, libraryMatch } = runtime.ladder().getState();
@@ -79,7 +92,9 @@ export function libraryOffers(
   };
 
   const refresh = () => {
-    const offer = offerNow();
+    const seen = chosenSession(runtime);
+    forgetStaleDismissal(seen);
+    const offer = offerNow(seen);
     if (!sameOffer(offer, getState().offer)) setState({ offer });
   };
 
@@ -112,4 +127,33 @@ export function libraryOffers(
   };
 
   return { refresh, watchLibrary, dismissOffer };
+}
+
+type LockOn = (seen: MediaSessionSnapshot, lock: PlayAlongLock) => void;
+
+export function acceptAction(
+  runtime: PlayAlongRuntime,
+  { getState, setState }: StoreAccess<PlayAlongStore>,
+  lockOn: LockOn,
+) {
+  return async (): Promise<LockOutcome> => {
+    const { offer } = getState();
+    if (offer === undefined) return refused(LOCK_REFUSAL.noOffer);
+    const grid = await runtime.readGrid(offer.match).catch(() => NO_GRID);
+    const seen = chosenSession(runtime);
+    if (getState().offer !== offer || seen === undefined)
+      return refused(LOCK_REFUSAL.noOffer);
+    if (grid.beats.length === 0) return refused(LOCK_REFUSAL.noGrid);
+    const bpm = clamp(offer.match.bpm, BPM_BOUNDS.min, BPM_BOUNDS.max);
+    setState({ bpm });
+    lockOn(seen, {
+      sessionId: seen.sessionId,
+      track: trackOf(seen),
+      downbeatSec: firstDownbeatSec(grid),
+      bpm,
+      lockedAtBoottimeMs: runtime.boottimeNowMs(),
+      grid,
+    });
+    return LOCKED_OUTCOME;
+  };
 }

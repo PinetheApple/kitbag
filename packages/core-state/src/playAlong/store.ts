@@ -8,8 +8,9 @@ import type {
 import { configuredStore, type StoreAccess } from '../configuredStore.ts';
 import { BPM_BOUNDS, clamp } from '../metronome/config.ts';
 import type { DetectedGrid } from '../stemPlayer/meterOverride.ts';
-import { acceptAction, gridLink } from './libraryGrid.ts';
+import { engineGrid } from './engineGrid.ts';
 import {
+  acceptAction,
   chosenSession,
   libraryOffers,
   type LibraryOfferActions,
@@ -36,6 +37,7 @@ import {
   LOCKED_OUTCOME,
   refused,
   type LockOutcome,
+  type LockRefusal,
 } from './lockOutcome.ts';
 import { nativePlayAlongRuntime, type PlayAlongRuntime } from './runtime.ts';
 import {
@@ -73,6 +75,7 @@ export interface PlayAlongState extends LibraryOfferState {
   readonly songAheadOfClickMs: number | undefined;
   readonly lastAnchorAtBoottimeMs: number | undefined;
   readonly sourceGoneAtBoottimeMs: number | undefined;
+  readonly lastRefusal: LockRefusal | undefined;
 }
 
 export interface PlayAlongActions extends LibraryOfferActions {
@@ -146,7 +149,30 @@ function follower(
 ) {
   let follow: Follow | undefined;
 
-  const grids = gridLink(runtime.commands);
+  const grids = engineGrid(runtime.commands);
+
+  const gridRejected = () => {
+    unlock();
+    setState({ lastRefusal: LOCK_REFUSAL.gridRejected });
+  };
+
+  const syncGrid = (lock: PlayAlongLock) => {
+    if (lock.grid === undefined) grids.drop();
+    else if (!grids.holds(lock.grid))
+      grids.send(lock.grid, { accepted: anchor, rejected: gridRejected });
+  };
+
+  const placeClick = (
+    lock: PlayAlongLock,
+    songMs: number,
+    frame: number,
+    speed: number,
+  ): boolean => {
+    if (lock.grid !== undefined) return grids.anchor(songMs, frame, speed);
+    const click = clickPlacement(lock, getState().pattern, songMs, speed);
+    runtime.commands.metronomeAnchorExternal(click.songSec, frame, click.bpm);
+    return true;
+  };
 
   const retrySoon = (current: Follow) => {
     if (current.retry !== undefined) return;
@@ -158,13 +184,9 @@ function follower(
 
   const anchor = () => {
     const current = follow;
-    const { lock, pattern } = getState();
+    const { lock } = getState();
     if (current === undefined || lock === undefined) return;
-    if (lock.grid === undefined) grids.drop();
-    else if (!grids.holds(lock.grid)) {
-      grids.send(lock.grid, anchor);
-      return;
-    }
+    syncGrid(lock);
     const { seen } = current;
     if (current.grace !== undefined || !seen.playing || seen.speed <= 0) return;
     const now = runtime.boottimeNowMs();
@@ -175,10 +197,7 @@ function follower(
       retrySoon(current);
       return;
     }
-    if (lock.grid === undefined) {
-      const click = clickPlacement(lock, pattern, songMs, seen.speed);
-      runtime.commands.metronomeAnchorExternal(click.songSec, frame, click.bpm);
-    } else if (!grids.anchor(songMs, frame, seen.speed)) return;
+    if (!placeClick(lock, songMs, frame, seen.speed)) return;
     const songAheadOfClickMs = correctionMs(current.lastAnchor, now, songMs);
     current.lastAnchor = { atMs: now, songMs, speed: seen.speed };
     setState({ songAheadOfClickMs, lastAnchorAtBoottimeMs: now });
@@ -272,7 +291,12 @@ function follower(
     follow.seen = seen;
     follow.lastAnchor = undefined;
     sourceBack(follow);
-    setState({ lock, songAheadOfClickMs: undefined, offer: undefined });
+    setState({
+      lock,
+      songAheadOfClickMs: undefined,
+      offer: undefined,
+      lastRefusal: undefined,
+    });
     runtime.sessions().getState().pick(seen.sessionId);
     anchor();
   };
@@ -369,6 +393,7 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
       pattern: initialPattern(),
       bpm: undefined,
       offer: undefined,
+      lastRefusal: undefined,
       ...NO_LOCK_STATE,
       setBpm: (bpm) => {
         if (!Number.isFinite(bpm)) return;

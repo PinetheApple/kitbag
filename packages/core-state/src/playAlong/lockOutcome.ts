@@ -5,6 +5,7 @@ export const LOCK_REFUSAL = {
   unknownPosition: 'unknown-position',
   noOffer: 'no-offer',
   noGrid: 'no-grid',
+  gridRejected: 'grid-rejected',
 } as const;
 
 export type LockRefusal = (typeof LOCK_REFUSAL)[keyof typeof LOCK_REFUSAL];

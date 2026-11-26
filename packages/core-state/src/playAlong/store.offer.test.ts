@@ -5,11 +5,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LOCK_REFUSAL, REANCHOR_INTERVAL_MS } from './store.ts';
 import {
   BPM,
+  call,
   fakePlayAlong,
   FRAMES_PER_MS,
   OTHER_ID,
   SESSION_ID,
   snapshot,
+  STANDALONE,
   START_MS,
 } from './store.test-helper.ts';
 
@@ -224,7 +226,7 @@ describe('accepting the offer', () => {
     expect(fake.gridAnchors()[1]?.[0]).toBeCloseTo(SONG_SEC, 9);
   });
 
-  it('never anchors a grid the engine refused', async () => {
+  it('unlocks and says why when the engine refuses the grid', async () => {
     const fake = await accepted(
       offered(
         fakePlayAlong({
@@ -233,10 +235,40 @@ describe('accepting the offer', () => {
         }),
       ),
     );
+    expect(fake.outcome).toEqual({ locked: true });
+    expect(fake.store.getState().lock).toBeUndefined();
+    expect(fake.store.getState().lastRefusal).toBe(LOCK_REFUSAL.gridRejected);
+    expect(fake.calls).toContain('clearGrid()');
+    expect(fake.calls).toContain(call('metronomeSelectSlot', STANDALONE));
     vi.advanceTimersByTime(REANCHOR_INTERVAL_MS);
     await settle();
     expect(fake.gridAnchors()).toEqual([]);
     expect(fake.anchors()).toEqual([]);
+  });
+
+  it('unlocks and says why when sending the grid fails', async () => {
+    const fake = offered();
+    fake.commands.setGrid.mockImplementationOnce(() =>
+      Promise.reject(new Error('bridge')),
+    );
+    await accepted(fake);
+    expect(fake.store.getState().lock).toBeUndefined();
+    expect(fake.store.getState().lastRefusal).toBe(LOCK_REFUSAL.gridRejected);
+    expect(fake.calls).toContain(call('metronomeSelectSlot', STANDALONE));
+  });
+
+  it('forgets the refusal on the next lock', async () => {
+    const fake = await accepted(
+      offered(
+        fakePlayAlong({
+          grid: DRIFTING,
+          gridResult: KB_RESULT.KB_ERROR_INVALID_ARGUMENT,
+        }),
+      ),
+    );
+    fake.store.getState().setBpm(BPM);
+    fake.store.getState().tap(START_MS);
+    expect(fake.store.getState().lastRefusal).toBeUndefined();
   });
 
   it('refuses with no offer on screen', async () => {
