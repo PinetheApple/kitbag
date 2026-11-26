@@ -30,21 +30,35 @@ const PRESET_BEATS = 3;
 const QUARTER = 4;
 const PRESET_METER = { beatsPerBar: PRESET_BEATS, denominator: QUARTER };
 const PRESET_DOWNBEATS = [0, 3, 6];
+const TRACK_SECONDS = (snapshot().durationMs ?? 0) / MS_PER_SECOND;
+const PRESET_ROW = {
+  name: 'Song',
+  title: 'Song',
+  artist: 'Band',
+  bpm: BPM,
+  beatsPerBar: PRESET_BEATS,
+  denominator: QUARTER,
+  subdivision: 1,
+  accents: toBlob([2, 0, 0]),
+  sound: 0,
+};
 const presetOnSong = () =>
+  presetShelf([{ ...PRESET_ROW, librarySongId: MATCH.id }]);
+const presetOnTrack = () =>
   presetShelf([
     {
-      name: 'Song',
-      title: 'Song',
-      artist: 'Band',
-      librarySongId: MATCH.id,
-      bpm: BPM,
-      beatsPerBar: PRESET_BEATS,
-      denominator: QUARTER,
-      subdivision: 1,
-      accents: toBlob([2, 0, 0]),
-      sound: 0,
+      ...PRESET_ROW,
+      librarySongId: null,
+      source: SESSION_ID,
+      lengthSeconds: TRACK_SECONDS,
     },
   ]);
+const BEAT_SEC = 0.5;
+const PICKUP_GRID = {
+  beats: Array.from({ length: 13 }, (_, beat) => SONG_SEC + beat * BEAT_SEC),
+  downbeatIndices: [2, 6, 10],
+};
+const PICKUP_PRESET_DOWNBEATS = [2, 5, 8, 11];
 const FAST = 1.25;
 const NOW_FRAME = START_MS * FRAMES_PER_MS;
 const REANCHORED_SEC = SONG_SEC + REANCHOR_INTERVAL_MS / MS_PER_SECOND;
@@ -367,6 +381,36 @@ describe('the meter from the song preset', () => {
     await accepted(fake);
     expect(fake.store.getState().pattern).toMatchObject(PRESET_METER);
     expect(fake.grids().at(-1)?.[1]).toEqual(PRESET_DOWNBEATS);
+  });
+
+  it('counts preset bars from the detected bar one after a pickup', async () => {
+    const fake = offered(
+      fakePlayAlong({ grid: PICKUP_GRID, shelf: presetOnSong() }),
+    );
+    await settle();
+    await accepted(fake);
+    expect(fake.grids().at(-1)?.[1]).toEqual(PICKUP_PRESET_DOWNBEATS);
+  });
+
+  it('names and locks with a preset matched by the track, not linked', async () => {
+    const fake = offered(
+      fakePlayAlong({ grid: DRIFTING, shelf: presetOnTrack() }),
+    );
+    await settle();
+    expect(fake.store.getState().offer?.meter).toEqual(PRESET_METER);
+    fake.store.getState().setBeats(initialConfig().beatsPerBar, QUARTER);
+    await accepted(fake);
+    expect(fake.store.getState().pattern).toMatchObject(PRESET_METER);
+    expect(fake.grids().at(-1)?.[1]).toEqual(PRESET_DOWNBEATS);
+  });
+
+  it('names a preset saved while locked once it offers again', async () => {
+    const fake = await accepted();
+    fake.store.getState().setBeats(PRESET_BEATS, QUARTER);
+    await fake.store.getState().saveForTrack();
+    fake.store.getState().unlock();
+    await settle();
+    expect(fake.store.getState().offer?.meter).toEqual(PRESET_METER);
   });
 
   it('puts the preset meter back over a meter edited before accepting', async () => {

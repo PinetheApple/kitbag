@@ -19,6 +19,12 @@ import {
   refused,
   type LockOutcome,
 } from './lockOutcome.ts';
+import {
+  identityOf,
+  presetForTrack,
+  sameIdentity,
+  type TrackIdentity,
+} from './presetLookup.ts';
 import type { PlayAlongRuntime } from './runtime.ts';
 import type { PlayAlongLock, PlayAlongStore } from './store.ts';
 import {
@@ -53,6 +59,16 @@ export interface LibraryOfferActions {
 
 type OfferAccess = StoreAccess<LibraryOfferState & LockedView>;
 
+interface MeterRead {
+  readonly songId: number | undefined;
+  readonly identity: TrackIdentity;
+}
+
+const sameRead = (a: MeterRead | undefined, b: MeterRead) =>
+  a !== undefined &&
+  a.songId === b.songId &&
+  sameIdentity(a.identity, b.identity);
+
 const isOfferFor = (offer: LibraryOffer, seen: MediaSessionSnapshot) =>
   offer.sessionId === seen.sessionId && sameTrack(offer.track, seen);
 
@@ -84,29 +100,34 @@ export function libraryOffers(
   let dismissed: LibraryOffer | undefined;
   let lookedUp: MediaSessionSnapshot | undefined;
   let presetMeter:
-    | { readonly songId: number; readonly meter: PresetMeter | undefined }
-    | undefined;
-  let readingMeterOf: number | undefined;
+    (MeterRead & { readonly meter: PresetMeter | undefined }) | undefined;
+  let reading: MeterRead | undefined;
 
-  const readMeter = (songId: number) => {
-    if (readingMeterOf === songId) return;
-    readingMeterOf = songId;
-    void runtime
-      .presets()
-      .forLibrarySong(songId)
+  const readMeter = (read: MeterRead) => {
+    if (sameRead(reading, read)) return;
+    reading = read;
+    void presetForTrack(runtime.presets(), read.identity, read.songId)
       .then(meterOfPreset, () => undefined)
       .then((meter) => {
-        if (readingMeterOf !== songId) return;
-        readingMeterOf = undefined;
-        presetMeter = { songId, meter };
+        if (reading !== read) return;
+        reading = undefined;
+        presetMeter = { ...read, meter };
         refresh();
       });
   };
 
-  const meterFor = (match: LibraryMatch): PresetMeter | undefined => {
-    if (match.kind !== 'song') return undefined;
-    if (presetMeter?.songId === match.id) return presetMeter.meter;
-    readMeter(match.id);
+  const meterFor = (
+    seen: MediaSessionSnapshot,
+    match: LibraryMatch,
+  ): PresetMeter | undefined => {
+    const identity = identityOf(seen);
+    if (identity === undefined) return undefined;
+    const read = {
+      songId: match.kind === 'song' ? match.id : undefined,
+      identity,
+    };
+    if (sameRead(presetMeter, read)) return presetMeter?.meter;
+    readMeter(read);
     return undefined;
   };
 
@@ -119,7 +140,10 @@ export function libraryOffers(
     seen: MediaSessionSnapshot | undefined,
   ): LibraryOffer | undefined => {
     if (seen === undefined || dismissed !== undefined) return undefined;
-    if (getState().lock !== undefined) return undefined;
+    if (getState().lock !== undefined) {
+      presetMeter = undefined;
+      return undefined;
+    }
     const { track, libraryMatch } = runtime.ladder().getState();
     if (libraryMatch === null || !sameSong(track, songOf(seen)))
       return undefined;
@@ -127,7 +151,7 @@ export function libraryOffers(
       sessionId: seen.sessionId,
       track: trackOf(seen),
       match: libraryMatch,
-      meter: meterFor(libraryMatch),
+      meter: meterFor(seen, libraryMatch),
     };
   };
 
