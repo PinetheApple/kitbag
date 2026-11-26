@@ -29,7 +29,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MovePausedBanner } from '../dataFolder/MovePausedBanner.tsx';
 import { DockedMiniPlayer } from '../miniPlayer/DockedMiniPlayer.tsx';
-import { useMiniPlayerDocked } from '../miniPlayer/useMiniPlayerDocked.ts';
+import { useAnyMiniPlayerDocked } from '../miniPlayer/useMiniPlayerDocked.ts';
 import { useQueueSheet } from '../queue/useQueueSheet.tsx';
 import { useSettingsRoutes } from '../settings/settingsRoutes.ts';
 import { ArrangeSheet } from './ArrangeSheet.tsx';
@@ -162,7 +162,7 @@ export function HomeScreen() {
     ...more.map((tool) => tool.id),
   ].includes(TOOL_ID.practiceHistory);
   const liveText = useLiveText(usePracticeTileText(practiceListed));
-  const docked = useMiniPlayerDocked();
+  const docked = useAnyMiniPlayerDocked();
   const queue = useQueueSheet(insets.bottom);
   const movePaused = useDataFolder((s) => pausedMove(s) !== null);
   const [arranging, setArranging] = useState(false);

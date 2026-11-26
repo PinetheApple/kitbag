@@ -42,6 +42,8 @@ export function lockedToLine(appLabel: string | undefined): string {
   return PLAY_ALONG_NAME + FACT_SEPARATOR + lock;
 }
 
-export function lockedSubtext(appLabel: string): string {
-  return `Locked${FACT_SEPARATOR}${appLabel}`;
+const LOCKED = 'Locked';
+
+export function lockedSubtext(appLabel: string | undefined): string {
+  return appLabel === undefined ? LOCKED : LOCKED + FACT_SEPARATOR + appLabel;
 }

@@ -9,7 +9,7 @@ export function useSongMiniPlayerDocked(): boolean {
   return shown && settled;
 }
 
-export function useMiniPlayerDocked(): boolean {
+export function useAnyMiniPlayerDocked(): boolean {
   const song = useMiniPlayerShown();
   const playAlong = usePlayAlongMiniShown();
   const settled = useDockSettled();

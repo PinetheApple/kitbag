@@ -10,13 +10,13 @@ vi.mock('@kitbag/tool-sync', () => ({
 }));
 vi.mock('./useDockSettled', () => ({ useDockSettled: () => shown.settled }));
 
-const { useMiniPlayerDocked, useSongMiniPlayerDocked } = await import(
+const { useAnyMiniPlayerDocked, useSongMiniPlayerDocked } = await import(
   './useMiniPlayerDocked.ts'
 );
 
 function useDockedWhere(song: boolean, playAlong: boolean, settled = true) {
   Object.assign(shown, { song, playAlong, settled });
-  return { lists: useMiniPlayerDocked(), player: useSongMiniPlayerDocked() };
+  return { lists: useAnyMiniPlayerDocked(), player: useSongMiniPlayerDocked() };
 }
 
 describe('where a mini-player docks', () => {

@@ -1,13 +1,14 @@
 import { EditGroup, EditRow, EditValue } from '@kitbag/core-design';
 import type { SourceCredit } from '@kitbag/core-state';
+import { creditLinkText } from '@kitbag/tool-sync';
 import { useCallback } from 'react';
 
-import { ATTRIBUTIONS, DATA_CREDITS, linkText } from './attributions.ts';
+import { ATTRIBUTIONS, BPM_CREDITS } from './attributions.ts';
 import { openUrl } from './openUrl.ts';
 import { SettingsFrame } from './SettingsFrame.tsx';
 
 function CreditRow({ credit }: { readonly credit: SourceCredit }) {
-  const link = linkText(credit.url);
+  const link = creditLinkText(credit);
   const open = useCallback(() => {
     openUrl(credit.url);
   }, [credit.url]);
@@ -36,7 +37,7 @@ export function AttributionsScreen({
             <EditValue muted>{attribution.licence}</EditValue>
           </EditRow>
         ))}
-        {DATA_CREDITS.map((credit) => (
+        {BPM_CREDITS.map((credit) => (
           <CreditRow key={credit.name} credit={credit} />
         ))}
       </EditGroup>

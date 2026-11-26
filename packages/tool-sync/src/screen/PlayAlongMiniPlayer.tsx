@@ -21,15 +21,10 @@ export function usePlayAlongMiniShown(): boolean {
   return usePlayAlong((s) => s.lock !== undefined);
 }
 
-function useLockedAppLabel(): string | undefined {
+export function useLockedSubtext(): string | undefined {
   const locked = usePlayAlong((s) => s.lock !== undefined);
   const appLabel = useLastSeen(useFollowedSession()?.appLabel);
-  return locked ? appLabel : undefined;
-}
-
-export function useLockedSubtext(): string | undefined {
-  const appLabel = useLockedAppLabel();
-  return appLabel === undefined ? undefined : lockedSubtext(appLabel);
+  return locked ? lockedSubtext(appLabel) : undefined;
 }
 
 interface LockedProps extends PlayAlongMiniPlayerProps {
@@ -38,8 +33,8 @@ interface LockedProps extends PlayAlongMiniPlayerProps {
 
 function LockedMiniPlayer({ lock, bottomInset, onOpen }: LockedProps) {
   const session = useFollowedSession();
-  const appLabel = useLockedAppLabel();
-  const progress = usePlayAlongProgress(session);
+  const lastSeen = useLastSeen(session);
+  const progress = usePlayAlongProgress(lastSeen);
   const playing = usePlayingValue(session?.playing === true);
   const playPause = usePlayAlong((s) => s.playPause);
   const unlock = usePlayAlong((s) => s.unlock);
@@ -48,7 +43,7 @@ function LockedMiniPlayer({ lock, bottomInset, onOpen }: LockedProps) {
     <MiniPlayerBar
       tile="playAlong"
       title={title}
-      detail={lockedToLine(appLabel)}
+      detail={lockedToLine(lastSeen?.appLabel)}
       progress={progress}
       playing={playing}
       openLabel={`Open ${PLAY_ALONG_NAME}`}

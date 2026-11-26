@@ -71,6 +71,7 @@ describe('the locked mini-player text', () => {
 
   it('still says it is locked before the app is known', () => {
     expect(lockedToLine(undefined)).toBe('Play along · locked');
+    expect(lockedSubtext(undefined)).toBe('Locked');
   });
 
   it('falls back to an unknown title', () => {

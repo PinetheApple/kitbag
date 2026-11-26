@@ -30,9 +30,5 @@ export const ATTRIBUTIONS: readonly Attribution[] = [
   { name: '@expo/vector-icons', licence: 'MIT' },
 ];
 
-export const DATA_CREDITS: readonly SourceCredit[] =
+export const BPM_CREDITS: readonly SourceCredit[] =
   Object.values(BPM_SOURCE_CREDIT);
-
-export function linkText(url: string): string {
-  return url.replace(/^https?:\/\//, '');
-}

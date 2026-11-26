@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { BPM_SOURCE_CREDIT } from '@kitbag/core-state';
 
-import { ATTRIBUTIONS, DATA_CREDITS, linkText } from './attributions.ts';
+import { ATTRIBUTIONS, BPM_CREDITS } from './attributions.ts';
 
 const THIRD_PARTY = join(
   import.meta.dirname,
@@ -59,12 +59,8 @@ describe('attributions', () => {
   });
 });
 
-describe('data credits', () => {
+describe('BPM credits', () => {
   it('credit every BPM data source with its link', () => {
-    expect(DATA_CREDITS).toEqual([BPM_SOURCE_CREDIT.getsongbpm]);
-  });
-
-  it('show the link without its scheme', () => {
-    expect(linkText('https://getsongbpm.com')).toBe('getsongbpm.com');
+    expect(BPM_CREDITS).toEqual([BPM_SOURCE_CREDIT.getsongbpm]);
   });
 });

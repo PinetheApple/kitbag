@@ -1,4 +1,4 @@
-export { chooseSession } from './logic/chooseSession.ts';
+export * from './pure.ts';
 export {
   PlayAlongMiniPlayer,
   useLockedSubtext,

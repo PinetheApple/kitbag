@@ -97,6 +97,7 @@ vi.mock('@kitbag/tool-tuner', () => ({
 }));
 
 vi.mock('@kitbag/tool-sync', () => ({
+  PLAY_ALONG_NAME: 'Play along',
   useLockedSubtext: () => home.lockedSubtext,
 }));
 
@@ -106,7 +107,7 @@ vi.mock('expo-router', () => ({
 }));
 
 vi.mock('../miniPlayer/useMiniPlayerDocked.ts', () => ({
-  useMiniPlayerDocked: () => dock.docked,
+  useAnyMiniPlayerDocked: () => dock.docked,
 }));
 
 vi.mock('../miniPlayer/DockedMiniPlayer.tsx', () => ({
