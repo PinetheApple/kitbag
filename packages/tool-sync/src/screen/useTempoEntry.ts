@@ -75,10 +75,12 @@ function useStep(
   const ladderBpm = useTempoLadder((s) => s.bpm);
   return useCallback(() => {
     if (bpm === null) return;
-    setEntry(entryOf(stepped(bpm)));
+    const next = stepped(bpm);
+    const ladderOwnsTempo = !locked && ladderBpm === bpm;
+    setEntry(entryOf(next));
     setTapping(false);
-    if (locked || ladderBpm === null) setBpm(stepped(bpm));
-    else onLadder();
+    if (ladderOwnsTempo) onLadder();
+    else setBpm(next);
   }, [bpm, stepped, onLadder, setBpm, locked, ladderBpm, setEntry, setTapping]);
 }
 

@@ -73,7 +73,18 @@ it('holds only the click key, sized for the dock, with no song to follow', () =>
   const [key, ...rest] = renderClick(false);
   expect(rest).toEqual([]);
   expect(key).toMatchObject({ size: 'dock', glyph: 'play' });
-  expect(key?.onPress).toBe(store.startClick);
+  (key?.onPress as () => void)();
+  expect(store.startClick).toHaveBeenCalledOnce();
+});
+
+it('survives a click that fails to start', () => {
+  store.startClick.mockImplementationOnce(() => {
+    throw new Error('engine refused');
+  });
+  const [key] = renderClick(false);
+  expect(() => {
+    (key?.onPress as () => void)();
+  }).not.toThrow();
 });
 
 it('stops the click from the same key while it runs', () => {

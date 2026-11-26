@@ -29,17 +29,17 @@ export const NO_TEMPO_NUMERAL = '––';
 export const SET_TEMPO_HINT = 'Tap the pad or the number to set it';
 const LOOKING_UP = 'Looking up';
 const CHANGE_HINT = `${FACT_SEPARATOR}tap to change`;
-const OFFERED_GRID: TempoLine = {
-  lead: 'from your ',
-  rung: 'library',
-  tail: ' beat grid',
-  noTempo: false,
-  credit: null,
-};
-
 const RUNG_NAME: Readonly<Record<LadderRung, string>> = {
   [BPM_SOURCE.library]: 'library',
   [BPM_SOURCE.getSongBpm]: BPM_SOURCE_LABEL.getsongbpm,
+};
+
+const OFFERED_GRID: TempoLine = {
+  lead: 'from your ',
+  rung: RUNG_NAME[BPM_SOURCE.library],
+  tail: ' beat grid',
+  noTempo: false,
+  credit: null,
 };
 
 const FOUND_WORDS: Readonly<Record<BpmSource, { lead: string; rung: string }>> =

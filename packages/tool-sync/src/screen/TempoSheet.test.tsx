@@ -23,12 +23,12 @@ const drawn = vi.hoisted(() => ({
   readouts: [] as Props[],
   presets: [] as Props[],
 }));
-interface PlayAlongView {
+interface PlayAlongFake {
   bpm: number | undefined;
   lock: object | undefined;
   setBpm: ReturnType<typeof vi.fn>;
 }
-const playAlong = vi.hoisted((): PlayAlongView => ({
+const playAlong = vi.hoisted((): PlayAlongFake => ({
   bpm: 0,
   lock: undefined,
   setBpm: vi.fn(),
@@ -37,7 +37,6 @@ interface LadderView {
   bpm: number | null;
   source: string | null;
   tapsLanded: number;
-  enter: ReturnType<typeof vi.fn>;
   tap: ReturnType<typeof vi.fn>;
   halve: ReturnType<typeof vi.fn>;
   double: ReturnType<typeof vi.fn>;
@@ -46,7 +45,6 @@ const ladder = vi.hoisted((): LadderView => ({
   bpm: null,
   source: null,
   tapsLanded: 0,
-  enter: vi.fn(),
   tap: vi.fn(),
   halve: vi.fn(),
   double: vi.fn(),
@@ -120,7 +118,8 @@ function press(preset: string) {
   const button = drawn.presets.find((props) =>
     String(props.label).startsWith(preset),
   );
-  (button?.onPress as (event: unknown) => void)({
+  const handler = button?.onPressIn ?? button?.onPress;
+  (handler as (event: unknown) => void)({
     nativeEvent: { timestamp: TOUCH_UPTIME_MS },
   });
 }
@@ -142,8 +141,11 @@ beforeEach(() => {
   ladder.tapsLanded = 0;
 });
 
-it('times a sheet tap from its touch', () => {
+it('times a sheet tap from touch-down', () => {
   render();
+  const tapKey = drawn.presets.find((props) => props.label === 'Tap');
+  expect(tapKey?.onPress).toBeUndefined();
+  expect(tapKey?.onPressIn).toBeInstanceOf(Function);
   press('Tap');
   expect(ladder.tap).toHaveBeenCalledWith(TOUCH_UPTIME_MS + DEEP_SLEEP_GAP_MS);
 });
@@ -207,6 +209,15 @@ it('doubles the locked tempo through play along', () => {
   render();
   press('×2');
   expect(playAlong.setBpm).toHaveBeenCalledWith(ANALYSED_BPM * 2);
+  expect(ladder.double).not.toHaveBeenCalled();
+});
+
+it('steps the shown tempo once the ladder fell behind it', () => {
+  ladder.bpm = DEFAULT_BPM;
+  playAlong.bpm = DEFAULT_BPM / 2;
+  render();
+  press('×2');
+  expect(playAlong.setBpm).toHaveBeenCalledWith(DEFAULT_BPM);
   expect(ladder.double).not.toHaveBeenCalled();
 });
 

@@ -21,7 +21,7 @@ interface PadInputs {
 export function useTapPad({ following, locked, retap, onLanded }: PadInputs) {
   const songBpm = usePlayAlong((s) => s.bpm) ?? null;
   const offered = usePlayAlong((s) => s.offer !== undefined);
-  const bpm = useTempoLadder((s) => s.bpm);
+  const ladderBpm = useTempoLadder((s) => s.bpm);
   const source = useTempoLadder((s) => s.source);
   const tapsLanded = useTempoLadder((s) => s.tapsLanded);
   const copy = tapPadCopy({
@@ -30,7 +30,7 @@ export function useTapPad({ following, locked, retap, onLanded }: PadInputs) {
     retap,
     offered,
     songBpm,
-    tappedBpm: source === BPM_SOURCE.tap ? bpm : null,
+    tappedBpm: source === BPM_SOURCE.tap ? ladderBpm : null,
     tapsLanded,
   });
   const onTap = useCallback(

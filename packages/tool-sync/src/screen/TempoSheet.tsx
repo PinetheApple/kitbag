@@ -90,7 +90,7 @@ function StepPresets({ bpm, onHalve, onDouble, onTap }: StepPresetsProps) {
         kind="action"
         label="Tap"
         accessibilityLabel="Tap tempo"
-        onPress={onTap}
+        onPressIn={onTap}
       />
     </View>
   );

@@ -5,6 +5,7 @@ import {
   stemPlayer,
   TransportKey,
 } from '@kitbag/core-design';
+import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { usePlayAlong } from './playAlongHooks.ts';
@@ -23,6 +24,13 @@ export function ClickDock({ bottomInset }: { readonly bottomInset: number }) {
   const clickPlaying = usePlayAlong((s) => s.clickPlaying);
   const startClick = usePlayAlong((s) => s.startClick);
   const stopClick = usePlayAlong((s) => s.stopClick);
+  const start = useCallback(() => {
+    try {
+      startClick();
+    } catch {
+      return;
+    }
+  }, [startClick]);
   return (
     <PlayerDock bottomInset={bottomInset}>
       <View style={styles.row}>
@@ -32,7 +40,7 @@ export function ClickDock({ bottomInset }: { readonly bottomInset: number }) {
           accessibilityLabel={
             clickPlaying ? 'Stop the click' : 'Start the click'
           }
-          onPress={clickPlaying ? stopClick : startClick}
+          onPress={clickPlaying ? stopClick : start}
         />
       </View>
     </PlayerDock>
