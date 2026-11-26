@@ -284,7 +284,11 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
         };
       },
       dismissOffer: offers.dismissOffer,
-      acceptOffer: acceptAction(runtime, access, lockOn),
+      acceptOffer: acceptAction(runtime, access, {
+        lockOn,
+        applyPreset: presets.applyPreset,
+        presetFor: offers.presetFor,
+      }),
       ...patternSetters(runtime, access, follow, slot),
       ...transport(runtime, access),
     };

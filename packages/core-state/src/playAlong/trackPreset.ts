@@ -212,5 +212,10 @@ export function trackPresets(
     };
   };
 
-  return { saveForTrack, watch, savedPhaseMs: () => savedPhaseMs };
+  return {
+    saveForTrack,
+    watch,
+    applyPreset: apply,
+    savedPhaseMs: () => savedPhaseMs,
+  };
 }

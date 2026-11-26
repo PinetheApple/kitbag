@@ -1,10 +1,16 @@
-import { isGridMeter, type SongPreset } from '@kitbag/core-db';
+import {
+  NO_METER_OVERRIDE,
+  isGridMeter,
+  type SongPreset,
+} from '@kitbag/core-db';
 import type { MediaSessionSnapshot } from '@kitbag/core-native';
 
 import type { StoreAccess } from '../configuredStore.ts';
 import { BPM_BOUNDS, clamp } from '../metronome/config.ts';
+import { initialConfig } from '../metronome/store.ts';
 import { NO_GRID } from '../songPlayer/songGrid.ts';
 import {
+  detectedMeter,
   overrideDownbeats,
   type DetectedGrid,
 } from '../stemPlayer/meterOverride.ts';
@@ -20,11 +26,12 @@ import {
   type LockOutcome,
 } from './lockOutcome.ts';
 import {
-  identityOf,
-  presetForTrack,
-  sameIdentity,
-  type TrackIdentity,
-} from './presetLookup.ts';
+  gridMeterOf,
+  presetMeters,
+  sameMeter,
+  type PresetMeter,
+  type PresetMeters,
+} from './presetMeters.ts';
 import type { PlayAlongRuntime } from './runtime.ts';
 import type { PlayAlongLock, PlayAlongStore } from './store.ts';
 import {
@@ -35,10 +42,7 @@ import {
   type PlayAlongTrack,
 } from './track.ts';
 
-export interface PresetMeter {
-  readonly beatsPerBar: number;
-  readonly denominator: number;
-}
+export type { PresetMeter } from './presetMeters.ts';
 
 export interface LibraryOffer {
   readonly sessionId: string;
@@ -59,32 +63,24 @@ export interface LibraryOfferActions {
 
 type OfferAccess = StoreAccess<LibraryOfferState & LockedView>;
 
-interface MeterRead {
-  readonly songId: number | undefined;
-  readonly identity: TrackIdentity;
-}
-
-const sameRead = (a: MeterRead | undefined, b: MeterRead) =>
-  a !== undefined &&
-  a.songId === b.songId &&
-  sameIdentity(a.identity, b.identity);
-
 const isOfferFor = (offer: LibraryOffer, seen: MediaSessionSnapshot) =>
   offer.sessionId === seen.sessionId && sameTrack(offer.track, seen);
 
 const sameMatch = (a: LibraryMatch, b: LibraryMatch) =>
   a.kind === b.kind && a.id === b.id && a.bpm === b.bpm;
 
+const sameOfferTrack = (a: LibraryOffer, b: LibraryOffer) =>
+  a.sessionId === b.sessionId &&
+  a.track.title === b.track.title &&
+  a.track.artist === b.track.artist &&
+  a.track.durationMs === b.track.durationMs;
+
 function sameOffer(a: LibraryOffer | undefined, b: LibraryOffer | undefined) {
   if (a === undefined || b === undefined) return a === b;
   return (
-    a.sessionId === b.sessionId &&
-    a.track.title === b.track.title &&
-    a.track.artist === b.track.artist &&
-    a.track.durationMs === b.track.durationMs &&
+    sameOfferTrack(a, b) &&
     sameMatch(a.match, b.match) &&
-    a.meter?.beatsPerBar === b.meter?.beatsPerBar &&
-    a.meter?.denominator === b.meter?.denominator
+    sameMeter(a.meter, b.meter)
   );
 }
 
@@ -99,37 +95,9 @@ export function libraryOffers(
 ) {
   let dismissed: LibraryOffer | undefined;
   let lookedUp: MediaSessionSnapshot | undefined;
-  let presetMeter:
-    (MeterRead & { readonly meter: PresetMeter | undefined }) | undefined;
-  let reading: MeterRead | undefined;
-
-  const readMeter = (read: MeterRead) => {
-    if (sameRead(reading, read)) return;
-    reading = read;
-    void presetForTrack(runtime.presets(), read.identity, read.songId)
-      .then(meterOfPreset, () => undefined)
-      .then((meter) => {
-        if (reading !== read) return;
-        reading = undefined;
-        presetMeter = { ...read, meter };
-        refresh();
-      });
-  };
-
-  const meterFor = (
-    seen: MediaSessionSnapshot,
-    match: LibraryMatch,
-  ): PresetMeter | undefined => {
-    const identity = identityOf(seen);
-    if (identity === undefined) return undefined;
-    const read = {
-      songId: match.kind === 'song' ? match.id : undefined,
-      identity,
-    };
-    if (sameRead(presetMeter, read)) return presetMeter?.meter;
-    readMeter(read);
-    return undefined;
-  };
+  const meters = presetMeters(runtime, () => {
+    refresh();
+  });
 
   const forgetStaleDismissal = (seen: MediaSessionSnapshot | undefined) => {
     if (dismissed !== undefined && !(seen && isOfferFor(dismissed, seen)))
@@ -140,22 +108,22 @@ export function libraryOffers(
     seen: MediaSessionSnapshot | undefined,
   ): LibraryOffer | undefined => {
     if (seen === undefined || dismissed !== undefined) return undefined;
-    if (getState().lock !== undefined) {
-      presetMeter = undefined;
-      return undefined;
-    }
+    if (getState().lock !== undefined) return undefined;
     const { track, libraryMatch } = runtime.ladder().getState();
     if (libraryMatch === null || !sameSong(track, songOf(seen)))
       return undefined;
+    const lookup = meters.meterFor(seen, libraryMatch);
+    if (!lookup.settled) return undefined;
     return {
       sessionId: seen.sessionId,
       track: trackOf(seen),
       match: libraryMatch,
-      meter: meterFor(seen, libraryMatch),
+      meter: lookup.meter,
     };
   };
 
   const refresh = () => {
+    if (getState().lock !== undefined) meters.forget();
     const seen = chosenSession(runtime);
     forgetStaleDismissal(seen);
     const offer = offerNow(seen);
@@ -190,18 +158,19 @@ export function libraryOffers(
     refresh();
   };
 
-  return { refresh, watchLibrary, dismissOffer };
+  return {
+    refresh,
+    watchLibrary,
+    dismissOffer,
+    presetFor: meters.presetFor,
+  };
 }
 
-type LockOn = (seen: MediaSessionSnapshot, lock: PlayAlongLock) => void;
-
-const meterOfPreset = (
-  preset: SongPreset | undefined,
-): PresetMeter | undefined =>
-  preset && {
-    beatsPerBar: preset.beatsPerBar,
-    denominator: preset.denominator,
-  };
+interface AcceptSteps {
+  readonly lockOn: (seen: MediaSessionSnapshot, lock: PlayAlongLock) => void;
+  readonly applyPreset: (preset: SongPreset) => void;
+  readonly presetFor: PresetMeters['presetFor'];
+}
 
 function meteredGrid(
   grid: DetectedGrid,
@@ -211,8 +180,8 @@ function meteredGrid(
   return {
     beats: grid.beats,
     downbeatIndices: overrideDownbeats(grid, {
+      ...NO_METER_OVERRIDE,
       meterBeatsPerBar: meter.beatsPerBar,
-      barOneSeconds: null,
     }),
   };
 }
@@ -220,22 +189,36 @@ function meteredGrid(
 export function acceptAction(
   runtime: PlayAlongRuntime,
   { getState, setState }: StoreAccess<PlayAlongStore>,
-  lockOn: LockOn,
+  { lockOn, applyPreset, presetFor }: AcceptSteps,
 ) {
   return async (): Promise<LockOutcome> => {
     const { offer } = getState();
-    if (offer === undefined) return refused(LOCK_REFUSAL.noOffer);
-    const detected = await runtime.readGrid(offer.match).catch(() => NO_GRID);
+    const asked = chosenSession(runtime);
+    if (offer === undefined || asked === undefined)
+      return refused(LOCK_REFUSAL.noOffer);
+    const [detected, preset] = await Promise.all([
+      runtime.readGrid(offer.match).catch(() => NO_GRID),
+      presetFor(asked, offer.match),
+    ]);
     const seen = chosenSession(runtime);
-    if (getState().offer !== offer || seen === undefined)
+    const current = getState().offer;
+    if (
+      seen === undefined ||
+      current === undefined ||
+      !sameOfferTrack(offer, current) ||
+      !isOfferFor(offer, seen)
+    )
       return refused(LOCK_REFUSAL.noOffer);
     if (detected.beats.length === 0) return refused(LOCK_REFUSAL.noGrid);
     const bpm = clamp(offer.match.bpm, BPM_BOUNDS.min, BPM_BOUNDS.max);
     setState({ bpm });
-    const { meter } = offer;
-    if (meter !== undefined)
-      getState().setBeats(meter.beatsPerBar, meter.denominator);
+    if (preset !== undefined) applyPreset(preset);
+    const meter = gridMeterOf(preset);
     const grid = meteredGrid(detected, meter);
+    getState().setBeats(
+      detectedMeter(grid).meter,
+      meter?.denominator ?? initialConfig().denominator,
+    );
     lockOn(seen, {
       sessionId: seen.sessionId,
       track: trackOf(seen),

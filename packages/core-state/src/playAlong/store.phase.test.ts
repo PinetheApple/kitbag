@@ -31,6 +31,7 @@ const THREE_BEAT_GRID = {
   downbeatIndices: [0, 3, 6, 9],
 };
 const THREE_BEAT_BACK_ONE = [2, 5, 8];
+const THREE_BEAT_BAR = 3;
 const PICKUP_DOWNBEATS = [6, 10];
 const PICKUP_SHIFTED = [7, 11];
 const NO_DOWNBEAT_GRID = { beats: GRID.beats, downbeatIndices: [] };
@@ -59,6 +60,7 @@ async function gridLocked(
   const fake = fakePlayAlong(options);
   fake.store.getState().watchLibrary();
   fake.ladder.found(MATCH);
+  await settle();
   await fake.store.getState().acceptOffer();
   await settle();
   return fake;
@@ -241,11 +243,11 @@ describe('phase on a library grid lock', () => {
     expect(fake.store.getState().lock?.grid).toBe(GRID);
   });
 
-  it('wraps a grid shift by the grid own bar, not the pattern meter', async () => {
+  it('wraps a grid shift by the grid own bar, which the pattern takes', async () => {
     const fake = await gridLocked({ grid: THREE_BEAT_GRID });
     fake.store.getState().shiftDownbeat(-1);
     await settle();
-    expect(fake.store.getState().pattern.beatsPerBar).toBe(BEATS);
+    expect(fake.store.getState().pattern.beatsPerBar).toBe(THREE_BEAT_BAR);
     expect(downbeatCalls(fake)).toEqual([THREE_BEAT_BACK_ONE]);
   });
 
