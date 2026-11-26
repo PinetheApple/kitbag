@@ -283,6 +283,16 @@ Java_com_kitbag_corenative_EngineTransport_nativeStop(JNIEnv*, jobject) {
 }
 
 JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativePlayAlongClickStop(JNIEnv*, jobject) {
+  kitbag::commandPlayAlongClickStop();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativePlayAlongEnd(JNIEnv*, jobject) {
+  kitbag::commandPlayAlongEnd();
+}
+
+JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_EngineTransport_nativeSetTempo(JNIEnv*, jobject, jdouble bpm) {
   kitbag::commandStandaloneSetTempo(bpm);
 }

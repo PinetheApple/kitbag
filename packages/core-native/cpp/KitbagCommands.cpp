@@ -110,6 +110,15 @@ double commandStandaloneBpm() {
   return kb_metronome_slot_current_bpm(kitbagEngine(), KB_METRONOME_SLOT_STANDALONE);
 }
 
+void commandPlayAlongClickStop() {
+  kb_metronome_slot_stop(commandEngine(), KB_METRONOME_SLOT_PLAY_ALONG);
+}
+void commandPlayAlongEnd() {
+  const LockedEngine engine = commandEngine();
+  kb_metronome_slot_stop(engine, KB_METRONOME_SLOT_PLAY_ALONG);
+  kb_metronome_select_slot(engine, KB_METRONOME_SLOT_STANDALONE);
+}
+
 int32_t commandRigClickStart(double bpm, int32_t subdivision, double startFrame) {
   constexpr double kExactFrameLimit = static_cast<double>(int64_t{1} << 53);
   constexpr int64_t kRejectedFrame = -1;

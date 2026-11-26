@@ -199,6 +199,14 @@ void expectSelect(int32_t intent, const std::string& wantCalls) {
   if (selectedSlot != KB_METRONOME_SLOT_PLAY_ALONG) fail("select slot", intent, selectedSlot);
 }
 
+void expectPlayAlongStops() {
+  expectSongTransport(kitbag::commandPlayAlongClickStop, "play along click stop",
+                      "stop-play-along ");
+  selectedSlot = -1;
+  expectSongTransport(kitbag::commandPlayAlongEnd, "play along end", "stop-play-along select ");
+  if (selectedSlot != KB_METRONOME_SLOT_STANDALONE) fail("play along end slot", 0, selectedSlot);
+}
+
 }  // namespace
 
 namespace kitbag {
@@ -278,7 +286,7 @@ extern "C" void kb_metronome_anchor_external(kb_engine*, double songPos, uint64_
   if (songPos != kSongPos || bpm != kSongBpm) fail("anchor args", songPos, bpm);
 }
 extern "C" void kb_metronome_slot_stop(kb_engine*, int32_t slot) {
-  songCalls += onSlot(slot, "stop ");
+  songCalls += slot == KB_METRONOME_SLOT_PLAY_ALONG ? "stop-play-along " : onSlot(slot, "stop ");
 }
 extern "C" void kb_metronome_slot_pause(kb_engine*, int32_t slot) {
   songCalls += onSlot(slot, "click-pause ");
@@ -329,6 +337,7 @@ int main() {
   expectAnchorExternal();
   expectSelect(1, "select start ");
   expectSelect(0, "select ");
+  expectPlayAlongStops();
 
   return failures == 0 ? 0 : 1;
 }

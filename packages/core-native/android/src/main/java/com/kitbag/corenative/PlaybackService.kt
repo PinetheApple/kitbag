@@ -11,7 +11,6 @@ import android.os.IBinder
 import android.os.Looper
 import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
-import androidx.core.content.ContextCompat
 import com.kitbag.corenative.transport.CardEffect
 import com.kitbag.corenative.transport.CardEvent
 import com.kitbag.corenative.transport.CardFence
@@ -57,7 +56,7 @@ class PlaybackService : Service() {
 
   override fun onCreate() {
     super.onCreate()
-    running = true
+    starts.running = true
     CardNotifications.createChannels(this)
     card = MetronomeCard(
       this,
@@ -69,8 +68,7 @@ class PlaybackService : Service() {
   }
 
   override fun onDestroy() {
-    running = false
-    startRequested = false
+    starts.stopped()
     clock.removeCallbacks(tick)
     song?.release()
     poster.finish()
@@ -146,6 +144,7 @@ class PlaybackService : Service() {
       ::postSong,
       { songRequestListener },
       fences.song,
+      { if (PlayAlongService.following) EngineTransport.stopPlayAlongClick() },
       { songStartedListener?.invoke() },
       { songEndedListener?.invoke() },
     ) { songStopped() }.also { song = it }
@@ -363,9 +362,7 @@ class PlaybackService : Service() {
     private const val EXTRA_METRONOME_CARD = "metronomeCard"
     private val fences = CardFences()
 
-    @Volatile private var running = false
-
-    @Volatile private var startRequested = false
+    private val starts = ForegroundStarts(LOG_TAG)
 
     @Volatile var listener: ((TransportChange) -> Unit)? = null
 
@@ -389,7 +386,7 @@ class PlaybackService : Service() {
       cardNumber: Int,
     ) {
       val playing = state.playback == Playback.PLAYING
-      if (!running && !playing) return
+      if (!starts.running && !playing) return
       val intent = Intent(context, PlaybackService::class.java)
         .setAction(ACTION_SHOW)
         .putExtra(EXTRA_PLAYBACK, state.playback.wire)
@@ -404,13 +401,13 @@ class PlaybackService : Service() {
         .putExtra(EXTRA_CARD_NUMBER, cardNumber)
         .putExtra(EXTRA_METRONOME_CARD, fences.showMetronome())
       state.subtitle?.let { intent.putExtra(EXTRA_SUBTITLE, it) }
-      start(context, intent)
+      starts.start(context, intent)
     }
 
     // Sent while a show's start is still pending too: it queues behind that show, so no card is left stuck.
     fun hide(context: Context) =
       fences.hideMetronome {
-        if (running || startRequested) {
+        if (starts.live) {
           context.startService(Intent(context, PlaybackService::class.java).setAction(ACTION_HIDE))
         }
       }
@@ -438,12 +435,12 @@ class PlaybackService : Service() {
         .putExtra(EXTRA_RESTART_FROM_FRAME, song.restartFromFrame)
         .putExtra(EXTRA_SKIP_SECONDS, song.skipSeconds)
         .putExtra(EXTRA_SONG_CARD, fences.song.issue())
-      start(context, intent)
+      starts.start(context, intent)
     }
 
     fun orderSong(context: Context, order: SongOrder) {
       songOrder = order
-      if (!running && !startRequested) return
+      if (!starts.live) return
       context.startService(
         Intent(context, PlaybackService::class.java)
           .setAction(ACTION_SONG_ORDER)
@@ -453,7 +450,7 @@ class PlaybackService : Service() {
 
     // The card reads the engine only on its tick, so a seek the app makes is published at once.
     fun seekedSong(context: Context, positionFrames: Long) {
-      if (!running && !startRequested) return
+      if (!starts.live) return
       context.startService(
         Intent(context, PlaybackService::class.java)
           .setAction(ACTION_SONG_SEEKED)
@@ -463,20 +460,10 @@ class PlaybackService : Service() {
 
     fun hideSong(context: Context) {
       fences.song.withdraw()
-      if (!running && !startRequested) return
+      if (!starts.live) return
       context.startService(Intent(context, PlaybackService::class.java).setAction(ACTION_SONG_HIDE))
     }
 
-    // An update to a live service needs no new foreground start, which Android 12+
-    // refuses from the background.
-    private fun start(context: Context, intent: Intent) {
-      if (running) {
-        context.startService(intent)
-      } else {
-        ContextCompat.startForegroundService(context, intent)
-        startRequested = true
-      }
-    }
   }
 }
 

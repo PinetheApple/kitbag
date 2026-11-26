@@ -42,7 +42,8 @@ class SongControlsTest {
   )
   private val engine = FakeEngine()
   private val fence = CardFence()
-  private val controls = SongControls(engine, fence)
+  private val engineCallsAtStarting = mutableListOf<Int>()
+  private val controls = SongControls(engine, fence) { engineCallsAtStarting += engine.calls.size }
   private val requests = mutableListOf<SongCommand>()
   private val app: (SongCommand) -> Unit = { requests += it }
 
@@ -59,20 +60,35 @@ class SongControlsTest {
   }
 
   @Test
-  fun `a play from the card that starts the song reports the start`() {
+  fun `a play from the card that starts the song announces it before the engine plays`() {
     val card = fence.issue()
     val outcome = press(card, songA, PLAY) as SongControls.Outcome.Ran
     assertTrue(outcome.started)
+    assertEquals(listOf(0), engineCallsAtStarting)
+    assertEquals(listOf(SongCommand.Play), engine.calls)
   }
 
   @Test
-  fun `a play while playing, a pause and a count-in play report no start`() {
+  fun `a play while playing announces no start`() {
     val card = fence.issue()
     engine.playing = true
     assertFalse((press(card, songA, PLAY) as SongControls.Outcome.Ran).started)
+    assertEquals(emptyList<Int>(), engineCallsAtStarting)
+  }
+
+  @Test
+  fun `a pause announces no start`() {
+    val card = fence.issue()
+    engine.playing = true
     assertFalse((press(card, songA, PAUSE) as SongControls.Outcome.Ran).started)
-    engine.playing = false
+    assertEquals(emptyList<Int>(), engineCallsAtStarting)
+  }
+
+  @Test
+  fun `a count-in play announces no start`() {
+    val card = fence.issue()
     assertFalse((press(card, songA, PLAY, countingIn = true) as SongControls.Outcome.Ran).started)
+    assertEquals(emptyList<Int>(), engineCallsAtStarting)
   }
 
   @Test

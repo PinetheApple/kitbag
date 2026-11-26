@@ -8,7 +8,6 @@ import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 
 internal data class PlayAlongCard(val app: String, val title: String?, val playing: Boolean)
 
@@ -34,8 +33,7 @@ class PlayAlongService : Service() {
   }
 
   override fun onDestroy() {
-    running = false
-    startRequested = false
+    starts.stopped()
     Log.i(LOG_TAG, "service stopped")
     super.onDestroy()
   }
@@ -45,18 +43,20 @@ class PlayAlongService : Service() {
     when (intent?.action) {
       ACTION_SHOW -> post(intent)
       ACTION_REQUEST -> request(PlayAlongCardAction.named(intent.getStringExtra(EXTRA_ACTION)))
-      else -> finish()
+      ACTION_HIDE -> finish()
     }
     return START_NOT_STICKY
   }
 
   override fun onTaskRemoved(rootIntent: Intent?) {
-    request(PlayAlongCardAction.STOP)
+    requestListener?.invoke(PlayAlongCardAction.STOP)
+    EngineTransport.endPlayAlong()
+    finish()
     super.onTaskRemoved(rootIntent)
   }
 
   private fun post(intent: Intent) {
-    running = true
+    starts.running = true
     val notification = notification(
       PlayAlongCard(
         app = intent.getStringExtra(EXTRA_APP).orEmpty(),
@@ -72,15 +72,18 @@ class PlayAlongService : Service() {
 
   // With no app listening there is no follow left to end, so Stop silences the click itself.
   private fun request(action: PlayAlongCardAction?) {
-    if (action == null) return
-    val app = requestListener
-    if (app != null) app(action) else if (action == PlayAlongCardAction.STOP) EngineTransport.stop()
-    if (action == PlayAlongCardAction.STOP) finish()
+    when (action) {
+      PlayAlongCardAction.STOP -> {
+        requestListener?.invoke(action) ?: EngineTransport.endPlayAlong()
+        finish()
+      }
+      PlayAlongCardAction.PLAY_PAUSE -> requestListener?.invoke(action)
+      null -> Unit
+    }
   }
 
   private fun finish() {
-    running = false
-    startRequested = false
+    starts.stopped()
     surface.remove()
     stopSelf(lastStartId)
   }
@@ -123,9 +126,10 @@ class PlayAlongService : Service() {
     private const val EXTRA_PLAYING = "playing"
     private const val EXTRA_ACTION = "action"
 
-    @Volatile private var running = false
+    private val starts = ForegroundStarts(LOG_TAG)
 
-    @Volatile private var startRequested = false
+    internal val following: Boolean
+      get() = starts.running
 
     @Volatile internal var requestListener: ((PlayAlongCardAction) -> Unit)? = null
 
@@ -135,16 +139,11 @@ class PlayAlongService : Service() {
         .putExtra(EXTRA_APP, card.app)
         .putExtra(EXTRA_TITLE, card.title)
         .putExtra(EXTRA_PLAYING, card.playing)
-      if (running) {
-        context.startService(intent)
-      } else {
-        ContextCompat.startForegroundService(context, intent)
-        startRequested = true
-      }
+      starts.start(context, intent)
     }
 
     fun hide(context: Context) {
-      if (!running && !startRequested) return
+      if (!starts.live) return
       context.startService(Intent(context, PlayAlongService::class.java).setAction(ACTION_HIDE))
     }
   }

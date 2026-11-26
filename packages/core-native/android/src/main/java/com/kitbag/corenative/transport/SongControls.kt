@@ -8,7 +8,11 @@ interface SongEngine {
   fun playing(): Boolean
 }
 
-class SongControls(private val engine: SongEngine, private val fence: CardFence) {
+class SongControls(
+  private val engine: SongEngine,
+  private val fence: CardFence,
+  private val onStarting: () -> Unit,
+) {
   sealed interface Outcome {
     data object Dropped : Outcome
 
@@ -49,12 +53,13 @@ class SongControls(private val engine: SongEngine, private val fence: CardFence)
     } ?: Outcome.Dropped
 
   private fun runCommands(transport: SongTransport, progress: () -> SongProgress, commands: List<SongCommand>): Outcome {
-    val before = progress()
-    var expected = before
+    val starts = !progress().shownPlaying && SongCommand.Play in commands
+    if (starts) onStarting()
+    var expected = progress()
     for (command in commands) {
       engine.execute(command)
       expected = transport.applied(expected, command)
     }
-    return Outcome.Ran(expected, started = !before.shownPlaying && expected.playing)
+    return Outcome.Ran(expected, started = starts)
   }
 }

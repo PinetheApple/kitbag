@@ -50,7 +50,15 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     PlaybackService.songRequestListener = songRequestListener
     PlaybackService.songStartedListener = songStartedListener
     PlayAlongService.requestListener = playAlongListener
+    endOrphanedFollow(reactContext)
     outputRoutes.start()
+  }
+
+  // A reloaded JS has no follow, so a card still up from the old one would hold a click no one ends.
+  private fun endOrphanedFollow(context: ReactApplicationContext) {
+    if (!PlayAlongService.following) return
+    EngineTransport.endPlayAlong()
+    PlayAlongService.hide(context)
   }
 
   // A reloaded module's init can run before the old one's invalidate.

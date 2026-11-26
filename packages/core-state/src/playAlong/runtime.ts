@@ -45,7 +45,13 @@ export type FollowedSessions = Pick<
 
 type Unsubscribe = () => void;
 
-type Starts = (listener: () => void) => Unsubscribe;
+type OnStarting = (listener: () => void) => Unsubscribe;
+
+const unsubscriber =
+  (subscription: { remove: () => void }): Unsubscribe =>
+  () => {
+    subscription.remove();
+  };
 
 export interface PlayAlongRuntime {
   readonly commands: PlayAlongCommands;
@@ -54,7 +60,7 @@ export interface PlayAlongRuntime {
   readonly sessions: () => FollowedSessions;
   readonly sessionCommand: typeof mediaSessionCommand;
   readonly latencyOffsetMs: () => number;
-  readonly onClickStarting: Starts;
+  readonly onClickStarting: OnStarting;
   readonly yieldStandalone: () => () => void;
   readonly onCardRequest: (
     listener: (request: PlayAlongCardRequest) => void,
@@ -69,8 +75,8 @@ type StartingMetronome = Pick<
 
 export function clickStartsOf(
   metronome: StartingMetronome,
-  songCardStarts: Starts,
-): Starts {
+  songCardStarts: OnStarting,
+): OnStarting {
   return (listener) => {
     const stopMetronome = metronome.getState().onStarting(listener);
     const stopSongs = onSongStarting(listener);
@@ -83,12 +89,8 @@ export function clickStartsOf(
   };
 }
 
-const nativeSongCardStarts: Starts = (listener) => {
-  const subscription = getKitbagCommands().onSongCardStarted(listener);
-  return () => {
-    subscription.remove();
-  };
-};
+const nativeSongCardStarts: OnStarting = (listener) =>
+  unsubscriber(getKitbagCommands().onSongCardStarted(listener));
 
 export const nativePlayAlongRuntime: PlayAlongRuntime = {
   get commands() {
@@ -103,12 +105,8 @@ export const nativePlayAlongRuntime: PlayAlongRuntime = {
   latencyOffsetMs: () => metronomeStore.getState().latencyOffset,
   onClickStarting: clickStartsOf(metronomeStore, nativeSongCardStarts),
   yieldStandalone: () => metronomeStore.getState().yieldEngine(),
-  onCardRequest: (listener) => {
-    const subscription = getKitbagCommands().onPlayAlongCard(listener);
-    return () => {
-      subscription.remove();
-    };
-  },
+  onCardRequest: (listener) =>
+    unsubscriber(getKitbagCommands().onPlayAlongCard(listener)),
   playbackStarted: () => {
     void getNotificationPermissionStore().getState().playbackStarted();
   },
