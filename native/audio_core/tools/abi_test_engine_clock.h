@@ -4,6 +4,8 @@
 namespace abi_test {
 
 void RunEngineClockAbiTests();
+void RunBoottimeMappingAbiTests();
+void RunExternalLockAbiTests();
 
 }  // namespace abi_test
 

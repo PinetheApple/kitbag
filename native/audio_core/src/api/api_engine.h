@@ -19,14 +19,14 @@ inline const Engine* ToEngine(const kb_engine* engine) {
 
 // Stopped here, not left to the callback: a metronome start and stop drained in
 // one block never show it a started metronome.
-inline void StopRigClickFor(Engine* engine) {
-  engine->metronome().rig_click().Stop();
+inline void StopRigClickFor(Engine* engine, int32_t slot) {
+  engine->metronome(slot).rig_click().Stop();
   engine->SetRigClickIntent(false);
 }
 
-inline void TakeOverFromRigClick(Engine* engine) {
-  engine->SetMetronomeIntent(true);
-  StopRigClickFor(engine);
+inline void TakeOverFromRigClick(Engine* engine, int32_t slot) {
+  engine->SetMetronomeIntent(slot, true);
+  StopRigClickFor(engine, slot);
 }
 
 }  // namespace kitbag

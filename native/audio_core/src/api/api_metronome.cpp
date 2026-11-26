@@ -50,30 +50,26 @@ extern "C" {
 
 void kb_metronome_start(kb_engine* engine) {
   if (engine != nullptr) {
-    kitbag::TakeOverFromRigClick(ToEngine(engine));
-    ToEngine(engine)->metronome().Start();
+    kitbag::Engine* target = ToEngine(engine);
+    kitbag::TakeOverFromRigClick(target, target->selected_metronome_slot());
+    target->metronome().Start();
   }
 }
 
 void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame) {
-  if (engine != nullptr) {
-    kitbag::TakeOverFromRigClick(ToEngine(engine));
-    ToEngine(engine)->metronome().StartAt(start_frame);
-  }
+  kb_metronome_slot_start_at(
+      engine,
+      kb_metronome_selected_slot(engine),
+      start_frame
+  );
 }
 
 void kb_metronome_stop(kb_engine* engine) {
-  if (engine != nullptr) {
-    ToEngine(engine)->metronome().Stop();
-    ToEngine(engine)->SetMetronomeIntent(false);
-  }
+  kb_metronome_slot_stop(engine, kb_metronome_selected_slot(engine));
 }
 
 void kb_metronome_pause(kb_engine* engine) {
-  if (engine != nullptr) {
-    ToEngine(engine)->metronome().Pause();
-    ToEngine(engine)->SetMetronomeIntent(false);
-  }
+  kb_metronome_slot_pause(engine, kb_metronome_selected_slot(engine));
 }
 
 kb_result kb_metronome_set_grid(
@@ -116,15 +112,14 @@ void kb_metronome_anchor_external(
     double bpm
 ) {
   if (engine != nullptr) {
-    kitbag::TakeOverFromRigClick(ToEngine(engine));
-    ToEngine(engine)->metronome().AnchorExternal(song_pos_sec, at_frame, bpm);
+    kitbag::Engine* target = ToEngine(engine);
+    kitbag::TakeOverFromRigClick(target, target->selected_metronome_slot());
+    target->metronome().AnchorExternal(song_pos_sec, at_frame, bpm);
   }
 }
 
 void kb_metronome_set_tempo(kb_engine* engine, double bpm) {
-  if (engine != nullptr) {
-    ToEngine(engine)->metronome().SetTempo(bpm);
-  }
+  kb_metronome_slot_set_tempo(engine, kb_metronome_selected_slot(engine), bpm);
 }
 
 void kb_metronome_set_beats(
@@ -297,7 +292,10 @@ double kb_metronome_bar_phase(const kb_engine* engine) {
 }
 
 double kb_metronome_current_bpm(const kb_engine* engine) {
-  return engine == nullptr ? 0.0 : ToEngine(engine)->metronome().current_bpm();
+  return kb_metronome_slot_current_bpm(
+      engine,
+      kb_metronome_selected_slot(engine)
+  );
 }
 
 int32_t kb_metronome_bar_muted(const kb_engine* engine) {

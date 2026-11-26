@@ -52,6 +52,26 @@ void Metronome::AnchorExternal(
   commands_.Push(command);
 }
 
+// A suspended slot applies its commands and rings out what sounds; its beat
+// clock stands still, and the grid cursor re-seeds when it renders again.
+void Metronome::RenderSuspended(
+    float* output,
+    uint32_t frames,
+    uint32_t channels
+) {
+  custom_sounds_.BeginBlock();
+  ApplyPendingCommands();
+  pending_preview_sound_ = -1;
+  ReacquireGrid();
+  current_bpm_.store(bpm_, std::memory_order_relaxed);
+  for (uint32_t frame = 0; frame < frames; ++frame) {
+    const float sample = (voices_.Render() + custom_sounds_.Render()) * volume_;
+    for (uint32_t channel = 0; channel < channels; ++channel) {
+      output[frame * channels + channel] += sample;
+    }
+  }
+}
+
 bool Metronome::ApplyTransportCommand(const Command& command) {
   switch (command.type) {
     case CommandType::kStart:

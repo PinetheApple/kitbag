@@ -54,7 +54,8 @@ kb_result kb_metronome_count_in_at(
   // A rollback could restore a token whose count already ended, which nothing
   // would ever clear; refusing before the claim needs none.
   if (!target->metronome().HasCommandRoom()) return KB_ERROR_BUSY;
-  const uint32_t intent = target->ClaimMetronomeIntent();
+  const int32_t slot = target->selected_metronome_slot();
+  const uint32_t intent = target->ClaimMetronomeIntent(slot);
   if (!target->metronome().CountInAt(
           end_frame,
           beat_frames,
@@ -64,7 +65,7 @@ kb_result kb_metronome_count_in_at(
       )) {
     return KB_ERROR_BUSY;
   }
-  kitbag::StopRigClickFor(target);
+  kitbag::StopRigClickFor(target, slot);
   return KB_OK;
 }
 

@@ -9,6 +9,7 @@
 #include "check.h"
 #include "engine.h"
 #include "media/streaming_track.h"
+#include "rt/monotonic_clock.h"
 #include "rt/rt_publisher.h"
 
 namespace {
@@ -45,7 +46,7 @@ std::unique_ptr<BeatGrid> MakeGrid(int salt) {
 void RenderBlocks(Engine* engine, uint64_t blocks, uint32_t width = kBlock) {
   std::vector<float> out(static_cast<size_t>(width) * Engine::kChannelCount);
   for (uint64_t b = 0; b < blocks; ++b) {
-    engine->RenderOffline(out.data(), width);
+    engine->RenderOffline(out.data(), width, kitbag::MonotonicNs());
   }
 }
 

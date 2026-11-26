@@ -1413,7 +1413,9 @@ None of this exists; the source data never leaves Kotlin.
   `getPlaybackSpeed()` — it currently reads raw `position` only, and the
   extrapolation needs both.
 - Extrapolate `pos + (now - lastUpdate) * speed`.
-- Re-anchor every 1–2s via `kb_metronome_anchor_external` (§4.2).
+- Re-anchor every 1–2s via `kb_metronome_anchor_external` (§4.2). The report's
+  `elapsedRealtime` instant becomes `at_frame` through
+  `kb_engine_frame_at_boottime` (`kitbag_engine_clock_api.h`).
 
 ### 8.5 BPM ladder
 
@@ -1538,10 +1540,12 @@ standalone tempo; closing it never leaves a mess to restore.
 **"Its own" is a metronome slot inside the one native engine**, not a second
 engine and not an app-side save and restore (`docs/decisions.md` 2026-09-26,
 ruling 3; #620). One click sounds at a time: switching slots suspends the other,
-and the standalone metronome resumes untouched. The slot needs an addition to
-the §4 API, tracked in #620. **The acceptance criterion:** opening Play along
-and closing it must leave the standalone metronome exactly as it was, including
-mid-run.
+and the standalone metronome resumes untouched. `kb_metronome_select_slot`
+(`kitbag_metronome_slot_api.h`) routes every `kb_metronome_*` call and read to
+the selected slot; the lock-screen card drives the standalone slot whatever is
+selected. **The acceptance criterion:** opening Play along and closing it must
+leave the standalone metronome exactly as it was, including mid-run
+(`abi_verify`, slots).
 
 **Leaving Play along while locked keeps the click following.** Kitbag runs it in
 the background under the metronome's foreground service (§5.6), so switching to

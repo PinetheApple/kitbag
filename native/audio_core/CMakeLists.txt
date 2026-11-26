@@ -40,6 +40,7 @@ set(KITBAG_CORE_SOURCES
   src/api/api_grid_click.cpp
   src/api/api_media.cpp
   src/api/api_metronome.cpp
+  src/api/api_metronome_slot.cpp
   src/api/api_mixdown.cpp
   src/api/api_rig_click.cpp
   src/api/api_song_start.cpp
@@ -250,6 +251,9 @@ if(KITBAG_BUILD_TOOLS)
                             tools/abi_test_grid_click.cpp
                             tools/abi_test_rig_click.cpp
                             tools/abi_test_engine_clock.cpp
+                            tools/abi_test_boottime.cpp
+                            tools/abi_test_external_lock.cpp
+                            tools/abi_test_metronome_slots.cpp
                             tools/abi_test_mixer_rate.cpp)
   target_include_directories(abi_verify PRIVATE src tools tools/media)
   target_link_libraries(abi_verify PRIVATE kitbag_core Threads::Threads)

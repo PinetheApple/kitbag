@@ -72,6 +72,7 @@ class Metronome {
       uint64_t block_start_frame,
       const SongClock* song = nullptr
   );
+  void RenderSuspended(float* output, uint32_t frames, uint32_t channels);
 
   // App-thread API. Non-blocking; drops commands if the ring is full.
   void Start();

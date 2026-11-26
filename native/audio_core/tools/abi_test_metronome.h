@@ -9,6 +9,7 @@ void RunPolyAbiTests();
 void RunSubdivisionAccentAbiTests();
 void RunGridClickAbiTests();
 void RunRigClickAbiTests();
+void RunMetronomeSlotAbiTests();
 
 }  // namespace abi_test
 
