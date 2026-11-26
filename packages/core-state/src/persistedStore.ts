@@ -1,4 +1,8 @@
-import { createStore, type StoreApi } from 'zustand/vanilla';
+import {
+  configuredStore,
+  type ConfiguredStore,
+  type StoreAccess,
+} from './configuredStore.ts';
 
 export type Commit<S> = <K extends keyof S, V extends S[K]>(
   key: K,
@@ -6,49 +10,24 @@ export type Commit<S> = <K extends keyof S, V extends S[K]>(
   save: (value: V) => void,
 ) => void;
 
-export interface PersistedStore<P, S> {
-  readonly create: (persistence?: P) => StoreApi<S>;
-  readonly configure: (persistence: P) => void;
-  readonly get: () => StoreApi<S>;
-}
+export type PersistedStore<P, S> = ConfiguredStore<P, S>;
 
 export function persistedStore<P, S>(
   name: string,
   inMemory: P,
-  init: (
-    persistence: P,
-    commit: Commit<S>,
-    transient: Pick<StoreApi<S>, 'getState' | 'setState'>,
-  ) => S,
+  init: (persistence: P, commit: Commit<S>, transient: StoreAccess<S>) => S,
 ): PersistedStore<P, S> {
-  const create = (persistence: P = inMemory) =>
-    createStore<S>((set, get) =>
-      init(
-        persistence,
-        (key, value, save) => {
-          if (get()[key] === value) return;
-          const changed: Partial<S> = {};
-          changed[key] = value;
-          set(changed);
-          save(value);
-        },
-        { getState: get, setState: set },
-      ),
-    );
-  let configured: StoreApi<S> | undefined;
-  return {
-    create,
-    configure: (persistence) => {
-      if (configured !== undefined) {
-        throw new Error(
-          `${name} store already exists; configure persistence before first use`,
-        );
-      }
-      configured = create(persistence);
-    },
-    get: () => {
-      configured ??= create();
-      return configured;
-    },
-  };
+  return configuredStore<P, S>(name, inMemory, (persistence, access) =>
+    init(
+      persistence,
+      (key, value, save) => {
+        if (access.getState()[key] === value) return;
+        const changed: Partial<S> = {};
+        changed[key] = value;
+        access.setState(changed);
+        save(value);
+      },
+      access,
+    ),
+  );
 }

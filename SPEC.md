@@ -2485,8 +2485,9 @@ native and stay native:
    `NotificationListenerService`, ported from a Flutter plugin to a TurboModule.
    The Android logic is correct and survives; §2.3's `requestPermission` lie and
    §8.4's missing `lastPositionUpdateTime`/`playbackSpeed` are fixed in the port.
-   **Not ported yet:** `MediaNotificationListenerService.kt` is a skeleton, so the
-   Flutter plugin and its manifest entry stay in `legacy/android/` as the source.
+   Ported in core-native (#619): `media/MediaListenerService` and the
+   `KitbagMediaSessions` TurboModule. Not yet verified on a device, so
+   `legacy/android/` stays as the reference until it is.
 3. **Audio engine lifecycle** — `kb_engine_create`/`start`/`stop` tied to the
    Android lifecycle, not to a React component's mount.
 
