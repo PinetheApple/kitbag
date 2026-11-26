@@ -3,9 +3,12 @@ import { KB_RESULT } from '@kitbag/core-native';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { LOCK_REFUSAL, REANCHOR_INTERVAL_MS } from './store.ts';
+import { toBlob } from '../library/presetMapping.ts';
+import { initialConfig } from '../metronome/store.ts';
 import {
   BPM,
   call,
+  presetShelf,
   fakePlayAlong,
   FRAMES_PER_MS,
   OTHER_ID,
@@ -23,6 +26,25 @@ const DRIFTING = {
   downbeatIndices: [0, 4],
 };
 const AHEAD_MS = 20;
+const PRESET_BEATS = 3;
+const QUARTER = 4;
+const PRESET_METER = { beatsPerBar: PRESET_BEATS, denominator: QUARTER };
+const PRESET_DOWNBEATS = [0, 3, 6];
+const presetOnSong = () =>
+  presetShelf([
+    {
+      name: 'Song',
+      title: 'Song',
+      artist: 'Band',
+      librarySongId: MATCH.id,
+      bpm: BPM,
+      beatsPerBar: PRESET_BEATS,
+      denominator: QUARTER,
+      subdivision: 1,
+      accents: toBlob([2, 0, 0]),
+      sound: 0,
+    },
+  ]);
 const FAST = 1.25;
 const NOW_FRAME = START_MS * FRAMES_PER_MS;
 const REANCHORED_SEC = SONG_SEC + REANCHOR_INTERVAL_MS / MS_PER_SECOND;
@@ -318,5 +340,52 @@ describe('accepting the offer', () => {
     const fake = await accepted();
     fake.store.getState().unlock();
     expect(fake.store.getState().offer?.match).toEqual(MATCH);
+  });
+});
+
+describe('the meter from the song preset', () => {
+  it('names the preset meter on the offer', async () => {
+    const fake = offered(
+      fakePlayAlong({ grid: DRIFTING, shelf: presetOnSong() }),
+    );
+    await settle();
+    expect(fake.store.getState().offer?.meter).toEqual(PRESET_METER);
+  });
+
+  it('names no meter when the song has no preset', async () => {
+    const fake = offered();
+    await settle();
+    expect(fake.store.getState().offer).toBeDefined();
+    expect(fake.store.getState().offer?.meter).toBeUndefined();
+  });
+
+  it('locks with the preset meter and its downbeats', async () => {
+    const fake = offered(
+      fakePlayAlong({ grid: DRIFTING, shelf: presetOnSong() }),
+    );
+    await settle();
+    await accepted(fake);
+    expect(fake.store.getState().pattern).toMatchObject(PRESET_METER);
+    expect(fake.grids().at(-1)?.[1]).toEqual(PRESET_DOWNBEATS);
+  });
+
+  it('puts the preset meter back over a meter edited before accepting', async () => {
+    const fake = offered(
+      fakePlayAlong({ grid: DRIFTING, shelf: presetOnSong() }),
+    );
+    await settle();
+    fake.store.getState().setBeats(initialConfig().beatsPerBar, QUARTER);
+    await accepted(fake);
+    expect(fake.store.getState().pattern).toMatchObject(PRESET_METER);
+  });
+
+  it('keeps the detected downbeats without a preset', async () => {
+    const fake = offered();
+    await settle();
+    await accepted(fake);
+    expect(fake.store.getState().pattern.beatsPerBar).toBe(
+      initialConfig().beatsPerBar,
+    );
+    expect(fake.grids().at(-1)?.[1]).toEqual(DRIFTING.downbeatIndices);
   });
 });
