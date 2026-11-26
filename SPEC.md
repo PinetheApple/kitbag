@@ -2081,8 +2081,8 @@ the supersession: ≤7 primary choices.)
   or the system save dialog, restore comes in through the picker. **Kitbag writes to no path of its own
   choosing.**
 - **Attributions is not optional**: `kitbag-ui.html`'s footer promises "BPM data:
-  Deezer / GetSongBPM (attribution in-app)". Licence and source are table stakes
-  for GPLv3 and, per §12.1, part of the brand.
+  GetSongBPM (attribution in-app)". Licence and source are table stakes for
+  GPLv3 and, per §12.1, part of the brand.
 - **Version reads the manifest.** Today it is a hardcoded `'0.1.0'` with an empty
   `onTap`, while the CHANGELOG claims v0.5. Neither is true.
 
