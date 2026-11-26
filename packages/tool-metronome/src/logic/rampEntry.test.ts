@@ -1,12 +1,12 @@
-import { describe, expect, it } from 'vitest';
-
-import type { BpmBounds } from '@kitbag/core-state';
 import {
   confirmEntry,
   openEntry,
   pressDigit,
   type NumpadEntry,
-} from './numpad.ts';
+} from '@kitbag/core-design';
+import type { BpmBounds } from '@kitbag/core-state';
+import { describe, expect, it } from 'vitest';
+
 import { RAMP_BPM_ENTRY, withRampBpm, type RampBpmField } from './rampEntry.ts';
 
 const BOUNDS: BpmBounds = { min: 20, max: 400 };

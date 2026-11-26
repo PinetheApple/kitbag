@@ -1,4 +1,10 @@
 import {
+  confirmEntry,
+  openEntry,
+  pressDigit,
+  type NumpadEntry,
+} from '@kitbag/core-design';
+import {
   KB_MIN_RAMP_STEP_BPM,
   KB_MUTE_BARS_BOUNDS,
   KB_POLY_AGAINST_BAR,
@@ -13,12 +19,6 @@ import {
 } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
-import {
-  confirmEntry,
-  openEntry,
-  pressDigit,
-  type NumpadEntry,
-} from './numpad.ts';
 import { polyAgainstLabel } from './polyRow.ts';
 import {
   practiceEntry,

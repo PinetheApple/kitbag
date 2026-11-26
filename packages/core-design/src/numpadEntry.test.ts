@@ -8,11 +8,11 @@ import {
   pressBackspace,
   pressDigit,
   type NumpadEntry,
-} from './numpad.ts';
-import type { BpmBounds } from '@kitbag/core-state';
+  type NumberBounds,
+} from './numpadEntry.ts';
 import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
 
-const BOUNDS: BpmBounds = { min: 20, max: 400 };
+const BOUNDS: NumberBounds = { min: 20, max: 400 };
 
 const type = (entry: NumpadEntry, digits: readonly number[]) =>
   digits.reduce((current, digit) => pressDigit(current, digit, BOUNDS), entry);

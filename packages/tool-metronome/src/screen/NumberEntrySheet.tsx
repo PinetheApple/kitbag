@@ -1,6 +1,12 @@
 import {
+  confirmEntry,
   createThemedStyles,
+  displayDigits,
+  entryLabel,
   NumpadKeypad,
+  openEntry,
+  pressBackspace,
+  pressDigit,
   Sheet,
   SheetHint,
   textRoles,
@@ -10,14 +16,6 @@ import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import type { BpmBounds } from '@kitbag/core-state';
-import {
-  confirmEntry,
-  displayDigits,
-  entryLabel,
-  openEntry,
-  pressBackspace,
-  pressDigit,
-} from '../logic/numpad.ts';
 
 interface NumberEntrySheetProps {
   readonly visible: boolean;

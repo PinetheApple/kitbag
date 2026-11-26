@@ -1,8 +1,12 @@
 // A keypress is rejected only when no digit fits; the range clamps once, at
 // confirm.
 
-import type { BpmBounds } from '@kitbag/core-state';
 import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
+
+export interface NumberBounds {
+  readonly min: number;
+  readonly max: number;
+}
 
 const RADIX = 10;
 const NOTHING_ENTERED = 'nothing entered';
@@ -23,14 +27,14 @@ export function openEntry(bpm: number): NumpadEntry {
 
 // Width of the largest in-range tempo. A full-width entry can still be out of
 // range (999 with a 400 ceiling) — that is what the confirm clamp is for.
-function maxDigits(bounds: BpmBounds): number {
+function maxDigits(bounds: NumberBounds): number {
   return String(bounds.max).length;
 }
 
 export function pressDigit(
   entry: NumpadEntry,
   digit: number,
-  bounds: BpmBounds,
+  bounds: NumberBounds,
 ): NumpadEntry {
   if (entry.untouched) return { digits: String(digit), untouched: false };
   if (entry.digits.length >= maxDigits(bounds)) return entry;
@@ -66,7 +70,7 @@ export function entryLabel(
  */
 export function confirmEntry(
   entry: NumpadEntry,
-  bounds: BpmBounds,
+  bounds: NumberBounds,
 ): number | undefined {
   if (entry.digits.length === 0) return undefined;
   const typed = Number.parseInt(entry.digits, RADIX);

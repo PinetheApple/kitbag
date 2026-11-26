@@ -69,6 +69,8 @@ export * from './components/MeterRow.tsx';
 export * from './components/MeterSheet.tsx';
 export * from './components/TempoModeSheet.tsx';
 export * from './components/NumpadKeypad.tsx';
+export * from './numpadEntry.ts';
+export * from './textPlaceholder.ts';
 export * from './components/PegSelector.tsx';
 export * from './components/PickerGrid.tsx';
 export * from './components/PlainListRow.tsx';
