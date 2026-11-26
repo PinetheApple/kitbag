@@ -1,4 +1,6 @@
 import {
+  formatClock,
+  secondsToFrames,
   TEMPO_CORRECTION,
   type LibraryRow,
   type LibrarySongRow,
@@ -8,7 +10,6 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import {
-  formatLength,
   NO_BREAK_SPACE,
   playingSubtitle,
   rowBadges,
@@ -72,13 +73,23 @@ describe('the facts of the playing row', () => {
 
 describe('length', () => {
   it.each([
-    [0, '0:00', '0 seconds'],
-    [59.6, '1:00', '1 minute 0 seconds'],
+    [59.6, '0:59', '59 seconds'],
+    [149.6, '2:29', '2 minutes 29 seconds'],
     [250.4, '4:10', '4 minutes 10 seconds'],
     [3725, '1:02:05', '1 hour 2 minutes 5 seconds'],
   ])('%s s reads %s and says %s', (seconds, shown, spoken) => {
-    expect(formatLength(seconds)).toBe(shown);
+    expect(
+      shownSubtitle({ ...BARE_STEMS, durationSec: seconds }, 'grid', null),
+    ).toBe(shown);
     expect(spokenLength(seconds)).toBe(spoken);
+  });
+
+  it("matches the player's total for the same song", () => {
+    const rate = 48_000;
+    const total = formatClock(secondsToFrames(149.6, rate), rate);
+    expect(shownSubtitle({ ...SONG, durationSec: 149.6 }, 'grid', null)).toBe(
+      `${total} · 158 BPM`,
+    );
   });
 });
 

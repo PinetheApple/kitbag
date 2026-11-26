@@ -1,5 +1,6 @@
 export * from './stemPlayer/facts.ts';
 export * from './text.ts';
+export * from './stemPlayer/time.ts';
 export * from './stemPlayer/mix.ts';
 export * from './stemPlayer/speedKeyText.ts';
 export * from './stemPlayer/tempoText.ts';

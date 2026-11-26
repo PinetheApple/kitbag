@@ -28,9 +28,7 @@ export function entryName(entry: SetlistEntry, stems: StemSongs): string {
 export function songLengthFact(
   row: Pick<LibraryStemSetRow, 'durationSec'>,
 ): string | null {
-  return row.durationSec > 0
-    ? formatClockSeconds(Math.round(row.durationSec))
-    : null;
+  return row.durationSec > 0 ? formatClockSeconds(row.durationSec) : null;
 }
 
 export function joinedFacts(parts: readonly (string | null)[]): string {

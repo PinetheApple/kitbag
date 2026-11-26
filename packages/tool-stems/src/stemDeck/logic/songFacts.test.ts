@@ -27,6 +27,12 @@ describe('a song on StemDeck', () => {
     expect(songFacts(SONG)).toBe('Sinach · 8:01 · 6 stems');
   });
 
+  it('reads the length in whole seconds played, as the player clock does', () => {
+    expect(songFacts({ ...SONG, durationSec: 149.6 })).toBe(
+      'Sinach · 2:29 · 6 stems',
+    );
+  });
+
   it('leaves out what StemDeck did not say', () => {
     expect(
       songFacts({ ...SONG, artist: null, durationSec: null, lanes: ['bass'] }),
