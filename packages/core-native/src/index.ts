@@ -145,6 +145,7 @@ export {
   isNotificationListenerEnabled,
   mediaSessionCommand,
   openNotificationListenerSettings,
+  rearmMediaSessions,
   subscribeMediaSessions,
 } from './mediaSessions/source';
 export type {

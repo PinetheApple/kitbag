@@ -33,7 +33,6 @@ class MediaSessionWatch(
   private val listenerComponent = ComponentName(context, MediaListenerService::class.java)
   private val tracked = LinkedHashMap<String, Tracked>()
   private val labels = HashMap<String, String>()
-  private var listening = false
 
   private val sessionsChanged =
     MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
@@ -43,17 +42,15 @@ class MediaSessionWatch(
 
   fun start() {
     handler.post {
-      if (!listening) {
-        listening = listen()
-        send()
-      }
+      manager.removeOnActiveSessionsChangedListener(sessionsChanged)
+      if (!listen()) track(emptyList())
+      send()
     }
   }
 
   fun stop() {
     handler.post {
-      if (listening) manager.removeOnActiveSessionsChangedListener(sessionsChanged)
-      listening = false
+      manager.removeOnActiveSessionsChangedListener(sessionsChanged)
       track(emptyList())
     }
   }
@@ -88,7 +85,7 @@ class MediaSessionWatch(
   }
 
   private fun follow(id: String, controller: MediaController): Tracked =
-    Tracked(controller, Changes(id)).also { controller.registerCallback(it.callback, handler) }
+    Tracked(controller, SessionCallback(id)).also { controller.registerCallback(it.callback, handler) }
 
   private fun send() = publish(tracked.map { (id, entry) -> info(id, entry.controller) })
 
@@ -101,8 +98,8 @@ class MediaSessionWatch(
       sessionId = sessionId,
       packageName = packageName,
       appLabel = labelOf(packageName),
-      title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE),
-      artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST),
+      title = metadata?.firstText(MediaMetadata.METADATA_KEY_TITLE, MediaMetadata.METADATA_KEY_DISPLAY_TITLE),
+      artist = metadata?.firstText(MediaMetadata.METADATA_KEY_ARTIST, MediaMetadata.METADATA_KEY_ALBUM_ARTIST),
       durationMs = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION)?.takeIf { it > 0 },
       playing = playing,
       positionMs = state?.position?.takeIf { it != PlaybackState.PLAYBACK_POSITION_UNKNOWN },
@@ -110,6 +107,9 @@ class MediaSessionWatch(
       speed = if (playing) state?.playbackSpeed ?: 0f else 0f,
     )
   }
+
+  private fun MediaMetadata.firstText(vararg keys: String): String? =
+    keys.firstNotNullOfOrNull { key -> getString(key)?.takeIf { it.isNotEmpty() } }
 
   private fun labelOf(packageName: String): String =
     labels.getOrPut(packageName) {
@@ -125,7 +125,7 @@ class MediaSessionWatch(
 
   private class Tracked(val controller: MediaController, val callback: MediaController.Callback)
 
-  private inner class Changes(private val id: String) : MediaController.Callback() {
+  private inner class SessionCallback(private val id: String) : MediaController.Callback() {
     override fun onPlaybackStateChanged(state: PlaybackState?) = send()
 
     override fun onMetadataChanged(metadata: MediaMetadata?) = send()

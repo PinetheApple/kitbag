@@ -92,6 +92,10 @@ export function isNotificationListenerEnabled(): Promise<boolean> {
   return getKitbagMediaSessions().listenerEnabled();
 }
 
-export function openNotificationListenerSettings(): void {
-  getKitbagMediaSessions().openListenerSettings();
+export function openNotificationListenerSettings(): Promise<boolean> {
+  return getKitbagMediaSessions().openListenerSettings();
+}
+
+export function rearmMediaSessions(): void {
+  if (subscription !== undefined) getKitbagMediaSessions().setWatching(true);
 }

@@ -1,7 +1,7 @@
 import type { MediaSessionSnapshot } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
-import { chooseSession, orderSessions } from './chooseSession.ts';
+import { chooseSession } from './chooseSession.ts';
 
 function session(
   sessionId: string,
@@ -53,9 +53,9 @@ describe('chooseSession', () => {
     expect(chooseSession([session('idle'), paused], choice)).toBe('paused');
   });
 
-  it('moves off a paused choice when another session plays', () => {
+  it('keeps a paused choice when another session starts playing', () => {
     const choice = { chosenId: 'paused', pickedId: undefined };
-    expect(chooseSession([paused, playing], choice)).toBe('playing');
+    expect(chooseSession([paused, playing], choice)).toBe('paused');
   });
 
   it('moves on when the chosen session goes away', () => {
@@ -70,18 +70,5 @@ describe('chooseSession', () => {
 
   it('chooses nothing when there are no sessions', () => {
     expect(chooseSession([], none)).toBeUndefined();
-  });
-});
-
-describe('orderSessions', () => {
-  it('lists playing sessions first and keeps the native order otherwise', () => {
-    const idle = session('idle');
-    const ordered = orderSessions([paused, playing, idle, podcast]);
-    expect(ordered.map(({ sessionId }) => sessionId)).toEqual([
-      'playing',
-      'podcast',
-      'paused',
-      'idle',
-    ]);
   });
 });

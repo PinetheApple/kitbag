@@ -2,6 +2,7 @@ import {
   isNotificationListenerEnabled,
   mediaSessionCommand,
   openNotificationListenerSettings,
+  rearmMediaSessions,
   subscribeMediaSessions,
 } from '@kitbag/core-native';
 import {
@@ -18,6 +19,7 @@ configureMediaSessions({
     command: mediaSessionCommand,
     listenerEnabled: isNotificationListenerEnabled,
     openListenerSettings: openNotificationListenerSettings,
+    rearm: rearmMediaSessions,
   },
   choose: chooseSession,
 });

@@ -4,10 +4,11 @@ import type {
   MediaSessionCommand,
   MediaSessionSnapshot,
   openNotificationListenerSettings,
+  rearmMediaSessions,
   subscribeMediaSessions,
 } from '@kitbag/core-native';
 
-import { persistedStore } from '../persistedStore.ts';
+import { configuredStore } from '../configuredStore.ts';
 
 export interface SessionChoice {
   readonly chosenId: string | undefined;
@@ -24,6 +25,7 @@ export interface MediaSessionsSource {
   readonly command: typeof mediaSessionCommand;
   readonly listenerEnabled: typeof isNotificationListenerEnabled;
   readonly openListenerSettings: typeof openNotificationListenerSettings;
+  readonly rearm: typeof rearmMediaSessions;
 }
 
 export interface MediaSessionsRuntime {
@@ -36,7 +38,7 @@ export interface MediaSessionsStore extends SessionChoice {
   readonly sessions: readonly MediaSessionSnapshot[];
   readonly watch: () => () => void;
   readonly refresh: () => Promise<void>;
-  readonly openSettings: () => void;
+  readonly openSettings: () => Promise<boolean>;
   readonly pick: (sessionId: string) => void;
   readonly command: (command: MediaSessionCommand) => void;
 }
@@ -48,7 +50,8 @@ const unsupported: MediaSessionsRuntime = {
     subscribe: () => ignore,
     command: ignore,
     listenerEnabled: () => Promise.resolve(false),
-    openListenerSettings: ignore,
+    openListenerSettings: () => Promise.resolve(false),
+    rearm: ignore,
   },
   choose: ignore,
 };
@@ -61,10 +64,10 @@ const liveId = (
     ? sessionId
     : undefined;
 
-const mediaSessions = persistedStore<MediaSessionsRuntime, MediaSessionsStore>(
+const mediaSessions = configuredStore<MediaSessionsRuntime, MediaSessionsStore>(
   'Media sessions',
   unsupported,
-  ({ source, choose }, _commit, { getState, setState }) => {
+  ({ source, choose }, { getState, setState }) => {
     const settle = (
       sessions: readonly MediaSessionSnapshot[],
       wantedId = getState().pickedId,
@@ -80,6 +83,7 @@ const mediaSessions = persistedStore<MediaSessionsRuntime, MediaSessionsStore>(
       const access = await source.listenerEnabled();
       setState({ access });
       if (!access) settle([]);
+      source.rearm();
     };
     return {
       access: undefined,

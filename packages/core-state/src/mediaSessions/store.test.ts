@@ -49,7 +49,8 @@ function fakes({ enabled = true }: { readonly enabled?: boolean } = {}) {
     ),
     command: vi.fn(),
     listenerEnabled: vi.fn(() => Promise.resolve(enabled)),
-    openListenerSettings: vi.fn(),
+    openListenerSettings: vi.fn(() => Promise.resolve(true)),
+    rearm: vi.fn(),
   } satisfies MediaSessionsSource;
   const choose = vi.fn<SessionChooser>(
     (sessions, { pickedId }) => pickedId ?? sessions[0]?.sessionId,
@@ -148,16 +149,23 @@ describe('media sessions store', () => {
     expect(source.command).not.toHaveBeenCalled();
   });
 
-  it('opens the listener settings', () => {
+  it('opens the listener settings and says whether they opened', async () => {
     const { store, source } = fakes();
-    store.getState().openSettings();
+    await expect(store.getState().openSettings()).resolves.toBe(true);
     expect(source.openListenerSettings).toHaveBeenCalledOnce();
   });
 
-  it('reports access granted on refresh', async () => {
-    const { store } = fakes();
+  it('reports access granted on refresh and re-arms the listener', async () => {
+    const { store, source } = fakes();
     await store.getState().refresh();
     expect(store.getState().access).toBe(true);
+    expect(source.rearm).toHaveBeenCalledOnce();
+  });
+
+  it('re-arms on refresh when access is off too, so native drops its sessions', async () => {
+    const { store, source } = fakes({ enabled: false });
+    await store.getState().refresh();
+    expect(source.rearm).toHaveBeenCalledOnce();
   });
 
   it('drops the sessions when refresh finds access revoked', async () => {

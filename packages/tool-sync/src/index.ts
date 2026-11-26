@@ -1,1 +1,1 @@
-export { chooseSession, orderSessions } from './logic/chooseSession.ts';
+export { chooseSession } from './logic/chooseSession.ts';

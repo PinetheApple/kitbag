@@ -6,24 +6,12 @@ const byId = (
   sessionId: string | undefined,
 ) => sessions.find((session) => session.sessionId === sessionId);
 
-export function orderSessions(
-  sessions: readonly MediaSessionSnapshot[],
-): MediaSessionSnapshot[] {
-  return [
-    ...sessions.filter((session) => session.playing),
-    ...sessions.filter((session) => !session.playing),
-  ];
-}
-
 export const chooseSession: SessionChooser = (
   sessions,
   { chosenId, pickedId },
 ) => {
-  const picked = byId(sessions, pickedId);
-  if (picked !== undefined) return picked.sessionId;
+  const held = byId(sessions, pickedId) ?? byId(sessions, chosenId);
+  if (held !== undefined) return held.sessionId;
   const music = sessions.filter((session) => !session.spokenWord);
-  const current = byId(music, chosenId);
-  if (current?.playing) return current.sessionId;
-  const playing = music.find((session) => session.playing);
-  return (playing ?? current ?? music[0])?.sessionId;
+  return (music.find((session) => session.playing) ?? music[0])?.sessionId;
 };

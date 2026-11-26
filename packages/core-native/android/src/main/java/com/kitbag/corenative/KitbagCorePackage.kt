@@ -21,43 +21,14 @@ class KitbagCorePackage : BaseReactPackage() {
 
   override fun getReactModuleInfoProvider(): ReactModuleInfoProvider =
     ReactModuleInfoProvider {
-      mapOf(
-        NativeKitbagCommandsSpec.NAME to
-          ReactModuleInfo(
-            NativeKitbagCommandsSpec.NAME, // name
-            KitbagCommandsModule::class.java.name, // className
-            false, // canOverrideExistingModule
-            false, // needsEagerInit
-            false, // isCxxModule
-            true, // isTurboModule
-          ),
-        NativeKitbagLibrarySpec.NAME to
-          ReactModuleInfo(
-            NativeKitbagLibrarySpec.NAME, // name
-            KitbagLibraryModule::class.java.name, // className
-            false, // canOverrideExistingModule
-            false, // needsEagerInit
-            false, // isCxxModule
-            true, // isTurboModule
-          ),
-        NativeKitbagStemDeckSpec.NAME to
-          ReactModuleInfo(
-            NativeKitbagStemDeckSpec.NAME,
-            KitbagStemDeckModule::class.java.name,
-            false,
-            false,
-            false,
-            true,
-          ),
-        NativeKitbagMediaSessionsSpec.NAME to
-          ReactModuleInfo(
-            NativeKitbagMediaSessionsSpec.NAME,
-            KitbagMediaSessionsModule::class.java.name,
-            false,
-            false,
-            false,
-            true,
-          ),
-      )
+      listOf(
+        NativeKitbagCommandsSpec.NAME to KitbagCommandsModule::class.java,
+        NativeKitbagLibrarySpec.NAME to KitbagLibraryModule::class.java,
+        NativeKitbagStemDeckSpec.NAME to KitbagStemDeckModule::class.java,
+        NativeKitbagMediaSessionsSpec.NAME to KitbagMediaSessionsModule::class.java,
+      ).associate { (name, type) -> name to turboModule(name, type) }
     }
+
+  private fun turboModule(name: String, type: Class<out NativeModule>) =
+    ReactModuleInfo(name, type.name, false, false, false, true)
 }

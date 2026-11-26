@@ -6,5 +6,4 @@ export const SPOKEN_WORD_APPS: ReadonlySet<string> = new Set([
   'com.google.android.apps.podcasts',
   'de.danoeh.antennapod',
   'fm.castbox.audiobook.radio.podcast',
-  'com.storytel',
 ]);

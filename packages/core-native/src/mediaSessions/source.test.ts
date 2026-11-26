@@ -54,7 +54,7 @@ const native = vi.hoisted(() => {
       }),
       setWatching: vi.fn(),
       listenerEnabled: vi.fn(() => Promise.resolve(true)),
-      openListenerSettings: vi.fn(),
+      openListenerSettings: vi.fn(() => Promise.resolve(true)),
       play: vi.fn(),
       pause: vi.fn(),
       skipToNext: vi.fn(),
@@ -72,6 +72,7 @@ const {
   isNotificationListenerEnabled,
   mediaSessionCommand,
   openNotificationListenerSettings,
+  rearmMediaSessions,
   subscribeMediaSessions,
   toMediaSessionSnapshots,
 } = await import('./source.ts');
@@ -149,9 +150,24 @@ describe('mediaSessionCommand', () => {
 });
 
 describe('notification listener access', () => {
-  it('asks native whether access is on and opens its settings', async () => {
+  it('asks native whether access is on without starting anything', async () => {
     await expect(isNotificationListenerEnabled()).resolves.toBe(true);
-    openNotificationListenerSettings();
-    expect(native.module.openListenerSettings).toHaveBeenCalledOnce();
+    expect(native.module.setWatching).not.toHaveBeenCalled();
+  });
+
+  it('reports whether the settings screen opened', async () => {
+    native.module.openListenerSettings.mockResolvedValueOnce(false);
+    await expect(openNotificationListenerSettings()).resolves.toBe(false);
+  });
+});
+
+describe('rearmMediaSessions', () => {
+  it('asks native to listen again only while something is subscribed', () => {
+    rearmMediaSessions();
+    expect(native.module.setWatching).not.toHaveBeenCalled();
+    const stop = subscribeMediaSessions(vi.fn());
+    rearmMediaSessions();
+    expect(native.module.setWatching.mock.calls).toEqual([[true], [true]]);
+    stop();
   });
 });

@@ -15,4 +15,6 @@ export const isNotificationListenerEnabled: typeof Native.isNotificationListener
   () => Promise.resolve(false);
 
 export const openNotificationListenerSettings: typeof Native.openNotificationListenerSettings =
-  ignore;
+  () => Promise.resolve(false);
+
+export const rearmMediaSessions: typeof Native.rearmMediaSessions = ignore;

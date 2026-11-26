@@ -20,7 +20,7 @@ export type MediaSessionsEvent = Readonly<{
 
 export interface Spec extends TurboModule {
   listenerEnabled(): Promise<boolean>;
-  openListenerSettings(): void;
+  openListenerSettings(): Promise<boolean>;
   setWatching(watching: boolean): void;
   play(sessionId: string): void;
   pause(sessionId: string): void;
