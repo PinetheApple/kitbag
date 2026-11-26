@@ -156,6 +156,9 @@ int32_t commandSetGridGrouping(const int32_t* sizes, int32_t count) {
 int32_t commandSetGridRate(int32_t rate) {
   return kb_metronome_set_grid_rate(commandEngine(), rate);
 }
+int32_t commandSetGridDownbeats(const int32_t* downbeats, int32_t count) {
+  return kb_metronome_set_grid_downbeats(commandEngine(), downbeats, count);
+}
 void commandFollowMixer(bool enabled) {
   kb_metronome_follow_mixer(commandEngine(), flag(enabled));
 }

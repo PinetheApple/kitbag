@@ -96,6 +96,8 @@ export interface BoottimeClockHost {
   readonly boottime_ms: number;
   /** kb_engine_frame_at_boottime for an elapsedRealtime ms; NaN while it returns non-OK. */
   frame_at_boottime_ms(boottimeMs: number): number;
+  /** kb_clock_suspended_ns in ms: time spent in deep sleep, so far. */
+  readonly suspended_ms: number;
 }
 
 /** The mixdown export's polled state; read a few times a second, not per frame. */

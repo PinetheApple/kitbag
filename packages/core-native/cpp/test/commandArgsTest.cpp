@@ -49,6 +49,7 @@ int32_t selectedSlot = -1;
 int32_t intentRead = 0;
 uint64_t anchoredAt = 0;
 uint64_t gridAnchoredAt = 0;
+std::string sentDownbeats;
 constexpr double kSongPos = 83.25;
 constexpr double kSongBpm = 121.5;
 constexpr double kSongRate = 1.25;
@@ -211,6 +212,15 @@ void expectAnchorGrid() {
   expectGridAnchor(kEndFrame, -kSongRate, "");
 }
 
+void expectGridDownbeats() {
+  const int32_t shifted[] = {1, 5, 9};
+  sentDownbeats.clear();
+  const int32_t moved = kitbag::commandSetGridDownbeats(shifted, 3);
+  const int32_t emptied = kitbag::commandSetGridDownbeats(nullptr, 0);
+  if (sentDownbeats != "1 5 9 | | ") fail(("downbeats: " + sentDownbeats).c_str(), 0, 0);
+  if (moved != KB_ERROR_BUSY || emptied != KB_ERROR_BUSY) fail("downbeats result", moved, emptied);
+}
+
 void expectSelect(int32_t intent, const std::string& wantCalls) {
   songCalls.clear();
   intentRead = intent;
@@ -305,6 +315,12 @@ extern "C" void kb_metronome_anchor_external(kb_engine*, double songPos, uint64_
   anchoredAt = frame;
   if (songPos != kSongPos || bpm != kSongBpm) fail("anchor args", songPos, bpm);
 }
+extern "C" kb_result kb_metronome_set_grid_downbeats(kb_engine*, const int32_t* indices,
+                                                    int32_t count) {
+  for (int32_t i = 0; i < count; ++i) sentDownbeats += std::to_string(indices[i]) + " ";
+  sentDownbeats += "| ";
+  return KB_ERROR_BUSY;
+}
 extern "C" void kb_metronome_anchor_grid(kb_engine*, double songPos, uint64_t frame,
                                          double rate) {
   songCalls += "grid-anchor ";
@@ -362,6 +378,7 @@ int main() {
   expectServiceStartCannotRestart();
   expectAnchorExternal();
   expectAnchorGrid();
+  expectGridDownbeats();
   expectSelect(1, "select start ");
   expectSelect(0, "select ");
   expectPlayAlongStops();

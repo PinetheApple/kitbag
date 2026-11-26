@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <vector>
 
+#include "grid_beat_phase.h"
 #include "metronome/grid_state.h"
 #include "metronome_test_audio.h"
 #include "zero_clock.h"
@@ -15,9 +16,6 @@ using kitbag_test::kZeroClock;
 
 constexpr int kAnchorGridBeats = 12;
 constexpr double kIntervalSec = 0.5;
-// Half a sample past each beat keeps every fire frame off a rounding boundary,
-// so the model and the engine cannot round one beat to different frames.
-constexpr double kBeatPhaseSec = 0.5 / kSampleRate;
 constexpr int64_t kRenderFrames = int64_t{4} * kSampleRate;
 constexpr double kFastRate = 1.25;
 constexpr int kEighths = 2;

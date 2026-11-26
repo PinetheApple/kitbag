@@ -76,6 +76,14 @@ void Metronome::SetPolyrhythm(bool enabled, int beats) {
   commands_.Push(command);
 }
 
+void Metronome::SetAccent(int beat_index, Accent accent) {
+  SetAccent(beat_index, static_cast<int32_t>(accent));
+}
+
+void Metronome::SetPolyAccent(int beat_index, Accent accent) {
+  SetPolyAccent(beat_index, static_cast<int32_t>(accent));
+}
+
 void Metronome::SetPolyAccent(int beat_index, int32_t accent) {
   Command command{CommandType::kSetPolyAccent};
   command.int_a = beat_index;
@@ -168,6 +176,21 @@ void Metronome::SetGrid(
   }
   if (grid != nullptr) grid->click_epoch = ++click_epoch_;
   grid_.Publish(std::move(grid), clock, engine_running);
+}
+
+bool Metronome::SetGridDownbeats(
+    std::span<const int32_t> downbeats,
+    FrameClock clock,
+    bool engine_running
+) {
+  const auto* node = grid_.Get();
+  if (node == nullptr) return false;
+  const size_t beats = node->value.beat_times_sec.size();
+  if (!ValidDownbeats(downbeats, static_cast<int32_t>(beats))) return false;
+  auto grid = std::make_unique<BeatGrid>(node->value);
+  grid->bars = GridBars(downbeats, beats);
+  grid_.Publish(std::move(grid), clock, engine_running);
+  return true;
 }
 
 void Metronome::ClearGrid(FrameClock clock, bool engine_running) {

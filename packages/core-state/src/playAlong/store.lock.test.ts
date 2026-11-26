@@ -33,6 +33,7 @@ function tapped(fake = fakePlayAlong()) {
 describe('tap to align', () => {
   it('refuses a tap with no tempo and leaves the engine alone', () => {
     const fake = fakePlayAlong();
+    fake.store.getState().watchLibrary();
     expect(fake.store.getState().tap(START_MS)).toEqual({
       locked: false,
       reason: LOCK_REFUSAL.noBpm,
@@ -81,6 +82,9 @@ describe('tap to align', () => {
       downbeatSec: TAP_SONG_SEC,
       bpm: BPM,
       lockedAtBoottimeMs: START_MS + TAP_AFTER_MS,
+      phaseOffsetMs: 0,
+      downbeatShift: 0,
+      downbeatShiftAvailable: true,
     });
   });
 

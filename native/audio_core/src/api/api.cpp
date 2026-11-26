@@ -90,6 +90,10 @@ int64_t kb_clock_boottime_ns(void) {
   return kitbag::BoottimeNs();
 }
 
+int64_t kb_clock_suspended_ns(void) {
+  return kitbag::SuspendedNs();
+}
+
 kb_result kb_engine_frame_at_boottime(
     const kb_engine* engine,
     int64_t boottime_ns,
