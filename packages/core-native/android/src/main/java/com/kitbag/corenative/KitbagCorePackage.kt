@@ -6,24 +6,6 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.module.model.ReactModuleInfo
 import com.facebook.react.module.model.ReactModuleInfoProvider
 
-/**
- * Registration seam for @kitbag/core-native's native surface (SPEC §13.1: the
- * JSI/TurboModule surface is owned here). Two things attach to the RN runtime
- * through this package, both kept on the single kb_engine* the HostObject owns
- * (SPEC §4.5):
- *   1. The KitbagCommands TurboModule (getModule below), routing each command to
- *      kitbag::command* via JNI (KitbagJni*.cpp).
- *   2. The JSI HostObject install (kitbag::kitbagInstall) — triggered from the
- *      TurboModule's constructor (KitbagCommandsModule.init), because that is the
- *      first point a live JSI runtime handle is available. The 60fps read path
- *      (§13.3) is then completed on the UI runtime from JS (bootstrapRuntime.ts).
- *
- * The module name comes from `NativeKitbagCommandsSpec.NAME`, the codegen-owned
- * constant (§13.7: one owner). It is never retyped here.
- *
- * NOT VERIFIED on device. This compiles against the RN 0.83 `BaseReactPackage` /
- * `ReactModuleInfo` (6-arg) API; the runtime seam is the #33 gate.
- */
 class KitbagCorePackage : BaseReactPackage() {
   override fun getModule(
     name: String,
@@ -33,39 +15,20 @@ class KitbagCorePackage : BaseReactPackage() {
       NativeKitbagCommandsSpec.NAME -> KitbagCommandsModule(reactContext)
       NativeKitbagLibrarySpec.NAME -> KitbagLibraryModule(reactContext)
       NativeKitbagStemDeckSpec.NAME -> KitbagStemDeckModule(reactContext)
+      NativeKitbagMediaSessionsSpec.NAME -> KitbagMediaSessionsModule(reactContext)
       else -> null
     }
 
   override fun getReactModuleInfoProvider(): ReactModuleInfoProvider =
     ReactModuleInfoProvider {
-      mapOf(
-        NativeKitbagCommandsSpec.NAME to
-          ReactModuleInfo(
-            NativeKitbagCommandsSpec.NAME, // name
-            KitbagCommandsModule::class.java.name, // className
-            false, // canOverrideExistingModule
-            false, // needsEagerInit
-            false, // isCxxModule
-            true, // isTurboModule
-          ),
-        NativeKitbagLibrarySpec.NAME to
-          ReactModuleInfo(
-            NativeKitbagLibrarySpec.NAME, // name
-            KitbagLibraryModule::class.java.name, // className
-            false, // canOverrideExistingModule
-            false, // needsEagerInit
-            false, // isCxxModule
-            true, // isTurboModule
-          ),
-        NativeKitbagStemDeckSpec.NAME to
-          ReactModuleInfo(
-            NativeKitbagStemDeckSpec.NAME,
-            KitbagStemDeckModule::class.java.name,
-            false,
-            false,
-            false,
-            true,
-          ),
-      )
+      listOf(
+        NativeKitbagCommandsSpec.NAME to KitbagCommandsModule::class.java,
+        NativeKitbagLibrarySpec.NAME to KitbagLibraryModule::class.java,
+        NativeKitbagStemDeckSpec.NAME to KitbagStemDeckModule::class.java,
+        NativeKitbagMediaSessionsSpec.NAME to KitbagMediaSessionsModule::class.java,
+      ).associate { (name, type) -> name to turboModule(name, type) }
     }
+
+  private fun turboModule(name: String, type: Class<out NativeModule>) =
+    ReactModuleInfo(name, type.name, false, false, false, true)
 }
