@@ -5,11 +5,13 @@ import {
   pressNumpadDigit,
   type NumpadEntry,
 } from '@kitbag/core-design';
-import { boottimeNowMs } from '@kitbag/core-native';
 import {
   BPM_BOUNDS,
+  BPM_SOURCE,
   doubledBpm,
   halvedBpm,
+  TAPS_TO_SET_TEMPO,
+  tempoLadderStore,
   useTempoLadder,
 } from '@kitbag/core-state';
 import {
@@ -18,8 +20,10 @@ import {
   type Dispatch,
   type SetStateAction,
 } from 'react';
+import type { GestureResponderEvent } from 'react-native';
 
 import { usePlayAlong } from './playAlongHooks.ts';
+import { touchedAtBoottimeMs } from './touchTime.ts';
 
 const EMPTY_ENTRY: NumpadEntry = { digits: '', untouched: false };
 
@@ -78,17 +82,33 @@ function useStep(
   }, [bpm, stepped, onLadder, setBpm, locked, ladderBpm, setEntry, setTapping]);
 }
 
-function useSteps(state: EntryState, bpm: number | null) {
+function tappedTempo(): number | undefined {
+  const { bpm, source, tapsLanded } = tempoLadderStore.getState();
+  if (tapsLanded < TAPS_TO_SET_TEMPO || source !== BPM_SOURCE.tap) return;
+  return bpm ?? undefined;
+}
+
+function useSheetTap({ setTapping }: EntryState) {
   const tap = useTempoLadder((s) => s.tap);
+  const setBpm = usePlayAlong((s) => s.setBpm);
+  const locked = usePlayAlong((s) => s.lock !== undefined);
+  return useCallback(
+    (event: GestureResponderEvent) => {
+      setTapping(true);
+      tap(touchedAtBoottimeMs(event));
+      const tapped = locked ? tappedTempo() : undefined;
+      if (tapped !== undefined) setBpm(tapped);
+    },
+    [setTapping, tap, locked, setBpm],
+  );
+}
+
+function useSteps(state: EntryState, bpm: number | null) {
   const halve = useTempoLadder((s) => s.halve);
   const double = useTempoLadder((s) => s.double);
-  const { setTapping } = state;
   const onHalve = useStep(state, bpm, halvedBpm, halve);
   const onDouble = useStep(state, bpm, doubledBpm, double);
-  const onTap = useCallback(() => {
-    setTapping(true);
-    tap(boottimeNowMs());
-  }, [setTapping, tap]);
+  const onTap = useSheetTap(state);
   return { onHalve, onDouble, onTap };
 }
 

@@ -1,4 +1,3 @@
-import { uptimeToBoottimeMs } from '@kitbag/core-native';
 import {
   BPM_SOURCE,
   getPlayAlongStore,
@@ -10,16 +9,13 @@ import type { GestureResponderEvent } from 'react-native';
 
 import { TAP_PAD_MODE, tapPadCopy } from '../logic/tapPad.ts';
 import { usePlayAlong } from './playAlongHooks.ts';
+import { touchedAtBoottimeMs } from './touchTime.ts';
 
 interface PadInputs {
   readonly following: boolean;
   readonly locked: boolean;
   readonly retap: boolean;
   readonly onLanded: () => void;
-}
-
-function touchedAtBoottimeMs(event: GestureResponderEvent): number {
-  return uptimeToBoottimeMs(event.nativeEvent.timestamp);
 }
 
 export function useTapPad({ following, locked, retap, onLanded }: PadInputs) {

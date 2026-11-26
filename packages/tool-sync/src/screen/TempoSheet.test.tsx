@@ -5,12 +5,18 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { create } from 'react-test-renderer';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { TAPS_TO_SET_TEMPO } from '@kitbag/core-state';
+
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const ANALYSED_BPM = 171.6;
 const DEFAULT_BPM = 120;
 const TYPED_DIGITS = [9, 6];
 const TYPED_BPM = 96;
+const TAPPED_BPM = 88;
+const TWO_TAPS = 2;
+const TOUCH_UPTIME_MS = 3000;
+const DEEP_SLEEP_GAP_MS = 60_000;
 
 const drawn = vi.hoisted(() => ({
   keypad: [] as Props[],
@@ -29,6 +35,7 @@ const playAlong = vi.hoisted((): PlayAlongView => ({
 }));
 interface LadderView {
   bpm: number | null;
+  source: string | null;
   tapsLanded: number;
   enter: ReturnType<typeof vi.fn>;
   tap: ReturnType<typeof vi.fn>;
@@ -37,6 +44,7 @@ interface LadderView {
 }
 const ladder = vi.hoisted((): LadderView => ({
   bpm: null,
+  source: null,
   tapsLanded: 0,
   enter: vi.fn(),
   tap: vi.fn(),
@@ -61,6 +69,12 @@ vi.mock('@kitbag/core-state', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   useTempoLadder: <T,>(selector: (state: typeof ladder) => T) =>
     selector(ladder),
+  tempoLadderStore: { getState: () => ladder },
+}));
+
+vi.mock('@kitbag/core-native', async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  uptimeToBoottimeMs: (uptimeMs: number) => uptimeMs + DEEP_SLEEP_GAP_MS,
 }));
 
 vi.mock('@kitbag/core-design', async (original) => {
@@ -106,7 +120,17 @@ function press(preset: string) {
   const button = drawn.presets.find((props) =>
     String(props.label).startsWith(preset),
   );
-  (button?.onPress as () => void)();
+  (button?.onPress as (event: unknown) => void)({
+    nativeEvent: { timestamp: TOUCH_UPTIME_MS },
+  });
+}
+
+function tapsLand(tapsLanded: number) {
+  ladder.tap.mockImplementation(() => {
+    ladder.tapsLanded = tapsLanded;
+    ladder.source = 'tap';
+    ladder.bpm = TAPPED_BPM;
+  });
 }
 
 beforeEach(() => {
@@ -114,6 +138,37 @@ beforeEach(() => {
   ladder.bpm = ANALYSED_BPM;
   playAlong.bpm = ANALYSED_BPM;
   playAlong.lock = undefined;
+  ladder.source = null;
+  ladder.tapsLanded = 0;
+});
+
+it('times a sheet tap from its touch', () => {
+  render();
+  press('Tap');
+  expect(ladder.tap).toHaveBeenCalledWith(TOUCH_UPTIME_MS + DEEP_SLEEP_GAP_MS);
+});
+
+it('moves a lock once four sheet taps set a tempo', () => {
+  playAlong.lock = {};
+  tapsLand(TAPS_TO_SET_TEMPO);
+  render();
+  press('Tap');
+  expect(playAlong.setBpm).toHaveBeenCalledWith(TAPPED_BPM);
+});
+
+it('waits for the fourth sheet tap before moving a lock', () => {
+  playAlong.lock = {};
+  tapsLand(TWO_TAPS);
+  render();
+  press('Tap');
+  expect(playAlong.setBpm).not.toHaveBeenCalled();
+});
+
+it('leaves four unlocked sheet taps to the ladder', () => {
+  tapsLand(TAPS_TO_SET_TEMPO);
+  render();
+  press('Tap');
+  expect(playAlong.setBpm).not.toHaveBeenCalled();
 });
 
 it('sets a typed tempo through play along, which also moves a lock', () => {

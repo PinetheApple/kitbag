@@ -1,5 +1,8 @@
-import { createElement, type ReactNode } from 'react';
+// react-test-renderer is deprecated, but it alone re-renders on state with no DOM.
+/* eslint-disable @typescript-eslint/no-deprecated */
+import { act, createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { create, type ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
@@ -73,4 +76,22 @@ it('locks on the stored grid only when Lock is tapped', () => {
   expect(store.acceptOffer).not.toHaveBeenCalled();
   (lock?.onPress as () => void)();
   expect(store.acceptOffer).toHaveBeenCalledOnce();
+});
+
+it('stays on screen for another try when the lock is refused', async () => {
+  store.acceptOffer.mockResolvedValue({ locked: false, reason: 'no-grid' });
+  let tree: ReactTestRenderer | undefined;
+  act(() => {
+    tree = create(createElement(LibraryOfferCard));
+  });
+  const pressLock = async () => {
+    await act(async () => {
+      (drawn.buttons.at(-1)?.onPress as () => void)();
+      await Promise.resolve();
+    });
+  };
+  await pressLock();
+  expect(tree?.toJSON()).not.toBeNull();
+  await pressLock();
+  expect(store.acceptOffer).toHaveBeenCalledTimes(2);
 });
