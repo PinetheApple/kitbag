@@ -3,7 +3,7 @@ import type { KB_ACCENT, MediaSessionStep } from '@kitbag/core-native';
 
 import { configuredStore, type StoreAccess } from '../configuredStore.ts';
 import { BPM_BOUNDS, clamp } from '../metronome/config.ts';
-import { DEFAULT_BPM } from '../metronome/store.ts';
+import { DEFAULT_BPM, initialConfig } from '../metronome/store.ts';
 import type { DetectedGrid } from '../stemPlayer/meterOverride.ts';
 import {
   clickAlone,
@@ -41,7 +41,7 @@ import { nativePlayAlongRuntime, type PlayAlongRuntime } from './runtime.ts';
 import {
   DEFAULT_PHASE_STEP_MS,
   fittedPhase,
-  UNSHIFTED_PHASE,
+  tapPhase,
   type LockPhase,
   type PhaseActions,
   type PhaseState,
@@ -146,7 +146,10 @@ function patternSetters(
       const { lock } = getState();
       if (lock !== undefined)
         setState({
-          lock: { ...lock, ...fittedPhase(lock, lock.bpm, pattern()) },
+          lock: {
+            ...lock,
+            ...fittedPhase(lock, pattern(), follow.heardSpeed()),
+          },
         });
       follow.anchor();
     },
@@ -185,7 +188,7 @@ function tapAction(
       bpm,
       lockedAtBoottimeMs: atBoottimeMs,
       grid: undefined,
-      ...UNSHIFTED_PHASE,
+      ...tapPhase(),
     });
     return LOCKED_OUTCOME;
   };
@@ -210,13 +213,18 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
     });
     const showBpm = (next: number) => {
       const { lock, pattern } = access.getState();
+      const retimed = lock && {
+        ...lock,
+        bpm: next,
+        grid: undefined,
+        gridDownbeats: undefined,
+        downbeatShiftAvailable: true,
+      };
       access.setState({
         bpm: next,
-        lock: lock && {
-          ...lock,
-          ...fittedPhase(lock, next, pattern),
-          bpm: next,
-          grid: undefined,
+        lock: retimed && {
+          ...retimed,
+          ...fittedPhase(retimed, pattern, follow.heardSpeed()),
         },
       });
       click.retempo(next);
@@ -238,16 +246,14 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
       unlockReason: undefined,
       clickPlaying: false,
       phaseStepMs: DEFAULT_PHASE_STEP_MS,
-      latencyOffsetMs: runtime.latencyOffsetMs(),
+      latencyOffsetMs: initialConfig().latencyOffset,
       ...NO_LOCK_STATE,
       setBpm,
       startClick: click.start,
       stopClick: click.stop,
       tap: tapAction(runtime, access, follow),
-      unlock: () => {
-        follow.unlock();
-      },
-      ...phaseActions(access, follow.anchor),
+      unlock: follow.unlock,
+      ...phaseActions(access, follow.anchor, follow.heardSpeed),
       watchLibrary: () => {
         const stopOffers = offers.watchLibrary();
         const stopTempo = tempo.watch();

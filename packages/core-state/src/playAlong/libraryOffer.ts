@@ -7,7 +7,7 @@ import type { LibraryMatch } from '../tempoLadder/libraryMatch.ts';
 import { sameSong } from '../tempoLadder/store.ts';
 import { firstDownbeatSec } from './libraryGrid.ts';
 import type { LockedView } from './lockedView.ts';
-import { UNSHIFTED_PHASE } from './phase.ts';
+import { gridPhase } from './phase.ts';
 import {
   LOCK_REFUSAL,
   LOCKED_OUTCOME,
@@ -153,7 +153,7 @@ export function acceptAction(
       bpm,
       lockedAtBoottimeMs: runtime.boottimeNowMs(),
       grid,
-      ...UNSHIFTED_PHASE,
+      ...gridPhase(grid),
     });
     return LOCKED_OUTCOME;
   };

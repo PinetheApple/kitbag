@@ -8,7 +8,7 @@ const GRID_ANCHOR_FRAME = 0;
 
 type GridCommands = Pick<
   PlayAlongCommands,
-  'setGrid' | 'clearGrid' | 'metronomeAnchorGrid'
+  'setGrid' | 'clearGrid' | 'metronomeAnchorGrid' | 'metronomeSetGridDownbeats'
 >;
 
 export interface GridReply {
@@ -20,12 +20,17 @@ export function engineGrid(commands: GridCommands) {
   let sent: DetectedGrid | undefined;
   let ready = false;
   let generation = 0;
+  let heldDownbeats: readonly number[] | undefined;
+  let askedDownbeats: readonly number[] | undefined;
+  let asks = 0;
   return {
     holds: (grid: DetectedGrid) => sent === grid,
     send: (grid: DetectedGrid, reply: GridReply) => {
       const mine = ++generation;
       sent = grid;
       ready = false;
+      heldDownbeats = grid.downbeatIndices;
+      askedDownbeats = undefined;
       const settle = (result: number) => {
         if (mine !== generation) return;
         if (result !== KB_RESULT.KB_OK) {
@@ -40,6 +45,20 @@ export function engineGrid(commands: GridCommands) {
         .then(settle, () => {
           settle(KB_RESULT.KB_ERROR_INTERNAL);
         });
+    },
+    placeDownbeats: (downbeats: readonly number[]) => {
+      if (!ready || downbeats === (askedDownbeats ?? heldDownbeats)) return;
+      const mine = generation;
+      const ask = ++asks;
+      askedDownbeats = downbeats;
+      const settle = (result: number) => {
+        if (mine !== generation || ask !== asks) return;
+        askedDownbeats = undefined;
+        if (result === KB_RESULT.KB_OK) heldDownbeats = downbeats;
+      };
+      void commands.metronomeSetGridDownbeats(downbeats).then(settle, () => {
+        settle(KB_RESULT.KB_ERROR_INTERNAL);
+      });
     },
     anchor: (songMs: number, frame: number, rate: number): boolean => {
       if (!ready) return false;

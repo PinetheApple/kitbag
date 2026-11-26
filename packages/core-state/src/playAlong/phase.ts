@@ -2,9 +2,13 @@ import { MS_PER_SECOND } from '@kitbag/core-db';
 
 import { clamp } from '../metronome/config.ts';
 import type { BeatDirection } from '../stemPlayer/beatStep.ts';
-import type { DetectedGrid } from '../stemPlayer/meterOverride.ts';
+import { usableDownbeats } from '../stemPlayer/bars.ts';
+import {
+  detectedMeter,
+  type DetectedGrid,
+} from '../stemPlayer/meterOverride.ts';
 import type { PlayAlongPattern } from './pattern.ts';
-import { barSeconds } from './position.ts';
+import { beatSeconds } from './position.ts';
 
 const BEAT_HALVES = 2;
 
@@ -25,6 +29,8 @@ export const DEFAULT_PHASE_STEP_MS: PhaseStepMs = MEDIUM_STEP_MS;
 export interface LockPhase {
   readonly phaseOffsetMs: number;
   readonly downbeatShift: number;
+  readonly downbeatShiftAvailable: boolean;
+  readonly gridDownbeats: readonly number[] | undefined;
 }
 
 export interface PhaseState {
@@ -40,60 +46,96 @@ export interface PhaseActions {
   readonly resetPhase: () => void;
 }
 
-type Meter = Pick<PlayAlongPattern, 'beatsPerBar' | 'denominator'>;
-
-export const UNSHIFTED_PHASE: LockPhase = {
+export const UNSHIFTED_PHASE = {
   phaseOffsetMs: 0,
   downbeatShift: 0,
-};
+  gridDownbeats: undefined,
+} as const satisfies Partial<LockPhase>;
 
-export function phaseLimitMs(bpm: number, denominator: number): number {
-  return (barSeconds(bpm, 1, denominator) * MS_PER_SECOND) / BEAT_HALVES;
+export const tapPhase = (): LockPhase => ({
+  ...UNSHIFTED_PHASE,
+  downbeatShiftAvailable: true,
+});
+
+export const gridPhase = (grid: DetectedGrid): LockPhase => ({
+  ...UNSHIFTED_PHASE,
+  downbeatShiftAvailable:
+    usableDownbeats(grid.downbeatIndices, grid.beats.length).length > 0,
+});
+
+export function phaseLimitMs(
+  bpm: number,
+  denominator: number,
+  speed: number,
+): number {
+  return (beatSeconds(bpm * speed, denominator) * MS_PER_SECOND) / BEAT_HALVES;
 }
 
-export function clampPhase(ms: number, bpm: number, denominator: number) {
-  const limit = phaseLimitMs(bpm, denominator);
+export function clampPhase(
+  ms: number,
+  bpm: number,
+  denominator: number,
+  speed: number,
+): number {
+  const limit = phaseLimitMs(bpm, denominator, speed);
   return clamp(ms, -limit, limit);
 }
 
-export function shiftedDownbeat(
+export const wrappedShift = (shift: number, beatsPerBar: number): number =>
+  ((shift % beatsPerBar) + beatsPerBar) % beatsPerBar;
+
+export const nextShift = (
   shift: number,
-  direction: BeatDirection | 0,
+  direction: BeatDirection,
   beatsPerBar: number,
-): number {
-  return (((shift + direction) % beatsPerBar) + beatsPerBar) % beatsPerBar;
-}
+): number => wrappedShift(shift + direction, beatsPerBar);
 
-export const fittedPhase = (
-  phase: LockPhase,
-  bpm: number,
-  meter: Meter,
-): LockPhase => ({
-  phaseOffsetMs: clampPhase(phase.phaseOffsetMs, bpm, meter.denominator),
-  downbeatShift: shiftedDownbeat(phase.downbeatShift, 0, meter.beatsPerBar),
-});
+export const lockBeatsPerBar = (
+  grid: DetectedGrid | undefined,
+  pattern: Pick<PlayAlongPattern, 'beatsPerBar'>,
+): number =>
+  grid === undefined ? pattern.beatsPerBar : detectedMeter(grid).meter;
 
-export function shiftedGrid(
+export function shiftedDownbeats(
   grid: DetectedGrid,
   shift: number,
   beatsPerBar: number,
-): DetectedGrid {
+): readonly number[] {
+  if (shift === 0) return grid.downbeatIndices;
   const moved = grid.downbeatIndices
     .map((index) => index + shift)
     .filter((index) => index < grid.beats.length);
-  const before = (moved[0] ?? beatsPerBar) - beatsPerBar;
-  return {
-    beats: grid.beats,
-    downbeatIndices: before >= 0 ? [before, ...moved] : moved,
-  };
+  const [first] = moved;
+  if (first === undefined) return moved;
+  const leadingDownbeat = first - beatsPerBar;
+  return leadingDownbeat >= 0 ? [leadingDownbeat, ...moved] : moved;
 }
 
-export function downbeatSecOf(
+export const fittedPhase = (
+  lock: LockPhase & {
+    readonly bpm: number;
+    readonly grid: DetectedGrid | undefined;
+  },
+  pattern: Pick<PlayAlongPattern, 'beatsPerBar' | 'denominator'>,
+  speed: number,
+): Pick<LockPhase, 'phaseOffsetMs' | 'downbeatShift'> => ({
+  phaseOffsetMs: clampPhase(
+    lock.phaseOffsetMs,
+    lock.bpm,
+    pattern.denominator,
+    speed,
+  ),
+  downbeatShift: wrappedShift(
+    lock.downbeatShift,
+    lockBeatsPerBar(lock.grid, pattern),
+  ),
+});
+
+export function shiftedDownbeatSec(
   downbeatSec: number,
   shift: number,
   bpm: number,
-  meter: Meter,
+  denominator: number,
 ): number {
-  const bar = barSeconds(bpm, meter.beatsPerBar, meter.denominator);
-  return downbeatSec + (shift * bar) / meter.beatsPerBar;
+  return downbeatSec + shift * beatSeconds(bpm, denominator);
 }

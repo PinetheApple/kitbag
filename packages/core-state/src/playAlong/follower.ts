@@ -14,13 +14,12 @@ import {
   type UnlockReason,
 } from './lockOutcome.ts';
 import type { PlayAlongPattern } from './pattern.ts';
-import { downbeatSecOf, shiftedGrid } from './phase.ts';
+import { clampPhase, shiftedDownbeatSec } from './phase.ts';
 import {
   barSeconds,
   engineSongSeconds,
   extrapolatedPositionMs,
 } from './position.ts';
-import type { DetectedGrid } from '../stemPlayer/meterOverride.ts';
 import type { PlayAlongRuntime } from './runtime.ts';
 import type { PlayAlongSlot } from './slot.ts';
 import type { PlayAlongLock, PlayAlongState, PlayAlongStore } from './store.ts';
@@ -30,6 +29,7 @@ export const REANCHOR_INTERVAL_MS = 1500;
 export const ANCHOR_RETRY_MS = 50;
 export const SEEK_JUMP_MS = 1000;
 export const SOURCE_GONE_HOLD_MS = 10_000;
+const UNIT_SPEED = 1;
 
 type Access = StoreAccess<PlayAlongStore>;
 
@@ -74,11 +74,11 @@ function clickPlacement(
 ) {
   const bar = barSeconds(lock.bpm, pattern.beatsPerBar, pattern.denominator);
   const songSec = songMs / MS_PER_SECOND;
-  const downbeatSec = downbeatSecOf(
+  const downbeatSec = shiftedDownbeatSec(
     lock.downbeatSec,
     lock.downbeatShift,
     lock.bpm,
-    pattern,
+    pattern.denominator,
   );
   return {
     songSec: engineSongSeconds(songSec, downbeatSec, bar) / speed,
@@ -95,22 +95,6 @@ export function follower(
   let follow: Follow | undefined;
 
   const grids = engineGrid(runtime.commands);
-  let shifted:
-    { source: DetectedGrid; shift: number; grid: DetectedGrid } | undefined;
-
-  const engineGridOf = (lock: PlayAlongLock, grid: DetectedGrid) => {
-    const shift = lock.downbeatShift;
-    if (shift === 0) return grid;
-    if (shifted?.source !== grid || shifted.shift !== shift) {
-      const { beatsPerBar } = getState().pattern;
-      shifted = {
-        source: grid,
-        shift,
-        grid: shiftedGrid(grid, shift, beatsPerBar),
-      };
-    }
-    return shifted.grid;
-  };
 
   const gridRejected = () => {
     unlock();
@@ -122,9 +106,9 @@ export function follower(
       grids.drop();
       return;
     }
-    const grid = engineGridOf(lock, lock.grid);
-    if (!grids.holds(grid))
-      grids.send(grid, { accepted: anchor, rejected: gridRejected });
+    if (!grids.holds(lock.grid))
+      grids.send(lock.grid, { accepted: anchor, rejected: gridRejected });
+    grids.placeDownbeats(lock.gridDownbeats ?? lock.grid.downbeatIndices);
   };
 
   const placeClick = (
@@ -182,7 +166,7 @@ export function follower(
     runtime.commands.metronomePause();
   };
 
-  const unlock = (reason?: UnlockReason) => {
+  const end = (reason: UnlockReason | undefined) => {
     const ending = follow;
     if (ending === undefined) return;
     follow = undefined;
@@ -194,12 +178,14 @@ export function follower(
     unlocked();
   };
 
+  const unlock = () => {
+    end(undefined);
+  };
+
   const sourceGone = (current: Follow) => {
     if (current.grace !== undefined) return;
     silence(current);
-    current.grace = setTimeout(() => {
-      unlock();
-    }, SOURCE_GONE_HOLD_MS);
+    current.grace = setTimeout(unlock, SOURCE_GONE_HOLD_MS);
     setState({ sourceGoneAtBoottimeMs: runtime.boottimeNowMs() });
   };
 
@@ -210,7 +196,21 @@ export function follower(
     setState({ sourceGoneAtBoottimeMs: undefined });
   };
 
+  const refitPhase = (speed: number) => {
+    const { lock, pattern } = getState();
+    if (lock === undefined || speed <= 0) return;
+    const phaseOffsetMs = clampPhase(
+      lock.phaseOffsetMs,
+      lock.bpm,
+      pattern.denominator,
+      speed,
+    );
+    if (phaseOffsetMs !== lock.phaseOffsetMs)
+      setState({ lock: { ...lock, phaseOffsetMs } });
+  };
+
   const followReport = (current: Follow, seen: MediaSessionSnapshot) => {
+    if (seen.speed !== current.seen.speed) refitPhase(seen.speed);
     current.seen = seen;
     showCard(current);
     if (seen.playing) anchor();
@@ -228,7 +228,7 @@ export function follower(
     }
     sourceBack(current);
     if (!sameTrack(lock.track, seen)) {
-      unlock(UNLOCK_REASON.trackChanged);
+      end(UNLOCK_REASON.trackChanged);
       return;
     }
     if (lock.track.durationMs !== seen.durationMs)
@@ -242,9 +242,7 @@ export function follower(
   };
 
   const start = (seen: MediaSessionSnapshot): Follow => {
-    slot.enter(() => {
-      unlock();
-    });
+    slot.enter(unlock);
     const stopWatching = runtime.sessions().subscribe((state, previous) => {
       if (state.sessions !== previous.sessions) onSessions(state.sessions);
     });
@@ -284,5 +282,10 @@ export function follower(
     anchor();
   };
 
-  return { anchor, unlock, lockOn };
+  const heardSpeed = () => {
+    const speed = follow?.seen.speed;
+    return speed !== undefined && speed > 0 ? speed : UNIT_SPEED;
+  };
+
+  return { anchor, unlock, lockOn, heardSpeed };
 }

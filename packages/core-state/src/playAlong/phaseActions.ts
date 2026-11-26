@@ -1,8 +1,10 @@
 import type { StoreAccess } from '../configuredStore.ts';
 import {
   clampPhase,
+  lockBeatsPerBar,
+  nextShift,
   PHASE_STEPS_MS,
-  shiftedDownbeat,
+  shiftedDownbeats,
   UNSHIFTED_PHASE,
   type LockPhase,
   type PhaseActions,
@@ -16,6 +18,7 @@ const isPhaseStep = (step: number): step is PhaseStepMs =>
 export function phaseActions(
   { getState, setState }: StoreAccess<PlayAlongStore>,
   anchor: () => void,
+  heardSpeed: () => number,
 ): PhaseActions {
   const edit = (change: (lock: PlayAlongLock) => Partial<LockPhase>) => {
     const { lock } = getState();
@@ -25,9 +28,24 @@ export function phaseActions(
   };
   const setOffset = (ms: number) => {
     edit((lock) => ({
-      phaseOffsetMs: clampPhase(ms, lock.bpm, getState().pattern.denominator),
+      phaseOffsetMs: clampPhase(
+        ms,
+        lock.bpm,
+        getState().pattern.denominator,
+        heardSpeed(),
+      ),
     }));
   };
+  const shift = (lock: PlayAlongLock, downbeatShift: number) => ({
+    downbeatShift,
+    gridDownbeats:
+      lock.grid &&
+      shiftedDownbeats(
+        lock.grid,
+        downbeatShift,
+        lockBeatsPerBar(lock.grid, getState().pattern),
+      ),
+  });
   return {
     nudgePhase: (direction) => {
       const { lock, phaseStepMs } = getState();
@@ -41,13 +59,12 @@ export function phaseActions(
       if (isPhaseStep(step)) setState({ phaseStepMs: step });
     },
     shiftDownbeat: (direction) => {
-      edit((lock) => ({
-        downbeatShift: shiftedDownbeat(
-          lock.downbeatShift,
-          direction,
-          getState().pattern.beatsPerBar,
-        ),
-      }));
+      const { lock, pattern } = getState();
+      if (lock?.downbeatShiftAvailable !== true) return;
+      const beatsPerBar = lockBeatsPerBar(lock.grid, pattern);
+      edit(() =>
+        shift(lock, nextShift(lock.downbeatShift, direction, beatsPerBar)),
+      );
     },
     resetPhase: () => {
       edit(() => UNSHIFTED_PHASE);

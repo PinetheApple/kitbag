@@ -32,6 +32,7 @@ export type PlayAlongCommands = Pick<
   | 'metronomeSelectSlot'
   | 'metronomeAnchorExternal'
   | 'metronomeAnchorGrid'
+  | 'metronomeSetGridDownbeats'
   | 'setGrid'
   | 'clearGrid'
   | 'metronomePause'
