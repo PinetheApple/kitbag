@@ -1,11 +1,10 @@
 import {
+  DrawnLiveSlot,
   FillBar,
   Icon,
   IconGlyph,
   iconSizes,
   isTextScaled,
-  LiveSlot,
-  LiveText,
   useReduceMotionValue,
   useTheme,
 } from '@kitbag/core-design';
@@ -101,17 +100,20 @@ function RampStatus({ rows, frame, ramp }: RampStatusProps) {
   return (
     <StatusVariant rows={rows} shown="ramp" style={[styles.live, reserve]}>
       <Icon name="ramp" size="statusLive" color="text2" />
-      <LiveSlot
+      <DrawnLiveSlot
         text={next}
         role="statusLead"
         widest={RAMP_NEXT_WIDEST}
+        color={color.text}
         textStyle={styles.lead}
       />
-      <LiveText
+      <DrawnLiveSlot
         text={remaining}
         role="status"
-        align="left"
-        style={styles.detail}
+        widest={rampRemainingText(interval, unit)}
+        color={color.text}
+        textStyle={styles.detail}
+        style={styles.grow}
       />
       <Text style={[styles.meta, scaled && styles.ownLine]}>
         {`target ${String(ramp.targetBpm)}`}
@@ -177,10 +179,11 @@ function CountInStatus({
         color={countInInk(theme.color.bg, theme.color.text)}
       />
       <Text style={[styles.lead, styles.countInLead]}>Count-in</Text>
-      <LiveSlot
+      <DrawnLiveSlot
         text={meta}
         role="statusMeta"
         widest={COUNT_IN_WIDEST}
+        color={countInInk(theme.color.bg, theme.color.text)}
         textStyle={[styles.meta, styles.countInMeta]}
         style={styles.pushRight}
       />

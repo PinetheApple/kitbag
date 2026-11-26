@@ -20,6 +20,15 @@ export const DOT_WIDTHS: DotWidths = {
   silentNow: metronome.dotSilentNowBorder,
 };
 
+const EDGE = {
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+  borderRadius: radius.circle,
+} as const;
+
 export const PULSE_MARKS = {
   mark: metronome.pulseMark,
   gap: metronome.pulseMarkGap,
@@ -54,6 +63,15 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
     },
     dot: {
       borderRadius: radius.circle,
+      borderWidth: DOT_WIDTHS.normal,
+    },
+    accentEdge: {
+      ...EDGE,
+      borderWidth: DOT_WIDTHS.accent,
+    },
+    silentEdge: {
+      ...EDGE,
+      borderWidth: DOT_WIDTHS.silentNow,
     },
     dashed: {
       borderStyle: 'dashed',

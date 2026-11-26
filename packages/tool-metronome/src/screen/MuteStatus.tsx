@@ -1,11 +1,13 @@
 import {
   createThemedStyles,
+  DrawnLiveSlot,
   Icon,
-  LiveSlot,
   metronome,
+  TRANSPARENT,
+  useTheme,
 } from '@kitbag/core-design';
 import type { BarMuteConfig } from '@kitbag/core-state';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
@@ -45,10 +47,6 @@ const useCycleStyles = createThemedStyles((theme) => ({
     borderRadius: metronome.cycleCellRadius,
     borderWidth: metronome.cycleCellBorder,
   },
-  play: {
-    backgroundColor: theme.color.text2,
-    borderColor: theme.color.text2,
-  },
   ...mutedCellStyles(
     metronome.cycleCellBorder,
     metronome.cycleCellRadius,
@@ -62,16 +60,11 @@ const useCycleStyles = createThemedStyles((theme) => ({
     left: -OUTLINE_REACH,
     borderRadius: metronome.cycleCellRadius + OUTLINE_REACH,
     borderWidth: metronome.cycleNowOutline,
-    borderColor: theme.color.text,
-  },
-  stack: {
-    justifyContent: 'center',
-  },
-  overlay: {
-    position: 'absolute',
-    left: 0,
   },
 }));
+
+const MUTED_LEAD = 'Muted bar';
+const PLAYING_LEAD = 'Playing';
 
 interface CycleCellProps {
   readonly cell: number;
@@ -82,23 +75,25 @@ interface CycleCellProps {
 
 function CycleCell({ cell, position, playBars, cycle }: CycleCellProps) {
   const styles = useCycleStyles();
+  const { color } = useTheme();
   const bar = useDerivedValue(() => cycleCellBar(cell, position.value, cycle));
-  const play = useAnimatedStyle(() => ({
-    opacity: bar.value >= 0 && bar.value < playBars ? 1 : 0,
-  }));
+  const play = useAnimatedStyle(() => {
+    const ink =
+      bar.value >= 0 && bar.value < playBars ? color.text2 : TRANSPARENT;
+    return { backgroundColor: ink, borderColor: ink };
+  });
   const mute = useAnimatedStyle(() => ({
-    opacity: bar.value >= playBars ? 1 : 0,
+    borderColor: bar.value >= playBars ? color.text2 : TRANSPARENT,
   }));
   const now = useAnimatedStyle(() => ({
-    opacity: bar.value >= 0 && bar.value === position.value ? 1 : 0,
+    borderColor:
+      bar.value >= 0 && bar.value === position.value ? color.text : TRANSPARENT,
   }));
   return (
     <View style={styles.cell}>
-      <Animated.View style={[styles.face, styles.play, play]} />
-      <Animated.View style={[StyleSheet.absoluteFill, mute]}>
-        <View style={styles.mutedOutline} />
-        <View style={styles.mutedEnds} />
-      </Animated.View>
+      <Animated.View style={[styles.face, play]} />
+      <Animated.View style={[styles.mutedOutline, mute]} />
+      <Animated.View style={[styles.mutedEnds, mute]} />
       <Animated.View style={[styles.now, now]} />
     </View>
   );
@@ -119,28 +114,28 @@ export function MuteStatus({
 }: MuteStatusProps) {
   const styles = useStatusStyles();
   const cycleStyles = useCycleStyles();
+  const { color } = useTheme();
   const cycle = barMute.playBars + barMute.muteBars;
   const position = useDerivedValue(() => ofText(barMutePosition.value, cycle));
-  const muted = useAnimatedStyle(() => ({
-    opacity: barMuted.value === 0 ? 0 : 1,
-  }));
-  const playing = useAnimatedStyle(() => ({
-    opacity: barMuted.value === 0 ? 1 : 0,
-  }));
+  const lead = useDerivedValue<string>(() =>
+    barMuted.value === 0 ? PLAYING_LEAD : MUTED_LEAD,
+  );
   const cells = Array.from({ length: cycleStripCells(cycle) }, (_u, i) => i);
   return (
     <StatusVariant rows={rows} shown="mute" style={styles.live}>
       <Icon name="muteBars" size="statusLive" color="text2" />
-      <View style={cycleStyles.stack}>
-        <Animated.Text style={[styles.lead, muted]}>Muted bar</Animated.Text>
-        <Animated.Text style={[styles.lead, cycleStyles.overlay, playing]}>
-          Playing
-        </Animated.Text>
-      </View>
-      <LiveSlot
+      <DrawnLiveSlot
+        text={lead}
+        role="statusLead"
+        widest={MUTED_LEAD}
+        color={color.text}
+        textStyle={styles.lead}
+      />
+      <DrawnLiveSlot
         text={position}
         role="statusMeta"
         widest={ofText(cycle - 1, cycle)}
+        color={color.text2}
         textStyle={styles.meta}
         style={styles.metaGap}
       />

@@ -37,8 +37,7 @@ vi.mock('@kitbag/core-design', async (original) => ({
   FillBar: () => null,
   Icon: () => null,
   IconGlyph: () => null,
-  LiveSlot: () => null,
-  LiveText: () => null,
+  DrawnLiveSlot: () => null,
   useReduceMotionValue: () => ({ value: false }),
   useTheme: () => ({ color: new Proxy({}, { get: () => '' }) }),
 }));

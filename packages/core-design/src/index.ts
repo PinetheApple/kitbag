@@ -110,6 +110,7 @@ export * from './components/WheelPicker.tsx';
 export * from './components/Waveform.tsx';
 export { FillBar, type FillBarProps } from './components/ProgressSvg.tsx';
 export * from './components/DrawnFigures.tsx';
+export * from './components/DrawnLiveSlot.tsx';
 export * from './components/BeatWaveform.tsx';
 export * from './components/PlayerDock.tsx';
 export * from './components/PlayerScroll.tsx';

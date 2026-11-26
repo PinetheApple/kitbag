@@ -9,7 +9,7 @@ import type { ColorToken } from '../tokens.ts';
 import { GhostText } from './GhostText.tsx';
 
 type Roles = typeof textRoles;
-type PlainRoleName = {
+export type PlainRoleName = {
   [Name in TextRoleName]: Roles[Name] extends
     { readonly tracking: number } | { readonly uppercase: true }
     ? never
@@ -22,12 +22,12 @@ export interface DrawnFiguresProps {
   readonly color?: ColorToken;
 }
 
-const TABULAR_FIGURES = "'tnum'";
+export const TABULAR_FIGURES = "'tnum'";
 const ANY_DIGIT = /\d/g;
 const SAME_WIDTH_DIGIT = '0';
 // Android lays a Text's first line out from the font's top metric; "top" puts the
 // svg baseline at the same depth, so the drawing sits where the Text would.
-const TEXT_LINE_TOP = 'top';
+export const TEXT_LINE_TOP = 'top';
 
 export function DrawnFigures({
   text,

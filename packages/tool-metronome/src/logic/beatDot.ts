@@ -33,9 +33,10 @@ export interface DotWidths {
 }
 
 export interface DotLook {
-  readonly backgroundColor: string;
-  readonly borderColor: string;
-  readonly borderWidth: number;
+  readonly fill: string;
+  readonly edge: string;
+  readonly accentEdge: string;
+  readonly silentEdge: string;
 }
 
 export function dotLook(
@@ -43,41 +44,41 @@ export function dotLook(
   sounding: boolean,
   silentBar: boolean,
   palette: DotPalette,
-  widths: DotWidths,
 ): DotLook {
   'worklet';
+  const { clear } = palette;
   if (silentBar && sounding) {
     return {
-      backgroundColor: palette.clear,
-      borderColor: palette.silentNow,
-      borderWidth: widths.silentNow,
+      fill: clear,
+      edge: clear,
+      accentEdge: clear,
+      silentEdge: palette.silentNow,
     };
   }
   if (silentBar || state === 'muted') {
     return {
-      backgroundColor: palette.clear,
-      borderColor: sounding ? palette.silentNow : palette.hollow,
-      borderWidth: widths.normal,
+      fill: clear,
+      edge: sounding ? palette.silentNow : palette.hollow,
+      accentEdge: clear,
+      silentEdge: clear,
     };
   }
-  const ring = state === 'accented' ? widths.accent : widths.normal;
+  const accentEdge = state === 'accented' ? palette.accent : clear;
   if (sounding) {
     return {
-      backgroundColor: palette.accent,
-      borderColor: palette.accent,
-      borderWidth: ring,
+      fill: palette.accent,
+      edge: palette.accent,
+      accentEdge,
+      silentEdge: clear,
     };
   }
   if (state === 'accented') {
-    return {
-      backgroundColor: palette.clear,
-      borderColor: palette.accent,
-      borderWidth: ring,
-    };
+    return { fill: clear, edge: palette.accent, accentEdge, silentEdge: clear };
   }
   return {
-    backgroundColor: palette.fill,
-    borderColor: palette.border,
-    borderWidth: widths.normal,
+    fill: palette.fill,
+    edge: palette.border,
+    accentEdge: clear,
+    silentEdge: clear,
   };
 }
