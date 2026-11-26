@@ -145,6 +145,7 @@ function ChipFace({
         <Icon name={icon} size={glyphSize} color={glyphColor} />
       )}
       <Text
+        accessibilityLabel={`dbg:chip:${label}`}
         numberOfLines={1}
         style={[
           styles.label,

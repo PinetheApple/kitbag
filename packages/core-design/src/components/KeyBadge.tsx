@@ -47,7 +47,11 @@ export function KeyBadge({
       style={[styles.badge, box, style]}
       importantForAccessibility="no-hide-descendants"
     >
-      <Text style={styles.label} maxFontSizeMultiplier={scale}>
+      <Text
+        accessibilityLabel={`dbg:key-badge:${label}`}
+        style={styles.label}
+        maxFontSizeMultiplier={scale}
+      >
         {label}
       </Text>
     </View>

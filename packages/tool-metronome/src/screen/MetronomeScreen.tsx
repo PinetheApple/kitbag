@@ -283,7 +283,7 @@ export function MetronomeScreen({
             {strip === null ? null : (
               <Text
                 accessible={strip.spoken !== null}
-                accessibilityLabel={strip.spoken ?? undefined}
+                accessibilityLabel="dbg:notes-strip"
                 numberOfLines={1}
                 style={[styles.notes, topGap]}
               >

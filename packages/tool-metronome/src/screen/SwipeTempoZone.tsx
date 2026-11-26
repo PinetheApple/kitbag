@@ -243,6 +243,7 @@ export function SwipeTempoZone({
     >
       {tight ? (
         <Text
+          accessibilityLabel="dbg:tempo-ghost"
           maxFontSizeMultiplier={maxScale}
           style={[styles.bpm, numeral, styles.ghost]}
           importantForAccessibility="no"
@@ -255,7 +256,9 @@ export function SwipeTempoZone({
     </Pressable>
   );
   const caption = (
-    <Text style={styles.sub}>{tempoCaption(bpm, swipeAnywhere)}</Text>
+    <Text accessibilityLabel="dbg:tempo-caption" style={styles.sub}>
+      {tempoCaption(bpm, swipeAnywhere)}
+    </Text>
   );
   const sweep = <BarSweep barPhase={barPhase} gap={SWEEP_GAP[density]} />;
   if (tight) {

@@ -115,7 +115,10 @@ function RampStatus({ rows, frame, ramp }: RampStatusProps) {
         textStyle={styles.detail}
         style={styles.grow}
       />
-      <Text style={[styles.meta, scaled && styles.ownLine]}>
+      <Text
+        accessibilityLabel="dbg:ramp-target"
+        style={[styles.meta, scaled && styles.ownLine]}
+      >
         {`target ${String(ramp.targetBpm)}`}
       </Text>
       <Animated.View style={[styles.progressTrack, track]}>
@@ -146,8 +149,16 @@ function ReachedStatus({
       style={[styles.live, styles.reached, reserve]}
     >
       <Icon name="check" size="statusLive" color="accentDeep" />
-      <Text style={styles.lead}>{`Ramp reached ${String(targetBpm)}`}</Text>
-      <Text style={[styles.meta, styles.pushRight]}>holding</Text>
+      <Text
+        accessibilityLabel="dbg:reached-lead"
+        style={styles.lead}
+      >{`Ramp reached ${String(targetBpm)}`}</Text>
+      <Text
+        accessibilityLabel="dbg:reached-holding"
+        style={[styles.meta, styles.pushRight]}
+      >
+        holding
+      </Text>
       <View style={[styles.progressTrack, styles.progress]} />
     </StatusVariant>
   );
@@ -175,7 +186,12 @@ function CountInStatus({
       style={[styles.live, styles.countIn]}
     >
       <IconGlyph name="countingIn" px={iconSizes.statusLive} color={ink} />
-      <Text style={[styles.lead, styles.countInLead]}>Count-in</Text>
+      <Text
+        accessibilityLabel="dbg:countin-lead"
+        style={[styles.lead, styles.countInLead]}
+      >
+        Count-in
+      </Text>
       <DrawnLiveSlot
         text={meta}
         role="statusMeta"
@@ -206,8 +222,14 @@ function AfterCountInStatus({
       wrapsWhenScaled={false}
     >
       <Icon name="practiceTools" size="statusLive" color="text2" />
-      <Text style={[styles.lead, styles.afterCountInText]}>Then</Text>
       <Text
+        accessibilityLabel="dbg:then-lead"
+        style={[styles.lead, styles.afterCountInText]}
+      >
+        Then
+      </Text>
+      <Text
+        accessibilityLabel="dbg:then-summary"
         style={[
           styles.meta,
           styles.pushRight,
@@ -267,6 +289,7 @@ export function StatusStack({
         <View style={[styles.rest, restRow]}>
           <Icon name="practiceTools" size="statusRest" color="text2" />
           <Text
+            accessibilityLabel="dbg:rest-summary"
             style={styles.restText}
             numberOfLines={statusTextLines(fontScale)}
           >

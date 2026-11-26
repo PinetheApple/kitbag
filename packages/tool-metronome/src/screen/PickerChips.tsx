@@ -87,7 +87,9 @@ export function PickerChips({
         onPress={onOpenMeter}
       >
         <View style={[styles.chip, styles.meter]}>
-          <Text style={styles.label}>{meterLabel(meter)}</Text>
+          <Text accessibilityLabel="dbg:chip-meter" style={styles.label}>
+            {meterLabel(meter)}
+          </Text>
           <Icon name="caretDown" size="caret" color="decor" />
         </View>
       </Pressable>
@@ -104,7 +106,9 @@ export function PickerChips({
             denominator={denominator}
             height={metronome.notationChip}
           />
-          <Text style={styles.label}>{name}</Text>
+          <Text accessibilityLabel="dbg:chip-subdivision" style={styles.label}>
+            {name}
+          </Text>
           <Icon name="caretDown" size="caret" color="decor" />
         </View>
       </Pressable>

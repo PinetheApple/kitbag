@@ -132,7 +132,9 @@ export function Badge({
           style={[labelStyle, (list || tone === 'strong') && styles.listIcon]}
         />
       )}
-      <Text style={labelStyle}>{label}</Text>
+      <Text accessibilityLabel={`dbg:badge:${label}`} style={labelStyle}>
+        {label}
+      </Text>
     </View>
   );
 }

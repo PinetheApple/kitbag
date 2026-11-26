@@ -60,15 +60,21 @@ export function PolyLegend() {
     <View style={styles.legend}>
       <View style={styles.item}>
         <View style={[styles.swatch, styles.cycleStart]} />
-        <Text style={styles.label}>cycle start</Text>
+        <Text accessibilityLabel="dbg:poly-legend-start" style={styles.label}>
+          cycle start
+        </Text>
       </View>
       <View style={styles.item}>
         <View style={styles.swatch} />
-        <Text style={styles.label}>poly beat</Text>
+        <Text accessibilityLabel="dbg:poly-legend-beat" style={styles.label}>
+          poly beat
+        </Text>
       </View>
       <View style={styles.item}>
         <View style={styles.bracket} />
-        <Text style={styles.label}>one cycle</Text>
+        <Text accessibilityLabel="dbg:poly-legend-cycle" style={styles.label}>
+          one cycle
+        </Text>
       </View>
     </View>
   );

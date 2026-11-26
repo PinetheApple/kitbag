@@ -192,12 +192,17 @@ function SongChipFace({
     <>
       <View style={[styles.lines, stage && styles.stageLines]}>
         <View style={styles.titleLine}>
-          <Text style={styles.songTitle} numberOfLines={1}>
+          <Text
+            accessibilityLabel="dbg:appbar-song-title"
+            style={styles.songTitle}
+            numberOfLines={1}
+          >
             {text.title}
           </Text>
           {unsaved ? <UnsavedDot /> : null}
         </View>
         <Text
+          accessibilityLabel="dbg:appbar-song-context"
           style={[styles.songContext, stage && styles.stageContext]}
           numberOfLines={1}
         >
@@ -258,7 +263,11 @@ function SetlistsChip({ onPress }: { readonly onPress: () => void }) {
       onPress={onPress}
     >
       <View style={styles.setChip}>
-        <Text style={styles.setLabel} numberOfLines={1}>
+        <Text
+          accessibilityLabel="dbg:appbar-setlist-chip"
+          style={styles.setLabel}
+          numberOfLines={1}
+        >
           {setlistChipLabel(undefined)}
         </Text>
         <Icon name="caretDown" size="caret" color="decor" />

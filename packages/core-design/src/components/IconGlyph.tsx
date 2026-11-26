@@ -16,7 +16,12 @@ export interface IconGlyphProps {
 /** The bare vector glyph, for callers that size by pixels rather than role. */
 export function IconGlyph({ name, px, color }: IconGlyphProps) {
   return (
-    <MaterialCommunityIcons name={iconGlyphs[name]} size={px} color={color} />
+    <MaterialCommunityIcons
+      accessibilityLabel={`dbg:glyph:${name}`}
+      name={iconGlyphs[name]}
+      size={px}
+      color={color}
+    />
   );
 }
 

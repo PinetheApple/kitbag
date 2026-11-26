@@ -277,7 +277,11 @@ export function PolyDots({
     const { width, height } = event.nativeEvent.layout;
     setLabel({ width, height });
   }, []);
-  const labelText = <Text style={styles.labelText}>{text}</Text>;
+  const labelText = (
+    <Text accessibilityLabel="dbg:poly-label" style={styles.labelText}>
+      {text}
+    </Text>
+  );
   return (
     <View
       style={[styles.block, width]}
@@ -287,6 +291,7 @@ export function PolyDots({
       pointerEvents="none"
     >
       <Text
+        accessibilityLabel="dbg:poly-label-ghost"
         style={[styles.labelText, styles.ghost]}
         importantForAccessibility="no"
         onLayout={handleLabelLayout}

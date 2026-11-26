@@ -114,7 +114,9 @@ export function PracticePill({ elapsedMs, onEnd }: PracticePillProps) {
         />
         {endable ? (
           <View style={styles.endRow}>
-            <Text style={styles.end}>End</Text>
+            <Text accessibilityLabel="dbg:pill-end" style={styles.end}>
+              End
+            </Text>
           </View>
         ) : null}
       </Pressable>

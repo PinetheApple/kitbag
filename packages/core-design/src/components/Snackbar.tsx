@@ -115,7 +115,10 @@ export function Snackbar({
         inline === true ? styles.inline : { bottom },
       ]}
     >
-      <Text style={styles.message} accessibilityLabel={spokenMessage}>
+      <Text
+        style={styles.message}
+        accessibilityLabel={`dbg:snackbar:${spokenMessage}`}
+      >
         {message}
       </Text>
       {actionLabel === undefined ? null : (
@@ -125,7 +128,12 @@ export function Snackbar({
           style={styles.action}
           onPress={onAction}
         >
-          <Text style={styles.actionLabel}>{actionLabel}</Text>
+          <Text
+            accessibilityLabel="dbg:snackbar-action"
+            style={styles.actionLabel}
+          >
+            {actionLabel}
+          </Text>
         </Pressable>
       )}
     </View>

@@ -41,7 +41,12 @@ export function CountInSquares({
       <>
         <CountSquare beat={beat} side={dotSize} currentBeat={countBeat} />
         <View style={styles.pulseRow} />
-        <Text style={styles.marker}>{TEXT_PLACEHOLDER}</Text>
+        <Text
+          accessibilityLabel={`dbg:countin-placeholder:${String(beat)}`}
+          style={styles.marker}
+        >
+          {TEXT_PLACEHOLDER}
+        </Text>
       </>
     ),
     [dotSize, countBeat, styles],

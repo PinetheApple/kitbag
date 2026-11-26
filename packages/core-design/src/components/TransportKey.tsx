@@ -160,7 +160,12 @@ export function TransportKey({
       onPress={onPress}
     >
       {icon === undefined ? (
-        <Text style={[LABEL_TEXT, inkStyle, designSizeLabel]}>{text}</Text>
+        <Text
+          accessibilityLabel={`dbg:transport-key:${text}`}
+          style={[LABEL_TEXT, inkStyle, designSizeLabel]}
+        >
+          {text}
+        </Text>
       ) : (
         <InlineIcon name={icon} style={[GLYPH_TEXT[keySize], inkStyle]} />
       )}

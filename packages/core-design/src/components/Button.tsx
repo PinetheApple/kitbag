@@ -246,6 +246,7 @@ export function Button({
           />
         )}
         <Text
+          accessibilityLabel={`dbg:button:${label}`}
           style={[
             styles.label,
             buttonSize === 'small' && styles.smallLabel,

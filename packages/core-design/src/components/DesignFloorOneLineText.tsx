@@ -34,7 +34,12 @@ export function DesignFloorOneLineText({
   return (
     <View style={boxStyle} onLayout={fit.onAvailableLayout}>
       {fit.measurer}
-      <Text style={[style, fit.style]} numberOfLines={1} ellipsizeMode="tail">
+      <Text
+        accessibilityLabel={`dbg:floor-text:${text}`}
+        style={[style, fit.style]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
         {text}
       </Text>
     </View>

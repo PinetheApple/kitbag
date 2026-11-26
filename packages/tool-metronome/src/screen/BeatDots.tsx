@@ -211,6 +211,7 @@ export function BeatDots({
             palette={palette}
           />
           <Text
+            accessibilityLabel={`dbg:beat-marker:${String(beat)}`}
             style={styles.marker}
             accessible={false}
             importantForAccessibility="no"
@@ -268,15 +269,21 @@ export function BeatLegend() {
     <View style={styles.legend}>
       <View style={styles.legendItem}>
         <View style={[styles.swatch, styles.swatchAccent]} />
-        <Text style={styles.legendLabel}>accent</Text>
+        <Text accessibilityLabel="dbg:legend-accent" style={styles.legendLabel}>
+          accent
+        </Text>
       </View>
       <View style={styles.legendItem}>
         <View style={[styles.swatch, styles.swatchNormal]} />
-        <Text style={styles.legendLabel}>normal</Text>
+        <Text accessibilityLabel="dbg:legend-normal" style={styles.legendLabel}>
+          normal
+        </Text>
       </View>
       <View style={styles.legendItem}>
         <View style={[styles.swatch, styles.swatchMuted]} />
-        <Text style={styles.legendLabel}>muted</Text>
+        <Text accessibilityLabel="dbg:legend-muted" style={styles.legendLabel}>
+          muted
+        </Text>
       </View>
     </View>
   );

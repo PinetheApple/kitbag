@@ -93,7 +93,9 @@ export function UnsavedNote() {
   return (
     <View style={styles.note}>
       <UnsavedDot />
-      <Text style={styles.noteText}>{UNSAVED_CHANGES}</Text>
+      <Text accessibilityLabel="dbg:unsaved-note" style={styles.noteText}>
+        {UNSAVED_CHANGES}
+      </Text>
     </View>
   );
 }
@@ -131,7 +133,12 @@ function RowAction({ icon, label, spoken, primary, onPress }: RowActionProps) {
         style={[styles.rowAction, primary ? styles.rowSave : styles.rowRevert]}
       >
         <InlineIcon name={icon} style={[styles.rowIcon, ink]} />
-        <Text style={[styles.rowLabel, ink]}>{label}</Text>
+        <Text
+          accessibilityLabel={`dbg:unsaved-row:${label}`}
+          style={[styles.rowLabel, ink]}
+        >
+          {label}
+        </Text>
       </View>
     </Pressable>
   );

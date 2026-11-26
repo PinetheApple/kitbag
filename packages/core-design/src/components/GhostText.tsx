@@ -16,6 +16,7 @@ const styles = StyleSheet.create({
 export function GhostText({ role, text, textStyle }: GhostTextProps) {
   return (
     <Text
+      accessibilityLabel={`dbg:ghost:${role}:${text}`}
       style={[
         roleStyle({ ...textRoles[role], tabular: true }),
         textStyle,

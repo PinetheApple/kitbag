@@ -63,7 +63,11 @@ function OneLineMeasurer({
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <Text style={[style, measureText]} onLayout={handleLayout}>
+      <Text
+        accessibilityLabel="dbg:one-line-fit-measurer"
+        style={[style, measureText]}
+        onLayout={handleLayout}
+      >
         {text}
       </Text>
     </View>

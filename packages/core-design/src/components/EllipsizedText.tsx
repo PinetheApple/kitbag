@@ -26,17 +26,25 @@ export function EllipsizedText({
   const { fontSize, opacity } = StyleSheet.flatten(style) ?? {};
   if (fontSize === undefined || !isTextScaled(fontScale) || children === '')
     return (
-      <Text style={style} numberOfLines={numberOfLines} ellipsizeMode="tail">
+      <Text
+        accessibilityLabel="dbg:ellipsized"
+        style={style}
+        numberOfLines={numberOfLines}
+        ellipsizeMode="tail"
+      >
         {children}
       </Text>
     );
   return (
     <Text
+      accessibilityLabel="dbg:ellipsized-outer"
       style={{ fontSize: ellipsisPaintSize(fontSize, fontScale), opacity }}
       numberOfLines={numberOfLines}
       ellipsizeMode="tail"
     >
-      <Text style={style}>{children}</Text>
+      <Text accessibilityLabel="dbg:ellipsized-inner" style={style}>
+        {children}
+      </Text>
     </Text>
   );
 }
