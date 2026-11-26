@@ -108,6 +108,13 @@ bool SampleVoices::Trigger(int slot, float gain) {
   return true;
 }
 
+bool SampleVoices::sounding() const {
+  for (const Voice& voice : voices_) {
+    if (voice.frames != nullptr || voice.fade_left > 0) return true;
+  }
+  return false;
+}
+
 float SampleVoices::Render() {
   float sample = 0.0F;
   for (Voice& voice : voices_) {

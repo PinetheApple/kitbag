@@ -71,6 +71,7 @@ void Metronome::RenderSuspended(
   pending_preview_sound_ = -1;
   ReacquireGrid();
   current_bpm_.store(bpm_, std::memory_order_relaxed);
+  if (!voices_.sounding() && !custom_sounds_.sounding()) return;
   for (uint32_t frame = 0; frame < frames; ++frame) {
     const float sample = (voices_.Render() + custom_sounds_.Render()) * volume_;
     for (uint32_t channel = 0; channel < channels; ++channel) {

@@ -14,6 +14,7 @@ class ClickVoices {
       uint32_t sample_rate
   );
   float Render();
+  bool sounding() const;
 
  private:
   struct Voice {
