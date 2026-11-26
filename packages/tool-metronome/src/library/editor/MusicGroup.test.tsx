@@ -3,7 +3,13 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 import { songPreset } from '../../logic/fixtures.test-helper.ts';
-import { draftFrom, type PresetDraft } from '../../logic/presetDraft.ts';
+import { DEFAULT_BPM } from '@kitbag/core-state';
+
+import {
+  draftFrom,
+  editFrom,
+  type PresetDraft,
+} from '../../logic/presetDraft.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -83,11 +89,24 @@ describe('preset editor tempo row', () => {
     });
   });
 
-  it('shows the number once the tempo is changed', () => {
-    const changed = { ...untimed, bpm: untimed.bpm + 1 };
-    expect(tempoField(changed)).toMatchObject({
-      value: String(changed.bpm),
-      accessibilityValue: `${String(changed.bpm)} BPM`,
+  it('leaves the song’s tempo on any step, even back to the same number', () => {
+    let draft = untimed;
+    const update = (change: (d: PresetDraft) => PresetDraft) => {
+      draft = change(draft);
+    };
+    const stepTempo = (delta: number) => {
+      steppers.length = 0;
+      const editor = { ...editorFor(draft), update };
+      renderToStaticMarkup(createElement(MusicGroup, { editor }));
+      const field = steppers.find((props) => props.label === 'Tempo');
+      (field?.onStep as (delta: number) => void)(delta);
+    };
+    stepTempo(1);
+    stepTempo(-1);
+    expect(editFrom(draft).bpm).toBe(DEFAULT_BPM);
+    expect(tempoField(draft)).toMatchObject({
+      value: String(DEFAULT_BPM),
+      accessibilityValue: `${String(DEFAULT_BPM)} BPM`,
     });
   });
 

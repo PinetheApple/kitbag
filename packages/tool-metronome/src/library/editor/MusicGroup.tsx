@@ -24,6 +24,7 @@ import {
   withNextDenominator,
   withPolyAgainst,
   withPolyBeats,
+  withTempoEdited,
 } from '../../logic/presetDraft.ts';
 import { polyAgainstLabel } from '../../logic/polyRow.ts';
 import { TEMPO_FROM_SONG } from '../../logic/songSummary.ts';
@@ -42,7 +43,7 @@ const EDITOR_LED_GAPS = {
   left: space.rowGap,
 };
 import { OnOff, StepField } from './fields.tsx';
-import type { PresetEditor } from './usePresetEditor.ts';
+import { useMarkedUpdate, type PresetEditor } from './usePresetEditor.ts';
 
 function useIdentitySetters(editor: PresetEditor) {
   const { update } = editor;
@@ -209,11 +210,12 @@ const SONG_TEMPO_FIELD = {
 } as const;
 
 function TempoRow({ editor }: { readonly editor: PresetEditor }) {
+  const update = useMarkedUpdate(editor.update, withTempoEdited);
   const songTempo = keepsSongTempo(editor.draft) ? SONG_TEMPO_FIELD : {};
   return (
     <EditRow label="Tempo">
       <StepField
-        update={editor.update}
+        update={update}
         field="bpm"
         value={editor.draft.bpm}
         {...songTempo}

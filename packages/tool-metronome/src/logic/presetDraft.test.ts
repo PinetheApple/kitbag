@@ -18,6 +18,8 @@ import {
   withNextDenominator,
   withPolyAgainst,
   withPolyBeats,
+  withRampBpmEdited,
+  withTempoEdited,
 } from './presetDraft.ts';
 import { setlistSubtitle, songSubtitle } from './songSummary.ts';
 
@@ -125,18 +127,58 @@ describe('preset draft', () => {
   it('saves no tempo for a song that has none unless the tempo is changed', () => {
     const draft = draftFrom({ ...PRESET, bpm: null });
     expect(editFrom(draft).bpm).toBeNull();
-    expect(editFrom({ ...draft, bpm: draft.bpm + 1 }).bpm).toBe(
-      DEFAULT_BPM + 1,
-    );
+    const changed = withTempoEdited({ ...draft, bpm: draft.bpm + 1 });
+    expect(editFrom(changed).bpm).toBe(DEFAULT_BPM + 1);
   });
 
-  it('keeps the song’s tempo only until the tempo is changed', () => {
+  it('keeps the song’s tempo until the tempo is edited, even back to the same number', () => {
     const draft = draftFrom({ ...PRESET, bpm: null });
     expect(keepsSongTempo(draft)).toBe(true);
-    expect(keepsSongTempo({ ...draft, bpm: draft.bpm + 1 })).toBe(false);
+    const back = withTempoEdited(draft);
+    expect(keepsSongTempo(back)).toBe(false);
+    expect(editFrom(back).bpm).toBe(DEFAULT_BPM);
     expect(keepsSongTempo(draftFrom({ ...PRESET, bpm: DEFAULT_BPM }))).toBe(
       false,
     );
+  });
+
+  describe('a ramp that follows the song’s tempo', () => {
+    const following = draftFrom({
+      ...PRESET,
+      bpm: null,
+      rampStartBpm: null,
+      rampEndBpm: null,
+    });
+
+    it('saves no ramp tempos while the song’s tempo is kept', () => {
+      expect(editFrom(following)).toMatchObject({
+        rampStartBpm: null,
+        rampEndBpm: null,
+      });
+    });
+
+    it('saves the ramp tempo that was edited and keeps the other following', () => {
+      const edited = withRampBpmEdited(following, 'startBpm');
+      expect(editFrom(edited)).toMatchObject({
+        rampStartBpm: DEFAULT_BPM,
+        rampEndBpm: null,
+      });
+    });
+
+    it('saves both ramp tempos once the tempo is set', () => {
+      expect(editFrom(withTempoEdited(following))).toMatchObject({
+        rampStartBpm: DEFAULT_BPM,
+        rampEndBpm: DEFAULT_BPM,
+      });
+    });
+
+    it('keeps saving a set ramp as before', () => {
+      const set = draftFrom({ ...PRESET, bpm: null });
+      expect(editFrom(set)).toMatchObject({
+        rampStartBpm: PRESET.rampStartBpm,
+        rampEndBpm: PRESET.rampEndBpm,
+      });
+    });
   });
 
   it('never saves an empty name or blank notes', () => {

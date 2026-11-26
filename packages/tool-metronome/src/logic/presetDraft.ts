@@ -25,15 +25,18 @@ import {
 } from '@kitbag/core-state';
 
 import { MIN_BEATS } from './meter.ts';
+import type { RampBpmField } from './rampEntry.ts';
 
 export type RampDraft = RampConfig;
 export type BarMuteDraft = BarMuteConfig;
+export type RampFromSong = Readonly<Record<RampBpmField, boolean>>;
 
 export interface PresetDraft {
   readonly name: string;
   readonly notes: string;
   readonly bpm: number;
-  readonly tempoFromSong: boolean;
+  readonly loadedWithoutTempo: boolean;
+  readonly rampFromSong: RampFromSong;
   readonly beatsPerBar: number;
   readonly denominator: number;
   readonly subdivision: number;
@@ -81,7 +84,11 @@ export function draftFrom(preset: SongPreset): PresetDraft {
     name: preset.name,
     notes: preset.notes ?? '',
     bpm,
-    tempoFromSong: preset.bpm === null,
+    loadedWithoutTempo: preset.bpm === null,
+    rampFromSong: {
+      startBpm: preset.rampStartBpm === null,
+      targetBpm: preset.rampEndBpm === null,
+    },
     beatsPerBar: preset.beatsPerBar,
     denominator: preset.denominator,
     subdivision: preset.subdivision,
@@ -102,17 +109,33 @@ export function draftFrom(preset: SongPreset): PresetDraft {
   };
 }
 
-export const keepsSongTempo = ({ bpm, tempoFromSong }: PresetDraft) =>
-  tempoFromSong && bpm === DEFAULT_BPM;
+export const keepsSongTempo = (draft: PresetDraft) => draft.loadedWithoutTempo;
+
+export const withTempoEdited = (draft: PresetDraft): PresetDraft => ({
+  ...draft,
+  loadedWithoutTempo: false,
+});
+
+export const withRampBpmEdited = (
+  draft: PresetDraft,
+  field: RampBpmField,
+): PresetDraft => ({
+  ...draft,
+  rampFromSong: { ...draft.rampFromSong, [field]: false },
+});
 
 const savedTempo = (draft: PresetDraft) =>
   keepsSongTempo(draft) ? null : draft.bpm;
 
-function trainerEdit({ ramp, barMute }: PresetDraft): PresetEdit {
+const savedRampBpm = (draft: PresetDraft, field: RampBpmField) =>
+  keepsSongTempo(draft) && draft.rampFromSong[field] ? null : draft.ramp[field];
+
+function trainerEdit(draft: PresetDraft): PresetEdit {
+  const { ramp, barMute } = draft;
   return {
     rampEnabled: ramp.enabled,
-    rampStartBpm: ramp.startBpm,
-    rampEndBpm: ramp.targetBpm,
+    rampStartBpm: savedRampBpm(draft, 'startBpm'),
+    rampEndBpm: savedRampBpm(draft, 'targetBpm'),
     rampStep: ramp.stepBpm,
     rampLength: ramp.interval,
     rampUnit: ramp.unit,
