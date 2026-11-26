@@ -141,6 +141,12 @@ export {
 } from './appChrome';
 export type { AppNightMode, AppVersion } from './appChromeTypes.ts';
 export { getOutputRoute, watchOutputRoute } from './outputRoute';
+export type {
+  MediaSessionCommand,
+  MediaSessionSnapshot,
+  MediaSessionsListener,
+  MediaSessionStep,
+} from './mediaSessions/types.ts';
 export type { OutputRoute, OutputRouteKind } from './outputRouteTypes.ts';
 export { acquireEngineHold, type EngineHoldCommands } from './engineHold.ts';
 export { setTrackKey, type TrackKeyCommands } from './mixerKey.ts';
