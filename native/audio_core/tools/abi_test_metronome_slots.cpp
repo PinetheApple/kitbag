@@ -37,9 +37,11 @@ constexpr int32_t kOutOfRangeSlot = KB_METRONOME_SLOT_PLAY_ALONG + 1;
 constexpr int32_t kNegativeSlot = -1;
 
 std::vector<float> RenderSeconds(kb_engine* engine, double seconds) {
-  const double frames = seconds * kb_engine_sample_rate(engine);
+  const auto blocks = static_cast<int64_t>(
+      std::ceil(seconds * kb_engine_sample_rate(engine) / kRigBlock)
+  );
   std::vector<float> out;
-  for (double done = 0.0; done < frames; done += kRigBlock) {
+  for (int64_t block_index = 0; block_index < blocks; ++block_index) {
     const std::vector<float> block = Render(engine, kRigBlock);
     out.insert(out.end(), block.begin(), block.end());
   }

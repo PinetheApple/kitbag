@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <limits>
 
 #include "metronome/grid_bars.h"
 #include "metronome/metronome_internal.h"
