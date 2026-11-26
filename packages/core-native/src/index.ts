@@ -134,6 +134,7 @@ export {
   boottimeNowMs,
   engineFrameAtBoottimeMs,
   getEngineClockPair,
+  uptimeToBoottimeMs,
 } from './engineClock';
 export * from './generated/nativeConstants.gen.ts';
 

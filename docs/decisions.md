@@ -1343,3 +1343,4 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   (13) A bounce from Settings without the grant shows the still-off state.
   **[owner, 2026-11-26]**
 - **2026-11-26 · Play along away state (§8.9, #618)** — The Play along mini-player has a close that ends following, as the song mini-player's close ends the song, and the notification while away offers the other app's play/pause and Stop, with no tempo − or +. **[REC taken, owner may overturn]**
+- **2026-11-27 · Play along phase at playback speed (§8.6, D5, D6, #667)** — The phase offset is wall-clock ms, the same unit as the route latency, so the D6 total adds the two directly. Its ±half-beat limit is taken at the heard tempo (lock BPM × the other app's playback speed) and the offset is re-clamped when the speed changes. **[recorded — coordinator ruling]**

@@ -25,6 +25,7 @@ struct GridState {
   static constexpr int64_t kReseedFollow = -1;
 
   uint64_t observed_generation = 0;
+  uint32_t observed_click_epoch = 0;
   size_t cursor = 0;
   int64_t beat_index = -1;
   // 1-based next tick in the beat; the tick count means none left.
