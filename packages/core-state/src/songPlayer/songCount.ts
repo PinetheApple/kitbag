@@ -17,6 +17,7 @@ import {
   songStart,
   type SongStart,
 } from '../stemPlayer/songStart.ts';
+import { songStarting } from '../stemPlayer/songStarting.ts';
 import { secondsToFrames } from '../stemPlayer/time.ts';
 import type { SongPlayerActions } from './actions.ts';
 import type { SongPlayerState } from './state.ts';
@@ -118,8 +119,12 @@ export function songCount(
     play: (head) => {
       const fromTop = atTop(head);
       playedIn = session();
-      if (fromTop) start.play(head);
-      else runtimeOf().commands.mixerPlay();
+      if (fromTop) {
+        start.play(head);
+        return;
+      }
+      songStarting();
+      runtimeOf().commands.mixerPlay();
     },
     cancel: () => {
       const cancelled = start.cancel();

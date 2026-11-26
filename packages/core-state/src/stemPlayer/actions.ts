@@ -4,6 +4,7 @@ import { soloAfter, UNITY_GAIN } from './mix.ts';
 import type { MixSaver } from './mixSaver.ts';
 import type { MixerRuntime, StemPlayerCommands } from './runtime.ts';
 import type { SongStart } from './songStart.ts';
+import { songStarting } from './songStarting.ts';
 import {
   restartFromFrame,
   songTransportShown,
@@ -132,6 +133,7 @@ export function plainStart(
 ): Pick<SongStart, 'play' | 'cancel'> {
   return {
     play: () => {
+      songStarting();
       runtimeOf().commands.mixerPlay();
     },
     cancel: () => false,
