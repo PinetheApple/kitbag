@@ -16,6 +16,7 @@ const fills = vi.hoisted(() => [] as Props[]);
 const countBeats = vi.hoisted(() => [] as number[]);
 const nativeTexts = vi.hoisted(() => [] as string[]);
 const drawnTexts = vi.hoisted(() => [] as string[]);
+const lineLabels = vi.hoisted(() => [] as string[]);
 
 function recordText(props: Props): void {
   const children = [props.children].flat();
@@ -77,6 +78,10 @@ vi.mock('@kitbag/core-design', async (original) => {
       return null;
     },
     createThemedStyles: () => () => new Proxy({}, { get: () => ({}) }),
+    DrawnLineLabel: (props: Props) => {
+      lineLabels.push(props.text as string);
+      return null;
+    },
     DrawnLiveSlot: (props: Props) => {
       drawnTexts.push((props.text as { value: string }).value);
       return null;
@@ -229,6 +234,14 @@ const RAMP_MODE: Mode = {
   },
 };
 
+const COUNT_IN_INTO_MUTED_BAR: Mode = {
+  name: 'from a count-in into a muted bar',
+  settings: BAR_MUTE_ON,
+  polyBeats: null,
+  before: COUNT_IN_MODE.after,
+  after: { ...ON_BEAT_ONE, barMutePosition: 2, barMuted: 1 },
+};
+
 const MODES: readonly Mode[] = [
   DEFAULT_MODE,
   POLY_MODE,
@@ -296,6 +309,30 @@ function drawAt(mode: Mode, moment: Moment): Drawn {
   };
 }
 
+interface Grid {
+  readonly nativeTexts: string[];
+  readonly lineLabels: string[];
+}
+
+function gridAt(mode: Mode, moment: Moment): Grid {
+  nativeTexts.length = 0;
+  lineLabels.length = 0;
+  renderToStaticMarkup(
+    createElement(BeatDots, {
+      beatCount: ACCENTS.length,
+      subdivision: SUBDIVISION,
+      polyBeats: mode.polyBeats,
+      polyAgainst: POLY_AGAINST_BEATS,
+      accents: ACCENTS,
+      width: 360,
+      density: 'roomy',
+      frame: frameAt(moment),
+      onCycle: vi.fn(),
+    }),
+  );
+  return { nativeTexts: [...nativeTexts], lineLabels: [...lineLabels] };
+}
+
 function keysThatMove(before: readonly Style[], after: readonly Style[]) {
   const moved = new Set<string>();
   before.forEach((style, index) => {
@@ -331,6 +368,19 @@ describe.each(MODES)('the playing frame, $name,', (mode) => {
     expect(before.nativeTexts).not.toEqual([]);
     expect(after.nativeTexts).toEqual(before.nativeTexts);
   });
+});
+
+describe('the beat grid', () => {
+  it.each([COUNT_IN_MODE, COUNT_IN_INTO_MUTED_BAR])(
+    'labels its beats without native Text, whose first restyle after mount Android reports, $name',
+    (mode) => {
+      for (const moment of [mode.before, mode.after]) {
+        const grid = gridAt(mode, moment);
+        expect(grid.nativeTexts).toEqual([]);
+        expect(grid.lineLabels).toContain('1');
+      }
+    },
+  );
 });
 
 describe('status text the frame changes', () => {

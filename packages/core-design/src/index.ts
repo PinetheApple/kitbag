@@ -112,6 +112,7 @@ export * from './components/WheelPicker.tsx';
 export * from './components/Waveform.tsx';
 export { FillBar, type FillBarProps } from './components/ProgressSvg.tsx';
 export * from './components/DrawnFigures.tsx';
+export * from './components/DrawnLineLabel.tsx';
 export * from './components/DrawnLiveSlot.tsx';
 export * from './components/DrawnTextFrame.tsx';
 export type { PlainRoleName } from './components/drawnText.ts';
