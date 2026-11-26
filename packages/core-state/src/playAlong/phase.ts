@@ -106,10 +106,22 @@ export function shiftedDownbeats(
     .map((index) => index + shift)
     .filter((index) => index < grid.beats.length);
   const [first] = moved;
-  if (first === undefined) return moved;
+  const [original] = grid.downbeatIndices;
+  if (first === undefined || original === undefined) return moved;
+  if (original >= beatsPerBar) return moved;
   const leadingDownbeat = first - beatsPerBar;
   return leadingDownbeat >= 0 ? [leadingDownbeat, ...moved] : moved;
 }
+
+export const shiftedPhase = (
+  lock: { readonly grid: DetectedGrid | undefined },
+  downbeatShift: number,
+  beatsPerBar: number,
+): Pick<LockPhase, 'downbeatShift' | 'gridDownbeats'> => ({
+  downbeatShift,
+  gridDownbeats:
+    lock.grid && shiftedDownbeats(lock.grid, downbeatShift, beatsPerBar),
+});
 
 export const fittedPhase = (
   lock: LockPhase & {

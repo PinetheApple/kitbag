@@ -14,7 +14,12 @@ import {
   type UnlockReason,
 } from './lockOutcome.ts';
 import type { PlayAlongPattern } from './pattern.ts';
-import { clampPhase, shiftedDownbeatSec } from './phase.ts';
+import {
+  clampPhase,
+  shiftedDownbeatSec,
+  UNSHIFTED_PHASE,
+  type LockPhase,
+} from './phase.ts';
 import {
   barSeconds,
   engineSongSeconds,
@@ -30,6 +35,14 @@ export const ANCHOR_RETRY_MS = 50;
 export const SEEK_JUMP_MS = 1000;
 export const SOURCE_GONE_HOLD_MS = 10_000;
 const UNIT_SPEED = 1;
+
+const pick = ({
+  downbeatShift,
+  gridDownbeats,
+}: Pick<LockPhase, 'downbeatShift' | 'gridDownbeats'>) => ({
+  downbeatShift,
+  gridDownbeats,
+});
 
 type Access = StoreAccess<PlayAlongStore>;
 
@@ -96,6 +109,17 @@ export function follower(
 
   const grids = engineGrid(runtime.commands);
 
+  let acceptedShift = pick(UNSHIFTED_PHASE);
+
+  const downbeatsRejected = () => {
+    const { lock } = getState();
+    if (lock === undefined) return;
+    setState({
+      lock: { ...lock, ...acceptedShift },
+      lastRefusal: LOCK_REFUSAL.downbeatsRejected,
+    });
+  };
+
   const gridRejected = () => {
     unlock();
     setState({ lastRefusal: LOCK_REFUSAL.gridRejected });
@@ -108,7 +132,12 @@ export function follower(
     }
     if (!grids.holds(lock.grid))
       grids.send(lock.grid, { accepted: anchor, rejected: gridRejected });
-    grids.placeDownbeats(lock.gridDownbeats ?? lock.grid.downbeatIndices);
+    grids.placeDownbeats(lock.gridDownbeats ?? lock.grid.downbeatIndices, {
+      accepted: () => {
+        acceptedShift = pick(lock);
+      },
+      rejected: downbeatsRejected,
+    });
   };
 
   const placeClick = (
@@ -196,22 +225,23 @@ export function follower(
     setState({ sourceGoneAtBoottimeMs: undefined });
   };
 
-  const refitPhase = (speed: number) => {
+  const refitPhase = () => {
     const { lock, pattern } = getState();
-    if (lock === undefined || speed <= 0) return;
+    if (lock === undefined) return;
     const phaseOffsetMs = clampPhase(
       lock.phaseOffsetMs,
       lock.bpm,
       pattern.denominator,
-      speed,
+      heardSpeed(),
     );
     if (phaseOffsetMs !== lock.phaseOffsetMs)
       setState({ lock: { ...lock, phaseOffsetMs } });
   };
 
   const followReport = (current: Follow, seen: MediaSessionSnapshot) => {
-    if (seen.speed !== current.seen.speed) refitPhase(seen.speed);
+    const speedChanged = seen.speed !== current.seen.speed;
     current.seen = seen;
+    if (speedChanged) refitPhase();
     showCard(current);
     if (seen.playing) anchor();
     else silence(current);
@@ -266,6 +296,7 @@ export function follower(
   };
 
   const lockOn = (seen: MediaSessionSnapshot, lock: PlayAlongLock) => {
+    acceptedShift = pick(lock);
     follow ??= start(seen);
     follow.seen = seen;
     follow.lastAnchor = undefined;

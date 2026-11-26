@@ -6,6 +6,7 @@ export const LOCK_REFUSAL = {
   noOffer: 'no-offer',
   noGrid: 'no-grid',
   gridRejected: 'grid-rejected',
+  downbeatsRejected: 'downbeats-rejected',
 } as const;
 
 export type LockRefusal = (typeof LOCK_REFUSAL)[keyof typeof LOCK_REFUSAL];

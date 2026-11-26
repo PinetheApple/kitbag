@@ -4,7 +4,7 @@ import {
   lockBeatsPerBar,
   nextShift,
   PHASE_STEPS_MS,
-  shiftedDownbeats,
+  shiftedPhase,
   UNSHIFTED_PHASE,
   type LockPhase,
   type PhaseActions,
@@ -36,16 +36,6 @@ export function phaseActions(
       ),
     }));
   };
-  const shift = (lock: PlayAlongLock, downbeatShift: number) => ({
-    downbeatShift,
-    gridDownbeats:
-      lock.grid &&
-      shiftedDownbeats(
-        lock.grid,
-        downbeatShift,
-        lockBeatsPerBar(lock.grid, getState().pattern),
-      ),
-  });
   return {
     nudgePhase: (direction) => {
       const { lock, phaseStepMs } = getState();
@@ -62,8 +52,12 @@ export function phaseActions(
       const { lock, pattern } = getState();
       if (lock?.downbeatShiftAvailable !== true) return;
       const beatsPerBar = lockBeatsPerBar(lock.grid, pattern);
-      edit(() =>
-        shift(lock, nextShift(lock.downbeatShift, direction, beatsPerBar)),
+      edit((current) =>
+        shiftedPhase(
+          current,
+          nextShift(current.downbeatShift, direction, beatsPerBar),
+          beatsPerBar,
+        ),
       );
     },
     resetPhase: () => {

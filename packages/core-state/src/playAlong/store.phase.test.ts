@@ -6,9 +6,10 @@ import {
   DEFAULT_PHASE_STEP_MS,
   PHASE_STEPS_MS,
   phaseLimitMs,
+  shiftedDownbeats,
 } from './phase.ts';
 import { SECONDS_PER_MINUTE } from '../text.ts';
-import { UNLOCK_REASON } from './lockOutcome.ts';
+import { LOCK_REFUSAL, UNLOCK_REASON } from './lockOutcome.ts';
 import { REANCHOR_INTERVAL_MS } from './store.ts';
 import {
   BPM,
@@ -29,6 +30,8 @@ const THREE_BEAT_GRID = {
   downbeatIndices: [0, 3, 6, 9],
 };
 const THREE_BEAT_BACK_ONE = [2, 5, 8];
+const PICKUP_DOWNBEATS = [6, 10];
+const PICKUP_SHIFTED = [7, 11];
 const NO_DOWNBEAT_GRID = { beats: GRID.beats, downbeatIndices: [] };
 const [FINE_MS, , COARSE_MS] = PHASE_STEPS_MS;
 const FAR_MS = 10_000;
@@ -205,6 +208,16 @@ describe('phase while locked', () => {
   });
 });
 
+describe('shifted grid downbeats', () => {
+  it('puts no accent inside an analysed pickup', () => {
+    const pickup = {
+      beats: GRID.beats.concat(GRID.beats),
+      downbeatIndices: PICKUP_DOWNBEATS,
+    };
+    expect(shiftedDownbeats(pickup, 1, BEATS)).toEqual(PICKUP_SHIFTED);
+  });
+});
+
 describe('phase on a library grid lock', () => {
   it('moves the grid anchor without sending the grid again', async () => {
     const fake = await gridLocked();
@@ -248,6 +261,27 @@ describe('phase on a library grid lock', () => {
     expect(downbeatCalls(fake)).toEqual([]);
   });
 
+  it('gives a shift up and says so when the engine refuses it twice', async () => {
+    const fake = await gridLocked({
+      grid: GRID,
+      downbeatsResult: () => KB_RESULT.KB_ERROR_INVALID_ARGUMENT,
+    });
+    fake.store.getState().shiftDownbeat(1);
+    await settle();
+    vi.advanceTimersByTime(REANCHOR_INTERVAL_MS);
+    await settle();
+    vi.advanceTimersByTime(REANCHOR_INTERVAL_MS);
+    await settle();
+    expect(downbeatCalls(fake)).toEqual([SHIFTED_INDICES, SHIFTED_INDICES]);
+    expect(fake.store.getState().lock).toMatchObject({
+      downbeatShift: 0,
+      gridDownbeats: undefined,
+    });
+    expect(fake.store.getState().lastRefusal).toBe(
+      LOCK_REFUSAL.downbeatsRejected,
+    );
+  });
+
   it('sends a shift the engine refused again on the next anchor', async () => {
     const results = [KB_RESULT.KB_ERROR_INVALID_ARGUMENT, KB_RESULT.KB_OK];
     const fake = await gridLocked({
@@ -261,6 +295,8 @@ describe('phase on a library grid lock', () => {
     vi.advanceTimersByTime(REANCHOR_INTERVAL_MS);
     await settle();
     expect(downbeatCalls(fake)).toEqual([SHIFTED_INDICES, SHIFTED_INDICES]);
+    expect(fake.store.getState().lock?.downbeatShift).toBe(1);
+    expect(fake.store.getState().lastRefusal).toBeUndefined();
   });
 });
 
