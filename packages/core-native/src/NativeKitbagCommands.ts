@@ -141,6 +141,10 @@ export interface Spec extends TurboModule {
   ): Promise<ConstantTempoFit>;
   setGridGrouping(sizes: readonly CodegenTypes.Int32[]): Promise<number>;
   setGridRate(rate: CodegenTypes.Int32): Promise<number>;
+  /** kb_metronome_set_grid_downbeats: a KB_RESULT; the grid's beats, anchor and mapping stay. */
+  metronomeSetGridDownbeats(
+    downbeatIndices: readonly CodegenTypes.Int32[],
+  ): Promise<number>;
   metronomeFollowMixer(enabled: boolean): void;
 
   setBeats(

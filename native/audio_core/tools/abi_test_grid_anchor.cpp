@@ -149,6 +149,7 @@ void RunGridAnchorAbiTests() {
   TestStartsOnTheMappedBeat();
   TestDropsAnchorWithoutItsGrid();
   TestDropsBadArguments();
+  RunGridDownbeatAbiTests();
 }
 
 }  // namespace abi_test

@@ -48,6 +48,17 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetGridGrouping(JNIEnv* en
 }
 
 JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetGridDownbeats(JNIEnv* env, jobject, jintArray indices) {
+  const jsize count = env->GetArrayLength(indices);
+  if (count == 0) return static_cast<jint>(kitbag::commandSetGridDownbeats(nullptr, 0));
+  jint* elems = env->GetIntArrayElements(indices, nullptr);
+  if (elems == nullptr) return static_cast<jint>(KB_ERROR_INTERNAL);
+  const int32_t result = kitbag::commandSetGridDownbeats(elems, static_cast<int32_t>(count));
+  env->ReleaseIntArrayElements(indices, elems, JNI_ABORT);
+  return static_cast<jint>(result);
+}
+
+JNIEXPORT jint JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetGridRate(JNIEnv*, jobject, jint rate) {
   return static_cast<jint>(kitbag::commandSetGridRate(rate));
 }

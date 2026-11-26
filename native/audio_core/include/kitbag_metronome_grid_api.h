@@ -46,6 +46,19 @@ KB_EXPORT kb_result kb_metronome_set_grid(
     int32_t downbeat_count,
     uint64_t anchor_frame
 );
+/* Replace the downbeats of the grid set by kb_metronome_set_grid, keeping its
+ * beats, its anchor_frame and the kb_metronome_anchor_grid mapping: the click
+ * plays on without a re-seek, every beat sounds once, and from the next beat
+ * the accent follows the new downbeats. downbeat_indices are as in set_grid;
+ * NULL with downbeat_count 0 leaves the grid without downbeats, so no beat is
+ * accented. The grid's grouping and rate still apply. Returns
+ * KB_ERROR_INVALID_ARGUMENT, changing nothing, with no grid set on the selected
+ * slot or for downbeats set_grid would refuse. */
+KB_EXPORT kb_result kb_metronome_set_grid_downbeats(
+    kb_engine* engine,
+    const int32_t* downbeat_indices,
+    int32_t downbeat_count
+);
 /* Return to constant-tempo mode. The click keeps its phase: the first click at
  * the constant tempo falls one whole beat after the last grid beat that
  * sounded, not on the next sample. */

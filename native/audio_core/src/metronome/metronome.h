@@ -95,15 +95,11 @@ class Metronome {
   void SetGridGrouping(std::span<const int32_t> sizes);
   void SetGridRate(int32_t rate);
   void SetAccent(int beat_index, int32_t accent);
-  void SetAccent(int beat_index, Accent accent) {
-    SetAccent(beat_index, static_cast<int32_t>(accent));
-  }
+  void SetAccent(int beat_index, Accent accent);
   void SetPolyrhythm(bool enabled, int beats);
   void SetPolyAccent(int beat_index, int32_t accent);
   void SetPolyAgainst(int main_beats);
-  void SetPolyAccent(int beat_index, Accent accent) {
-    SetPolyAccent(beat_index, static_cast<int32_t>(accent));
-  }
+  void SetPolyAccent(int beat_index, Accent accent);
   void SetSounds(int normal_sound, int accent_sound);
   void SetCountIn(int bars, bool distinct, int sound);
   void PreviewSound(int sound, bool accented);
@@ -129,6 +125,13 @@ class Metronome {
       FrameClock clock,
       bool engine_running
   );
+  // Same beats, click epoch and anchor: the mapping, cursor and onset floor
+  // hold. False, publishing nothing, with no grid set or an invalid table.
+  bool SetGridDownbeats(
+      std::span<const int32_t> downbeats,
+      FrameClock clock,
+      bool engine_running
+  );
   // Return to constant-tempo mode, keeping the click's phase: the first bpm_
   // click falls one whole beat after the last grid beat (SPEC.md §4.2.1).
   void ClearGrid(FrameClock clock, bool engine_running);
@@ -142,11 +145,7 @@ class Metronome {
     return commands_.Free() > 0;
   }
   // RT: the intent of a click-off count that ended this block, once.
-  uint32_t TakeEndedIntent() {
-    const uint32_t ended = ended_intent_;
-    ended_intent_ = kNoIntent;
-    return ended;
-  }
+  uint32_t TakeEndedIntent();
   bool is_running() const {
     return running_flag_.load(std::memory_order_relaxed);
   }
@@ -258,7 +257,8 @@ class Metronome {
       BlockTempo* tempo
   );
   GridView AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate);
-  void ObserveGridChange(const GridView& view, uint32_t sample_rate);
+  bool ObserveGridChange(const GridView& view, uint32_t sample_rate);
+  void RebarGrid(const BeatGrid& grid);
   void BeginPendingStart(
       const GridView& view,
       uint64_t frame,
