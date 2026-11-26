@@ -21,6 +21,7 @@ import {
   type PresetEdit,
   type RampConfig,
   type SongPreset,
+  DEFAULT_BPM,
 } from '@kitbag/core-state';
 
 import { MIN_BEATS } from './meter.ts';
@@ -32,6 +33,7 @@ export interface PresetDraft {
   readonly name: string;
   readonly notes: string;
   readonly bpm: number;
+  readonly tempoFromSong: boolean;
   readonly beatsPerBar: number;
   readonly denominator: number;
   readonly subdivision: number;
@@ -57,11 +59,11 @@ function polyAccentsOf(preset: SongPreset, polyBeats: number): KB_ACCENT[] {
   return defaults.map((fallback, index) => saved[index] ?? fallback);
 }
 
-function rampDraftOf(preset: SongPreset): RampDraft {
+function rampDraftOf(preset: SongPreset, bpm: number): RampDraft {
   return {
     enabled: preset.rampEnabled,
-    startBpm: preset.rampStartBpm ?? preset.bpm,
-    targetBpm: preset.rampEndBpm ?? preset.bpm,
+    startBpm: preset.rampStartBpm ?? bpm,
+    targetBpm: preset.rampEndBpm ?? bpm,
     stepBpm: preset.rampStep,
     interval: preset.rampLength ?? DEFAULT_TRAINER_BARS,
     unit: rampUnitOf(preset.rampUnit),
@@ -74,10 +76,12 @@ export function draftFrom(preset: SongPreset): PresetDraft {
     preset.polyBeats >= KB_POLY_BEATS_BOUNDS.min
       ? preset.polyBeats
       : DEFAULT_POLY_BEATS;
+  const bpm = preset.bpm ?? DEFAULT_BPM;
   return {
     name: preset.name,
     notes: preset.notes ?? '',
-    bpm: preset.bpm,
+    bpm,
+    tempoFromSong: preset.bpm === null,
     beatsPerBar: preset.beatsPerBar,
     denominator: preset.denominator,
     subdivision: preset.subdivision,
@@ -89,7 +93,7 @@ export function draftFrom(preset: SongPreset): PresetDraft {
     sound: preset.sound,
     perAccentSounds: perAccentSoundsOf(preset.perAccentSounds, preset.sound),
     countInBars: preset.countInBars,
-    ramp: rampDraftOf(preset),
+    ramp: rampDraftOf(preset, bpm),
     barMute: {
       enabled: preset.barMuteEnabled,
       playBars: preset.barMutePlayBars ?? DEFAULT_TRAINER_BARS,
@@ -97,6 +101,9 @@ export function draftFrom(preset: SongPreset): PresetDraft {
     },
   };
 }
+
+const savedTempo = ({ bpm, tempoFromSong }: PresetDraft) =>
+  tempoFromSong && bpm === DEFAULT_BPM ? null : bpm;
 
 function trainerEdit({ ramp, barMute }: PresetDraft): PresetEdit {
   return {
@@ -117,7 +124,7 @@ export function editFrom(draft: PresetDraft): PresetEdit {
   return {
     name: draft.name.trim() === '' ? 'Untitled' : draft.name.trim(),
     notes: draft.notes.trim() === '' ? null : draft.notes,
-    bpm: draft.bpm,
+    bpm: savedTempo(draft),
     beatsPerBar: draft.beatsPerBar,
     denominator: draft.denominator,
     subdivision: draft.subdivision,
