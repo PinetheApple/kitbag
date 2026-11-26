@@ -13,13 +13,15 @@ import { countSquareState, type CountSquareState } from './countSquareState.ts';
 import { textRoles } from '../roles.ts';
 import { TRANSPARENT } from '../styleConstants.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
-import { drawnFont } from './drawnText.ts';
+import {
+  ANCHOR_AT_CENTRE,
+  BASELINE_AT_CENTRE,
+  drawnFont,
+} from './drawnText.ts';
 
 const AnimatedSvgText = Animated.createAnimatedComponent(SvgText);
 
 const FACE_ROLE = 'countSquare';
-const ANCHOR_AT_CENTRE = 'middle';
-const BASELINE_OF_CENTRED_TEXT = 'central';
 const INK_STATES = [
   'now',
   'done',
@@ -59,7 +61,7 @@ function CountDigit({
     <AnimatedSvgText
       transform={`translate(${String(centre)} ${String(centre)})`}
       textAnchor={ANCHOR_AT_CENTRE}
-      alignmentBaseline={BASELINE_OF_CENTRED_TEXT}
+      alignmentBaseline={BASELINE_AT_CENTRE}
       fill={fill}
       {...drawnFont(FACE_ROLE, fontSize)}
       animatedProps={shown}

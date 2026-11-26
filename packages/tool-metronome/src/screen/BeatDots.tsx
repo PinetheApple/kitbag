@@ -1,6 +1,8 @@
 import {
+  DrawnLineLabel,
   hitBoxStyle,
   hitExtension,
+  metronome,
   useTheme,
   type LedState,
   type NeighbourGaps,
@@ -210,14 +212,13 @@ export function BeatDots({
             barMuted={barMuted}
             palette={palette}
           />
-          <Text
-            style={styles.marker}
-            accessible={false}
-            importantForAccessibility="no"
-            accessibilityElementsHidden
-          >
-            {beatMarker(beat)}
-          </Text>
+          <DrawnLineLabel
+            text={beatMarker(beat)}
+            role="beatMarker"
+            lineHeight={metronome.beatMarkerLineHeight}
+            width={dotSize}
+            color={theme.color.text2}
+          />
         </>
       );
     },
@@ -228,8 +229,8 @@ export function BeatDots({
       currentBeat,
       barMuted,
       onCycle,
-      styles,
       subdivision,
+      theme.color.text2,
       barPulse,
       linePitchGap,
     ],

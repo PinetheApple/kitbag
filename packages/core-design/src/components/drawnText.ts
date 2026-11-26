@@ -21,11 +21,25 @@ export function sameWidthFigures(text: string): string {
   return text.replace(ANY_DIGIT, SAME_WIDTH_DIGIT);
 }
 
-export function drawnFont(role: PlainRoleName, fontSize: number) {
+export const ANCHOR_AT_CENTRE = 'middle';
+// "central" sets the svg baseline half the ascent-minus-descent below the anchor,
+// so the glyph's ascent-to-descent box is centred on it.
+export const BASELINE_AT_CENTRE = 'central';
+
+export interface DrawnFontOptions {
+  readonly tabularOnlyForTabularRoles?: boolean;
+}
+
+export function drawnFont(
+  role: PlainRoleName,
+  fontSize: number,
+  { tabularOnlyForTabularRoles = false }: DrawnFontOptions = {},
+) {
   const face = textRoles[role];
+  const tabular = !tabularOnlyForTabularRoles || 'tabular' in face;
   return {
     fontFamily: fontFace(face.family, face.weight),
     fontSize,
-    fontFeatureSettings: TABULAR_FIGURES,
+    ...(tabular ? { fontFeatureSettings: TABULAR_FIGURES } : null),
   };
 }

@@ -86,12 +86,6 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
       borderRadius: radius.circle,
       borderWidth: metronome.dotRing,
     },
-    marker: {
-      ...textStyle(textRoles.beatMarker),
-      lineHeight: metronome.beatMarkerLineHeight,
-      minHeight: metronome.beatMarkerLineHeight,
-      color: theme.color.text2,
-    },
     pulseRow: {
       height: metronome.pulseMark,
       justifyContent: 'center',

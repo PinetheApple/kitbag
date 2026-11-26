@@ -1,7 +1,7 @@
-import { CountSquare } from '@kitbag/core-design';
+import { CountSquare, LabelLineSpacer, metronome } from '@kitbag/core-design';
 import { KB_STOPPED_BEAT } from '@kitbag/core-native';
 import { useCallback, useMemo } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
@@ -9,7 +9,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import type { LedRowLayout } from '@kitbag/core-state';
 
-import { TEXT_PLACEHOLDER } from '../logic/textPlaceholder.ts';
 import { useBeatDotStyles } from './beatDotStyles.ts';
 import { BeatGrid } from './BeatGrid.tsx';
 
@@ -41,7 +40,10 @@ export function CountInSquares({
       <>
         <CountSquare beat={beat} side={dotSize} currentBeat={countBeat} />
         <View style={styles.pulseRow} />
-        <Text style={styles.marker}>{TEXT_PLACEHOLDER}</Text>
+        <LabelLineSpacer
+          lineHeight={metronome.beatMarkerLineHeight}
+          width={dotSize}
+        />
       </>
     ),
     [dotSize, countBeat, styles],
