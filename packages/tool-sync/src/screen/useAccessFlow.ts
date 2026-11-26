@@ -38,7 +38,10 @@ export function useAccessFlow(): AccessFlow {
   const openSettings = useMediaSessions((s) => s.openSettings);
   const [awaiting, setAwaiting] = useState(false);
   const [askedForAccess, setAskedForAccess] = useState(false);
-  const [declined, setDeclined] = useState(false);
+  const explainerDeclined = useMediaSessions((s) => s.explainerDeclined);
+  const declineExplainer = useMediaSessions((s) => s.declineExplainer);
+  const [reopened, setReopened] = useState(false);
+  const declined = explainerDeclined && !reopened;
 
   const onReturn = useCallback((stillOff: boolean) => {
     setAwaiting(false);
@@ -51,10 +54,11 @@ export function useAccessFlow(): AccessFlow {
     openSettings().catch(() => undefined);
   }, [openSettings]);
   const notNow = useCallback(() => {
-    setDeclined(true);
-  }, []);
+    setReopened(false);
+    declineExplainer();
+  }, [declineExplainer]);
   const explainAgain = useCallback(() => {
-    setDeclined(false);
+    setReopened(true);
     setAskedForAccess(false);
   }, []);
 

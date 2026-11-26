@@ -26,7 +26,11 @@ const LINE_CHIP_GAPS = { top: unshared(space.controlGap) };
 
 const useStyles = createThemedStyles(() => ({
   barChip: { marginRight: screenBar.chipEnd },
-  line: { flexDirection: 'row', paddingBottom: space.controlGap },
+  line: {
+    flexDirection: 'row',
+    paddingHorizontal: space.screenInset,
+    paddingBottom: space.controlGap,
+  },
   badge: { top: -size.keyBadgeOffset, right: -size.keyBadgeOffset },
   greyed: { opacity: opacity.muted },
 }));
