@@ -1,14 +1,24 @@
 import {
   artistCredits,
+  artistMatchText,
   songMatchText,
   type SongIdentity,
 } from '@kitbag/core-db';
 
 export const MATCH_THRESHOLD = 0.8;
-const SHARED_CREDIT_WEIGHT = 0.9;
+const SINGLE_CREDIT_WEIGHT = 0.9;
+
+const NUMBER = /^\d+$/;
 
 function words(text: string): string[] {
   return text.split(' ').filter((word) => word !== '');
+}
+
+function numbersIn(text: string): string {
+  return words(text)
+    .filter((word) => NUMBER.test(word))
+    .sort()
+    .join(' ');
 }
 
 function sharedWordScore(left: string, right: string): number {
@@ -27,9 +37,12 @@ function sharedWordScore(left: string, right: string): number {
 function artistScore(query: string, candidate: string): number {
   const theirs = artistCredits(candidate);
   const creditScores = artistCredits(query).flatMap((ours) =>
-    theirs.map((their) => sharedWordScore(ours, their) * SHARED_CREDIT_WEIGHT),
+    theirs.map((their) => sharedWordScore(ours, their) * SINGLE_CREDIT_WEIGHT),
   );
-  const whole = sharedWordScore(songMatchText(query), songMatchText(candidate));
+  const whole = sharedWordScore(
+    artistMatchText(query),
+    artistMatchText(candidate),
+  );
   return Math.max(whole, ...creditScores);
 }
 
@@ -37,10 +50,10 @@ export function songMatchScore(
   query: SongIdentity,
   candidate: SongIdentity,
 ): number {
-  const title = sharedWordScore(
-    songMatchText(query.title),
-    songMatchText(candidate.title),
-  );
+  const ours = songMatchText(query.title);
+  const theirs = songMatchText(candidate.title);
+  if (numbersIn(ours) !== numbersIn(theirs)) return 0;
+  const title = sharedWordScore(ours, theirs);
   return Math.min(title, artistScore(query.artist, candidate.artist));
 }
 

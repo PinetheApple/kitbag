@@ -3,12 +3,12 @@ import type {
   SongLibraryRepository,
 } from '@kitbag/core-db';
 
-import type { TempoSource } from './tempoSource.ts';
+import type { OnlineBpmLookup } from './onlineBpmLookup.ts';
 
 export interface TempoLadderRuntime {
   readonly cache: BpmCacheRepository;
   readonly library: Pick<SongLibraryRepository, 'list'>;
-  readonly onlineSources: () => readonly TempoSource[];
+  readonly onlineLookups: () => readonly OnlineBpmLookup[];
 }
 
 let configured: TempoLadderRuntime | undefined;

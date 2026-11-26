@@ -83,6 +83,53 @@ describe('tempo ladder store', () => {
     expect(store.getState().bpm).toBeNull();
   });
 
+  it('ends a lookup the runtime cannot serve as not found', async () => {
+    const store = createTempoLadderStore(() => {
+      throw new Error('Tempo ladder is not configured');
+    });
+    await store.getState().lookUp(SONG);
+    expect(store.getState()).toMatchObject({
+      track: SONG,
+      looking: false,
+      bpm: null,
+      source: null,
+    });
+  });
+
+  it('keeps a typed tempo when the same track is announced again', async () => {
+    const http = fakeHttp(ONLINE_HIT);
+    const runtime = ladderRuntime({ httpGet: http.httpGet, key: KEY });
+    const store = createTempoLadderStore(() => runtime);
+    await store.getState().lookUp(SONG);
+    store.getState().enter(150);
+    const asked = http.urls.length;
+    await store
+      .getState()
+      .lookUp({ title: 'Under Pressure (Remastered 2011)', artist: 'QUEEN' });
+    expect(store.getState()).toMatchObject({
+      bpm: 150,
+      source: BPM_SOURCE.manual,
+    });
+    expect(http.urls).toHaveLength(asked);
+  });
+
+  it('keeps the source when halving or doubling a looked-up tempo', async () => {
+    const runtime = ladderRuntime({
+      httpGet: fakeHttp(ONLINE_HIT).httpGet,
+      key: KEY,
+    });
+    const store = createTempoLadderStore(() => runtime);
+    await store.getState().lookUp(SONG);
+    store.getState().halve();
+    expect(store.getState()).toMatchObject({
+      bpm: 57,
+      source: BPM_SOURCE.getSongBpm,
+    });
+    store.getState().enter(100);
+    store.getState().double();
+    expect(store.getState().source).toBe(BPM_SOURCE.manual);
+  });
+
   it('shows each tap landing and sets the tempo on the fourth', () => {
     const store = createTempoLadderStore(() => ladderRuntime());
     const landed: number[] = [];

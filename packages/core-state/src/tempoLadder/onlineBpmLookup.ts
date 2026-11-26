@@ -1,6 +1,6 @@
 import type { BpmLookupSource, SongIdentity } from '@kitbag/core-db';
 
-export interface TempoSource {
+export interface OnlineBpmLookup {
   readonly id: BpmLookupSource;
   readonly lookUp: (
     song: SongIdentity,

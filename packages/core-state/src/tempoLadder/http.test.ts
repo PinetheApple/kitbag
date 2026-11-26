@@ -27,6 +27,17 @@ describe('getJson', () => {
     await expect(getJson(httpGet, TEST_URL, SIGNAL)).rejects.toThrow();
   });
 
+  it('keeps the request address, and the key in it, out of the error', async () => {
+    const httpGet: HttpGet = () =>
+      Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+    const failure = getJson(httpGet, `${TEST_URL}?api_key=test-key`, SIGNAL);
+    await expect(failure).rejects.toThrow(
+      expect.objectContaining({
+        message: expect.not.stringContaining('test-key') as unknown,
+      }),
+    );
+  });
+
   it('passes the signal to the request', async () => {
     const seen: AbortSignal[] = [];
     const httpGet: HttpGet = (_url, { signal }) => {

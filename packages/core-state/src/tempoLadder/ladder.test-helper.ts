@@ -7,9 +7,9 @@ import type {
 
 import type { HttpGet } from './http.ts';
 import { offline } from './http.test-helper.ts';
-import { defaultTempoSources } from './onlineSources.ts';
+import { defaultOnlineLookups } from './onlineLookups.ts';
 import type { TempoLadderRuntime } from './runtime.ts';
-import type { TempoSource } from './tempoSource.ts';
+import type { OnlineBpmLookup } from './onlineBpmLookup.ts';
 
 export function memoryCache(initial: CachedBpm | null = null) {
   const puts: [SongIdentity, CachedBpm][] = [];
@@ -29,14 +29,14 @@ export function ladderRuntime(
     readonly rows?: readonly LibraryRow[];
     readonly httpGet?: HttpGet;
     readonly key?: string;
-    readonly sources?: readonly TempoSource[];
+    readonly lookups?: readonly OnlineBpmLookup[];
   } = {},
 ): TempoLadderRuntime {
   return {
     cache: fields.cache ?? memoryCache().cache,
     library: { list: () => Promise.resolve([...(fields.rows ?? [])]) },
-    onlineSources: () =>
-      fields.sources ??
-      defaultTempoSources(fields.httpGet ?? offline, fields.key),
+    onlineLookups: () =>
+      fields.lookups ??
+      defaultOnlineLookups(fields.httpGet ?? offline, fields.key),
   };
 }

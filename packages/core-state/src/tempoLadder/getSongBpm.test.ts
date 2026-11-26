@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import noResult from './fixtures/getsongbpm-no-result.json';
 import numericTempo from './fixtures/getsongbpm-numeric-tempo.json';
 import search from './fixtures/getsongbpm-search.json';
-import { getSongBpmSource, getSongBpmUrl } from './getSongBpm.ts';
+import { getSongBpmLookup, getSongBpmUrl } from './getSongBpm.ts';
 import { fakeHttp, GETSONGBPM_SEARCH } from './http.test-helper.ts';
 import type { HttpGet } from './http.ts';
 
@@ -17,23 +17,28 @@ function lookUpGetSongBpm(
   key: string,
   httpGet: HttpGet,
 ) {
-  return getSongBpmSource(key, httpGet).lookUp(song, SIGNAL);
+  return getSongBpmLookup(key, httpGet).lookUp(song, SIGNAL);
 }
 
 describe('getSongBpmUrl', () => {
-  it('sends the key and a song and artist lookup', () => {
+  it('sends the key and a cleaned song and artist lookup', () => {
     const url = new URL(
-      getSongBpmUrl({ title: 'Don’t Stop', artist: 'A & B' }, KEY),
+      getSongBpmUrl(
+        { title: 'Don’t Stop (Remastered 2011)', artist: 'A & B feat. C' },
+        KEY,
+      ),
     );
     expect(url.searchParams.get('api_key')).toBe(KEY);
     expect(url.searchParams.get('type')).toBe('both');
-    expect(url.searchParams.get('lookup')).toBe('song:Don’t Stop artist:A & B');
+    expect(url.searchParams.get('lookup')).toBe(
+      'song:dont stop artist:a and b',
+    );
   });
 });
 
-describe('getSongBpmSource', () => {
+describe('getSongBpmLookup', () => {
   it('answers as GetSongBPM', () => {
-    expect(getSongBpmSource(KEY, fakeHttp({}).httpGet).id).toBe(
+    expect(getSongBpmLookup(KEY, fakeHttp({}).httpGet).id).toBe(
       BPM_LOOKUP_SOURCE.getSongBpm,
     );
   });

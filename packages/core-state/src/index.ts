@@ -82,13 +82,14 @@ export {
   type HttpGet,
   type HttpResponse,
 } from './tempoLadder/http.ts';
-export type { TempoSource } from './tempoLadder/tempoSource.ts';
-export { defaultTempoSources } from './tempoLadder/onlineSources.ts';
-export { getSongBpmSource } from './tempoLadder/getSongBpm.ts';
+export type { OnlineBpmLookup } from './tempoLadder/onlineBpmLookup.ts';
+export { defaultOnlineLookups } from './tempoLadder/onlineLookups.ts';
+export { getSongBpmLookup } from './tempoLadder/getSongBpm.ts';
 export {
   BPM_SOURCE,
   BPM_SOURCE_CREDIT,
   BPM_SOURCE_LABEL,
+  NOT_FOUND_TEXT,
   notFoundText,
   sourceText,
   type BpmSource,

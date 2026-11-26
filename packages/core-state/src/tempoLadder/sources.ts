@@ -32,6 +32,10 @@ export function sourceText(source: BpmSource): string {
   return `via ${BPM_SOURCE_LABEL[source]}`;
 }
 
+export const NOT_FOUND_TEXT = 'Not found';
+
 export function notFoundText(tried: readonly LadderRung[]): string {
-  return `Not found · ${tried.map((rung) => BPM_SOURCE_LABEL[rung]).join(', ')}`;
+  if (tried.length === 0) return NOT_FOUND_TEXT;
+  const names = tried.map((rung) => BPM_SOURCE_LABEL[rung]);
+  return `${NOT_FOUND_TEXT} · ${names.join(', ')}`;
 }

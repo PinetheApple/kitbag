@@ -9,7 +9,7 @@ import { climbLadder } from './ladder.ts';
 import { ladderRuntime, memoryCache } from './ladder.test-helper.ts';
 import { songRow } from './libraryRows.test-helper.ts';
 import { BPM_SOURCE } from './sources.ts';
-import type { TempoSource } from './tempoSource.ts';
+import type { OnlineBpmLookup } from './onlineBpmLookup.ts';
 
 const SONG = { title: 'Under Pressure', artist: 'Queen' };
 const KEY = 'test-key';
@@ -23,7 +23,7 @@ function answering(
   name: string,
   bpm: number | null,
   asked: string[],
-): TempoSource {
+): OnlineBpmLookup {
   return {
     id: BPM_LOOKUP_SOURCE.getSongBpm,
     lookUp: () => {
@@ -33,7 +33,7 @@ function answering(
   };
 }
 
-const hung: TempoSource = {
+const hung: OnlineBpmLookup = {
   id: BPM_LOOKUP_SOURCE.getSongBpm,
   lookUp: () => new Promise<never>(() => undefined),
 };
@@ -126,27 +126,42 @@ describe('climbLadder', () => {
     expect(puts).toEqual([]);
   });
 
-  it('asks the online sources in the order given', async () => {
+  it('asks the online lookups in the order given', async () => {
     const asked: string[] = [];
-    const sources = [
+    const lookups = [
       answering('first', null, asked),
       answering('second', 98, asked),
     ];
-    const result = await climbLadder(SONG, ladderRuntime({ sources }));
+    const result = await climbLadder(SONG, ladderRuntime({ lookups }));
     expect(asked).toEqual(['first', 'second']);
     expect(result.bpm).toBe(98);
   });
 
-  it('counts a source that never answers as tried and moves on', async () => {
+  it('counts a lookup that never answers as tried once and moves on', async () => {
     vi.useFakeTimers();
     const asked: string[] = [];
-    const sources = [hung, answering('next', 114, asked)];
-    const pending = climbLadder(SONG, ladderRuntime({ sources }));
+    const lookups = [hung, answering('next', 114, asked)];
+    const pending = climbLadder(SONG, ladderRuntime({ lookups }));
     await vi.advanceTimersByTimeAsync(LOOKUP_TIMEOUT_MS);
     expect(await pending).toEqual({
       bpm: 114,
       source: BPM_SOURCE.getSongBpm,
-      tried: [BPM_SOURCE.library, BPM_SOURCE.getSongBpm, BPM_SOURCE.getSongBpm],
+      tried: [BPM_SOURCE.library, BPM_SOURCE.getSongBpm],
+      libraryMatch: null,
+    });
+  });
+
+  it('keeps climbing when the online lookups cannot be listed', async () => {
+    const runtime = {
+      ...ladderRuntime({ key: KEY }),
+      onlineLookups: () => {
+        throw new Error('no key store');
+      },
+    };
+    expect(await climbLadder(SONG, runtime)).toEqual({
+      bpm: null,
+      source: null,
+      tried: [BPM_SOURCE.library],
       libraryMatch: null,
     });
   });

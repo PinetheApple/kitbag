@@ -1,9 +1,13 @@
-import { BPM_LOOKUP_SOURCE, type SongIdentity } from '@kitbag/core-db';
+import {
+  BPM_LOOKUP_SOURCE,
+  songMatchText,
+  type SongIdentity,
+} from '@kitbag/core-db';
 import { isNumber, isRecord, isString } from '@kitbag/core-db/src/guards';
 
 import { getJson, type HttpGet } from './http.ts';
 import { rankMatches } from './matchScore.ts';
-import type { TempoSource } from './tempoSource.ts';
+import type { OnlineBpmLookup } from './onlineBpmLookup.ts';
 
 const GETSONGBPM_API = 'https://api.getsong.co/search/';
 
@@ -12,7 +16,7 @@ interface GetSongBpmCandidate extends SongIdentity {
 }
 
 export function getSongBpmUrl(song: SongIdentity, apiKey: string): string {
-  const lookup = `song:${song.title} artist:${song.artist}`;
+  const lookup = `song:${songMatchText(song.title)} artist:${songMatchText(song.artist)}`;
   return `${GETSONGBPM_API}?api_key=${encodeURIComponent(apiKey)}&type=both&lookup=${encodeURIComponent(lookup)}`;
 }
 
@@ -29,10 +33,10 @@ function candidateOf(item: unknown): GetSongBpmCandidate[] {
   return [{ title: item.title, artist: artist.name, bpm }];
 }
 
-export function getSongBpmSource(
+export function getSongBpmLookup(
   apiKey: string,
   httpGet: HttpGet,
-): TempoSource {
+): OnlineBpmLookup {
   return {
     id: BPM_LOOKUP_SOURCE.getSongBpm,
     lookUp: async (song, signal) => {

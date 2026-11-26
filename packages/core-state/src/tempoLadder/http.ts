@@ -1,4 +1,5 @@
 export const LOOKUP_TIMEOUT_MS = 5000;
+const LOOKUP_FAILED = 'Tempo lookup failed';
 
 export interface HttpResponse {
   readonly ok: boolean;
@@ -16,7 +17,7 @@ export async function getJson(
   signal: AbortSignal,
 ): Promise<unknown> {
   const response = await httpGet(url, { signal });
-  if (!response.ok) throw new Error(`Lookup failed: ${url}`);
+  if (!response.ok) throw new Error(LOOKUP_FAILED);
   return response.json();
 }
 

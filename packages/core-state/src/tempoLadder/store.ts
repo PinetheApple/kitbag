@@ -1,10 +1,10 @@
-import type { SongIdentity } from '@kitbag/core-db';
+import { songMatchKey, type SongIdentity } from '@kitbag/core-db';
 import { createStore } from 'zustand/vanilla';
 
 import { BPM_BOUNDS, withinBpmBounds } from '../metronome/config.ts';
 import { pushTap, tapTempoBpm } from '../tapTempo/tapTempo.ts';
 import { doubledBpm, halvedBpm } from './bpmSteps.ts';
-import { climbLadder, type TempoLookup } from './ladder.ts';
+import { climbLadder, NO_TEMPO, type TempoLookup } from './ladder.ts';
 import { getTempoLadder, type TempoLadderRuntime } from './runtime.ts';
 import { BPM_SOURCE, type BpmSource } from './sources.ts';
 
@@ -22,14 +22,29 @@ export interface TempoLadderStore extends TempoLookup {
 }
 
 const UNKNOWN = {
+  ...NO_TEMPO,
   track: null,
   looking: false,
-  bpm: null,
-  source: null,
-  tried: [],
-  libraryMatch: null,
   tapsLanded: 0,
-} as const;
+};
+
+function sameTrack(left: SongIdentity | null, right: SongIdentity): boolean {
+  if (left === null) return false;
+  const ours = songMatchKey(left);
+  const theirs = songMatchKey(right);
+  return ours.title === theirs.title && ours.artist === theirs.artist;
+}
+
+async function climbSafely(
+  track: SongIdentity,
+  runtime: () => TempoLadderRuntime,
+): Promise<TempoLookup> {
+  try {
+    return await climbLadder(track, runtime());
+  } catch {
+    return NO_TEMPO;
+  }
+}
 
 export function createTempoLadderStore(runtime: () => TempoLadderRuntime) {
   let taps: readonly number[] = [];
@@ -39,11 +54,12 @@ export function createTempoLadderStore(runtime: () => TempoLadderRuntime) {
       set({ bpm: withinBpmBounds(bpm), source });
     };
     const lookUp = async (track: SongIdentity) => {
+      if (sameTrack(get().track, track)) return;
       latestLookup += 1;
       const lookup = latestLookup;
       taps = [];
       set({ ...UNKNOWN, track, looking: true });
-      const found = await climbLadder(track, runtime());
+      const found = await climbSafely(track, runtime);
       if (lookup !== latestLookup) return;
       const { tried, libraryMatch } = found;
       set({ looking: false, tried, libraryMatch });
@@ -65,8 +81,8 @@ export function createTempoLadderStore(runtime: () => TempoLadderRuntime) {
       }
     };
     const step = (stepped: (bpm: number) => number) => () => {
-      const { bpm } = get();
-      if (bpm !== null) choose(stepped(bpm), BPM_SOURCE.manual);
+      const { bpm, source } = get();
+      if (bpm !== null && source !== null) choose(stepped(bpm), source);
     };
     return {
       ...UNKNOWN,
