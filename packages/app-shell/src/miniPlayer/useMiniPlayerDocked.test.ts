@@ -1,3 +1,5 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 const shown = vi.hoisted(() => ({
@@ -32,7 +34,14 @@ function useDockedWhere(
   off: string[] = [],
 ) {
   Object.assign(shown, { song, playAlong, settled, off });
-  return { lists: useAnyMiniPlayerDocked(), player: useSongMiniPlayerDocked() };
+  const docked = { lists: false, player: false };
+  const Probe = () => {
+    docked.lists = useAnyMiniPlayerDocked();
+    docked.player = useSongMiniPlayerDocked();
+    return null;
+  };
+  renderToStaticMarkup(createElement(Probe));
+  return docked;
 }
 
 describe('where a mini-player docks', () => {

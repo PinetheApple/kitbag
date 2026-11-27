@@ -237,10 +237,9 @@ describe('HomeScreen Play along row', () => {
     expect(rowTitles([TOOL_ID.sync])).not.toContain('Play along');
   });
 
-  it('restores the row in the same place when Play along is back on', () => {
+  it('restores the row when Play along is back on', () => {
     rowTitles([TOOL_ID.sync]);
-    expect(rowTitles([])).toEqual(rowTitles([TOOL_ID.tuner]));
-    expect(rowTitles([])).toContain('Play along');
+    expect(rowTitles([])).toEqual(['Play along']);
   });
 
   const syncSubtitle = (locked: string | undefined) => {

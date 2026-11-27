@@ -24,18 +24,18 @@ export function DockedMiniPlayer({
   const openPlayAlong = useCallback(() => {
     router.push(PLAY_ALONG_ROUTE);
   }, [router]);
-  if (!song && !playAlongOn) return null;
-  if (!song)
+  if (song)
     return (
-      <PlayAlongMiniPlayer bottomInset={bottomInset} onOpen={openPlayAlong} />
+      <MiniPlayer
+        usePlayhead={useMixerFrame}
+        bottomInset={bottomInset}
+        onOpenSong={routes.openSong}
+        onOpenStemSet={routes.openStemSet}
+        onOpenQueue={onOpenQueue}
+      />
     );
+  if (!playAlongOn) return null;
   return (
-    <MiniPlayer
-      usePlayhead={useMixerFrame}
-      bottomInset={bottomInset}
-      onOpenSong={routes.openSong}
-      onOpenStemSet={routes.openStemSet}
-      onOpenQueue={onOpenQueue}
-    />
+    <PlayAlongMiniPlayer bottomInset={bottomInset} onOpen={openPlayAlong} />
   );
 }
