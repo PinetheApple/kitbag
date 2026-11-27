@@ -217,6 +217,7 @@ function TempoRow({ editor }: { readonly editor: PresetEditor }) {
       <StepField
         update={update}
         field="bpm"
+        wrapValue
         value={editor.draft.bpm}
         {...songTempo}
         label="Tempo"

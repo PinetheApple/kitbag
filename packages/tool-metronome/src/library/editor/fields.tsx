@@ -20,6 +20,7 @@ export interface StepFieldProps {
   readonly label: string;
   readonly display?: string;
   readonly spoken?: string;
+  readonly wrapValue?: boolean;
   readonly unit: string;
   readonly min: number;
   readonly max: number;
@@ -41,6 +42,7 @@ export function StepField(props: StepFieldProps) {
       variant="inline"
       label={props.label}
       value={props.display ?? String(props.value)}
+      wrapValue={props.wrapValue ?? false}
       accessibilityValue={
         props.spoken ?? `${String(props.value)} ${props.unit}`
       }

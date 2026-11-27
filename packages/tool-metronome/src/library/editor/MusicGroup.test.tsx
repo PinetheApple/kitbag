@@ -84,6 +84,7 @@ describe('preset editor tempo row', () => {
 
   it('shows the song’s tempo for a song that saves none', () => {
     expect(tempoField(untimed)).toMatchObject({
+      wrapValue: true,
       value: 'Tempo from the song',
       accessibilityValue: 'Tempo from the song',
     });
