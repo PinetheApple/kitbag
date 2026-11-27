@@ -36,7 +36,7 @@ vi.mock('@/runtime/libraryRoutes', () => ({
 }));
 
 const { DockedMiniPlayer } = await import('./DockedMiniPlayer.tsx');
-const { PLAY_ALONG_ROUTE, TOOL_ID } = await import('../home/registry.ts');
+const { TOOL_ID, TOOL_ROUTES } = await import('../home/toolRoutes.ts');
 
 const BOTTOM = 24;
 
@@ -71,7 +71,7 @@ describe('the docked mini-player', () => {
   it('reopens Play along from its mini-player', () => {
     const [[, props] = ['', {}]] = render(false);
     (props.onOpen as () => void)();
-    expect(world.push).toHaveBeenCalledExactlyOnceWith(PLAY_ALONG_ROUTE);
+    expect(world.push).toHaveBeenCalledExactlyOnceWith(TOOL_ROUTES.sync.home);
   });
 
   it('shows no Play along mini-player while Play along is off', () => {
