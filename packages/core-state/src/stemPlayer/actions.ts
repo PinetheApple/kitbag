@@ -1,4 +1,4 @@
-import type { Debounced } from './debounce.ts';
+import type { Debounced } from '../debounce.ts';
 import { clamp } from '../metronome/config.ts';
 import { soloAfter, UNITY_GAIN } from './mix.ts';
 import type { MixSaver } from './mixSaver.ts';
