@@ -2,11 +2,11 @@ import { useCallback } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DockedMiniPlayer } from './DockedMiniPlayer.tsx';
-import { useMiniPlayerDocked } from './useMiniPlayerDocked.ts';
+import { useSongMiniPlayerDocked } from './useMiniPlayerDocked.ts';
 
 export function useViewedPlayerDock() {
   const { bottom } = useSafeAreaInsets();
-  const docked = useMiniPlayerDocked();
+  const docked = useSongMiniPlayerDocked();
   const render = useCallback(
     (onOpenQueue: () => void) => (
       <DockedMiniPlayer bottomInset={bottom} onOpenQueue={onOpenQueue} />

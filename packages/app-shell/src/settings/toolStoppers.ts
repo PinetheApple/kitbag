@@ -21,12 +21,20 @@ export interface ToolStopperDeps {
       readonly close: () => void;
     };
   };
+  readonly playAlong: {
+    readonly getState: () => {
+      readonly lock: object | undefined;
+      readonly unlock: () => void;
+      readonly stopClick: () => void;
+    };
+  };
 }
 
 export function toolStoppers({
   metronome,
   stemPlayer,
   songPlayer,
+  playAlong,
 }: ToolStopperDeps): ToolStoppers {
   return {
     [TOOL_ID.metronome]: () => {
@@ -39,6 +47,11 @@ export function toolStoppers({
     [TOOL_ID.library]: () => {
       const player = songPlayer.getState();
       if (player.songId !== null) player.close();
+    },
+    [TOOL_ID.sync]: () => {
+      const follower = playAlong.getState();
+      if (follower.lock !== undefined) follower.unlock();
+      follower.stopClick();
     },
   };
 }

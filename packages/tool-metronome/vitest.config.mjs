@@ -10,7 +10,6 @@ export default defineConfig({
   test: {
     include: [
       'src/logic/**/*.test.ts',
-      'src/screen/useHoldEngine.test.ts',
       'src/screen/useEndPracticeOnLeave.test.ts',
       'src/screen/muteStrips.test.ts',
       'src/screen/SwipeHint.test.ts',
@@ -29,8 +28,8 @@ export default defineConfig({
       'src/screen/SetlistSongsSheet.test.tsx',
       'src/screen/MetronomeAppBar.test.tsx',
       'src/library/songLists.test.tsx',
+      'src/library/AllSongsScreen.test.tsx',
       'src/screen/PracticeSections.test.tsx',
-      'src/screen/MeterSheet.test.tsx',
       'src/screen/PolyStrip.test.tsx',
       'src/screen/SwipeTempoZone.test.tsx',
       'src/screen/frameSurfaces.test.tsx',

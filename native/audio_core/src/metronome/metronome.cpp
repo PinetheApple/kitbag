@@ -76,6 +76,14 @@ void Metronome::SetPolyrhythm(bool enabled, int beats) {
   commands_.Push(command);
 }
 
+void Metronome::SetAccent(int beat_index, Accent accent) {
+  SetAccent(beat_index, static_cast<int32_t>(accent));
+}
+
+void Metronome::SetPolyAccent(int beat_index, Accent accent) {
+  SetPolyAccent(beat_index, static_cast<int32_t>(accent));
+}
+
 void Metronome::SetPolyAccent(int beat_index, int32_t accent) {
   Command command{CommandType::kSetPolyAccent};
   command.int_a = beat_index;
@@ -170,6 +178,21 @@ void Metronome::SetGrid(
   grid_.Publish(std::move(grid), clock, engine_running);
 }
 
+bool Metronome::SetGridDownbeats(
+    std::span<const int32_t> downbeats,
+    FrameClock clock,
+    bool engine_running
+) {
+  const auto* node = grid_.Get();
+  if (node == nullptr) return false;
+  const size_t beats = node->value.beat_times_sec.size();
+  if (!ValidDownbeats(downbeats, static_cast<int32_t>(beats))) return false;
+  auto grid = std::make_unique<BeatGrid>(node->value);
+  grid->bars = GridBars(downbeats, beats);
+  grid_.Publish(std::move(grid), clock, engine_running);
+  return true;
+}
+
 void Metronome::ClearGrid(FrameClock clock, bool engine_running) {
   grid_.Publish(nullptr, clock, engine_running);
 }
@@ -205,6 +228,7 @@ bool Metronome::RouteCommand(const Command& command) {
     case CommandType::kStop:
     case CommandType::kPause:
     case CommandType::kAnchorExternal:
+    case CommandType::kAnchorGrid:
     case CommandType::kSetTempo:
     case CommandType::kSetLatencyOffset:
     case CommandType::kSetFollowMixer:
@@ -215,7 +239,6 @@ bool Metronome::RouteCommand(const Command& command) {
     case CommandType::kSetSounds:
     case CommandType::kPreviewSound:
     case CommandType::kSetVolume:
-      return ApplyTrainerCommand(command) || ApplyOutputCommand(command);
     case CommandType::kSetBeats:
     case CommandType::kSetSubdivision:
     case CommandType::kSetSubdivisionAccents:
@@ -224,9 +247,14 @@ bool Metronome::RouteCommand(const Command& command) {
     case CommandType::kSetPolyAccent:
     case CommandType::kSetPolyAgainst:
     case CommandType::kSetGridClick:
-      return ApplyPatternCommand(command) || ApplyGridClickCommand(command);
+      return ApplySettingCommand(command);
   }
   return false;
+}
+
+bool Metronome::ApplySettingCommand(const Command& command) {
+  return ApplyTrainerCommand(command) || ApplyOutputCommand(command) ||
+         ApplyPatternCommand(command) || ApplyGridClickCommand(command);
 }
 
 bool Metronome::ApplyClockCommand(const Command& command) {

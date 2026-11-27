@@ -1,7 +1,9 @@
 #include "kitbag_api.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <cstdlib>
 
 #include "abi_test_engine_clock.h"
 #include "abi_test_song_rig.h"
@@ -24,6 +26,8 @@ constexpr uint32_t kBlockFrames[] = {
 constexpr int kBlockRounds = 60;
 constexpr int64_t kProbeDeltas[] = {-7001, 0, 1, 12345, 480000};
 constexpr int64_t kLateNs = 10'000'000;
+constexpr int kSuspendedBracketAttempts = 8;
+constexpr int64_t kSuspendedJitterNs = 50'000;
 constexpr int64_t kHoursSuspendedNs =
     std::chrono::nanoseconds(
         std::chrono::hours(3) + std::chrono::microseconds(123'457)
@@ -91,6 +95,29 @@ void TestClockIsRawBoottime() {
   );
 }
 
+// Never slept, the gap is near 0 and each read jitters around it by microseconds,
+// so a preempted bracket is retried rather than widened.
+bool SuspendedWithinBracket() {
+  const int64_t before = RawSuspendedNs();
+  const int64_t read = kb_clock_suspended_ns();
+  const int64_t after = RawSuspendedNs();
+  const int64_t tolerance = std::llabs(after - before) + kSuspendedJitterNs;
+  return read >= std::min(before, after) - tolerance &&
+         read <= std::max(before, after) + tolerance;
+}
+
+void TestSuspendedIsBoottimeMinusMonotonic() {
+  bool within = false;
+  for (int attempt = 0; attempt < kSuspendedBracketAttempts && !within;
+       ++attempt) {
+    within = SuspendedWithinBracket();
+  }
+  Check(
+      within,
+      "boottime: kb_clock_suspended_ns is CLOCK_BOOTTIME minus CLOCK_MONOTONIC"
+  );
+}
+
 void TestHoursSuspendedSubtracted() {
   kb_engine* engine = nullptr;
   if (kb_engine_create(&engine) != KB_OK) return;
@@ -138,6 +165,7 @@ void RunBoottimeMappingAbiTests() {
   TestExactAcrossBlocks();
   TestLatestPairWins();
   TestClockIsRawBoottime();
+  TestSuspendedIsBoottimeMinusMonotonic();
   TestHoursSuspendedSubtracted();
 }
 

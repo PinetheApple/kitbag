@@ -86,6 +86,7 @@ class Metronome {
   void Stop();
   void Pause();
   void AnchorExternal(double song_pos_sec, uint64_t at_frame, double bpm);
+  void AnchorGrid(double song_pos_sec, uint64_t at_frame, double rate);
   void SetTempo(double bpm);
   void SetTimeSignature(int numerator, int denominator);
   void SetSubdivision(int subdivision);
@@ -94,15 +95,11 @@ class Metronome {
   void SetGridGrouping(std::span<const int32_t> sizes);
   void SetGridRate(int32_t rate);
   void SetAccent(int beat_index, int32_t accent);
-  void SetAccent(int beat_index, Accent accent) {
-    SetAccent(beat_index, static_cast<int32_t>(accent));
-  }
+  void SetAccent(int beat_index, Accent accent);
   void SetPolyrhythm(bool enabled, int beats);
   void SetPolyAccent(int beat_index, int32_t accent);
   void SetPolyAgainst(int main_beats);
-  void SetPolyAccent(int beat_index, Accent accent) {
-    SetPolyAccent(beat_index, static_cast<int32_t>(accent));
-  }
+  void SetPolyAccent(int beat_index, Accent accent);
   void SetSounds(int normal_sound, int accent_sound);
   void SetCountIn(int bars, bool distinct, int sound);
   void PreviewSound(int sound, bool accented);
@@ -128,6 +125,11 @@ class Metronome {
       FrameClock clock,
       bool engine_running
   );
+  [[nodiscard]] bool SetGridDownbeats(
+      std::span<const int32_t> downbeats,
+      FrameClock clock,
+      bool engine_running
+  );
   // Return to constant-tempo mode, keeping the click's phase: the first bpm_
   // click falls one whole beat after the last grid beat (SPEC.md §4.2.1).
   void ClearGrid(FrameClock clock, bool engine_running);
@@ -141,11 +143,7 @@ class Metronome {
     return commands_.Free() > 0;
   }
   // RT: the intent of a click-off count that ended this block, once.
-  uint32_t TakeEndedIntent() {
-    const uint32_t ended = ended_intent_;
-    ended_intent_ = kNoIntent;
-    return ended;
-  }
+  uint32_t TakeEndedIntent();
   bool is_running() const {
     return running_flag_.load(std::memory_order_relaxed);
   }
@@ -184,19 +182,6 @@ class Metronome {
   using CommandType = MetronomeCommandType;
   using Command = MetronomeCommand;
 
-  // Per-block tempo derivatives, recomputed whenever bpm_ changes mid-block.
-  struct BlockTempo {
-    double beats_per_sample = 0.0;
-    double latency_beats = 0.0;
-    double poly_ticks_per_beat = 1.0;
-  };
-
-  // The block's grid and its identity, from one acquire load (SPEC.md §4.2.1).
-  struct GridView {
-    const BeatGrid* grid = nullptr;
-    uint64_t generation = 0;
-  };
-
   void ApplyPendingCommands();
   void ApplyCommand(const Command& command);
   bool RouteCommand(const Command& command);
@@ -204,6 +189,10 @@ class Metronome {
   void ReacquireGrid();
   void DeferStart(const Command& command);
   void StashPendingAnchor(const Command& command);
+  void StashGridAnchor(const Command& command);
+  void ClearPendingAnchors();
+  bool HasPendingAnchor() const;
+  bool ApplySettingCommand(const Command& command);
   bool ApplyClockCommand(const Command& command);
   bool ApplyTrainerCommand(const Command& command);
   bool ApplyPatternCommand(const Command& command);
@@ -266,7 +255,8 @@ class Metronome {
       BlockTempo* tempo
   );
   GridView AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate);
-  void ObserveGridChange(const GridView& view, uint32_t sample_rate);
+  bool ObserveGridChange(const GridView& view, uint32_t sample_rate);
+  void RebarGrid(const BeatGrid& grid);
   void BeginPendingStart(
       const GridView& view,
       uint64_t frame,
@@ -281,6 +271,14 @@ class Metronome {
   );
   void
   BeginAnchorExternal(uint64_t now, uint32_t sample_rate, BlockTempo* tempo);
+  void ApplyPendingGridAnchor(
+      const GridView& view,
+      uint64_t now,
+      uint32_t sample_rate
+  );
+  void StartOnGrid(const GridView& view, double song_seconds);
+  bool KeepsGridTimeline(const BeatGrid& grid, double shift_sec) const;
+  GridMapping MappingFor(const BeatGrid& grid) const;
   // From the latency-shifted position, so an anchor lands on the song's bar.
   void SyncBarFromPosition(double beats_per_sample);
   double LastSoundedPosition(double beats_per_sample) const;
@@ -360,7 +358,7 @@ class Metronome {
   uint32_t ended_intent_ = kNoIntent;
   CountInSchedule count_in_at_;
   // Held until the render loop knows block_start_frame. The last drained wins.
-  bool has_pending_anchor_ = false;
+  bool has_pending_tempo_anchor_ = false;
   double pending_anchor_song_pos_ = 0.0;
   double pending_anchor_bpm_ = kDefaultBpm;
   uint64_t pending_anchor_frame_ = 0;

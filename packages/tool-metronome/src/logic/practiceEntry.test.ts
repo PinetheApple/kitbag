@@ -1,4 +1,10 @@
 import {
+  confirmNumpadEntry,
+  openNumpadEntry,
+  pressNumpadDigit,
+  type NumpadEntry,
+} from '@kitbag/core-design';
+import {
   KB_MIN_RAMP_STEP_BPM,
   KB_MUTE_BARS_BOUNDS,
   KB_POLY_AGAINST_BAR,
@@ -13,12 +19,6 @@ import {
 } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
-import {
-  confirmEntry,
-  openEntry,
-  pressDigit,
-  type NumpadEntry,
-} from './numpad.ts';
 import { polyAgainstLabel } from './polyRow.ts';
 import {
   practiceEntry,
@@ -51,10 +51,10 @@ function typeInto(
 ): PracticeValues {
   const { bounds, value } = practiceEntry(field, values);
   const entry = digits.reduce<NumpadEntry>(
-    (current, digit) => pressDigit(current, digit, bounds),
-    openEntry(value),
+    (current, digit) => pressNumpadDigit(current, digit, bounds),
+    openNumpadEntry(value),
   );
-  const typed = confirmEntry(entry, bounds);
+  const typed = confirmNumpadEntry(entry, bounds);
   return typed === undefined ? values : withPracticeEntry(values, field, typed);
 }
 

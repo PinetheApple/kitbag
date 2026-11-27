@@ -16,6 +16,7 @@ import {
   toggledCategories,
 } from './categories.ts';
 import { clickSoundLock, type ClickSoundLock } from '../clickSounds/lock.ts';
+import { flushStandaloneMetronomePersistence } from '../metronome/standalonePersistence.ts';
 import { getBackup, type BackupDeps } from './runtime.ts';
 
 export type RestoreFailure = ImportFailure | { readonly kind: 'unreadable' };
@@ -133,6 +134,7 @@ export function createRestoreStore(
 
     const finish = async (state: RestoreReview, confirmReplace: boolean) => {
       show({ ...state, phase: 'applying' });
+      flushStandaloneMetronomePersistence();
       const result = await lock.run(() =>
         deps().service().apply(state.plan, { confirmReplace }),
       );

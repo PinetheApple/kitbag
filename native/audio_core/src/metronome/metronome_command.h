@@ -12,6 +12,7 @@ enum class MetronomeCommandType : uint8_t {
   kStop,
   kPause,
   kAnchorExternal,
+  kAnchorGrid,
   kSetTempo,
   kSetBeats,
   kSetSubdivision,

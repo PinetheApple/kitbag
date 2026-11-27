@@ -1,8 +1,10 @@
 # Tools as downloadable plugins: feasibility and cost
 
-Status: research and plan, 2026-11-27. Nothing here is decided; SPEC.md §9.2 and §9.3
-still say tools are a fixed compile-time set and that there is no public plugin SDK.
-Adopting any part of this plan means changing those sections first.
+Status: research and plan, 2026-11-27, updated the same day with the owner's decision
+on #657 (see "Progress and decisions"). Steps 1 to 3 are done and step 4 is approved,
+starting with an experience mockup. SPEC.md §9.2 and §9.3 still say tools are a fixed
+compile-time set and that there is no public plugin SDK; building step 4 means changing
+those sections first.
 
 The question: can the tuner, Songs, Stem songs, the metronome and Play along become
 plugins that a user downloads only when wanted, with community plugins later, and what
@@ -22,8 +24,89 @@ plugins").
 
 Recommended path: take the packaging decision first, then make the shell
 registry-driven, since that helps every later option. Build runtime-loaded first-party
-JavaScript tool packs only if spikes S2 and S4 pass, and start community extension as
-data packs, not code.
+JavaScript tool packs (S2 passed; approved by the owner, mockup first), and start
+community extension as data packs, not code.
+
+## Progress and decisions
+
+Owner decision (2026-11-27): "lightweight" means a smaller download, extensibility, and
+less app bloat (only installed tools show on screens). The size of each extension is not
+a concern. The path in #657 and where it stands:
+
+| Step | What | State |
+|---|---|---|
+| 1 | Compressed native libraries (`expo.useLegacyPackaging`) | Done, #697 (#692). Download went from about 37.7 MB to about 20.9 MB. |
+| 2 | Registry-driven shell: Home, Settings and routes list only installed or enabled tools | Done, #698 (#696, Play along hidden when off) and #701 (#695, tool routes come from the registry). |
+| 3 | Spike: a worklet in a downloaded Hermes bundle drives a 60fps view | Done, verdict "works" (#700, closed unmerged, branch `spike/runtime-bundle-worklet` kept). |
+| 4 | First-party tools as signed downloadable bundles, then data packs | Approved. The experience mockup (every state of the Tools "Get", update and remove flows, the consent screen, and the F-Droid build) comes first, before any loader code. |
+
+Community plugins stay later.
+
+### Spike verdict (step 3, #700)
+
+A separately built bundle, as plain JavaScript and as Hermes bytecode, loaded at runtime
+through a small JSI function in `core-native`, drove a Reanimated worklet screen on the
+emulator at 61 frames/s with no frame over 16.7 ms and no worklet errors. The same screen
+compiled in was the control. Read it as works or does not work, not as absolute numbers
+(SwiftShader). The run with the JS thread blocked is not proven: it logged no marker
+that the block ran. Rerun it on a phone with a marker.
+
+Blockers the spike hit, which a real loader has to solve:
+
+1. `fetch` cannot read local files on React Native 0.88, so the bundle is read natively.
+2. A second Metro bundle writes its module system onto the host's global object. The
+   prototype snapshots and restores it; a real loader needs a serializer with a
+   per-plugin global prefix.
+3. Reanimated's Bundle Mode does not support a second bundle, so it stays off. Default
+   worklet serialisation works across bundles.
+4. Release builds skip the worklets version check, so a plugin built against another
+   worklets or Hermes version fails without a clear error. Pin every plugin to the host
+   build in its manifest and check before evaluating.
+5. Handing a plugin the whole `react-native` module gives it `TurboModuleRegistry` and
+   bypasses `core-native` (§13.1). A plugin needs a curated, versioned module surface.
+
+Loader estimate from the spike: 10 to 17 agent-days (build and serializer 1–2, shared
+module surface 2–4, version pinning 1–2 plus CI rebuilding every plugin per host release,
+signature check 2–3, download path 2–3, lifecycle and errors 2–3). This replaces the
+2–3 day estimate for spike S2 and narrows Phase 3 below. The owner approved step 4 knowing
+the saving is about 1.3 to 2.3 MB, because the goal is extensibility and screens that
+show only what is installed, not bytes alone.
+
+### F-Droid findings for step 4 (researched 2026-11-27)
+
+Verified means the policy page says it; inferred is reasoning; gap means no primary
+source was found.
+
+- **Allowed only with opt-in consent (verified).** The Inclusion Policy bars downloading
+  additional executable binary files without explicit, opt-in consent that says users are
+  bypassing F-Droid's checks [F1]. Hermes bytecode most likely counts (inferred). For
+  plain JavaScript it is less clear (gap: no ruling found).
+- **No anti-feature covers it (verified).** The list has no "downloads code" tag; the
+  non-free add-on, network and dependency tags do not apply to FOSS bundles built from
+  this repo and hosted on our releases (inferred). A silent update check could fall under
+  Tracking, so any check is opt-in too (inferred). Undisclosed anti-features are
+  rejected, so the download behaviour is stated in the metadata.
+- **Reproducibility (verified and inferred).** F-Droid builds the APK from source and
+  compares it with the published one [F3]. Downloaded bundles fall outside that check,
+  which is why consent is required. The policy's remedy for non-free dependencies is a
+  build flavour without them, and that is the sanctioned shape here (inferred). No
+  precedent that requires F-Droid to build the bundles was found (gap).
+- **Precedent.** Termux ships add-ons as separate F-Droid apps with one signing
+  identity. F-Droid and GitHub builds cannot be mixed.
+
+Options for the F-Droid build, best fit first (inferred):
+
+1. A flavour with every tool compiled in and no code download. No consent screen, F-Droid
+   builds everything, tool updates arrive with app releases. Downloads stay in the GitHub
+   and Obtainium build. **This is the plan's default.**
+2. Opt-in downloads in the F-Droid build too, with explicit consent text. Expect review
+   friction; whether Hermes bytecode is accepted is open.
+3. One F-Droid app per tool (S5's shape). Workable, but signing and upkeep add up and it
+   fits a registry poorly.
+
+Still open (S4): ask on the inclusion request (#61) whether signed Hermes bundles fall
+under the consent clause, and check whether the F-Droid scanner flags bundled `.hbc`
+files. A reviewer's answer settles it; option 1 does not wait for it.
 
 ## 1. Today's state
 
@@ -402,10 +485,10 @@ median size, including its review rounds. Owner waits and phone checks come on t
 
 | Phase | Content | Size |
 |---|---|---|
-| 0. Measure and pack | Spike S1. Decide on compressed native libraries, with one start-up measurement on the phone. Dependency audit. | 1–2 agent-days |
-| 1. Registry-driven shell | `ToolPlugin` exports, catch-all route, shell stops importing tool internals (about 30 files), store factories, SPEC §9.2/§13.1/§13.4 edits, lint zones | 6–10 agent-days |
-| 2. Spikes S2–S5 | See below | 4–7 agent-days, plus the wait for F-Droid's answer |
-| 3. First-party tool packs | Per-tool bundle build, signing in `release.yml`, loader and verifier in `core-native`, version gate, Tools manager "Get" and "Remove" with mockups of every state, F-Droid flavour, release-gate checks | 10–15 agent-days |
+| 0. Measure and pack | Done for packaging (#697). Spike S1 and the dependency audit are optional now. | Done |
+| 1. Registry-driven shell | `ToolPlugin` exports, catch-all route, shell stops importing tool internals (about 30 files), store factories, SPEC §9.2/§13.1/§13.4 edits, lint zones. Routes and Home visibility are done (#698, #701); the rest remains. | Started; remainder 4–8 agent-days |
+| 2. Spikes S2–S5 | S2 done (#700, works). S3 is not needed unless the custom loader proves worse than Re.Pack. S4 and S5 are below. | S4 plus S5 only, 1.5–2.5 agent-days, plus the wait for F-Droid's answer |
+| 3. First-party tool packs | Experience mockup first (approved before code). Then per-tool bundle build, signing in `release.yml`, loader and verifier in `core-native`, version gate, Tools manager "Get" and "Remove", F-Droid flavour with tools compiled in, release-gate checks | 10–17 agent-days (spike estimate) |
 | 4a. Community data packs | Schemas, importer, registry repo and review CI, opt-in feed, Tools manager entry | 6–10 agent-days |
 | 4b. Community code plugins | Sandbox runtime, capability API, permission prompts, review tooling | 15–25+ agent-days; research first |
 
@@ -417,7 +500,7 @@ Downloadable first-party tools take 21 to 34 agent-days in total.
 | Spike | Question | Proves it | Kills it |
 |---|---|---|---|
 | S1 Attribution (0.5 day) | How many bytes of the bundle and dex are each tool's? | Release bundle with `--sourcemap-output`, attributed per package; dex attributed with the R8 mapping. | Tools total under 1.5 MB, so the whole plugin plan is not worth it for size alone. |
-| S2 Second Hermes bundle (2–3 days) | Can a second bytecode bundle be loaded into the running app on RN 0.88 and the New Architecture, mount under Expo Router, and run a worklet that reads the HostObject at 60 fps? | Tuner needle from a pack, steady on the phone, with the JS thread starved (§5.8's test). | Worklets from the second bundle cannot reach the UI runtime, or module IDs clash with the host bundle. |
+| S2 Second Hermes bundle (done, #700: works) | Can a second bytecode bundle be loaded into the running app on RN 0.88 and the New Architecture, mount under Expo Router, and run a worklet that reads the HostObject at 60 fps? | Tuner needle from a pack, steady on the phone, with the JS thread starved (§5.8's test). | Worklets from the second bundle cannot reach the UI runtime, or module IDs clash with the host bundle. |
 | S3 Re.Pack on Expo SDK 58 (2 days) | Does the app build and run with Rspack instead of Metro, including Expo Router, Expo modules and NativeWind? | A release APK from Re.Pack that passes the existing e2e flows. | Expo Router or NativeWind need Metro; Re.Pack is then out, and S2 decides alone. |
 | S4 F-Droid ruling (0.5 day plus waiting) | Is an opt-in "Get tool" that downloads signed first-party Hermes bytecode acceptable, and which anti-feature does it carry? | A written answer on the inclusion request (#61). | No: the F-Droid build ships every tool, or uses S5. |
 | S5 Asset-only companion APK (1–2 days) | Can the host load a tool bundle from a same-signer, launcher-less APK, and will F-Droid and Obtainium list one? | Host reads and verifies the companion's bundle after the companion is installed through Obtainium. | Signature check or asset access fails, or no store lists add-on packages. |
@@ -472,6 +555,7 @@ Accessed 2026-11-27.
 - [P1] Google Play Console Help, "Device and Network Abuse" policy: https://support.google.com/googleplay/android-developer/answer/9888379
 - [F1] F-Droid, "Inclusion Policy": https://f-droid.org/docs/Inclusion_Policy/
 - [F2] F-Droid, "Anti-Features": https://f-droid.org/docs/Anti-Features/
+- [F3] F-Droid, "Reproducible Builds": https://f-droid.org/en/docs/Reproducible_Builds/
 - [E1] Expo, "Async routes": https://docs.expo.dev/router/web/async-routes/
 - [RN1] React Native, "Using Hermes": https://reactnative.dev/docs/hermes
 - [R1] Re.Pack, "Code splitting": https://re-pack.dev/docs/features/code-splitting

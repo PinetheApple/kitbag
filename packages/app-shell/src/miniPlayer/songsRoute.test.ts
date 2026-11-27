@@ -34,7 +34,7 @@ vi.mock('@kitbag/tool-library', () => ({
   },
 }));
 vi.mock('./useMiniPlayerDocked', () => ({
-  useMiniPlayerDocked: () => state.docked,
+  useAnyMiniPlayerDocked: () => state.docked,
 }));
 vi.mock('./DockedMiniPlayer', () => ({ DockedMiniPlayer: () => null }));
 vi.mock('@/queue/useQueueSheet', () => ({

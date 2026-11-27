@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   commonMeters,
-  meterLabel,
   numeratorChoices,
   sameMeter,
-} from './meter.ts';
+  timeSignatureLabel,
+} from '@kitbag/core-design';
 
 describe('numeratorChoices', () => {
   it('runs from one beat to the engine maximum', () => {
@@ -23,13 +23,13 @@ describe('numeratorChoices', () => {
 
 describe('commonMeters', () => {
   it('offers the mockup chips the engine allows', () => {
-    expect(commonMeters(KB_MAX_BEATS, KB_DENOMINATORS).map(meterLabel)).toEqual(
-      ['2/4', '3/4', '4/4', '5/4', '6/8', '7/8', '9/8', '12/8'],
-    );
+    expect(
+      commonMeters(KB_MAX_BEATS, KB_DENOMINATORS).map(timeSignatureLabel),
+    ).toEqual(['2/4', '3/4', '4/4', '5/4', '6/8', '7/8', '9/8', '12/8']);
   });
 
   it('skips chips over the beat limit or on a denominator the engine lacks', () => {
-    expect(commonMeters(8, [4]).map(meterLabel)).toEqual([
+    expect(commonMeters(8, [4]).map(timeSignatureLabel)).toEqual([
       '2/4',
       '3/4',
       '4/4',

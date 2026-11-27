@@ -1,73 +1,43 @@
+import { SoundPickerSheet } from '@kitbag/core-design';
 import {
-  PickerGrid,
-  SegmentedControl,
-  Sheet,
-  SHEET_TOUCH_ROOM,
-  space,
-  unshared,
-} from '@kitbag/core-design';
-import {
-  useMetronome,
   withoutSound,
   type PerAccentSounds,
   SOUND_OPTIONS,
-  SOUND_ROLE,
+  SOUND_PICKER_HINT,
   SOUND_ROLE_OPTIONS,
   soundPickerLabel,
-  soundsWith,
-  type SoundRole,
+  type SoundsUpdate,
+  useMetronome,
+  useSoundPicker,
 } from '@kitbag/core-state';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 
 import { CustomSoundSheets, useCustomSoundMenu } from './CustomSoundSheets.tsx';
 import { CustomSounds, useImportHint } from './CustomSounds.tsx';
-import { useHoldEngine } from './useHoldEngine.ts';
 
-// Heads the sheet; the picker grid below does not reach into the gap.
-const ROLE_GAPS = { bottom: unshared(space.sectionGap) };
-const ROLE_EDGE = { top: SHEET_TOUCH_ROOM };
-
-const PICKER_HINT =
-  'Tap a sound to hear it at the current volume. Accent and normal beats can use different sounds.';
-
-interface SoundSheetProps {
+export interface MetronomeSoundSheetProps {
   readonly visible: boolean;
   readonly bottomInset: number;
   readonly onDismiss: () => void;
-}
-
-export interface SoundPickerSheetProps extends SoundSheetProps {
   readonly sounds: PerAccentSounds;
-  readonly onChange: (
-    update: (sounds: PerAccentSounds) => PerAccentSounds,
-  ) => void;
+  readonly onChange: (update: SoundsUpdate) => void;
 }
 
-export function SoundPickerSheet({
+export function MetronomeSoundSheet({
   visible,
   bottomInset,
   onDismiss,
   sounds,
   onChange,
-}: SoundPickerSheetProps) {
-  useHoldEngine(visible);
-  const [role, setRole] = useState<SoundRole>(SOUND_ROLE.normal);
-  const previewSound = useMetronome((state) => state.previewSound);
+}: MetronomeSoundSheetProps) {
+  const previewSound = useMetronome((s) => s.previewSound);
+  const { role, setRole, pick } = useSoundPicker(
+    visible,
+    onChange,
+    previewSound,
+  );
   const importHint = useImportHint();
   const menu = useCustomSoundMenu();
-  const pick = useCallback(
-    (id: number) => {
-      onChange((current) => soundsWith(current, role, id));
-      previewSound(id, role === SOUND_ROLE.accent);
-    },
-    [onChange, previewSound, role],
-  );
-  const pickOption = useCallback(
-    (value: string) => {
-      pick(Number(value));
-    },
-    [pick],
-  );
   const handleRemoved = useCallback(
     (id: number) => {
       onChange((current) => withoutSound(current, id));
@@ -76,30 +46,19 @@ export function SoundPickerSheet({
   );
   return (
     <>
-      <Sheet
+      <SoundPickerSheet
         visible={visible}
-        title="Click sound"
-        titleIcon="sound"
-        hint={`${PICKER_HINT} ${importHint}`}
-        dismissLabel="Close click sound"
         bottomInset={bottomInset}
+        hint={`${SOUND_PICKER_HINT} ${importHint}`}
+        roles={SOUND_ROLE_OPTIONS}
+        role={role}
+        gridLabel={soundPickerLabel(role)}
+        options={SOUND_OPTIONS}
+        selected={String(sounds[role])}
+        onRole={setRole}
+        onPick={pick}
         onDismiss={onDismiss}
       >
-        <SegmentedControl
-          fill
-          accessibilityLabel="Beat level"
-          options={SOUND_ROLE_OPTIONS}
-          selected={role}
-          neighbourGapDp={ROLE_GAPS}
-          edgeRoomDp={ROLE_EDGE}
-          onSelect={setRole}
-        />
-        <PickerGrid
-          accessibilityLabel={soundPickerLabel(role)}
-          options={SOUND_OPTIONS}
-          selected={String(sounds[role])}
-          onSelect={pickOption}
-        />
         <CustomSounds
           selected={sounds[role]}
           showHint={false}
@@ -107,7 +66,7 @@ export function SoundPickerSheet({
           onImported={pick}
           onOptions={menu.open}
         />
-      </Sheet>
+      </SoundPickerSheet>
       <CustomSoundSheets
         menu={menu}
         bottomInset={bottomInset}

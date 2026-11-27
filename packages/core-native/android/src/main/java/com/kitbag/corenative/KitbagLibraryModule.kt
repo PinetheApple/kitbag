@@ -116,6 +116,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun releaseOldCopies() = moves.releaseOldCopies()
 
   override fun pickDocument(promise: Promise) = picker.pickDocument(promise)
+  override fun pickDocuments(promise: Promise) = picker.pickDocuments(promise)
 
   override fun pickFolder(promise: Promise) = picker.pickFolder(promise)
 

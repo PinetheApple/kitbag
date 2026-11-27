@@ -198,7 +198,7 @@ note_body "$fixture" 1 "Tap tempo follows your taps."
 merge_pr "$fixture" 1
 check "prints the path it wrote: <versionCode>.txt (0.26.2 -> 2602.txt)" \
   "$(run_in "$fixture" "" "$VERSION" 2>/dev/null)" "metadata/en-US/changelogs/${VERSION_CODE}.txt"
-run_in "$fixture" "" 0.100.0 >/dev/null 2>&1
+run_in "$fixture" "" 0.1000.0 >/dev/null 2>&1
 check "an out-of-bounds version is refused" "$?" "$EXIT_OUT_OF_BOUNDS"
 
 echo "--check-body"

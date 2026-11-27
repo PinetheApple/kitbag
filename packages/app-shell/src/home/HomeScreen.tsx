@@ -20,6 +20,7 @@ import {
   useTuner,
   visibleTiles,
 } from '@kitbag/core-state';
+import { useLockedSubtext } from '@kitbag/tool-sync';
 import { DEFAULT_TUNING, tuningLabel } from '@kitbag/tool-tuner';
 import { useRouter, type Href } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -28,7 +29,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MovePausedBanner } from '../dataFolder/MovePausedBanner.tsx';
 import { DockedMiniPlayer } from '../miniPlayer/DockedMiniPlayer.tsx';
-import { useMiniPlayerDocked } from '../miniPlayer/useMiniPlayerDocked.ts';
+import { useAnyMiniPlayerDocked } from '../miniPlayer/useMiniPlayerDocked.ts';
 import { useQueueSheet } from '../queue/useQueueSheet.tsx';
 import { useSettingsRoutes } from '../settings/settingsRoutes.ts';
 import { ArrangeSheet } from './ArrangeSheet.tsx';
@@ -57,6 +58,7 @@ import {
   songsTileSubtext,
   stemsTileSubtext,
   LIBRARY_UNAVAILABLE_SUBTEXT,
+  PLAY_ALONG_SUBTEXT,
   UPCOMING_SUBTEXT,
   type MetronomeSummary,
 } from './subtext.ts';
@@ -100,6 +102,7 @@ function useLiveText(practice: string): Readonly<Record<string, LiveText>> {
   const tuning = tuningLabel(useTuner((s) => s.tuning) ?? DEFAULT_TUNING);
   const libraryRows = useSongLibrary((s) => s.rows);
   const libraryFailed = useSongLibrary((s) => s.failed);
+  const playAlong = useLockedSubtext() ?? PLAY_ALONG_SUBTEXT;
   return useMemo(() => {
     const library = summarize(libraryRows);
     const songs = libraryFailed
@@ -116,9 +119,10 @@ function useLiveText(practice: string): Readonly<Record<string, LiveText>> {
       [TOOL_ID.tuner]: { tile: tuning, resume: tuning },
       [TOOL_ID.library]: { tile: songs, resume: songs },
       [TOOL_ID.stems]: { tile: stems, resume: stems },
+      [TOOL_ID.sync]: { tile: playAlong, resume: playAlong },
       [TOOL_ID.practiceHistory]: { tile: practice, resume: practice },
     };
-  }, [metronome, tuning, libraryRows, libraryFailed, practice]);
+  }, [metronome, tuning, libraryRows, libraryFailed, playAlong, practice]);
 }
 
 function useArrangement(isOn: ToolOnTest) {
@@ -158,7 +162,7 @@ export function HomeScreen() {
     ...more.map((tool) => tool.id),
   ].includes(TOOL_ID.practiceHistory);
   const liveText = useLiveText(usePracticeTileText(practiceListed));
-  const docked = useMiniPlayerDocked();
+  const docked = useAnyMiniPlayerDocked();
   const queue = useQueueSheet(insets.bottom);
   const movePaused = useDataFolder((s) => pausedMove(s) !== null);
   const [arranging, setArranging] = useState(false);
@@ -222,7 +226,9 @@ export function HomeScreen() {
       },
     ];
   });
-  const rows = HOME_TOOLS.filter((tool) => tool.layout === 'row');
+  const rows = HOME_TOOLS.filter(
+    (tool) => tool.layout === 'row' && isOn(tool.id),
+  );
   const moreItems: MoreToolsItem[] = more.map((tool) => ({
     tool,
     subtitle: subtextOf(tool),

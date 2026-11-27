@@ -16,14 +16,14 @@ import {
 
 const stem = (itemId: number, stemSetId: number) =>
   ({ kind: ENTRY_KIND.stem, item: { id: itemId }, stemSetId }) as SetlistEntry;
-const click = (itemId: number) =>
+const click = (itemId: number, bpm: number | null = 72) =>
   ({
     kind: ENTRY_KIND.preset,
     item: { id: itemId },
     preset: {
       id: itemId,
       name: 'Ballad count',
-      bpm: 72,
+      bpm,
       beatsPerBar: 6,
       denominator: 8,
     },
@@ -102,6 +102,9 @@ describe('up next sheet text', () => {
   it('reads a setlist row by kind, a metronome song by its own facts', () => {
     expect(setlistRowSubtitle(ballad, 'Friday gig', stems)).toBe(
       'Metronome song · 72 BPM · 6/8',
+    );
+    expect(setlistRowSubtitle(click(3, null), 'Friday gig', stems)).toBe(
+      'Metronome song · 6/8',
     );
     expect(setlistRowSubtitle(second, 'Friday gig', stems)).toBe(
       'Friday gig · 3:52 · A maj · 104 BPM',

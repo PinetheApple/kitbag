@@ -8,18 +8,15 @@ import {
   importedBundle,
   JOB_ID,
   setup,
+  ZIP,
   type Store,
 } from './store.test-helper.ts';
 
-const ZIP: PickedDocument = {
-  uri: 'content://redbone.zip',
-  name: 'Redbone.stemdeck.zip',
-  mimeType: 'application/zip',
-};
-
 function zipFiles(overrides: Parameters<typeof fakeFiles>[0] = {}) {
   return fakeFiles({
-    pickDocument: vi.fn(() => Promise.resolve<PickedDocument | null>(ZIP)),
+    pickDocuments: vi.fn(() =>
+      Promise.resolve<readonly PickedDocument[]>([ZIP]),
+    ),
     ...overrides,
   });
 }

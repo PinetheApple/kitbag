@@ -66,6 +66,7 @@ set(KITBAG_CORE_SOURCES
   src/metronome/metronome.cpp
   src/metronome/metronome_count_in.cpp
   src/metronome/metronome_grid.cpp
+  src/metronome/metronome_grid_anchor.cpp
   src/metronome/metronome_pattern.cpp
   src/metronome/metronome_render.cpp
   src/metronome/metronome_trainer_mirrors.cpp
@@ -185,6 +186,7 @@ if(KITBAG_BUILD_TOOLS)
     src/metronome/metronome.cpp
     src/metronome/metronome_count_in.cpp
     src/metronome/metronome_grid.cpp
+    src/metronome/metronome_grid_anchor.cpp
     src/metronome/metronome_pattern.cpp
     src/metronome/metronome_render.cpp
     src/metronome/metronome_trainer_mirrors.cpp
@@ -233,6 +235,8 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_grid_offset.cpp
     tools/metronome/metronome_test_grid_offset_model.cpp
     tools/metronome/metronome_test_grid_offset_steps.cpp
+    tools/metronome/metronome_test_grid_anchor.cpp
+    tools/metronome/metronome_test_grid_downbeats.cpp
     tools/rt/rt_publisher_verify.cpp
     tools/rt/stall_detector_test.cpp
     ${KITBAG_METRONOME_SOURCES})
@@ -254,6 +258,8 @@ if(KITBAG_BUILD_TOOLS)
                             tools/abi_test_boottime.cpp
                             tools/abi_test_external_lock.cpp
                             tools/abi_test_reanchor_nudge.cpp
+                            tools/abi_test_grid_anchor.cpp
+                            tools/abi_test_grid_downbeats.cpp
                             tools/abi_test_metronome_slots.cpp
                             tools/abi_test_mixer_rate.cpp)
   target_include_directories(abi_verify PRIVATE src tools tools/media)

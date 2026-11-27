@@ -15,11 +15,14 @@ void commandMetronomeStop();
 void commandMetronomePause();
 void commandMetronomeSelectSlot(int32_t slot);
 void commandMetronomeAnchorExternal(double songPosSec, double atFrame, double bpm);
+void commandMetronomeAnchorGrid(double songPosSec, double atFrame, double rate);
 void commandStandaloneStartNow();
 void commandStandalonePause();
 void commandStandaloneStop();
 void commandStandaloneSetTempo(double bpm);
 double commandStandaloneBpm();
+void commandPlayAlongClickStop();
+void commandPlayAlongEnd();
 int32_t commandRigClickStart(double bpm, int32_t subdivision, double startFrame);
 void commandRigClickStop();
 bool commandRigClickIsActive();
@@ -30,6 +33,7 @@ int32_t commandSetGrid(const double* beatTimesSec, int32_t count, const int32_t*
 void commandClearGrid();
 int32_t commandSetGridGrouping(const int32_t* sizes, int32_t count);
 int32_t commandSetGridRate(int32_t rate);
+int32_t commandSetGridDownbeats(const int32_t* downbeats, int32_t count);
 void commandFollowMixer(bool enabled);
 
 void commandSetBeats(int32_t beatsPerBar, int32_t denominator);

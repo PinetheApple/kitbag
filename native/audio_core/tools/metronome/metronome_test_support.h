@@ -387,6 +387,8 @@ void RunFollowTests();
 void RunFollowRateTests();
 void RunBarPhaseTests();
 void RunGridOffsetChangeTests();
+void RunGridAnchorTests();
+void RunGridDownbeatTests();
 
 }  // namespace metronome_test
 

@@ -16,6 +16,18 @@ export interface PresetEditor {
   readonly save: () => Promise<void>;
 }
 
+export function useMarkedUpdate(
+  update: DraftUpdate,
+  mark: (draft: PresetDraft) => PresetDraft,
+): DraftUpdate {
+  return useCallback<DraftUpdate>(
+    (change) => {
+      update((draft) => mark(change(draft)));
+    },
+    [update, mark],
+  );
+}
+
 export function usePresetEditor(preset: SongPreset): PresetEditor {
   const savePreset = useLibrary((s) => s.savePreset);
   const [draft, setDraft] = useState(() => draftFrom(preset));

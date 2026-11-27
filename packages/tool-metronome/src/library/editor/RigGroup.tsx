@@ -18,7 +18,12 @@ import { useCallback, useState } from 'react';
 import { Pressable } from 'react-native';
 
 import { COUNT_IN_BAR_OPTIONS } from '../../logic/countIn.ts';
-import type { BarMuteDraft, RampDraft } from '../../logic/presetDraft.ts';
+import {
+  withRampBpmEdited,
+  type BarMuteDraft,
+  type PresetDraft,
+  type RampDraft,
+} from '../../logic/presetDraft.ts';
 import {
   RAMP_UNIT_OPTIONS,
   rampUnitFromOption,
@@ -29,9 +34,9 @@ import {
 } from '../../logic/rampUnit.ts';
 import { stepWithin } from '../../logic/trainer.ts';
 import { useCustomSoundViews } from '../../screen/CustomSounds.tsx';
-import { SoundPickerSheet } from '../../screen/SoundSheet.tsx';
+import { MetronomeSoundSheet } from '../../screen/SoundSheet.tsx';
 import { EDIT_ROW_SEGMENT_GAPS, OnOff, TrainerStep } from './fields.tsx';
-import type { PresetEditor } from './usePresetEditor.ts';
+import { useMarkedUpdate, type PresetEditor } from './usePresetEditor.ts';
 
 // Once the row wraps, the unit track sits below the interval stepper.
 const UNIT_GAPS = { ...EDIT_ROW_SEGMENT_GAPS, top: space.controlGap };
@@ -94,7 +99,7 @@ function SoundRow(props: {
       >
         <EditValue>{soundChipLabel(draft.perAccentSounds, custom)}</EditValue>
       </Pressable>
-      <SoundPickerSheet
+      <MetronomeSoundSheet
         visible={open}
         bottomInset={props.bottomInset}
         onDismiss={hide}
@@ -105,19 +110,28 @@ function SoundRow(props: {
   );
 }
 
+const markRampStart = (draft: PresetDraft) =>
+  withRampBpmEdited(draft, 'startBpm');
+const markRampTarget = (draft: PresetDraft) =>
+  withRampBpmEdited(draft, 'targetBpm');
+
 function RampTempo({ editor }: { readonly editor: PresetEditor }) {
-  const { draft, update } = editor;
-  const common = { update, trainer: 'ramp' as const, unit: 'BPM' };
+  const { draft } = editor;
+  const common = { trainer: 'ramp' as const, unit: 'BPM' };
+  const updateStart = useMarkedUpdate(editor.update, markRampStart);
+  const updateTarget = useMarkedUpdate(editor.update, markRampTarget);
   return (
     <EditRow label="From / to">
       <TrainerStep
         {...common}
+        update={updateStart}
         label="Ramp from"
         value={draft.ramp.startBpm}
         step={stepFrom}
       />
       <TrainerStep
         {...common}
+        update={updateTarget}
         label="Ramp to"
         value={draft.ramp.targetBpm}
         step={stepTo}

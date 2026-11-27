@@ -88,6 +88,10 @@ double BoottimeNowMs(const kb_engine*) {
   return BoottimeMs(std::chrono::nanoseconds(kb_clock_boottime_ns())).count();
 }
 
+double SuspendedMs(const kb_engine*) {
+  return BoottimeMs(std::chrono::nanoseconds(kb_clock_suspended_ns())).count();
+}
+
 // NaN for an instant that cannot be cast to int64 ns or a clock with no pair yet.
 double FrameAtBoottimeMs(const kb_engine* engine, double boottime_ms) {
   const double none = std::numeric_limits<double>::quiet_NaN();
@@ -120,6 +124,7 @@ constexpr EngineProp kEngineProps[] = {
     {"clock_pair_monotonic_ns",
      [](const kb_engine* e) { return ReadClockPair(e).monotonic_ns; }},
     {"boottime_ms", BoottimeNowMs},
+    {"suspended_ms", SuspendedMs},
     {"mixdown_progress",
      [](const kb_engine* e) { return kb_mixdown_progress(e); }},
     {"mixdown_state",

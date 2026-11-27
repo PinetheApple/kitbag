@@ -25,6 +25,10 @@ KB_EXPORT kb_result kb_engine_clock_pair(
  * monotonic clock where the platform has no boottime clock. */
 KB_EXPORT int64_t kb_clock_boottime_ns(void);
 
+/* CLOCK_BOOTTIME minus CLOCK_MONOTONIC now: the time spent in deep sleep. A touch
+ * timestamp is uptimeMillis, which is CLOCK_MONOTONIC; add this to make it boottime. */
+KB_EXPORT int64_t kb_clock_suspended_ns(void);
+
 /* The engine frame the render callback was at when kb_clock_boottime_ns read
  * boottime_ns, from the latest clock pair, to the nearest frame; instants
  * either side of the pair extrapolate at the engine rate. Output latency is not

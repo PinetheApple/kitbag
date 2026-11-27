@@ -41,6 +41,12 @@ bool Metronome::CountInAt(
   return commands_.Push(command);
 }
 
+uint32_t Metronome::TakeEndedIntent() {
+  const uint32_t ended = ended_intent_;
+  ended_intent_ = kNoIntent;
+  return ended;
+}
+
 void Metronome::Stop() {
   commands_.Push({CommandType::kStop});
 }
@@ -58,6 +64,19 @@ void Metronome::AnchorExternal(
   command.value = song_pos_sec;
   command.value_b = bpm;
   command.frame = at_frame;
+  commands_.Push(command);
+}
+
+void Metronome::AnchorGrid(
+    double song_pos_sec,
+    uint64_t at_frame,
+    double rate
+) {
+  Command command{CommandType::kAnchorGrid};
+  command.value = song_pos_sec;
+  command.value_b = rate;
+  command.frame = at_frame;
+  command.epoch = click_epoch_;
   commands_.Push(command);
 }
 
@@ -85,7 +104,7 @@ bool Metronome::ApplyTransportCommand(const Command& command) {
     case CommandType::kStart:
       // The most recent transport call wins: cancel a deferred start or anchor.
       has_pending_start_ = false;
-      has_pending_anchor_ = false;
+      ClearPendingAnchors();
       BeginRun();
       return true;
     case CommandType::kStartAt:
@@ -96,6 +115,9 @@ bool Metronome::ApplyTransportCommand(const Command& command) {
       return true;
     case CommandType::kAnchorExternal:
       StashPendingAnchor(command);
+      return true;
+    case CommandType::kAnchorGrid:
+      StashGridAnchor(command);
       return true;
     case CommandType::kStop:
       StopRun();
@@ -119,17 +141,36 @@ void Metronome::DeferStart(const Command& command) {
 }
 
 void Metronome::StashPendingAnchor(const Command& command) {
-  has_pending_anchor_ = true;
+  has_pending_tempo_anchor_ = true;
   pending_anchor_song_pos_ = command.value;
   pending_anchor_bpm_ = command.value_b;
   pending_anchor_frame_ = command.frame;
+}
+
+void Metronome::StashGridAnchor(const Command& command) {
+  if (!std::isfinite(command.value) || !std::isfinite(command.value_b) ||
+      command.value_b <= 0.0) {
+    return;
+  }
+  grid_state_.pending_grid_anchor =
+      GridMapping{command.epoch, command.value, command.frame, command.value_b};
+}
+
+void Metronome::ClearPendingAnchors() {
+  has_pending_tempo_anchor_ = false;
+  grid_state_.pending_grid_anchor.reset();
+}
+
+bool Metronome::HasPendingAnchor() const {
+  return has_pending_tempo_anchor_ ||
+         grid_state_.pending_grid_anchor.has_value();
 }
 
 void Metronome::StopRun() {
   running_ = false;
   last_tick_ = kNoFiredTick;
   has_pending_start_ = false;
-  has_pending_anchor_ = false;  // a Stop cancels a queued anchor too
+  ClearPendingAnchors();
   // Force a re-seed next block: a cursor stranded where the pause began
   // swallows every beat the pause spanned into one off-grid click (§4.2.1).
   ReacquireGrid();
@@ -208,7 +249,7 @@ void Metronome::BeginAnchorExternal(
     uint32_t sample_rate,
     BlockTempo* tempo
 ) {
-  has_pending_anchor_ = false;
+  has_pending_tempo_anchor_ = false;
   has_pending_start_ = false;  // an anchor supersedes a deferred start
   ramp_.Disable();
   const double heard = beat_position_ + LatencyBeats();

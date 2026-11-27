@@ -9,6 +9,7 @@ import {
   space,
   StepControl,
   type StepDelta,
+  subdivisionLabel,
   useTextScaled,
 } from '@kitbag/core-design';
 import { KB_STOPPED_BEAT, KB_SUBDIVISION_BOUNDS } from '@kitbag/core-native';
@@ -18,14 +19,16 @@ import { View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
 import {
+  keepsSongTempo,
   withBeats,
   withCycledAccent,
   withNextDenominator,
   withPolyAgainst,
   withPolyBeats,
+  withTempoEdited,
 } from '../../logic/presetDraft.ts';
 import { polyAgainstLabel } from '../../logic/polyRow.ts';
-import { subdivisionLabel } from '../../logic/subdivision.ts';
+import { TEMPO_FROM_SONG } from '../../logic/songSummary.ts';
 import { BeatLeds } from '../../screen/BeatLeds.tsx';
 
 const SUB_ROW = { paddingLeft: metronomeEditor.subRowIndent } as const;
@@ -40,7 +43,7 @@ const EDITOR_LED_GAPS = {
   left: space.rowGap,
 };
 import { OnOff, StepField } from './fields.tsx';
-import type { PresetEditor } from './usePresetEditor.ts';
+import { useMarkedUpdate, type PresetEditor } from './usePresetEditor.ts';
 
 function useIdentitySetters(editor: PresetEditor) {
   const { update } = editor;
@@ -201,13 +204,22 @@ function PolyRows({ editor }: { readonly editor: PresetEditor }) {
   );
 }
 
+const SONG_TEMPO_FIELD = {
+  display: TEMPO_FROM_SONG,
+  spoken: TEMPO_FROM_SONG,
+} as const;
+
 function TempoRow({ editor }: { readonly editor: PresetEditor }) {
+  const update = useMarkedUpdate(editor.update, withTempoEdited);
+  const songTempo = keepsSongTempo(editor.draft) ? SONG_TEMPO_FIELD : {};
   return (
     <EditRow label="Tempo">
       <StepField
-        update={editor.update}
+        update={update}
         field="bpm"
+        wrapValue
         value={editor.draft.bpm}
+        {...songTempo}
         label="Tempo"
         unit="BPM"
         min={BPM_BOUNDS.min}

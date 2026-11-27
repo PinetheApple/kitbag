@@ -71,8 +71,11 @@ sealed interface CardEffect {
 }
 
 class CardRouting {
-  private var songShowing = false
-  private var metronomeShowing = false
+  var songShowing = false
+    private set
+
+  var metronomeShowing = false
+    private set
 
   val cardShowing: Boolean
     get() = songShowing || metronomeShowing

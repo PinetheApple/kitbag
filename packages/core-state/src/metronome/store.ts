@@ -104,6 +104,7 @@ export interface MetronomeActions {
   setPolyAccents: (accents: readonly KB_ACCENT[]) => void;
   setSounds: (normal: number, accent: number) => void;
   previewSound: (sound: number, accented: boolean) => void;
+  previewSelectedSlot: (sound: number, accented: boolean) => void;
   holdEngine: () => () => void;
   yieldEngine: () => () => void;
   setVolume: (volume: number) => void;
@@ -392,6 +393,11 @@ export function createMetronomeStore(
         };
       },
       yieldEngine: yielding.yieldEngine,
+      // The engine previews on the selected slot, so this sounds while yielded.
+      previewSelectedSlot: (sound, accented) => {
+        if (isSoundId(sound) && holds > 0)
+          commands.previewSound(sound, accented);
+      },
       setCountInScope: (countInScope) => {
         set({ countInScope });
       },

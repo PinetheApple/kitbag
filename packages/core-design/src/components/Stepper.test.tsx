@@ -1,0 +1,98 @@
+import { createElement, type ReactNode } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+type Props = Record<string, unknown> & { readonly children?: ReactNode };
+
+const presses = vi.hoisted(() => [] as Props[]);
+
+vi.mock('react-native', async () => {
+  const { createElement: h } = await import('react');
+  const host = (props: Props) => h('div', null, props.children);
+  return {
+    View: host,
+    Text: (props: Props) => h('span', null, props.children),
+    Pressable: (props: Props) => {
+      presses.push(props);
+      return h('button', null, props.children);
+    },
+    StyleSheet: { create: <T,>(s: T) => s },
+  };
+});
+
+vi.mock('./Icon.tsx', () => ({ Icon: () => null }));
+vi.mock('../ThemeProvider.tsx', () => ({
+  createThemedStyles: () => () => ({}),
+}));
+
+const { Stepper } = await import('./Stepper.tsx');
+
+const KEYS = {
+  earlier: 'decrease',
+  later: 'increase',
+  earlierLabel: 'Earlier',
+  laterLabel: 'Later',
+} as const;
+
+function drawn(props: Partial<Parameters<typeof Stepper>[0]> = {}) {
+  presses.length = 0;
+  const onEarlier = vi.fn();
+  const onLater = vi.fn();
+  const markup = renderToStaticMarkup(
+    createElement(Stepper, {
+      value: '+10 ms',
+      keys: KEYS,
+      onEarlier,
+      onLater,
+      ...props,
+    }),
+  );
+  return { markup, onEarlier, onLater };
+}
+
+const pressOn = (label: string) => {
+  const key = presses.find((p) => p.accessibilityLabel === label);
+  (key?.onPress as () => void)();
+};
+
+beforeEach(() => {
+  presses.length = 0;
+});
+
+describe('Stepper', () => {
+  it('steps back with the earlier key and forward with the later key', () => {
+    const { onEarlier, onLater } = drawn();
+    pressOn(KEYS.earlierLabel);
+    expect(onEarlier).toHaveBeenCalledOnce();
+    expect(onLater).not.toHaveBeenCalled();
+    pressOn(KEYS.laterLabel);
+    expect(onLater).toHaveBeenCalledOnce();
+  });
+
+  it('shows its value, pressable only when it opens something', () => {
+    expect(drawn().markup).toContain('+10 ms');
+    expect(presses).toHaveLength(2);
+    const onValuePress = vi.fn();
+    drawn({ onValuePress, valueLabel: 'Phase +10 ms' });
+    pressOn('Phase +10 ms');
+    expect(onValuePress).toHaveBeenCalledOnce();
+  });
+
+  it('disables both keys when disabled', () => {
+    drawn({ disabled: true });
+    expect(presses.map((p) => p.disabled)).toEqual([true, true]);
+  });
+
+  it('gives disabled keys the reason as their hint', () => {
+    drawn({ disabled: true, disabledHint: 'Not available' });
+    expect(presses.map((p) => p.accessibilityHint)).toEqual([
+      'Not available',
+      'Not available',
+    ]);
+    drawn({ disabledHint: 'Not available' });
+    expect(presses.map((p) => p.accessibilityHint)).toEqual([
+      undefined,
+      undefined,
+    ]);
+  });
+});

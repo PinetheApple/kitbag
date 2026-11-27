@@ -47,7 +47,7 @@ export const NORMAL_ACCENT = 1;
 export const PER_ACCENT_SOUND_BYTES = 2;
 
 export interface PresetShape {
-  bpm: number;
+  bpm: number | null;
   beatsPerBar: number;
   subdivision: number;
   denominator: number;

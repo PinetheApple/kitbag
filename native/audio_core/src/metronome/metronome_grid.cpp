@@ -37,19 +37,32 @@ double Metronome::GridSeconds(
     uint64_t frame,
     uint32_t sample_rate
 ) const {
-  return (static_cast<double>(frame) - static_cast<double>(grid.anchor_frame)) /
-             sample_rate +
-         latency_offset_ms_ / kMsPerSecond;
+  const GridMapping mapping = MappingFor(grid);
+  const double since_sec =
+      (static_cast<double>(frame) - static_cast<double>(mapping.frame)) /
+      sample_rate;
+  return mapping.song_sec +
+         (since_sec + latency_offset_ms_ / kMsPerSecond) * mapping.rate;
 }
 
 // Zero is never a live generation, so the next block re-seeds the cursor.
 void Metronome::ReacquireGrid() {
   grid_state_.observed_generation = 0;
+  grid_state_.observed_click_epoch = 0;
 }
 
 // Song bars stop at a clear; constant tempo counts bars from beat_position_.
-void Metronome::ObserveGridChange(const GridView& view, uint32_t sample_rate) {
+bool Metronome::ObserveGridChange(const GridView& view, uint32_t sample_rate) {
+  if (view.generation == grid_state_.observed_generation) return false;
   grid_state_.observed_generation = view.generation;
+  const uint32_t epoch = view.grid == nullptr ? 0 : view.grid->click_epoch;
+  const bool same_grid =
+      epoch == grid_state_.observed_click_epoch && epoch != 0;
+  grid_state_.observed_click_epoch = epoch;
+  if (same_grid) {
+    RebarGrid(*view.grid);
+    return false;
+  }
   grid_state_.follow_last_frame = GridState::kReseedFollow;
   if (view.grid != nullptr && grid_click_.Adopt(*view.grid)) {
     grid_state_.resync_sub = true;
@@ -57,9 +70,18 @@ void Metronome::ObserveGridChange(const GridView& view, uint32_t sample_rate) {
   if (view.grid == nullptr && running_) {
     SyncBarFromPosition(BlockTempoFor(sample_rate).beats_per_sample);
   }
+  return true;
 }
 
-Metronome::GridView
+void Metronome::RebarGrid(const BeatGrid& grid) {
+  SyncGridBar(grid);
+  grid_state_.resync_sub = true;
+  if (grid_state_.beat_index < 0) return;
+  const auto beat = static_cast<size_t>(grid_state_.beat_index);
+  current_beat_.store(grid.bars[beat].position, std::memory_order_relaxed);
+}
+
+GridView
 Metronome::AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate) {
   // One acquire load per block. Change is detected by generation, never by
   // address: a freed grid's address can be recycled, a generation cannot.
@@ -69,10 +91,11 @@ Metronome::AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate) {
     view.grid = &node->value;
     view.generation = node->generation;
   }
-  const bool changed = view.generation != grid_state_.observed_generation;
-  if (changed) ObserveGridChange(view, sample_rate);
-  const double shift_sec = std::exchange(grid_state_.pending_shift_sec, 0.0);
+  const bool changed = ObserveGridChange(view, sample_rate);
+  const double offset_shift_sec =
+      std::exchange(grid_state_.pending_shift_sec, 0.0);
   if (view.grid == nullptr || follow_mixer_) return view;
+  const double shift_sec = offset_shift_sec * MappingFor(*view.grid).rate;
   // Only a whole-beat backward shift clears the floor to replay (§4.7); other
   // re-seeds land past the last onset this run heard on this anchor.
   const bool replays = !changed && GridShiftReplays(*view.grid, shift_sec);
@@ -244,8 +267,10 @@ void Metronome::PublishGridMirrors(const BeatGrid& grid, double song_seconds) {
   );
   // Clamped to the same range SetTempo enforces: a beat tracker emits outlier
   // intervals by nature, and this atomic is the tempo the UI reads out.
+  const double rate =
+      follow_mixer_ ? GridMapping::kRealTime : MappingFor(grid).rate;
   current_bpm_.store(
-      Clamp(kSecondsPerMinute / interval, kMinBpm, kMaxBpm),
+      Clamp(kSecondsPerMinute * rate / interval, kMinBpm, kMaxBpm),
       std::memory_order_relaxed
   );
 }
