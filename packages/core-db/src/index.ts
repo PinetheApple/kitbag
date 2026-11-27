@@ -59,6 +59,7 @@ export type {
   RouteLatencyRepository,
 } from './route-latency-repository';
 export {
+  MAX_TOOL_DATA_KEY_BYTES,
   MAX_TOOL_DATA_VALUE_BYTES,
   ToolDataRejected,
   type ToolData,

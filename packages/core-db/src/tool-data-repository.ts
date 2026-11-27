@@ -7,10 +7,12 @@ import { BYTES_PER_KIB } from './units';
 const MAX_TOOL_DATA_VALUE_KIB = 64;
 export const MAX_TOOL_DATA_VALUE_BYTES =
   MAX_TOOL_DATA_VALUE_KIB * BYTES_PER_KIB;
+export const MAX_TOOL_DATA_KEY_BYTES = 256;
 
 export type ToolDataRow = typeof toolData.$inferSelect;
 export type ToolDataEntry = Omit<ToolDataRow, 'toolId'>;
-export type ToolDataRejection = 'emptyId' | 'invalidJson' | 'tooLarge';
+export type ToolDataRejection =
+  'emptyId' | 'keyTooLong' | 'invalidJson' | 'tooLarge';
 
 export class ToolDataRejected extends Error {
   constructor(readonly reason: ToolDataRejection) {
@@ -43,6 +45,8 @@ function isJson(value: string): boolean {
 
 function checkWrite(toolId: string, key: string, value: string): void {
   if (toolId === '' || key === '') throw new ToolDataRejected('emptyId');
+  if (utf8.encode(key).byteLength > MAX_TOOL_DATA_KEY_BYTES)
+    throw new ToolDataRejected('keyTooLong');
   if (utf8.encode(value).byteLength > MAX_TOOL_DATA_VALUE_BYTES)
     throw new ToolDataRejected('tooLarge');
   if (!isJson(value)) throw new ToolDataRejected('invalidJson');

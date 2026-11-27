@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { BACKUP_VERSION, CATEGORIES } from './backup-format';
 import { parseBackup } from './backup-parse';
-import { openBackupDatabase, seed } from './backup.test-helper';
+import { openBackupDatabase, seed, unwrap } from './backup.test-helper';
 import { TOOL_DATA_SECTION_VERSION } from './backup-tool-data';
 import { createToolDataRepository } from './tool-data-repository';
 import { MS_PER_SECOND } from './units';
@@ -16,7 +16,7 @@ async function withToolData() {
   const toolData = createToolDataRepository(database.handle, () => SAVED_AT);
   await toolData.forTool('drone').set('note', '{"pitch":"D"}');
   await toolData.forTool('chords').set('favourites', '["Am7"]');
-  return { ...database, ...seeded };
+  return { ...database, ...seeded, toolData };
 }
 
 const root = (text: string) => JSON.parse(text) as Record<string, unknown>;
@@ -28,28 +28,41 @@ describe('exporting tool data', () => {
     expect(root(await database.backup.export())).not.toHaveProperty('toolData');
   });
 
-  it('writes every record under toolData, outside the categories', async () => {
+  it.each([
+    ['no categories passed', undefined],
+    ['every category passed', CATEGORIES],
+  ])(
+    'writes every record under toolData on a full export, %s',
+    async (_name, categories) => {
+      const { backup } = await withToolData();
+      const file = root(await backup.export(categories));
+      expect(file.version).toBe(BACKUP_VERSION);
+      expect(file.categories).toEqual(CATEGORIES);
+      expect(file.toolData).toEqual({
+        version: TOOL_DATA_SECTION_VERSION,
+        records: [
+          {
+            toolId: 'chords',
+            key: 'favourites',
+            value: '["Am7"]',
+            updatedAt: SAVED_AT_SECONDS,
+          },
+          {
+            toolId: 'drone',
+            key: 'note',
+            value: '{"pitch":"D"}',
+            updatedAt: SAVED_AT_SECONDS,
+          },
+        ],
+      });
+    },
+  );
+
+  it('leaves tool data out of a partial export', async () => {
     const { backup } = await withToolData();
-    const file = root(await backup.export(['tunings']));
-    expect(file.version).toBe(BACKUP_VERSION);
-    expect(file.categories).toEqual(['tunings']);
-    expect(file.toolData).toEqual({
-      version: TOOL_DATA_SECTION_VERSION,
-      records: [
-        {
-          toolId: 'chords',
-          key: 'favourites',
-          value: '["Am7"]',
-          updatedAt: SAVED_AT_SECONDS,
-        },
-        {
-          toolId: 'drone',
-          key: 'note',
-          value: '{"pitch":"D"}',
-          updatedAt: SAVED_AT_SECONDS,
-        },
-      ],
-    });
+    expect(root(await backup.export(['tunings']))).not.toHaveProperty(
+      'toolData',
+    );
   });
 
   it('keeps the export parseable', async () => {
@@ -62,5 +75,20 @@ describe('exporting tool data', () => {
     expect(root(await backup.exportSetlist(friday.uuid))).not.toHaveProperty(
       'toolData',
     );
+  });
+});
+
+describe('restoring a file without toolData', () => {
+  it('keeps every tool data row on Replace', async () => {
+    const source = openBackupDatabase();
+    await seed(source);
+    const text = await source.backup.export();
+    const { backup, toolData } = await withToolData();
+    const plan = unwrap(
+      await backup.plan(text, { mode: 'replace', categories: [...CATEGORIES] }),
+    );
+    unwrap(await backup.apply(plan, { confirmReplace: true }));
+    expect(await toolData.forTool('chords').get('favourites')).toBe('["Am7"]');
+    expect(await toolData.forTool('drone').get('note')).toBe('{"pitch":"D"}');
   });
 });

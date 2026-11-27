@@ -2,12 +2,16 @@ import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 
 import { migrate, SCHEMA_VERSION } from './migrate';
-import { buildV32Fixture, pragma, rows } from './migrate-fixtures.test-helper';
+import {
+  buildV32Fixture,
+  pragma,
+  rows,
+  snapshot,
+  TOOL_DATA_TABLE,
+} from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
 type Row = Record<string, unknown>;
-
-const TOOL_DATA = 'tool_data';
 
 const SEED: readonly string[] = [
   `INSERT INTO songs
@@ -45,38 +49,17 @@ function seededV32(): DatabaseSync {
   return db;
 }
 
-const tableNames = (db: DatabaseSync) =>
-  rows<{ name: string }>(
-    db,
-    "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
-  ).map(({ name }) => name);
-
-function snapshot(db: DatabaseSync) {
-  const tables = tableNames(db).filter((name) => name !== TOOL_DATA);
-  return {
-    objects: rows<Row>(
-      db,
-      `SELECT type, name, tbl_name, sql FROM sqlite_master
-       WHERE tbl_name != '${TOOL_DATA}' ORDER BY type, name`,
-    ),
-    data: Object.fromEntries(
-      tables.map((name) => [
-        name,
-        rows<Row>(db, `SELECT * FROM ${name} ORDER BY rowid`),
-      ]),
-    ),
-    sequences: rows(db, 'SELECT * FROM sqlite_sequence ORDER BY name'),
-  };
-}
+const withoutToolData = (db: DatabaseSync) =>
+  snapshot(db, { except: [TOOL_DATA_TABLE] });
 
 describe('migrate v32 to v33', () => {
   it('keeps every row of every table and every other object', () => {
     const db = seededV32();
-    const before = snapshot(db);
+    const before = withoutToolData(db);
     for (const [name, data] of Object.entries(before.data))
       expect(data.length, name).toBeGreaterThan(0);
     migrate(nodeSqliteDriver(db));
-    expect(snapshot(db)).toEqual(before);
+    expect(withoutToolData(db)).toEqual(before);
     expect(rows(db, 'PRAGMA foreign_key_check')).toEqual([]);
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
   });
@@ -89,9 +72,9 @@ describe('migrate v32 to v33', () => {
     (_, open) => {
       const db = open();
       migrate(nodeSqliteDriver(db));
-      expect(rows(db, `SELECT * FROM ${TOOL_DATA}`)).toEqual([]);
+      expect(rows(db, `SELECT * FROM ${TOOL_DATA_TABLE}`)).toEqual([]);
       expect(
-        rows<Row>(db, `PRAGMA table_info(${TOOL_DATA})`).map(
+        rows<Row>(db, `PRAGMA table_info(${TOOL_DATA_TABLE})`).map(
           ({ name, type, notnull, pk }) => ({ name, type, notnull, pk }),
         ),
       ).toEqual([

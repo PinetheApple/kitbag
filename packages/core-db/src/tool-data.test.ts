@@ -3,8 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { openBackupDatabase } from './backup.test-helper';
 import {
   createToolDataRepository,
+  MAX_TOOL_DATA_KEY_BYTES,
   MAX_TOOL_DATA_VALUE_BYTES,
-  ToolDataRejected,
+  type ToolDataRejection,
 } from './tool-data-repository';
 
 const SAVED_AT = new Date('2026-11-27T10:00:00Z');
@@ -14,14 +15,11 @@ function open(now = () => SAVED_AT) {
   return createToolDataRepository(openBackupDatabase().handle, now);
 }
 
-async function rejection(work: Promise<unknown>) {
-  const error: unknown = await work.then(
-    () => undefined,
-    (thrown: unknown) => thrown,
-  );
-  expect(error).toBeInstanceOf(ToolDataRejected);
-  return (error as ToolDataRejected).reason;
-}
+const JSON_STRING_QUOTES = '""'.length;
+const E_ACUTE = 'é';
+const E_ACUTE_BYTES = new TextEncoder().encode(E_ACUTE).byteLength;
+
+const refused = (reason: ToolDataRejection) => ({ reason });
 
 describe('tool data repository', () => {
   it('stores JSON text per tool and key, unseen by other tools', async () => {
@@ -66,28 +64,49 @@ describe('tool data repository', () => {
     async (value) => {
       const chords = open().forTool('chords');
       await chords.set('k', '1');
-      expect(await rejection(chords.set('k', value))).toBe('invalidJson');
+      await expect(chords.set('k', value)).rejects.toMatchObject(
+        refused('invalidJson'),
+      );
       expect(await chords.get('k')).toBe('1');
     },
   );
 
   it('caps a value by its UTF-8 size', async () => {
     const chords = open().forTool('chords');
-    const fits = JSON.stringify('x'.repeat(MAX_TOOL_DATA_VALUE_BYTES - 2));
+    const fits = JSON.stringify(
+      'x'.repeat(MAX_TOOL_DATA_VALUE_BYTES - JSON_STRING_QUOTES),
+    );
     await chords.set('fits', fits);
     expect(await chords.get('fits')).toBe(fits);
-    const multiByte = JSON.stringify('é'.repeat(MAX_TOOL_DATA_VALUE_BYTES / 2));
-    expect(await rejection(chords.set('big', multiByte))).toBe('tooLarge');
+    const multiByte = JSON.stringify(
+      E_ACUTE.repeat(MAX_TOOL_DATA_VALUE_BYTES / E_ACUTE_BYTES),
+    );
+    await expect(chords.set('big', multiByte)).rejects.toMatchObject(
+      refused('tooLarge'),
+    );
     expect(await chords.get('big')).toBeNull();
+  });
+
+  it('caps a key by its UTF-8 size', async () => {
+    const chords = open().forTool('chords');
+    const longest = 'k'.repeat(MAX_TOOL_DATA_KEY_BYTES);
+    await chords.set(longest, '1');
+    expect(await chords.get(longest)).toBe('1');
+    const multiByte = E_ACUTE.repeat(
+      MAX_TOOL_DATA_KEY_BYTES / E_ACUTE_BYTES + 1,
+    );
+    await expect(chords.set(multiByte, '1')).rejects.toMatchObject(
+      refused('keyTooLong'),
+    );
   });
 
   it('refuses an empty tool id or key', async () => {
     const repository = open();
-    expect(await rejection(repository.forTool('').set('k', '1'))).toBe(
-      'emptyId',
+    await expect(repository.forTool('').set('k', '1')).rejects.toMatchObject(
+      refused('emptyId'),
     );
-    expect(await rejection(repository.forTool('chords').set('', '1'))).toBe(
-      'emptyId',
-    );
+    await expect(
+      repository.forTool('chords').set('', '1'),
+    ).rejects.toMatchObject(refused('emptyId'));
   });
 });

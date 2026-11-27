@@ -89,13 +89,18 @@ async function withAudio(
   };
 }
 
+const isFullExport = (requested: readonly Category[]) =>
+  CATEGORIES.every((category) => requested.includes(category));
+
 async function exportBackup(
   { db }: DatabaseHandle,
   files: ClickSoundFiles,
   requested: readonly Category[],
 ): Promise<string> {
   const { records } = await loadSnapshot(db);
-  const toolData = await loadToolDataSection(db);
+  const toolData = isFullExport(requested)
+    ? await loadToolDataSection(db)
+    : undefined;
   const categories = withDependencies(requested);
   return serializeBackup({
     version: BACKUP_VERSION,

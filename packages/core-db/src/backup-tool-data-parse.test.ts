@@ -10,21 +10,20 @@ import {
   type BackupDatabase,
 } from './backup.test-helper';
 
-const TOOL_DATA_SHAPES: [string, unknown][] = [
-  [
-    'version 1 records',
+const VERSION_1_SECTION = {
+  version: 1,
+  records: [
     {
-      version: 1,
-      records: [
-        {
-          toolId: 'chords',
-          key: 'favourites',
-          value: '["Am7"]',
-          updatedAt: 1764237600,
-        },
-      ],
+      toolId: 'chords',
+      key: 'favourites',
+      value: '["Am7"]',
+      updatedAt: 1764237600,
     },
   ],
+};
+
+const TOOL_DATA_SHAPES: [string, unknown][] = [
+  ['version 1 records', VERSION_1_SECTION],
   ['a later version', { version: 99, records: 'opaque' }],
   ['not an object', 'opaque'],
 ];
@@ -64,9 +63,8 @@ describe('a backup carrying toolData', () => {
     'restores every category on %s and ignores the key',
     async (mode) => {
       const { source, text } = await seededExport();
-      const [, toolData] = TOOL_DATA_SHAPES[0] ?? [];
       const target = openBackupDatabase();
-      await restore(target, withToolData(text, toolData), mode);
+      await restore(target, withToolData(text, VERSION_1_SECTION), mode);
       expect(await records(target)).toEqual(await records(source));
     },
   );

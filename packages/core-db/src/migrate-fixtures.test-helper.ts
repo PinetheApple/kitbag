@@ -1,4 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
+import { getTableName } from 'drizzle-orm';
 
 import { CLICK_RATE } from './click-rate';
 import {
@@ -58,6 +59,7 @@ import {
   MIGRATE_V28_TO_V29,
   MIGRATE_V29_TO_V30,
 } from './migrate-steps';
+import { toolData } from './schema';
 
 const V7_DDL: readonly string[] = [
   `CREATE TABLE setlists (
@@ -237,6 +239,46 @@ export const V22_STEM_SET_COLUMNS = {
 
 export function rows<T>(db: DatabaseSync, sql: string): T[] {
   return db.prepare(sql).all() as T[];
+}
+
+interface SchemaObject {
+  type: string;
+  name: string;
+  tbl_name: string;
+  sql: string | null;
+}
+
+export const TOOL_DATA_TABLE = getTableName(toolData);
+
+export const tableNames = (db: DatabaseSync) =>
+  rows<{ name: string }>(
+    db,
+    "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+  ).map(({ name }) => name);
+
+export function snapshot(
+  db: DatabaseSync,
+  { except = [] }: { except?: readonly string[] } = {},
+) {
+  const kept = (table: string) => !except.includes(table);
+  return {
+    objects: rows<SchemaObject>(
+      db,
+      'SELECT type, name, tbl_name, sql FROM sqlite_master ORDER BY type, name',
+    ).filter(({ tbl_name }) => kept(tbl_name)),
+    data: Object.fromEntries(
+      tableNames(db)
+        .filter(kept)
+        .map((name) => [
+          name,
+          rows<Record<string, unknown>>(
+            db,
+            `SELECT * FROM ${name} ORDER BY rowid`,
+          ),
+        ]),
+    ),
+    sequences: rows(db, 'SELECT * FROM sqlite_sequence ORDER BY name'),
+  };
 }
 
 export function pragma(db: DatabaseSync, name: string): unknown {
