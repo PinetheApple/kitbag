@@ -2,7 +2,13 @@ import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 
 import { migrate, SCHEMA_VERSION } from './migrate';
-import { buildV30Fixture, pragma, rows } from './migrate-fixtures.test-helper';
+import { MANUAL_TEMPO_COLUMN_DDL } from './migrate-manual-tempo';
+import {
+  buildV30Fixture,
+  pragma,
+  rows,
+  V32_MANUAL_TEMPO_COLUMNS,
+} from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
 type Row = Record<string, unknown>;
@@ -37,8 +43,28 @@ function seededV30(): DatabaseSync {
   return db;
 }
 
+const LATER_COLUMNS = new Set(Object.keys(V32_MANUAL_TEMPO_COLUMNS));
+
+const withoutLaterColumns = (row: Row) =>
+  Object.fromEntries(
+    Object.entries(row).filter(([column]) => !LATER_COLUMNS.has(column)),
+  );
+
+const withoutLaterDdl = (row: Row) =>
+  typeof row.sql === 'string'
+    ? {
+        ...row,
+        sql: MANUAL_TEMPO_COLUMN_DDL.reduce(
+          (sql, ddl) => sql.replace(`, ${ddl}`, ''),
+          row.sql,
+        ),
+      }
+    : row;
+
 const table = (db: DatabaseSync, name: string) =>
-  rows<Row>(db, `SELECT * FROM ${name} ORDER BY rowid`);
+  rows<Row>(db, `SELECT * FROM ${name} ORDER BY rowid`).map(
+    withoutLaterColumns,
+  );
 
 const presetColumns = (db: DatabaseSync) =>
   rows<Row>(db, `PRAGMA table_xinfo(${PRESETS})`);
@@ -53,7 +79,7 @@ function everythingButPresetColumns(db: DatabaseSync) {
       db,
       `SELECT type, name, tbl_name, sql FROM sqlite_master
        WHERE name != '${PRESETS}' ORDER BY type, name`,
-    ),
+    ).map(withoutLaterDdl),
     data: Object.fromEntries(tables.map((name) => [name, table(db, name)])),
     sequences: rows(db, 'SELECT * FROM sqlite_sequence ORDER BY name'),
     foreignKeys: Object.fromEntries(

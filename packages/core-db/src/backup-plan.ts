@@ -19,6 +19,7 @@ import {
   stemSongKey,
 } from './backup-format';
 import type { Snapshot } from './backup-snapshot';
+import { storedManualTempoColumns } from './backup-manual-tempo';
 import { fittedToDevice, stemSongChange } from './backup-stem-song-plan';
 import { meterOverrideOf, NO_METER_OVERRIDE } from './meter-override';
 import { TEMPO_COLUMN_OF } from './stem-tempo';
@@ -293,6 +294,7 @@ function fillMissingOverrideFromDevice(
       ...meterOverrideOf({ ...NO_METER_OVERRIDE, ...local }),
       tempoCorrection: local?.tempoCorrection ?? null,
       chosenTempoMode: local?.chosenTempoMode ?? null,
+      ...storedManualTempoColumns(local),
       ...(local?.speed === undefined ? {} : { speed: local.speed }),
       ...song,
     };

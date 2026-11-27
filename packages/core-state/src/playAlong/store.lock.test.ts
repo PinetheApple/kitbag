@@ -5,10 +5,8 @@ import { halvedBpm, doubledBpm } from '../tempoLadder/bpmSteps.ts';
 import { ladderRuntime } from '../tempoLadder/ladder.test-helper.ts';
 import { songRow } from '../tempoLadder/libraryRows.test-helper.ts';
 import { BPM_SOURCE } from '../tempoLadder/sources.ts';
-import {
-  createTempoLadderStore,
-  TAPS_TO_SET_TEMPO,
-} from '../tempoLadder/store.ts';
+import { TAPS_TO_SET_TEMPO } from '../tapTempo/tapTempo.ts';
+import { createTempoLadderStore } from '../tempoLadder/store.ts';
 import { LOCK_REFUSAL } from './store.ts';
 import {
   BPM,

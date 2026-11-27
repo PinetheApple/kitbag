@@ -7,6 +7,8 @@ import type {
   SongTransportRequest,
 } from '@kitbag/core-native';
 
+import type { SongLibraryActions } from '../songLibrary/store.ts';
+
 export type StemPlayerCommands = Pick<
   KitbagCommandsSpec,
   | 'start'
@@ -75,6 +77,7 @@ export type StemPlayerRecords = Pick<
   | 'saveStemSetClick'
   | 'saveStemSetChosenTempoMode'
   | 'saveStemSetSpeedKey'
+  | 'saveStemSetManualTempo'
 >;
 
 // The metronome tool's transport, running or paused behind its notification;
@@ -111,6 +114,7 @@ export interface MixdownRuntime {
 
 export interface StemPlayerRuntime extends MixerRuntime {
   readonly records: StemPlayerRecords;
+  readonly library: Pick<SongLibraryActions, 'refresh'>;
   readonly countInBars: () => number;
   readonly mixdown: MixdownRuntime;
 }

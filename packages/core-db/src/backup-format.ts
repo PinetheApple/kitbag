@@ -1,6 +1,7 @@
 import type { ClickRate } from './click-rate';
 import type { ClickSound } from './click-sound-repository';
 import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
+import type { ManualTempoColumns } from './manual-tempo';
 import type { MeterOverride } from './meter-override';
 import { STANDALONE_METRONOME_KEY } from './standalone-metronome-preference';
 import type { LyricLineTimes, LyricsSource } from './stem-lyrics';
@@ -38,7 +39,10 @@ export const DEFAULT_IMPORT_CATEGORIES: readonly Category[] = [
 ];
 
 export interface LibrarySongRecord
-  extends Partial<MeterOverride>, Partial<TempoColumns> {
+  extends
+    Partial<MeterOverride>,
+    Partial<TempoColumns>,
+    Partial<ManualTempoColumns> {
   uuid: string;
   title: string;
   artist: string;
@@ -146,7 +150,8 @@ export interface StemMixRecord {
   pitch: number;
 }
 
-export interface StemSongRecord extends MeterOverride {
+export interface StemSongRecord
+  extends MeterOverride, Partial<ManualTempoColumns> {
   source: StemSetSource;
   stemdeckJobId: string | null;
   uuid: string | null;

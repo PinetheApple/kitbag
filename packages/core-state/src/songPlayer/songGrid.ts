@@ -1,6 +1,8 @@
 import {
+  effectiveCorrection,
   meterOverrideOf,
   NO_METER_OVERRIDE,
+  type ManualTempo,
   type MeterOverride,
   type SongRecord,
   type TempoCorrection,
@@ -8,15 +10,19 @@ import {
 } from '@kitbag/core-db';
 
 import { sameNumbers, usableDownbeats } from '../stemPlayer/bars.ts';
+import { anchoredMeter } from '../manualTempo/manualGrid.ts';
 import {
-  detectedMeter,
   isMeterOverridden,
   overrideDownbeats,
   type DetectedGrid,
   type DetectedMeter,
 } from '../stemPlayer/meterOverride.ts';
 import { correctedGrid } from '../stemPlayer/tempoCorrection.ts';
-import { tempoGrid, tempoModeOf } from '../stemPlayer/tempoGrid.ts';
+import {
+  constantGrid,
+  tempoGrid,
+  tempoModeOf,
+} from '../stemPlayer/tempoGrid.ts';
 
 export interface SongGrid extends DetectedGrid {
   readonly detected: DetectedMeter;
@@ -26,7 +32,7 @@ export const NO_GRID: DetectedGrid = { beats: [], downbeatIndices: [] };
 
 export type AnalysedSong = Pick<
   SongRecord,
-  'beats' | 'downbeatIndices' | 'bpm' | 'tempo' | 'durationSec'
+  'beats' | 'downbeatIndices' | 'bpm' | 'tempo' | 'durationSec' | 'manualTempo'
 >;
 
 export const NO_ANALYSIS: AnalysedSong = {
@@ -34,21 +40,43 @@ export const NO_ANALYSIS: AnalysedSong = {
   bpm: null,
   tempo: null,
   durationSec: 0,
+  manualTempo: null,
 };
 
 export function analysedGrid(
   song: AnalysedSong,
   mode: TempoMode | null,
 ): DetectedGrid {
+  if (song.manualTempo !== null)
+    return constantGrid(song.manualTempo, song.durationSec);
   return tempoGrid(song, song.tempo, mode, song.durationSec);
+}
+
+export function analysedSongGrid(
+  song: AnalysedSong,
+  mode: TempoMode | null,
+  override: MeterOverride,
+  correction: TempoCorrection,
+): SongGrid {
+  return songGrid(
+    analysedGrid(song, mode),
+    override,
+    effectiveCorrection(song.manualTempo, correction),
+    song.manualTempo,
+  );
 }
 
 export function songGrid(
   analysed: DetectedGrid,
-  override: MeterOverride,
+  shownOverride: MeterOverride,
   correction: TempoCorrection,
+  manualTempo: ManualTempo | null,
 ): SongGrid {
-  const found = detectedMeter(analysed);
+  const { detected: found, override } = anchoredMeter(
+    analysed,
+    manualTempo,
+    shownOverride,
+  );
   const barOneSeconds = override.barOneSeconds ?? found.barOneSeconds;
   const corrected = correctedGrid(analysed, correction, barOneSeconds);
   if (corrected === analysed)
@@ -71,8 +99,9 @@ export function recordGrid(
   record: SongRecord,
   mode: TempoMode | null = tempoModeOf(record),
 ): SongGrid {
-  return songGrid(
-    analysedGrid(record, mode),
+  return analysedSongGrid(
+    record,
+    mode,
     meterOverrideOf(record),
     record.tempoCorrection,
   );
@@ -97,8 +126,9 @@ export function overrideDisagrees(
 ): boolean {
   if (!isMeterOverridden(meterOverrideOf(record))) return false;
   const shown = recordGrid(record, mode);
-  const unforced = songGrid(
-    analysedGrid(record, mode),
+  const unforced = analysedSongGrid(
+    record,
+    mode,
     NO_METER_OVERRIDE,
     record.tempoCorrection,
   );

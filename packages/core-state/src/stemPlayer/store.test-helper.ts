@@ -102,6 +102,7 @@ export function record(
     ...NO_CLICK,
     tempo: null,
     chosenTempoMode: null,
+    manualTempo: null,
     ...change,
   };
 }
@@ -217,6 +218,9 @@ export function fakeRuntime(set: StemSetRecord) {
     saveStemSetSpeedKey: vi.fn<StemPlayerRecords['saveStemSetSpeedKey']>(() =>
       Promise.resolve(),
     ),
+    saveStemSetManualTempo: vi.fn<StemPlayerRecords['saveStemSetManualTempo']>(
+      () => Promise.resolve(),
+    ),
   };
   const sharedMetronome = {
     active: vi.fn(() => false),
@@ -248,6 +252,7 @@ export function fakeRuntime(set: StemSetRecord) {
   const runtime: StemPlayerRuntime = {
     commands,
     records,
+    library: { refresh: vi.fn(() => Promise.resolve()) },
     sharedMetronome,
     engine: {
       sampleRate: () => RATE,
