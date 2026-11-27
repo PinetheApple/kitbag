@@ -1,0 +1,1 @@
+• Play along's phase controls: nudge the click earlier or later in 1, 10 or 50 ms steps, see the total with your route latency, and shift which beat counts as one.
