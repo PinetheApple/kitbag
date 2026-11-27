@@ -9,6 +9,7 @@ import type { MixerClick, MixerClickSource } from './mixerClick.ts';
 import { stopClick, turnClickOff, type ClickSlice } from './clickActions.ts';
 import { debounce } from './debounce.ts';
 import type { MixerClaim } from './mixerClaim.ts';
+import { mixerSeeked } from './mixerSeeked.ts';
 import { createPendingClick } from './pendingClick.ts';
 import type { MixerRuntime, StemPlayerCommands } from './runtime.ts';
 import type { SongCardOwner } from './songTransport.ts';
@@ -93,6 +94,7 @@ export function mixerSession({
   };
   const scrubSeek = debounce((frame: number) => {
     runtimeOf().commands.mixerSeek(frame);
+    mixerSeeked();
     afterScrubSeek?.(frame);
   }, scrubSeekDelayMs);
   const live = (opened: number) => opened === session;

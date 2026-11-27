@@ -11,7 +11,7 @@ interface Reaction {
 
 const frameCallbacks = new Set<FrameCallback>();
 const reactions = new Set<Reaction>();
-const FRAME_MS = 16;
+export const FRAME_MS = 16;
 const ANIMATED = Symbol('animated style');
 const ANIMATED_PROPS = Symbol('animated props');
 
