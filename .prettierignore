@@ -11,9 +11,11 @@ docs/
 **/.expo/
 **/*.gen.ts
 # Emitted verbatim by core-design/scripts/generate-tailwind.ts from §12.2's
-# tokens; generate:check diffs byte-for-byte, so prettier must not reformat them.
+# tokens, and by app-shell's writeRules.ts; generate:check diffs byte-for-byte,
+# so prettier must not reformat them.
 packages/core-design/theme.css
 packages/core-design/tailwind.config.js
+packages/app-shell/tool-bundle-rules.json
 pnpm-lock.yaml
 CHANGELOG.md
 # Prose and harness config, same rationale as docs/ and design/: reflowing them

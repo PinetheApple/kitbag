@@ -38,6 +38,27 @@ describe('probeGlobals', () => {
     expect(probe).toEqual({ added: [], changed: ['existing'] });
   });
 
+  it('reports a global whose descriptor changes while its value stays', () => {
+    const probe = probeGlobals(
+      "Object.defineProperty(globalThis, 'existing', { value: 1, writable: false });",
+      (global: Record<string, unknown>) => {
+        global.existing = 1;
+      },
+    );
+    expect(probe).toEqual({ added: [], changed: ['existing'] });
+  });
+
+  it('reports a global written after evaluation, as register() would', () => {
+    const probe = probeGlobals(
+      'globalThis.later = function () { globalThis.leak = 1; };',
+      () => undefined,
+      (global: Record<string, unknown>) => {
+        (global.later as () => void)();
+      },
+    );
+    expect(probe.added).toEqual(['later', 'leak']);
+  });
+
   it('reports nothing for a bundle that keeps to its own scope', () => {
     const probe = probeGlobals(
       '(function () { var local = 1; })();',

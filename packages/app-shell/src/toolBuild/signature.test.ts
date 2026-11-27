@@ -1,67 +1,26 @@
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { verifyEs256 } from './signature';
+import { flipByte, makeScratch, opensslSign, testKey } from './testSupport';
 
-const scratch = mkdtempSync(path.join(tmpdir(), 'kbt-sig-'));
+const scratch = makeScratch('kbt-sig-');
+const input = path.join(scratch, 'sample.json');
+const output = path.join(scratch, 'sample.sig');
 
-function testKey(
-  name: string,
-  curve = 'P-256',
-): { key: string; spkiBase64: string } {
-  const key = path.join(scratch, `${name}.key`);
-  execFileSync('openssl', [
-    'genpkey',
-    '-algorithm',
-    'EC',
-    '-pkeyopt',
-    `ec_paramgen_curve:${curve}`,
-    '-out',
-    key,
-  ]);
-  const spki = execFileSync('openssl', [
-    'pkey',
-    '-in',
-    key,
-    '-pubout',
-    '-outform',
-    'DER',
-  ]);
-  return { key, spkiBase64: spki.toString('base64') };
-}
-
-function opensslSign(key: string, data: Buffer): Buffer {
-  const input = path.join(scratch, 'sample.json');
+function signSample(key: string, data: Buffer): Buffer {
   writeFileSync(input, data);
-  const sig = path.join(scratch, 'sample.sig');
-  execFileSync('openssl', [
-    'dgst',
-    '-sha256',
-    '-sign',
-    key,
-    '-out',
-    sig,
-    input,
-  ]);
-  return readFileSync(sig);
+  opensslSign(key, input, output);
+  return readFileSync(output);
 }
 
-const signer = testKey('test-tools-1');
-const other = testKey('test-tools-2');
-const p384 = testKey('test-tools-p384', 'P-384');
+const signer = testKey(scratch, 'test-tools-1');
+const other = testKey(scratch, 'test-tools-2');
+const p384 = testKey(scratch, 'test-tools-p384', 'P-384');
 const sample = Buffer.from('{"schema":1,"id":"sample"}');
-const signature = opensslSign(signer.key, sample);
-
-function flipByte(bytes: Buffer, fromEnd: number): Buffer {
-  const copy = Buffer.from(bytes);
-  const at = copy.length - fromEnd;
-  copy.writeUInt8(copy.readUInt8(at) ^ 1, at);
-  return copy;
-}
+const signature = signSample(signer.key, sample);
 
 afterAll(() => {
   rmSync(scratch, { recursive: true, force: true });
@@ -89,8 +48,9 @@ describe('verifyEs256', () => {
   });
 
   it('rejects a valid signature from a key that is not P-256', () => {
-    const signed = opensslSign(p384.key, sample);
-    expect(verifyEs256(sample, signed, p384.spkiBase64)).toBe(false);
+    expect(
+      verifyEs256(sample, signSample(p384.key, sample), p384.spkiBase64),
+    ).toBe(false);
   });
 
   it('rejects bytes that are not a public key', () => {

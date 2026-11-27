@@ -62,9 +62,24 @@ export interface BundleRequest {
 const TYPE_ONLY_IMPORTS = new Set(['@kitbag/core-plugin-api']);
 const METRO_REQUIRE = '__r';
 const METRO_WORKERS = 1;
-// The require polyfill reports a throwing module through ErrorUtils as fatal and reads
-// nativeRequire for RAM bundles; shadowing both keeps a failing tool catchable by the loader.
-const SHADOWED_HOST_GLOBALS = ['ErrorUtils', 'nativeRequire'];
+// The require polyfill reads ErrorUtils and nativeRequire; the rest are native entry points.
+// Containment against collisions and casual reach only: the signature is the trust boundary.
+export const SHADOWED_HOST_GLOBALS = [
+  'ErrorUtils',
+  'nativeRequire',
+  '__turboModuleProxy',
+  'nativeModuleProxy',
+  '__fbBatchedBridge',
+  '__fbBatchedBridgeConfig',
+  '__fbGenNativeModule',
+  'nativeCallSyncHook',
+  'nativeFlushQueueImmediate',
+  'nativeFabricUIManager',
+  '__nativeComponentRegistry',
+  '__workletsModuleProxy',
+  '__workletsNetworking',
+  '__KitbagHostObject',
+];
 
 function isInside(file: string, dir: string): boolean {
   const relative = path.relative(dir, file);

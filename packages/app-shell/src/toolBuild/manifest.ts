@@ -1,24 +1,33 @@
 import type { HostApiVersion } from '@kitbag/core-plugin-api';
 
-export const SCHEMA_VERSION = 1;
-export const SIGNATURE_ALG = 'ES256';
-export const BUNDLE_ENTRY = 'bundle.hbc';
-export const ASSETS_DIR = 'assets';
-export const MANIFEST_FILE = 'manifest.json';
-export const MANIFEST_SIG_FILE = 'manifest.sig';
-export const INDEX_FILE = 'tools-index.json';
-export const INDEX_SIG_FILE = `${INDEX_FILE}.sig`;
-export const KBT_EXTENSION = '.kbt';
-export const TEST_KEY_PREFIX = 'test-';
+import { BUNDLE_RULES } from './bundleRules.ts';
+import { Problems } from './problems.ts';
 
-const ID = /^[a-z][a-z0-9-]{1,31}$/;
-const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
-const SHA256 = /^[0-9a-f]{64}$/;
-const FILE_PATH = /^(bundle\.hbc|assets\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*)$/;
-const ROUTE = /^\/t\/[a-z][a-z0-9-]{1,31}(\/[A-Za-z0-9[\]._-]+)*$/;
-const NAME_MAX = 40;
-const SUMMARY_MAX = 80;
-const CHANGELOG_MAX = 500;
+const { files, patterns, limits, keys } = BUNDLE_RULES;
+
+export const SCHEMA_VERSION = BUNDLE_RULES.schemaVersion;
+export const SIGNATURE_ALG = BUNDLE_RULES.signatureAlg;
+export const BUNDLE_ENTRY = files.entry;
+export const ASSETS_DIR = files.assetsDir;
+export const MANIFEST_FILE = files.manifest;
+export const MANIFEST_SIG_FILE = files.manifestSig;
+export const INDEX_FILE = files.index;
+export const INDEX_SIG_FILE = files.indexSig;
+export const KBT_EXTENSION = files.kbtExtension;
+export const TEST_KEY_PREFIX = keys.testPrefix;
+export const KEY_ID = new RegExp(patterns.keyId);
+
+const ID = new RegExp(patterns.id);
+const SEMVER = new RegExp(patterns.semver);
+const SHA256 = new RegExp(patterns.sha256);
+const FILE_PATH = new RegExp(patterns.filePath);
+const ROUTE = new RegExp(patterns.route);
+const {
+  nameMax: NAME_MAX,
+  summaryMax: SUMMARY_MAX,
+  changelogMax: CHANGELOG_MAX,
+  labelMax: LABEL_MAX,
+} = limits;
 
 export interface ManifestFile {
   readonly path: string;
@@ -91,8 +100,8 @@ export interface ToolIndex {
 
 export interface PinnedKey {
   readonly keyId: string;
-  readonly role: 'tools' | 'revocation';
-  readonly status?: 'current' | 'next' | 'retired';
+  readonly role: (typeof keys.roles)[number];
+  readonly status?: (typeof keys.statuses)[number];
   readonly spkiBase64: string;
 }
 
@@ -159,15 +168,6 @@ function optional(
   return value === undefined || check(value);
 }
 
-class Problems {
-  readonly list: string[] = [];
-
-  expect(ok: boolean, problem: string): boolean {
-    if (!ok) this.list.push(problem);
-    return ok;
-  }
-}
-
 function isManifestFile(file: unknown): file is ManifestFile {
   return (
     isJsonObject(file) &&
@@ -179,7 +179,7 @@ function isManifestFile(file: unknown): file is ManifestFile {
 
 function checkFiles(files: unknown, problems: Problems): number | undefined {
   if (
-    !problems.expect(
+    !problems.check(
       Array.isArray(files) && files.length > 0,
       'files must list at least one file',
     )
@@ -191,15 +191,15 @@ function checkFiles(files: unknown, problems: Problems): number | undefined {
   let total = 0;
   for (const file of entries) {
     if (!isManifestFile(file)) {
-      problems.list.push(`files entry ${JSON.stringify(file)} is malformed`);
+      problems.add(`files entry ${JSON.stringify(file)} is malformed`);
       continue;
     }
     const { path, size } = file;
-    problems.expect(!paths.has(path), `files lists ${path} twice`);
+    problems.check(!paths.has(path), `files lists ${path} twice`);
     paths.add(path);
     total += size;
   }
-  problems.expect(paths.has(BUNDLE_ENTRY), `files must list ${BUNDLE_ENTRY}`);
+  problems.check(paths.has(BUNDLE_ENTRY), `files must list ${BUNDLE_ENTRY}`);
   return total;
 }
 
@@ -207,7 +207,7 @@ function checkRoutes(m: Json, problems: Problems): void {
   const prefix = `/t/${String(m.id)}`;
   const routes = m.routes;
   if (
-    !problems.expect(
+    !problems.check(
       isTextList(routes, ROUTE) && routes.length > 0,
       'routes must hold at least one /t/ route',
     )
@@ -215,52 +215,52 @@ function checkRoutes(m: Json, problems: Problems): void {
     return;
   }
   for (const route of routes as string[]) {
-    problems.expect(
+    problems.check(
       route === prefix || route.startsWith(`${prefix}/`),
       `route ${route} is outside ${prefix}`,
     );
   }
   const tile = m.homeTile;
   if (tile === undefined) return;
-  problems.expect(
+  problems.check(
     isJsonObject(tile) &&
-      isText(tile.label, undefined, NAME_MAX) &&
+      isText(tile.label, undefined, LABEL_MAX) &&
       (routes as unknown[]).includes(tile.route),
     'homeTile needs a label and a route from routes',
   );
 }
 
 function checkIdentity(m: Json, problems: Problems): void {
-  problems.expect(
+  problems.check(
     m.schema === SCHEMA_VERSION,
     `schema must be ${String(SCHEMA_VERSION)}`,
   );
-  problems.expect(
+  problems.check(
     isText(m.id, ID),
     `id ${JSON.stringify(m.id)} is not a tool id`,
   );
-  problems.expect(
+  problems.check(
     isText(m.name, undefined, NAME_MAX),
     `name must be text of at most ${String(NAME_MAX)}`,
   );
-  problems.expect(
+  problems.check(
     isText(m.version, SEMVER),
     `version ${JSON.stringify(m.version)} is not semver`,
   );
-  problems.expect(isText(m.icon), 'icon must be text');
-  problems.expect(
+  problems.check(isText(m.icon), 'icon must be text');
+  problems.check(
     optional(m.summary, (s) => isText(s, undefined, SUMMARY_MAX)),
     'summary is too long',
   );
-  problems.expect(
+  problems.check(
     optional(m.changelog, (c) => isText(c, undefined, CHANGELOG_MAX)),
     'changelog is too long',
   );
-  problems.expect(
+  problems.check(
     isTextList(m.capabilities),
     'capabilities must be a list of names',
   );
-  problems.expect(
+  problems.check(
     optional(
       m.requires,
       (r) =>
@@ -274,20 +274,20 @@ function checkIdentity(m: Json, problems: Problems): void {
 
 function checkCompatibility(m: Json, problems: Problems): void {
   const { hostApi, host, runtime } = m;
-  problems.expect(
+  problems.check(
     isJsonObject(hostApi) &&
       isInt(hostApi.major, 0) &&
       isInt(hostApi.minMinor, 0),
     'hostApi needs integer major and minMinor',
   );
-  problems.expect(
+  problems.check(
     isJsonObject(host) &&
       isInt(host.minVersionCode, 0) &&
       (host.maxVersionCode === null || isInt(host.maxVersionCode, 0)) &&
       isText(host.builtWith, SEMVER),
     'host needs minVersionCode, maxVersionCode and builtWith',
   );
-  problems.expect(
+  problems.check(
     isJsonObject(runtime) &&
       isInt(runtime.hermesBytecodeVersion, 0) &&
       [
@@ -304,7 +304,7 @@ export function signatureProblem(signature: unknown): string | undefined {
   const ok =
     isJsonObject(signature) &&
     signature.alg === SIGNATURE_ALG &&
-    isText(signature.keyId, ID);
+    isText(signature.keyId, KEY_ID);
   return ok ? undefined : `signature must be { alg: ${SIGNATURE_ALG}, keyId }`;
 }
 
@@ -313,25 +313,25 @@ export function manifestProblems(
   { signed }: { readonly signed: boolean },
 ): string[] {
   const problems = new Problems();
-  if (!problems.expect(isJsonObject(value), 'manifest is not a JSON object'))
+  if (!problems.check(isJsonObject(value), 'manifest is not a JSON object'))
     return problems.list;
   const m = value as Json;
   for (const key of Object.keys(m))
-    problems.expect(MANIFEST_KEYS.has(key), `unknown manifest field ${key}`);
+    problems.check(MANIFEST_KEYS.has(key), `unknown manifest field ${key}`);
   checkIdentity(m, problems);
   checkCompatibility(m, problems);
   checkRoutes(m, problems);
-  problems.expect(m.entry === BUNDLE_ENTRY, `entry must be ${BUNDLE_ENTRY}`);
+  problems.check(m.entry === BUNDLE_ENTRY, `entry must be ${BUNDLE_ENTRY}`);
   const total = checkFiles(m.files, problems);
-  problems.expect(
+  problems.check(
     total === undefined || m.size === total,
     'size is not the sum of files[].size',
   );
   if (signed) {
     const problem = signatureProblem(m.signature);
-    if (problem !== undefined) problems.list.push(problem);
+    if (problem !== undefined) problems.add(problem);
   } else {
-    problems.expect(
+    problems.check(
       m.signature === undefined,
       'an unsigned manifest carries no signature',
     );

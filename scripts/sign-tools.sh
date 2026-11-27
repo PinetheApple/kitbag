@@ -9,7 +9,6 @@ readonly EXIT_USAGE=3
 SCRIPTS=$(cd "$(dirname "$0")" && pwd)
 readonly SCRIPTS
 readonly CLI="$SCRIPTS/../packages/app-shell/src/toolBuild/cli.ts"
-readonly INDEX=tools-index.json
 readonly P256_OID='ASN1 OID: prime256v1'
 
 usage() {
@@ -17,8 +16,8 @@ usage() {
 usage: sign-tools.sh [--key PATH --key-id ID] [--host-version X.Y.Z] <dir>
 
 Signs every *.kbt in <dir> with an ECDSA P-256 key: stamps the key id into each
-manifest.json, adds manifest.sig over its exact bytes, then writes ${INDEX}
-for the host release and signs it as ${INDEX}.sig. Signatures are DER from
+manifest.json, adds manifest.sig over its exact bytes, then writes the tool
+index for the host release and signs it. Signatures are DER from
 openssl dgst -sha256 -sign.
 
 Without --key, the key is TOOLS_SIGNING_KEY (base64 of the PEM) and the id
@@ -82,7 +81,7 @@ else
     fail "no key: pass --key and --key-id, or set TOOLS_SIGNING_KEY and TOOLS_SIGNING_KEY_ID" "$EXIT_NO_KEY"
 fi
 readonly KEY_ID=$key_id
-[[ $KEY_ID =~ ^[a-z][a-z0-9-]*$ ]] || fail "key id '$KEY_ID' is not a key id" "$EXIT_USAGE"
+command -v node >/dev/null || fail "node not found" "$EXIT_SIGN_FAILED"
 
 key_pem() {
   if [[ -n $key_file ]]; then
@@ -113,15 +112,17 @@ cli() {
   node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON "$CLI" "$@"
 }
 
-cli stamp --key-id "$KEY_ID" --work "$WORK" "$DIR" || fail "could not read the bundles in $DIR (reason above)" "$EXIT_SIGN_FAILED"
+pairs=$(cli stamp --key-id "$KEY_ID" --work "$WORK" "$DIR") ||
+  fail "could not stamp the bundles in $DIR (reason above)" "$EXIT_SIGN_FAILED"
 signed=0
-for manifest in "$WORK"/*.manifest.json; do
-  sign "$manifest" "${manifest%.json}.sig"
+while IFS=$'\t' read -r input output; do
+  sign "$input" "$output"
   signed=$((signed + 1))
-done
-cli seal --key-id "$KEY_ID" --work "$WORK" --host-version "$host_version" --host-version-code "$host_code" "$DIR" ||
-  fail "could not write the signed bundles and $INDEX (reason above)" "$EXIT_SIGN_FAILED"
-sign "$DIR/$INDEX" "$DIR/$INDEX.sig"
+done <<<"$pairs"
+index_pair=$(cli seal --key-id "$KEY_ID" --work "$WORK" --host-version "$host_version" --host-version-code "$host_code" "$DIR") ||
+  fail "could not write the signed bundles and the index (reason above)" "$EXIT_SIGN_FAILED"
+IFS=$'\t' read -r index_input index_output <<<"$index_pair"
+sign "$index_input" "$index_output"
 
-echo "sign-tools: ok — signed $signed bundle(s) and $INDEX with $KEY_ID (host $host_version)"
+echo "sign-tools: ok — signed $signed bundle(s) and $index_input with $KEY_ID (host $host_version)"
 exit "$EXIT_OK"

@@ -34,12 +34,20 @@ export function hermescPath(): string {
   return path.join(path.dirname(compilerPackage), 'hermesc', binDir, 'hermesc');
 }
 
-export function compileHermes(jsPath: string, hbcPath: string): void {
+// Relative names, because hermesc embeds the source name and a rebuild must match byte for byte.
+export function compileHermes(
+  dir: string,
+  jsName: string,
+  hbcName: string,
+): void {
   try {
     execFileSync(
       hermescPath(),
-      ['-emit-binary', '-O', '-out', hbcPath, jsPath],
-      { stdio: 'pipe' },
+      ['-emit-binary', '-O', '-out', hbcName, jsName],
+      {
+        cwd: dir,
+        stdio: 'pipe',
+      },
     );
   } catch (error) {
     throw new BuildError(`hermesc failed: ${String(error)}`);

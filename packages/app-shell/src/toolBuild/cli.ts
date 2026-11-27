@@ -2,12 +2,13 @@ import { parseArgs } from 'node:util';
 
 import { buildTool } from './buildTool.ts';
 import { BuildError } from './paths.ts';
-import { gateToolSet } from './toolGate.ts';
+import { gateToolSet } from './gateIndex.ts';
 import {
   sealBundles,
   stampManifests,
   writeIndex,
   type HostRelease,
+  type SigningPair,
 } from './toolSet.ts';
 
 const EXIT_FAILED = 1;
@@ -43,6 +44,10 @@ function host(values: Values): HostRelease {
   };
 }
 
+function printPairs(pairs: readonly SigningPair[]): void {
+  for (const { input, output } of pairs) console.log(`${input}\t${output}`);
+}
+
 async function main(argv: string[]): Promise<void> {
   const { values, positionals } = parseArgs({
     args: argv,
@@ -66,11 +71,17 @@ async function main(argv: string[]): Promise<void> {
       return;
     }
     case 'stamp':
-      stampManifests(dir, required(values, 'key-id'), required(values, 'work'));
+      printPairs(
+        stampManifests(
+          dir,
+          required(values, 'key-id'),
+          required(values, 'work'),
+        ),
+      );
       return;
     case 'seal':
       sealBundles(dir, required(values, 'work'));
-      writeIndex(dir, required(values, 'key-id'), host(values));
+      printPairs([writeIndex(dir, required(values, 'key-id'), host(values))]);
       return;
     case 'gate': {
       const problems = gateToolSet({

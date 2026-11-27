@@ -20,24 +20,41 @@ function snapshot(
   );
 }
 
+const DESCRIPTOR_FIELDS = [
+  'value',
+  'get',
+  'set',
+  'writable',
+  'enumerable',
+  'configurable',
+] as const;
+
+function descriptorFields(
+  descriptor: PropertyDescriptor | undefined,
+): unknown[] {
+  const fields = (descriptor ?? {}) as Record<string, unknown>;
+  return DESCRIPTOR_FIELDS.map((field) => fields[field]);
+}
+
 function sameDescriptor(
   a: PropertyDescriptor | undefined,
   b: PropertyDescriptor | undefined,
 ): boolean {
-  return (
-    Object.is(a?.value, b?.value) && a?.get === b?.get && a?.set === b?.set
-  );
+  const before = descriptorFields(a);
+  return descriptorFields(b).every((value, i) => Object.is(value, before[i]));
 }
 
 export function probeGlobals(
   js: string,
   install: (global: ProbeGlobal) => void,
+  afterEvaluation: (global: ProbeGlobal) => void = () => undefined,
 ): GlobalsProbe {
   const context = vm.createContext();
   const global = vm.runInContext('globalThis', context) as ProbeGlobal;
   install(global);
   const before = snapshot(global);
   vm.runInContext(js, context, { timeout: PROBE_TIMEOUT_MS });
+  afterEvaluation(global);
   const after = snapshot(global);
   return {
     added: [...after.keys()].filter((key) => !before.has(key)).map(String),

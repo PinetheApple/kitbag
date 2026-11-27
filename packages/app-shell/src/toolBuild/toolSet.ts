@@ -4,6 +4,8 @@ import path from 'node:path';
 import { HOST_API } from '../toolHost/hostApi.ts';
 import {
   INDEX_FILE,
+  INDEX_SIG_FILE,
+  KEY_ID,
   KBT_EXTENSION,
   MANIFEST_FILE,
   MANIFEST_SIG_FILE,
@@ -44,27 +46,33 @@ function parseManifest(bytes: Buffer): ToolManifest {
   return JSON.parse(bytes.toString('utf8')) as ToolManifest;
 }
 
+export interface SigningPair {
+  readonly input: string;
+  readonly output: string;
+}
+
 export function stampManifests(
   dir: string,
   keyId: string,
   workDir: string,
-): void {
-  for (const asset of kbtFiles(dir)) {
+): SigningPair[] {
+  if (!KEY_ID.test(keyId))
+    throw new BuildError(`key id '${keyId}' is not a key id`);
+  return kbtFiles(dir).map((asset) => {
     const manifest = parseManifest(
       zipEntry(readZip(readFileSync(path.join(dir, asset))), MANIFEST_FILE),
     );
     const stamped = { ...manifest, signature: { alg: SIGNATURE_ALG, keyId } };
-    writeFileSync(
-      path.join(workDir, `${asset}${STAMPED_SUFFIX}`),
-      `${JSON.stringify(stamped, null, 2)}\n`,
-    );
-  }
+    const input = path.join(workDir, `${asset}${STAMPED_SUFFIX}`);
+    writeFileSync(input, `${JSON.stringify(stamped, null, 2)}\n`);
+    return { input, output: path.join(workDir, `${asset}${SIG_SUFFIX}`) };
+  });
 }
 
 export function sealBundles(dir: string, workDir: string): void {
   for (const asset of kbtFiles(dir)) {
     const kbt = path.join(dir, asset);
-    const signed = new Set([MANIFEST_FILE, MANIFEST_SIG_FILE]);
+    const signed = new Set<string>([MANIFEST_FILE, MANIFEST_SIG_FILE]);
     const payload = readZip(readFileSync(kbt)).filter(
       (entry) => !signed.has(entry.name),
     );
@@ -105,7 +113,7 @@ export function writeIndex(
   dir: string,
   keyId: string,
   host: HostRelease,
-): void {
+): SigningPair {
   const index: ToolIndex = {
     schema: SCHEMA_VERSION,
     host,
@@ -115,8 +123,7 @@ export function writeIndex(
       indexEntry(asset, readFileSync(path.join(dir, asset))),
     ),
   };
-  writeFileSync(
-    path.join(dir, INDEX_FILE),
-    `${JSON.stringify(index, null, 2)}\n`,
-  );
+  const input = path.join(dir, INDEX_FILE);
+  writeFileSync(input, `${JSON.stringify(index, null, 2)}\n`);
+  return { input, output: path.join(dir, INDEX_SIG_FILE) };
 }

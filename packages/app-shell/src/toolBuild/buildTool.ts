@@ -75,29 +75,47 @@ function readToolPackage(toolDir: string): ToolPackage {
   };
 }
 
+interface Registration {
+  readonly id: string;
+  readonly register: (host: unknown) => unknown;
+}
+
 function assertScoped(js: string, id: string): void {
-  const registered: string[] = [];
-  const probe = probeGlobals(js, (global) => {
-    global[TOOL_REGISTRY_KEY] = {
-      module: () => stubModule(),
-      register: (registeredId: string, register: unknown) => {
-        if (typeof register === 'function') registered.push(registeredId);
-      },
-    };
-  });
+  const registered: Registration[] = [];
+  const probe = probeGlobals(
+    js,
+    (global) => {
+      global[TOOL_REGISTRY_KEY] = {
+        module: () => stubModule(),
+        register: (registeredId: string, register: unknown) => {
+          if (typeof register === 'function') {
+            registered.push({
+              id: registeredId,
+              register: register as Registration['register'],
+            });
+          }
+        },
+      };
+    },
+    () => {
+      for (const registration of registered)
+        registration.register(stubModule());
+    },
+  );
   const leaked = [...probe.added, ...probe.changed];
-  if (leaked.length > 0)
+  if (leaked.length > 0) {
     throw new BuildError(
       `the bundle writes host globals: ${leaked.join(', ')}`,
     );
-  if (registered.join() !== id) {
+  }
+  if (registered.length !== 1 || registered[0]?.id !== id) {
     throw new BuildError(
       `the entry must export ${TOOL_ENTRY_EXPORT} and register once as ${id}`,
     );
   }
 }
 
-function assetFiles(toolDir: string, dir = ASSETS_DIR): string[] {
+function assetFiles(toolDir: string, dir: string = ASSETS_DIR): string[] {
   const absolute = path.join(toolDir, dir);
   if (!statSync(absolute, { throwIfNoEntry: false })?.isDirectory()) return [];
   return readdirSync(absolute, { withFileTypes: true })
@@ -142,12 +160,18 @@ function manifestFor(
   };
 }
 
-export async function buildTool(request: BuildRequest): Promise<string> {
-  const toolDir = path.resolve(request.toolDir);
-  const pkg = readToolPackage(toolDir);
-  const workDir = path.join(path.resolve(request.outDir), 'build', pkg.tool.id);
-  rmSync(workDir, { recursive: true, force: true });
-  mkdirSync(workDir, { recursive: true });
+const BUNDLE_JS = 'bundle.js';
+
+interface Compiled {
+  readonly js: string;
+  readonly hbc: Buffer;
+}
+
+async function compileBundle(
+  toolDir: string,
+  pkg: ToolPackage,
+  workDir: string,
+): Promise<Compiled> {
   const js = await bundleTool({
     toolDir,
     entry: path.resolve(toolDir, pkg.main),
@@ -155,11 +179,35 @@ export async function buildTool(request: BuildRequest): Promise<string> {
     workDir,
   });
   assertScoped(js, pkg.tool.id);
-  const jsPath = path.join(workDir, 'bundle.js');
-  const hbcPath = path.join(workDir, BUNDLE_ENTRY);
-  writeFileSync(jsPath, js);
-  compileHermes(jsPath, hbcPath);
-  const hbc = readFileSync(hbcPath);
+  writeFileSync(path.join(workDir, BUNDLE_JS), js);
+  compileHermes(workDir, BUNDLE_JS, BUNDLE_ENTRY);
+  return { js, hbc: readFileSync(path.join(workDir, BUNDLE_ENTRY)) };
+}
+
+function packKbt(
+  outDir: string,
+  manifest: ToolManifest,
+  payload: readonly ZipEntry[],
+): string {
+  const problems = manifestProblems(manifest, { signed: false });
+  if (problems.length > 0)
+    throw new BuildError(`invalid manifest: ${problems.join('; ')}`);
+  const kbt = path.join(outDir, kbtAssetName(manifest.id, manifest.version));
+  const manifestBytes = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
+  writeFileSync(
+    kbt,
+    writeZip([{ name: MANIFEST_FILE, data: manifestBytes }, ...payload]),
+  );
+  return kbt;
+}
+
+export async function buildTool(request: BuildRequest): Promise<string> {
+  const toolDir = path.resolve(request.toolDir);
+  const pkg = readToolPackage(toolDir);
+  const workDir = path.join(path.resolve(request.outDir), 'build', pkg.tool.id);
+  rmSync(workDir, { recursive: true, force: true });
+  mkdirSync(workDir, { recursive: true });
+  const { hbc } = await compileBundle(toolDir, pkg, workDir);
   const payload: ZipEntry[] = [
     { name: BUNDLE_ENTRY, data: hbc },
     ...assetFiles(toolDir).map((name) => ({
@@ -167,18 +215,9 @@ export async function buildTool(request: BuildRequest): Promise<string> {
       data: readFileSync(path.join(toolDir, name)),
     })),
   ];
-  const manifest = manifestFor(request, pkg, listFiles(payload), hbc);
-  const problems = manifestProblems(manifest, { signed: false });
-  if (problems.length > 0)
-    throw new BuildError(`invalid manifest: ${problems.join('; ')}`);
-  const kbt = path.join(
+  return packKbt(
     request.outDir,
-    kbtAssetName(manifest.id, manifest.version),
+    manifestFor(request, pkg, listFiles(payload), hbc),
+    payload,
   );
-  const manifestBytes = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
-  writeFileSync(
-    kbt,
-    writeZip([{ name: MANIFEST_FILE, data: manifestBytes }, ...payload]),
-  );
-  return kbt;
 }
