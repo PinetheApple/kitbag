@@ -3,78 +3,120 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import { APPEARANCE_PREFERENCE_KEYS } from './appearance-preferences';
+import type { Category, Resolutions } from './backup-format';
+import type { ImportOptions } from './backup-plan';
 import {
-  OLDEST_RESTORABLE_BACKUP_VERSION,
-  type Category,
-} from './backup-format';
-import {
-  openBackupDatabase,
-  records,
-  seed,
-  unwrap,
-  type BackupDatabase,
-} from './backup.test-helper';
+  addFolderSong,
+  addStemDeckSong,
+  stemSongDatabase,
+  type StemSongDatabase,
+} from './backup-stem-songs.test-helper';
+import { records, unwrap } from './backup.test-helper';
 import { createRouteLatencyRepository } from './route-latency-repository';
 import { RIG_PREFERENCE_KEYS } from './rig-preferences';
 
-const fixture = (name: string) =>
-  readFileSync(new URL(`./backup-fixtures/${name}`, import.meta.url), 'utf8');
-
-const RESTORED = JSON.parse(fixture('restored-v4-v5.json')) as Record<
-  'merged' | 'replaced',
-  Record<string, unknown>
->;
-
-const OLD_VERSIONS = [OLDEST_RESTORABLE_BACKUP_VERSION, 5] as const;
+const OLD_RELEASES = ['v4-early', 'v4-last', 'v5'] as const;
 const LOCAL_ROUTE = { route: 'speaker', offsetMs: 90, name: null, kind: null };
-
-const restoredAs = async (database: BackupDatabase, expected: object) => {
-  const restored = await records(database);
-  for (const [category, value] of Object.entries(expected))
-    expect(restored[category], category).toEqual(value);
+const LOCAL_VOLUME = '0.75';
+const LOCAL_THEME = 'dark';
+const RENAMED_SINCE_EARLY_V4: Readonly<Record<string, string>> = {
+  rampBars: 'rampLength',
 };
 
-async function withLocalSettings(database: BackupDatabase) {
-  await database.preferences.set(RIG_PREFERENCE_KEYS.volume, '0.75');
-  await database.preferences.set(APPEARANCE_PREFERENCE_KEYS.theme, 'dark');
-  await createRouteLatencyRepository(database.handle).save(LOCAL_ROUTE);
+interface Restored {
+  mergeResolutions: Resolutions;
+  merged: Record<string, unknown>;
+  replaced: Record<string, unknown>;
 }
 
-async function expectLocalSettingsKept(database: BackupDatabase) {
-  expect(database.preferences.get(RIG_PREFERENCE_KEYS.volume)).toBe('0.75');
-  expect(database.preferences.get(APPEARANCE_PREFERENCE_KEYS.theme)).toBe(
-    'dark',
+const fixture = (release: string, name: string) =>
+  readFileSync(
+    new URL(`./backup-fixtures/${release}/${name}`, import.meta.url),
+    'utf8',
   );
-  expect(await createRouteLatencyRepository(database.handle).list()).toEqual([
+
+const categoriesOf = (file: string) =>
+  (JSON.parse(file) as { categories: Category[] }).categories;
+
+async function restore(
+  target: StemSongDatabase,
+  file: string,
+  options: ImportOptions,
+) {
+  const plan = unwrap(await target.backup.plan(file, options));
+  return target.backup.apply(plan, { confirmReplace: true });
+}
+
+async function withLocalSettings(target: StemSongDatabase) {
+  await target.preferences.set(RIG_PREFERENCE_KEYS.volume, LOCAL_VOLUME);
+  await target.preferences.set(APPEARANCE_PREFERENCE_KEYS.theme, LOCAL_THEME);
+  await createRouteLatencyRepository(target.handle).save(LOCAL_ROUTE);
+}
+
+async function localTarget(local: string) {
+  const target = stemSongDatabase();
+  const categories = categoriesOf(local);
+  if (categories.includes('stemSongs')) {
+    await addStemDeckSong(target);
+    await addFolderSong(target);
+  }
+  unwrap(await restore(target, local, { mode: 'replace', categories }));
+  await withLocalSettings(target);
+  return target;
+}
+
+const renamed = (record: object) =>
+  Object.fromEntries(
+    Object.entries(record).map(([field, value]) => [
+      RENAMED_SINCE_EARLY_V4[field] ?? field,
+      value,
+    ]),
+  );
+
+async function expectRestoredAs(
+  target: StemSongDatabase,
+  expected: Record<string, unknown>,
+) {
+  const actual = await records(target);
+  for (const category of categoriesOf(JSON.stringify(expected)))
+    expect(actual[category], category).toMatchObject(
+      (expected[category] as object[]).map(renamed),
+    );
+}
+
+async function expectLocalSettingsKept(target: StemSongDatabase) {
+  expect(target.preferences.get(RIG_PREFERENCE_KEYS.volume)).toBe(LOCAL_VOLUME);
+  expect(target.preferences.get(APPEARANCE_PREFERENCE_KEYS.theme)).toBe(
+    LOCAL_THEME,
+  );
+  expect(await createRouteLatencyRepository(target.handle).list()).toEqual([
     LOCAL_ROUTE,
   ]);
 }
 
-describe.each(OLD_VERSIONS)('a version %i backup', (version) => {
-  const file = fixture(`v${String(version)}.json`);
-  const { categories } = JSON.parse(file) as { categories: Category[] };
+describe.each(OLD_RELEASES)('a %s backup', (release) => {
+  const file = fixture(release, 'backup.json');
+  const local = fixture(release, 'local.json');
+  const old = JSON.parse(fixture(release, 'restored.json')) as Restored;
 
-  it('merges with the default categories as before', async () => {
-    const target = openBackupDatabase();
-    await withLocalSettings(target);
-    const plan = unwrap(await target.backup.plan(file));
-    expect(plan.file.categories).not.toContain('rigSettings');
-    expect((await target.backup.apply(plan)).ok).toBe(true);
-    await restoredAs(target, RESTORED.merged);
+  it('merges into the same data the release that wrote it merged into', async () => {
+    const target = await localTarget(local);
+    const result = await restore(target, file, {
+      resolutions: old.mergeResolutions,
+    });
+    expect(result.ok).toBe(true);
+    await expectRestoredAs(target, old.merged);
     await expectLocalSettingsKept(target);
   });
 
-  it('replaces every category it holds as before, sparing newer settings', async () => {
-    const target = openBackupDatabase();
-    await seed(target);
-    await withLocalSettings(target);
-    const plan = unwrap(
-      await target.backup.plan(file, { mode: 'replace', categories }),
-    );
-    expect((await target.backup.apply(plan, { confirmReplace: true })).ok).toBe(
-      true,
-    );
-    await restoredAs(target, RESTORED.replaced);
+  it('replaces into the same data the release that wrote it replaced into', async () => {
+    const target = await localTarget(local);
+    const result = await restore(target, file, {
+      mode: 'replace',
+      categories: categoriesOf(file),
+    });
+    expect(result.ok).toBe(true);
+    await expectRestoredAs(target, old.replaced);
     await expectLocalSettingsKept(target);
   });
 });

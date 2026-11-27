@@ -1,7 +1,7 @@
 {
   "format": "kitbag-backup",
-  "version": 4,
-  "exportedAt": "2026-11-27T10:40:51.380Z",
+  "version": 5,
+  "exportedAt": "2026-11-27T11:16:40.749Z",
   "categories": [
     "librarySongs",
     "songPresets",
@@ -25,7 +25,7 @@
       "downbeatIndices": "AA==",
       "bpm": 128,
       "waveformPath": null,
-      "uuid": "5fe73761-9b02-4069-bf8f-af8927ab26e2",
+      "uuid": "c3e319b5-456e-4195-9921-26d1dd507b34",
       "analysisVersion": null,
       "meterBeatsPerBar": null,
       "barOneSeconds": null,
@@ -70,8 +70,8 @@
       "artist": "Artist",
       "source": "file",
       "lengthSeconds": 210.25,
-      "uuid": "cbd3d53f-c404-48f4-8310-c2770e1522bf",
-      "librarySongUuid": "5fe73761-9b02-4069-bf8f-af8927ab26e2"
+      "uuid": "5ac483f3-83ed-443b-8b4c-42b62ea4552b",
+      "librarySongUuid": "c3e319b5-456e-4195-9921-26d1dd507b34"
     },
     {
       "name": "Closer",
@@ -103,35 +103,43 @@
       "artist": "Artist",
       "source": "file",
       "lengthSeconds": 210.25,
-      "uuid": "7b9ccf4a-b193-4969-b951-cab8b0c11f45",
+      "uuid": "eb76da78-268c-4762-8b41-f8e6a8839d61",
       "librarySongUuid": null
     }
   ],
   "setlists": [
     {
-      "uuid": "d641112b-885a-40f2-9341-7ba0cfb46730",
+      "uuid": "ac75e347-a817-430a-8fe8-6d41db6459af",
       "name": "Friday",
       "active": true,
       "presetUuids": [
-        "7b9ccf4a-b193-4969-b951-cab8b0c11f45",
-        "cbd3d53f-c404-48f4-8310-c2770e1522bf"
+        "eb76da78-268c-4762-8b41-f8e6a8839d61",
+        "5ac483f3-83ed-443b-8b4c-42b62ea4552b"
       ],
       "items": [
-        { "preset": "7b9ccf4a-b193-4969-b951-cab8b0c11f45" },
-        { "preset": "cbd3d53f-c404-48f4-8310-c2770e1522bf" }
+        {
+          "preset": "eb76da78-268c-4762-8b41-f8e6a8839d61"
+        },
+        {
+          "preset": "5ac483f3-83ed-443b-8b4c-42b62ea4552b"
+        }
       ]
     },
     {
-      "uuid": "d1aa95aa-33c3-4a6d-a2aa-53a39baad661",
+      "uuid": "03d02fa6-ebe5-41ea-bc46-f9dbcba86c69",
       "name": "Acoustic",
       "active": false,
-      "presetUuids": ["cbd3d53f-c404-48f4-8310-c2770e1522bf"],
-      "items": [{ "preset": "cbd3d53f-c404-48f4-8310-c2770e1522bf" }]
+      "presetUuids": ["5ac483f3-83ed-443b-8b4c-42b62ea4552b"],
+      "items": [
+        {
+          "preset": "5ac483f3-83ed-443b-8b4c-42b62ea4552b"
+        }
+      ]
     }
   ],
   "tunings": [
     {
-      "uuid": "504a7072-dcee-4d7d-be4f-ae824fa1f55b",
+      "uuid": "6696bec4-15d6-4b79-9de4-9bf7dadd2cf6",
       "name": "Drop D",
       "notes": "Ji0yNztA",
       "instrument": 1
@@ -139,20 +147,29 @@
   ],
   "practiceSessions": [
     {
-      "uuid": "7bdba016-93f1-43b9-8070-14065f5487b0",
+      "uuid": "c810bec0-ee32-4ef1-a19e-8dd74f422c45",
       "startTime": 1784059200,
       "durationSeconds": 1800,
       "avgBpm": 120,
-      "setlistUuid": "d641112b-885a-40f2-9341-7ba0cfb46730",
-      "songsPlayed": "[\"cbd3d53f-c404-48f4-8310-c2770e1522bf\",\"7b9ccf4a-b193-4969-b951-cab8b0c11f45\"]",
+      "setlistUuid": "ac75e347-a817-430a-8fe8-6d41db6459af",
+      "songsPlayed": "[\"5ac483f3-83ed-443b-8b4c-42b62ea4552b\",\"eb76da78-268c-4762-8b41-f8e6a8839d61\"]",
       "setlistName": "Friday",
       "log": "{\"v\":1,\"stretches\":[{\"from\":0,\"to\":1800000,\"end\":\"end\",\"song\":{\"uuid\":\"opener\",\"title\":\"Opener\"},\"setlist\":{\"uuid\":\"friday\",\"name\":\"Friday\",\"position\":2},\"settings\":null,\"countIn\":{\"bars\":1,\"distinct\":true,\"sound\":0},\"tempo\":[[600000,124]],\"endBpm\":124,\"avgBpm\":122}]}"
     }
   ],
   "countInSettings": [
-    { "key": "count_in_bars", "value": "2" },
-    { "key": "count_in_distinct", "value": "0" },
-    { "key": "count_in_scope", "value": "always" }
+    {
+      "key": "count_in_bars",
+      "value": "2"
+    },
+    {
+      "key": "count_in_distinct",
+      "value": "0"
+    },
+    {
+      "key": "count_in_scope",
+      "value": "always"
+    }
   ],
   "metronomeSettings": [
     {
@@ -160,6 +177,80 @@
       "value": "{\"bpm\":132,\"beatsPerBar\":7,\"denominator\":8}"
     }
   ],
-  "clickSounds": [],
-  "stemSongs": []
+  "clickSounds": [
+    {
+      "slot": 0,
+      "uuid": "6f1c2a3b-4d5e-4f60-8a71-92b3c4d5e6f7",
+      "name": "Rimshot",
+      "wav": "UklGRiQAAAAAgP8/"
+    }
+  ],
+  "stemSongs": [
+    {
+      "source": "stemdeck",
+      "stemdeckJobId": "job-echo",
+      "uuid": null,
+      "label": "Echo (live)",
+      "title": "Echo (live)",
+      "meterBeatsPerBar": 3,
+      "barOneSeconds": 1.5,
+      "speed": 0.75,
+      "pitch": 0,
+      "lyricsRetimed": [11.9, 15.2],
+      "clickGrouping": [3, 3, 2],
+      "clickRate": "double",
+      "chosenTempoMode": "constant",
+      "stems": [
+        {
+          "role": "vocals",
+          "name": null,
+          "gain": 0.25,
+          "muted": true,
+          "soloed": false,
+          "pitch": 0
+        },
+        {
+          "role": "drums",
+          "name": "Kit",
+          "gain": 1.5,
+          "muted": false,
+          "soloed": true,
+          "pitch": -2
+        }
+      ]
+    },
+    {
+      "source": "folder",
+      "stemdeckJobId": null,
+      "uuid": "7d4c1f8e-2b6a-4f3d-9c1e-5a8b7e6d4c3b",
+      "label": "Echo (live)",
+      "title": "Echo (live)",
+      "meterBeatsPerBar": 3,
+      "barOneSeconds": 1.5,
+      "speed": 0.75,
+      "pitch": 0,
+      "lyricsRetimed": [11.9, 15.2],
+      "clickGrouping": [3, 3, 2],
+      "clickRate": "double",
+      "chosenTempoMode": "constant",
+      "stems": [
+        {
+          "role": "vocals",
+          "name": null,
+          "gain": 0.25,
+          "muted": true,
+          "soloed": false,
+          "pitch": 0
+        },
+        {
+          "role": "drums",
+          "name": "Kit",
+          "gain": 1.5,
+          "muted": false,
+          "soloed": true,
+          "pitch": -2
+        }
+      ]
+    }
+  ]
 }
