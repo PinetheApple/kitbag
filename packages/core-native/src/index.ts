@@ -122,6 +122,11 @@ export {
   getKitbagHostObject,
 } from './host/KitbagHostObject.ts';
 export {
+  readBarPhase,
+  readCurrentBeat,
+  readCurrentBpm,
+} from './host/workletReads.ts';
+export {
   type TunerReading,
   unpackTunerSnapshot,
   tunerNote,

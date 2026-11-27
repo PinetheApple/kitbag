@@ -111,7 +111,7 @@ type InstalledHost = KitbagHostObject &
   BoottimeClockHost &
   MixdownHost;
 
-interface HostGlobal {
+export interface HostGlobal {
   [KITBAG_HOST_OBJECT_KEY]?: InstalledHost;
 }
 

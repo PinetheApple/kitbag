@@ -1,7 +1,7 @@
 import type { TSESTree } from '@typescript-eslint/utils';
 
-import { createRule } from '../utils/create-rule';
-import { isInPackage } from '../utils/package-path';
+import { createRule } from '../utils/create-rule.ts';
+import { isInPackage } from '../utils/package-path.ts';
 
 // SPEC §9.1 / §13.1 / §9.4 / §13.6: core-plugin-api is the abstract contract and
 // imports NOTHING — "No React import, no store import, no native import" (§9.1).
