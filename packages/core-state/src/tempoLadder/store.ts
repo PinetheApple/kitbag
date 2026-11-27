@@ -18,7 +18,7 @@ export interface TempoLadderStore extends TempoLookup {
   readonly tap: (nowMs: number) => void;
   readonly halve: () => void;
   readonly double: () => void;
-  readonly enter: (bpm: number) => void;
+  readonly enter: (bpm: number, source?: BpmSource) => void;
 }
 
 const UNKNOWN = {
@@ -84,8 +84,8 @@ export function createTempoLadderStore(runtime: () => TempoLadderRuntime) {
       }
     };
     const step = (stepped: (bpm: number) => number) => () => {
-      const { bpm, source } = get();
-      if (bpm !== null && source !== null) choose(stepped(bpm), source);
+      const { bpm } = get();
+      if (bpm !== null) choose(stepped(bpm), BPM_SOURCE.manual);
     };
     return {
       ...UNKNOWN,
@@ -93,8 +93,8 @@ export function createTempoLadderStore(runtime: () => TempoLadderRuntime) {
       tap,
       halve: step(halvedBpm),
       double: step(doubledBpm),
-      enter: (bpm) => {
-        choose(bpm, BPM_SOURCE.manual);
+      enter: (bpm, source = BPM_SOURCE.manual) => {
+        choose(bpm, source);
       },
     };
   });
