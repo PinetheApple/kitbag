@@ -1,0 +1,1 @@
+• Settings > Data takes your own GetSongBPM key, so Play along can look up the tempo of songs that are not in your library. The key stays on your device, is never shown or logged, and is left out of Kitbag's backup file.
