@@ -3,6 +3,7 @@ import {
   Pressable,
   TextInput,
   type TextInputInstance,
+  type TextInputProps,
   View,
 } from 'react-native';
 
@@ -82,6 +83,9 @@ export interface TextFieldProps {
   readonly accessibilityLabel: string;
   readonly icon?: IconName;
   readonly autoFocus?: boolean;
+  readonly autoCapitalize?: TextInputProps['autoCapitalize'];
+  readonly autoCorrect?: boolean;
+  readonly spellCheck?: boolean;
   readonly editable?: boolean;
   readonly ref?: Ref<TextInputInstance>;
   readonly onSubmitEditing?: () => void;
@@ -113,6 +117,9 @@ export function TextField(props: TextFieldProps) {
         placeholderTextColor={theme.color[placeholderInk]}
         accessibilityLabel={props.accessibilityLabel}
         autoFocus={props.autoFocus ?? false}
+        autoCapitalize={props.autoCapitalize}
+        autoCorrect={props.autoCorrect}
+        spellCheck={props.spellCheck}
         editable={props.editable ?? true}
         onSubmitEditing={props.onSubmitEditing}
       />

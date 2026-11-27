@@ -122,6 +122,9 @@ export function GetSongBpmKeySheet({
           onChangeText={setDraft}
           placeholder={KEY_PLACEHOLDER}
           accessibilityLabel={GET_SONG_BPM_KEY_LABEL}
+          autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
         />
         <SheetHint>{KEY_PRIVACY_HINT}</SheetHint>
         <KeyActions draft={draft} />

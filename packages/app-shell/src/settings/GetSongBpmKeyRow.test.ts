@@ -138,6 +138,14 @@ describe('GetSongBPM key row', () => {
     expect(value(root, GET_SONG_BPM_KEY_LABEL)).toBe(KEY_SET);
   });
 
+  it('keeps the keyboard from changing a typed key', () => {
+    expect(only(openSheet(), 'TextField').props).toMatchObject({
+      autoCapitalize: 'none',
+      autoCorrect: false,
+      spellCheck: false,
+    });
+  });
+
   it('offers no Save for a blank entry', () => {
     const root = openSheet();
     type(root, '   ');
