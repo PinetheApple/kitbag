@@ -1,10 +1,8 @@
-import type { PickedDocument } from '@kitbag/core-native';
-
-type Items = readonly PickedDocument[];
+import type { IntakeEvent } from '@kitbag/core-native';
 
 export interface IntakeSource {
-  readonly takeLaunch: () => Promise<Items>;
-  readonly watch: (listener: (items: Items) => void) => () => void;
+  readonly takeLaunch: () => Promise<IntakeEvent>;
+  readonly watch: (listener: (intake: IntakeEvent) => void) => () => void;
 }
 
 const warn = (error: unknown) => {
@@ -14,9 +12,9 @@ const warn = (error: unknown) => {
 export function intakeSession(source: IntakeSource) {
   let queue: Promise<void> = Promise.resolve();
   return {
-    start: (receive: (items: Items) => Promise<void>) => {
-      const deliver = (items: Items) => {
-        queue = queue.then(() => receive(items)).catch(warn);
+    start: (receive: (intake: IntakeEvent) => Promise<void>) => {
+      const deliver = (intake: IntakeEvent) => {
+        queue = queue.then(() => receive(intake)).catch(warn);
       };
       const stop = source.watch(deliver);
       source.takeLaunch().then(deliver, warn);

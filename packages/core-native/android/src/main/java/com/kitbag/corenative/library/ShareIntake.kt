@@ -7,7 +7,6 @@ import android.os.Build
 import com.facebook.react.bridge.ActivityEventListener
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
-import com.facebook.react.bridge.WritableArray
 import com.facebook.react.bridge.WritableMap
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicReference
@@ -27,25 +26,36 @@ class ShareIntake(
   override fun onNewIntent(intent: Intent) {
     val uris = take(intent)
     if (uris.isEmpty()) return
-    io.execute { emit(Arguments.createMap().apply { putArray(ITEMS, describeAll(uris)) }) }
+    io.execute { emit(describeAll(uris)) }
   }
 
   override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) = Unit
 
-  private fun describeAll(uris: List<Uri>): WritableArray =
-    Arguments.createArray().apply {
-      uris.forEach { uri ->
-        try {
-          pushMap(describe(uri))
-        } catch (e: Exception) {
-          warn("Could not read a shared file", e)
-        }
+  private fun describeAll(uris: List<Uri>): WritableMap {
+    val items = Arguments.createArray()
+    var unreadable = 0
+    uris.forEach { uri ->
+      if (uri.scheme !in FILE_SCHEMES) {
+        unreadable += 1
+        return@forEach
+      }
+      try {
+        items.pushMap(describe(uri))
+      } catch (e: Exception) {
+        unreadable += 1
+        warn("Could not read a shared file", e)
       }
     }
+    return Arguments.createMap().apply {
+      putArray(ITEMS, items)
+      putInt(UNREADABLE, unreadable)
+    }
+  }
 
   companion object {
     private const val TAKEN = "com.kitbag.corenative.INTAKE_TAKEN"
     private const val ITEMS = "items"
+    private const val UNREADABLE = "unreadable"
     private val ACTIONS = setOf(Intent.ACTION_VIEW, Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE)
     private val FILE_SCHEMES = setOf(ContentResolver.SCHEME_CONTENT, ContentResolver.SCHEME_FILE)
     private val launch = AtomicReference<Intent?>(null)
@@ -63,7 +73,7 @@ class ShareIntake(
       if (intent.action !in ACTIONS || intent.getBooleanExtra(TAKEN, false)) return emptyList()
       markTaken(intent)
       if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return emptyList()
-      return uris(intent).filter { it.scheme in FILE_SCHEMES }
+      return uris(intent)
     }
 
     private fun uris(intent: Intent): List<Uri> =

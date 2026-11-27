@@ -17,6 +17,7 @@ export type PickedBackup = Readonly<{
 
 export type IntakeEvent = Readonly<{
   items: readonly PickedDocument[];
+  unreadable: CodegenTypes.Int32;
 }>;
 
 export type PickedFolder = Readonly<{
@@ -299,7 +300,7 @@ export interface Spec extends TurboModule {
   pickFolder(): Promise<PickedFolder | null>;
   pickBackup(): Promise<PickedBackup | null>;
   readSharedBackup(uri: string): Promise<PickedBackup>;
-  takeLaunchIntake(): Promise<readonly PickedDocument[]>;
+  takeLaunchIntake(): Promise<IntakeEvent>;
   readonly onIntake: CodegenTypes.EventEmitter<IntakeEvent>;
   shareBackup(fileName: string, contents: string): Promise<void>;
   /** Resolves false when the user cancels the save dialog. */

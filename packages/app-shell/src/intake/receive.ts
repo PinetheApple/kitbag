@@ -1,9 +1,18 @@
-import type { PickedBackup, PickedDocument } from '@kitbag/core-native';
+import type {
+  IntakeEvent,
+  PickedBackup,
+  PickedDocument,
+} from '@kitbag/core-native';
 import { planIntake, type IntakePlan } from '@kitbag/core-state';
 
 import { HOME_TOOLS, TOOL_ID, type ToolOnTest } from '../home/registry.ts';
 import { RESTORE_ROUTE } from '../settings/settingsRoutes.ts';
-import { RESTORE_BUSY_TEXT, skippedText, turnOnText } from './intakeText.ts';
+import {
+  RESTORE_BUSY_TEXT,
+  skippedText,
+  turnOnText,
+  unreadableText,
+} from './intakeText.ts';
 
 export interface IntakeDeps {
   readonly backupMimeType: () => string;
@@ -57,10 +66,11 @@ async function importAll(plan: ImportPlan, deps: IntakeDeps) {
 }
 
 export async function receiveIntake(
-  items: readonly PickedDocument[],
+  { items, unreadable }: IntakeEvent,
   deps: IntakeDeps,
 ): Promise<void> {
   const plan = planIntake(items, deps.backupMimeType());
   if (plan.kind === 'restore') await openRestore(plan, deps);
   else if (plan.kind === 'import') await importAll(plan, deps);
+  else if (unreadable > 0) deps.notify(unreadableText(unreadable));
 }

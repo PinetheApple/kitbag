@@ -1,19 +1,17 @@
 import {
   getKitbagLibrary,
+  type IntakeEvent,
   type PickedBackup,
-  type PickedDocument,
 } from './NativeKitbagLibrary';
 
-export function takeLaunchIntake(): Promise<readonly PickedDocument[]> {
+export function takeLaunchIntake(): Promise<IntakeEvent> {
   return getKitbagLibrary().takeLaunchIntake();
 }
 
 export function watchIntake(
-  listener: (items: readonly PickedDocument[]) => void,
+  listener: (intake: IntakeEvent) => void,
 ): () => void {
-  const subscription = getKitbagLibrary().onIntake(({ items }) => {
-    listener(items);
-  });
+  const subscription = getKitbagLibrary().onIntake(listener);
   return () => {
     subscription.remove();
   };

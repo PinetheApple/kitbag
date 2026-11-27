@@ -1,11 +1,15 @@
-import type { PickedBackup, PickedDocument } from '@kitbag/core-native';
+import type {
+  IntakeEvent,
+  PickedBackup,
+  PickedDocument,
+} from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('expo-router', () => ({ useRouter: vi.fn() }));
 
 import { TOOL_ID } from '../home/registry.ts';
 import { RESTORE_ROUTE } from '../settings/settingsRoutes.ts';
-import { RESTORE_BUSY_TEXT } from './intakeText.ts';
+import { RESTORE_BUSY_TEXT, unreadableText } from './intakeText.ts';
 import { receiveIntake, type IntakeDeps } from './receive.ts';
 
 const JSON_MIME = 'application/json';
@@ -14,6 +18,11 @@ const doc = (name: string, mimeType: string): PickedDocument => ({
   uri: `content://shared/${name}`,
   name,
   mimeType,
+});
+
+const shared = (...items: PickedDocument[]): IntakeEvent => ({
+  items,
+  unreadable: 0,
 });
 
 const SONG = doc('Everlong.mp3', 'audio/mpeg');
@@ -50,7 +59,7 @@ function harness(off: readonly string[] = []) {
 describe('receiving opened or shared files', () => {
   it('opens Songs and imports shared audio through the batch import', async () => {
     const deps = harness();
-    await receiveIntake([SONG, SECOND_SONG], deps);
+    await receiveIntake(shared(SONG, SECOND_SONG), deps);
     expect(deps.navigate).toHaveBeenCalledWith('/library');
     expect(deps.importDocuments).toHaveBeenCalledWith([SONG, SECOND_SONG]);
     expect(deps.openBackup).not.toHaveBeenCalled();
@@ -58,14 +67,14 @@ describe('receiving opened or shared files', () => {
 
   it('opens Stem songs for a shared StemDeck bundle', async () => {
     const deps = harness();
-    await receiveIntake([STEMS], deps);
+    await receiveIntake(shared(STEMS), deps);
     expect(deps.navigate).toHaveBeenCalledWith('/stems');
     expect(deps.importDocuments).toHaveBeenCalledWith([STEMS]);
   });
 
   it('opens Songs for a bundle shared with audio, where both land', async () => {
     const deps = harness();
-    await receiveIntake([STEMS, SONG], deps);
+    await receiveIntake(shared(STEMS, SONG), deps);
     expect(deps.navigate).toHaveBeenCalledWith('/library');
     expect(deps.importDocuments).toHaveBeenCalledWith([STEMS, SONG]);
   });
@@ -78,13 +87,13 @@ describe('receiving opened or shared files', () => {
       order.push('import');
       return Promise.resolve();
     });
-    await receiveIntake([SONG], deps);
+    await receiveIntake(shared(SONG), deps);
     expect(order).toEqual(['navigate', 'import']);
   });
 
   it('opens a shared backup in the Restore review and imports nothing', async () => {
     const deps = harness();
-    await receiveIntake([BACKUP], deps);
+    await receiveIntake(shared(BACKUP), deps);
     expect(deps.navigate).toHaveBeenCalledWith(RESTORE_ROUTE);
     expect(deps.readBackup).toHaveBeenCalledWith(BACKUP.uri);
     expect(deps.openBackup).toHaveBeenCalledOnce();
@@ -94,7 +103,7 @@ describe('receiving opened or shared files', () => {
 
   it('says the files shared beside a backup were not imported', async () => {
     const deps = harness();
-    await receiveIntake([SONG, BACKUP, STEMS], deps);
+    await receiveIntake(shared(SONG, BACKUP, STEMS), deps);
     expect(deps.importDocuments).not.toHaveBeenCalled();
     expect(deps.notify).toHaveBeenCalledOnce();
     expect(deps.notify.mock.calls[0]?.[0]).toContain('2 files');
@@ -103,7 +112,7 @@ describe('receiving opened or shared files', () => {
   it('says so when a restore is already applying', async () => {
     const deps = harness();
     deps.openBackup.mockResolvedValue(false);
-    await receiveIntake([BACKUP], deps);
+    await receiveIntake(shared(BACKUP), deps);
     expect(deps.notify).toHaveBeenCalledOnce();
   });
 
@@ -115,7 +124,7 @@ describe('receiving opened or shared files', () => {
     'names %s when its tool is off, and imports nothing',
     async (name, off, items) => {
       const deps = harness(off);
-      await receiveIntake(items, deps);
+      await receiveIntake(shared(...items), deps);
       expect(deps.importDocuments).not.toHaveBeenCalled();
       expect(deps.navigate).not.toHaveBeenCalled();
       expect(deps.notify).toHaveBeenCalledOnce();
@@ -126,19 +135,34 @@ describe('receiving opened or shared files', () => {
   it('says only that a restore is running when files beside a backup were skipped too', async () => {
     const deps = harness();
     deps.openBackup.mockResolvedValue(false);
-    await receiveIntake([SONG, BACKUP], deps);
+    await receiveIntake(shared(SONG, BACKUP), deps);
     expect(deps.notify.mock.calls).toEqual([[RESTORE_BUSY_TEXT]]);
   });
 
   it('opens a backup whatever tools are off', async () => {
     const deps = harness([TOOL_ID.library, TOOL_ID.stems]);
-    await receiveIntake([BACKUP], deps);
+    await receiveIntake(shared(BACKUP), deps);
     expect(deps.openBackup).toHaveBeenCalledOnce();
+  });
+
+  it('says the share could not be opened when no shared file could be read', async () => {
+    const deps = harness();
+    await receiveIntake({ items: [], unreadable: 2 }, deps);
+    expect(deps.notify.mock.calls).toEqual([[unreadableText(2)]]);
+    expect(deps.navigate).not.toHaveBeenCalled();
+    expect(deps.importDocuments).not.toHaveBeenCalled();
+  });
+
+  it('imports what could be read and stays quiet about the rest', async () => {
+    const deps = harness();
+    await receiveIntake({ items: [SONG], unreadable: 1 }, deps);
+    expect(deps.importDocuments).toHaveBeenCalledWith([SONG]);
+    expect(deps.notify).not.toHaveBeenCalled();
   });
 
   it('does nothing for an empty share', async () => {
     const deps = harness();
-    await receiveIntake([], deps);
+    await receiveIntake(shared(), deps);
     expect(deps.navigate).not.toHaveBeenCalled();
     expect(deps.notify).not.toHaveBeenCalled();
   });

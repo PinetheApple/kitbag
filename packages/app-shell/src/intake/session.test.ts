@@ -1,4 +1,4 @@
-import type { PickedDocument } from '@kitbag/core-native';
+import type { IntakeEvent, PickedDocument } from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 
 import { intakeSession, type IntakeSource } from './session.ts';
@@ -15,19 +15,24 @@ const LATER: PickedDocument = {
   mimeType: 'application/zip',
 };
 
-type Items = readonly PickedDocument[];
+const event = (...items: PickedDocument[]): IntakeEvent => ({
+  items,
+  unreadable: 0,
+});
 
-function fakeSource(initial: Items) {
-  const listeners = new Set<(items: Items) => void>();
+const NOTHING = event();
+
+function fakeSource(launch: IntakeEvent) {
+  const listeners = new Set<(intake: IntakeEvent) => void>();
   const source: IntakeSource = {
-    takeLaunch: vi.fn(() => Promise.resolve(initial)),
-    watch: vi.fn((listener: (items: Items) => void) => {
+    takeLaunch: vi.fn(() => Promise.resolve(launch)),
+    watch: vi.fn((listener: (intake: IntakeEvent) => void) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
     }),
   };
-  const share = (items: Items) => {
-    for (const listener of listeners) listener(items);
+  const share = (intake: IntakeEvent) => {
+    for (const listener of listeners) listener(intake);
   };
   return { source, share, listeners };
 }
@@ -36,18 +41,18 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('the intake session', () => {
   it('delivers the files the app was started with', async () => {
-    const { source } = fakeSource([SONG]);
+    const { source } = fakeSource(event(SONG));
     const receive = vi.fn(() => Promise.resolve());
     intakeSession(source).start(receive);
     await settle();
-    expect(receive.mock.calls).toEqual([[[SONG]]]);
+    expect(receive.mock.calls).toEqual([[event(SONG)]]);
   });
 
   it('asks the source again on remount and lets it hand the launch files over once', async () => {
-    const { source } = fakeSource([SONG]);
+    const { source } = fakeSource(event(SONG));
     vi.mocked(source.takeLaunch)
-      .mockResolvedValueOnce([SONG])
-      .mockResolvedValue([]);
+      .mockResolvedValueOnce(event(SONG))
+      .mockResolvedValue(NOTHING);
     const session = intakeSession(source);
     const receive = vi.fn(() => Promise.resolve());
     const stop = session.start(receive);
@@ -56,21 +61,21 @@ describe('the intake session', () => {
     session.start(receive);
     await settle();
     expect(source.takeLaunch).toHaveBeenCalledTimes(2);
-    expect(receive.mock.calls).toEqual([[[SONG]], [[]]]);
+    expect(receive.mock.calls).toEqual([[event(SONG)], [NOTHING]]);
   });
 
   it('delivers files shared while the app is open', async () => {
-    const { source, share } = fakeSource([]);
+    const { source, share } = fakeSource(NOTHING);
     const receive = vi.fn(() => Promise.resolve());
     intakeSession(source).start(receive);
     await settle();
-    share([LATER]);
+    share(event(LATER));
     await settle();
-    expect(receive.mock.calls).toEqual([[[]], [[LATER]]]);
+    expect(receive.mock.calls).toEqual([[NOTHING], [event(LATER)]]);
   });
 
   it('stops listening when unmounted', async () => {
-    const { source, listeners } = fakeSource([]);
+    const { source, listeners } = fakeSource(NOTHING);
     const stop = intakeSession(source).start(() => Promise.resolve());
     await settle();
     stop();
@@ -78,7 +83,7 @@ describe('the intake session', () => {
   });
 
   it('handles one delivery at a time, so two imports never overlap', async () => {
-    const { source, share } = fakeSource([SONG]);
+    const { source, share } = fakeSource(event(SONG));
     let finish: () => void = () => undefined;
     const receive = vi.fn(
       () =>
@@ -88,7 +93,7 @@ describe('the intake session', () => {
     );
     intakeSession(source).start(receive);
     await settle();
-    share([LATER]);
+    share(event(LATER));
     await settle();
     expect(receive).toHaveBeenCalledOnce();
     finish();
@@ -98,15 +103,15 @@ describe('the intake session', () => {
 
   it('keeps delivering after one delivery fails', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const { source, share } = fakeSource([SONG]);
+    const { source, share } = fakeSource(event(SONG));
     const receive = vi
-      .fn<(items: Items) => Promise<void>>()
+      .fn<(intake: IntakeEvent) => Promise<void>>()
       .mockRejectedValueOnce(new Error('boom'))
       .mockResolvedValue(undefined);
     intakeSession(source).start(receive);
     await settle();
-    share([LATER]);
+    share(event(LATER));
     await settle();
-    expect(receive).toHaveBeenLastCalledWith([LATER]);
+    expect(receive).toHaveBeenLastCalledWith(event(LATER));
   });
 });
