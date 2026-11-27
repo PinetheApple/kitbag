@@ -1,0 +1,1 @@
+• Smaller download: the app's native libraries are now compressed.
