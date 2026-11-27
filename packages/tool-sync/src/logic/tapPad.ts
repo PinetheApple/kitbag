@@ -18,6 +18,7 @@ export interface TapPadInputs {
   readonly tappedBpm: number | null;
   readonly tapsLanded: number;
   readonly retap: boolean;
+  readonly offered: boolean;
 }
 
 export interface TapPadCopy {
@@ -58,7 +59,9 @@ export function tapPadCopy(inputs: TapPadInputs): TapPadCopy {
     return {
       mode: TAP_PAD_MODE.align,
       title: 'Tap on a downbeat',
-      hint: 'One tap locks the click to the song',
+      hint: inputs.offered
+        ? 'Or tap on a downbeat to lock it yourself'
+        : 'One tap locks the click to the song',
     };
   return {
     mode: TAP_PAD_MODE.tempo,

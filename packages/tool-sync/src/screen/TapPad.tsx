@@ -17,6 +17,7 @@ import {
   Pressable,
   Text,
   View,
+  type GestureResponderEvent,
   type PressableStateCallbackType,
 } from 'react-native';
 
@@ -81,7 +82,7 @@ export function TapLeds({ landed }: { readonly landed: number }) {
 export interface TapPadProps {
   readonly copy: TapPadCopy;
   readonly tapsLanded: number;
-  readonly onTap: () => void;
+  readonly onTap: (event: GestureResponderEvent) => void;
   readonly onRelease: () => void;
   readonly minHeight?: number | null;
 }

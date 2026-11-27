@@ -16,10 +16,15 @@ import { PLAY_ALONG_VIEW, type PlayAlongView } from '../logic/playAlongView.ts';
 import { BpmCard } from './BpmCard.tsx';
 import { DriftMeter } from './DriftMeter.tsx';
 import { FadedScroll } from './FadedScroll.tsx';
+import { LibraryOfferCard } from './LibraryOfferCard.tsx';
 import { PatternCard } from './PatternCard.tsx';
 import { NotFollowingRow, NothingPlaying } from './NoSong.tsx';
 import { NowPlayingCard } from './NowPlayingCard.tsx';
-import { useSongPositionMs, useTempoLine } from './playAlongHooks.ts';
+import {
+  usePlayAlong,
+  useSongPositionMs,
+  useTempoLine,
+} from './playAlongHooks.ts';
 import { TapPad } from './TapPad.tsx';
 import { useNewTrack, type NewTrack } from './useNewTrack.ts';
 import { usePadFit } from './usePadFit.ts';
@@ -103,6 +108,7 @@ function BodyCards(props: BodyCardsProps) {
   const styles = useStyles();
   const { view, session, lock, layout, meter } = props;
   const { bpm, line } = useTempoLine();
+  const offered = usePlayAlong((s) => s.offer !== undefined);
   return (
     <View style={styles.body}>
       {layout.meter === METER_PLACE.first ? meter : null}
@@ -119,6 +125,7 @@ function BodyCards(props: BodyCardsProps) {
           onOpenTempo={props.onOpenTempo}
         />
       </View>
+      {offered && lock === undefined ? <LibraryOfferCard /> : null}
       <PatternCard
         following={lock !== undefined}
         muted={props.silenced}
