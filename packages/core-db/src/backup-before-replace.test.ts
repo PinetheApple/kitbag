@@ -57,7 +57,7 @@ describe('the copy kept before a replace', () => {
     const target = await seededTarget();
     const before = await records(target);
     expect((await replace(target, await backupFile())).ok).toBe(true);
-    const copy = await target.backup.beforeReplace();
+    const copy = await target.backup.keptBeforeReplace();
     if (copy === null) throw new Error('no copy kept');
     expect(portable(copy)).toEqual(before);
   });
@@ -66,7 +66,7 @@ describe('the copy kept before a replace', () => {
     const target = await seededTarget();
     const before = await records(target);
     await replace(target, await backupFile());
-    const copy = await target.backup.beforeReplace();
+    const copy = await target.backup.keptBeforeReplace();
     if (copy === null) throw new Error('no copy kept');
     expect((await replace(target, copy)).ok).toBe(true);
     expect(await records(target)).toEqual(before);
@@ -81,7 +81,7 @@ describe('the copy kept before a replace', () => {
       ok: false,
       error: { kind: 'replaceNotConfirmed' },
     });
-    expect(await target.backup.beforeReplace()).toBeNull();
+    expect(await target.backup.keptBeforeReplace()).toBeNull();
   });
 
   it('aborts the replace without changing anything when it cannot be taken', async () => {
@@ -94,6 +94,6 @@ describe('the copy kept before a replace', () => {
       error: { kind: 'snapshotFailed' },
     });
     expect(await rows(target)).toEqual(before);
-    expect(await target.backup.beforeReplace()).toBeNull();
+    expect(await target.backup.keptBeforeReplace()).toBeNull();
   });
 });

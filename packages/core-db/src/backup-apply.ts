@@ -1,4 +1,4 @@
-import { eq, inArray, isNotNull, sql } from 'drizzle-orm';
+import { eq, inArray, isNotNull } from 'drizzle-orm';
 
 import { ANALYSIS_STATUS } from './analysis-status';
 import {
@@ -12,9 +12,7 @@ import {
   type ClickSoundRecord,
   type LibrarySongRecord,
   type PracticeSessionRecord,
-  type PreferenceRecord,
   type RigRecord,
-  type RouteLatencyRecord,
   type SetlistRecord,
   type SongPresetRecord,
   type StemSongRecord,
@@ -28,6 +26,8 @@ import {
   loadStemEntries,
   type SetlistEntryContext,
 } from './backup-setlist-entries';
+import { upsertPreference } from './backup-apply-preference';
+import { upsertRigSetting } from './backup-apply-rig';
 import { restoreStemSong } from './backup-stem-songs';
 import {
   freshClickSoundFileName,
@@ -170,40 +170,6 @@ function simpleUpsert(
     return found(inserted, 'Backup insert').id;
   };
 }
-
-async function upsertPreference(
-  db: Database,
-  record: PreferenceRecord,
-): Promise<number> {
-  const { key, value } = record;
-  const rows = await db
-    .insert(preferences)
-    .values({ key, value })
-    .onConflictDoUpdate({ target: preferences.key, set: { value } })
-    .returning({ id: sql<number>`rowid` });
-  return found(rows, 'Preference upsert').id;
-}
-
-async function upsertRouteLatency(
-  db: Database,
-  record: RouteLatencyRecord,
-): Promise<number> {
-  const { offsetMs, name, kind } = record;
-  const rows = await db
-    .insert(routeLatency)
-    .values(record)
-    .onConflictDoUpdate({
-      target: routeLatency.route,
-      set: { offsetMs, name, kind },
-    })
-    .returning({ id: sql<number>`rowid` });
-  return found(rows, 'Route latency upsert').id;
-}
-
-const upsertRigSetting = (db: Database, record: RigRecord) =>
-  'route' in record
-    ? upsertRouteLatency(db, record)
-    : upsertPreference(db, record);
 
 async function upsertClickSound(
   db: Database,

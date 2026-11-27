@@ -30,7 +30,7 @@ describe('GetSongBPM key and backups', () => {
       }),
     );
     unwrap(await target.backup.apply(plan, { confirmReplace: true }));
-    const copy = await target.backup.beforeReplace();
+    const copy = await target.backup.keptBeforeReplace();
     expect(copy).not.toBeNull();
     expect(copy).not.toContain(PERSONAL_KEY);
     expect(copy).not.toContain(GET_SONG_BPM_KEY_PREFERENCE);

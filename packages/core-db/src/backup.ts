@@ -218,7 +218,7 @@ export function createBackupService(
         ),
       ),
     apply,
-    beforeReplace: () => serial(() => readBeforeReplace(handle.db)),
+    keptBeforeReplace: () => serial(() => readBeforeReplace(handle.db)),
   };
 }
 

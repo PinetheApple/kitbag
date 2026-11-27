@@ -62,4 +62,4 @@ const appearance = persistedStore<AppearancePersistence, AppearanceStore>(
 export const createAppearanceStore = appearance.create;
 export const configureAppearancePersistence = appearance.configure;
 export const getAppearanceStore = appearance.get;
-export const reloadAppearancePersistence = appearance.reload;
+export const reloadAppearanceStore = appearance.reload;

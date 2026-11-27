@@ -104,7 +104,7 @@ const accents = persistedStore<
 export const createSubdivisionAccentsStore = accents.create;
 export const configureSubdivisionAccentsPersistence = accents.configure;
 export const getSubdivisionAccentsStore = accents.get;
-export const reloadSubdivisionAccentsPersistence = accents.reload;
+export const reloadSubdivisionAccentsStore = accents.reload;
 
 export function replaySubdivisionAccents(
   store: SubdivisionAccentsStoreApi,

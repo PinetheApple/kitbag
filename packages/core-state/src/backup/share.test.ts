@@ -17,7 +17,7 @@ function deps() {
     exportSetlist: vi.fn(() => Promise.resolve('{"setlist":true}')),
     plan: vi.fn(),
     apply: vi.fn(),
-    beforeReplace: vi.fn(),
+    keptBeforeReplace: vi.fn(),
   };
   return {
     service: () => service,

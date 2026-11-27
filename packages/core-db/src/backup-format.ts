@@ -141,6 +141,10 @@ export type RouteLatencyRecord = RouteLatency;
 
 export type RigRecord = PreferenceRecord | RouteLatencyRecord;
 
+export const isRouteLatencyRecord = (
+  record: BackupRecord | LocalRecord,
+): record is RouteLatencyRecord => 'route' in record;
+
 export interface ClickSoundRecord {
   slot: number;
   uuid: string;
@@ -316,7 +320,7 @@ export function recordKey(
   record: BackupRecord | LocalRecord,
 ): string {
   if (isPreference(category, record)) return record.key;
-  if ('route' in record) return routeLatencyKey(record.route);
+  if (isRouteLatencyRecord(record)) return routeLatencyKey(record.route);
   if (category === 'clickSounds' && 'slot' in record)
     return String(record.slot);
   if ('stems' in record) return stemSongKey(record);
@@ -325,7 +329,7 @@ export function recordKey(
 
 export function recordLabel(category: Category, record: BackupRecord): string {
   if (isPreference(category, record)) return record.key;
-  if ('route' in record) return record.name ?? record.route;
+  if (isRouteLatencyRecord(record)) return record.name ?? record.route;
   if ('label' in record) return record.label;
   if ('name' in record) return record.name;
   if ('title' in record) return record.title;

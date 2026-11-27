@@ -4,6 +4,7 @@ import { CATEGORIES } from './backup-format';
 import {
   openBackupDatabase,
   seed,
+  UNRELATED_PREFERENCE,
   unwrap,
   type BackupDatabase,
 } from './backup.test-helper';
@@ -132,7 +133,7 @@ describe('rig settings in a backup', () => {
 
   it('refuse a key that is not a rig setting', async () => {
     const file = JSON.parse(await exported()) as Record<string, unknown>;
-    file.rigSettings = [{ key: 'last_tool', value: 'tuner' }];
+    file.rigSettings = [{ key: UNRELATED_PREFERENCE, value: 'tuner' }];
     const plan = await openBackupDatabase().backup.plan(JSON.stringify(file));
     expect(plan).toMatchObject({
       ok: false,

@@ -7,7 +7,7 @@ import {
 import { CATEGORIES } from '@kitbag/core-db';
 import { describe, expect, it, vi } from 'vitest';
 
-import { readBeforeReplace } from './beforeReplace.ts';
+import { openableBeforeReplace } from './beforeReplace.ts';
 import { createRestoreStore } from './restore.ts';
 import type { BackupDeps } from './runtime.ts';
 
@@ -27,7 +27,7 @@ describe('the copy kept before a replace', () => {
   it('reads as nothing before any replace', async () => {
     const target = openBackupDatabase();
     expect(
-      await readBeforeReplace(
+      await openableBeforeReplace(
         COPY_NAME,
         deps(() => target.backup),
       ),
@@ -49,7 +49,7 @@ describe('the copy kept before a replace', () => {
     const backup = deps(() => target.backup);
     const store = createRestoreStore(() => backup);
 
-    await store.getState().open(() => readBeforeReplace(COPY_NAME, backup));
+    await store.getState().open(() => openableBeforeReplace(COPY_NAME, backup));
     expect(store.getState().restore).toMatchObject({
       phase: 'review',
       source: { name: COPY_NAME },

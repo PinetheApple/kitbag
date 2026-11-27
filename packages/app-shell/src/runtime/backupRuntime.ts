@@ -5,9 +5,9 @@ import {
   configureBackup,
   libraryStore,
   releaseStaleSounds,
-  reloadAppearancePersistence,
+  reloadAppearanceStore,
   reloadCountInPersistence,
-  reloadHomeLayoutPersistence,
+  reloadHomeLayoutStore,
   reloadStandaloneMetronomePersistence,
   songLibraryStore,
   tunerStore,
@@ -23,8 +23,8 @@ export async function refreshAfterRestore(report: ApplyReport): Promise<void> {
   libraryStore.setState({ loaded: null, discarded: null, played: [] });
   reloadCountInPersistence();
   reloadStandaloneMetronomePersistence();
-  reloadAppearancePersistence();
-  reloadHomeLayoutPersistence();
+  reloadAppearanceStore();
+  reloadHomeLayoutStore();
   releaseStaleSounds(report);
   await Promise.all([
     libraryStore.getState().refresh(),

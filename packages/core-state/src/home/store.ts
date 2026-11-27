@@ -28,4 +28,4 @@ const homeLayout = persistedStore<HomeLayoutPersistence, HomeLayoutStore>(
 export const createHomeLayoutStore = homeLayout.create;
 export const configureHomeLayoutPersistence = homeLayout.configure;
 export const getHomeLayoutStore = homeLayout.get;
-export const reloadHomeLayoutPersistence = homeLayout.reload;
+export const reloadHomeLayoutStore = homeLayout.reload;

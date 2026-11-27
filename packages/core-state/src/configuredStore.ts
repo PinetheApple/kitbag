@@ -9,7 +9,7 @@ export interface ConfiguredStore<R, S> {
   readonly reload: () => void;
 }
 
-const dataOf = <S>(state: S): Partial<S> =>
+const withoutActions = <S>(state: S): Partial<S> =>
   Object.fromEntries(
     Object.entries(state as object).filter(
       ([, value]) => typeof value !== 'function',
@@ -26,7 +26,7 @@ export function configuredStore<R, S>(
       init(runtime, { getState: get, setState: set }),
     );
   let configured: StoreApi<S> | undefined;
-  let runtimeInUse = fallback;
+  let configuredRuntime = fallback;
   return {
     create,
     configure: (runtime) => {
@@ -35,7 +35,7 @@ export function configuredStore<R, S>(
           `${name} store already exists; configure it before first use`,
         );
       }
-      runtimeInUse = runtime;
+      configuredRuntime = runtime;
       configured = create(runtime);
     },
     get: () => {
@@ -43,7 +43,9 @@ export function configuredStore<R, S>(
       return configured;
     },
     reload: () => {
-      configured?.setState(dataOf(create(runtimeInUse).getState()));
+      configured?.setState(
+        withoutActions(create(configuredRuntime).getState()),
+      );
     },
   };
 }

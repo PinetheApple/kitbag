@@ -1,7 +1,7 @@
 import {
   DEFAULT_VOLUME,
   getSubdivisionAccentsStore,
-  reloadSubdivisionAccentsPersistence,
+  reloadSubdivisionAccentsStore,
   replaySubdivisionAccents,
   type createMetronomeStore,
   type RouteLatencyStore,
@@ -32,7 +32,7 @@ export function reloadRig({
   routeLatency,
   metronome,
   volume,
-  reloadAccents = reloadSubdivisionAccentsPersistence,
+  reloadAccents = reloadSubdivisionAccentsStore,
 }: RigReload): Promise<void> {
   metronome.getState().setVolume(volume.load() ?? DEFAULT_VOLUME);
   reloadAccents();
