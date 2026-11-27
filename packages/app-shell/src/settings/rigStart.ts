@@ -1,5 +1,7 @@
 import {
+  DEFAULT_VOLUME,
   getSubdivisionAccentsStore,
+  reloadSubdivisionAccentsStore,
   replaySubdivisionAccents,
   type createMetronomeStore,
   type RouteLatencyStore,
@@ -17,6 +19,24 @@ export interface RigStart {
   readonly sendAccents: SendSubdivisionAccents;
   readonly appState: AppStateSource;
   readonly accents?: SubdivisionAccentsStoreApi;
+}
+
+export interface RigReload extends Pick<
+  RigStart,
+  'routeLatency' | 'metronome' | 'volume'
+> {
+  readonly reloadAccents?: () => void;
+}
+
+export function reloadRig({
+  routeLatency,
+  metronome,
+  volume,
+  reloadAccents = reloadSubdivisionAccentsStore,
+}: RigReload): Promise<void> {
+  metronome.getState().setVolume(volume.load() ?? DEFAULT_VOLUME);
+  reloadAccents();
+  return routeLatency.getState().reload();
 }
 
 // The engine keeps no rig settings across a process start; this is their replay.
@@ -39,7 +59,7 @@ export function startRig({
     console.warn('[kitbag] rig settings not applied', error);
   }
   appState.addEventListener('change', (state) => {
-    if (state === 'background') routeLatency.getState().flush();
+    if (state === 'background') void routeLatency.getState().flush();
   });
   routeLatency
     .getState()

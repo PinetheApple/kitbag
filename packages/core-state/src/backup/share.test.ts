@@ -17,12 +17,14 @@ function deps() {
     exportSetlist: vi.fn(() => Promise.resolve('{"setlist":true}')),
     plan: vi.fn(),
     apply: vi.fn(),
+    keptBeforeReplace: vi.fn(),
   };
   return {
     service: () => service,
     pick: vi.fn(),
     share: vi.fn(() => Promise.resolve()),
     save: vi.fn(() => Promise.resolve(true)),
+    beforeRestore: vi.fn(() => Promise.resolve()),
     afterRestore: vi.fn(),
     calls: service,
   } satisfies BackupDeps & { calls: unknown };

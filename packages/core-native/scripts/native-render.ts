@@ -27,14 +27,20 @@ function renderField(field: TunerField): string {
   );
 }
 
+function renderFixedRoutes(routes: NativeConstants['fixedOutputRoutes']) {
+  return routes
+    .map(({ id, kind }) => `  { id: '${id}', kind: '${kind}' },`)
+    .join('\n');
+}
+
 /** Deterministic, prettier-free (`.gen.ts` is prettier-ignored) TS source. */
 export function renderConstants(c: NativeConstants): string {
   const soundNames = c.soundNames.map((n) => `'${n}'`).join(', ');
-  return `// GENERATED — DO NOT EDIT. Owner: native/audio_core (SPEC §13.7).
+  return `// GENERATED — DO NOT EDIT. Owners: native/audio_core, OutputRoutes.kt (SPEC §13.7).
 // Regenerate: pnpm --filter @kitbag/core-native generate
 // Verify (CI drift guard): pnpm --filter @kitbag/core-native generate:check
 //
-// Every value here is extracted from the engine's own source, never retyped.
+// Every value here is extracted from its owner's source, never retyped.
 // Hand-edits are reverted by the next regenerate and fail generate:check.
 
 /** Max beats a single measured grid may carry (KB_MAX_GRID_BEATS). */
@@ -167,6 +173,11 @@ export const KB_LATENCY_OFFSET_MS_BOUNDS = {
   min: ${String(c.latencyOffsetMsBounds.min)},
   max: ${String(c.latencyOffsetMsBounds.max)},
 } as const;
+
+/** Output routes keyed by family alone, with no device identity (Keying.FIXED in OutputRoutes.kt). */
+export const KB_FIXED_OUTPUT_ROUTES = [
+${renderFixedRoutes(c.fixedOutputRoutes)}
+] as const;
 
 /** Bar-phase range for the beat sweep (kb_metronome_bar_phase). */
 export const KB_BAR_PHASE_BOUNDS = {

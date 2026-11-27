@@ -26,6 +26,11 @@ export {
 } from './play-queue-repository';
 export type { Preferences } from './preferences';
 export { COUNT_IN_PREFERENCE_KEYS } from './count-in-preferences';
+export { RIG_PREFERENCE_KEYS } from './rig-preferences';
+export {
+  APPEARANCE_PREFERENCE_KEYS,
+  HOME_LAYOUT_KEY,
+} from './appearance-preferences';
 export { STANDALONE_METRONOME_KEY } from './standalone-metronome-preference';
 export { GET_SONG_BPM_KEY_PREFERENCE } from './getsongbpm-key-preference';
 export type {
@@ -199,6 +204,8 @@ export {
 } from './backup-format';
 export type { StaleSlots } from './backup-apply';
 export type { ApplyOptions, ApplyReport, BackupService } from './backup';
+export type { KeptBeforeReplace } from './backup-before-replace';
+export type { BackupRules } from './backup-rules';
 export type { MigrationCopyFiles } from './migration-copy';
 export {
   freshClickSoundFileName,
