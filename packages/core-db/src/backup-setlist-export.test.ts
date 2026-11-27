@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { parseBackup } from './backup-parse';
+import { TEST_BACKUP_RULES } from './backup-rules.test-helper';
 import {
   openBackupDatabase,
   presetValues,
@@ -14,7 +15,10 @@ describe('single-setlist export', () => {
     const { friday, opener, closer } = await seed(source);
     await source.presets.create(presetValues('Not listed', null));
 
-    const file = parseBackup(await source.backup.exportSetlist(friday.uuid));
+    const file = parseBackup(
+      await source.backup.exportSetlist(friday.uuid),
+      TEST_BACKUP_RULES,
+    );
 
     expect(file.categories).toEqual(['songPresets', 'setlists']);
     expect(file.records.setlists).toEqual([
@@ -38,7 +42,10 @@ describe('single-setlist export', () => {
     const { acoustic, opener } = await seed(source);
     await source.sets.add(acoustic.id, opener.id);
 
-    const file = parseBackup(await source.backup.exportSetlist(acoustic.uuid));
+    const file = parseBackup(
+      await source.backup.exportSetlist(acoustic.uuid),
+      TEST_BACKUP_RULES,
+    );
 
     expect(file.records.setlists[0]?.presetUuids).toEqual([
       opener.uuid,

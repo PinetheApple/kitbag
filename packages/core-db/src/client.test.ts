@@ -18,11 +18,17 @@ import {
 import { SCHEMA_VERSION, V24_SCHEMA_VERSION } from './migrate';
 import { MIGRATION_COPY_MARGIN_BYTES } from './migration-copy';
 import { SQLITE_CANTOPEN } from './sqlite-result-codes';
+import { TEST_BACKUP_RULES } from './backup-rules.test-helper';
 
 const MIGRATION_FAILURE = new Error('disk I/O error');
 
 const openNamed = (name: string) => () =>
-  openDatabase(memoryClickSoundFiles().files, unusedMigrationCopyFiles, name);
+  openDatabase(
+    memoryClickSoundFiles().files,
+    unusedMigrationCopyFiles,
+    TEST_BACKUP_RULES,
+    name,
+  );
 
 function failingMigration(sql: string) {
   if (sql === 'PRAGMA user_version') return { rows: [{ user_version: 0 }] };
@@ -74,7 +80,12 @@ describe('openDatabase', () => {
     connection.executeSync.mockImplementation(() => ({
       rows: [{ user_version: 0, foreign_keys: 1 }],
     }));
-    openDatabase(memoryClickSoundFiles().files, unusedMigrationCopyFiles, 'ok');
+    openDatabase(
+      memoryClickSoundFiles().files,
+      unusedMigrationCopyFiles,
+      TEST_BACKUP_RULES,
+      'ok',
+    );
     expect(connection.close).not.toHaveBeenCalled();
   });
 
@@ -130,7 +141,12 @@ describe('openDatabase', () => {
       return { rows: [{ foreign_keys: 1 }] };
     });
 
-    openDatabase(memoryClickSoundFiles().files, files, 'kitbag');
+    openDatabase(
+      memoryClickSoundFiles().files,
+      files,
+      TEST_BACKUP_RULES,
+      'kitbag',
+    );
 
     const statements = connection.executeSync.mock.calls.map(([sql]) =>
       String(sql),

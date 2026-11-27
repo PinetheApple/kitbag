@@ -1,12 +1,9 @@
+import { RIG_PREFERENCE_KEYS } from '@kitbag/core-db';
 import { KB_VOLUME_BOUNDS } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
 import type { StoredPreference } from '../runtime/storedPreference.ts';
-import {
-  accentsPersistence,
-  RIG_KEYS,
-  volumePersistence,
-} from './rigPreferences.ts';
+import { accentsPersistence, volumePersistence } from './rigPreferences.ts';
 
 function memory(initial: Record<string, string> = {}) {
   const data = new Map<string, string>(Object.entries(initial));
@@ -29,8 +26,8 @@ describe('subdivision accents on the database', () => {
 
   it('load nothing from a value they cannot read', () => {
     const { stored } = memory({
-      [RIG_KEYS.accentMasks]: '{not json',
-      [RIG_KEYS.accentCount]: 'four',
+      [RIG_PREFERENCE_KEYS.accentMasks]: '{not json',
+      [RIG_PREFERENCE_KEYS.accentCount]: 'four',
     });
     expect(accentsPersistence(stored).load()).toEqual({});
   });
@@ -45,7 +42,7 @@ describe('click volume on the database', () => {
 
   it('ignores a stored volume outside the engine range', () => {
     const { stored } = memory({
-      [RIG_KEYS.volume]: String(KB_VOLUME_BOUNDS.max + 1),
+      [RIG_PREFERENCE_KEYS.volume]: String(KB_VOLUME_BOUNDS.max + 1),
     });
     expect(volumePersistence(stored).load()).toBeUndefined();
   });

@@ -13,6 +13,7 @@ import { stemSets } from './schema';
 import { replaceStemBundle } from './stem-bundle-repository';
 import { createSongLibraryRepository } from './song-library-repository';
 import { openTestDatabase } from './sqlite.test-helper';
+import { TEST_BACKUP_RULES } from './backup-rules.test-helper';
 
 const JOB = 'job-redbone';
 const CRASH = expect.stringContaining('crash') as unknown;
@@ -62,6 +63,7 @@ function connected() {
     connection,
     memoryClickSoundFiles().files,
     unusedMigrationCopyFiles,
+    TEST_BACKUP_RULES,
   );
   return { connection, database };
 }

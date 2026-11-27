@@ -1,6 +1,7 @@
 import {
   CATEGORIES,
   DEFAULT_IMPORT_CATEGORIES,
+  isRouteLatencyRecord,
   recordKey,
   referenceOf,
   REFERENCES,
@@ -327,12 +328,37 @@ function effective(
   return resolved;
 }
 
+// A built-in route's latency is this phone's own measurement: a replace keeps it.
+function planRigReplace(
+  incoming: readonly BackupRecord[],
+  snapshot: Snapshot,
+  deviceRoutes: readonly string[],
+): MergeState {
+  const kept = new Set(
+    snapshot.records.rigSettings
+      .filter(isRouteLatencyRecord)
+      .map(({ route }) => route)
+      .filter((route) => deviceRoutes.includes(route)),
+  );
+  const restored = incoming.filter(
+    (record) => !isRouteLatencyRecord(record) || !kept.has(record.route),
+  );
+  const state = planReplace(
+    restored,
+    snapshot.records.rigSettings.length - kept.size,
+  );
+  state.summary.incoming = incoming.length;
+  state.summary.unchanged = incoming.length - restored.length;
+  return state;
+}
+
 function planCategory(
   category: Category,
   mode: ImportMode,
   incoming: readonly BackupRecord[],
   snapshot: Snapshot,
   resolutions: Resolutions,
+  deviceRoutes: readonly string[],
 ): MergeState {
   if (category === 'stemSongs')
     return planStemSongs(
@@ -348,6 +374,8 @@ function planCategory(
       snapshot,
       resolutions,
     );
+  if (mode === 'replace' && category === 'rigSettings')
+    return planRigReplace(incoming, snapshot, deviceRoutes);
   if (mode === 'replace')
     return planReplace(incoming, snapshot.records[category].length);
   return planMerge(category, incoming, snapshot, resolutions);
@@ -357,6 +385,7 @@ export function computePlan(
   file: BackupFile,
   snapshot: Snapshot,
   options: ImportOptions,
+  deviceRoutes: readonly string[],
 ): { plan: ImportPlan; writes: Writes } {
   const mode = options.mode ?? 'merge';
   const resolutions = options.resolutions ?? {};
@@ -376,6 +405,7 @@ export function computePlan(
       incoming,
       snapshot,
       resolutions,
+      deviceRoutes,
     );
     plan.counts[category] = result.summary;
     plan.unresolved.push(...result.unresolved);

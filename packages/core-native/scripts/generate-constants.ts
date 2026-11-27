@@ -35,6 +35,13 @@ const sources: NativeSources = {
   clickSoundHeader: read('include', 'kitbag_click_sound_api.h'),
   constantTempoHeader: read('include', 'kitbag_constant_tempo_api.h'),
   metronomeSlotHeader: read('include', 'kitbag_metronome_slot_api.h'),
+  outputRoutes: readFileSync(
+    join(
+      pkgRoot,
+      'android/src/main/java/com/kitbag/corenative/route/OutputRoutes.kt',
+    ),
+    'utf8',
+  ),
 };
 
 const rendered = renderConstants(collectConstants(sources));

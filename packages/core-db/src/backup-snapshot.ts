@@ -3,6 +3,7 @@ import { asc, inArray, sql } from 'drizzle-orm';
 import {
   itemPresets,
   PREFERENCE_KEYS,
+  routeLatencyKey,
   type Category,
   type LibrarySongRecord,
   type LocalRecords,
@@ -24,6 +25,7 @@ import {
   clickSounds,
   practiceSessions,
   preferences,
+  routeLatency,
   setlistItems,
   setlists,
   songPresets,
@@ -174,6 +176,32 @@ const preferenceRecords = (rows: { key: string; value: string }[]) =>
 const preferenceIds = (rows: { id: number; key: string }[]) =>
   new Map(rows.map((row) => [row.key, row.id]));
 
+function loadRouteLatencies(db: Database) {
+  return db
+    .select({
+      id: sql<number>`rowid`,
+      route: routeLatency.route,
+      offsetMs: routeLatency.offsetMs,
+      name: routeLatency.name,
+      kind: routeLatency.kind,
+    })
+    .from(routeLatency)
+    .orderBy(asc(routeLatency.route));
+}
+
+type RouteRow = Awaited<ReturnType<typeof loadRouteLatencies>>[number];
+
+const routeRecords = (rows: RouteRow[]) =>
+  rows.map(({ route, offsetMs, name, kind }) => ({
+    route,
+    offsetMs,
+    name,
+    kind,
+  }));
+
+const routeIds = (rows: RouteRow[]) =>
+  rows.map(({ route, id }) => [routeLatencyKey(route), id] as const);
+
 async function loadRows(db: Database) {
   return {
     songRows: await db.select().from(songs).orderBy(asc(songs.id)),
@@ -189,6 +217,9 @@ async function loadRows(db: Database) {
       .orderBy(asc(practiceSessions.id)),
     countInRows: await loadPreferences(db, 'countInSettings'),
     metronomeRows: await loadPreferences(db, 'metronomeSettings'),
+    rigRows: await loadPreferences(db, 'rigSettings'),
+    routeRows: await loadRouteLatencies(db),
+    appearanceRows: await loadPreferences(db, 'appearanceSettings'),
     clickSoundRows: await db
       .select()
       .from(clickSounds)
@@ -222,6 +253,11 @@ export async function loadSnapshot(db: Database): Promise<Snapshot> {
     metronomeSettings: preferenceRecords(rows.metronomeRows),
     clickSounds: rows.clickSoundRows,
     stemSongs: rows.stemSongs.records,
+    rigSettings: [
+      ...preferenceRecords(rows.rigRows),
+      ...routeRecords(rows.routeRows),
+    ],
+    appearanceSettings: preferenceRecords(rows.appearanceRows),
   };
   return { records, ids: idMaps(rows) };
 }
@@ -241,5 +277,10 @@ function idMaps(rows: Awaited<ReturnType<typeof loadRows>>): IdMaps {
       rows.clickSoundRows.map(({ slot }) => [String(slot), slot]),
     ),
     stemSongs: rows.stemSongs.ids,
+    rigSettings: new Map([
+      ...preferenceIds(rows.rigRows),
+      ...routeIds(rows.routeRows),
+    ]),
+    appearanceSettings: preferenceIds(rows.appearanceRows),
   };
 }
