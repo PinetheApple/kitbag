@@ -9,17 +9,19 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('react-native', () => ({}));
 
 const { usePadFit } = await import('./usePadFit.ts');
+const { COMPACT_PAD_FLOOR } = await import('../logic/padFit.ts');
 
 type PadFit = ReturnType<typeof usePadFit>;
 
 const NORMAL_SLOT = stemSections.padMinHeight + space.sectionGap;
-const BPM_CARD = 101;
-const SHORT_REGION = 286;
+const BPM_CARD = 101.5;
+const BPM_CARD_TOP = 84.6;
+const SHORT_REGION = 287.5;
 const TALL_REGION = 650;
 
-function layout(height: number): LayoutChangeEvent {
+function layout(height: number, y = 0): LayoutChangeEvent {
   return {
-    nativeEvent: { layout: { x: 0, y: 0, width: 0, height } },
+    nativeEvent: { layout: { x: 0, y, width: 0, height } },
   } as LayoutChangeEvent;
 }
 
@@ -36,11 +38,16 @@ function mounted() {
     if (fit === undefined) throw new Error('not mounted');
     return fit;
   };
-  const measure = (region: number, slot: number, bpmCard: number) => {
+  const measure = (
+    region: number,
+    slot: number,
+    bpmCard: number,
+    bpmCardTop = 0,
+  ) => {
     act(() => {
       current().onRegion(layout(region));
       current().onSlot(layout(slot));
-      current().onBpmCard(layout(bpmCard));
+      current().onBpmCard(layout(bpmCard, bpmCardTop));
     });
     return current().padHeight;
   };
@@ -56,6 +63,12 @@ describe('usePadFit', () => {
     const height = mounted().measure(SHORT_REGION, NORMAL_SLOT, BPM_CARD);
     expect(height).not.toBeNull();
     expect(height).toBeLessThan(stemSections.padMinHeight);
+  });
+
+  it('fits the BPM card by its bottom edge, under the song card above it', () => {
+    expect(
+      mounted().measure(SHORT_REGION, NORMAL_SLOT, BPM_CARD, BPM_CARD_TOP),
+    ).toBe(COMPACT_PAD_FLOOR);
   });
 
   it('judges the fit on the normal pad, not on the compact one it drew', () => {

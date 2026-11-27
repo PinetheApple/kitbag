@@ -8,7 +8,11 @@ type Props = Record<string, unknown> & { readonly children?: ReactNode };
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
   const host = (props: Props) => h('div', null, props.children);
-  return { View: host, StyleSheet: { create: <T,>(s: T) => s } };
+  return {
+    View: host,
+    Text: (props: Props) => h('span', null, props.children),
+    StyleSheet: { create: <T,>(s: T) => s },
+  };
 });
 
 const drawn = vi.hoisted(() => ({
@@ -22,7 +26,11 @@ const store = vi.hoisted(() => ({
     denominator: 4,
     subdivision: 2,
     accents: [] as number[],
+    sounds: { normal: 1, accent: 1 },
   },
+  hasSavedPreset: false,
+  presetRecalled: false,
+  savedPhaseMs: undefined as number | undefined,
   setAccents: vi.fn(),
 }));
 
@@ -55,13 +63,15 @@ vi.mock('./useClickFrame.ts', () => ({
   },
 }));
 
+const SAVED_PHASE_MS = 10;
+
 const { PatternCard } = await import('./PatternCard.tsx');
 
 function draw(props: { readonly following: boolean; readonly muted: boolean }) {
   drawn.chips.length = 0;
   drawn.dots.length = 0;
   drawn.running.length = 0;
-  renderToStaticMarkup(
+  return renderToStaticMarkup(
     createElement(PatternCard, {
       ...props,
       onOpenMeter: vi.fn(),
@@ -72,6 +82,9 @@ function draw(props: { readonly following: boolean; readonly muted: boolean }) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  store.hasSavedPreset = false;
+  store.presetRecalled = false;
+  store.savedPhaseMs = undefined;
   store.pattern.accents = [
     KB_ACCENT.KB_ACCENT_ACCENTED,
     KB_ACCENT.KB_ACCENT_NORMAL,
@@ -110,6 +123,28 @@ describe('PatternCard', () => {
       KB_ACCENT.KB_ACCENT_NORMAL,
       KB_ACCENT.KB_ACCENT_NORMAL,
     ]);
+  });
+
+  it('says the saved settings are back once recall applied them', () => {
+    store.hasSavedPreset = true;
+    store.presetRecalled = true;
+    store.savedPhaseMs = SAVED_PHASE_MS;
+    expect(draw({ following: false, muted: false })).toContain(
+      'Your saved settings are back: 4/4, eighths, Woodblock, +10 ms',
+    );
+  });
+
+  it('drops the saved settings line once locked', () => {
+    store.hasSavedPreset = true;
+    store.presetRecalled = true;
+    expect(draw({ following: true, muted: false })).not.toContain('saved');
+  });
+
+  it('drops the saved settings line after a save then an unlock', () => {
+    store.hasSavedPreset = true;
+    store.presetRecalled = false;
+    store.savedPhaseMs = SAVED_PHASE_MS;
+    expect(draw({ following: false, muted: false })).not.toContain('saved');
   });
 
   it('reads the click only while it follows a song', () => {

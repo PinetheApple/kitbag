@@ -84,6 +84,7 @@ vi.mock('./ClickSoundSheet.tsx', () => ({ ClickSoundSheet: () => null }));
 vi.mock('./SourceSheet.tsx', () => ({ SourceSheet: () => null }));
 vi.mock('./TempoSheet.tsx', () => ({ TempoSheet: () => null }));
 vi.mock('./PhaseSheet.tsx', () => ({ PhaseSheet: () => null }));
+vi.mock('./SaveSheet.tsx', () => ({ SaveSheet: () => null }));
 vi.mock('./PatternSheets.tsx', () => ({
   PATTERN_SHEET: { meter: 'meter', subdivision: 'subdivision' },
   PatternSheets: () => null,
@@ -160,5 +161,15 @@ describe('PlayAlongScreen', () => {
     world.sounds = { normal: 1, accent: 3 };
     shown();
     expect(world.menu?.soundLabel).toBe(soundChipLabel(world.sounds));
+  });
+
+  it('offers Save for this song only while locked', () => {
+    world.access = true;
+    world.session = {};
+    shown();
+    expect(world.menu?.onSave).toBeNull();
+    world.lock = {};
+    shown();
+    expect(world.menu?.onSave).toEqual(expect.any(Function));
   });
 });
