@@ -34,13 +34,14 @@ export function songListRows(
 ): SongListRow[] {
   return entries.map((entry, index) => {
     const preset = isPresetEntry(entry) ? entry.preset : null;
+    const bpm = preset?.bpm ?? null;
     return {
       itemId: entry.item.id,
       presetId: preset?.id ?? null,
       stemSetId: isPresetEntry(entry) ? null : entry.stemSetId,
       number: String(index + 1),
       name: entryName(entry, stems),
-      bpm: preset === null ? null : String(Math.round(preset.bpm)),
+      bpm: bpm === null ? null : String(Math.round(bpm)),
       now: entry.item.id === loadedItemId,
     };
   });

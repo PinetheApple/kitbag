@@ -84,7 +84,7 @@ export function repeatedText(
 function metronomeFacts(preset: PresetSetlistEntry['preset']): string[] {
   return [
     QUEUE_TEXT.metronomeSong,
-    `${String(Math.round(preset.bpm))} ${BPM_UNIT}`,
+    preset.bpm === null ? '' : `${String(Math.round(preset.bpm))} ${BPM_UNIT}`,
     signatureLabel(preset.beatsPerBar, preset.denominator),
   ];
 }
