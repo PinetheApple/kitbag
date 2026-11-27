@@ -20,25 +20,44 @@ vi.mock('@kitbag/core-design', async (original) => {
 
 const { PlayAlongMenu } = await import('./PlayAlongMenu.tsx');
 
+const onSave = vi.fn();
 const onClickSound = vi.fn();
-const onNotificationAccess = vi.fn();
 
-it('lists Click sound with the picked sound, then Notification access', () => {
+function drawMenu(save: (() => void) | null) {
+  rows.length = 0;
   renderToStaticMarkup(
     createElement(PlayAlongMenu, {
       visible: true,
       access: true,
       soundLabel: 'Woodblock',
       bottomInset: 0,
+      onSave: save,
       onClickSound,
       onNotificationAccess,
       onDismiss: vi.fn(),
     }),
   );
+}
+const onNotificationAccess = vi.fn();
+
+it('lists Save for this song first, then Click sound and Notification access', () => {
+  drawMenu(onSave);
   expect(rows.map(({ icon, label, value }) => [icon, label, value])).toEqual([
+    ['saveInto', 'Save for this song', undefined],
     ['sound', 'Click sound', 'Woodblock'],
     ['info', 'Notification access', 'On'],
   ]);
-  expect(rows[0]?.onPress).toBe(onClickSound);
-  expect(rows[1]?.onPress).toBe(onNotificationAccess);
+  expect(rows.map((row) => row.onPress)).toEqual([
+    onSave,
+    onClickSound,
+    onNotificationAccess,
+  ]);
+});
+
+it('leaves Save for this song out while there is no lock to save', () => {
+  drawMenu(null);
+  expect(rows.map((row) => row.label)).toEqual([
+    'Click sound',
+    'Notification access',
+  ]);
 });

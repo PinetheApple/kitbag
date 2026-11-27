@@ -30,13 +30,21 @@ import {
   useSessionWatchWhileLocked,
   useTempoLine,
 } from './playAlongHooks.ts';
+import { SaveSheet } from './SaveSheet.tsx';
 import { SourceSheet } from './SourceSheet.tsx';
 import { TempoSheet } from './TempoSheet.tsx';
 import { useAccessFlow, type AccessFlow } from './useAccessFlow.ts';
 import { useLastSeen } from './useLastSeen.ts';
 
 type OpenSheet =
-  'none' | 'source' | 'tempo' | 'menu' | 'sound' | 'phase' | PatternSheet;
+  | 'none'
+  | 'source'
+  | 'tempo'
+  | 'menu'
+  | 'save'
+  | 'sound'
+  | 'phase'
+  | PatternSheet;
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
@@ -62,6 +70,9 @@ function useSheets() {
   const openMenu = useCallback(() => {
     setSheet('menu');
   }, []);
+  const openSave = useCallback(() => {
+    setSheet('save');
+  }, []);
   const openSound = useCallback(() => {
     setSheet('sound');
   }, []);
@@ -80,6 +91,7 @@ function useSheets() {
     openSource,
     openTempo,
     openMenu,
+    openSave,
     openSound,
     openPhase,
     openMeter,
@@ -127,6 +139,7 @@ function PlayAlongSheets({
   const sessions = useMediaSessions((s) => s.sessions);
   const openSettings = useMediaSessions((s) => s.openSettings);
   const sounds = usePlayAlong((s) => s.pattern.sounds);
+  const locked = usePlayAlong((s) => s.lock !== undefined);
   const { line } = useTempoLine();
   const { close } = sheets;
   const handleAccess = useCallback(() => {
@@ -159,8 +172,14 @@ function PlayAlongSheets({
         access={access === true}
         soundLabel={soundChipLabel(sounds)}
         bottomInset={bottomInset}
+        onSave={locked ? sheets.openSave : null}
         onClickSound={sheets.openSound}
         onNotificationAccess={handleAccess}
+        onDismiss={close}
+      />
+      <SaveSheet
+        visible={sheets.sheet === 'save'}
+        bottomInset={bottomInset}
         onDismiss={close}
       />
       <ClickSoundSheet

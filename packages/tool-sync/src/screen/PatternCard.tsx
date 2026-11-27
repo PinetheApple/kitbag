@@ -5,6 +5,8 @@ import {
   opacity,
   PickerChips,
   space,
+  textRoles,
+  textStyle,
 } from '@kitbag/core-design';
 import {
   getPlayAlongStore,
@@ -12,18 +14,32 @@ import {
   ledStatesFor,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
-import { View, type LayoutChangeEvent } from 'react-native';
+import { Text, View, type LayoutChangeEvent } from 'react-native';
 
 import { cycledAccents } from '../logic/patternEdit.ts';
+import { recallLine } from '../logic/saveForSong.ts';
 import { usePlayAlong } from './playAlongHooks.ts';
 import { useClickFrame } from './useClickFrame.ts';
 
 const DOT_DENSITY = 'roomy';
 
-const useStyles = createThemedStyles(() => ({
+const useStyles = createThemedStyles((theme) => ({
   card: { gap: space.sectionGap },
   muted: { opacity: opacity.muted },
+  recall: {
+    ...textStyle(textRoles.fieldLabel),
+    textAlign: 'center',
+    color: theme.color.text2,
+  },
 }));
+
+function RecallLine({ following }: { readonly following: boolean }) {
+  const styles = useStyles();
+  const pattern = usePlayAlong((s) => s.pattern);
+  const recalled = usePlayAlong((s) => s.hasSavedPreset) && !following;
+  if (!recalled) return null;
+  return <Text style={styles.recall}>{recallLine(pattern)}</Text>;
+}
 
 function cycleBeat(beat: number): void {
   const playAlong = getPlayAlongStore().getState();
@@ -69,6 +85,7 @@ export function PatternCard({
         onOpenMeter={onOpenMeter}
         onOpenSubdivision={onOpenSubdivision}
       />
+      <RecallLine following={following} />
       <View style={muted ? styles.muted : null} onLayout={handleLayout}>
         <BeatDotGrid
           lines={lines}
