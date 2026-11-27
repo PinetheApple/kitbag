@@ -1,8 +1,8 @@
-// GENERATED — DO NOT EDIT. Owner: native/audio_core (SPEC §13.7).
+// GENERATED — DO NOT EDIT. Owners: native/audio_core, OutputRoutes.kt (SPEC §13.7).
 // Regenerate: pnpm --filter @kitbag/core-native generate
 // Verify (CI drift guard): pnpm --filter @kitbag/core-native generate:check
 //
-// Every value here is extracted from the engine's own source, never retyped.
+// Every value here is extracted from its owner's source, never retyped.
 // Hand-edits are reverted by the next regenerate and fail generate:check.
 
 /** Max beats a single measured grid may carry (KB_MAX_GRID_BEATS). */
@@ -220,6 +220,14 @@ export const KB_LATENCY_OFFSET_MS_BOUNDS = {
   min: -300,
   max: 300,
 } as const;
+
+/** Output routes keyed by family alone, with no device identity (Keying.FIXED in OutputRoutes.kt). */
+export const KB_FIXED_OUTPUT_ROUTES = [
+  { id: 'speaker', kind: 'speaker' },
+  { id: 'earpiece', kind: 'other' },
+  { id: 'wired', kind: 'wired' },
+  { id: 'bt-le-broadcast', kind: 'bluetooth' },
+] as const;
 
 /** Bar-phase range for the beat sweep (kb_metronome_bar_phase). */
 export const KB_BAR_PHASE_BOUNDS = {
