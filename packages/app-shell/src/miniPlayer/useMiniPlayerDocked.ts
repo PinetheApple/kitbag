@@ -1,6 +1,9 @@
 import { useMiniPlayerShown } from '@kitbag/tool-library';
 import { usePlayAlongMiniShown } from '@kitbag/tool-sync';
 
+import { TOOL_ID } from '@/home/registry';
+import { useToolOn } from '@/home/toolsOn';
+
 import { useDockSettled } from './useDockSettled';
 
 export function useSongMiniPlayerDocked(): boolean {
@@ -11,7 +14,9 @@ export function useSongMiniPlayerDocked(): boolean {
 
 export function useAnyMiniPlayerDocked(): boolean {
   const song = useMiniPlayerShown();
-  const playAlong = usePlayAlongMiniShown();
+  const playAlongShown = usePlayAlongMiniShown();
+  const playAlongOn = useToolOn()(TOOL_ID.sync);
+  const playAlong = playAlongShown && playAlongOn;
   const settled = useDockSettled();
   return (song || playAlong) && settled;
 }
