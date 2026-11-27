@@ -126,7 +126,7 @@ export const DEFAULT_BPM = 120;
 const DEFAULT_BEATS = 4;
 const DEFAULT_DENOMINATOR: Denominator = KB_BPM_REFERENCE_DENOMINATOR;
 export const DEFAULT_POLY_BEATS = 3;
-const DEFAULT_VOLUME = 1;
+export const DEFAULT_VOLUME = 1;
 export const DEFAULT_TRAINER_BARS = 4;
 export const DEFAULT_RAMP_STEP_BPM = 5;
 

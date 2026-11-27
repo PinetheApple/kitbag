@@ -4,11 +4,17 @@ import type { PickedBackup } from '@kitbag/core-native';
 export interface BackupDeps {
   readonly service: () => Pick<
     BackupService,
-    'summary' | 'export' | 'exportSetlist' | 'plan' | 'apply'
+    | 'summary'
+    | 'export'
+    | 'exportSetlist'
+    | 'plan'
+    | 'apply'
+    | 'keptBeforeReplace'
   >;
   readonly pick: () => Promise<PickedBackup | null>;
   readonly share: (fileName: string, contents: string) => Promise<void>;
   readonly save: (fileName: string, contents: string) => Promise<boolean>;
+  readonly beforeRestore: () => Promise<void>;
   readonly afterRestore: (report: ApplyReport) => Promise<void>;
 }
 

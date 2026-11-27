@@ -26,11 +26,13 @@ import {
 } from './database-open-error.test-helper';
 import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 import { SQLITE_IOERR } from './sqlite-result-codes';
+import { TEST_BACKUP_RULES } from './backup-rules.test-helper';
 
 function openAppDatabase() {
   const database = openDatabase(
     memoryClickSoundFiles().files,
     unusedMigrationCopyFiles,
+    TEST_BACKUP_RULES,
   );
   const connection = opened.at(-1);
   if (connection === undefined) throw new Error('no connection opened');
@@ -62,6 +64,7 @@ describe('foreign keys on the app connection', () => {
         ignoringForeignKeys,
         memoryClickSoundFiles().files,
         unusedMigrationCopyFiles,
+        TEST_BACKUP_RULES,
       ),
     );
     expect(close).toHaveBeenCalledOnce();
@@ -86,6 +89,7 @@ describe('foreign keys on the app connection', () => {
           unreadable,
           memoryClickSoundFiles().files,
           unusedMigrationCopyFiles,
+          TEST_BACKUP_RULES,
         ),
       );
       expect(error.cause).toBe(failure);

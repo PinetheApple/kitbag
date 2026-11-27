@@ -19,6 +19,7 @@ import {
   parseDefineNumber,
   parseDocumentedSymmetricBound,
   parseEnum,
+  parseFixedOutputRoutes,
   parseRangeAfter,
   parseSoundNames,
   parseTunerFields,
@@ -54,6 +55,14 @@ const realSources: NativeSources = {
   clickSoundHeader: read('include', 'kitbag_click_sound_api.h'),
   constantTempoHeader: read('include', 'kitbag_constant_tempo_api.h'),
   metronomeSlotHeader: read('include', 'kitbag_metronome_slot_api.h'),
+  outputRoutes: readFileSync(
+    join(
+      import.meta.dirname,
+      '..',
+      'android/src/main/java/com/kitbag/corenative/route/OutputRoutes.kt',
+    ),
+    'utf8',
+  ),
 };
 
 describe('parseDefineInt', () => {
@@ -281,6 +290,28 @@ describe('parseTunerFields', () => {
   });
   it('throws when the layout table is absent', () => {
     expect(() => parseTunerFields('no bit table here')).toThrow();
+  });
+});
+
+describe('parseFixedOutputRoutes', () => {
+  it('reads the route families keyed without a device identity, with their kinds', () => {
+    expect(parseFixedOutputRoutes(realSources.outputRoutes)).toEqual([
+      { id: 'speaker', kind: 'speaker' },
+      { id: 'earpiece', kind: 'other' },
+      { id: 'wired', kind: 'wired' },
+      { id: 'bt-le-broadcast', kind: 'bluetooth' },
+    ]);
+  });
+  it('throws when the families are absent', () => {
+    expect(() => parseFixedOutputRoutes('enum class Other {}')).toThrow();
+  });
+  it('throws when a kind no longer reaches the wire as its lowercased name', () => {
+    const renamed = realSources.outputRoutes.replace(
+      'name.lowercase()',
+      'name',
+    );
+    expect(renamed).not.toBe(realSources.outputRoutes);
+    expect(() => parseFixedOutputRoutes(renamed)).toThrow();
   });
 });
 

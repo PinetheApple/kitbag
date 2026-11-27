@@ -1,5 +1,5 @@
 import { KB_SUBDIVISION_BOUNDS } from '@kitbag/core-native';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   accentedSlots,
@@ -32,6 +32,29 @@ describe('subdivision accent masks', () => {
 
   it('reads slot 0 as unaccented whatever bit 0 holds', () => {
     expect(accentedSlots(0b1011, 4)).toEqual([false, true, false, true]);
+  });
+});
+
+describe('the configured accents store', () => {
+  it('takes restored patterns on reload and toggles on top of them', async () => {
+    vi.resetModules();
+    const accents = await import('./subdivisionAccents.ts');
+    let stored: Partial<SubdivisionAccentsSettings> = {};
+    accents.configureSubdivisionAccentsPersistence({
+      load: () => stored,
+      save: (changed) => {
+        stored = { ...stored, ...changed };
+      },
+    });
+    const store = accents.getSubdivisionAccentsStore();
+    store.getState().toggle(4, 1);
+    stored = { masks: [0, 0, 0, 0, 0b1000], lastCount: 3 };
+    accents.reloadSubdivisionAccentsStore();
+    expect(store.getState()).toMatchObject({ lastCount: 3 });
+    expect(store.getState().masks[4]).toBe(0b1000);
+    store.getState().toggle(4, 2);
+    expect(store.getState().masks[4]).toBe(0b1100);
+    expect(stored.masks?.[4]).toBe(0b1100);
   });
 });
 

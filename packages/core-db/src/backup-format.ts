@@ -1,9 +1,12 @@
+import { APPEARANCE_STORED_KEYS } from './appearance-preferences';
 import type { ClickRate } from './click-rate';
 import type { ClickSound } from './click-sound-repository';
 import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
 import type { ToolDataSection } from './backup-tool-data';
 import type { ManualTempoColumns } from './manual-tempo';
 import type { MeterOverride } from './meter-override';
+import { RIG_STORED_KEYS } from './rig-preferences';
+import type { RouteLatency } from './route-latency-repository';
 import { STANDALONE_METRONOME_KEY } from './standalone-metronome-preference';
 import type { LyricLineTimes, LyricsSource } from './stem-lyrics';
 import type { BundleTempo, TempoColumns } from './stem-tempo';
@@ -26,6 +29,8 @@ export const CATEGORIES = [
   'metronomeSettings',
   'clickSounds',
   'stemSongs',
+  'rigSettings',
+  'appearanceSettings',
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
 
@@ -37,6 +42,8 @@ export const DEFAULT_IMPORT_CATEGORIES: readonly Category[] = [
   'metronomeSettings',
   'clickSounds',
   'stemSongs',
+  'rigSettings',
+  'appearanceSettings',
 ];
 
 export interface LibrarySongRecord
@@ -135,6 +142,14 @@ export interface PreferenceRecord {
   value: string;
 }
 
+export type RouteLatencyRecord = RouteLatency;
+
+export type RigRecord = PreferenceRecord | RouteLatencyRecord;
+
+export const isRouteLatencyRecord = (
+  record: BackupRecord | LocalRecord,
+): record is RouteLatencyRecord => 'route' in record;
+
 export interface ClickSoundRecord {
   slot: number;
   uuid: string;
@@ -177,6 +192,8 @@ export interface CategoryRecords {
   metronomeSettings: PreferenceRecord[];
   clickSounds: ClickSoundRecord[];
   stemSongs: StemSongRecord[];
+  rigSettings: RigRecord[];
+  appearanceSettings: PreferenceRecord[];
 }
 
 export type BackupRecord = CategoryRecords[Category][number];
@@ -219,6 +236,7 @@ export type ImportFailure =
   | { kind: 'unresolvedConflicts'; conflicts: Conflict[] }
   | { kind: 'replaceNotConfirmed' }
   | { kind: 'stalePlan' }
+  | { kind: 'snapshotFailed'; reason: string; sound?: string }
   | { kind: 'databaseError'; reason: string };
 
 export interface Conflict {
@@ -273,6 +291,8 @@ export function referenceOf(
 export const PREFERENCE_KEYS = {
   countInSettings: COUNT_IN_STORED_KEYS,
   metronomeSettings: [STANDALONE_METRONOME_KEY],
+  rigSettings: RIG_STORED_KEYS,
+  appearanceSettings: APPEARANCE_STORED_KEYS,
 } as const satisfies Partial<Record<Category, readonly string[]>>;
 
 export type PreferenceCategory = keyof typeof PREFERENCE_KEYS;
@@ -298,11 +318,16 @@ export function stemSongKey(record: StemSongRecord): string {
   return `${record.source}:${identity ?? ''}`;
 }
 
+const ROUTE_KEY_PREFIX = 'route:';
+
+export const routeLatencyKey = (route: string) => `${ROUTE_KEY_PREFIX}${route}`;
+
 export function recordKey(
   category: Category,
   record: BackupRecord | LocalRecord,
 ): string {
   if (isPreference(category, record)) return record.key;
+  if (isRouteLatencyRecord(record)) return routeLatencyKey(record.route);
   if (category === 'clickSounds' && 'slot' in record)
     return String(record.slot);
   if ('stems' in record) return stemSongKey(record);
@@ -311,6 +336,7 @@ export function recordKey(
 
 export function recordLabel(category: Category, record: BackupRecord): string {
   if (isPreference(category, record)) return record.key;
+  if (isRouteLatencyRecord(record)) return record.name ?? record.route;
   if ('label' in record) return record.label;
   if ('name' in record) return record.name;
   if ('title' in record) return record.title;

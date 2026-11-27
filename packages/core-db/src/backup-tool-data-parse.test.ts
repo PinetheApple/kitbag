@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CATEGORIES, type ImportMode } from './backup-format';
 import { parseBackup } from './backup-parse';
+import { TEST_BACKUP_RULES } from './backup-rules.test-helper';
 import {
   openBackupDatabase,
   records,
@@ -53,9 +54,9 @@ describe('a backup carrying toolData', () => {
     'parses to the same file as without it, with %s',
     async (_name, toolData) => {
       const { text } = await seededExport();
-      expect(parseBackup(withToolData(text, toolData))).toEqual(
-        parseBackup(text),
-      );
+      expect(
+        parseBackup(withToolData(text, toolData), TEST_BACKUP_RULES),
+      ).toEqual(parseBackup(text, TEST_BACKUP_RULES));
     },
   );
 

@@ -86,6 +86,31 @@ afterEach(() => {
 });
 
 describe('route latency', () => {
+  it('re-reads stored offsets on reload and applies the restored one to the live route', async () => {
+    const rows = [HEADPHONES_ROW];
+    const { store, route, calls, applied } = harness(rows);
+    await store.getState().start();
+    route(HEADPHONES);
+    store.getState().step(1);
+    rows.splice(0, rows.length, { ...HEADPHONES_ROW, offsetMs: 95 });
+    await store.getState().reload();
+    expect(applied()).toBe(95);
+    expect(store.getState().stored[HEADPHONES.id]?.offsetMs).toBe(95);
+    await vi.advanceTimersByTimeAsync(ROUTE_LATENCY_SAVE_DELAY_MS);
+    expect(calls.saved).toEqual([]);
+  });
+
+  it('applies 0 on reload when the live route lost its stored offset', async () => {
+    const rows = [HEADPHONES_ROW];
+    const { store, route, applied } = harness(rows);
+    await store.getState().start();
+    route(HEADPHONES);
+    rows.splice(0, rows.length);
+    await store.getState().reload();
+    expect(applied()).toBe(0);
+    expect(store.getState().stored).toEqual({});
+  });
+
   it('applies the stored offset of the route in use at start', async () => {
     const { store, route, applied } = harness();
     await store.getState().start();
@@ -267,7 +292,7 @@ describe('route latency', () => {
     await store.getState().start();
     route(HEADPHONES);
     store.getState().step(1);
-    store.getState().flush();
+    void store.getState().flush();
     expect(calls.saved).toEqual([{ ...HEADPHONES_ROW, offsetMs: 183 }]);
   });
 });
