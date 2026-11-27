@@ -307,6 +307,19 @@ class CardRoutingTest {
   }
 
   @Test
+  fun `the metronome card is the shown one only while no song card covers it`() {
+    assertFalse(routing.metronomeCardShown)
+    showMetronome()
+    assertTrue(routing.metronomeCardShown)
+    showSong()
+    assertFalse(routing.metronomeCardShown)
+    routing.on(CardEvent.SongStopped)
+    assertTrue(routing.metronomeCardShown)
+    routing.on(CardEvent.MetronomeHidden)
+    assertFalse(routing.metronomeCardShown)
+  }
+
+  @Test
   fun `a seek the app made leaves a metronome-only card alone`() {
     showMetronome()
     assertEquals(CardEffect.None, routing.on(CardEvent.SongSeekedInApp(0L)))

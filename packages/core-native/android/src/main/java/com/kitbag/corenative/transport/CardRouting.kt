@@ -77,6 +77,9 @@ class CardRouting {
   val cardShowing: Boolean
     get() = songShowing || metronomeShowing
 
+  val metronomeCardShown: Boolean
+    get() = metronomeShowing && !songShowing
+
   fun on(event: CardEvent): CardEffect =
     when {
       songShowing -> whileSong(event)

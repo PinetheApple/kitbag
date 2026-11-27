@@ -17,8 +17,11 @@ import com.kitbag.corenative.transport.CardFence
 import com.kitbag.corenative.transport.CardFences
 import com.kitbag.corenative.transport.CardPoster
 import com.kitbag.corenative.transport.CardRouting
+import com.kitbag.corenative.transport.Interruption
+import com.kitbag.corenative.transport.InterruptionRouting
 import com.kitbag.corenative.transport.MetronomeControls
 import com.kitbag.corenative.transport.MetronomeEngine
+import com.kitbag.corenative.transport.NowPlaying
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
 import com.kitbag.corenative.transport.SessionButton
@@ -44,6 +47,8 @@ class PlaybackService : Service() {
   private var metronomeCardNumber = CardFence.NONE
   private val metronomeControls = MetronomeControls(EngineMetronome, fences.metronome)
   private lateinit var card: MetronomeCard
+  private lateinit var focus: SongFocus
+  private lateinit var interruptions: AudioInterruptions
   private var song: SongCard? = null
   private val routing = CardRouting()
   private val poster = CardPoster(ServiceCardSurface(this, NOTIFICATION_ID)) {
@@ -65,10 +70,14 @@ class PlaybackService : Service() {
       CardNotifications.launchIntent(this),
       ::actionIntent,
     )
+    focus = SongFocus(this, ::interrupted)
+    interruptions = AudioInterruptions(this, ::interrupted).also { it.start() }
   }
 
   override fun onDestroy() {
     starts.stopped()
+    interruptions.stop()
+    focus.release()
     clock.removeCallbacks(tick)
     song?.release()
     poster.finish()
@@ -186,12 +195,27 @@ class PlaybackService : Service() {
   }
 
   private fun releaseSong() {
+    focus.release()
     song?.release()
     song = null
   }
 
-  private fun postSong(notification: Notification, playing: Boolean, cardNumber: Int) =
+  private fun postSong(notification: Notification, playing: Boolean, cardNumber: Int) {
+    focus.hold(playing)
     poster.post(notification, playing, fences.song, cardNumber)
+  }
+
+  // Pauses take the cards' own Pause path, which the JS store already follows.
+  private fun interrupted(interruption: Interruption) {
+    val playing = NowPlaying(
+      song = song?.shownPlaying() == true,
+      metronome = routing.metronomeCardShown && state?.playback == Playback.PLAYING,
+      playAlongFollowing = PlayAlongService.following,
+    )
+    val pauses = InterruptionRouting.pauses(interruption, playing)
+    if (pauses.song) song?.handle(SongAction.PAUSE)
+    if (pauses.metronome) handle(TransportAction.PAUSE)
+  }
 
   private fun show(intent: Intent) {
     hold(intent)
