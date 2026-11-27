@@ -2260,8 +2260,9 @@ decisions they carry are the reason the files read as they now do:
 
 - **Standalone song library** — the metronome spec draws the entry point (the
   "All songs" row) but not the screen behind it.
-- **GetSongBPM key row** (D7) — a Settings row that takes a personal key. Small,
-  but undesigned, and it needs the attribution copy.
+- **GetSongBPM key row** (D7) — built in #689 from the existing Settings row and
+  text-entry sheet patterns, last row of Data, with no mockup. Its placement and
+  copy have not had a design review.
 
 **Open:** wordmark/logo pass · swipe sensitivity confirmation on device.
 (Landscape is **deferred past v1** — D13.)

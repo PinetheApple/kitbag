@@ -28,6 +28,7 @@ import {
   NOTIFICATIONS_LABEL,
   type NotificationRow,
 } from './notificationText.ts';
+import { GetSongBpmKeyRow } from './GetSongBpmKeyRow.tsx';
 import { formatPracticeSummary } from './practiceText.ts';
 import { RigSection } from './RigSection.tsx';
 import { openUrl } from './openUrl.ts';
@@ -141,6 +142,7 @@ function DataSection({
         >
           {summary === null ? null : <EditValue>{summary}</EditValue>}
         </EditRow>
+        <GetSongBpmKeyRow />
       </EditGroup>
       <StorageSheets
         kind={sheet}
