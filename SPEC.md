@@ -1028,7 +1028,7 @@ working. Changes:
   re-analyse in the background, one at a time, through the Re-analyse path, each
   at most once per session; the song open in the player waits until it closes. A
   failure keeps the old grid and is not retried automatically; Re-analyse retries it. The meter
-  override (meter, bar one) is the user's and survives re-analysis.
+  override (meter, bar one) and a manual tempo (§6.3) are the user's and survive re-analysis.
 - **Meter override → downbeats.** Songs and stem sets alike: the detected
   downbeats (analysis, or a stem set's bar marks) pass through the override.
   The detected meter is the most common bar length, larger on a tie. Detected
@@ -1059,6 +1059,19 @@ working. Changes:
   the click chips are muted, and the waveform is flat with no ticks. A failed
   analysis offers Re-analyse (§6.2) unless the file's format is unsupported or
   the file is missing. The song still plays; seek and loop work unsnapped.
+- **Set tempo** (owner, 2026-11-27; #715;
+  `docs/research/mockups/715-manual-tempo-grid.html`): with no grid, a Set tempo
+  button takes the muted chips' place and the Player sheet has a Set tempo row.
+  Step 1 types a whole BPM or taps along (one decimal, shown from the fourth tap,
+  intervals averaged as in §8.5), 30–300 BPM (`TEMPO_MIN_BPM`..`TEMPO_MAX_BPM`),
+  clamped on confirm. Step 2 marks bar 1 at the playhead, with a ±0.1 BPM stepper
+  and 3/4 or 4/4. Save stores a **manual tempo** beside the analysed grid; the
+  click runs on the constant grid built from it, the card reads "manual tempo",
+  and Undo restores what was there. An analysed song is corrected the same way
+  from "Set tempo manually" in the Player sheet only, prefilled from the analysis;
+  "Use analysed tempo" switches back while an analysed grid is stored. Re-analyse
+  asks first and keeps the manual tempo in use: a grid found is offered ("Use
+  132"), a failure changes nothing.
 - **Fix tap-to-seek.** Flutter measures the Scaffold's width, not the
   waveform's, so seek is off by the horizontal padding. Measure the waveform.
 - **`.kwav` load off the UI thread.** Flutter does synchronous file I/O in
@@ -1252,6 +1265,9 @@ Acceptance:
 - **Synced lyrics** follow playback, shifted by the stored offset. Tap-along
   retiming is saved per song in Kitbag.
 - **Song facts:** key, BPM, tempo stability. Loudness is stored but not shown (owner, 2026-11-01).
+- **Set tempo** (§6.3, #715): a stem song with no grid gets the same Set tempo
+  flow, in the BPM chip's place and the Player sheet. Until #384 lands it is not
+  offered on a stem song that has a grid.
 - **Mixdown export:** offline render of the current mix, speed and key, out
   through the share sheet (§5.5) — never a hardcoded path. The whole song as a
   stereo 16-bit PCM WAV at the engine rate, no dither; gain, mute, solo and
@@ -1312,7 +1328,8 @@ phone. That page defines the format; this spec does not copy it.
   bundle. On failure nothing changes: the swap is one transaction.
 - **Backup:** its own Restore category, Stem songs, carrying each stem song's
   settings and never its audio: rename, meter and bar one, retiming, speed,
-  click grouping and rate, chosen tempo mode, and per stem name, mix and key.
+  click grouping and rate, chosen tempo mode, manual tempo, and per stem name,
+  mix and key.
   A StemDeck song matches the one on the phone with the same job id; a folder
   song matches by UUID, so only on the phone that imported it. One with no
   match is skipped, and the restore screen and report count it apart as not on
@@ -1964,6 +1981,7 @@ than its own (`newer-version`), before writing anything.
 | `play_queue`: + `song_id` (unique, FK to `songs`, cascade), `stem_set_id` nullable, a CHECK that exactly one is set (a table rebuild) | §7.9, #572 — one queue holds single songs beside stem songs, each once; schema v29 |
 | `Songs`: + `tempo_mode`, `tempo_bpm`, `tempo_anchor`, `tempo_beats_per_bar`, `tempo_source`, `chosen_tempo_mode`, the `StemSets` columns of v22 with the same meanings; `tempo_source` gains `analysed`, Kitbag's own constant-tempo fit, stored as a `follow` tempo (bpm and anchor NULL when the fit found no steady tempo). A stem song whose bundle has beats but no tempo gets an `analysed` fit once, on import or at the next start. Backups carry a song's fit and chosen mode; a Merge difference in the fit alone is not a conflict | #474 — constant tempo or follow for songs Kitbag analyses; schema v30 |
 | `SongPresets`: `bpm` nullable (a table rebuild): a song preset saved by Play along carries no tempo (§8.8) | #671; schema v31 |
+| `Songs`, `StemSets`: + `manual_tempo_bpm` REAL, `manual_tempo_anchor` REAL (bar 1, seconds), `manual_tempo_beats_per_bar` INTEGER (3 or 4); all NULL = no manual tempo. Never written by analysis, so the analysed grid stays beside it; a stem re-import keeps it only for the same StemDeck job. Backups carry it as optional fields, with no format version change | §6.3, #715; schema v32 |
 | **All paths relative** to the data folder | §2.3 (iOS) and **D11** (the folder can move between internal storage and an SD card) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
 | BPM cache table | §8.5 |

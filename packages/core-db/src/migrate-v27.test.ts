@@ -2,7 +2,12 @@ import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 
 import { migrate, SCHEMA_VERSION } from './migrate';
-import { buildV26Fixture, pragma, rows } from './migrate-fixtures.test-helper';
+import {
+  buildV26Fixture,
+  pragma,
+  rows,
+  V32_MANUAL_TEMPO_COLUMNS,
+} from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
 const LOWEST_KEY = -6;
@@ -34,7 +39,7 @@ describe('migrate v26 to v27', () => {
     );
     migrate(nodeSqliteDriver(db));
     expect(rows(db, 'SELECT * FROM stem_sets ORDER BY id')).toEqual(
-      before.map((row) => ({ ...row, pitch: 0 })),
+      before.map((row) => ({ ...row, pitch: 0, ...V32_MANUAL_TEMPO_COLUMNS })),
     );
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
   });

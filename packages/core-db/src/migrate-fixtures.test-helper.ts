@@ -26,12 +26,14 @@ import {
   V28_SCHEMA_VERSION,
   V29_SCHEMA_VERSION,
   V30_SCHEMA_VERSION,
+  V31_SCHEMA_VERSION,
 } from './migrate';
 import {
   MIGRATE_V14_TO_V15,
   MIGRATE_V15_TO_V16,
   MIGRATE_V16_TO_V17,
 } from './migrate-stems';
+import { MIGRATE_V30_TO_V31 } from './migrate-presets';
 import {
   MIGRATE_V7_TO_V8,
   MIGRATE_V8_TO_V9,
@@ -219,6 +221,12 @@ export const V22_TEMPO_COLUMNS = {
 export const V27_STEM_SET_COLUMNS = { pitch: 0 };
 
 export const V30_SONG_COLUMNS = V22_TEMPO_COLUMNS;
+
+export const V32_MANUAL_TEMPO_COLUMNS = {
+  manual_tempo_bpm: null,
+  manual_tempo_anchor: null,
+  manual_tempo_beats_per_bar: null,
+};
 
 export const V22_STEM_SET_COLUMNS = {
   ...V21_STEM_SET_COLUMNS,
@@ -408,5 +416,12 @@ export function buildV30Fixture(): DatabaseSync {
   const db = buildV29Fixture();
   applyInTransaction(db, MIGRATE_V29_TO_V30);
   db.exec(`PRAGMA user_version = ${String(V30_SCHEMA_VERSION)}`);
+  return db;
+}
+
+export function buildV31Fixture(): DatabaseSync {
+  const db = buildV30Fixture();
+  applyInTransaction(db, MIGRATE_V30_TO_V31);
+  db.exec(`PRAGMA user_version = ${String(V31_SCHEMA_VERSION)}`);
   return db;
 }

@@ -2,6 +2,7 @@ import type { MeterOverride, TempoCorrection } from '@kitbag/core-db';
 
 import type { MixerHold } from '../stemPlayer/mixerSession.ts';
 import type { StemPlayerActions } from '../stemPlayer/store.ts';
+import type { SongManualTempoActions } from './manualTempo.ts';
 import type { SongClickActions } from './songClick.ts';
 
 export interface SongSession {
@@ -35,7 +36,8 @@ export type SongPlayerActions = Pick<
   | 'playheadSeconds'
   | 'setTempoMode'
 > &
-  SongClickActions & {
+  SongClickActions &
+  SongManualTempoActions & {
     readonly open: (songId: number, waveformBars: number) => SongSession;
     readonly close: () => void;
     readonly onCardStop: (listener: () => void) => () => void;

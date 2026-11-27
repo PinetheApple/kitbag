@@ -1,8 +1,8 @@
 import {
-  correctedBpm,
   meterOverrideOf,
   type LibraryRow,
   type LibrarySongRow,
+  type ManualTempoChange,
   type SongRecord,
   type TempoCorrection,
   type TempoMode,
@@ -57,18 +57,19 @@ import {
   type SongClickMetronome,
 } from './songClick.ts';
 import {
-  analysedGrid,
+  analysedSongGrid,
   NO_ANALYSIS,
   overrideDisagrees,
   recordGrid,
   sameGrid,
-  songGrid,
   type AnalysedSong,
   type SongGrid,
 } from './songGrid.ts';
+import { analysedOfferOf, songManualTempo } from './manualTempo.ts';
 import { heldWhileSaving } from './heldWhileSaving.ts';
 import { songTempo } from './songTempo.ts';
 import {
+  analysedBpmOf,
   closedState,
   factsOf,
   namesOf,
@@ -259,10 +260,27 @@ export function createSongPlayerStore(
     const applyTempoMode = (mode: TempoMode) => {
       const { meterOverride, tempoCorrection } = get();
       showGrid(
-        songGrid(analysedGrid(analysed, mode), meterOverride, tempoCorrection),
+        analysedSongGrid(analysed, mode, meterOverride, tempoCorrection),
         tempoFacts(analysed, mode, tempoCorrection),
       );
     };
+    const applyManualTempo = ({
+      manualTempo,
+      meterOverride,
+    }: ManualTempoChange) => {
+      analysed = { ...analysed, manualTempo };
+      const { tempoMode, tempoCorrection } = get();
+      showGrid(
+        analysedSongGrid(analysed, tempoMode, meterOverride, tempoCorrection),
+        {
+          ...tempoFacts(analysed, tempoMode, tempoCorrection),
+          manualTempo,
+          meterOverride,
+          meterNotice: null,
+        },
+      );
+    };
+    const manual = songManualTempo({ ...context, apply: applyManualTempo });
     const modes = songTempo(context, applyTempoMode);
     const loops = loopActions(context);
 
@@ -284,8 +302,13 @@ export function createSongPlayerStore(
       const reanalysed = ready && !sameGrid(analysed, record);
       if (ready) analysed = record;
       const notice = reanalysed && overrideDisagrees(record, mode);
+      const facts = factsOf(record, mode);
+      const offer = reanalysed
+        ? analysedOfferOf(record.manualTempo, facts.analysedBpm ?? null)
+        : null;
       set({
-        ...factsOf(record, mode),
+        ...facts,
+        ...(offer === null ? {} : { analysedOffer: offer }),
         ...(ready
           ? { meterOverride: meterOverrideOf(record), detected: grid.detected }
           : {}),
@@ -334,6 +357,7 @@ export function createSongPlayerStore(
       analysed = NO_ANALYSIS;
       heldCorrection.reset();
       modes.reset();
+      manual.reset();
       waveform.reset(bars);
       set({
         ...closedState,
@@ -397,20 +421,24 @@ export function createSongPlayerStore(
       meterOverrideChanged: (songId, override) => {
         if (!isOpenAndReady(songId)) return;
         const meterOverride = meterOverrideOf(override);
-        const grid = analysedGrid(analysed, get().tempoMode);
-        showGrid(songGrid(grid, meterOverride, get().tempoCorrection), {
-          meterOverride,
-          meterNotice: null,
-        });
+        const { tempoMode, tempoCorrection } = get();
+        showGrid(
+          analysedSongGrid(analysed, tempoMode, meterOverride, tempoCorrection),
+          { meterOverride, meterNotice: null },
+        );
       },
       tempoCorrectionChanged: (songId, tempoCorrection) => {
         if (!isOpenAndReady(songId)) return;
         heldCorrection.hold(tempoCorrection);
-        const grid = analysedGrid(analysed, get().tempoMode);
-        showGrid(songGrid(grid, get().meterOverride, tempoCorrection), {
-          tempoCorrection,
-          bpm: correctedBpm(get().detectedBpm, tempoCorrection),
-        });
+        const { tempoMode, meterOverride } = get();
+        showGrid(
+          analysedSongGrid(analysed, tempoMode, meterOverride, tempoCorrection),
+          {
+            ...tempoFacts(analysed, tempoMode, tempoCorrection),
+            tempoCorrection,
+            analysedBpm: analysedBpmOf(analysed, tempoMode, tempoCorrection),
+          },
+        );
       },
       tempoCorrectionSettled: (songId) => {
         if (get().songId === songId) heldCorrection.settle();
@@ -438,6 +466,7 @@ export function createSongPlayerStore(
       ...clickSettings.actions,
       saveForSong: presets.saveForSong,
       setTempoMode: modes.setTempoMode,
+      ...manual.actions,
       ...speed.actions,
     };
   });

@@ -134,11 +134,18 @@ export {
   type TempoRatio,
 } from './tempo-correction';
 export {
+  TEMPO_MAX_BPM,
+  TEMPO_MIN_BPM,
   TEMPO_MODE,
   TEMPO_SOURCE,
   type TempoMode,
   type TempoSource,
 } from './tempo-mode';
+export {
+  effectiveCorrection,
+  type ManualTempo,
+  type ManualTempoChange,
+} from './manual-tempo';
 export {
   bundleTempoOf,
   bundleTempoViolation,

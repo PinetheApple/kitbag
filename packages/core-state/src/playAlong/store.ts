@@ -7,7 +7,7 @@ import { DEFAULT_BPM, initialConfig } from '../metronome/store.ts';
 import type { DetectedGrid } from '../stemPlayer/meterOverride.ts';
 import { doubledBpm, halvedBpm } from '../tempoLadder/bpmSteps.ts';
 import { BPM_SOURCE } from '../tempoLadder/sources.ts';
-import { TAPS_TO_SET_TEMPO } from '../tempoLadder/store.ts';
+import { TAPS_TO_SET_TEMPO } from '../tapTempo/tapTempo.ts';
 import {
   clickAlone,
   type ClickAloneActions,

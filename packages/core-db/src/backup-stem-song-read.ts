@@ -1,4 +1,5 @@
 import type { StemMixRecord, StemSongRecord } from './backup-format';
+import { readManualTempo } from './backup-manual-tempo';
 import { asObject, invalidField, reader, type Reader } from './backup-reader';
 import type { ClickRate } from './click-rate';
 import { stemSetClickViolation } from './click-settings';
@@ -124,6 +125,7 @@ export function readStemSong(value: unknown, path: string): StemSongRecord {
     ...readPlayback(r, asObject(value, path), path),
     pitch: readSongPitch(r, path),
     ...readClick(r, path),
+    ...readManualTempo(r, path),
     stems: readMixes(r, path),
   };
 }

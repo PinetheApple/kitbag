@@ -427,6 +427,7 @@ describe('readSong', () => {
       barOneSeconds: null,
       tempo: null,
       chosenTempoMode: null,
+      manualTempo: null,
     });
   });
 

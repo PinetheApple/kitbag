@@ -13,6 +13,7 @@ import {
   type SongPresetRecord,
 } from './backup-format';
 import { encodeBase64, nullableBase64, presetBase64 } from './base64';
+import { storedManualTempoColumns } from './backup-manual-tempo';
 import { loadStemSongs } from './backup-stem-songs';
 import { meterOverrideOf } from './meter-override';
 import type { Database } from './repository';
@@ -75,6 +76,7 @@ function librarySongRecord(row: SongRow): LibrarySongRecord {
     ...portableSong(row),
     ...meterOverrideOf(row),
     ...storedTempoColumns(storedTempoOf(row)),
+    ...storedManualTempoColumns(row),
     tempoCorrection: storedTempoCorrection(
       tempoCorrectionOf(row.tempoCorrection),
     ),

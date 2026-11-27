@@ -6,6 +6,10 @@ import {
   type StemMixRecord,
   type StemSongRecord,
 } from './backup-format';
+import {
+  carriesManualTempo,
+  storedManualTempoColumns,
+} from './backup-manual-tempo';
 import { saveStemSetClick, stemSetClickOf } from './click-settings';
 import { meterOverrideOf, saveMeterOverride } from './meter-override';
 import type { Database } from './repository';
@@ -58,6 +62,7 @@ function stemSongRecord(
     lyricsRetimed: parseRetimedLyrics(row.lyricsRetimed),
     ...stemSetClickOf(row),
     chosenTempoMode: storedTempoOf(row).chosenTempoMode,
+    ...storedManualTempoColumns(row),
     stems: mixes.map(mixRecord),
     lyrics: lyricsOf(row),
     tempo: storedTempoOf(row).tempo,
@@ -120,7 +125,11 @@ export async function restoreStemSong(
   await saveChosenTempoMode(db, stemSets, localId, record.chosenTempoMode);
   await db
     .update(stemSets)
-    .set({ speed: record.speed, pitch: record.pitch })
+    .set({
+      speed: record.speed,
+      pitch: record.pitch,
+      ...(carriesManualTempo(record) ? storedManualTempoColumns(record) : {}),
+    })
     .where(eq(stemSets.id, localId));
   await restoreMixes(db, localId, record.stems);
   return localId;

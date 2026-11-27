@@ -6,6 +6,7 @@ import {
   TEMPO_CORRECTION,
   type AnalysisStatus,
   type BundleTempo,
+  type ManualTempo,
   type MeterOverride,
   type SongRecord,
   type TempoCorrection,
@@ -36,6 +37,10 @@ export interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
   readonly clickSettings: SongClickSettings;
   readonly countEndFrame: number | null;
   readonly speed: number;
+  readonly manualTempo: ManualTempo | null;
+  readonly analysedBpm: number | null;
+  readonly analysedOffer: number | null;
+  readonly tempoUndoable: boolean;
 }
 
 export const closedState: SongPlayerState = {
@@ -63,11 +68,22 @@ export const closedState: SongPlayerState = {
   clickSettings: CLOSED_CLICK_SETTINGS,
   countEndFrame: null,
   speed: KB_MIXER_UNITY_RATE,
+  manualTempo: null,
+  analysedBpm: null,
+  analysedOffer: null,
+  tempoUndoable: false,
 };
 
 type SongFacts = Pick<
   SongRecord,
-  'title' | 'artist' | 'bpm' | 'tempo' | 'analysisStatus' | 'tempoCorrection'
+  | 'title'
+  | 'artist'
+  | 'bpm'
+  | 'tempo'
+  | 'analysisStatus'
+  | 'tempoCorrection'
+  | 'manualTempo'
+  | 'beats'
 >;
 
 export function namesOf(record: Pick<SongFacts, 'title' | 'artist'>) {
@@ -78,16 +94,28 @@ export function namesOf(record: Pick<SongFacts, 'title' | 'artist'>) {
 }
 
 export function tempoFacts(
-  record: Pick<SongFacts, 'bpm' | 'tempo'>,
+  record: Pick<SongFacts, 'bpm' | 'tempo' | 'manualTempo'>,
   mode: TempoMode | null,
   correction: TempoCorrection,
 ): Pick<SongPlayerState, 'bpm' | 'detectedBpm' | 'tempoMode'> {
-  const detectedBpm = gridBpm(record, mode);
+  const detectedBpm = gridBpm({ ...record, manualTempo: null }, mode);
   return {
-    bpm: correctedBpm(detectedBpm, correction),
+    bpm: record.manualTempo?.bpm ?? correctedBpm(detectedBpm, correction),
     detectedBpm,
     tempoMode: mode,
   };
+}
+
+export function analysedBpmOf(
+  record: Pick<SongFacts, 'bpm' | 'tempo' | 'beats'>,
+  mode: TempoMode | null,
+  correction: TempoCorrection,
+): number | null {
+  if (record.beats.length === 0) return null;
+  return correctedBpm(
+    gridBpm({ ...record, manualTempo: null }, mode),
+    correction,
+  );
 }
 
 export function factsOf(
@@ -100,6 +128,8 @@ export function factsOf(
     tempo: record.tempo,
     tempoCorrection: record.tempoCorrection,
     analysisStatus: record.analysisStatus,
+    manualTempo: record.manualTempo,
+    analysedBpm: analysedBpmOf(record, mode, record.tempoCorrection),
   };
 }
 

@@ -3,6 +3,10 @@ import type {
   StemMixRecord,
   StemSongRecord,
 } from './backup-format';
+import {
+  carriesManualTempo,
+  storedManualTempoColumns,
+} from './backup-manual-tempo';
 import { NO_CLICK } from './click-settings';
 import { NO_METER_OVERRIDE } from './meter-override';
 import { stems, stemSets } from './schema';
@@ -27,6 +31,21 @@ const field = (mine: unknown, theirs: unknown, atDefault: boolean): Field => ({
 
 const named = (mine: string | null, theirs: string | null): Field[] =>
   theirs === null ? [] : [field(mine, theirs, mine === null)];
+
+function manualTempoFields(
+  mine: LocalStemSong,
+  theirs: StemSongRecord,
+): Field[] {
+  if (!carriesManualTempo(theirs)) return [];
+  const local = storedManualTempoColumns(mine);
+  return [
+    field(
+      local,
+      storedManualTempoColumns(theirs),
+      local.manualTempoBpm === null,
+    ),
+  ];
+}
 
 function songFields(mine: LocalStemSong, theirs: StemSongRecord): Field[] {
   return [
@@ -63,6 +82,7 @@ function songFields(mine: LocalStemSong, theirs: StemSongRecord): Field[] {
       theirs.chosenTempoMode,
       mine.chosenTempoMode === null,
     ),
+    ...manualTempoFields(mine, theirs),
   ];
 }
 

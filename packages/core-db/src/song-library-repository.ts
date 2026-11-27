@@ -20,6 +20,15 @@ import {
   type MeterOverridePatch,
 } from './meter-override';
 import { packFloat32, packInt32, unpackFloat32, unpackInt32 } from './packing';
+import {
+  effectiveCorrection,
+  listedTempo,
+  manualTempoOf,
+  manualTempoSelection,
+  saveManualTempo,
+  type ManualTempo,
+  type ManualTempoChange,
+} from './manual-tempo';
 import { found, type Database, type DatabaseHandle } from './repository';
 import { setlistItems, songPresets, songs, stems, stemSets } from './schema';
 import {
@@ -106,6 +115,7 @@ export interface SongRecord extends MeterOverride, StoredTempo {
   readonly analysisStatus: AnalysisStatus;
   readonly tempoCorrection: TempoCorrection;
   readonly speed: number;
+  readonly manualTempo: ManualTempo | null;
 }
 
 export interface SongFiles {
@@ -154,6 +164,7 @@ async function songRows(db: Database): Promise<LibrarySongRow[]> {
   const listed = await songsInSetlists(db);
   const rows = await db
     .select({
+      manualTempo: manualTempoSelection(songs),
       id: songs.id,
       title: songs.title,
       artist: songs.artist,
@@ -167,18 +178,25 @@ async function songRows(db: Database): Promise<LibrarySongRow[]> {
       createdAt: songs.createdAt,
     })
     .from(songs);
-  return rows.map((row) => ({
-    ...row,
-    kind: 'song',
-    tempoCorrection: tempoCorrectionOf(row.tempoCorrection),
-    hasGrid: row.hasGrid !== 0,
-    inSetlist: listed.has(row.id),
-  }));
+  return rows.map(({ manualTempo, ...row }) => {
+    const { manualTempo: manual, ...tempo } = listedTempo(manualTempo, row);
+    return {
+      ...row,
+      ...tempo,
+      kind: 'song',
+      tempoCorrection: effectiveCorrection(
+        manual,
+        tempoCorrectionOf(row.tempoCorrection),
+      ),
+      inSetlist: listed.has(row.id),
+    };
+  });
 }
 
 async function stemSetRows(db: Database): Promise<LibraryStemSetRow[]> {
   const rows = await db
     .select({
+      manualTempo: manualTempoSelection(stemSets),
       id: stemSets.id,
       title: stemSets.name,
       artist: stemSets.artist,
@@ -193,12 +211,16 @@ async function stemSetRows(db: Database): Promise<LibraryStemSetRow[]> {
     .from(stemSets)
     .leftJoin(stems, eq(stems.stemSetId, stemSets.id))
     .groupBy(stemSets.id);
-  return rows.map((row) => ({
-    ...row,
-    kind: 'stems',
-    durationSec: row.durationSec ?? 0,
-    hasGrid: row.hasGrid !== 0,
-  }));
+  return rows.map(({ manualTempo, ...row }) => {
+    const { bpm, hasGrid } = listedTempo(manualTempo, row);
+    return {
+      ...row,
+      bpm,
+      hasGrid,
+      kind: 'stems',
+      durationSec: row.durationSec ?? 0,
+    };
+  });
 }
 
 async function listRows(db: Database): Promise<LibraryRow[]> {
@@ -385,6 +407,7 @@ async function readSong(
     speed: row.speed,
     ...meterOverrideOf(row),
     ...storedTempoOf(row),
+    manualTempo: manualTempoOf(row),
   };
 }
 
@@ -437,6 +460,10 @@ export function createSongLibraryRepository({
       serial(() => saveTempoCorrection(db, id, correction)),
     saveSongSpeed: (id: number, speed: number) =>
       serial(() => saveSongSpeed(db, id, speed)),
+    saveSongManualTempo: (id: number, change: ManualTempoChange) =>
+      serial(() => saveManualTempo(db, songs, id, change)),
+    saveStemSetManualTempo: (id: number, change: ManualTempoChange) =>
+      serial(() => saveManualTempo(db, stemSets, id, change)),
     saveStemSetMeterOverride: (id: number, patch: MeterOverridePatch) =>
       serial(() => saveMeterOverride(db, stemSets, id, patch)),
     saveStemSetClick: (id: number, patch: StemSetClickPatch) =>
