@@ -1,0 +1,1 @@
+• Backups now include your volume, accents, output latency, theme and Home layout, and Kitbag keeps a copy of your data before Replace everything.
