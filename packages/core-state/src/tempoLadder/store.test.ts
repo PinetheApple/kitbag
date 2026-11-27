@@ -113,7 +113,7 @@ describe('tempo ladder store', () => {
     expect(http.urls).toHaveLength(asked);
   });
 
-  it('keeps the source when halving or doubling a looked-up tempo', async () => {
+  it('names a halved or doubled looked-up tempo typed', async () => {
     const runtime = ladderRuntime({
       httpGet: fakeHttp(ONLINE_HIT).httpGet,
       key: KEY,
@@ -123,11 +123,24 @@ describe('tempo ladder store', () => {
     store.getState().halve();
     expect(store.getState()).toMatchObject({
       bpm: 57,
-      source: BPM_SOURCE.getSongBpm,
+      source: BPM_SOURCE.manual,
     });
-    store.getState().enter(100);
+    await store.getState().lookUp(OTHER);
+    store.getState().enter(100, BPM_SOURCE.library);
     store.getState().double();
-    expect(store.getState().source).toBe(BPM_SOURCE.manual);
+    expect(store.getState()).toMatchObject({
+      bpm: 200,
+      source: BPM_SOURCE.manual,
+    });
+  });
+
+  it('takes an entered tempo with the source it names', () => {
+    const store = createTempoLadderStore(() => ladderRuntime());
+    store.getState().enter(113, BPM_SOURCE.library);
+    expect(store.getState()).toMatchObject({
+      bpm: 113,
+      source: BPM_SOURCE.library,
+    });
   });
 
   it('shows each tap landing and sets the tempo on the fourth', () => {

@@ -23,7 +23,9 @@ import {
   tempoLadderStore,
   type TempoLadderStore,
 } from '../tempoLadder/store.ts';
+import { getLibrary } from '../library/runtime.ts';
 import { readLibraryGrid } from './libraryGrid.ts';
+import type { TrackPresets } from './trackPreset.ts';
 
 export type PlayAlongCommands = Pick<
   KitbagCommandsSpec,
@@ -62,7 +64,14 @@ export type FollowedLadder = Pick<
   StoreApi<
     Pick<
       TempoLadderStore,
-      'track' | 'libraryMatch' | 'bpm' | 'lookUp' | 'enter'
+      | 'track'
+      | 'libraryMatch'
+      | 'bpm'
+      | 'source'
+      | 'tapsLanded'
+      | 'lookUp'
+      | 'tap'
+      | 'enter'
     >
   >,
   'getState' | 'subscribe'
@@ -88,12 +97,16 @@ export interface PlayAlongRuntime {
   readonly readGrid: (match: LibraryMatch) => Promise<DetectedGrid>;
   readonly sessionCommand: typeof mediaSessionCommand;
   readonly latencyOffsetMs: () => number;
+  readonly onLatencyOffset: (
+    listener: (offsetMs: number) => void,
+  ) => Unsubscribe;
   readonly onClickStarting: OnStarting;
   readonly yieldStandalone: () => () => void;
   readonly onCardRequest: (
     listener: (request: PlayAlongCardRequest) => void,
   ) => Unsubscribe;
   readonly playbackStarted: () => void;
+  readonly presets: () => TrackPresets;
 }
 
 type StartingMetronome = Pick<
@@ -134,6 +147,11 @@ export const nativePlayAlongRuntime: PlayAlongRuntime = {
     mediaSessionCommand(sessionId, command);
   },
   latencyOffsetMs: () => metronomeStore.getState().latencyOffset,
+  onLatencyOffset: (listener) =>
+    metronomeStore.subscribe((state, previous) => {
+      if (state.latencyOffset !== previous.latencyOffset)
+        listener(state.latencyOffset);
+    }),
   onClickStarting: clickStartsOf(metronomeStore, nativeSongCardStarts),
   yieldStandalone: () => metronomeStore.getState().yieldEngine(),
   onCardRequest: (listener) =>
@@ -141,4 +159,5 @@ export const nativePlayAlongRuntime: PlayAlongRuntime = {
   playbackStarted: () => {
     void getNotificationPermissionStore().getState().playbackStarted();
   },
+  presets: () => getLibrary().presets,
 };

@@ -1,6 +1,7 @@
 import {
   BACKUP_FORMAT,
   BACKUP_VERSION,
+  OLDEST_RESTORABLE_BACKUP_VERSION,
   CATEGORIES,
   itemPresets,
   PREFERENCE_KEYS,
@@ -105,7 +106,7 @@ function readPresetMusic(r: Reader) {
   return {
     uuid: r.uuid('uuid'),
     name: r.string('name'),
-    bpm: r.number('bpm'),
+    bpm: r.nullableNumber('bpm'),
     beatsPerBar: r.count('beatsPerBar'),
     subdivision: r.count('subdivision'),
     denominator: r.count('denominator'),
@@ -310,12 +311,17 @@ function readCategories(value: unknown): Category[] {
   return listed as Category[];
 }
 
+const isRestorableVersion = (version: unknown) =>
+  typeof version === 'number' &&
+  version >= OLDEST_RESTORABLE_BACKUP_VERSION &&
+  version <= BACKUP_VERSION;
+
 function readHeader(root: Record<string, unknown>) {
   const { version, format } = root;
   const foreign = format !== undefined && format !== BACKUP_FORMAT;
-  if (!foreign && typeof version === 'number' && version !== BACKUP_VERSION)
+  if (!foreign && typeof version === 'number' && !isRestorableVersion(version))
     reject({ kind: 'unsupportedVersion', version });
-  if (format !== BACKUP_FORMAT || version !== BACKUP_VERSION)
+  if (format !== BACKUP_FORMAT || !isRestorableVersion(version))
     reject({ kind: 'malformedFile', reason: 'not a Kitbag backup' });
   return {
     exportedAt: reader(root, '$').string('exportedAt'),

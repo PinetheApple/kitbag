@@ -6,6 +6,11 @@ import {
 } from '@kitbag/core-native';
 import { vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
+import type {
+  LinkedPresetValues,
+  NewSongPreset,
+  SongPreset,
+} from '@kitbag/core-db';
 
 import { NO_GRID } from '../songPlayer/songGrid.ts';
 import type { DetectedGrid } from '../stemPlayer/meterOverride.ts';
@@ -23,6 +28,7 @@ export const LATENCY_MS = 180;
 export const SESSION_ID = 'player';
 export const OTHER_ID = 'other';
 export const BPM = 120;
+const SETTLE_TURNS = 8;
 export const PLAY_ALONG = KB_METRONOME_SLOT.KB_METRONOME_SLOT_PLAY_ALONG;
 export const STANDALONE = KB_METRONOME_SLOT.KB_METRONOME_SLOT_STANDALONE;
 
@@ -60,7 +66,10 @@ function fakeLadder() {
     track: null,
     libraryMatch: null,
     bpm: null,
+    source: null,
+    tapsLanded: 0,
     lookUp,
+    tap: vi.fn(),
     enter: vi.fn((bpm: number) => {
       ladder.setState({ bpm });
     }),
@@ -131,6 +140,58 @@ function fakeCommands(
   } satisfies PlayAlongRuntime['commands'];
 }
 
+export async function settle() {
+  for (let turn = 0; turn < SETTLE_TURNS; turn++) await Promise.resolve();
+}
+
+export function presetShelf(rows: readonly Partial<SongPreset>[] = []) {
+  const saved = new Map<number, SongPreset>();
+  const row = (id: number, values: object) =>
+    ({
+      uuid: `preset-${String(id)}`,
+      notes: null,
+      phaseNudge: 0,
+      source: null,
+      lengthSeconds: null,
+      librarySongId: null,
+      ...values,
+      id,
+    }) as SongPreset;
+  rows.forEach((values, index) => {
+    saved.set(index + 1, row(index + 1, values));
+  });
+  const create = vi.fn((values: NewSongPreset) => {
+    const preset = row(saved.size + 1, values);
+    saved.set(preset.id, preset);
+    return Promise.resolve(preset);
+  });
+  const update = vi.fn((id: number, values: Partial<NewSongPreset>) => {
+    const current = saved.get(id);
+    if (current !== undefined)
+      saved.set(id, row(id, { ...current, ...values }));
+    return Promise.resolve();
+  });
+  const forLibrarySong = vi.fn((songId: number) =>
+    Promise.resolve(
+      [...saved.values()].find((preset) => preset.librarySongId === songId),
+    ),
+  );
+  const saveForLibrarySong = vi.fn(
+    async (songId: number, values: LinkedPresetValues) => {
+      const linked = await forLibrarySong(songId);
+      if (linked === undefined)
+        return create({ ...values, librarySongId: songId });
+      await update(linked.id, values);
+      return saved.get(linked.id) ?? linked;
+    },
+  );
+  const list = vi.fn(() => Promise.resolve([...saved.values()]));
+  return {
+    repository: { list, create, update, forLibrarySong, saveForLibrarySong },
+    rows: () => [...saved.values()],
+  };
+}
+
 export function fakePlayAlong({
   sessions = [snapshot()],
   onClickStarting = () => () => undefined,
@@ -139,6 +200,8 @@ export function fakePlayAlong({
   gridResult = KB_RESULT.KB_OK,
   downbeatsResult = () => KB_RESULT.KB_OK,
   nowFrame = () => Date.now() * FRAMES_PER_MS,
+  shelf = presetShelf(),
+  ladder,
 }: {
   readonly grid?: DetectedGrid;
   readonly gridResult?: number;
@@ -147,6 +210,8 @@ export function fakePlayAlong({
   readonly onClickStarting?: PlayAlongRuntime['onClickStarting'];
   readonly yieldStandalone?: PlayAlongRuntime['yieldStandalone'];
   readonly nowFrame?: PlayAlongRuntime['nowFrame'];
+  readonly shelf?: ReturnType<typeof presetShelf>;
+  readonly ladder?: FollowedLadder;
 } = {}) {
   vi.useFakeTimers({ now: START_MS });
   const calls: string[] = [];
@@ -173,17 +238,25 @@ export function fakePlayAlong({
   const playbackStarted = vi.fn();
   const cardListeners = new Set<(request: PlayAlongCardRequest) => void>();
   const sessionsRead = vi.fn(() => media);
-  const latencyRead = vi.fn(() => LATENCY_MS);
+  let latencyMs = LATENCY_MS;
+  const latencyRead = vi.fn(() => latencyMs);
+  const latencyListeners = new Set<(offsetMs: number) => void>();
   const runtime: PlayAlongRuntime = {
     commands,
     boottimeNowMs: () => Date.now(),
     nowFrame,
     engineFrameAtBoottimeMs: frameAt,
     sessions: sessionsRead,
-    ladder: () => library.ladder,
+    ladder: () => ladder ?? library.ladder,
     readGrid,
     sessionCommand,
     latencyOffsetMs: latencyRead,
+    onLatencyOffset: (listener) => {
+      latencyListeners.add(listener);
+      return () => {
+        latencyListeners.delete(listener);
+      };
+    },
     onClickStarting,
     yieldStandalone: yieldStandalone ?? loggedYield,
     onCardRequest: (listener) => {
@@ -193,9 +266,11 @@ export function fakePlayAlong({
       };
     },
     playbackStarted,
+    presets: () => shelf.repository,
   };
   return {
     store: createPlayAlongStore(runtime),
+    shelf,
     sessionsRead,
     latencyRead,
     calls,
@@ -217,6 +292,11 @@ export function fakePlayAlong({
     report: (next: readonly MediaSessionSnapshot[]) => {
       media.setState({ sessions: next });
     },
+    routeLatency: (offsetMs: number) => {
+      latencyMs = offsetMs;
+      for (const listener of [...latencyListeners]) listener(offsetMs);
+    },
+    latencyListeners: () => latencyListeners.size,
     anchors: () => commands.metronomeAnchorExternal.mock.calls,
     grids: () => commands.setGrid.mock.calls,
     gridAnchors: () => commands.metronomeAnchorGrid.mock.calls,

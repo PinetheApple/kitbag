@@ -52,7 +52,7 @@ export const summary = (
 export const entry = (
   itemId: number,
   name = '',
-  bpm = 120,
+  bpm: number | null = 120,
   presetId = itemId,
 ) =>
   ({

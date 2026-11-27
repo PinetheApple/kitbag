@@ -20,6 +20,7 @@ import { setlistItems, songPresets } from './schema';
 function checkPreset(values: NewSongPreset) {
   const violation = presetViolation({
     ...values,
+    bpm: values.bpm ?? null,
     denominator: values.denominator ?? DEFAULT_DENOMINATOR,
     rampStartBpm: values.rampStartBpm ?? null,
     rampEndBpm: values.rampEndBpm ?? null,
