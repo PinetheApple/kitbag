@@ -10,6 +10,8 @@ import {
 import { countInLabel } from './countIn.ts';
 import { rampChipValue } from './trainer.ts';
 
+export const TEMPO_FROM_SONG = 'Tempo from the song';
+
 function modifier(
   preset: SongPreset,
   custom: readonly CustomSoundView[],
@@ -32,8 +34,9 @@ export function songSubtitle(
   custom: readonly CustomSoundView[] = [],
 ): string {
   const signature = `${String(preset.beatsPerBar)}/${String(preset.denominator)}`;
-  const tempo = preset.bpm === null ? [] : [String(Math.round(preset.bpm))];
-  return [...tempo, signature, modifier(preset, custom)].join(' · ');
+  const tempo =
+    preset.bpm === null ? TEMPO_FROM_SONG : String(Math.round(preset.bpm));
+  return [tempo, signature, modifier(preset, custom)].join(' · ');
 }
 
 export function setlistSubtitle(
