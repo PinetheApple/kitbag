@@ -881,7 +881,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   uncompressed on purpose as Android's default (uncompressed libs load in place; the
   bundle is memory-mapped). Compressing them was declined; the cut taken is the 17
   unused font files. Breakdown: [#49 comment](https://github.com/PinetheApple/kitbag/issues/49#issuecomment-6575336455).
-  **[owner]**
+  **[owner]** Superseded on 2026-11-27: native libraries are now compressed (#657, #692).
 
 - **2026-11-02 · Per-release F-Droid changelogs (§13.8, #61)** — Each release writes
   `metadata/en-US/changelogs/<versionCode>.txt` from the ```` ```release-note ```` block
@@ -1347,3 +1347,4 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 - **2026-11-27 · Play along phase at playback speed (§8.6, D5, D6, #667)** — The phase offset is wall-clock ms, the same unit as the route latency, so the D6 total adds the two directly. Its ±half-beat limit is taken at the heard tempo (lock BPM × the other app's playback speed) and the offset is re-clamped when the speed changes. **[recorded — coordinator ruling]**
 - **2026-11-27 · Play along offer meter from a song preset (§8.6, #663)** — The offer names a song preset's meter only when it has 3 or 4 beats per bar, the meters the grid's downbeats can be re-derived for; those bars count from the detected bar one, so a pickup stays unaccented. With any other preset meter, or no preset, a library lock keeps the detected meter for both the click pattern and the downbeats. The offer waits for the preset read so the card does not change after it shows. **[recorded — lane call, owner may overturn]**
 - **2026-11-27 · GetSongBPM key storage (§8.5, D7, #689)** — The key is a database setting, left out of Kitbag's backup file; Android Auto Backup still carries it with the database, and the web build, a dev target, keeps it in plain localStorage. Settings shows only whether a key is saved, never any of its characters, and the key is never logged. **[recorded — coordinator ruling]**
+- **2026-11-27 · Native libraries are stored compressed (#657, #692)** — The release APK stores its native libraries compressed (`expo.useLegacyPackaging=true`), reversing the 2026-11-02 #49 entry. A smaller download is one of the three meanings of "lightweight" in #657; the cost is a larger installed size, since Android extracts the libraries at install. The before and after download sizes are in #692. **[owner, 2026-11-27]**
