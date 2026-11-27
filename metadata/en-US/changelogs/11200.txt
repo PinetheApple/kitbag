@@ -1,0 +1,1 @@
+• Play along works without a song: start and stop the click on its own, with tap tempo. Taps are timed from the moment your finger lands. When the song playing in another app is in your library, Play along offers to lock to its beat grid with one tap.
