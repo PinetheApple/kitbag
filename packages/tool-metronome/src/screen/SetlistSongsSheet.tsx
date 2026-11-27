@@ -28,6 +28,8 @@ import { Pressable, Text, View } from 'react-native';
 import {
   songListHint,
   songListRows,
+  songRowSpoken,
+  songRowTempo,
   STEM_SONG_HINT,
   type SongListRow,
 } from '../logic/songList.ts';
@@ -111,10 +113,8 @@ function SongRow({
   const handlePress = useCallback(() => {
     onPick(row);
   }, [onPick, row]);
-  const spoken =
-    row.bpm === null
-      ? `${row.number}. ${row.name}, stem song`
-      : `${row.number}. ${row.name}, ${row.bpm} BPM`;
+  const spoken = songRowSpoken(row);
+  const tempo = songRowTempo(row);
   return (
     <Pressable
       accessibilityRole="button"
@@ -141,12 +141,12 @@ function SongRow({
           <View>
             <Badge tone="accent" variant="filled" label="NOW" />
           </View>
-        ) : row.bpm === null ? (
+        ) : tempo === null ? (
           <View>
             <Badge label={STEMS_BADGE} />
           </View>
         ) : (
-          <Text style={styles.bpm}>{row.bpm}</Text>
+          <Text style={styles.bpm}>{tempo}</Text>
         )}
       </View>
     </Pressable>

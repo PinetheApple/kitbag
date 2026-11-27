@@ -7,6 +7,8 @@ import {
   type StemSongs,
 } from '@kitbag/core-state';
 
+import { TEMPO_FROM_SONG } from './songSummary.ts';
+
 export interface SongListRow {
   readonly itemId: number;
   readonly presetId: number | null;
@@ -18,6 +20,18 @@ export interface SongListRow {
 }
 
 export const STEM_SONG_HINT = 'A stem song opens in the stem player.';
+const STEM_SONG_SPOKEN = 'stem song';
+
+export function songRowTempo(row: SongListRow): string | null {
+  if (row.stemSetId !== null) return null;
+  return row.bpm ?? TEMPO_FROM_SONG;
+}
+
+export function songRowSpoken(row: SongListRow): string {
+  const tempo = row.bpm === null ? TEMPO_FROM_SONG : `${row.bpm} BPM`;
+  const detail = row.stemSetId === null ? tempo : STEM_SONG_SPOKEN;
+  return `${row.number}. ${row.name}, ${detail}`;
+}
 
 export function songListHint(set: ActiveSet): string {
   const where =

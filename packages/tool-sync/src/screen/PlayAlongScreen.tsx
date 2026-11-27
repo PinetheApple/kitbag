@@ -12,6 +12,7 @@ import {
 import { MIN_SESSIONS_TO_CHOOSE } from '../logic/sourceRows.ts';
 import { ClickSoundSheet } from './ClickSoundSheet.tsx';
 import { PermissionExplainer } from './PermissionExplainer.tsx';
+import { PhaseSheet, type PlayAlongRoute } from './PhaseSheet.tsx';
 import { PlayAlongAppBar, type SourceChipProps } from './PlayAlongAppBar.tsx';
 import { PlayAlongBody } from './PlayAlongBody.tsx';
 import { ClickDock, PlayAlongDock } from './PlayAlongDock.tsx';
@@ -34,7 +35,8 @@ import { TempoSheet } from './TempoSheet.tsx';
 import { useAccessFlow, type AccessFlow } from './useAccessFlow.ts';
 import { useLastSeen } from './useLastSeen.ts';
 
-type OpenSheet = 'none' | 'source' | 'tempo' | 'menu' | 'sound' | PatternSheet;
+type OpenSheet =
+  'none' | 'source' | 'tempo' | 'menu' | 'sound' | 'phase' | PatternSheet;
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
@@ -42,6 +44,7 @@ const useStyles = createThemedStyles((theme) => ({
 
 export interface PlayAlongScreenProps {
   readonly insets: ScreenInsets;
+  readonly route?: PlayAlongRoute | undefined;
   readonly onBack?: () => void;
 }
 
@@ -62,6 +65,9 @@ function useSheets() {
   const openSound = useCallback(() => {
     setSheet('sound');
   }, []);
+  const openPhase = useCallback(() => {
+    setSheet('phase');
+  }, []);
   const openMeter = useCallback(() => {
     setSheet(PATTERN_SHEET.meter);
   }, []);
@@ -75,6 +81,7 @@ function useSheets() {
     openTempo,
     openMenu,
     openSound,
+    openPhase,
     openMeter,
     openSubdivision,
   };
@@ -106,10 +113,16 @@ function patternSheet(sheet: OpenSheet): PatternSheet | null {
 interface SheetsProps {
   readonly sheets: ReturnType<typeof useSheets>;
   readonly followedId: string | undefined;
+  readonly route: PlayAlongRoute | undefined;
   readonly bottomInset: number;
 }
 
-function PlayAlongSheets({ sheets, followedId, bottomInset }: SheetsProps) {
+function PlayAlongSheets({
+  sheets,
+  followedId,
+  route,
+  bottomInset,
+}: SheetsProps) {
   const access = useMediaSessions((s) => s.access);
   const sessions = useMediaSessions((s) => s.sessions);
   const openSettings = useMediaSessions((s) => s.openSettings);
@@ -155,6 +168,12 @@ function PlayAlongSheets({ sheets, followedId, bottomInset }: SheetsProps) {
         bottomInset={bottomInset}
         onDismiss={close}
       />
+      <PhaseSheet
+        visible={sheets.sheet === 'phase'}
+        route={route}
+        bottomInset={bottomInset}
+        onDismiss={close}
+      />
     </>
   );
 }
@@ -196,7 +215,11 @@ function usePlayAlongView(flow: AccessFlow) {
   return { view, explaining, showsBody, session, lock };
 }
 
-export function PlayAlongScreen({ insets, onBack }: PlayAlongScreenProps) {
+export function PlayAlongScreen({
+  insets,
+  route,
+  onBack,
+}: PlayAlongScreenProps) {
   useSessionWatchWhileLocked();
   useLibraryWatch();
   const styles = useStyles();
@@ -229,12 +252,14 @@ export function PlayAlongScreen({ insets, onBack }: PlayAlongScreenProps) {
           onOpenTempo={sheets.openTempo}
           onOpenMeter={sheets.openMeter}
           onOpenSubdivision={sheets.openSubdivision}
+          onOpenPhase={sheets.openPhase}
         />
       ) : null}
       <ScreenDock view={view} session={session} bottomInset={insets.bottom} />
       <PlayAlongSheets
         sheets={sheets}
         followedId={session?.sessionId}
+        route={route}
         bottomInset={insets.bottom}
       />
     </View>

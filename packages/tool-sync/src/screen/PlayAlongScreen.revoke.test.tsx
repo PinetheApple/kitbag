@@ -42,6 +42,7 @@ vi.mock('./PatternSheets.tsx', async (original) => ({
 vi.mock('./ClickSoundSheet.tsx', () => ({ ClickSoundSheet: () => null }));
 vi.mock('./SourceSheet.tsx', () => ({ SourceSheet: () => null }));
 vi.mock('./TempoSheet.tsx', () => ({ TempoSheet: () => null }));
+vi.mock('./PhaseSheet.tsx', () => ({ PhaseSheet: () => null }));
 
 const { configureMediaSessions, getMediaSessionsStore } =
   await import('@kitbag/core-state');

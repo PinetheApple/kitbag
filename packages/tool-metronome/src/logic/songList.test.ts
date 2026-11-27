@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest';
 
 import { entry } from './fixtures.test-helper.ts';
 import { UNKNOWN_STEM_SONG } from '@kitbag/core-state';
-import { songListHint, songListRows } from './songList.ts';
+import {
+  songListHint,
+  songListRows,
+  songRowSpoken,
+  songRowTempo,
+} from './songList.ts';
 
 const NO_STEMS = new Map();
 
@@ -53,9 +58,28 @@ describe('song list sheet', () => {
     ]);
   });
 
-  it('shows no tempo for a song that saves none', () => {
+  it('reads a song that saves no tempo as the song’s tempo, not a stem song', () => {
     const [row] = songListRows([entry(1, 'Click only', null)], null, NO_STEMS);
-    expect(row?.bpm).toBeNull();
+    if (row === undefined) throw new Error('no row');
+    expect(row.stemSetId).toBeNull();
+    expect(songRowTempo(row)).toBe('Tempo from the song');
+    expect(songRowSpoken(row)).toBe('1. Click only, Tempo from the song');
+  });
+
+  it('reads a stem song as one and a timed song by its tempo', () => {
+    const stem = { kind: ENTRY_KIND.stem, item: { id: 2 }, stemSetId: 9 };
+    const [timed, stemRow] = songListRows(
+      [entry(1, 'Opener', 132), stem as unknown as SetlistEntry],
+      null,
+      NO_STEMS,
+    );
+    if (timed === undefined || stemRow === undefined) throw new Error('rows');
+    expect([songRowTempo(timed), songRowSpoken(timed)]).toEqual([
+      '132',
+      '1. Opener, 132 BPM',
+    ]);
+    expect(songRowTempo(stemRow)).toBeNull();
+    expect(songRowSpoken(stemRow)).toBe(`2. ${UNKNOWN_STEM_SONG}, stem song`);
   });
 
   it('marks nothing when the loaded song is not in the set', () => {

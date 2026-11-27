@@ -83,6 +83,7 @@ vi.mock('./PlayAlongMenu.tsx', () => ({
 vi.mock('./ClickSoundSheet.tsx', () => ({ ClickSoundSheet: () => null }));
 vi.mock('./SourceSheet.tsx', () => ({ SourceSheet: () => null }));
 vi.mock('./TempoSheet.tsx', () => ({ TempoSheet: () => null }));
+vi.mock('./PhaseSheet.tsx', () => ({ PhaseSheet: () => null }));
 vi.mock('./PatternSheets.tsx', () => ({
   PATTERN_SHEET: { meter: 'meter', subdivision: 'subdivision' },
   PatternSheets: () => null,

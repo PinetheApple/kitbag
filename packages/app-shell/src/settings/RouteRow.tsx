@@ -1,15 +1,8 @@
-import { Badge, type IconName } from '@kitbag/core-design';
+import { Badge } from '@kitbag/core-design';
 import type { OutputRouteKind } from '@kitbag/core-native';
 
 import { OptionRow } from './OptionRow.tsx';
-
-const ROUTE_ICON: Readonly<Record<OutputRouteKind, IconName>> = {
-  speaker: 'routeSpeaker',
-  wired: 'routeWired',
-  bluetooth: 'routeBluetooth',
-  usb: 'routeUsb',
-  other: 'routeOther',
-};
+import { ROUTE_ICON } from './routeIcon.ts';
 
 export interface RouteRowProps {
   readonly kind: OutputRouteKind;
