@@ -5,6 +5,7 @@ export interface PlayAlongMenuProps {
   readonly access: boolean;
   readonly soundLabel: string;
   readonly bottomInset: number;
+  readonly onSave: (() => void) | null;
   readonly onClickSound: () => void;
   readonly onNotificationAccess: () => void;
   readonly onDismiss: () => void;
@@ -15,6 +16,7 @@ export function PlayAlongMenu({
   access,
   soundLabel,
   bottomInset,
+  onSave,
   onClickSound,
   onNotificationAccess,
   onDismiss,
@@ -27,6 +29,9 @@ export function PlayAlongMenu({
       bottomInset={bottomInset}
       onDismiss={onDismiss}
     >
+      {onSave === null ? null : (
+        <MenuRow icon="saveInto" label="Save for this song" onPress={onSave} />
+      )}
       <MenuRow
         icon="sound"
         label="Click sound"

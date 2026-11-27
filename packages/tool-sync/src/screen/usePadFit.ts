@@ -7,17 +7,22 @@ function heightOf(event: LayoutChangeEvent): number {
   return event.nativeEvent.layout.height;
 }
 
+function bottomOf(event: LayoutChangeEvent): number {
+  const { y, height } = event.nativeEvent.layout;
+  return y + height;
+}
+
 export function usePadFit() {
   const [region, setRegion] = useState(0);
   const [slot, setSlot] = useState(0);
-  const [bpmCard, setBpmCard] = useState(0);
-  const padHeight = compactPadHeight({ region, slot, bpmCard });
+  const [bpmCardBottom, setBpmCardBottom] = useState(0);
+  const padHeight = compactPadHeight({ region, slot, bpmCardBottom });
   const normal = padHeight === null;
   const onRegion = useCallback((event: LayoutChangeEvent) => {
     setRegion(heightOf(event));
   }, []);
   const onBpmCard = useCallback((event: LayoutChangeEvent) => {
-    setBpmCard(heightOf(event));
+    setBpmCardBottom(bottomOf(event));
   }, []);
   const onSlot = useCallback(
     (event: LayoutChangeEvent) => {
