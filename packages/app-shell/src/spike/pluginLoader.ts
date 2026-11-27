@@ -8,6 +8,7 @@ import * as Worklets from 'react-native-worklets';
 
 import {
   installSpikeRegistry,
+  SPIKE_MARKER,
   SPIKE_REGISTRY_KEY,
   spikeRegistry,
   type SpikeExternal,
@@ -23,7 +24,7 @@ const HOST_MODULES: Readonly<Record<SpikeExternal, unknown>> = {
 };
 
 const ASSET_JS = 'kb_spike_plugin.js';
-const ASSET_BYTECODE = 'kb_spike_plugin.hbc';
+export const ASSET_BYTECODE = 'kb_spike_plugin.hbc';
 
 export function shippedSpikeLocation(bytecode: boolean): string {
   return bytecode ? ASSET_BYTECODE : ASSET_JS;
@@ -71,7 +72,7 @@ export function loadSpikeScreen(
   evaluateBundle(location);
   const touched = restoreGlobals(before);
   console.log(
-    `KB_SPIKE loaded location=${location} evalMs=${(performance.now() - startedMs).toFixed(1)} restored=${touched.join(',')}`,
+    `${SPIKE_MARKER} loaded location=${location} evalMs=${(performance.now() - startedMs).toFixed(1)} restored=${touched.join(',')}`,
   );
   const screen = spikeRegistry().screen;
   if (screen === undefined) throw new Error('bundle registered no screen');

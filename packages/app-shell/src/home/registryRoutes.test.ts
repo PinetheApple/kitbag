@@ -15,6 +15,7 @@ const GATE_CALL = /export default gated\(\s*TOOL_ID\.(\w+)/;
 const SHELL_ROUTES: readonly string[] = [
   '/',
   '/gate',
+  '/plugin-spike',
   '/settings',
   '/settings/attributions',
   '/settings/calibrate',

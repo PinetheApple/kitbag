@@ -3,7 +3,9 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, type ComponentType } from 'react';
 import { Text } from 'react-native';
 
+import { HbcCheck, isHbcCheck } from '@/spike/HbcCheck';
 import { loadSpikeScreen, shippedSpikeLocation } from '@/spike/pluginLoader';
+import { SPIKE_MARKER } from '@/spike/registry';
 import { SpikeScreen, type SpikeScreenProps } from '@/spike/SpikeScreen';
 
 const FLAG_ON = '1';
@@ -14,6 +16,7 @@ type LoadState =
   | { readonly kind: 'failed'; readonly message: string };
 
 interface SpikeParams {
+  readonly check?: string;
   readonly control?: string;
   readonly hbc?: string;
   readonly src?: string;
@@ -28,17 +31,18 @@ function locationFor(hbc?: string, src?: string): string {
 export default function PluginSpikeRoute() {
   const params = useLocalSearchParams<SpikeParams>();
   const theme = useTheme();
+  const check = isHbcCheck(params.check) ? params.check : undefined;
   const isControl = params.control === FLAG_ON;
   const [load, setLoad] = useState<LoadState>({ kind: 'loading' });
 
   useEffect(() => {
-    if (isControl) return undefined;
+    if (isControl || check !== undefined) return undefined;
     let live = true;
     const onReady = (screen: ComponentType<SpikeScreenProps>) => {
       if (live) setLoad({ kind: 'ready', screen });
     };
     const onFailed = (error: unknown) => {
-      console.log(`KB_SPIKE load failed: ${String(error)}`);
+      console.log(`${SPIKE_MARKER} load failed: ${String(error)}`);
       if (live) setLoad({ kind: 'failed', message: String(error) });
     };
     const location = locationFor(params.hbc, params.src);
@@ -46,7 +50,7 @@ export default function PluginSpikeRoute() {
     return () => {
       live = false;
     };
-  }, [isControl, params.hbc, params.src]);
+  }, [check, isControl, params.hbc, params.src]);
 
   const screenProps: SpikeScreenProps = {
     variant: isControl
@@ -59,6 +63,9 @@ export default function PluginSpikeRoute() {
     starve: params.starve === FLAG_ON,
   };
 
+  if (check !== undefined) {
+    return <HbcCheck name={check} textColor={theme.color.text} />;
+  }
   if (isControl) return <SpikeScreen {...screenProps} />;
   if (load.kind === 'ready') return <load.screen {...screenProps} />;
   return (

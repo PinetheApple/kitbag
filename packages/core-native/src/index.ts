@@ -177,7 +177,7 @@ export type {
   TransportShowState,
 } from './NativeKitbagCommands';
 export { focusReaderNode } from './readerFocus';
-export { evaluateBundle } from './spike/bundleEval.ts';
+export { evaluateBundle, hbcFileVersion } from './spike/bundleEval.ts';
 export {
   PLAY_ALONG_CARD_ACTION,
   TRANSPORT_PLAYBACK,

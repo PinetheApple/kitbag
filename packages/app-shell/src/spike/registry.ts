@@ -13,6 +13,7 @@ export const SPIKE_EXTERNALS = [
 export type SpikeExternal = (typeof SPIKE_EXTERNALS)[number];
 
 export const SPIKE_REGISTRY_KEY = '__kitbagSpike';
+export const SPIKE_MARKER = 'KBSPIKE';
 
 export interface SpikeRegistry {
   readonly modules: Readonly<Record<SpikeExternal, unknown>>;

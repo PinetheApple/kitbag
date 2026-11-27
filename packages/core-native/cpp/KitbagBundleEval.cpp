@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <iterator>
 #include <memory>
@@ -26,6 +27,8 @@ using facebook::jsi::Value;
 
 constexpr unsigned kArgCount = 1;
 constexpr std::string_view kFileScheme = "file://";
+constexpr uint64_t kHbcMagic = 0x1F1903C103BC1FC6;
+constexpr size_t kHbcVersionOffset = sizeof(kHbcMagic);
 
 class OwnedBuffer final : public facebook::jsi::Buffer {
  public:
@@ -53,22 +56,46 @@ std::optional<std::vector<uint8_t>> readAsset(AAssetManager* assets, const std::
   return bytes;
 }
 
+std::string locationArg(Runtime& rt, const Value* args, size_t count) {
+  if (count < kArgCount || !args[0].isString()) throw JSError(rt, "expected (location)");
+  return args[0].getString(rt).utf8(rt);
+}
+
+std::vector<uint8_t> readBundle(Runtime& rt, AAssetManager* assets, const std::string& location) {
+  if (assets == nullptr && !location.starts_with(kFileScheme)) throw JSError(rt, "no asset manager for " + location);
+  auto bytes = location.starts_with(kFileScheme) ? readFile(location.substr(kFileScheme.size()))
+                                                 : readAsset(assets, location);
+  if (!bytes) throw JSError(rt, "cannot read bundle " + location);
+  return std::move(*bytes);
+}
+
+// Android ABIs are all little-endian, matching the hbc header's byte order.
+double hbcVersion(Runtime& rt, const std::vector<uint8_t>& bytes, const std::string& location) {
+  uint64_t magic = 0;
+  uint32_t version = 0;
+  if (bytes.size() < kHbcVersionOffset + sizeof(version)) throw JSError(rt, "too short for hbc " + location);
+  std::memcpy(&magic, bytes.data(), sizeof(magic));
+  if (magic != kHbcMagic) throw JSError(rt, "no hbc magic in " + location);
+  std::memcpy(&version, bytes.data() + kHbcVersionOffset, sizeof(version));
+  return static_cast<double>(version);
+}
+
+void setHostFunction(Runtime& rt, const char* key, facebook::jsi::HostFunctionType fn) {
+  rt.global().setProperty(
+      rt, key, Function::createFromHostFunction(rt, PropNameID::forAscii(rt, key), kArgCount, std::move(fn)));
+}
+
 }  // namespace
 
 void installBundleEval(Runtime& rt, AAssetManager* assets) {
-  auto evalBundle = [assets](Runtime& rt, const Value&, const Value* args, size_t count) {
-    if (count < kArgCount || !args[0].isString()) throw JSError(rt, "expected (location)");
-    const std::string location = args[0].getString(rt).utf8(rt);
-    auto bytes = location.starts_with(kFileScheme)
-                     ? readFile(location.substr(kFileScheme.size()))
-                     : readAsset(assets, location);
-    if (!bytes) throw JSError(rt, "cannot read bundle " + location);
-    return rt.evaluateJavaScript(std::make_shared<OwnedBuffer>(std::move(*bytes)), location);
-  };
-  rt.global().setProperty(
-      rt, kBundleEvalKey,
-      Function::createFromHostFunction(rt, PropNameID::forAscii(rt, kBundleEvalKey), kArgCount,
-                                       std::move(evalBundle)));
+  setHostFunction(rt, kBundleEvalKey, [assets](Runtime& rt, const Value&, const Value* args, size_t count) {
+    const std::string location = locationArg(rt, args, count);
+    return rt.evaluateJavaScript(std::make_shared<OwnedBuffer>(readBundle(rt, assets, location)), location);
+  });
+  setHostFunction(rt, kHbcVersionKey, [assets](Runtime& rt, const Value&, const Value* args, size_t count) {
+    const std::string location = locationArg(rt, args, count);
+    return Value(hbcVersion(rt, readBundle(rt, assets, location), location));
+  });
 }
 
 }  // namespace kitbag

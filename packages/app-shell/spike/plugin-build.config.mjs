@@ -13,6 +13,8 @@ const shimDir = path.join(spikeDir, '.externals');
 const assetDir = path.join(projectRoot, 'android/app/src/main/assets');
 const jsOut = path.join(assetDir, 'kb_spike_plugin.js');
 const hbcOut = path.join(assetDir, 'kb_spike_plugin.hbc');
+const mismatchOut = path.join(assetDir, 'kb_spike_mismatch.hbc');
+const HBC_VERSION_OFFSET = 8;
 const require = createRequire(path.join(projectRoot, 'package.json'));
 
 function writeShims() {
@@ -73,4 +75,16 @@ writeFileSync(jsOut, `(function () {\n${readFileSync(jsOut, 'utf8')}\n})();\n`);
 execFileSync(hermesc(), ['-emit-binary', '-O', '-out', hbcOut, jsOut], {
   stdio: 'inherit',
 });
-console.log(`wrote ${jsOut}\nwrote ${hbcOut}`);
+function writeMismatch() {
+  const bytes = readFileSync(hbcOut);
+  const version = bytes.readUInt32LE(HBC_VERSION_OFFSET);
+  bytes.writeUInt32LE(version + 1, HBC_VERSION_OFFSET);
+  writeFileSync(mismatchOut, bytes);
+  return version;
+}
+
+execFileSync(hermesc(), ['-version'], { stdio: 'inherit' });
+const fileVersion = writeMismatch();
+console.log(
+  `wrote ${jsOut}\nwrote ${hbcOut} (version ${fileVersion})\nwrote ${mismatchOut} (version ${fileVersion + 1})`,
+);
