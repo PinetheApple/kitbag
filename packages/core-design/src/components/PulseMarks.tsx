@@ -5,8 +5,8 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import type { DotPalette } from '../logic/beatDot.ts';
-import { pulseInBeat, pulseMarkFit } from '../logic/pulseMarks.ts';
+import type { DotPalette } from '../beatDotLook.ts';
+import { pulseInBeat, pulseMarkFit } from '../pulseMarks.ts';
 import { PULSE_MARKS, useBeatDotStyles } from './beatDotStyles.ts';
 
 interface PulseMarksProps {

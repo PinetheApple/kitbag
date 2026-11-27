@@ -4,21 +4,21 @@ import { expect, it, vi } from 'vitest';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
-vi.mock('react-native', async () => {
-  const { createElement: h } = await import('react');
-  const host = (props: Props) => h('div', null, props.children);
-  return { View: host, Text: host, Pressable: host };
-});
+const COMMON_TIME = 4;
+const MAX_BEATS = 16;
+const DENOMINATORS = [2, 4, 8, 16];
 
-vi.mock('@kitbag/core-design', async (original) => {
+vi.mock('./WheelPicker.tsx', () => ({ WheelPicker: () => null }));
+vi.mock('./SheetHint.tsx', () => ({ SheetHint: () => null }));
+vi.mock('./Button.tsx', async () => {
   const { createElement: h } = await import('react');
   return {
-    ...(await original<Record<string, unknown>>()),
-    createThemedStyles: () => () => ({}),
-    textStyle: () => ({}),
-    WheelPicker: () => null,
-    SheetHint: () => null,
     Button: (props: Props) => h('button', null, props.label as string),
+  };
+});
+vi.mock('./Sheet.tsx', async () => {
+  const { createElement: h } = await import('react');
+  return {
     Sheet: (props: Props) =>
       h(
         'section',
@@ -29,14 +29,7 @@ vi.mock('@kitbag/core-design', async (original) => {
   };
 });
 
-vi.mock('@kitbag/core-state', () => ({
-  useMetronome: (select: (state: unknown) => unknown) =>
-    select({ beatsPerBar: 4, denominator: 4, setBeats: () => undefined }),
-}));
-
-vi.mock('./sheetStyles.ts', () => ({ useSheetStyles: () => ({}) }));
-
-const { MeterSheet } = await import('./MeterSheet.tsx');
+const { TimeSignatureSheet } = await import('./TimeSignatureSheet.tsx');
 
 function region(markup: string, tag: string): string {
   return markup.split(`<${tag}>`)[1]?.split(`</${tag}>`)[0] ?? '';
@@ -44,9 +37,14 @@ function region(markup: string, tag: string): string {
 
 it('keeps Cancel and Set outside the scroll so a short window still shows them', () => {
   const markup = renderToStaticMarkup(
-    createElement(MeterSheet, {
+    createElement(TimeSignatureSheet, {
       visible: true,
       bottomInset: 0,
+      beatsPerBar: COMMON_TIME,
+      denominator: COMMON_TIME,
+      maxBeats: MAX_BEATS,
+      denominators: DENOMINATORS,
+      onSet: vi.fn(),
       onDismiss: vi.fn(),
     }),
   );

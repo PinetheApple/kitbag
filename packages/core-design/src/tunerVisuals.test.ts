@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
 import { themes, withAlpha } from './theme.ts';
-import { stripPosition, tunerStripGradient } from './tunerVisuals.ts';
+import {
+  DRIFT_STRIP_SCALE,
+  DRIFT_STRIP_STOPS,
+  stripGradient,
+  stripPosition,
+  TUNER_STRIP_STOPS,
+} from './tunerVisuals.ts';
 
-describe('tunerStripGradient', () => {
+describe('stripGradient', () => {
   it('reproduces the design stops from the theme tokens', () => {
     const { color } = themes.dark;
-    expect(tunerStripGradient(color)).toBe(
+    expect(stripGradient(color, TUNER_STRIP_STOPS)).toBe(
       `linear-gradient(90deg, ${color.red} 0%, ${color.amber} 30%, ` +
         `${color.green} 47%, ${color.green} 53%, ${color.amber} 70%, ` +
         `${color.red} 100%)`,
@@ -14,12 +20,32 @@ describe('tunerStripGradient', () => {
   });
 
   it('follows the theme rather than holding its own colours', () => {
-    expect(tunerStripGradient(themes.light.color)).toContain(
+    expect(stripGradient(themes.light.color, TUNER_STRIP_STOPS)).toContain(
       themes.light.color.green,
     );
-    expect(tunerStripGradient(themes.light.color)).not.toContain(
+    expect(stripGradient(themes.light.color, TUNER_STRIP_STOPS)).not.toContain(
       themes.dark.color.green,
     );
+  });
+});
+
+describe('DRIFT_STRIP_STOPS', () => {
+  it('draws green inside ±10 ms and amber by ±30 ms of a ±50 ms scale', () => {
+    const { color } = themes.dark;
+    expect(stripGradient(color, DRIFT_STRIP_STOPS)).toBe(
+      `linear-gradient(90deg, ${color.red} 0%, ${color.amber} 20%, ` +
+        `${color.green} 40%, ${color.green} 60%, ${color.amber} 80%, ` +
+        `${color.red} 100%)`,
+    );
+  });
+
+  it('puts the in-time band where its milliseconds fall on the strip', () => {
+    const { fullScaleMs, inTimeMs } = DRIFT_STRIP_SCALE;
+    const greens = DRIFT_STRIP_STOPS.filter((stop) => stop.token === 'green');
+    expect(greens.map((stop) => stop.at)).toEqual([
+      stripPosition(-inTimeMs / fullScaleMs),
+      stripPosition(inTimeMs / fullScaleMs),
+    ]);
   });
 });
 

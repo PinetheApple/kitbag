@@ -1,5 +1,7 @@
 import {
   createThemedStyles,
+  DOT_METRICS,
+  dotPalette,
   metronome,
   radius,
   space,
@@ -17,7 +19,6 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { DOT_METRICS } from '../logic/belowTempo.ts';
 import {
   polyBarTable,
   polyCycleOffset,
@@ -32,7 +33,6 @@ import {
   type PolyRatio,
   type PolyRowGeometry,
 } from '../logic/polyRow.ts';
-import { dotPalette } from './beatDotStyles.ts';
 
 const usePolyStyles = createThemedStyles((theme) => ({
   block: {

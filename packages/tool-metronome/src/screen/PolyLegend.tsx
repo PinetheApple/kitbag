@@ -1,5 +1,6 @@
 import {
   createThemedStyles,
+  dotPalette,
   metronome,
   radius,
   space,
@@ -8,8 +9,6 @@ import {
   TRANSPARENT,
 } from '@kitbag/core-design';
 import { Text, View } from 'react-native';
-
-import { dotPalette } from './beatDotStyles.ts';
 
 const useLegendStyles = createThemedStyles((theme) => {
   const palette = dotPalette(theme.color);
