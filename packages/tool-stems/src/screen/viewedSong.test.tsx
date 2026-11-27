@@ -3,6 +3,7 @@
 import {
   opacity,
   QUEUE_TEXT,
+  SET_TEMPO_COPY,
   SheetHost,
   ThemeProvider,
 } from '@kitbag/core-design';
@@ -169,6 +170,34 @@ describe('a stem song viewed while another plays', () => {
     expect(
       byLabel(`Export mix: ${VIEW_ONLY_REASON}`).props.accessibilityState,
     ).toEqual({ disabled: true });
+  });
+
+  it('offers Set tempo on a viewed song with no grid only as a faded, disabled button', async () => {
+    await playingThenViewed([]);
+    const button = byLabel(SET_TEMPO_COPY.title);
+    expect(button.props.accessibilityState).toMatchObject({ disabled: true });
+    const faded = [button, ...button.findAll(() => true)].some((node) => {
+      const raw: unknown = node.props.style;
+      const style = Object.assign(
+        {},
+        ...([raw].flat(Infinity) as object[]),
+      ) as { opacity?: number };
+      return style.opacity === opacity.muted;
+    });
+    expect(faded).toBe(true);
+  });
+
+  it('disables the Set tempo row with the view reason and never opens the sheet', async () => {
+    await playingThenViewed([]);
+    await press(MENU);
+    const row = byLabel(`${SET_TEMPO_COPY.title}, ${VIEW_ONLY_REASON}`);
+    expect(row.props.accessibilityState).toMatchObject({ disabled: true });
+    await act(async () => {
+      (row.props.onPress as () => unknown)();
+      await flush();
+    });
+    expect(texts()).not.toContain(SET_TEMPO_COPY.stepOne);
+    expect(labelled(SET_TEMPO_COPY.close)).toEqual([]);
   });
 
   it('keeps the no-grid reason on Meter over the view reason', async () => {

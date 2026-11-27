@@ -3,13 +3,7 @@ import { useMemo, useState } from 'react';
 import type { ClickSection } from '../logic/clickView.ts';
 
 type PlayerSheet =
-  | 'menu'
-  | 'meter'
-  | 'export'
-  | 'upNext'
-  | 'setlists'
-  | 'speedKey'
-  | 'setTempo';
+  'menu' | 'meter' | 'export' | 'upNext' | 'setlists' | 'speedKey' | 'setTempo';
 
 interface ClickSheetOpen {
   readonly kind: 'click';

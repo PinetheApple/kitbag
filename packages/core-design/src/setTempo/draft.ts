@@ -1,4 +1,3 @@
-import { SECONDS_PER_MINUTE } from '../meterText.ts';
 import { confirmNumpadEntry, type NumpadEntry } from '../numpadEntry.ts';
 import type { SetTempoRules, TempoValue } from './rules.ts';
 
@@ -101,7 +100,7 @@ export function movedByBeats<M extends number>(
   durationSec: number,
   rules: SetTempoRules<M>,
 ): TempoDraft<M> {
-  const period = SECONDS_PER_MINUTE / draft.bpm;
+  const period = rules.secondsPerMinute / draft.bpm;
   const anchor = anchorWithin(
     draft.anchor + beats * period,
     durationSec,
@@ -141,9 +140,10 @@ export function stepped<M extends number>(
 export function beatsFromBarOne(
   seconds: number,
   { anchor, bpm }: { readonly anchor: number; readonly bpm: number },
+  secondsPerMinute: number,
 ): number {
   'worklet';
-  return ((seconds - anchor) * bpm) / SECONDS_PER_MINUTE;
+  return ((seconds - anchor) * bpm) / secondsPerMinute;
 }
 
 export const tempoValueOf = <M extends number>({

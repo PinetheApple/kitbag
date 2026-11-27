@@ -18,6 +18,7 @@ import {
 } from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
 
+import { UNDO } from '../logic/meterEdit.ts';
 import {
   SET_TEMPO_UNLOCKS,
   STEM_SET_TEMPO,
@@ -26,16 +27,12 @@ import {
 } from '../logic/setTempoView.ts';
 import type { MixerFrameValues } from './useMixerFrame.ts';
 
-const UNDO = 'Undo';
-
 interface PressProps {
   readonly onPress: () => void;
 }
 
 export function SetTempoButton({ onPress }: PressProps) {
-  const entry = useStemPlayer(stemTempoEntry);
   const viewing = useStemViewing();
-  if (entry !== STEM_TEMPO_ENTRY.set) return null;
   return (
     <Button
       label={SET_TEMPO_COPY.title}

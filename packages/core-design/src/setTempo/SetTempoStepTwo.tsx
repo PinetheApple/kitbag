@@ -145,9 +145,7 @@ function MoveKey({ amount, label, spoken, onMove, icon }: MoveKeyProps) {
   );
 }
 
-function BarOneMoves<M extends number>({
-  tempo,
-}: Pick<StepProps<M>, 'tempo'>) {
+function BarOneMoves<M extends number>({ tempo }: Pick<StepProps<M>, 'tempo'>) {
   const styles = useStyles();
   const { onBeat, onNudge } = tempo;
   const { text } = tempo.kit;
@@ -274,8 +272,9 @@ export function SetTempoStepTwo<M extends number>({
 }: SetTempoStepTwoProps<M>) {
   const styles = useStyles();
   const { anchor, bpm } = draft;
+  const { secondsPerMinute } = tempo.kit.rules;
   const beats = useDerivedValue(() =>
-    beatsFromBarOne(playhead.songSec.value, { anchor, bpm }),
+    beatsFromBarOne(playhead.songSec.value, { anchor, bpm }, secondsPerMinute),
   );
   return (
     <>

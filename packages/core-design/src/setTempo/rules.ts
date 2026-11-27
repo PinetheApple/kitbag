@@ -12,6 +12,7 @@ export interface SetTempoRules<M extends number> {
   readonly tapsToSet: number;
   readonly minAnchorSeconds: number;
   readonly msPerSecond: number;
+  readonly secondsPerMinute: number;
   readonly meters: readonly M[];
   readonly defaultMeter: M;
   readonly isMeter: (value: number) => value is M;

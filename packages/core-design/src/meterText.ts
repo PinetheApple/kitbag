@@ -1,5 +1,5 @@
 const QUARTER_NOTE = 4;
-export const SECONDS_PER_MINUTE = 60;
+const SECONDS_PER_MINUTE = 60;
 const MINUTES_PER_HOUR = 60;
 const TENTHS = 10;
 const TWO_DIGITS = 2;

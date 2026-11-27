@@ -1,4 +1,9 @@
-import { GRID_METER } from '@kitbag/core-db';
+import {
+  GRID_METER,
+  TEMPO_MODE,
+  TEMPO_SOURCE,
+  type BundleTempo,
+} from '@kitbag/core-db';
 import { describe, expect, it, vi } from 'vitest';
 
 import { MANUAL_TEMPO_FACT, NO_CLICK_FACT } from './facts.ts';
@@ -92,6 +97,30 @@ describe('previewing a tempo on a stem song', () => {
       click: false,
       manualTempo: DRAFT,
     });
+  });
+
+  it('keeps showing the draft when the tempo mode changes under it', async () => {
+    const follow: BundleTempo = {
+      mode: TEMPO_MODE.follow,
+      bpm: 128,
+      anchor: 0,
+      beatsPerBar: GRID_METER.quadruple,
+      source: TEMPO_SOURCE.detected,
+    };
+    const song = await opened([stem(1)], {
+      beats: [],
+      bars: [],
+      bpm: null,
+      tempo: follow,
+    });
+    song.store.getState().previewTempo(DRAFT);
+    await song.store.getState().setTempoMode(TEMPO_MODE.constant);
+    const { beats, tempoMode, tempoPreview } = song.store.getState();
+    expect({ tempoMode, tempoPreview }).toEqual({
+      tempoMode: TEMPO_MODE.constant,
+      tempoPreview: { savedGrid: true },
+    });
+    expect(beats.slice(0, 2)).toEqual([0, PERIOD_SEC]);
   });
 
   it('forgets the preview when another song opens', async () => {

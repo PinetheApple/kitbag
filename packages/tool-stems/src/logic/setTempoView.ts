@@ -1,8 +1,5 @@
 import { setTempoKit } from '@kitbag/core-design';
-import {
-  MANUAL_TEMPO_RULES,
-  type StemPlayerStore,
-} from '@kitbag/core-state';
+import { MANUAL_TEMPO_RULES, type StemPlayerStore } from '@kitbag/core-state';
 
 export const STEM_SET_TEMPO = setTempoKit(MANUAL_TEMPO_RULES);
 

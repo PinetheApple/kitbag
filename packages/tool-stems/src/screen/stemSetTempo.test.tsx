@@ -1,17 +1,20 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
 import { SET_TEMPO_COPY } from '@kitbag/core-design';
-import {
-  MANUAL_TEMPO_LABEL,
-  stemPlayerStore,
-} from '@kitbag/core-state';
+import { MANUAL_TEMPO_LABEL, stemPlayerStore } from '@kitbag/core-state';
 import { act } from 'react';
 import type { ReactTestInstance } from 'react-test-renderer';
 import { describe, expect, it } from 'vitest';
 
-import { NO_GRID_REASON } from '../logic/meterEdit.ts';
+import { NO_GRID_REASON, UNDO } from '../logic/meterEdit.ts';
 import { SET_TEMPO_UNLOCKS } from '../logic/setTempoView.ts';
-import { at, flush, mountTracked, type Player } from './playerHarness.test-helper.tsx';
+import {
+  at,
+  flush,
+  mountTracked,
+  SET_ID,
+  type Player,
+} from './playerHarness.test-helper.tsx';
 
 const NO_GRID = { beats: [], bars: [], bpm: null, key: 'F', scale: 'major' };
 const MANUAL = { bpm: 128, anchor: 0.8, beatsPerBar: 4 } as const;
@@ -81,7 +84,7 @@ describe('a stem song with no grid', () => {
     await toStepTwo(p);
     expect(p.has(SET_TEMPO_COPY.stepTwo)).toBe(true);
     await saved(p);
-    expect(p.records.saveStemSetManualTempo).toHaveBeenCalledWith(7, {
+    expect(p.records.saveStemSetManualTempo).toHaveBeenCalledWith(SET_ID, {
       manualTempo: MANUAL,
       meterOverride: { meterBeatsPerBar: null, barOneSeconds: null },
     });
@@ -96,9 +99,13 @@ describe('a stem song with no grid', () => {
     const p = await mountTracked(NO_GRID);
     await toStepTwo(p);
     await saved(p);
-    await p.press('Undo');
+    await p.press(UNDO);
     await flush();
-    expect(p.store.getState().manualTempo).toBeNull();
+    expect(p.store.getState()).toMatchObject({
+      manualTempo: null,
+      beats: [],
+      click: false,
+    });
     expect(p.labelled(SET_TEMPO_COPY.title)).toHaveLength(1);
   });
 
@@ -145,10 +152,14 @@ describe('moving to another stem song', () => {
   it('closes the Set tempo sheet and drops its preview', async () => {
     const p = await mountTracked(NO_GRID);
     await toStepTwo(p);
-    await p.showSet(8);
+    await p.showSet(SET_ID + 1);
     await flush();
     expect(p.has(SET_TEMPO_COPY.stepTwo)).toBe(false);
-    expect(p.store.getState().tempoPreview).toBeNull();
+    expect(p.store.getState()).toMatchObject({
+      setId: SET_ID + 1,
+      tempoPreview: null,
+      click: false,
+    });
   });
 });
 

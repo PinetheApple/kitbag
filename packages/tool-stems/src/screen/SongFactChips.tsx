@@ -56,7 +56,7 @@ export function SongFactChips({
   if (!settable && bpm === null && key === null && tempo === null) return null;
   return (
     <View style={styles.row}>
-      <SetTempoButton onPress={onSetTempo} />
+      {settable ? <SetTempoButton onPress={onSetTempo} /> : null}
       {bpm === null ? null : (
         <View accessible accessibilityLabel={bpm.spoken} style={styles.chip}>
           <Text style={styles.value}>{bpm.value}</Text>

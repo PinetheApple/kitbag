@@ -1,4 +1,7 @@
-import { SetTempoSheet as SharedSetTempoSheet, type SetTempo } from '@kitbag/core-design';
+import {
+  SetTempoSheet as SharedSetTempoSheet,
+  type SetTempo,
+} from '@kitbag/core-design';
 import {
   useLiveSongPlayer,
   useLoopScrub,

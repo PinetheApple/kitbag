@@ -39,7 +39,8 @@ function withTempoFact(
   record: StemSetRecord,
   grid: DetectedGrid,
 ): SongFacts {
-  if (record.manualTempo !== null) return { ...facts, tempo: MANUAL_TEMPO_FACT };
+  if (record.manualTempo !== null)
+    return { ...facts, tempo: MANUAL_TEMPO_FACT };
   return grid.beats.length === 0 ? { ...facts, tempo: NO_CLICK_FACT } : facts;
 }
 

@@ -1,6 +1,5 @@
 import {
   meterOverrideOf,
-  NO_METER_OVERRIDE,
   type BundleTempo,
   type ClickRate,
   type ManualTempo,
@@ -28,7 +27,6 @@ import {
 import type { SongFacts } from './facts.ts';
 import type { LoopEdge, LoopSeconds } from './loop.ts';
 import { applyHeldStart, sectionLoopActions } from './loopActions.ts';
-import { overrideDownbeats } from './meterOverride.ts';
 import type { RetimeTap, SongLyrics } from './lyrics.ts';
 import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
 import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
@@ -62,11 +60,11 @@ import {
 } from './stemTracks.ts';
 import { clampedSpeed } from './speedKey.ts';
 import { stemManualTempo, type StemManualTempoActions } from './manualTempo.ts';
-import { anchoredMeter } from '../manualTempo/manualGrid.ts';
+import { anchoredDownbeats } from '../manualTempo/manualGrid.ts';
 import type { TempoPreview } from '../manualTempo/previewSession.ts';
 import { stemTempoPreview } from './tempoPreview.ts';
 import { speedKeySession } from './speedKeyActions.ts';
-import { songGrid, tempoActions } from './tempoActions.ts';
+import { tempoActions } from './tempoActions.ts';
 import { framesToSeconds } from './time.ts';
 
 export const MIX_SAVE_DELAY_MS = 600;
@@ -333,54 +331,18 @@ export function createStemPlayerStore(
       recountWithClickOn: start.recountWithClickOn,
       gridSent: clickShape.gridSent,
     });
-    const songDownbeats = (
-      beats: readonly number[],
-      override: MeterOverride,
-    ) => {
-      const grid = { beats, downbeatIndices: markedDownbeatIndices };
-      const manualTempo = openRecord?.manualTempo ?? null;
-      return overrideDownbeats(
-        grid,
-        anchoredMeter(grid, manualTempo, override).override,
-      );
-    };
     const followers = {
       gridReplaced: start.gridReplaced,
       gridSent: clickShape.gridSent,
     };
-    const regrid = (
-      record: StemSetRecord,
-      mode: TempoMode | null,
-      override: MeterOverride,
-      kept: Partial<StemPlayerState>,
-    ) => {
-      const { marked, state } = songGrid(
-        record,
-        mode,
-        override,
-        speedKey.shift(),
-      );
-      markedDownbeatIndices = marked;
-      set({ ...state, ...kept });
-      void followNewGrid(context, followers);
-    };
-    const applyGrid = (mode: TempoMode | null) => {
-      if (openRecord === null) return;
-      regrid(openRecord, mode, get().meterOverride, { tempoPreview: null });
-    };
     const preview = stemTempoPreview({
       get,
+      set,
       record: () => openRecord,
-      showDraft: (saved, draft, savedGrid) => {
-        const { tempoMode, facts, recordedFacts } = get();
-        regrid({ ...saved, manualTempo: draft }, tempoMode, NO_METER_OVERRIDE, {
-          facts,
-          recordedFacts,
-          tempoPreview: { savedGrid },
-        });
-      },
-      restore: () => {
-        applyGrid(get().tempoMode);
+      shift: speedKey.shift,
+      showGrid: (marked) => {
+        markedDownbeatIndices = marked;
+        void followNewGrid(context, followers);
       },
     });
     const manual = stemManualTempo({
@@ -391,7 +353,7 @@ export function createStemPlayerStore(
         openRecord = { ...openRecord, manualTempo };
         preview.reset();
         set({ manualTempo, meterOverride });
-        applyGrid(get().tempoMode);
+        preview.applyGrid(get().tempoMode);
       },
     });
     const anchorRetime = retimeAnchor(context);
@@ -501,7 +463,7 @@ export function createStemPlayerStore(
       ...clicks,
       ...clickShape.actions,
       ...renameActions(context),
-      ...tempoActions(context, applyGrid),
+      ...tempoActions(context, preview.applyGrid),
       ...retimeActions(context, claim.defer, start, speedKey.rates),
       ...speedKey.actions,
       ...manual.actions,
@@ -509,7 +471,11 @@ export function createStemPlayerStore(
         const { status, setId: openSet, beats, downbeatIndices } = get();
         if (status !== 'ready' || openSet !== setId) return;
         const meterOverride = meterOverrideOf(override);
-        const downbeats = songDownbeats(beats, meterOverride);
+        const downbeats = anchoredDownbeats(
+          { beats, downbeatIndices: markedDownbeatIndices },
+          openRecord?.manualTempo ?? null,
+          meterOverride,
+        );
         if (sameNumbers(downbeats, downbeatIndices)) {
           set({ meterOverride });
           return;

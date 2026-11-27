@@ -2,6 +2,7 @@ import type { ManualTempo, MeterOverride } from '@kitbag/core-db';
 
 import {
   detectedMeter,
+  overrideDownbeats,
   type DetectedGrid,
   type DetectedMeter,
 } from '../stemPlayer/meterOverride.ts';
@@ -26,4 +27,15 @@ export function anchoredMeter(
     detected: { meter: beatsPerBar, barOneSeconds: anchor },
     override: meterOnly ? { ...override, barOneSeconds: anchor } : override,
   };
+}
+
+export function anchoredDownbeats(
+  grid: DetectedGrid,
+  manualTempo: ManualTempo | null,
+  override: MeterOverride,
+): readonly number[] {
+  return overrideDownbeats(
+    grid,
+    anchoredMeter(grid, manualTempo, override).override,
+  );
 }

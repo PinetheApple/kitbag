@@ -15,8 +15,8 @@ import {
   stepped,
   tempoSeed,
   typedValue,
-} from '@kitbag/core-design';
-import { MANUAL_TEMPO_RULES as RULES } from '@kitbag/core-state';
+} from './draft.ts';
+import { RULES } from './rules.test-helper.ts';
 
 const DURATION = 288;
 const DRAFT = { bpm: 120, anchor: 2, beatsPerBar: 4, nudgedMs: 0 } as const;
@@ -33,10 +33,15 @@ describe('tempoSeed', () => {
     ).toEqual({ ...manualTempo, analysed: false });
   });
 
-  it('prefills from the analysis, bar 1 and meter included', () => {
+  it('prefills from the analysis, rounded by the rules, bar 1 and meter included', () => {
     expect(
       tempoSeed(
-        { manualTempo: null, analysedBpm: 131.96, barOneSeconds: 0.8, meter: 3 },
+        {
+          manualTempo: null,
+          analysedBpm: 131.96,
+          barOneSeconds: 0.8,
+          meter: 3,
+        },
         RULES,
       ),
     ).toEqual({ bpm: 132, anchor: 0.8, beatsPerBar: 3, analysed: true });
@@ -68,8 +73,8 @@ describe('typed tempo', () => {
   });
 
   it('clamps a typed tempo into the range on confirm', () => {
-    expect(chosenTypedBpm(typed('412'), null, RULES)).toBe(300);
-    expect(chosenTypedBpm(typed('12'), null, RULES)).toBe(30);
+    expect(chosenTypedBpm(typed('412'), null, RULES)).toBe(240);
+    expect(chosenTypedBpm(typed('12'), null, RULES)).toBe(40);
     expect(chosenTypedBpm(typed(''), null, RULES)).toBeUndefined();
   });
 
@@ -87,9 +92,9 @@ describe('bar 1 moves', () => {
   it('starts at the seed bar 1, else at the playhead', () => {
     const empty = noSeed(RULES);
     expect(startDraft(128, empty, 41.2, RULES).anchor).toBe(41.2);
-    expect(
-      startDraft(128, { ...empty, anchor: 0.8 }, 41.2, RULES).anchor,
-    ).toBe(0.8);
+    expect(startDraft(128, { ...empty, anchor: 0.8 }, 41.2, RULES).anchor).toBe(
+      0.8,
+    );
   });
 
   it('moves a whole beat at the draft tempo', () => {
@@ -113,13 +118,13 @@ describe('bar 1 moves', () => {
     expect(markedAt(moved, 7)).toEqual({ ...DRAFT, anchor: 7, nudgedMs: 0 });
   });
 
-  it('steps the tempo by a tenth', () => {
-    expect(stepped(DRAFT, 1, RULES).bpm).toBe(120.1);
-    expect(stepped(DRAFT, -1, RULES).bpm).toBe(119.9);
+  it('steps the tempo by the rules step', () => {
+    expect(stepped(DRAFT, 1, RULES).bpm).toBe(120.5);
+    expect(stepped(DRAFT, -1, RULES).bpm).toBe(119.5);
   });
 
   it('places the playhead in beats from bar 1', () => {
-    expect(beatsFromBarOne(3, DRAFT)).toBe(2);
-    expect(beatsFromBarOne(1.5, DRAFT)).toBe(-1);
+    expect(beatsFromBarOne(3, DRAFT, RULES.secondsPerMinute)).toBe(2);
+    expect(beatsFromBarOne(1.5, DRAFT, RULES.secondsPerMinute)).toBe(-1);
   });
 });

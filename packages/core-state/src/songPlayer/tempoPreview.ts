@@ -73,7 +73,10 @@ export function tempoPreview({ get, analysed, showGrid }: TempoPreviewContext) {
   });
   return {
     reset: session.reset,
-    over: (record: SongRecord, mode: TempoMode | null): PreviewedGrid | null => {
+    over: (
+      record: SongRecord,
+      mode: TempoMode | null,
+    ): PreviewedGrid | null => {
       const draft = session.draft();
       return draft === null
         ? null
