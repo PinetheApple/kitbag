@@ -14,6 +14,7 @@ import {
   buildV14Fixture,
   pragma,
   rows,
+  tableNames,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -41,12 +42,6 @@ const readMembership = (db: DatabaseSync) =>
 
 const readSetlistNames = (db: DatabaseSync) =>
   rows<NameRow>(db, 'SELECT id, name FROM setlists ORDER BY id');
-
-const tableNames = (db: DatabaseSync) =>
-  rows<{ name: string }>(
-    db,
-    "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
-  ).map((row) => row.name);
 
 const columnNames = (db: DatabaseSync, table: string) =>
   rows<ColumnRow>(db, `PRAGMA table_info(${table})`).map((row) => row.name);

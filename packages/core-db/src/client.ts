@@ -23,6 +23,7 @@ import { createRouteLatencyRepository } from './route-latency-repository';
 import { createSetlistRepository } from './setlist-repository';
 import { createSongLibraryRepository } from './song-library-repository';
 import { createSongPresetRepository } from './song-preset-repository';
+import { createToolDataRepository } from './tool-data-repository';
 import { createTransactor } from './transaction';
 import { createTuningRepository } from './tuning-repository';
 
@@ -123,6 +124,7 @@ export function connectDatabase(
     practice: createPracticeRepository(handle),
     routeLatency: createRouteLatencyRepository(handle),
     bpmCache: createBpmCacheRepository(handle),
+    toolData: createToolDataRepository(handle),
     preferences: createPreferences(
       (sql, params) => connection.executeSync(sql, params).rows,
       handle.transactor,

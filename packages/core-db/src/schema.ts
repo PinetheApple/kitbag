@@ -3,6 +3,7 @@ import {
   check,
   customType,
   integer,
+  primaryKey,
   real,
   sqliteTable,
   text,
@@ -316,3 +317,14 @@ export const preferences = sqliteTable('preferences', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
 });
+
+export const toolData = sqliteTable(
+  'tool_data',
+  {
+    toolId: text('tool_id').notNull(),
+    key: text('key').notNull(),
+    value: text('value').notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.toolId, table.key] })],
+);
