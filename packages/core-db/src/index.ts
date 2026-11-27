@@ -100,6 +100,7 @@ export {
   type LyricsSource,
 } from './stem-lyrics';
 export type { StemSetIdentity } from './stem-set-match';
+export { SAME_SONG_DURATION_TOLERANCE_SEC } from './stem-set-match';
 export { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
 export { ANALYSIS_STATUS, type AnalysisStatus } from './analysis-status';
 export { CLICK_RATE, CLICK_RATES, type ClickRate } from './click-rate';
