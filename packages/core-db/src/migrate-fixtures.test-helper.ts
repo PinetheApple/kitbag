@@ -27,7 +27,9 @@ import {
   V29_SCHEMA_VERSION,
   V30_SCHEMA_VERSION,
   V31_SCHEMA_VERSION,
+  V32_SCHEMA_VERSION,
 } from './migrate';
+import { MIGRATE_V31_TO_V32 } from './migrate-manual-tempo';
 import {
   MIGRATE_V14_TO_V15,
   MIGRATE_V15_TO_V16,
@@ -423,5 +425,12 @@ export function buildV31Fixture(): DatabaseSync {
   const db = buildV30Fixture();
   applyInTransaction(db, MIGRATE_V30_TO_V31);
   db.exec(`PRAGMA user_version = ${String(V31_SCHEMA_VERSION)}`);
+  return db;
+}
+
+export function buildV32Fixture(): DatabaseSync {
+  const db = buildV31Fixture();
+  applyInTransaction(db, MIGRATE_V31_TO_V32);
+  db.exec(`PRAGMA user_version = ${String(V32_SCHEMA_VERSION)}`);
   return db;
 }

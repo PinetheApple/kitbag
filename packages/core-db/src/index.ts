@@ -59,6 +59,14 @@ export type {
   RouteLatencyRepository,
 } from './route-latency-repository';
 export {
+  MAX_TOOL_DATA_VALUE_BYTES,
+  ToolDataRejected,
+  type ToolData,
+  type ToolDataEntry,
+  type ToolDataRejection,
+  type ToolDataRepository,
+} from './tool-data-repository';
+export {
   BPM_CACHE_TTL_MS,
   type BpmCacheRepository,
   type CachedBpm,

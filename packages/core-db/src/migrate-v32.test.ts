@@ -13,6 +13,7 @@ import { nodeSqliteDriver } from './sqlite.test-helper';
 type Row = Record<string, unknown>;
 
 const GAINED = new Set(['songs', 'stem_sets']);
+const LATER_TABLE = 'tool_data';
 
 const ANALYSED_SONG = `INSERT INTO songs
   (title, artist, file_path, duration, format, created_at, beat_grid, downbeat_indices,
@@ -50,17 +51,18 @@ const tableNames = (db: DatabaseSync) =>
   ).map(({ name }) => name);
 
 function snapshot(db: DatabaseSync) {
-  const tables = tableNames(db);
+  const tables = tableNames(db).filter((name) => name !== LATER_TABLE);
   return {
     objects: rows<Row>(
       db,
       `SELECT type, name, tbl_name, sql FROM sqlite_master
-       WHERE tbl_name NOT IN ('songs', 'stem_sets') ORDER BY type, name`,
+       WHERE tbl_name NOT IN ('songs', 'stem_sets', '${LATER_TABLE}')
+       ORDER BY type, name`,
     ),
     indexes: rows<Row>(
       db,
       `SELECT name, tbl_name, sql FROM sqlite_master
-       WHERE type = 'index' ORDER BY name`,
+       WHERE type = 'index' AND tbl_name != '${LATER_TABLE}' ORDER BY name`,
     ),
     data: Object.fromEntries(
       tables.map((name) => [
