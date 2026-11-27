@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { CATEGORIES } from './backup-format';
+import { TEST_BACKUP_RULES } from './backup-rules.test-helper';
 import {
   openBackupDatabase,
   seed,
@@ -30,6 +31,16 @@ const BLUETOOTH = {
   name: 'Earbuds',
   kind: 'bluetooth',
 };
+
+const PHONE_SPEAKER = { ...SPEAKER, offsetMs: 80 };
+const EARPIECE = { route: 'earpiece', offsetMs: 30, name: null, kind: 'other' };
+const BUILT_IN_WIRED = {
+  route: 'wired',
+  offsetMs: 15,
+  name: null,
+  kind: 'wired',
+};
+const REPLACE_ALL = { mode: 'replace', categories: CATEGORIES } as const;
 
 const rigKeys = Object.values(RIG_PREFERENCE_KEYS);
 
@@ -129,6 +140,92 @@ describe('rig settings in a backup', () => {
       expect.arrayContaining([WIRED, SPEAKER]),
     );
     expect(await routes(target)).toHaveLength(2);
+  });
+
+  it('replace keeps the latency this phone measured for its built-in routes', async () => {
+    const source = openBackupDatabase();
+    const sourceRoutes = createRouteLatencyRepository(source.handle);
+    for (const route of [
+      SPEAKER,
+      { ...EARPIECE, offsetMs: 60 },
+      BUILT_IN_WIRED,
+      BLUETOOTH,
+    ])
+      await sourceRoutes.save(route);
+    const target = openBackupDatabase();
+    const targetRoutes = createRouteLatencyRepository(target.handle);
+    await targetRoutes.save(PHONE_SPEAKER);
+    await targetRoutes.save(EARPIECE);
+    await targetRoutes.save({ ...BLUETOOTH, offsetMs: 90 });
+    const result = await restore(
+      target,
+      await source.backup.export(),
+      REPLACE_ALL,
+    );
+    expect(result.ok).toBe(true);
+    expect(await routes(target)).toEqual(
+      expect.arrayContaining([
+        PHONE_SPEAKER,
+        EARPIECE,
+        BUILT_IN_WIRED,
+        BLUETOOTH,
+      ]),
+    );
+    expect(await routes(target)).toHaveLength(4);
+  });
+
+  it('replace counts the kept built-in routes as unchanged, not deleted', async () => {
+    const source = openBackupDatabase();
+    await createRouteLatencyRepository(source.handle).save(SPEAKER);
+    const target = openBackupDatabase();
+    await createRouteLatencyRepository(target.handle).save(PHONE_SPEAKER);
+    const plan = unwrap(
+      await target.backup.plan(await source.backup.export(), REPLACE_ALL),
+    );
+    expect(plan.counts.rigSettings).toMatchObject({
+      incoming: 1,
+      new: 0,
+      unchanged: 1,
+      deletes: 0,
+    });
+  });
+
+  it('merge still asks before overwriting a built-in route measured here', async () => {
+    const target = openBackupDatabase();
+    await createRouteLatencyRepository(target.handle).save(PHONE_SPEAKER);
+    const plan = unwrap(await target.backup.plan(await exported()));
+    expect(plan.unresolved).toContainEqual(
+      expect.objectContaining({
+        category: 'rigSettings',
+        key: 'route:speaker',
+      }),
+    );
+  });
+
+  it.each([
+    ['above', TEST_BACKUP_RULES.latencyOffsetMs.max + 1, 'offsetMs'],
+    ['below', TEST_BACKUP_RULES.latencyOffsetMs.min - 1, 'offsetMs'],
+  ])(
+    'refuse a route latency %s the engine bounds',
+    async (_side, offsetMs, field) => {
+      const file = JSON.parse(await exported()) as Record<string, unknown>;
+      file.rigSettings = [{ ...WIRED, offsetMs }];
+      const plan = await openBackupDatabase().backup.plan(JSON.stringify(file));
+      expect(plan).toMatchObject({
+        ok: false,
+        error: { kind: 'invalidField', path: `$.rigSettings[0].${field}` },
+      });
+    },
+  );
+
+  it('refuse a route latency without a route', async () => {
+    const file = JSON.parse(await exported()) as Record<string, unknown>;
+    file.rigSettings = [{ ...WIRED, route: ' ' }];
+    const plan = await openBackupDatabase().backup.plan(JSON.stringify(file));
+    expect(plan).toMatchObject({
+      ok: false,
+      error: { kind: 'invalidField', path: '$.rigSettings[0].route' },
+    });
   });
 
   it('refuse a key that is not a rig setting', async () => {

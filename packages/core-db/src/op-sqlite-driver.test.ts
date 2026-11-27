@@ -16,6 +16,7 @@ import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 import { INSTRUMENTS } from './tuning-rules';
 import { memoryClickSoundFiles } from './click-sound-files.test-helper';
 import { unusedMigrationCopyFiles } from './migration-copy-files.test-helper';
+import { TEST_BACKUP_RULES } from './backup-rules.test-helper';
 
 describe('drizzle over the op-sqlite connection', () => {
   it('runs repository reads and writes', async () => {
@@ -23,6 +24,7 @@ describe('drizzle over the op-sqlite connection', () => {
       fakeOpSqlite().connection,
       memoryClickSoundFiles().files,
       unusedMigrationCopyFiles,
+      TEST_BACKUP_RULES,
     );
 
     const setlist = await database.setlists.create('Friday');
@@ -62,6 +64,7 @@ describe('drizzle over the op-sqlite connection', () => {
         connection,
         memoryClickSoundFiles().files,
         unusedMigrationCopyFiles,
+        TEST_BACKUP_RULES,
       );
       await database.presets.create(presetValues('Mine', null));
       const mine = await database.setlists.create('Mine');

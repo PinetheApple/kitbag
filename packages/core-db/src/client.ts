@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/op-sqlite';
 
 import { attempt } from './attempt';
 import { createBackupService } from './backup';
+import type { BackupRules } from './backup-rules';
 import { createBpmCacheRepository } from './bpm-cache-repository';
 import type { ClickSoundFiles } from './click-sound-files';
 import { createClickSoundRepository } from './click-sound-repository';
@@ -51,12 +52,14 @@ export function drizzleClient(connection: Connection) {
 export function openDatabase(
   clickSoundFiles: ClickSoundFiles,
   migrationCopyFiles: MigrationCopyFiles,
+  backupRules: BackupRules,
   name: string = DATABASE_NAME,
 ) {
   return connectDatabase(
     openNativeConnection(name),
     clickSoundFiles,
     migrationCopyFiles,
+    backupRules,
   );
 }
 
@@ -83,6 +86,7 @@ export function connectDatabase(
   connection: Connection,
   clickSoundFiles: ClickSoundFiles,
   migrationCopyFiles: MigrationCopyFiles,
+  backupRules: BackupRules,
 ) {
   try {
     migrate(opSqliteMigrationDriver(connection), (fromVersion) => {
@@ -114,7 +118,7 @@ export function connectDatabase(
     presets: createSongPresetRepository(handle),
     tunings: createTuningRepository(handle),
     songLibrary: createSongLibraryRepository(handle),
-    backup: createBackupService(handle, clickSoundFiles),
+    backup: createBackupService(handle, clickSoundFiles, backupRules),
     clickSounds: createClickSoundRepository(handle),
     practice: createPracticeRepository(handle),
     routeLatency: createRouteLatencyRepository(handle),

@@ -12,11 +12,11 @@ import {
 import {
   applyWrites,
   type ClickSoundFileLog,
-  type FileContext,
   type SoundOutcome,
 } from './backup-apply';
 import { keepBeforeReplace, readBeforeReplace } from './backup-before-replace';
 import { parseBackup } from './backup-parse';
+import type { BackupRules } from './backup-rules';
 import {
   computePlan,
   planFingerprint,
@@ -137,9 +137,13 @@ async function summary({ db }: DatabaseHandle) {
   ) as Record<Category, number>;
 }
 
-const revalidated = (file: BackupFile) => parseBackup(serializeBackup(file));
+interface ServiceContext {
+  handle: DatabaseHandle;
+  files: ClickSoundFiles;
+  rules: BackupRules;
+}
 
-async function keepCurrentData(handle: DatabaseHandle, files: ClickSoundFiles) {
+async function keepCurrentData({ handle, files }: ServiceContext) {
   try {
     await keepBeforeReplace(
       handle.db,
@@ -154,11 +158,12 @@ async function keepCurrentData(handle: DatabaseHandle, files: ClickSoundFiles) {
 }
 
 async function applyPlan(
-  handle: DatabaseHandle,
-  fileContext: FileContext,
+  context: ServiceContext,
+  log: ClickSoundFileLog,
   plan: ImportPlan,
   options: ApplyOptions,
 ): Promise<ApplyReport> {
+  const { handle, files, rules } = context;
   const { db } = handle;
   if (plan.mode === 'replace' && options.confirmReplace !== true)
     throw new ImportRejected({ kind: 'replaceNotConfirmed' });
@@ -167,18 +172,19 @@ async function applyPlan(
       kind: 'unresolvedConflicts',
       conflicts: plan.unresolved,
     });
-  const file = revalidated(plan.file);
+  const file = parseBackup(serializeBackup(plan.file), rules);
   const snapshot = await loadSnapshot(db);
-  const fresh = computePlan(file, snapshot, plan);
+  const fresh = computePlan(file, snapshot, plan, rules.deviceRoutes);
   if (planFingerprint(fresh.plan) !== planFingerprint(plan))
     throw new ImportRejected({ kind: 'stalePlan' });
-  if (plan.mode === 'replace') await keepCurrentData(handle, fileContext.files);
+  if (plan.mode === 'replace') await keepCurrentData(context);
   const sounds = await applyWrites(
     db,
     fresh.plan,
     fresh.writes,
     snapshot,
-    fileContext,
+    { files, log },
+    rules.deviceRoutes,
   );
   return { counts: fresh.plan.counts, ...sounds };
 }
@@ -190,12 +196,14 @@ async function removeAll(files: ClickSoundFiles, fileNames: string[]) {
 export function createBackupService(
   handle: DatabaseHandle,
   files: ClickSoundFiles,
+  rules: BackupRules,
 ) {
   const { serial, transaction } = handle.transactor;
+  const context = { handle, files, rules };
   const apply = async (plan: ImportPlan, options: ApplyOptions = {}) => {
     const log: ClickSoundFileLog = { written: [], replaced: [] };
     const result = await asResult(() =>
-      transaction(() => applyPlan(handle, { files, log }, plan, options)),
+      transaction(() => applyPlan(context, log, plan, options)),
     );
     await removeAll(files, result.ok ? log.replaced : log.written);
     return result;
@@ -211,9 +219,10 @@ export function createBackupService(
         asResult(
           async () =>
             computePlan(
-              parseBackup(input),
+              parseBackup(input, rules),
               await loadSnapshot(handle.db),
               options,
+              rules.deviceRoutes,
             ).plan,
         ),
       ),

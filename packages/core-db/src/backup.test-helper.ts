@@ -2,6 +2,7 @@ import { afterEach } from 'vitest';
 
 import { createBackupService } from './backup';
 import type { ImportResult } from './backup-format';
+import { TEST_BACKUP_RULES } from './backup-rules.test-helper';
 import { createClickSoundRepository } from './click-sound-repository';
 import { memoryClickSoundFiles } from './click-sound-files.test-helper';
 import { COUNT_IN_PREFERENCE_KEYS } from './count-in-preferences';
@@ -56,7 +57,11 @@ export function backupDatabase(handle: ReturnType<typeof openTestDatabase>) {
     clickSounds: createClickSoundRepository(handle),
     sets: createSetlistRepository(handle),
     presets: createSongPresetRepository(handle),
-    backup: createBackupService(handle, clickSoundFiles.files),
+    backup: createBackupService(
+      handle,
+      clickSoundFiles.files,
+      TEST_BACKUP_RULES,
+    ),
     preferences: createPreferences(
       (sql, params) => handle.connection.prepare(sql).all(...params),
       handle.transactor,

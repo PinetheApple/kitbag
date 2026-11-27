@@ -1,4 +1,4 @@
-import { eq, inArray, isNotNull } from 'drizzle-orm';
+import { eq, inArray, isNotNull, notInArray } from 'drizzle-orm';
 
 import { ANALYSIS_STATUS } from './analysis-status';
 import {
@@ -205,13 +205,20 @@ const UPSERTS: Record<Category, Upsert> = {
   appearanceSettings: upsertPreference as Upsert,
 };
 
-async function deleteCategory(db: Database, category: Category) {
+async function deleteCategory(
+  db: Database,
+  category: Category,
+  deviceRoutes: readonly string[],
+) {
   if (category === 'stemSongs') return;
   if (isPreferenceCategory(category)) {
     await db
       .delete(preferences)
       .where(inArray(preferences.key, [...PREFERENCE_KEYS[category]]));
-    if (category === 'rigSettings') await db.delete(routeLatency);
+    if (category === 'rigSettings')
+      await db
+        .delete(routeLatency)
+        .where(notInArray(routeLatency.route, [...deviceRoutes]));
   } else if (category === 'setlists') {
     await db.delete(setlistItems);
     await db.update(practiceSessions).set({ setlistId: null });
@@ -343,13 +350,14 @@ export async function applyWrites(
   writes: Writes,
   snapshot: Snapshot,
   fileContext: FileContext,
+  deviceRoutes: readonly string[],
 ): Promise<SoundOutcome> {
   const { ids } = snapshot;
   const deviceStemSets = new Map(ids.stemSongs);
   const stemEntries = await loadStemEntries(db);
   if (plan.mode === 'replace') {
     for (const category of [...plan.categories].reverse()) {
-      await deleteCategory(db, category);
+      await deleteCategory(db, category, deviceRoutes);
       ids[category].clear();
     }
     if (plan.categories.includes('clickSounds'))

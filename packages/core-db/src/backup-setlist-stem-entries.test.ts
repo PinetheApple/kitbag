@@ -6,6 +6,7 @@ import { asc, eq } from 'drizzle-orm';
 
 import type { ImportOptions } from './backup-plan';
 import { parseBackup } from './backup-parse';
+import { TEST_BACKUP_RULES } from './backup-rules.test-helper';
 import {
   FOLDER_KEY,
   STEMDECK_KEY,
@@ -103,8 +104,10 @@ function withoutItems(text: string) {
 describe('a setlist holding stem songs in a backup', () => {
   it('writes every entry in order and keeps presetUuids to the metronome songs', async () => {
     const { source, opener, closer, items } = await mixedSource();
-    const [setlist] = parseBackup(await source.backup.export()).records
-      .setlists;
+    const [setlist] = parseBackup(
+      await source.backup.export(),
+      TEST_BACKUP_RULES,
+    ).records.setlists;
     expect(setlist?.items).toEqual(items);
     expect(setlist?.presetUuids).toEqual([opener.uuid, closer.uuid]);
   });
@@ -227,7 +230,10 @@ describe('a setlist holding stem songs in a backup', () => {
 
   it('exports on its own with its entries and listed presets, without stem mixes', async () => {
     const { source, opener, closer, gig, items } = await mixedSource();
-    const file = parseBackup(await source.backup.exportSetlist(gig.uuid));
+    const file = parseBackup(
+      await source.backup.exportSetlist(gig.uuid),
+      TEST_BACKUP_RULES,
+    );
     expect(file.categories).toEqual(['songPresets', 'setlists']);
     expect(file.records.setlists[0]?.items).toEqual(items);
     expect(file.records.songPresets.map(({ uuid }) => uuid).sort()).toEqual(

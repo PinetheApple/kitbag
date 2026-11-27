@@ -18,7 +18,6 @@ import {
   type PreferenceCategory,
   type PreferenceRecord,
   type RigRecord,
-  type RouteLatencyRecord,
   type SetlistItemRecord,
   type SetlistRecord,
   type SongPresetRecord,
@@ -32,6 +31,8 @@ import {
   reader,
   type Reader,
 } from './backup-reader';
+import { routeLatencyReader } from './backup-rig-read';
+import type { BackupRules } from './backup-rules';
 import { readSongTempo } from './backup-song-tempo';
 import { readStemSong } from './backup-stem-song-read';
 import { decodeBase64, presetBytes } from './base64';
@@ -274,25 +275,19 @@ function preferenceReader(category: PreferenceCategory) {
 
 const readRigPreference = preferenceReader('rigSettings');
 
-function readRouteLatency(value: unknown, path: string): RouteLatencyRecord {
-  const r = reader(value, path);
-  return {
-    route: r.string('route'),
-    offsetMs: r.number('offsetMs'),
-    name: r.nullableString('name'),
-    kind: r.nullableString('kind'),
-  };
+function rigSettingReader(rules: BackupRules) {
+  const readRouteLatency = routeLatencyReader(rules.latencyOffsetMs);
+  return (value: unknown, path: string): RigRecord =>
+    'route' in asObject(value, path)
+      ? readRouteLatency(value, path)
+      : readRigPreference(value, path);
 }
 
-function readRigSetting(value: unknown, path: string): RigRecord {
-  return 'route' in asObject(value, path)
-    ? readRouteLatency(value, path)
-    : readRigPreference(value, path);
-}
-
-const READERS: {
+type Readers = {
   [C in Category]: (value: unknown, path: string) => CategoryRecords[C][number];
-} = {
+};
+
+const READERS: Omit<Readers, 'rigSettings'> = {
   librarySongs: readLibrarySong,
   songPresets: readSongPreset,
   setlists: readSetlist,
@@ -302,7 +297,6 @@ const READERS: {
   metronomeSettings: preferenceReader('metronomeSettings'),
   clickSounds: readClickSound,
   stemSongs: readStemSong,
-  rigSettings: readRigSetting,
   appearanceSettings: preferenceReader('appearanceSettings'),
 };
 
@@ -310,6 +304,7 @@ function readCategory<C extends Category>(
   root: Record<string, unknown>,
   category: C,
   listed: boolean,
+  read: Readers[C],
 ): CategoryRecords[C] {
   const path = `$.${category}`;
   if (!listed) {
@@ -317,7 +312,6 @@ function readCategory<C extends Category>(
       invalidField(path, 'present but not listed in categories');
     return [];
   }
-  const read = READERS[category];
   return asArray(root[category], path).map((value, index) =>
     read(value, `${path}[${String(index)}]`),
   ) as CategoryRecords[C];
@@ -418,13 +412,19 @@ function parseJson(text: string): Record<string, unknown> {
   return asObject(root, '$');
 }
 
-export function parseBackup(input: string): BackupFile {
+export function parseBackup(input: string, rules: BackupRules): BackupFile {
   const root = parseJson(input);
   const header = readHeader(root);
+  const readers: Readers = { ...READERS, rigSettings: rigSettingReader(rules) };
   const records = Object.fromEntries(
     CATEGORIES.map((category) => [
       category,
-      readCategory(root, category, header.categories.includes(category)),
+      readCategory(
+        root,
+        category,
+        header.categories.includes(category),
+        readers[category],
+      ),
     ]),
   ) as unknown as CategoryRecords;
   const file: BackupFile = { ...header, version: BACKUP_VERSION, records };

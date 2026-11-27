@@ -2,11 +2,14 @@ import {
   DATABASE_NAME,
   DatabaseOpenError,
   openDatabase,
+  type BackupRules,
   type KitbagDatabase,
   type MigrationCopyFiles,
 } from '@kitbag/core-db';
 import {
   databaseFreeBytes,
+  KB_FIXED_OUTPUT_ROUTES,
+  KB_LATENCY_OFFSET_MS_BOUNDS,
   deleteClickSound,
   readClickSound,
   removeDatabaseCopy,
@@ -32,6 +35,13 @@ const migrationCopyFiles: MigrationCopyFiles = {
   },
 };
 
+export const backupRules: BackupRules = {
+  latencyOffsetMs: KB_LATENCY_OFFSET_MS_BOUNDS,
+  deviceRoutes: KB_FIXED_OUTPUT_ROUTES.filter(
+    ({ kind }) => kind !== 'bluetooth',
+  ).map(({ id }) => id),
+};
+
 function open(): DatabaseStatus {
   try {
     const database = openDatabase(
@@ -41,6 +51,7 @@ function open(): DatabaseStatus {
         remove: deleteClickSound,
       },
       migrationCopyFiles,
+      backupRules,
     );
     return { ok: true, database };
   } catch (error) {
