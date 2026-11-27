@@ -1,5 +1,6 @@
 import { CATEGORIES } from '@kitbag/core-db';
 
+import { flushStandaloneMetronomePersistence } from '../metronome/standalonePersistence.ts';
 import { getBackup, type BackupDeps } from './runtime.ts';
 
 export const LIBRARY_BACKUP_FILE_NAME = 'kitbag_export.json';
@@ -21,6 +22,7 @@ export function setlistBackupFileName(name: string): string {
 export async function shareLibraryBackup(
   deps: BackupDeps = getBackup(),
 ): Promise<void> {
+  flushStandaloneMetronomePersistence();
   const contents = await deps.service().export(CATEGORIES);
   await deps.share(LIBRARY_BACKUP_FILE_NAME, contents);
 }
@@ -28,6 +30,7 @@ export async function shareLibraryBackup(
 export async function saveLibraryBackup(
   deps: BackupDeps = getBackup(),
 ): Promise<boolean> {
+  flushStandaloneMetronomePersistence();
   const contents = await deps.service().export(CATEGORIES);
   return deps.save(LIBRARY_BACKUP_FILE_NAME, contents);
 }

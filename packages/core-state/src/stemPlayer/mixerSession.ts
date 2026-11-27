@@ -7,7 +7,7 @@ import {
 
 import type { MixerClick, MixerClickSource } from './mixerClick.ts';
 import { stopClick, turnClickOff, type ClickSlice } from './clickActions.ts';
-import { debounce } from './debounce.ts';
+import { debounce } from '../debounce.ts';
 import type { MixerClaim } from './mixerClaim.ts';
 import { mixerSeeked } from './mixerSeeked.ts';
 import { createPendingClick } from './pendingClick.ts';
