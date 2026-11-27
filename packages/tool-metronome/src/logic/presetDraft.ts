@@ -1,3 +1,4 @@
+import { MIN_BEATS } from '@kitbag/core-design';
 import {
   KB_DENOMINATORS,
   KB_MAX_BEATS,
@@ -24,7 +25,6 @@ import {
   DEFAULT_BPM,
 } from '@kitbag/core-state';
 
-import { MIN_BEATS } from './meter.ts';
 import type { RampBpmField } from './rampEntry.ts';
 
 export type RampDraft = RampConfig;

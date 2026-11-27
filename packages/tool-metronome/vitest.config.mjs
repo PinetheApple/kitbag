@@ -31,7 +31,6 @@ export default defineConfig({
       'src/library/songLists.test.tsx',
       'src/library/AllSongsScreen.test.tsx',
       'src/screen/PracticeSections.test.tsx',
-      'src/screen/MeterSheet.test.tsx',
       'src/screen/PolyStrip.test.tsx',
       'src/screen/SwipeTempoZone.test.tsx',
       'src/screen/frameSurfaces.test.tsx',

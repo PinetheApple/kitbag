@@ -15,7 +15,11 @@ export * from './songLibrary/badge.ts';
 export * from './songLibrary/replaceText.ts';
 export * from './stemPlayer/beatStep.ts';
 export * from './importText.ts';
-export { layoutBeatLeds } from './metronome/ledLayout.ts';
+export {
+  layoutBeatLeds,
+  ledStateFor,
+  ledStatesFor,
+} from './metronome/ledLayout.ts';
 export { countInBarsFromOption } from './metronome/countInOption.ts';
 export {
   customSoundViews,

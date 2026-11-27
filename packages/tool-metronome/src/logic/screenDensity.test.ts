@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { screenDensity } from './screenDensity.ts';
+import { screenDensity } from '@kitbag/core-design';
 
 const ROOMY = {
   windowHeight: 914,

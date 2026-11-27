@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -8,8 +8,14 @@ import Animated, {
 
 import { opacity, radius, size } from '../roles.ts';
 import { HALF, TRANSPARENT } from '../styleConstants.ts';
-import { createThemedStyles } from '../ThemeProvider.tsx';
-import { stripPosition, tunerStripGradient } from '../tunerVisuals.ts';
+import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
+import type { ColorToken } from '../tokens.ts';
+import {
+  stripGradient,
+  stripPosition,
+  TUNER_STRIP_STOPS,
+  type GradientStop,
+} from '../tunerVisuals.ts';
 
 const NEEDLE_REACH_ABOVE = size.tunerNeedleOverhang + size.tunerNeedleCap;
 
@@ -21,7 +27,6 @@ const useStyles = createThemedStyles((theme) => ({
   strip: {
     height: size.tunerStrip,
     borderRadius: radius.tunerStrip,
-    experimental_backgroundImage: tunerStripGradient(theme.color),
     opacity: opacity.tunerStrip,
   },
   centre: {
@@ -40,7 +45,6 @@ const useStyles = createThemedStyles((theme) => ({
     bottom: -size.tunerNeedleOverhang,
     width: size.tunerNeedle,
     borderRadius: radius.tunerNeedle,
-    backgroundColor: theme.color.text,
   },
   cap: {
     position: 'absolute',
@@ -51,19 +55,33 @@ const useStyles = createThemedStyles((theme) => ({
     borderTopWidth: size.tunerNeedleCap,
     borderLeftColor: TRANSPARENT,
     borderRightColor: TRANSPARENT,
-    borderTopColor: theme.color.text,
   },
 }));
 
 export interface TunerStripProps {
   readonly needle: SharedValue<number>;
   readonly active: SharedValue<number>;
+  readonly stops?: readonly GradientStop[];
+  readonly needleColor?: ColorToken;
 }
 
 // Decorative to screen readers: the screen's status text carries the reading.
-export function TunerStrip({ needle, active }: TunerStripProps) {
+export function TunerStrip({
+  needle,
+  active,
+  stops = TUNER_STRIP_STOPS,
+  needleColor = 'text',
+}: TunerStripProps) {
   const styles = useStyles();
+  const theme = useTheme();
   const stripWidth = useSharedValue(0);
+  const fill = useMemo(
+    () => ({ experimental_backgroundImage: stripGradient(theme.color, stops) }),
+    [theme.color, stops],
+  );
+  const ink = theme.color[needleColor];
+  const needleInk = useMemo(() => ({ backgroundColor: ink }), [ink]);
+  const capInk = useMemo(() => ({ borderTopColor: ink }), [ink]);
 
   const onLayout = useCallback(
     (event: LayoutChangeEvent) => {
@@ -89,10 +107,10 @@ export function TunerStrip({ needle, active }: TunerStripProps) {
       importantForAccessibility="no-hide-descendants"
       accessibilityElementsHidden
     >
-      <View style={styles.strip} onLayout={onLayout}>
+      <View style={[styles.strip, fill]} onLayout={onLayout}>
         <View style={styles.centre} />
-        <Animated.View style={[styles.needle, needleStyle]}>
-          <View style={styles.cap} />
+        <Animated.View style={[styles.needle, needleInk, needleStyle]}>
+          <View style={[styles.cap, capInk]} />
         </Animated.View>
       </View>
     </View>

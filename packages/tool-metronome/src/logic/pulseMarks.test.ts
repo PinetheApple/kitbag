@@ -5,7 +5,7 @@ import {
   pulseInBeat,
   pulseMarkFit,
   soundingPulse,
-} from './pulseMarks.ts';
+} from '@kitbag/core-design';
 
 const MARKS = { mark: 6, gap: 3, radius: 2 };
 

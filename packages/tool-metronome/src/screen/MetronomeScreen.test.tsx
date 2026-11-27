@@ -83,6 +83,7 @@ vi.mock('@kitbag/core-design', async (original) => ({
   textRoles: {},
   textStyle: () => ({}),
   fadeToClear: () => ({}),
+  PickerChips: () => null,
 }));
 
 vi.mock('@kitbag/core-state', () => ({
@@ -151,12 +152,13 @@ vi.mock('./BeatDots.tsx', () => ({
 vi.mock('./NumberEntrySheet.tsx', () => ({ NumberEntrySheet: () => null }));
 vi.mock('./MeterSheet.tsx', () => ({ MeterSheet: () => null }));
 vi.mock('./MetronomeAppBar.tsx', () => ({ MetronomeAppBar: () => null }));
-vi.mock('./PickerChips.tsx', () => ({ PickerChips: () => null }));
 vi.mock('./PolyLegend.tsx', () => ({ PolyLegend: () => null }));
 vi.mock('./PracticeSheet.tsx', () => ({ PracticeSheet: () => null }));
 vi.mock('./PresetRow.tsx', () => ({ PresetRow: () => null }));
 vi.mock('./StatusStack.tsx', () => ({ StatusStack: () => null }));
-vi.mock('./SubdivisionSheet.tsx', () => ({ SubdivisionSheet: () => null }));
+vi.mock('./MetronomeSubdivisionSheet.tsx', () => ({
+  MetronomeSubdivisionSheet: () => null,
+}));
 vi.mock('./SwipeHint.tsx', () => ({
   SwipeHint: (props: Props) => {
     hint.props = props;

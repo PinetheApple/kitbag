@@ -19,6 +19,7 @@ const idle: TapPadInputs = {
   songBpm: null,
   tappedBpm: null,
   tapsLanded: 0,
+  retap: false,
 };
 
 describe('tapPadCopy', () => {
@@ -38,6 +39,19 @@ describe('tapPadCopy', () => {
     });
     expect(copy.mode).toBe(TAP_PAD_MODE.landed);
     expect(copy.title).toBe('Locked on beat 1');
+  });
+
+  it('asks for a re-tap on a downbeat when the lock drifted', () => {
+    const copy = tapPadCopy({
+      ...idle,
+      following: true,
+      locked: true,
+      retap: true,
+      songBpm: SONG_BPM,
+    });
+    expect(copy.mode).toBe(TAP_PAD_MODE.align);
+    expect(copy.title).toBe('Re-tap on a downbeat');
+    expect(copy.hint).toBe('One tap puts the click back on the beat');
   });
 
   it('switches to tap tempo when every rung failed for the song', () => {

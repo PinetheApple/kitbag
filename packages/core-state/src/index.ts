@@ -97,7 +97,13 @@ export {
   type LadderRung,
   type SourceCredit,
 } from './tempoLadder/sources.ts';
-export { layoutBeatLeds, type LedRowLayout } from './metronome/ledLayout.ts';
+export {
+  layoutBeatLeds,
+  ledStateFor,
+  ledStatesFor,
+  type AccentLedState,
+  type LedRowLayout,
+} from './metronome/ledLayout.ts';
 export { countInBarsFromOption } from './metronome/countInOption.ts';
 export {
   effectivePolyAgainst,

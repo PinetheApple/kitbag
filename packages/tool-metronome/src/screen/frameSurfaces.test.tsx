@@ -35,7 +35,7 @@ vi.mock('react-native', async () => {
     View: box,
     Text: text,
     Pressable: box,
-    StyleSheet: { absoluteFill: {} },
+    StyleSheet: { absoluteFill: {}, create: <T,>(sheet: T) => sheet },
     useWindowDimensions: () => ({ fontScale: 1 }),
   };
 });
@@ -72,6 +72,9 @@ vi.mock('react-native-reanimated', async () => {
 vi.mock('@kitbag/core-design', async (original) => {
   return {
     ...(await original<Record<string, unknown>>()),
+    ...(await import('../../../core-design/src/components/BeatDotGrid.tsx')),
+    ...(await import('../../../core-design/src/components/beatDotStyles.ts')),
+    ...(await import('../../../core-design/src/components/BeatGrid.tsx')),
     CountSquare: (props: Props) => {
       countBeats.push((props.currentBeat as { value: number }).value);
       return null;

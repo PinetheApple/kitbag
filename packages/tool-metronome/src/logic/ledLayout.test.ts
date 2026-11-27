@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { beatDotSize, MAX_DOTS_PER_LINE } from '@kitbag/core-design';
 import { layoutBeatLeds } from '@kitbag/core-state';
-import { beatDotSize, MAX_DOTS_PER_LINE } from './ledLayout.ts';
 
 const sizesOf = (rows: readonly (readonly (readonly number[])[])[]) =>
   rows.map((row) => row.map((group) => group.length));

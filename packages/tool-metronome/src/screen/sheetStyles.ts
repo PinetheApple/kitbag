@@ -5,8 +5,4 @@ export const useSheetStyles = createThemedStyles((theme) => ({
     ...textStyle(textRoles.songArtist),
     color: theme.color.text2,
   },
-  selectedTile: {
-    borderColor: theme.color.accent,
-    backgroundColor: theme.selectedTileFill,
-  },
 }));

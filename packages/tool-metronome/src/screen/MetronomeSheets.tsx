@@ -4,7 +4,7 @@ import { MeterSheet } from './MeterSheet.tsx';
 import { NumberEntrySheet } from './NumberEntrySheet.tsx';
 import { PracticeSheet } from './PracticeSheet.tsx';
 import { PracticeSummarySheet } from './PracticeSummarySheet.tsx';
-import { SubdivisionSheet } from './SubdivisionSheet.tsx';
+import { MetronomeSubdivisionSheet } from './MetronomeSubdivisionSheet.tsx';
 
 export type OpenSheet =
   'none' | 'numpad' | 'meter' | 'subdivision' | 'practice' | 'summary';
@@ -44,7 +44,7 @@ export function MetronomeSheets({
         bottomInset={bottomInset}
         onDismiss={onClose}
       />
-      <SubdivisionSheet
+      <MetronomeSubdivisionSheet
         visible={openSheet === 'subdivision'}
         bottomInset={bottomInset}
         onDismiss={onClose}

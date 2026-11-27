@@ -1,6 +1,9 @@
-import { metronome } from '@kitbag/core-design';
+import {
+  metronome,
+  screenDensity,
+  type ScreenDensity,
+} from '@kitbag/core-design';
 
-import { screenDensity, type ScreenDensity } from '../logic/screenDensity.ts';
 import { useOverflowLatch } from './useOverflowLatch.ts';
 
 export function useScreenDensity(
