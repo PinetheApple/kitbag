@@ -20,9 +20,22 @@ const idle: TapPadInputs = {
   tappedBpm: null,
   tapsLanded: 0,
   retap: false,
+  offered: false,
 };
 
 describe('tapPadCopy', () => {
+  it('offers locking by hand while the library grid is offered', () => {
+    const copy = tapPadCopy({
+      ...idle,
+      following: true,
+      songBpm: SONG_BPM,
+      offered: true,
+    });
+    expect(copy.mode).toBe(TAP_PAD_MODE.align);
+    expect(copy.title).toBe('Tap on a downbeat');
+    expect(copy.hint).toBe('Or tap on a downbeat to lock it yourself');
+  });
+
   it('asks for a downbeat once a song plays and its tempo is known', () => {
     const copy = tapPadCopy({ ...idle, following: true, songBpm: SONG_BPM });
     expect(copy.mode).toBe(TAP_PAD_MODE.align);

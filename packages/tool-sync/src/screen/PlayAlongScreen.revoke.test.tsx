@@ -21,7 +21,7 @@ vi.mock('./playAlongHooks.ts', () => ({
   usePlayAlong: <T,>(selector: (state: Record<string, unknown>) => T) =>
     selector({ lock: undefined, pattern: { sounds: [] } }),
   useSessionWatchWhileLocked: () => undefined,
-  useSongTempo: () => undefined,
+  useLibraryWatch: () => undefined,
   useTempoLine: () => ({ bpm: null, line: { lead: '', rung: '' } }),
 }));
 
@@ -29,7 +29,10 @@ vi.mock('./PermissionExplainer.tsx', () => ({
   PermissionExplainer: 'PermissionExplainer',
 }));
 vi.mock('./PlayAlongBody.tsx', () => ({ PlayAlongBody: 'PlayAlongBody' }));
-vi.mock('./PlayAlongDock.tsx', () => ({ PlayAlongDock: 'PlayAlongDock' }));
+vi.mock('./PlayAlongDock.tsx', () => ({
+  PlayAlongDock: 'PlayAlongDock',
+  ClickDock: 'ClickDock',
+}));
 vi.mock('./PlayAlongAppBar.tsx', () => ({ PlayAlongAppBar: () => null }));
 vi.mock('./PlayAlongMenu.tsx', () => ({ PlayAlongMenu: () => null }));
 vi.mock('./PatternSheets.tsx', async (original) => ({

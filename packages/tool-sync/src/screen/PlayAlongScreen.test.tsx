@@ -23,6 +23,8 @@ const world = vi.hoisted(() => ({
   lock: undefined as object | undefined,
   sounds: { normal: 1, accent: 1 },
   menu: undefined as Props | undefined,
+  declined: false,
+  watchLibrary: vi.fn(),
 }));
 
 vi.mock('@kitbag/core-state', async (original) => ({
@@ -44,14 +46,14 @@ vi.mock('./playAlongHooks.ts', () => ({
   usePlayAlong: <T,>(selector: (state: Record<string, unknown>) => T) =>
     selector({ lock: world.lock, pattern: { sounds: world.sounds } }),
   useSessionWatchWhileLocked: () => undefined,
-  useSongTempo: () => undefined,
+  useLibraryWatch: world.watchLibrary,
   useTempoLine: () => ({ bpm: null, line: { lead: '', rung: '' } }),
 }));
 
 vi.mock('./useAccessFlow.ts', () => ({
   useAccessFlow: () => ({
     askedForAccess: false,
-    declined: false,
+    declined: world.declined,
     openAccess: vi.fn(),
     notNow: vi.fn(),
     explainAgain: vi.fn(),
@@ -64,7 +66,13 @@ const marker = vi.hoisted(() => (name: string) => async () => {
 });
 vi.mock('./PermissionExplainer.tsx', marker('PermissionExplainer'));
 vi.mock('./PlayAlongBody.tsx', marker('PlayAlongBody'));
-vi.mock('./PlayAlongDock.tsx', marker('PlayAlongDock'));
+vi.mock('./PlayAlongDock.tsx', async () => {
+  const { createElement: h } = await import('react');
+  return {
+    PlayAlongDock: () => h('i', null, 'PlayAlongDock'),
+    ClickDock: () => h('i', null, 'ClickDock'),
+  };
+});
 vi.mock('./PlayAlongAppBar.tsx', () => ({ PlayAlongAppBar: () => null }));
 vi.mock('./PlayAlongMenu.tsx', () => ({
   PlayAlongMenu: (props: Props) => {
@@ -94,6 +102,7 @@ beforeEach(() => {
   world.session = undefined;
   world.lock = undefined;
   world.menu = undefined;
+  world.declined = false;
 });
 
 describe('PlayAlongScreen', () => {
@@ -107,20 +116,36 @@ describe('PlayAlongScreen', () => {
     world.access = false;
     const markup = shown();
     expect(markup).toContain('PermissionExplainer');
-    expect(markup).not.toMatch(/PlayAlongBody|PlayAlongDock/);
+    expect(markup).not.toMatch(/PlayAlongBody|PlayAlongDock|ClickDock/);
   });
 
-  it('shows the body without a dock when nothing plays', () => {
+  it('docks only the click key when nothing plays', () => {
     world.access = true;
     const markup = shown();
-    expect(markup).toContain('PlayAlongBody');
+    expect(markup).toMatch(/PlayAlongBody.*ClickDock/);
     expect(markup).not.toContain('PlayAlongDock');
+  });
+
+  it('docks only the click key once access was declined', () => {
+    world.access = false;
+    world.declined = true;
+    const markup = shown();
+    expect(markup).toMatch(/PlayAlongBody.*ClickDock/);
+    expect(markup).not.toContain('PlayAlongDock');
+  });
+
+  it('watches the library for an offer', () => {
+    world.access = true;
+    shown();
+    expect(world.watchLibrary).toHaveBeenCalled();
   });
 
   it('docks the song transport once a song is followed', () => {
     world.access = true;
     world.session = {};
-    expect(shown()).toMatch(/PlayAlongBody.*PlayAlongDock/);
+    const markup = shown();
+    expect(markup).toMatch(/PlayAlongBody.*PlayAlongDock/);
+    expect(markup).not.toContain('ClickDock');
   });
 
   it('keeps the dock through the hold after the followed app went away', () => {

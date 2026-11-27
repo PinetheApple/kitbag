@@ -14,6 +14,7 @@ type Props = Record<string, unknown> & { readonly children?: ReactNode };
 const display = vi.hoisted(() => ({ fontScale: 1 }));
 const faces = vi.hoisted(() => [] as Props[]);
 const fits = vi.hoisted(() => [] as Record<string, unknown>[]);
+const presses = vi.hoisted(() => [] as Props[]);
 
 vi.mock('react-native', async (original) => {
   const actual = await original<Record<string, unknown>>();
@@ -21,7 +22,10 @@ vi.mock('react-native', async (original) => {
   return {
     ...actual,
     useWindowDimensions: () => ({ fontScale: display.fontScale }),
-    Pressable: (props: Props) => h('div', null, props.children),
+    Pressable: (props: Props) => {
+      presses.push(props);
+      return h('div', null, props.children);
+    },
     View: (props: Props) => {
       faces.push(props);
       return h('div', null, props.children);
@@ -114,4 +118,18 @@ describe('PresetButton selected', () => {
     renderAt(1);
     expect(face().backgroundColor).toBe(color.surface2);
   });
+});
+
+it('fires a press-in key on touch-down with the touch event', () => {
+  const onPressIn = vi.fn();
+  const event = { nativeEvent: { timestamp: 1 } };
+  presses.length = 0;
+  renderToStaticMarkup(
+    <ThemeProvider mode="dark">
+      <PresetButton kind="action" label={LABEL} onPressIn={onPressIn} />
+    </ThemeProvider>,
+  );
+  expect(presses[0]?.onPress).toBeUndefined();
+  (presses[0]?.onPressIn as (pressed: unknown) => void)(event);
+  expect(onPressIn).toHaveBeenCalledWith(event);
 });

@@ -18,7 +18,7 @@ import {
   TAPS_TO_SET_TEMPO,
   useTempoLadder,
 } from '@kitbag/core-state';
-import { View } from 'react-native';
+import { View, type GestureResponderEvent } from 'react-native';
 
 import { tapsLeftHint } from '../logic/tapPad.ts';
 import { NO_TEMPO_NUMERAL, shownBpm } from '../logic/tempoLine.ts';
@@ -63,7 +63,7 @@ interface StepPresetsProps {
   readonly bpm: number | null;
   readonly onHalve: () => void;
   readonly onDouble: () => void;
-  readonly onTap: () => void;
+  readonly onTap: (event: GestureResponderEvent) => void;
 }
 
 function StepPresets({ bpm, onHalve, onDouble, onTap }: StepPresetsProps) {
@@ -90,7 +90,7 @@ function StepPresets({ bpm, onHalve, onDouble, onTap }: StepPresetsProps) {
         kind="action"
         label="Tap"
         accessibilityLabel="Tap tempo"
-        onPress={onTap}
+        onPressIn={onTap}
       />
     </View>
   );
