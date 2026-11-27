@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -68,6 +68,8 @@ await Metro.runBuild(pluginConfig(shims), {
   out: jsOut,
   customTransformOptions: { engine: 'hermes' },
 });
+// Function scope keeps the prelude's top-level vars (__DEV__, process, ...) off the host global.
+writeFileSync(jsOut, `(function () {\n${readFileSync(jsOut, 'utf8')}\n})();\n`);
 execFileSync(hermesc(), ['-emit-binary', '-O', '-out', hbcOut, jsOut], {
   stdio: 'inherit',
 });

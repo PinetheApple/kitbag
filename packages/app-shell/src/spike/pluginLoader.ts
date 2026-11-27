@@ -49,8 +49,11 @@ function restoreGlobals(before: Descriptors): string[] {
     if (previous === undefined) {
       touched.push(`+${key}:${String(Reflect.deleteProperty(target, key))}`);
     } else if (
-      'value' in previous &&
-      Object.getOwnPropertyDescriptor(globalThis, key)?.value !== previous.value
+      previous.writable === true &&
+      !Object.is(
+        Object.getOwnPropertyDescriptor(globalThis, key)?.value,
+        previous.value,
+      )
     ) {
       target[key] = previous.value;
       touched.push(`~${key}`);
