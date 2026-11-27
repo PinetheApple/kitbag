@@ -292,7 +292,7 @@ describe('route latency', () => {
     await store.getState().start();
     route(HEADPHONES);
     store.getState().step(1);
-    store.getState().flush();
+    void store.getState().flush();
     expect(calls.saved).toEqual([{ ...HEADPHONES_ROW, offsetMs: 183 }]);
   });
 });
