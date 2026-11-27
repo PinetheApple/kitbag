@@ -1014,6 +1014,8 @@ working. Changes:
   Breaks on iOS, where the container UUID changes per launch. Paths are relative
   to the data folder, always.
 - **Downbeats** into the grid (§4.3).
+- The file picker takes several files; they import one at a time, a batch waits
+  on each replace prompt, and failures are named together.
 - **Re-analyse** action for a song.
 - Each song records the analyser version (`KB_BEAT_ANALYSIS_VERSION`) that made
   its grid. At launch, songs whose analysis succeeded on an older version

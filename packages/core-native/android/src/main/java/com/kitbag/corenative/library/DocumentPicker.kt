@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
+import android.util.Log
 import com.facebook.react.bridge.ActivityEventListener
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
@@ -29,21 +30,16 @@ class DocumentPicker(
   private val settledCopy = SettledCopy(File(context.cacheDir, SettledCopy.WORK_DIR), SqliteRecovery)
 
   fun pickDocument(promise: Promise) {
-    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-      addCategory(Intent.CATEGORY_OPENABLE)
-      type = "*/*"
-      putExtra(Intent.EXTRA_MIME_TYPES, PICKABLE_MIME_TYPES)
-    }
-    startPick(intent, REQUEST_PICK_DOCUMENT, promise)
+    startPick(openDocumentIntent(PICKABLE_MIME_TYPES), REQUEST_PICK_DOCUMENT, promise)
+  }
+
+  fun pickDocuments(promise: Promise) {
+    val intent = openDocumentIntent(PICKABLE_MIME_TYPES).putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+    startPick(intent, REQUEST_PICK_DOCUMENTS, promise)
   }
 
   fun pickBackup(promise: Promise) {
-    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-      addCategory(Intent.CATEGORY_OPENABLE)
-      type = "*/*"
-      putExtra(Intent.EXTRA_MIME_TYPES, BACKUP_MIME_TYPES)
-    }
-    startPick(intent, REQUEST_PICK_BACKUP, promise)
+    startPick(openDocumentIntent(BACKUP_MIME_TYPES), REQUEST_PICK_BACKUP, promise)
   }
 
   fun saveBackup(fileName: String, contents: String, promise: Promise) {
@@ -83,6 +79,13 @@ class DocumentPicker(
       pending = null
     }
   }
+
+  private fun openDocumentIntent(mimeTypes: Array<String>) =
+    Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+      addCategory(Intent.CATEGORY_OPENABLE)
+      type = "*/*"
+      putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes)
+    }
 
   private fun startPick(
     intent: Intent,
@@ -131,6 +134,10 @@ class DocumentPicker(
       copy(resultCode == Activity.RESULT_OK, uri, taken.source, promise)
       return
     }
+    if (requestCode == REQUEST_PICK_DOCUMENTS) {
+      describeAll(if (resultCode == Activity.RESULT_OK) pickedUris(data) else emptyList(), promise)
+      return
+    }
     if (resultCode != Activity.RESULT_OK || uri == null) {
       promise.resolve(null)
       return
@@ -170,6 +177,31 @@ class DocumentPicker(
         rejectLogged(promise, LibraryErrors.databaseCopyCode(e), "Could not save the database copy", e)
       }
     }
+  }
+
+  private fun describeAll(uris: List<Uri>, promise: Promise) {
+    io.execute {
+      val described = uris.mapNotNull(::describeOrSkip)
+      if (uris.isNotEmpty() && described.isEmpty()) {
+        promise.reject(LibraryErrors.PICK_FAILED, "Could not read any of the picked items")
+      } else {
+        promise.resolve(Arguments.createArray().apply { described.forEach { pushMap(it) } })
+      }
+    }
+  }
+
+  private fun describeOrSkip(uri: Uri): WritableMap? =
+    try {
+      describeDocument(uri)
+    } catch (e: Exception) {
+      Log.w(TAG, "Skipped a picked item that could not be read", e)
+      null
+    }
+
+  // A multi-select result carries its items in clipData, and may leave data null.
+  private fun pickedUris(data: Intent?): List<Uri> {
+    val clip = data?.clipData ?: return listOfNotNull(data?.data)
+    return (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
   }
 
   private fun openForWrite(uri: String, mode: String): OutputStream? =
@@ -216,13 +248,16 @@ class DocumentPicker(
       }
 
   internal companion object {
+    private const val TAG = "KitbagDocumentPicker"
     private const val REQUEST_PICK_DOCUMENT = 0x4b42
     private const val REQUEST_PICK_FOLDER = 0x4b43
     private const val REQUEST_PICK_BACKUP = 0x4b44
     private const val REQUEST_SAVE_BACKUP = 0x4b46
     private const val REQUEST_SAVE_DATABASE = 0x4b47
+    private const val REQUEST_PICK_DOCUMENTS = 0x4b48
     private val PICK_REQUESTS = setOf(
       REQUEST_PICK_DOCUMENT,
+      REQUEST_PICK_DOCUMENTS,
       REQUEST_PICK_FOLDER,
       REQUEST_PICK_BACKUP,
       REQUEST_SAVE_BACKUP,

@@ -68,6 +68,14 @@ function formatRefusedText(
   };
 }
 
+function importsFailedText(names: readonly string[]): NoticeText {
+  const listed = names.map((name) => `“${name}”`).join(', ');
+  return {
+    status: 'Import failed',
+    text: `${countLabel(names.length, 'file', 'files')} could not be added to your library: ${listed}. Import each one on its own to see why.`,
+  };
+}
+
 export function noticeText(notice: LibraryNotice): NoticeText {
   switch (notice.kind) {
     case 'bundleRefused':
@@ -84,6 +92,8 @@ export function noticeText(notice: LibraryNotice): NoticeText {
         status: 'Import failed',
         text: `“${notice.name}” was copied but could not be added to your library. Try again.`,
       };
+    case 'importsFailed':
+      return importsFailedText(notice.names);
     case 'pickerFailed':
       return {
         status: 'Picker unavailable',

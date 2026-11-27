@@ -289,6 +289,8 @@ export type LibraryConstants = Readonly<{
 export interface Spec extends TurboModule {
   getConstants(): LibraryConstants;
   pickDocument(): Promise<PickedDocument | null>;
+  /** Empty when the user cancels. */
+  pickDocuments(): Promise<readonly PickedDocument[]>;
   pickFolder(): Promise<PickedFolder | null>;
   pickBackup(): Promise<PickedBackup | null>;
   shareBackup(fileName: string, contents: string): Promise<void>;
