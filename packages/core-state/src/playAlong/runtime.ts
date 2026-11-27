@@ -23,7 +23,9 @@ import {
   tempoLadderStore,
   type TempoLadderStore,
 } from '../tempoLadder/store.ts';
+import { getLibrary } from '../library/runtime.ts';
 import { readLibraryGrid } from './libraryGrid.ts';
+import type { TrackPresets } from './trackPreset.ts';
 
 export type PlayAlongCommands = Pick<
   KitbagCommandsSpec,
@@ -94,6 +96,7 @@ export interface PlayAlongRuntime {
     listener: (request: PlayAlongCardRequest) => void,
   ) => Unsubscribe;
   readonly playbackStarted: () => void;
+  readonly presets: () => TrackPresets;
 }
 
 type StartingMetronome = Pick<
@@ -141,4 +144,5 @@ export const nativePlayAlongRuntime: PlayAlongRuntime = {
   playbackStarted: () => {
     void getNotificationPermissionStore().getState().playbackStarted();
   },
+  presets: () => getLibrary().presets,
 };

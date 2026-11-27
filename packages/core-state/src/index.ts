@@ -626,6 +626,13 @@ export {
   type PhaseStepMs,
 } from './playAlong/phase.ts';
 export { UNLOCK_REASON, type UnlockReason } from './playAlong/lockOutcome.ts';
+export {
+  SAVE_REFUSAL,
+  type SaveOutcome,
+  type SaveRefusal,
+  type TrackPresetActions,
+  type TrackPresetState,
+} from './playAlong/trackPreset.ts';
 export type { PlayAlongPattern } from './playAlong/pattern.ts';
 export { extrapolatedPositionMs } from './playAlong/position.ts';
 export type { PlayAlongRuntime } from './playAlong/runtime.ts';
