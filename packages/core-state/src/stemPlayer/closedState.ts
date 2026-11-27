@@ -41,4 +41,6 @@ export const closedState: StemPlayerState = {
   lyrics: NO_LYRICS,
   retime: { kind: 'off' },
   retimeFailure: null,
+  manualTempo: null,
+  tempoUndoable: false,
 };

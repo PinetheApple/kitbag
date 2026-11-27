@@ -7,6 +7,7 @@ import {
   metronomeStore,
   recordHeardSongs,
   songCountIn,
+  songLibraryStore,
   startAutoAdvance,
   startCardOrder,
   stopSongsForMetronome,
@@ -39,7 +40,10 @@ configureStemPlayer({
       getDatabase().songLibrary.saveStemSetChosenTempoMode(id, mode),
     saveStemSetSpeedKey: (id, change) =>
       getDatabase().songLibrary.saveStemSetSpeedKey(id, change),
+    saveStemSetManualTempo: (id, change) =>
+      getDatabase().songLibrary.saveStemSetManualTempo(id, change),
   },
+  library: { refresh: () => songLibraryStore.getState().refresh() },
 });
 
 startAutoAdvance(autoAdvanceDeps(playerWaveBars));

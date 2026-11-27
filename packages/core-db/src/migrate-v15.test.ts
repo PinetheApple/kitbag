@@ -8,6 +8,7 @@ import {
   rows,
   V22_STEM_SET_COLUMNS,
   V27_STEM_SET_COLUMNS,
+  V32_MANUAL_TEMPO_COLUMNS,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 import { STEM_SET_SOURCES } from './stem-set-source';
@@ -37,6 +38,7 @@ const NEW_SET_COLUMNS = {
   renamed: 0,
   ...V22_STEM_SET_COLUMNS,
   ...V27_STEM_SET_COLUMNS,
+  ...V32_MANUAL_TEMPO_COLUMNS,
 };
 
 function withFolderSet() {

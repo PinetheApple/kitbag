@@ -31,6 +31,7 @@ import {
   reader,
   type Reader,
 } from './backup-reader';
+import { readManualTempo } from './backup-manual-tempo';
 import { routeLatencyReader } from './backup-rig-read';
 import type { BackupRules } from './backup-rules';
 import { readSongTempo } from './backup-song-tempo';
@@ -96,6 +97,7 @@ function readLibrarySong(value: unknown, path: string): LibrarySongRecord {
     waveformPath: r.nullableString('waveformPath'),
     ...readSongGrid(r, path),
     ...readSongTempo(r, path),
+    ...readManualTempo(r, path),
   };
   if (
     record.beatGrid !== null &&

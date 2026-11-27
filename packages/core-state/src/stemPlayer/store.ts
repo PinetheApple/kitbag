@@ -2,6 +2,8 @@ import {
   meterOverrideOf,
   type BundleTempo,
   type ClickRate,
+  type ManualTempo,
+  type ManualTempoChange,
   type MeterOverride,
   type StemSetRecord,
   type StoredSection,
@@ -58,6 +60,8 @@ import {
   unloadTracks,
 } from './stemTracks.ts';
 import { clampedSpeed } from './speedKey.ts';
+import { stemManualTempo, type StemManualTempoActions } from './manualTempo.ts';
+import { anchoredMeter } from '../manualTempo/manualGrid.ts';
 import { speedKeySession } from './speedKeyActions.ts';
 import { songGrid, tempoActions } from './tempoActions.ts';
 import { framesToSeconds } from './time.ts';
@@ -140,9 +144,12 @@ export interface StemPlayerState {
   readonly lyrics: SongLyrics;
   readonly retime: RetimeState;
   readonly retimeFailure: RetimeFailure | null;
+  readonly manualTempo: ManualTempo | null;
+  readonly tempoUndoable: boolean;
 }
 
-export interface StemPlayerActions extends CardPressActions, SoundingPause {
+export interface StemPlayerActions
+  extends CardPressActions, SoundingPause, StemManualTempoActions {
   readonly open: (setId: number, waveformBars: number) => Promise<void>;
   readonly acquireSong: (setId: number, waveformBars: number) => MixerHold;
   readonly advanceTo: StartById;
@@ -321,16 +328,22 @@ export function createStemPlayerStore(
       recountWithClickOn: start.recountWithClickOn,
       gridSent: clickShape.gridSent,
     });
-    const songDownbeats = (beats: readonly number[], override: MeterOverride) =>
-      overrideDownbeats(
-        { beats, downbeatIndices: markedDownbeatIndices },
-        override,
+    const songDownbeats = (
+      beats: readonly number[],
+      override: MeterOverride,
+    ) => {
+      const grid = { beats, downbeatIndices: markedDownbeatIndices };
+      const manualTempo = openRecord?.manualTempo ?? null;
+      return overrideDownbeats(
+        grid,
+        anchoredMeter(grid, manualTempo, override).override,
       );
+    };
     const followers = {
       gridReplaced: start.gridReplaced,
       gridSent: clickShape.gridSent,
     };
-    const applyGrid = (mode: TempoMode) => {
+    const applyGrid = (mode: TempoMode | null) => {
       if (openRecord === null) return;
       const { marked, state } = songGrid(
         openRecord,
@@ -342,6 +355,16 @@ export function createStemPlayerStore(
       set(state);
       void followNewGrid(context, followers);
     };
+    const manual = stemManualTempo({
+      ...context,
+      record: () => openRecord,
+      apply: ({ manualTempo, meterOverride }: ManualTempoChange) => {
+        if (openRecord === null) return;
+        openRecord = { ...openRecord, manualTempo };
+        set({ manualTempo, meterOverride });
+        applyGrid(get().tempoMode);
+      },
+    });
     const anchorRetime = retimeAnchor(context);
     const afterSeek = (frame: number) => {
       anchorRetime(frame);
@@ -380,6 +403,7 @@ export function createStemPlayerStore(
     };
 
     const showLoading = (setId: number, advancedTo: number | null = null) => {
+      manual.reset();
       set({
         ...closedState,
         exportState: exportAfterLeaving(get().exportState),
@@ -450,6 +474,7 @@ export function createStemPlayerStore(
       ...tempoActions(context, applyGrid),
       ...retimeActions(context, claim.defer, start, speedKey.rates),
       ...speedKey.actions,
+      ...manual.actions,
       meterOverrideChanged: (setId, override) => {
         const { status, setId: openSet, beats, downbeatIndices } = get();
         if (status !== 'ready' || openSet !== setId) return;

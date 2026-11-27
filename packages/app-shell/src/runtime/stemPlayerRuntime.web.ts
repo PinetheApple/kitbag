@@ -17,5 +17,7 @@ configureStemPlayer({
     saveStemSetClick: () => Promise.resolve(),
     saveStemSetChosenTempoMode: () => Promise.resolve(),
     saveStemSetSpeedKey: () => Promise.resolve(),
+    saveStemSetManualTempo: () => Promise.resolve(),
   },
+  library: { refresh: () => Promise.resolve() },
 });

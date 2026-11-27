@@ -6,6 +6,13 @@ import {
   type StemSetClick,
 } from './click-settings';
 import {
+  manualTempoColumns,
+  manualTempoOf,
+  manualTempoSelection,
+  type ManualTempo,
+  type ManualTempoColumns,
+} from './manual-tempo';
+import {
   meterOverrideOf,
   saveMeterOverride,
   type MeterOverride,
@@ -41,6 +48,7 @@ interface KeptOnReplace {
   readonly retimed: LyricLineTimes | null;
   readonly meter: MeterOverride;
   readonly tempoMode: TempoMode | null;
+  readonly manualTempo: ManualTempo | null;
   readonly speed: number;
   readonly pitch: number;
   readonly click: StemSetClick;
@@ -77,6 +85,14 @@ function carriedMeter(meter: MeterOverride, sameJob: boolean): MeterOverride {
   return sameJob ? meter : { ...meter, barOneSeconds: null };
 }
 
+// A manual tempo's bar 1 is a time in the old job's audio too.
+function carriedManualTempo(
+  row: ManualTempoColumns,
+  sameJob: boolean,
+): ManualTempo | null {
+  return sameJob ? manualTempoOf(row) : null;
+}
+
 export async function readKept(
   db: Database,
   id: number,
@@ -87,6 +103,7 @@ export async function readKept(
       meterBeatsPerBar: stemSets.meterBeatsPerBar,
       barOneSeconds: stemSets.barOneSeconds,
       ...STEM_SET_TEMPO_COLUMNS,
+      ...manualTempoSelection(stemSets),
       speed: stemSets.speed,
       pitch: stemSets.pitch,
       clickGrouping: stemSets.clickGrouping,
@@ -105,6 +122,7 @@ export async function readKept(
       storedTempoOf(row).chosenTempoMode,
       bundle.tempo,
     ),
+    manualTempo: carriedManualTempo(row, sameJob),
     speed: row.speed,
     pitch: bundle.hasMix ? STEM_SET_PITCH.unshifted : row.pitch,
     click: stemSetClickOf(row),
@@ -124,7 +142,11 @@ export async function applyKept(
   await saveStemSetClick(db, id, kept.click);
   await db
     .update(stemSets)
-    .set({ speed: kept.speed, pitch: kept.pitch })
+    .set({
+      speed: kept.speed,
+      pitch: kept.pitch,
+      ...manualTempoColumns(kept.manualTempo),
+    })
     .where(eq(stemSets.id, id));
   await applyRoleMixes(db, id, kept.mixes);
 }

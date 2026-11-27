@@ -6,9 +6,10 @@ import {
   type TempoMode,
 } from '@kitbag/core-db';
 
+import { anchoredMeter } from '../manualTempo/manualGrid.ts';
 import { warn } from '../songLibrary/storeSupport.ts';
 import { songFacts, type PlaybackShift } from './facts.ts';
-import { detectedMeter, overrideDownbeats } from './meterOverride.ts';
+import { overrideDownbeats } from './meterOverride.ts';
 import type {
   ActionContext,
   StemPlayerActions,
@@ -43,14 +44,18 @@ export function songGrid(
   shift: PlaybackShift,
 ): { readonly marked: readonly number[]; readonly state: GridState } {
   const grid = effectiveGrid(record, mode);
-  const detected = detectedMeter(grid);
+  const { detected, override: anchored } = anchoredMeter(
+    grid,
+    record.manualTempo,
+    override,
+  );
   return {
     marked: grid.downbeatIndices,
     state: {
       tempoMode: mode,
       ...gridFacts(record, mode, shift),
       beats: grid.beats,
-      downbeatIndices: overrideDownbeats(grid, override),
+      downbeatIndices: overrideDownbeats(grid, anchored),
       detectedMeter: detected.meter,
       detectedBarOneSeconds: detected.barOneSeconds,
     },

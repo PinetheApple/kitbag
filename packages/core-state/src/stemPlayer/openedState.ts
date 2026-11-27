@@ -36,6 +36,7 @@ export function openedStemState(
       artist: record.artist,
       ...grid.state,
       meterOverride,
+      manualTempo: record.manualTempo,
       speed,
       songKey,
       tempo: record.tempo,
