@@ -8,7 +8,9 @@ import {
 import {
   manualTempoColumns,
   manualTempoOf,
+  manualTempoSelection,
   type ManualTempo,
+  type ManualTempoColumns,
 } from './manual-tempo';
 import {
   meterOverrideOf,
@@ -78,9 +80,17 @@ async function applyRoleMixes(
       .where(and(eq(stems.stemSetId, id), eq(stems.role, role)));
 }
 
-// Bar one, a manual tempo and lyric line times are times in the old job's audio.
+// Bar one and lyric line times are times in the old job's audio.
 function carriedMeter(meter: MeterOverride, sameJob: boolean): MeterOverride {
   return sameJob ? meter : { ...meter, barOneSeconds: null };
+}
+
+// A manual tempo's bar 1 is a time in the old job's audio too.
+function carriedManualTempo(
+  row: ManualTempoColumns,
+  sameJob: boolean,
+): ManualTempo | null {
+  return sameJob ? manualTempoOf(row) : null;
 }
 
 export async function readKept(
@@ -93,9 +103,7 @@ export async function readKept(
       meterBeatsPerBar: stemSets.meterBeatsPerBar,
       barOneSeconds: stemSets.barOneSeconds,
       ...STEM_SET_TEMPO_COLUMNS,
-      manualTempoBpm: stemSets.manualTempoBpm,
-      manualTempoAnchor: stemSets.manualTempoAnchor,
-      manualTempoBeatsPerBar: stemSets.manualTempoBeatsPerBar,
+      ...manualTempoSelection(stemSets),
       speed: stemSets.speed,
       pitch: stemSets.pitch,
       clickGrouping: stemSets.clickGrouping,
@@ -114,7 +122,7 @@ export async function readKept(
       storedTempoOf(row).chosenTempoMode,
       bundle.tempo,
     ),
-    manualTempo: sameJob ? manualTempoOf(row) : null,
+    manualTempo: carriedManualTempo(row, sameJob),
     speed: row.speed,
     pitch: bundle.hasMix ? STEM_SET_PITCH.unshifted : row.pitch,
     click: stemSetClickOf(row),

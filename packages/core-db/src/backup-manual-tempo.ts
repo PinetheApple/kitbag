@@ -30,3 +30,9 @@ export function storedManualTempoColumns(
     manualTempoOf({ ...NO_MANUAL_TEMPO_COLUMNS, ...row }),
   );
 }
+
+export function carriesManualTempo(
+  record: Partial<ManualTempoColumns>,
+): boolean {
+  return record.manualTempoBpm !== undefined;
+}

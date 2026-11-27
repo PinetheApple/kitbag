@@ -21,7 +21,10 @@ import {
 } from './meter-override';
 import { packFloat32, packInt32, unpackFloat32, unpackInt32 } from './packing';
 import {
+  effectiveCorrection,
+  listedTempo,
   manualTempoOf,
+  manualTempoSelection,
   saveManualTempo,
   type ManualTempo,
   type ManualTempoChange,
@@ -55,11 +58,7 @@ import {
 } from './stem-tempo';
 import { saveSongSpeed } from './song-speed';
 import { saveTempoCorrection } from './song-tempo-correction';
-import {
-  TEMPO_CORRECTION,
-  tempoCorrectionOf,
-  type TempoCorrection,
-} from './tempo-correction';
+import { tempoCorrectionOf, type TempoCorrection } from './tempo-correction';
 import type { TempoMode } from './tempo-mode';
 
 export interface LibrarySongRow {
@@ -161,24 +160,6 @@ async function songsInSetlists(db: Database): Promise<Set<number>> {
   );
 }
 
-const manualTempoSelection = (table: typeof songs | typeof stemSets) => ({
-  manualTempoBpm: table.manualTempoBpm,
-  manualTempoAnchor: table.manualTempoAnchor,
-  manualTempoBeatsPerBar: table.manualTempoBeatsPerBar,
-});
-
-function listedTempo(
-  stored: Parameters<typeof manualTempoOf>[0],
-  row: { readonly bpm: number | null; readonly hasGrid: number },
-) {
-  const manual = manualTempoOf(stored);
-  return {
-    manual: manual !== null,
-    bpm: manual?.bpm ?? row.bpm,
-    hasGrid: manual !== null || row.hasGrid !== 0,
-  };
-}
-
 async function songRows(db: Database): Promise<LibrarySongRow[]> {
   const listed = await songsInSetlists(db);
   const rows = await db
@@ -198,14 +179,15 @@ async function songRows(db: Database): Promise<LibrarySongRow[]> {
     })
     .from(songs);
   return rows.map(({ manualTempo, ...row }) => {
-    const { manual, ...tempo } = listedTempo(manualTempo, row);
+    const { manualTempo: manual, ...tempo } = listedTempo(manualTempo, row);
     return {
       ...row,
       ...tempo,
       kind: 'song',
-      tempoCorrection: manual
-        ? TEMPO_CORRECTION.none
-        : tempoCorrectionOf(row.tempoCorrection),
+      tempoCorrection: effectiveCorrection(
+        manual,
+        tempoCorrectionOf(row.tempoCorrection),
+      ),
       inSetlist: listed.has(row.id),
     };
   });

@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 
 import { migrate, SCHEMA_VERSION } from './migrate';
+import { MANUAL_TEMPO_COLUMN_DDL } from './migrate-manual-tempo';
 import {
   buildV30Fixture,
   pragma,
@@ -43,12 +44,22 @@ function seededV30(): DatabaseSync {
 }
 
 const LATER_COLUMNS = new Set(Object.keys(V32_MANUAL_TEMPO_COLUMNS));
-const LATER_TABLES = ['songs', 'stem_sets'];
 
 const withoutLaterColumns = (row: Row) =>
   Object.fromEntries(
     Object.entries(row).filter(([column]) => !LATER_COLUMNS.has(column)),
   );
+
+const withoutLaterDdl = (row: Row) =>
+  typeof row.sql === 'string'
+    ? {
+        ...row,
+        sql: MANUAL_TEMPO_COLUMN_DDL.reduce(
+          (sql, ddl) => sql.replace(`, ${ddl}`, ''),
+          row.sql,
+        ),
+      }
+    : row;
 
 const table = (db: DatabaseSync, name: string) =>
   rows<Row>(db, `SELECT * FROM ${name} ORDER BY rowid`).map(
@@ -67,9 +78,8 @@ function everythingButPresetColumns(db: DatabaseSync) {
     objects: rows<Row>(
       db,
       `SELECT type, name, tbl_name, sql FROM sqlite_master
-       WHERE name NOT IN ('${[PRESETS, ...LATER_TABLES].join("', '")}')
-       ORDER BY type, name`,
-    ),
+       WHERE name != '${PRESETS}' ORDER BY type, name`,
+    ).map(withoutLaterDdl),
     data: Object.fromEntries(tables.map((name) => [name, table(db, name)])),
     sequences: rows(db, 'SELECT * FROM sqlite_sequence ORDER BY name'),
     foreignKeys: Object.fromEntries(

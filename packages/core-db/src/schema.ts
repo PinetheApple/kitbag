@@ -30,7 +30,7 @@ function toBytes(value: unknown): Uint8Array {
   throw new TypeError(`Expected blob bytes, got ${typeof value}`);
 }
 
-function manualTempoColumnsOf() {
+function manualTempoColumnBuilders() {
   return {
     manualTempoBpm: real('manual_tempo_bpm'),
     manualTempoAnchor: real('manual_tempo_anchor'),
@@ -89,7 +89,7 @@ export const songs = sqliteTable('songs', {
   tempoBeatsPerBar: integer('tempo_beats_per_bar'),
   tempoSource: text('tempo_source', { enum: TEMPO_SOURCES }),
   chosenTempoMode: text('chosen_tempo_mode', { enum: TEMPO_MODES }),
-  ...manualTempoColumnsOf(),
+  ...manualTempoColumnBuilders(),
 });
 
 export const songPresets = sqliteTable('song_presets', {
@@ -247,7 +247,7 @@ export const stemSets = sqliteTable(
     tempoBeatsPerBar: integer('tempo_beats_per_bar'),
     tempoSource: text('tempo_source', { enum: TEMPO_SOURCES }),
     chosenTempoMode: text('chosen_tempo_mode', { enum: TEMPO_MODES }),
-    ...manualTempoColumnsOf(),
+    ...manualTempoColumnBuilders(),
   },
   (table) => [
     uniqueIndex('stem_sets_stemdeck_job_id')

@@ -8,6 +8,7 @@ import {
 } from './meter-override';
 import type { Database } from './repository';
 import type { songs, stemSets } from './schema';
+import { TEMPO_CORRECTION, type TempoCorrection } from './tempo-correction';
 import {
   TEMPO_MAX_BPM,
   TEMPO_MIN_ANCHOR_SECONDS,
@@ -42,7 +43,7 @@ export const NO_MANUAL_TEMPO_COLUMNS: ManualTempoColumns = {
   manualTempoBeatsPerBar: null,
 };
 
-export const MANUAL_TEMPO_FIELDS = Object.keys(
+const MANUAL_TEMPO_FIELDS = Object.keys(
   NO_MANUAL_TEMPO_COLUMNS,
 ) as (keyof ManualTempoColumns)[];
 
@@ -105,9 +106,37 @@ export function manualTempoOf(row: ManualTempoColumns): ManualTempo | null {
   };
 }
 
+// The correction scales the analysed tempo; a manual tempo is already the tempo heard.
+export function effectiveCorrection(
+  manualTempo: ManualTempo | null,
+  correction: TempoCorrection,
+): TempoCorrection {
+  return manualTempo === null ? correction : TEMPO_CORRECTION.none;
+}
+
+type ManualTempoTable = typeof songs | typeof stemSets;
+
+export const manualTempoSelection = (table: ManualTempoTable) => ({
+  manualTempoBpm: table.manualTempoBpm,
+  manualTempoAnchor: table.manualTempoAnchor,
+  manualTempoBeatsPerBar: table.manualTempoBeatsPerBar,
+});
+
+export function listedTempo(
+  stored: ManualTempoColumns,
+  row: { readonly bpm: number | null; readonly hasGrid: number },
+) {
+  const manualTempo = manualTempoOf(stored);
+  return {
+    manualTempo,
+    bpm: manualTempo?.bpm ?? row.bpm,
+    hasGrid: manualTempo !== null || row.hasGrid !== 0,
+  };
+}
+
 export async function saveManualTempo(
   db: Database,
-  table: typeof songs | typeof stemSets,
+  table: ManualTempoTable,
   id: number,
   { manualTempo, meterOverride }: ManualTempoChange,
 ): Promise<void> {

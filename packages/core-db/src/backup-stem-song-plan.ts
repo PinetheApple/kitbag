@@ -3,7 +3,10 @@ import type {
   StemMixRecord,
   StemSongRecord,
 } from './backup-format';
-import { storedManualTempoColumns } from './backup-manual-tempo';
+import {
+  carriesManualTempo,
+  storedManualTempoColumns,
+} from './backup-manual-tempo';
 import { NO_CLICK } from './click-settings';
 import { NO_METER_OVERRIDE } from './meter-override';
 import { stems, stemSets } from './schema';
@@ -33,7 +36,7 @@ function manualTempoFields(
   mine: LocalStemSong,
   theirs: StemSongRecord,
 ): Field[] {
-  if (theirs.manualTempoBpm === undefined) return [];
+  if (!carriesManualTempo(theirs)) return [];
   const local = storedManualTempoColumns(mine);
   return [
     field(

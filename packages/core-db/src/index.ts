@@ -141,7 +141,11 @@ export {
   type TempoMode,
   type TempoSource,
 } from './tempo-mode';
-export type { ManualTempo, ManualTempoChange } from './manual-tempo';
+export {
+  effectiveCorrection,
+  type ManualTempo,
+  type ManualTempoChange,
+} from './manual-tempo';
 export {
   bundleTempoOf,
   bundleTempoViolation,
