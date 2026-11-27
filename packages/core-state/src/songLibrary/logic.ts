@@ -23,7 +23,7 @@ const AUDIO_MIME_PREFIX = 'audio/';
 const NONSTANDARD_MIME_PREFIX = 'x-';
 const MIME_PARAMETER_SEPARATOR = ';';
 
-function mediaType(mimeType: string): string {
+export function mediaType(mimeType: string): string {
   const end = mimeType.indexOf(MIME_PARAMETER_SEPARATOR);
   return (end < 0 ? mimeType : mimeType.slice(0, end)).trim().toLowerCase();
 }
