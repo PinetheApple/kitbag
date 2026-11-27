@@ -11,7 +11,12 @@ import { bpmText, SET_TEMPO_TEXT } from '../logic/manualTempoText.ts';
 
 type TempoFacts = Pick<
   SongPlayerStore,
-  'status' | 'analysisStatus' | 'beats' | 'manualTempo' | 'analysedBpm'
+  | 'status'
+  | 'analysisStatus'
+  | 'beats'
+  | 'manualTempo'
+  | 'analysedBpm'
+  | 'tempoPreview'
 >;
 
 export const TEMPO_ROW = {

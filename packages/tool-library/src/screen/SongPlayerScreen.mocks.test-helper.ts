@@ -1,4 +1,10 @@
-import { createElement, type ReactNode } from 'react';
+import {
+  createElement,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type ReactNode,
+} from 'react';
 import { vi } from 'vitest';
 
 export const OPEN_SONG = {
@@ -48,6 +54,7 @@ export const manual = {
   undoTempo: vi.fn(() => Promise.resolve(true)),
   dismissTempoUndo: vi.fn(),
   dismissAnalysedOffer: vi.fn(),
+  previewTempo: vi.fn(),
 };
 export const songTempo: {
   tempo: unknown;
@@ -103,9 +110,28 @@ export function resetScreenState() {
   Object.assign(mixer, { session: 0, opens: 0, displaced: 0, releases: 0 });
 }
 
+function MockSheet(props: Props) {
+  const onShow = useRef(props.onShow as (() => void) | undefined);
+  useLayoutEffect(() => {
+    onShow.current = props.onShow as (() => void) | undefined;
+  });
+  useEffect(() => {
+    if (props.visible === true) onShow.current?.();
+  }, [props.visible]);
+  return props.visible === true
+    ? createElement(
+        'Sheet',
+        { title: props.title, titleDetail: props.titleDetail },
+        props.notice as ReactNode,
+        props.children,
+      )
+    : null;
+}
+
 const MANUAL_TEMPO_PARTS = [
   'BeatStrip',
   'ConfirmDialog',
+  'Icon',
   'LiveText',
   'NumpadKeypad',
   'NumpadReadout',
@@ -204,14 +230,7 @@ export async function coreDesignMock(original: <T>() => Promise<T>) {
         props.trailing as ReactNode,
       ),
     Button: (props: Props) => createElement('Button', props),
-    Sheet: (props: Props) =>
-      props.visible === true
-        ? createElement(
-            'Sheet',
-            { title: props.title, titleDetail: props.titleDetail },
-            props.children,
-          )
-        : null,
+    Sheet: MockSheet,
     ...passthroughs(MANUAL_TEMPO_PARTS),
     SectionHeader: (props: Props) => createElement('SectionHeader', props),
     SegmentedControl: (props: Props) =>
@@ -228,7 +247,7 @@ export async function coreDesignMock(original: <T>() => Promise<T>) {
       props.visible === true ? createElement('TempoModeSheet', props) : null,
     BeatWaveform: nothing,
     Card: parent,
-    Chip: () => createElement('Chip'),
+    Chip: (props: Props) => createElement('Chip', props),
     RowIcon: (props: Props) => createElement('RowIcon', props),
     useTheme: () => ({ accentInk: 'accent' }),
     PickerGrid: nothing,
@@ -364,6 +383,8 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
       undoTempo: manual.undoTempo,
       dismissTempoUndo: manual.dismissTempoUndo,
       dismissAnalysedOffer: manual.dismissAnalysedOffer,
+      previewTempo: manual.previewTempo,
+      tempoPreview: false,
       playheadSeconds: () => manual.playheadSeconds,
       tempoCorrectionChanged: vi.fn(),
       tempoCorrectionSettled: vi.fn(),

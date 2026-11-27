@@ -1,17 +1,26 @@
 import { Text, View } from 'react-native';
 import Animated, {
+  useAnimatedReaction,
   useAnimatedStyle,
+  useSharedValue,
   type SharedValue,
 } from 'react-native-reanimated';
 
+import {
+  FIRST_STRIP_BEAT,
+  isStripDownbeat,
+  stripPlayheadFraction,
+  stripWindowStart,
+} from '../beatStripWindow.ts';
 import { manualTempo } from '../manualTempoRoles.ts';
 import { asPercent } from '../percent.ts';
 import { size, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 
-const BEAT_CENTRE = 0.5;
 const BAR_ONE_LABEL = '1';
+const BEAT_MARK = manualTempo.beatMark;
+const DOWNBEAT_MARK = manualTempo.downbeatMark;
 const SLOTS = Array.from(
   { length: manualTempo.stripBeats },
   (_u, slot) => slot,
@@ -33,12 +42,7 @@ const useStyles = createThemedStyles((theme) => ({
     justifyContent: 'flex-end',
     paddingBottom: manualTempo.markBottom,
   },
-  beat: {
-    width: manualTempo.markStroke,
-    height: manualTempo.beatMark,
-    backgroundColor: theme.color.text,
-  },
-  downbeat: { height: manualTempo.downbeatMark },
+  beat: { width: manualTempo.markStroke, backgroundColor: theme.color.text },
   barOne: {
     ...textStyle(textRoles.polyStripCaption),
     position: 'absolute',
@@ -70,11 +74,30 @@ export interface BeatStripProps {
   readonly label: string;
 }
 
-const beatOfSlot = (slot: number) => slot - manualTempo.stripBeatsBeforeBarOne;
+interface SlotProps {
+  readonly slot: number;
+  readonly beatsPerBar: number;
+  readonly windowStart: SharedValue<number>;
+}
 
-function isDownbeat(slot: number, beatsPerBar: number): boolean {
-  const beat = beatOfSlot(slot);
-  return ((beat % beatsPerBar) + beatsPerBar) % beatsPerBar === 0;
+function StripSlot({ slot, beatsPerBar, windowStart }: SlotProps) {
+  const styles = useStyles();
+  const markStyle = useAnimatedStyle(() => ({
+    height: isStripDownbeat(windowStart.value + slot, beatsPerBar)
+      ? DOWNBEAT_MARK
+      : BEAT_MARK,
+  }));
+  const labelStyle = useAnimatedStyle(() => ({
+    opacity: windowStart.value + slot === 0 ? 1 : 0,
+  }));
+  return (
+    <View style={styles.slot}>
+      <Animated.View style={[styles.beat, markStyle]} />
+      <Animated.Text style={[styles.barOne, labelStyle]}>
+        {BAR_ONE_LABEL}
+      </Animated.Text>
+    </View>
+  );
 }
 
 export function BeatStrip({
@@ -83,31 +106,27 @@ export function BeatStrip({
   label,
 }: BeatStripProps) {
   const styles = useStyles();
-  const playheadStyle = useAnimatedStyle(() => {
-    const fraction =
-      (beatsFromBarOne.value +
-        manualTempo.stripBeatsBeforeBarOne +
-        BEAT_CENTRE) /
-      manualTempo.stripBeats;
-    return {
-      left: asPercent(fraction),
-      opacity: fraction >= 0 && fraction <= 1 ? 1 : 0,
-    };
-  });
+  const windowStart = useSharedValue(FIRST_STRIP_BEAT);
+  useAnimatedReaction(
+    () => beatsFromBarOne.value,
+    (beat) => {
+      windowStart.value = stripWindowStart(windowStart.value, beat);
+    },
+  );
+  const playheadStyle = useAnimatedStyle(() => ({
+    left: asPercent(
+      stripPlayheadFraction(windowStart.value, beatsFromBarOne.value),
+    ),
+  }));
   return (
     <View accessible accessibilityLabel={label} style={styles.strip}>
       {SLOTS.map((slot) => (
-        <View key={slot} style={styles.slot}>
-          <View
-            style={[
-              styles.beat,
-              isDownbeat(slot, beatsPerBar) && styles.downbeat,
-            ]}
-          />
-          {beatOfSlot(slot) === 0 ? (
-            <Text style={styles.barOne}>{BAR_ONE_LABEL}</Text>
-          ) : null}
-        </View>
+        <StripSlot
+          key={slot}
+          slot={slot}
+          beatsPerBar={beatsPerBar}
+          windowStart={windowStart}
+        />
       ))}
       <Text style={styles.label}>{label}</Text>
       <Animated.View style={[styles.playhead, playheadStyle]} />

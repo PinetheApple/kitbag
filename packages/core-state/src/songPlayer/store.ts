@@ -66,6 +66,7 @@ import {
   type SongGrid,
 } from './songGrid.ts';
 import { analysedOfferOf, songManualTempo } from './manualTempo.ts';
+import { tempoPreview } from './tempoPreview.ts';
 import { heldWhileSaving } from './heldWhileSaving.ts';
 import { songTempo } from './songTempo.ts';
 import {
@@ -256,6 +257,7 @@ export function createSongPlayerStore(
       });
       if (regrid) void followNewGrid(context, gridFollowers);
     };
+    const preview = tempoPreview({ get, analysed: () => analysed, showGrid });
 
     const applyTempoMode = (mode: TempoMode) => {
       const { meterOverride, tempoCorrection } = get();
@@ -269,6 +271,7 @@ export function createSongPlayerStore(
       meterOverride,
     }: ManualTempoChange) => {
       analysed = { ...analysed, manualTempo };
+      preview.reset();
       const { tempoMode, tempoCorrection } = get();
       showGrid(
         analysedSongGrid(analysed, tempoMode, meterOverride, tempoCorrection),
@@ -277,6 +280,7 @@ export function createSongPlayerStore(
           manualTempo,
           meterOverride,
           meterNotice: null,
+          tempoPreview: false,
         },
       );
     };
@@ -358,6 +362,7 @@ export function createSongPlayerStore(
       heldCorrection.reset();
       modes.reset();
       manual.reset();
+      preview.reset();
       waveform.reset(bars);
       set({
         ...closedState,
@@ -444,6 +449,7 @@ export function createSongPlayerStore(
         if (get().songId === songId) heldCorrection.settle();
       },
       playheadBeatSeconds: () => playheadBeatSeconds(get(), runtimeOf()),
+      previewTempo: preview.previewTempo,
       playheadSeconds: () =>
         framesToSeconds(runtimeOf().engine.position(), get().engineRate),
       dismissMeterNotice: () => {

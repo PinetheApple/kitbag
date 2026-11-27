@@ -26,11 +26,12 @@ function useReanalysisWatch() {
   const [notice, setNotice] = useState<string | null>(null);
   const status = useSongPlayer((s) => s.analysisStatus);
   const analysedBpm = useSongPlayer((s) => s.analysedBpm);
+  const manualBpm = useSongPlayer((s) => s.manualTempo?.bpm ?? null);
   useEffect(() => {
-    const next = watchReanalysis(stage, status, analysedBpm);
+    const next = watchReanalysis(stage, { status, analysedBpm, manualBpm });
     if (next.phase !== stage) setStage(next.phase);
     if (next.notice !== null) setNotice(next.notice);
-  }, [stage, status, analysedBpm]);
+  }, [stage, status, analysedBpm, manualBpm]);
   const arm = useCallback(() => {
     setStage(REANALYSIS.asked);
   }, []);

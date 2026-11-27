@@ -73,7 +73,7 @@ describe('tap and nudge copy', () => {
     expect(nudgeLabel(-10)).toBe('−10 ms');
     expect(nudgeLabel(10)).toBe('+10 ms');
     expect(nudgedText(20)).toBe(
-      'Moved +20 ms. Check late in the song for drift.',
+      'Moved +20 ms. Playing with the click: check late in the song for drift.',
     );
   });
 });

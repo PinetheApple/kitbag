@@ -3,7 +3,27 @@ export * from './text.ts';
 export * from './stemPlayer/mix.ts';
 export * from './stemPlayer/speedKeyText.ts';
 export * from './stemPlayer/tempoText.ts';
-export { TEMPO_MODE, TEMPO_SOURCE } from '@kitbag/core-db/src/tempo-mode';
+export {
+  TEMPO_MIN_ANCHOR_SECONDS,
+  TEMPO_MODE,
+  TEMPO_SOURCE,
+} from '@kitbag/core-db/src/tempo-mode';
+export { MS_PER_SECOND } from '@kitbag/core-db/src/units';
+export {
+  GRID_METER,
+  GRID_METERS,
+  isGridMeter,
+} from '@kitbag/core-db/src/meter-override';
+export {
+  MANUAL_BPM_STEP,
+  manualBpm,
+  MANUAL_TEMPO_BOUNDS,
+  pushManualTap,
+  stepManualBpm,
+  tappedManualBpm,
+} from './manualTempo/manualTempo.ts';
+export { TAPS_TO_SET_TEMPO } from './tapTempo/tapTempo.ts';
+export { constantGrid } from './stemPlayer/tempoGrid.ts';
 export {
   isUnitySpeed,
   SPEED_PRESETS,

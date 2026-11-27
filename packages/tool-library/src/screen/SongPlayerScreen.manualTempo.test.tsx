@@ -162,6 +162,33 @@ describe('a song with no beat grid', () => {
     expect(byType(tree, 'BeatStrip')).toHaveLength(1);
   });
 
+  it('previews the draft grid while bar 1 is marked, and drops it on Back', () => {
+    const tree = mount();
+    press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.title));
+    expect(manual.previewTempo).not.toHaveBeenCalledWith(
+      expect.objectContaining({ bpm: 128 }),
+    );
+    manual.playheadSeconds = 2.3;
+    typeTempo(tree, [1, 2, 8]);
+    expect(manual.previewTempo).toHaveBeenLastCalledWith(MANUAL);
+    press(withProp(tree, 'PresetButton', 'label', '+10 ms'));
+    expect(manual.previewTempo).toHaveBeenLastCalledWith({
+      ...MANUAL,
+      anchor: 2.31,
+    });
+    press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.back));
+    expect(manual.previewTempo).toHaveBeenLastCalledWith(null);
+    expect(manual.setManualTempo).not.toHaveBeenCalled();
+  });
+
+  it('plays the click against the song from the Preview click chip', () => {
+    const tree = mount();
+    press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.title));
+    typeTempo(tree, [1, 2, 8]);
+    press(withProp(tree, 'Chip', 'label', SET_TEMPO_TEXT.previewClick));
+    expect(transport.toggleClick).toHaveBeenCalledOnce();
+  });
+
   it('sets the tempo from the fourth tap on', () => {
     const tree = mount();
     press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.title));
@@ -266,6 +293,22 @@ describe('a song with a manual tempo', () => {
       withProp(tree, 'Snackbar', 'message', SET_TEMPO_TEXT.reanalysisFailed),
     ).toBeDefined();
     expect(manual.setManualTempo).not.toHaveBeenCalled();
+  });
+
+  it('says so when a re-analysis agrees with the manual tempo', () => {
+    const tree = openMenu();
+    press(only(menuRow(tree, REANALYZE_LABEL)));
+    press(first(tree, 'ConfirmDialog'), 'onConfirm');
+    manual.analysedBpm = MANUAL.bpm;
+    for (const analysisStatus of ['pending', 'done']) {
+      display.analysis = { analysisStatus, beats: [0] };
+      act(() => {
+        tree.update(screen(true));
+      });
+    }
+    expect(
+      withProp(tree, 'Snackbar', 'message', SET_TEMPO_TEXT.reanalysisAgrees),
+    ).toBeDefined();
   });
 
   it('offers a newer analysed tempo in a snackbar', () => {

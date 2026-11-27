@@ -1,4 +1,4 @@
-import type { SongPlayerStore } from '@kitbag/core-state';
+import { manualBpm, type SongPlayerStore } from '@kitbag/core-state';
 
 import { SET_TEMPO_TEXT } from './manualTempoText.ts';
 
@@ -16,20 +16,33 @@ export interface ReanalysisStep {
   readonly notice: string | null;
 }
 
+export interface ReanalysisResult {
+  readonly status: AnalysisStatus;
+  readonly analysedBpm: number | null;
+  readonly manualBpm: number | null;
+}
+
 const RUNNING: ReadonlySet<AnalysisStatus> = new Set(['pending', 'analyzing']);
+
+function resultNotice({
+  status,
+  analysedBpm,
+  manualBpm: manual,
+}: ReanalysisResult): string | null {
+  if (status === 'failed') return SET_TEMPO_TEXT.reanalysisFailed;
+  if (analysedBpm === null) return SET_TEMPO_TEXT.reanalysisNoBeat;
+  return manualBpm(analysedBpm) === manual
+    ? SET_TEMPO_TEXT.reanalysisAgrees
+    : null;
+}
 
 export function watchReanalysis(
   phase: ReanalysisPhase,
-  status: AnalysisStatus,
-  analysedBpm: number | null,
+  result: ReanalysisResult,
 ): ReanalysisStep {
   if (phase === REANALYSIS.idle) return { phase, notice: null };
-  if (RUNNING.has(status)) return { phase: REANALYSIS.running, notice: null };
+  if (RUNNING.has(result.status))
+    return { phase: REANALYSIS.running, notice: null };
   if (phase === REANALYSIS.asked) return { phase, notice: null };
-  if (status === 'failed')
-    return { phase: REANALYSIS.idle, notice: SET_TEMPO_TEXT.reanalysisFailed };
-  return {
-    phase: REANALYSIS.idle,
-    notice: analysedBpm === null ? SET_TEMPO_TEXT.reanalysisNoBeat : null,
-  };
+  return { phase: REANALYSIS.idle, notice: resultNotice(result) };
 }

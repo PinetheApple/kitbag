@@ -181,7 +181,13 @@ describe('playerStatusBadge', () => {
 });
 
 describe('the app-bar badge', () => {
-  const failed = { analysisStatus: 'failed', beats: [] } as const;
+  const stored = {
+    tempoPreview: false,
+    manualTempo: null,
+    analysedBpm: null,
+  } as const;
+  const failed = { ...stored, analysisStatus: 'failed', beats: [] } as const;
+  const DRAFT = { bpm: 128, anchor: 0, beatsPerBar: 4 } as const;
 
   it('waits for the song to be ready before naming its grid', () => {
     expect(barStatusOf({ ...failed, status: 'loading' })).toBeNull();
@@ -190,8 +196,24 @@ describe('the app-bar badge', () => {
 
   it('keeps the grid while a re-analysis runs', () => {
     expect(
-      barStatusOf({ status: 'ready', analysisStatus: 'analyzing', beats: [0] }),
+      barStatusOf({
+        ...stored,
+        status: 'ready',
+        analysisStatus: 'analyzing',
+        beats: [0],
+      }),
     ).toBeNull();
+  });
+
+  it('still reads NO GRID while the Set tempo sheet previews a draft grid', () => {
+    const previewing = { ...failed, status: 'ready', beats: [0, 1] } as const;
+    expect(barStatusOf({ ...previewing, tempoPreview: true })?.label).toBe(
+      'NO GRID',
+    );
+    expect(
+      barStatusOf({ ...previewing, tempoPreview: true, manualTempo: DRAFT }),
+    ).toBeNull();
+    expect(barStatusOf(previewing)).toBeNull();
   });
 
   it('shows the status over the BPM, else the BPM', () => {

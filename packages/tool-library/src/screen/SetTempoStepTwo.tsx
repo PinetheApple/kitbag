@@ -2,6 +2,7 @@ import {
   barOneLabel,
   BeatStrip,
   Button,
+  Chip,
   createThemedStyles,
   LiveText,
   manualTempo,
@@ -18,7 +19,12 @@ import {
   type SegmentOption,
   type StepperKeys,
 } from '@kitbag/core-design';
-import { GRID_METERS, isGridMeter } from '@kitbag/core-state';
+import {
+  GRID_METERS,
+  isGridMeter,
+  useLiveSongPlayer,
+  useSongPlayer,
+} from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 import { useDerivedValue } from 'react-native-reanimated';
@@ -67,6 +73,12 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
   },
   detail: { ...textStyle(textRoles.rowSubtitle), color: theme.color.text2 },
+  hint: {
+    ...textStyle(textRoles.rowSubtitle),
+    flex: 1,
+    minWidth: 0,
+    color: theme.color.text2,
+  },
   field: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -116,45 +128,60 @@ function BarOneRow({ tempo, draft, playhead }: StepProps) {
   );
 }
 
+interface MoveKeyProps {
+  readonly amount: number;
+  readonly label: string;
+  readonly spoken: string;
+  readonly onMove: (amount: number) => void;
+  readonly icon?: 'back' | 'forward';
+}
+
+function MoveKey({ amount, label, spoken, onMove, icon }: MoveKeyProps) {
+  const onPress = useCallback(() => {
+    onMove(amount);
+  }, [onMove, amount]);
+  return (
+    <PresetButton
+      label={label}
+      accessibilityLabel={spoken}
+      onPress={onPress}
+      {...(icon === undefined
+        ? {}
+        : { icon, iconAt: icon === 'back' ? 'start' : 'end' })}
+    />
+  );
+}
+
 function BarOneMoves({ tempo }: Pick<StepProps, 'tempo'>) {
   const styles = useStyles();
   const { onBeat, onNudge } = tempo;
-  const earlierBeat = useCallback(() => {
-    onBeat(EARLIER);
-  }, [onBeat]);
-  const laterBeat = useCallback(() => {
-    onBeat(LATER);
-  }, [onBeat]);
-  const earlierNudge = useCallback(() => {
-    onNudge(-NUDGE_MS);
-  }, [onNudge]);
-  const laterNudge = useCallback(() => {
-    onNudge(NUDGE_MS);
-  }, [onNudge]);
   return (
     <View style={styles.row}>
-      <PresetButton
-        label={SET_TEMPO_TEXT.beat}
+      <MoveKey
+        amount={EARLIER}
         icon="back"
-        accessibilityLabel={SET_TEMPO_TEXT.beatEarlier}
-        onPress={earlierBeat}
-      />
-      <PresetButton
-        label={nudgeLabel(-NUDGE_MS)}
-        accessibilityLabel={nudgeSpoken(-NUDGE_MS)}
-        onPress={earlierNudge}
-      />
-      <PresetButton
-        label={nudgeLabel(NUDGE_MS)}
-        accessibilityLabel={nudgeSpoken(NUDGE_MS)}
-        onPress={laterNudge}
-      />
-      <PresetButton
         label={SET_TEMPO_TEXT.beat}
+        spoken={SET_TEMPO_TEXT.beatEarlier}
+        onMove={onBeat}
+      />
+      <MoveKey
+        amount={-NUDGE_MS}
+        label={nudgeLabel(-NUDGE_MS)}
+        spoken={nudgeSpoken(-NUDGE_MS)}
+        onMove={onNudge}
+      />
+      <MoveKey
+        amount={NUDGE_MS}
+        label={nudgeLabel(NUDGE_MS)}
+        spoken={nudgeSpoken(NUDGE_MS)}
+        onMove={onNudge}
+      />
+      <MoveKey
+        amount={LATER}
         icon="forward"
-        iconAt="end"
-        accessibilityLabel={SET_TEMPO_TEXT.beatLater}
-        onPress={laterBeat}
+        label={SET_TEMPO_TEXT.beat}
+        spoken={SET_TEMPO_TEXT.beatLater}
+        onMove={onBeat}
       />
     </View>
   );
@@ -201,6 +228,26 @@ function TempoFields({ tempo, draft }: Omit<StepProps, 'playhead'>) {
   );
 }
 
+function PreviewClick() {
+  const styles = useStyles();
+  const click = useSongPlayer((s) => s.click);
+  const toggleClick = useLiveSongPlayer((s) => s.toggleClick);
+  const onToggle = useCallback(() => {
+    void toggleClick();
+  }, [toggleClick]);
+  return (
+    <View style={styles.field}>
+      <Chip
+        label={SET_TEMPO_TEXT.previewClick}
+        icon="metronome"
+        active={click}
+        onPress={onToggle}
+      />
+      <Text style={styles.hint}>{SET_TEMPO_TEXT.previewHint}</Text>
+    </View>
+  );
+}
+
 export function SetTempoStepTwo({ tempo, draft, playhead }: StepProps) {
   const styles = useStyles();
   const { anchor, bpm } = draft;
@@ -218,6 +265,7 @@ export function SetTempoStepTwo({ tempo, draft, playhead }: StepProps) {
       <BarOneRow tempo={tempo} draft={draft} playhead={playhead} />
       <BarOneMoves tempo={tempo} />
       <TempoFields tempo={tempo} draft={draft} />
+      <PreviewClick />
       <View style={styles.row}>
         <Button
           label={SET_TEMPO_TEXT.back}

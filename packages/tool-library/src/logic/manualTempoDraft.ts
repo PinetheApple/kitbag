@@ -115,7 +115,8 @@ export function nudged(
   ms: number,
   durationSec: number,
 ): TempoDraft {
-  const anchor = anchorWithin(draft.anchor + ms / MS_PER_SECOND, durationSec);
+  const atMs = Math.round(draft.anchor * MS_PER_SECOND) + ms;
+  const anchor = anchorWithin(atMs / MS_PER_SECOND, durationSec);
   if (anchor === draft.anchor) return draft;
   return { ...draft, anchor, nudgedMs: draft.nudgedMs + ms };
 }

@@ -22,7 +22,6 @@ import {
   useSongHeldFrame,
   useSongPlayer,
   useSongSource,
-  type DetectedGrid,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -52,7 +51,11 @@ import { SongTransport } from './SongTransport.tsx';
 import { useFollowQueueArrivals } from './useFollowQueueArrivals.ts';
 import { useLeaveOnStop } from './useLeaveOnStop.ts';
 import { useLoopHandles } from './useLoopHandles.ts';
-import { useDraftGrid, useSetTempo, useSetTempoOpen } from './useSetTempo.ts';
+import {
+  useSetTempo,
+  useSetTempoOpen,
+  useTempoPreview,
+} from './useSetTempo.ts';
 import { NotReady } from './NotReady.tsx';
 
 export const BODY_SLOT_ID = 'song-body-slot';
@@ -91,17 +94,10 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-interface SongWaveProps {
-  readonly playhead: ScrubFrame;
-  readonly preview: DetectedGrid | null;
-}
-
-function SongWave({ playhead, preview }: SongWaveProps) {
+function SongWave({ playhead }: { readonly playhead: ScrubFrame }) {
   const envelope = useSongPlayer((s) => s.envelope);
-  const shownBeats = useSongPlayer((s) => s.beats);
-  const shownDownbeats = useSongPlayer((s) => s.downbeatIndices);
-  const beats = preview?.beats ?? shownBeats;
-  const downbeatIndices = preview?.downbeatIndices ?? shownDownbeats;
+  const beats = useSongPlayer((s) => s.beats);
+  const downbeatIndices = useSongPlayer((s) => s.downbeatIndices);
   const frames = useSongPlayer((s) => s.durationFrames);
   const rate = useSongPlayer((s) => s.engineRate);
   const seek = useSongPlayer((s) => s.seek);
@@ -181,7 +177,7 @@ function Body({
     onSaved: onTempoSaved,
     onClose: onCloseSetTempo,
   });
-  const preview = useDraftGrid(tempo, setTempoOpen);
+  useTempoPreview(tempo, setTempoOpen);
   if (status !== 'ready')
     return (
       <View style={styles.bodyContent}>
@@ -198,7 +194,7 @@ function Body({
             nestedScrollEnabled
           >
             <Card>
-              <SongWave playhead={playhead} preview={preview} />
+              <SongWave playhead={playhead} />
               <ScrubRow frame={playhead} {...scrub} loopHandles={handles} />
             </Card>
             <SongLockCard songId={songId} />

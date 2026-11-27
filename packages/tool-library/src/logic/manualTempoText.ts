@@ -40,8 +40,10 @@ export const SET_TEMPO_TEXT = {
   startOver: 'Start over',
   barOneHelp: 'Play, pause on the one, then tap.',
   beat: 'Beat',
-  beatEarlier: 'Bar 1 one beat earlier',
-  beatLater: 'Bar 1 one beat later',
+  beatEarlier: 'Move bar 1 a beat earlier',
+  beatLater: 'Move bar 1 a beat later',
+  previewClick: 'Preview click',
+  previewHint: 'Hear it against the song before you save.',
   beatsPerBar: meterCopy.beatsPerBar,
   slower: 'Tempo 0.1 BPM slower',
   faster: 'Tempo 0.1 BPM faster',
@@ -55,6 +57,7 @@ export const SET_TEMPO_TEXT = {
   ok: 'OK',
   reanalysisFailed: 'Analysis failed. Your manual tempo is kept.',
   reanalysisNoBeat: 'Analysis found no beat. Your manual tempo is kept.',
+  reanalysisAgrees: 'Analysis agrees with your manual tempo.',
 } as const;
 
 export function manualBpmText(bpm: number): string {
@@ -114,7 +117,7 @@ export function nudgeLabel(ms: number): string {
 }
 
 export const nudgedText = (ms: number) =>
-  `Moved ${nudgeLabel(ms)}. Check late in the song for drift.`;
+  `Moved ${nudgeLabel(ms)}. Playing with the click: check late in the song for drift.`;
 
 export const nudgeSpoken = (ms: number) =>
-  `Bar 1 ${String(Math.abs(ms))} milliseconds ${ms < 0 ? 'earlier' : 'later'}`;
+  `Nudge ${String(Math.abs(ms))} ms ${ms < 0 ? 'earlier' : 'later'}`;

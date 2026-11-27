@@ -57,11 +57,6 @@ const useStyles = createThemedStyles((theme) => ({
   lit: { backgroundColor: theme.color.accent, borderColor: theme.color.accent },
 }));
 
-export function tapsLeftText(landed: number, needed: number): string {
-  const left = needed - landed;
-  return left === 1 ? '1 more tap' : `${String(left)} more taps`;
-}
-
 export interface TapLedsProps {
   readonly landed: number;
   readonly total: number;

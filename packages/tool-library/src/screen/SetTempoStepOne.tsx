@@ -89,10 +89,36 @@ function TypeEntry({ tempo }: StepProps) {
   );
 }
 
-function TapEntry({ tempo, playhead }: StepProps & PlayheadProps) {
+function TapFoot({ tempo }: StepProps) {
   const styles = useStyles();
+  const { taps, tappedBpm, onStartOver } = tempo.entry;
+  return (
+    <View style={styles.row}>
+      <Button
+        label={SET_TEMPO_TEXT.startOver}
+        icon="reset"
+        size="target"
+        fill
+        disabled={taps.length === 0}
+        disabledLook="faded"
+        onPress={onStartOver}
+      />
+      <Button
+        label={SET_TEMPO_TEXT.next}
+        variant="primary"
+        size="target"
+        fill
+        disabled={tappedBpm === null}
+        disabledLook="faded"
+        onPress={tempo.onTapped}
+      />
+    </View>
+  );
+}
+
+function TapEntry({ tempo, playhead }: StepProps & PlayheadProps) {
   const theme = useTheme();
-  const { taps, tappedBpm, onTap, onStartOver } = tempo.entry;
+  const { taps, tappedBpm, onTap } = tempo.entry;
   const landed = Math.min(taps.length, TAPS_TO_SET_TEMPO);
   return (
     <>
@@ -115,26 +141,7 @@ function TapEntry({ tempo, playhead }: StepProps & PlayheadProps) {
         <Icon name="tapAlong" size="retimePad" color={theme.accentInk} />
       </TapPad>
       <TapLeds landed={landed} total={TAPS_TO_SET_TEMPO} />
-      <View style={styles.row}>
-        <Button
-          label={SET_TEMPO_TEXT.startOver}
-          icon="reset"
-          size="target"
-          fill
-          disabled={taps.length === 0}
-          disabledLook="faded"
-          onPress={onStartOver}
-        />
-        <Button
-          label={SET_TEMPO_TEXT.next}
-          variant="primary"
-          size="target"
-          fill
-          disabled={tappedBpm === null}
-          disabledLook="faded"
-          onPress={tempo.onTapped}
-        />
-      </View>
+      <TapFoot tempo={tempo} />
     </>
   );
 }

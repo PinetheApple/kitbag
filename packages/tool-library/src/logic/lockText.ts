@@ -74,12 +74,29 @@ export function playerStatusBadge(badge: SongBadge): BadgeSpec | null {
     : songStatusBadge(badge);
 }
 
-type PlayerFacts = Pick<SongPlayerStore, 'status' | 'analysisStatus' | 'beats'>;
+type PlayerFacts = Pick<
+  SongPlayerStore,
+  | 'status'
+  | 'analysisStatus'
+  | 'beats'
+  | 'tempoPreview'
+  | 'manualTempo'
+  | 'analysedBpm'
+>;
+
+// A draft grid shown by the Set tempo sheet is not the song's until it is saved.
+function hasStoredGrid(state: Omit<PlayerFacts, 'status' | 'analysisStatus'>) {
+  if (!state.tempoPreview) return state.beats.length > 0;
+  return state.manualTempo !== null || state.analysedBpm !== null;
+}
 
 export type BarBadge = Omit<BadgeSpec, 'key'>;
 
-export function lockBadgeOf({ analysisStatus, beats }: PlayerFacts): SongBadge {
-  return playerSongBadge({ analysisStatus, hasGrid: beats.length > 0 });
+export function lockBadgeOf(state: PlayerFacts): SongBadge {
+  return playerSongBadge({
+    analysisStatus: state.analysisStatus,
+    hasGrid: hasStoredGrid(state),
+  });
 }
 
 export function barStatusOf(state: PlayerFacts): BadgeSpec | null {

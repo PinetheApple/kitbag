@@ -104,7 +104,7 @@ describe('bar 1 moves', () => {
   it('nudges by 10 ms and adds the nudges up', () => {
     const once = nudged(DRAFT, NUDGE_MS, DURATION);
     const twice = nudged(once, NUDGE_MS, DURATION);
-    expect(twice.anchor).toBeCloseTo(2.02, 6);
+    expect(twice.anchor).toBe(2.02);
     expect(twice.nudgedMs).toBe(2 * NUDGE_MS);
   });
 
