@@ -325,6 +325,38 @@ describe('importing several picked files', () => {
     });
   });
 
+  it('holds a shared batch until a picked batch has finished', async () => {
+    const { store, files } = setup(picking([ZIP]));
+    await store.getState().importSong();
+    vi.mocked(files.pickDocuments).mockResolvedValue([ZIP, WAV]);
+    const picked = store.getState().importSong();
+    await vi.waitFor(() => {
+      expect(store.getState().replacePrompt).not.toBeNull();
+    });
+    const shared = store.getState().importDocuments([MP3]);
+    await settle();
+    expect(files.importAudio).not.toHaveBeenCalled();
+    store.getState().cancelReplace();
+    await Promise.all([picked, shared]);
+    expect(vi.mocked(files.importAudio).mock.calls).toEqual([
+      [WAV.uri, 'songs/f2'],
+      [MP3.uri, 'songs/f3'],
+    ]);
+  });
+
+  it('ignores the picker while a shared batch is running', async () => {
+    const { store, files } = setup(picking([ZIP]));
+    await store.getState().importSong();
+    const shared = store.getState().importDocuments([ZIP, WAV]);
+    await vi.waitFor(() => {
+      expect(store.getState().replacePrompt).not.toBeNull();
+    });
+    await store.getState().importSong();
+    expect(files.pickDocuments).toHaveBeenCalledOnce();
+    store.getState().cancelReplace();
+    await shared;
+  });
+
   it('does nothing when the picker returns no files', async () => {
     const { store, files } = setup(picking([]));
     await store.getState().importSong();
