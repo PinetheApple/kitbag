@@ -1,0 +1,1 @@
+• Nothing visible yet: groundwork for setting a song's tempo by hand when beat analysis fails.
