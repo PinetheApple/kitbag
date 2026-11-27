@@ -1,0 +1,1 @@
+• Switching Play along off now hides it from Home and the mini-player and stops its click.
