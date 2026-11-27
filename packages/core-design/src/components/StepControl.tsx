@@ -56,6 +56,7 @@ export interface StepControlProps {
   readonly accented?: boolean;
   readonly repeatOnHold?: boolean;
   readonly wide?: boolean;
+  readonly wrapValue?: boolean;
   /** Gaps to the controls around the cluster, for the keys' 48dp hit boxes;
    * a number applies to every side, an omitted side has no neighbour. */
   readonly neighbourGapDp?: number | NeighbourGaps;
@@ -147,6 +148,10 @@ const useStyles = createThemedStyles((theme) => ({
   inlineValueAccented: {
     color: theme.color[theme.accentInk],
   },
+  wrapCluster: { flexShrink: 1, maxWidth: '100%' },
+  wrapValueBox: { flexShrink: 1 },
+  wrapValueText: { flexShrink: 1, textAlign: 'center' },
+  fixedKey: { flexShrink: 0 },
   largeCluster: {
     minHeight: size.stepInlineLarge,
     paddingVertical: 0,
@@ -183,6 +188,7 @@ export function StepControl({
   accented = false,
   repeatOnHold = false,
   wide = false,
+  wrapValue = false,
   neighbourGapDp = space.stepKeyGap,
 }: StepControlProps) {
   const styles = useStyles();
@@ -248,7 +254,11 @@ export function StepControl({
     onHold: () => void,
   ) =>
     inline ? (
-      <Pressable style={hitBox} onPress={onPress} {...repeatProps(onHold)}>
+      <Pressable
+        style={[hitBox, wrapValue && styles.fixedKey]}
+        onPress={onPress}
+        {...repeatProps(onHold)}
+      >
         <View style={[styles.inlineKey, large && styles.largeKey]}>
           <InlineIcon name={glyph} style={[styles.inlineKeyText, glyphSize]} />
         </View>
@@ -262,7 +272,11 @@ export function StepControl({
     );
 
   const valueBoxStyle = inline
-    ? [styles.inlineValueBox, wide && styles.wideValueBox]
+    ? [
+        styles.inlineValueBox,
+        wide && styles.wideValueBox,
+        wrapValue && styles.wrapValueBox,
+      ]
     : [styles.badgeValueBox, accented && styles.badgeValueBoxAccented];
   const valueNumber = (
     <Text
@@ -272,6 +286,7 @@ export function StepControl({
               styles.inlineValue,
               large && styles.largeValue,
               accented && styles.inlineValueAccented,
+              wrapValue && styles.wrapValueText,
             ]
           : [styles.badgeValue, accented && styles.badgeValueAccented]
       }
@@ -306,6 +321,7 @@ export function StepControl({
               styles.inlineCluster,
               large && styles.largeCluster,
               accented && styles.inlineClusterAccented,
+              wrapValue && styles.wrapCluster,
             ]
           : styles.badgeCluster
       }
