@@ -45,7 +45,7 @@ vi.mock('@kitbag/tool-stems', () => ({
   importCardShows: () => false,
 }));
 vi.mock('./useMiniPlayerDocked', () => ({
-  useMiniPlayerDocked: () => state.docked,
+  useAnyMiniPlayerDocked: () => state.docked,
 }));
 vi.mock('./DockedMiniPlayer', () => ({ DockedMiniPlayer: () => null }));
 vi.mock('@/queue/useQueueSheet', () => ({

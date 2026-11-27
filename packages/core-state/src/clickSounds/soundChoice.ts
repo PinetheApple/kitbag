@@ -24,6 +24,9 @@ export const SOUND_ROLE_OPTIONS = [
   { value: SOUND_ROLE.accent, label: soundRoleName(SOUND_ROLE.accent) },
 ] as const;
 
+export const SOUND_PICKER_HINT =
+  'Tap a sound to hear it at the current volume. Accent and normal beats can use different sounds.';
+
 export const SOUND_OPTIONS = BUILT_IN_SOUND_NAMES.map((label, id) => ({
   value: String(id),
   label,

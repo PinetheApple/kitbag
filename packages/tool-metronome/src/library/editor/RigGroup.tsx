@@ -34,7 +34,7 @@ import {
 } from '../../logic/rampUnit.ts';
 import { stepWithin } from '../../logic/trainer.ts';
 import { useCustomSoundViews } from '../../screen/CustomSounds.tsx';
-import { SoundPickerSheet } from '../../screen/SoundSheet.tsx';
+import { MetronomeSoundSheet } from '../../screen/SoundSheet.tsx';
 import { EDIT_ROW_SEGMENT_GAPS, OnOff, TrainerStep } from './fields.tsx';
 import { useMarkedUpdate, type PresetEditor } from './usePresetEditor.ts';
 
@@ -99,7 +99,7 @@ function SoundRow(props: {
       >
         <EditValue>{soundChipLabel(draft.perAccentSounds, custom)}</EditValue>
       </Pressable>
-      <SoundPickerSheet
+      <MetronomeSoundSheet
         visible={open}
         bottomInset={props.bottomInset}
         onDismiss={hide}

@@ -76,7 +76,12 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-export type MiniPlayerTile = Extract<IconName, 'song' | 'stems'>;
+export type MiniPlayerTile = Extract<IconName, 'song' | 'stems' | 'playAlong'>;
+
+export interface MiniPlayerQueue {
+  readonly label: string;
+  readonly onPress: () => void;
+}
 
 export interface MiniPlayerBarProps {
   readonly tile: MiniPlayerTile;
@@ -88,10 +93,9 @@ export interface MiniPlayerBarProps {
   readonly playLabel: string;
   readonly pauseLabel: string;
   readonly closeLabel: string;
-  readonly queueLabel: string;
+  readonly queue?: MiniPlayerQueue | undefined;
   readonly bottomInset: number;
   readonly onOpen: () => void;
-  readonly onQueue: () => void;
   readonly onTogglePlay: () => void;
   readonly onClose: () => void;
 }
@@ -126,6 +130,20 @@ function PlayToggle({
   );
 }
 
+function QueueKey({ label, onPress }: MiniPlayerQueue) {
+  const styles = useStyles();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={styles.button}
+      onPress={onPress}
+    >
+      <Icon name="queue" size="bar" color="text" />
+    </Pressable>
+  );
+}
+
 export function MiniPlayerBar({
   tile,
   title,
@@ -136,10 +154,9 @@ export function MiniPlayerBar({
   playLabel,
   pauseLabel,
   closeLabel,
-  queueLabel,
+  queue,
   bottomInset,
   onOpen,
-  onQueue,
   onTogglePlay,
   onClose,
 }: MiniPlayerBarProps) {
@@ -170,14 +187,7 @@ export function MiniPlayerBar({
             <EllipsizedText style={styles.detail}>{detail}</EllipsizedText>
           </View>
         </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={queueLabel}
-          style={styles.button}
-          onPress={onQueue}
-        >
-          <Icon name="queue" size="bar" color="text" />
-        </Pressable>
+        {queue === undefined ? null : <QueueKey {...queue} />}
         <PlayToggle
           playing={playing}
           playLabel={playLabel}
