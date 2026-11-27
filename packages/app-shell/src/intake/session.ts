@@ -12,7 +12,6 @@ const warn = (error: unknown) => {
 };
 
 export function intakeSession(source: IntakeSource) {
-  let initialTaken = false;
   let queue: Promise<void> = Promise.resolve();
   return {
     start: (receive: (items: Items) => Promise<void>) => {
@@ -20,10 +19,7 @@ export function intakeSession(source: IntakeSource) {
         queue = queue.then(() => receive(items)).catch(warn);
       };
       const stop = source.watch(deliver);
-      if (!initialTaken) {
-        initialTaken = true;
-        source.takeLaunch().then(deliver, warn);
-      }
+      source.takeLaunch().then(deliver, warn);
       return stop;
     },
   };

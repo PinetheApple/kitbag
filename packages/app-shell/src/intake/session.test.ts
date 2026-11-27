@@ -43,8 +43,11 @@ describe('the intake session', () => {
     expect(receive.mock.calls).toEqual([[[SONG]]]);
   });
 
-  it('does not deliver the starting files again when the app remounts', async () => {
+  it('asks the source again on remount and lets it hand the launch files over once', async () => {
     const { source } = fakeSource([SONG]);
+    vi.mocked(source.takeLaunch)
+      .mockResolvedValueOnce([SONG])
+      .mockResolvedValue([]);
     const session = intakeSession(source);
     const receive = vi.fn(() => Promise.resolve());
     const stop = session.start(receive);
@@ -52,8 +55,8 @@ describe('the intake session', () => {
     stop();
     session.start(receive);
     await settle();
-    expect(receive).toHaveBeenCalledOnce();
-    expect(source.takeLaunch).toHaveBeenCalledOnce();
+    expect(source.takeLaunch).toHaveBeenCalledTimes(2);
+    expect(receive.mock.calls).toEqual([[[SONG]], [[]]]);
   });
 
   it('delivers files shared while the app is open', async () => {
