@@ -1,48 +1,16 @@
-import { grownTextScale, isTextScaled, metronome } from '@kitbag/core-design';
-import { KB_MAX_BEATS } from '@kitbag/core-native';
-import { layoutBeatLeds, type LedRowLayout } from '@kitbag/core-state';
-
 import {
+  BEAT_LABEL_HEIGHT,
+  beatDotLineGap,
+  beatDotMetrics,
   beatDotSize,
+  grownTextScale,
+  isTextScaled,
   MAX_DOTS_PER_LINE,
-  type DotMetrics,
-} from './ledLayout.ts';
-import type { ScreenDensity } from './screenDensity.ts';
-
-export const DOT_METRICS: DotMetrics = {
-  maxDot: metronome.beatDotMax,
-  dotGap: metronome.beatDotGap,
-  groupGap: metronome.beatDotGroupGap,
-};
-
-const COMPACT_MULTI_LINE_METRICS: DotMetrics = {
-  ...DOT_METRICS,
-  maxDot: metronome.beatDotMaxCompactMultiLine,
-};
-
-const LINE_GAP: Readonly<Record<ScreenDensity, number>> = {
-  roomy: metronome.beatDotLineGap,
-  compact: metronome.beatDotLineGapCompact,
-};
-
-export function beatDotLineGap(density: ScreenDensity): number {
-  return LINE_GAP[density];
-}
-
-export function beatDotMetrics(
-  density: ScreenDensity,
-  lines: readonly LedRowLayout[],
-): DotMetrics {
-  return density === 'compact' && lines.length > 1
-    ? COMPACT_MULTI_LINE_METRICS
-    : DOT_METRICS;
-}
-
-export const BEAT_LABEL_HEIGHT =
-  metronome.beatMarkerGap +
-  metronome.pulseMark +
-  metronome.beatMarkerGap +
-  metronome.beatMarkerLineHeight;
+  metronome,
+  type ScreenDensity,
+} from '@kitbag/core-design';
+import { KB_MAX_BEATS } from '@kitbag/core-native';
+import { layoutBeatLeds } from '@kitbag/core-state';
 
 export const STATUS_REST_ROWS = 1;
 const LIVE_STATUS_ROWS = 2;

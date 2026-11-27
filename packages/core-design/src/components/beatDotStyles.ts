@@ -1,18 +1,12 @@
-import {
-  createThemedStyles,
-  metronome,
-  metronomeMix,
-  mixHex,
-  radius,
-  space,
-  textRoles,
-  textStyle,
-  TRANSPARENT,
-} from '@kitbag/core-design';
-
 import { StyleSheet } from 'react-native';
 
-import type { DotPalette } from '../logic/beatDot.ts';
+import type { DotPalette } from '../beatDotLook.ts';
+import { metronome, metronomeMix } from '../metronomeRoles.ts';
+import { radius, space, textRoles } from '../roles.ts';
+import { TRANSPARENT } from '../styleConstants.ts';
+import { textStyle } from '../textStyle.ts';
+import { mixHex } from '../theme.ts';
+import { createThemedStyles } from '../ThemeProvider.tsx';
 
 const RING_REACH = metronome.dotRingGap + metronome.dotRing;
 

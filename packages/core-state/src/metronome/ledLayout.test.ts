@@ -1,8 +1,10 @@
-import { KB_MAX_BEATS } from '@kitbag/core-native';
+import { KB_ACCENT, KB_MAX_BEATS } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
 import {
   layoutBeatLeds,
+  ledStateFor,
+  ledStatesFor,
   MAX_LEDS_PER_ROW,
   MIN_LEDS_PER_ROW,
 } from './ledLayout.ts';
@@ -72,5 +74,29 @@ describe('layoutBeatLeds', () => {
       const flat = layoutBeatLeds(beats).flat(2);
       expect(flat).toEqual(Array.from({ length: beats }, (_u, i) => i));
     }
+  });
+});
+
+describe('ledStateFor', () => {
+  it('maps each engine accent to its LED', () => {
+    expect(ledStateFor(KB_ACCENT.KB_ACCENT_ACCENTED)).toBe('accented');
+    expect(ledStateFor(KB_ACCENT.KB_ACCENT_NORMAL)).toBe('normal');
+    expect(ledStateFor(KB_ACCENT.KB_ACCENT_MUTED)).toBe('muted');
+  });
+});
+
+describe('ledStatesFor', () => {
+  it('gives every beat of the bar a state, normal where no accent is set', () => {
+    expect(ledStatesFor([KB_ACCENT.KB_ACCENT_ACCENTED], 3)).toEqual([
+      'accented',
+      'normal',
+      'normal',
+    ]);
+  });
+
+  it('drops accents past the bar', () => {
+    expect(
+      ledStatesFor([KB_ACCENT.KB_ACCENT_NORMAL, KB_ACCENT.KB_ACCENT_MUTED], 1),
+    ).toEqual(['normal']);
   });
 });

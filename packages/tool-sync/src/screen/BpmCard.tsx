@@ -25,6 +25,11 @@ const useStyles = createThemedStyles((theme) => ({
     gap: space.rowGap,
   },
   side: { flex: 1, gap: space.controlGap },
+  captionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.controlGap,
+  },
   sideOwnLine: { flexBasis: '100%' },
   numeral: {
     ...textStyle(textRoles.tempoNumeralTight),
@@ -33,6 +38,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   noTempo: { color: theme.color.text3 },
   caption: {
+    flex: 1,
     ...textStyle(textRoles.tempoCaption),
     color: theme.color.text2,
   },
@@ -53,6 +59,7 @@ const useStyles = createThemedStyles((theme) => ({
 export interface BpmCardProps {
   readonly bpm: number | null;
   readonly line: TempoLine;
+  readonly newTrack: boolean;
   readonly onOpenTempo: () => void;
 }
 
@@ -79,7 +86,7 @@ function CreditLink({
   );
 }
 
-export function BpmCard({ bpm, line, onOpenTempo }: BpmCardProps) {
+export function BpmCard({ bpm, line, newTrack, onOpenTempo }: BpmCardProps) {
   const styles = useStyles();
   const scaled = useTextScaled();
   const numeral = bpm === null ? NO_TEMPO_NUMERAL : shownBpm(bpm);
@@ -97,8 +104,11 @@ export function BpmCard({ bpm, line, onOpenTempo }: BpmCardProps) {
           {numeral}
         </Text>
         <View style={[styles.side, scaled && styles.sideOwnLine]}>
-          <Text style={styles.caption}>BPM</Text>
-          {line.noTempo ? <Badge label="No tempo" tone="warning" /> : null}
+          <View style={styles.captionRow}>
+            <Text style={styles.caption}>BPM</Text>
+            {newTrack ? <Badge label="NEW TRACK" tone="accent" /> : null}
+            {line.noTempo ? <Badge label="No tempo" tone="warning" /> : null}
+          </View>
           <Text style={styles.line}>
             {line.lead}
             <Text style={styles.rung}>{line.rung}</Text>

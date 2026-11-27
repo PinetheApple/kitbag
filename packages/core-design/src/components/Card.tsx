@@ -39,6 +39,7 @@ interface CardBaseProps {
 
 interface PlainCardProps extends CardBaseProps {
   readonly emphasis?: 'none';
+  readonly borderTone?: FeedbackTone;
 }
 
 interface ActiveCardProps extends CardBaseProps {
@@ -93,5 +94,7 @@ export function Card(props: CardProps) {
     );
   }
 
-  return <View style={styles.card}>{props.children}</View>;
+  const border =
+    props.borderTone === undefined ? null : styles[props.borderTone];
+  return <View style={[styles.card, border]}>{props.children}</View>;
 }

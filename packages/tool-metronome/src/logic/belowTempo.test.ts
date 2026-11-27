@@ -1,4 +1,10 @@
-import { metronome, space } from '@kitbag/core-design';
+import {
+  beatDotSize,
+  DOT_METRICS,
+  MAX_DOTS_PER_LINE,
+  metronome,
+  space,
+} from '@kitbag/core-design';
 import { KB_MAX_BEATS } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 import { layoutBeatLeds } from '@kitbag/core-state';
@@ -11,7 +17,6 @@ import {
   pinnedStackGap,
   pinnedStackScrollSlack,
   pinnedViewportOverlap,
-  DOT_METRICS,
   STATUS_REST_ROWS,
   statusProgressReserve,
   statusRowHeight,
@@ -23,7 +28,6 @@ import {
   tallestBelowTempo,
   type BelowTempoRoom,
 } from './belowTempo.ts';
-import { beatDotSize, MAX_DOTS_PER_LINE } from './ledLayout.ts';
 
 const SMALL_PHONE_DOTS_WIDTH = 360 - space.screenInset * 2;
 const LARGE_PHONE_DOTS_WIDTH = 411 - space.screenInset * 2;

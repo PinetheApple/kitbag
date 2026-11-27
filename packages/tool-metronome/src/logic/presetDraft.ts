@@ -1,3 +1,4 @@
+import { MIN_BEATS } from '@kitbag/core-design';
 import {
   KB_DENOMINATORS,
   KB_MAX_BEATS,
@@ -23,8 +24,6 @@ import {
   type SongPreset,
   DEFAULT_BPM,
 } from '@kitbag/core-state';
-
-import { MIN_BEATS } from './meter.ts';
 
 export type RampDraft = RampConfig;
 export type BarMuteDraft = BarMuteConfig;

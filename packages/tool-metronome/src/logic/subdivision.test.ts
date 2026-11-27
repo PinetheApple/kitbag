@@ -8,7 +8,7 @@ import {
   subdivisionColumns,
   subdivisionLabel,
   subdivisionName,
-} from './subdivision.ts';
+} from '@kitbag/core-design';
 
 describe('subdivisionLabel', () => {
   it('shows clicks per beat across the whole range (SPEC §5.2)', () => {

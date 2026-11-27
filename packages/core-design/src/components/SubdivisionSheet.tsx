@@ -1,30 +1,26 @@
-import {
-  createThemedStyles,
-  metronomeSheet,
-  NotationGlyph,
-  radius,
-  Sheet,
-  SheetHint,
-  size,
-  space,
-  textRoles,
-  textStyle,
-} from '@kitbag/core-design';
-import { KB_SUBDIVISION_BOUNDS } from '@kitbag/core-native';
-import { useMetronome } from '@kitbag/core-state';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 
+import { metronomeSheet } from '../metronomeRoles.ts';
+import { radius, size, space, textRoles } from '../roles.ts';
 import {
   inRows,
   spokenSubdivision,
   subdivisionChoices,
   subdivisionColumns,
   subdivisionName,
-} from '../logic/subdivision.ts';
-import { useSheetStyles } from './sheetStyles.ts';
+} from '../subdivisionText.ts';
+import { textStyle } from '../textStyle.ts';
+import { createThemedStyles } from '../ThemeProvider.tsx';
+import { NotationGlyph } from './NotationGlyph.tsx';
+import { usePickedTileStyles } from './pickedTileStyles.ts';
+import { Sheet } from './Sheet.tsx';
+import { SheetHint } from './SheetHint.tsx';
 
-const CHOICES = subdivisionChoices(KB_SUBDIVISION_BOUNDS);
+export interface SubdivisionBounds {
+  readonly min: number;
+  readonly max: number;
+}
 
 const useStyles = createThemedStyles((theme) => ({
   grid: {
@@ -69,7 +65,7 @@ function NotationTile({
   onPick,
 }: TileProps) {
   const styles = useStyles();
-  const sheetStyles = useSheetStyles();
+  const pickedStyles = usePickedTileStyles();
   const handlePress = useCallback(() => {
     onPick(subdivision);
   }, [onPick, subdivision]);
@@ -78,7 +74,7 @@ function NotationTile({
       accessibilityRole="radio"
       accessibilityLabel={spokenSubdivision(subdivision, denominator)}
       accessibilityState={{ checked: selected }}
-      style={[styles.tile, selected && sheetStyles.selectedTile]}
+      style={[styles.tile, selected && pickedStyles.selectedTile]}
       onPress={handlePress}
     >
       <NotationGlyph
@@ -94,28 +90,34 @@ function NotationTile({
   );
 }
 
-interface SubdivisionSheetProps {
+export interface SubdivisionSheetProps {
   readonly visible: boolean;
   readonly bottomInset: number;
+  readonly subdivision: number;
+  readonly denominator: number;
+  readonly bounds: SubdivisionBounds;
+  readonly onPick: (subdivision: number) => void;
   readonly onDismiss: () => void;
 }
 
 export function SubdivisionSheet({
   visible,
   bottomInset,
+  subdivision,
+  denominator,
+  bounds,
+  onPick,
   onDismiss,
 }: SubdivisionSheetProps) {
   const styles = useStyles();
   const { fontScale } = useWindowDimensions();
-  const subdivision = useMetronome((s) => s.subdivision);
-  const denominator = useMetronome((s) => s.denominator);
-  const setSubdivision = useMetronome((s) => s.setSubdivision);
+  const choices = useMemo(() => subdivisionChoices(bounds), [bounds]);
   const handlePick = useCallback(
     (next: number) => {
-      setSubdivision(next);
+      onPick(next);
       onDismiss();
     },
-    [setSubdivision, onDismiss],
+    [onPick, onDismiss],
   );
   return (
     <Sheet
@@ -131,7 +133,7 @@ export function SubdivisionSheet({
         accessibilityLabel="Subdivision"
         style={styles.grid}
       >
-        {inRows(CHOICES, subdivisionColumns(fontScale)).map((row) => (
+        {inRows(choices, subdivisionColumns(fontScale)).map((row) => (
           <View key={row[0]} style={styles.row}>
             {row.map((choice) => (
               <NotationTile
@@ -146,7 +148,7 @@ export function SubdivisionSheet({
         ))}
       </View>
       <SheetHint centered size="large">
-        {`Per written beat, ${String(KB_SUBDIVISION_BOUNDS.min)}–${String(KB_SUBDIVISION_BOUNDS.max)}. One tap sets it and closes the sheet; applies live.`}
+        {`Per written beat, ${String(bounds.min)}–${String(bounds.max)}. One tap sets it and closes the sheet; applies live.`}
       </SheetHint>
     </Sheet>
   );

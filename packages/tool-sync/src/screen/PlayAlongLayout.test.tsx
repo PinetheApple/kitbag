@@ -81,6 +81,7 @@ function bpmCard(): ReactTestInstance {
         noTempo: false,
         credit: null,
       },
+      newTrack: false,
       onOpenTempo: vi.fn(),
     }),
   );
@@ -105,14 +106,14 @@ describe('the BPM card', () => {
   it('puts the BPM line under the numeral above font 1.0', () => {
     display.scaled = true;
     const root = bpmCard();
-    const side = root.findByProps({ children: 'BPM' }).parent;
+    const side = root.findByProps({ children: 'BPM' }).parent?.parent;
     const top = root.findByType('Pressable' as never);
     expect(flat(side?.props.style).flexBasis).toBe('100%');
     expect(flat(top.props.style).flexWrap).toBe('wrap');
   });
 
   it('keeps the BPM line beside the numeral at font 1.0', () => {
-    const side = bpmCard().findByProps({ children: 'BPM' }).parent;
+    const side = bpmCard().findByProps({ children: 'BPM' }).parent?.parent;
     expect(flat(side?.props.style).flexBasis).toBeUndefined();
   });
 });

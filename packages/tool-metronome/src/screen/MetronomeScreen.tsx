@@ -1,4 +1,9 @@
-import { metronome, readerHiding, space } from '@kitbag/core-design';
+import {
+  metronome,
+  PickerChips,
+  readerHiding,
+  space,
+} from '@kitbag/core-design';
 import {
   BPM_BOUNDS,
   getPracticeSessionStore,
@@ -33,7 +38,6 @@ import { BeatDots, BeatLegend } from './BeatDots.tsx';
 import { MetronomeAppBar } from './MetronomeAppBar.tsx';
 import { useMetronomeScreenStyles } from './metronomeScreenStyles.ts';
 import { MetronomeSheets, type OpenSheet } from './MetronomeSheets.tsx';
-import { PickerChips } from './PickerChips.tsx';
 import { PolyLegend } from './PolyLegend.tsx';
 import { PracticePill, usePracticeElapsed } from './PracticePill.tsx';
 import { usePendingPractice } from './PracticeSummarySheet.tsx';

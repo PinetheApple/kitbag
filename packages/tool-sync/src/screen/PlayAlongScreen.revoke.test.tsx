@@ -32,6 +32,10 @@ vi.mock('./PlayAlongBody.tsx', () => ({ PlayAlongBody: 'PlayAlongBody' }));
 vi.mock('./PlayAlongDock.tsx', () => ({ PlayAlongDock: 'PlayAlongDock' }));
 vi.mock('./PlayAlongAppBar.tsx', () => ({ PlayAlongAppBar: () => null }));
 vi.mock('./PlayAlongMenu.tsx', () => ({ PlayAlongMenu: () => null }));
+vi.mock('./PatternSheets.tsx', async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  PatternSheets: () => null,
+}));
 vi.mock('./SourceSheet.tsx', () => ({ SourceSheet: () => null }));
 vi.mock('./TempoSheet.tsx', () => ({ TempoSheet: () => null }));
 
