@@ -11,6 +11,7 @@ import {
   V24_SONG_COLUMNS,
   V28_SONG_COLUMNS,
   V30_SONG_COLUMNS,
+  V32_MANUAL_TEMPO_COLUMNS,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -31,6 +32,7 @@ describe('migrate v13 to v14', () => {
         ...V24_SONG_COLUMNS,
         ...V28_SONG_COLUMNS,
         ...V30_SONG_COLUMNS,
+        ...V32_MANUAL_TEMPO_COLUMNS,
       })),
     );
     expect(

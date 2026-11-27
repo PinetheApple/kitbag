@@ -1,6 +1,7 @@
 import { asc, eq, isNotNull } from 'drizzle-orm';
 
 import { stemSetClickOf, type StemSetClick } from './click-settings';
+import { manualTempoOf, type ManualTempo } from './manual-tempo';
 import { meterOverrideOf, type MeterOverride } from './meter-override';
 import { found, type Database } from './repository';
 import { stems, stemSets } from './schema';
@@ -104,6 +105,7 @@ export interface StemSetRecord
   readonly pitch: number;
   readonly lyricsRetimed: LyricLineTimes | null;
   readonly stems: readonly StoredStem[];
+  readonly manualTempo: ManualTempo | null;
 }
 
 export interface StemSetFiles {
@@ -333,6 +335,7 @@ export async function readStemSet(
     ...meterOverrideOf(row),
     ...stemSetClickOf(row),
     ...storedTempoOf(row),
+    manualTempo: manualTempoOf(row),
     bpm: row.bpm,
     key: row.key,
     scale: row.scale,

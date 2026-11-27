@@ -7,6 +7,7 @@ import {
   rows,
   V22_STEM_SET_COLUMNS,
   V27_STEM_SET_COLUMNS,
+  V32_MANUAL_TEMPO_COLUMNS,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -26,6 +27,7 @@ describe('migrate v15 to v16', () => {
         renamed: 0,
         ...V22_STEM_SET_COLUMNS,
         ...V27_STEM_SET_COLUMNS,
+        ...V32_MANUAL_TEMPO_COLUMNS,
       })),
     );
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);

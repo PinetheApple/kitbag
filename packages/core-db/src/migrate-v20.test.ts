@@ -10,6 +10,7 @@ import {
   V24_SONG_COLUMNS,
   V28_SONG_COLUMNS,
   V30_SONG_COLUMNS,
+  V32_MANUAL_TEMPO_COLUMNS,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -38,6 +39,7 @@ describe('migrate v19 to v20', () => {
         ...V24_SONG_COLUMNS,
         ...V28_SONG_COLUMNS,
         ...V30_SONG_COLUMNS,
+        ...V32_MANUAL_TEMPO_COLUMNS,
       })),
     );
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);

@@ -155,6 +155,7 @@ describe('StemDeck bundles in the song library', () => {
       ...NO_CLICK,
       tempo: null,
       chosenTempoMode: null,
+      manualTempo: null,
       stems: FULL.stems.map((stem) => ({
         ...stem,
         id: expect.any(Number) as number,

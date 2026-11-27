@@ -8,6 +8,7 @@ import {
   rows,
   V28_SONG_COLUMNS,
   V30_SONG_COLUMNS,
+  V32_MANUAL_TEMPO_COLUMNS,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -30,6 +31,7 @@ describe('migrate v27 to v28', () => {
         ...row,
         ...V28_SONG_COLUMNS,
         ...V30_SONG_COLUMNS,
+        ...V32_MANUAL_TEMPO_COLUMNS,
       })),
     );
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);

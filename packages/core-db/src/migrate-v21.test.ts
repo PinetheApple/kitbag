@@ -9,6 +9,7 @@ import {
   V21_CLICK_COLUMNS,
   V22_TEMPO_COLUMNS,
   V27_STEM_SET_COLUMNS,
+  V32_MANUAL_TEMPO_COLUMNS,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -28,6 +29,7 @@ describe('migrate v20 to v21', () => {
         ...V21_CLICK_COLUMNS,
         ...V22_TEMPO_COLUMNS,
         ...V27_STEM_SET_COLUMNS,
+        ...V32_MANUAL_TEMPO_COLUMNS,
       })),
     );
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
