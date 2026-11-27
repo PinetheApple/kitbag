@@ -7,6 +7,8 @@ import {
   buildV30Fixture,
   pragma,
   rows,
+  tableNames,
+  TOOL_DATA_TABLE,
   V32_MANUAL_TEMPO_COLUMNS,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
@@ -70,15 +72,13 @@ const presetColumns = (db: DatabaseSync) =>
   rows<Row>(db, `PRAGMA table_xinfo(${PRESETS})`);
 
 function everythingButPresetColumns(db: DatabaseSync) {
-  const tables = rows<{ name: string }>(
-    db,
-    "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
-  ).map(({ name }) => name);
+  const tables = tableNames(db).filter((name) => name !== TOOL_DATA_TABLE);
   return {
     objects: rows<Row>(
       db,
       `SELECT type, name, tbl_name, sql FROM sqlite_master
-       WHERE name != '${PRESETS}' ORDER BY type, name`,
+       WHERE name != '${PRESETS}' AND tbl_name != '${TOOL_DATA_TABLE}'
+       ORDER BY type, name`,
     ).map(withoutLaterDdl),
     data: Object.fromEntries(tables.map((name) => [name, table(db, name)])),
     sequences: rows(db, 'SELECT * FROM sqlite_sequence ORDER BY name'),

@@ -25,6 +25,7 @@ import {
 } from './backup-plan';
 import { loadSnapshot } from './backup-snapshot';
 import { portableStemSong } from './backup-stem-songs';
+import { loadToolDataSection } from './backup-tool-data';
 import type { ClickSoundFiles } from './click-sound-files';
 import type { DatabaseHandle } from './repository';
 
@@ -56,6 +57,7 @@ export function serializeBackup(file: BackupFile): string {
   };
   for (const category of file.categories)
     out[category] = file.records[category];
+  if (file.toolData !== undefined) out.toolData = file.toolData;
   return JSON.stringify(out);
 }
 
@@ -87,18 +89,25 @@ async function withAudio(
   };
 }
 
+const isFullExport = (requested: readonly Category[]) =>
+  CATEGORIES.every((category) => requested.includes(category));
+
 async function exportBackup(
   { db }: DatabaseHandle,
   files: ClickSoundFiles,
   requested: readonly Category[],
 ): Promise<string> {
   const { records } = await loadSnapshot(db);
+  const toolData = isFullExport(requested)
+    ? await loadToolDataSection(db)
+    : undefined;
   const categories = withDependencies(requested);
   return serializeBackup({
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
     categories,
     records: await withAudio(records, files, categories),
+    ...(toolData === undefined ? {} : { toolData }),
   });
 }
 

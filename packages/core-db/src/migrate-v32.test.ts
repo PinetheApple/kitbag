@@ -6,11 +6,11 @@ import {
   buildV31Fixture,
   pragma,
   rows,
+  snapshot,
+  TOOL_DATA_TABLE,
   V32_MANUAL_TEMPO_COLUMNS,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
-
-type Row = Record<string, unknown>;
 
 const GAINED = new Set(['songs', 'stem_sets']);
 
@@ -43,32 +43,15 @@ function seededV31(): DatabaseSync {
   return db;
 }
 
-const tableNames = (db: DatabaseSync) =>
-  rows<{ name: string }>(
-    db,
-    "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
-  ).map(({ name }) => name);
-
-function snapshot(db: DatabaseSync) {
-  const tables = tableNames(db);
+function upgradeView(db: DatabaseSync) {
+  const { objects, data, sequences } = snapshot(db, {
+    except: [TOOL_DATA_TABLE],
+  });
   return {
-    objects: rows<Row>(
-      db,
-      `SELECT type, name, tbl_name, sql FROM sqlite_master
-       WHERE tbl_name NOT IN ('songs', 'stem_sets') ORDER BY type, name`,
-    ),
-    indexes: rows<Row>(
-      db,
-      `SELECT name, tbl_name, sql FROM sqlite_master
-       WHERE type = 'index' ORDER BY name`,
-    ),
-    data: Object.fromEntries(
-      tables.map((name) => [
-        name,
-        rows<Row>(db, `SELECT * FROM ${name} ORDER BY rowid`),
-      ]),
-    ),
-    sequences: rows(db, 'SELECT * FROM sqlite_sequence ORDER BY name'),
+    objects: objects.filter(({ tbl_name }) => !GAINED.has(tbl_name)),
+    indexes: objects.filter(({ type }) => type === 'index'),
+    data,
+    sequences,
   };
 }
 
@@ -80,11 +63,11 @@ const columns = (db: DatabaseSync, table: string) =>
 describe('migrate v31 to v32', () => {
   it('keeps every row and value, giving songs and stem songs no manual tempo', () => {
     const db = seededV31();
-    const before = snapshot(db);
+    const before = upgradeView(db);
     expect(before.data.songs).toHaveLength(3);
     expect(before.data.stem_sets).toHaveLength(1);
     migrate(nodeSqliteDriver(db));
-    const after = snapshot(db);
+    const after = upgradeView(db);
     expect(after.objects).toEqual(before.objects);
     expect(after.indexes).toEqual(before.indexes);
     expect(after.sequences).toEqual(before.sequences);
