@@ -30,31 +30,16 @@ class DocumentPicker(
   private val settledCopy = SettledCopy(File(context.cacheDir, SettledCopy.WORK_DIR), SqliteRecovery)
 
   fun pickDocument(promise: Promise) {
-    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-      addCategory(Intent.CATEGORY_OPENABLE)
-      type = "*/*"
-      putExtra(Intent.EXTRA_MIME_TYPES, PICKABLE_MIME_TYPES)
-    }
-    startPick(intent, REQUEST_PICK_DOCUMENT, promise)
+    startPick(openDocumentIntent(PICKABLE_MIME_TYPES), REQUEST_PICK_DOCUMENT, promise)
   }
 
   fun pickDocuments(promise: Promise) {
-    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-      addCategory(Intent.CATEGORY_OPENABLE)
-      type = "*/*"
-      putExtra(Intent.EXTRA_MIME_TYPES, PICKABLE_MIME_TYPES)
-      putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-    }
+    val intent = openDocumentIntent(PICKABLE_MIME_TYPES).putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
     startPick(intent, REQUEST_PICK_DOCUMENTS, promise)
   }
 
   fun pickBackup(promise: Promise) {
-    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-      addCategory(Intent.CATEGORY_OPENABLE)
-      type = "*/*"
-      putExtra(Intent.EXTRA_MIME_TYPES, BACKUP_MIME_TYPES)
-    }
-    startPick(intent, REQUEST_PICK_BACKUP, promise)
+    startPick(openDocumentIntent(BACKUP_MIME_TYPES), REQUEST_PICK_BACKUP, promise)
   }
 
   fun saveBackup(fileName: String, contents: String, promise: Promise) {
@@ -94,6 +79,13 @@ class DocumentPicker(
       pending = null
     }
   }
+
+  private fun openDocumentIntent(mimeTypes: Array<String>) =
+    Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+      addCategory(Intent.CATEGORY_OPENABLE)
+      type = "*/*"
+      putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes)
+    }
 
   private fun startPick(
     intent: Intent,

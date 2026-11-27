@@ -1,29 +1,15 @@
 import type {
   LibraryRow,
   MeterOverridePatch,
-  SongFiles,
   TempoCorrection,
 } from '@kitbag/core-db';
-import type {
-  AnalysisResult,
-  ImportedAudio,
-  LibraryConstants,
-  PickedDocument,
-} from '@kitbag/core-native';
+import type { AnalysisResult, LibraryConstants } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
-import {
-  audioFormat,
-  checkAudioFormat,
-  fileRemovals,
-  isStemArchive,
-  songFolder,
-  songRemovals,
-  type Removal,
-} from './logic.ts';
+import { fileRemovals, songRemovals, type Removal } from './logic.ts';
 import { cleanName } from '../names.ts';
 import { resultRecord } from './analysisRecord.ts';
-import { importEach } from './importBatch.ts';
+import { documentImports } from './importBatch.ts';
 import {
   availabilityRefresher,
   type RowFilesByKey,
@@ -60,7 +46,6 @@ import {
   enqueue,
   loadCodes,
   warn,
-  whileImporting,
   type Get,
   type SetState,
 } from './storeSupport.ts';
@@ -188,42 +173,6 @@ function readActions(deps: SongLibraryDeps, set: SetState, get: Get) {
   };
 }
 
-type ImportOutcome =
-  | { readonly ok: true; readonly song: SongFiles }
-  | { readonly ok: false; readonly kind: 'copyFailed' | 'addFailed' };
-
-async function importAudio(
-  deps: SongLibraryDeps,
-  doc: PickedDocument,
-  songsDir: string,
-): Promise<ImportOutcome> {
-  const files = deps.files();
-  const uuid = deps.newUuid();
-  let imported: ImportedAudio;
-  try {
-    imported = await files.importAudio(doc.uri, songFolder(songsDir, uuid));
-  } catch (error) {
-    warn(`copy of ${doc.name} failed`, error);
-    return { ok: false, kind: 'copyFailed' };
-  }
-  const song = { uuid, filePath: imported.relativePath, waveformPath: null };
-  try {
-    await deps.records().insertSong({
-      uuid,
-      title: imported.title,
-      artist: imported.artist,
-      filePath: imported.relativePath,
-      durationSec: imported.durationSec,
-      format: audioFormat(imported.relativePath),
-    });
-  } catch (error) {
-    warn(`adding ${doc.name} failed`, error);
-    await deleteLeftovers(files, songRemovals(song, songsDir), doc.name);
-    return { ok: false, kind: 'addFailed' };
-  }
-  return { ok: true, song };
-}
-
 function importActions(
   deps: SongLibraryDeps,
   set: SetState,
@@ -231,6 +180,7 @@ function importActions(
   imports: ImportTracker,
 ) {
   const bundles = stemBundleActions(deps, set, get, imports);
+  const importEach = documentImports(deps, set, get, bundles);
   let picking = false;
   const pick = async <T>(open: () => Promise<T | null>) => {
     if (picking) return null;
@@ -246,54 +196,10 @@ function importActions(
       picking = false;
     }
   };
-  const importDocument = async (doc: PickedDocument) => {
-    await whileImporting(set, get, doc.name, async () => {
-      const codes = loadCodes(deps, get);
-      set({ codes });
-      if (codes === null) {
-        set({ notice: { kind: 'copyFailed', name: doc.name } });
-        return;
-      }
-      const headerFormat = await deps
-        .files()
-        .sniffUnsupportedFormat(doc.uri)
-        .catch(() => '');
-      const check = checkAudioFormat(doc, codes, headerFormat);
-      if (!check.supported) {
-        set({
-          notice: {
-            kind: 'formatRefused',
-            name: doc.name,
-            format: check.format,
-            supported: codes.supportedAudioFamilies,
-          },
-        });
-        return;
-      }
-      const outcome = await importAudio(deps, doc, codes.songsDir);
-      if (outcome.ok) enqueue(deps.files(), outcome.song, false);
-      else set({ notice: { kind: outcome.kind, name: doc.name } });
-    });
-    await get().refresh();
-  };
-  const importOne = async (doc: PickedDocument) => {
-    if (isStemArchive(doc))
-      await bundles.importBundle(
-        { ...doc, isFolder: false },
-        { announce: true },
-      );
-    else await importDocument(doc);
-  };
   return {
     importSong: async () => {
       const docs = await pick(() => deps.files().pickDocuments());
-      if (docs !== null)
-        await importEach(
-          docs,
-          { importOne, answered: bundles.answered },
-          set,
-          get,
-        );
+      if (docs !== null) await importEach(docs);
     },
     importStemFolder: async () => {
       const folder = await pick(() => deps.files().pickFolder());

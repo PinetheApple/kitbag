@@ -45,7 +45,7 @@ interface Job {
 interface Pending {
   readonly job: Job;
   readonly targetId: number;
-  readonly answered: () => void;
+  readonly release: () => void;
 }
 
 interface Match {
@@ -294,13 +294,13 @@ export function stemBundleActions(
     return taken;
   };
 
-  const awaitAnswer = (job: Job, targetId: number) => {
-    pending?.answered();
-    let answered: () => void = () => undefined;
+  const holdForAnswer = (job: Job, targetId: number) => {
+    pending?.release();
+    let release: () => void = () => undefined;
     answer = new Promise<void>((resolve) => {
-      answered = resolve;
+      release = resolve;
     });
-    pending = { job, targetId, answered };
+    pending = { job, targetId, release };
   };
 
   const answerWith = async (target: (taken: Pending) => number | null) => {
@@ -309,7 +309,7 @@ export function stemBundleActions(
     try {
       await run(taken.job, target(taken));
     } finally {
-      taken.answered();
+      taken.release();
     }
   };
 
@@ -328,7 +328,7 @@ export function stemBundleActions(
         await run(job, null);
         return;
       }
-      awaitAnswer(job, match.set.id);
+      holdForAnswer(job, match.set.id);
       set({
         replacePrompt: {
           name: source.name,
@@ -340,9 +340,9 @@ export function stemBundleActions(
     confirmReplace: () => answerWith((taken) => taken.targetId),
     keepBoth: () => answerWith(() => null),
     cancelReplace: () => {
-      takePending()?.answered();
+      takePending()?.release();
     },
-    answered: () => answer,
+    untilAnswered: () => answer,
     addFetchedBundle,
   };
 }
