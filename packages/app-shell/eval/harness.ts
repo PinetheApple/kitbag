@@ -36,6 +36,9 @@ const GROUP_EXPECTED_RULE: Readonly<Record<string, string>> = {
   'plugin-api-imports-nothing': 'kitbag/plugin-api-imports-nothing',
   'filename-naming-convention': 'kitbag/filename-naming-convention',
   'import-graph': 'boundaries/element-types',
+  'downloadable-imports': 'no-restricted-imports',
+  'no-state-writes-in-frame-callback':
+    'kitbag/no-state-writes-in-frame-callback',
 };
 
 const PASS_SUFFIX = '_pass';

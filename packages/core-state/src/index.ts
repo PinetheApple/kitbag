@@ -251,6 +251,7 @@ export {
   type ToolSwitch,
   type ToolSwitchResult,
 } from './tools/switches.ts';
+export { createToolStore } from './toolStore/createToolStore.ts';
 export { useAppearance } from './appearance/useAppearance.ts';
 export { useGetSongBpmKey } from './getSongBpmKey/useGetSongBpmKey.ts';
 export {

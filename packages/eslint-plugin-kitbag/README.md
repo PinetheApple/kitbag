@@ -11,9 +11,10 @@ The architecture-rule enforcement of SPEC §13.6 — the ESLint successor to
 | `zustand-create-only-in-core-state` | Zustand store constructors (`create`, `createStore`, `createWithEqualityFn`) may be imported only in `core-state` — SPEC §13.4, §13.6.                           |
 | `plugin-api-imports-nothing`        | `core-plugin-api` imports no `@kitbag/*` workspace package — SPEC §13.1, §9.4.                                                                                   |
 | `filename-naming-convention`        | `.tsx` component files PascalCase; hooks (`use<X>`) and utils camelCase — SPEC §13.6.                                                                            |
+| `no-state-writes-in-frame-callback` | A frame callback (`useFrameCallback` argument or `'worklet'` function) never calls or hands off a `useState` setter or a store's `setState` — SPEC §13.3, §13.4. |
 
 Each rule self-scopes by reading the file's `packages/<name>/` path, so
-`plugin.configs.recommended` enables all four globally and each is a no-op
+`plugin.configs.recommended` enables every rule globally and each is a no-op
 outside the package it guards. The guarded package name is a rule option
 (default per table) for testability.
 

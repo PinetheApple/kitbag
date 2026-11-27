@@ -12,6 +12,13 @@ import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactNative from 'eslint-plugin-react-native';
 import prettier from 'eslint-config-prettier';
+import path from 'node:path';
+
+import {
+  DOWNLOADABLE_MESSAGE,
+  downloadablePackages,
+  downloadableRestrictions,
+} from './packages/eslint-plugin-kitbag/src/downloadableZone.ts';
 
 // --- §13.7 shared literals ----------------------------------------------------
 // Numbers ESLint should not flag as "magic". Kept deliberately tiny: the C++
@@ -125,7 +132,11 @@ const REALTIME_STATE_MESSAGE =
 // for the same file, so every non-native package's zone must fold in the native
 // binding ban itself (SPEC §13.2) — otherwise this override would clobber it.
 // core-native passes `includeNativeBan: false` because it IS the one holder.
-function restrictImports(forbidden, clause, { includeNativeBan = true } = {}) {
+function restrictImports(
+  forbidden,
+  clause,
+  { includeNativeBan = true, extra = { paths: [], patterns: [] } } = {},
+) {
   const patterns = forbidden.map((group) => ({
     group: [group],
     message: `Import boundary violation (${clause}).`,
@@ -133,15 +144,37 @@ function restrictImports(forbidden, clause, { includeNativeBan = true } = {}) {
   return [
     'error',
     {
-      paths: includeNativeBan
-        ? [...FONT_INDEX_IMPORTS, ...NATIVE_ONLY_IMPORTS.paths]
-        : FONT_INDEX_IMPORTS,
-      patterns: includeNativeBan
-        ? [...patterns, ...NATIVE_ONLY_IMPORTS.patterns]
-        : patterns,
+      paths: [
+        ...FONT_INDEX_IMPORTS,
+        ...(includeNativeBan ? NATIVE_ONLY_IMPORTS.paths : []),
+        ...extra.paths,
+      ],
+      patterns: [
+        ...patterns,
+        ...(includeNativeBan ? NATIVE_ONLY_IMPORTS.patterns : []),
+        ...extra.patterns,
+      ],
     },
   ];
 }
+
+const DOWNLOADABLE_FILES = downloadablePackages(
+  path.join(import.meta.dirname, 'packages'),
+).map((name) => `packages/${name}/**`);
+
+const DOWNLOADABLE_ZONE =
+  DOWNLOADABLE_FILES.length === 0
+    ? []
+    : [
+        {
+          files: DOWNLOADABLE_FILES,
+          rules: {
+            'no-restricted-imports': restrictImports([], DOWNLOADABLE_MESSAGE, {
+              extra: downloadableRestrictions(),
+            }),
+          },
+        },
+      ];
 
 const REALTIME_SYNTAX = [
   {
@@ -396,6 +429,8 @@ export default tseslint.config(
       ),
     },
   },
+
+  ...DOWNLOADABLE_ZONE,
 
   // app-shell — may import everything (§13.1), but is NOT core-native, so the
   // native binding ban still applies: even the shell reaches the engine only
