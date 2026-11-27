@@ -2,8 +2,8 @@
 
 Status: design, 2026-11-27. Docs only. Builds on #657 (owner decisions, spike verdict,
 F-Droid research) and `docs/research/plugin-distribution-feasibility.md` (PR #658).
-SPEC.md §9.2 ("tools are a fixed compile-time set") and §9.3 (no "Get", no sizes) still
-say the opposite; issue 0 changes them before any code lands.
+SPEC.md §9.1–§9.5, §12.4, §12.5, §13 and D18 state the rules this design implies
+(issue 0, #722).
 
 Every claim cites a repo path or a URL. **Inferred** marks reasoning not yet checked
 against code or a device. Spike-branch paths are read with
@@ -171,7 +171,7 @@ Kotlin parses the exact bytes it verified, never a second read. Schema (JSON Sch
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "required": ["schema", "id", "name", "version", "icon", "hostApi", "host", "runtime",
-               "entry", "files", "size", "routes", "homeTile", "capabilities", "signature"],
+               "entry", "files", "size", "routes", "capabilities", "signature"],
   "additionalProperties": false,
   "properties": {
     "schema": { "const": 1 },
@@ -224,6 +224,10 @@ Kotlin parses the exact bytes it verified, never a second read. Schema (JSON Sch
       "properties": { "label": { "type": "string", "maxLength": 40 }, "route": { "type": "string" } }
     },
     "capabilities": { "type": "array", "items": { "type": "string" } },
+    "requires": {
+      "type": "array", "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,31}$" }
+    },
     "changelog": { "type": "string", "maxLength": 500 },
     "signature": {
       "type": "object", "required": ["alg", "keyId"],
@@ -234,7 +238,9 @@ Kotlin parses the exact bytes it verified, never a second read. Schema (JSON Sch
 ```
 
 Rules JSON Schema cannot express, checked by the loader: every route starts with
-`/t/<id>` for this manifest's `id`; `homeTile.route` is one of `routes`; `files` paths
+`/t/<id>` for this manifest's `id`; `homeTile`, when present, has a `route` that is one
+of `routes` (a metronome extra has none, SPEC §9.1; #725 and #726 build this); every id in `requires` is installed or
+compiled in, and is not this manifest's `id`; `files` paths
 are unique and `bundle.hbc` appears exactly once; `size` is the sum of `files[].size`.
 The length caps (id 32, name 40, summary 80, changelog 500) are placeholders sized for
 the Home tile and the Get row; final values follow `design/kitbag-tools.html`.
@@ -737,7 +743,9 @@ manifest `summary`. Issue 0 edits §9.1.
 
 No converted tool imports another: what two tools share is core (8.2), and issue 13
 adds a test that fails if a bundle's imports reach another tool's package or moved
-directory. So the manifest has no dependency field.
+directory. So converted tools declare no `requires`; the field (3.1) is for new tools
+built on another, such as an intonation trainer on the drone (`design/kitbag-tools.html`
+3c), where Install offers to install both.
 
 | Link today | Without the other tool |
 |---|---|
