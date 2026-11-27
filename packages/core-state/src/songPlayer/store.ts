@@ -65,7 +65,7 @@ import {
   type AnalysedSong,
   type SongGrid,
 } from './songGrid.ts';
-import { songManualTempo } from './manualTempo.ts';
+import { analysedOfferOf, songManualTempo } from './manualTempo.ts';
 import { heldWhileSaving } from './heldWhileSaving.ts';
 import { songTempo } from './songTempo.ts';
 import {
@@ -303,11 +303,12 @@ export function createSongPlayerStore(
       if (ready) analysed = record;
       const notice = reanalysed && overrideDisagrees(record, mode);
       const facts = factsOf(record, mode);
-      const offered =
-        reanalysed && record.manualTempo !== null && record.beats.length > 0;
+      const offer = reanalysed
+        ? analysedOfferOf(record.manualTempo, facts.analysedBpm ?? null)
+        : null;
       set({
         ...facts,
-        ...(offered ? { analysedOffer: facts.analysedBpm } : {}),
+        ...(offer === null ? {} : { analysedOffer: offer }),
         ...(ready
           ? { meterOverride: meterOverrideOf(record), detected: grid.detected }
           : {}),

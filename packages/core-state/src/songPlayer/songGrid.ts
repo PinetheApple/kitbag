@@ -1,7 +1,8 @@
 import {
+  effectiveCorrection,
   meterOverrideOf,
   NO_METER_OVERRIDE,
-  TEMPO_CORRECTION,
+  type ManualTempo,
   type MeterOverride,
   type SongRecord,
   type TempoCorrection,
@@ -9,8 +10,8 @@ import {
 } from '@kitbag/core-db';
 
 import { sameNumbers, usableDownbeats } from '../stemPlayer/bars.ts';
+import { anchoredMeter } from '../manualTempo/manualGrid.ts';
 import {
-  detectedMeter,
   isMeterOverridden,
   overrideDownbeats,
   type DetectedGrid,
@@ -51,14 +52,6 @@ export function analysedGrid(
   return tempoGrid(song, song.tempo, mode, song.durationSec);
 }
 
-// The correction scales the analysed tempo; a manual tempo is already the one heard.
-export function gridCorrection(
-  song: Pick<AnalysedSong, 'manualTempo'>,
-  correction: TempoCorrection,
-): TempoCorrection {
-  return song.manualTempo === null ? correction : TEMPO_CORRECTION.none;
-}
-
 export function analysedSongGrid(
   song: AnalysedSong,
   mode: TempoMode | null,
@@ -68,16 +61,22 @@ export function analysedSongGrid(
   return songGrid(
     analysedGrid(song, mode),
     override,
-    gridCorrection(song, correction),
+    effectiveCorrection(song.manualTempo, correction),
+    song.manualTempo,
   );
 }
 
 export function songGrid(
   analysed: DetectedGrid,
-  override: MeterOverride,
+  shownOverride: MeterOverride,
   correction: TempoCorrection,
+  manualTempo: ManualTempo | null,
 ): SongGrid {
-  const found = detectedMeter(analysed);
+  const { detected: found, override } = anchoredMeter(
+    analysed,
+    manualTempo,
+    shownOverride,
+  );
   const barOneSeconds = override.barOneSeconds ?? found.barOneSeconds;
   const corrected = correctedGrid(analysed, correction, barOneSeconds);
   if (corrected === analysed)

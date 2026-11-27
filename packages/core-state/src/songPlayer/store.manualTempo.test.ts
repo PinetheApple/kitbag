@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { songRow } from '../storage/fixtures.test-helper.ts';
 import { opened, songRecord } from './store.test-helper.ts';
 
-const ANALYSED_BPM = 120;
+const ANALYSED_BPM = 132;
 const MANUAL = { bpm: 120, anchor: 0.5, beatsPerBar: GRID_METER.quadruple };
 const PERIOD_SEC = 0.5;
 const OVERRIDE = { meterBeatsPerBar: GRID_METER.triple, barOneSeconds: 1.5 };
@@ -69,7 +69,11 @@ describe('setting a manual tempo', () => {
     });
     expect(song.player.getState().bpm).toBe(ANALYSED_BPM * 2);
     await song.player.getState().setManualTempo(MANUAL);
-    expect(song.player.getState().bpm).toBe(MANUAL.bpm);
+    expect(song.player.getState()).toMatchObject({
+      bpm: MANUAL.bpm,
+      detectedBpm: ANALYSED_BPM,
+      analysedBpm: ANALYSED_BPM * 2,
+    });
     expect(song.player.getState().beats[1]).toBe(PERIOD_SEC);
   });
 
@@ -164,6 +168,23 @@ describe('a re-analysis under a manual tempo', () => {
     expect(song.player.getState()).toMatchObject({
       analysedOffer: null,
       analysedBpm: ANALYSED_BPM,
+    });
+  });
+
+  it('offers nothing when the analysed tempo is the manual one', async () => {
+    const song = await opened({ ...NO_GRID, manualTempo: MANUAL });
+    reanalysed(song, {
+      ...ANALYSED,
+      bpm: MANUAL.bpm,
+      manualTempo: MANUAL,
+      title: 'Same',
+    });
+    await vi.waitFor(() => {
+      expect(song.player.getState().title).toBe('Same');
+    });
+    expect(song.player.getState()).toMatchObject({
+      analysedOffer: null,
+      analysedBpm: MANUAL.bpm,
     });
   });
 

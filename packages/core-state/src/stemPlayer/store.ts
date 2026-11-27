@@ -61,6 +61,7 @@ import {
 } from './stemTracks.ts';
 import { clampedSpeed } from './speedKey.ts';
 import { stemManualTempo, type StemManualTempoActions } from './manualTempo.ts';
+import { anchoredMeter } from '../manualTempo/manualGrid.ts';
 import { speedKeySession } from './speedKeyActions.ts';
 import { songGrid, tempoActions } from './tempoActions.ts';
 import { framesToSeconds } from './time.ts';
@@ -327,11 +328,17 @@ export function createStemPlayerStore(
       recountWithClickOn: start.recountWithClickOn,
       gridSent: clickShape.gridSent,
     });
-    const songDownbeats = (beats: readonly number[], override: MeterOverride) =>
-      overrideDownbeats(
-        { beats, downbeatIndices: markedDownbeatIndices },
-        override,
+    const songDownbeats = (
+      beats: readonly number[],
+      override: MeterOverride,
+    ) => {
+      const grid = { beats, downbeatIndices: markedDownbeatIndices };
+      const manualTempo = openRecord?.manualTempo ?? null;
+      return overrideDownbeats(
+        grid,
+        anchoredMeter(grid, manualTempo, override).override,
       );
+    };
     const followers = {
       gridReplaced: start.gridReplaced,
       gridSent: clickShape.gridSent,

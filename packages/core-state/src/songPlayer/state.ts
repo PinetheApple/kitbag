@@ -20,7 +20,7 @@ import type { LoopSlice } from '../stemPlayer/loopActions.ts';
 import { gridBpm } from '../stemPlayer/tempoGrid.ts';
 import type { DetectedMeter } from '../stemPlayer/meterOverride.ts';
 import { CLOSED_CLICK_SETTINGS, type SongClickSettings } from './songClick.ts';
-import { gridCorrection, type SongGrid } from './songGrid.ts';
+import type { SongGrid } from './songGrid.ts';
 
 export interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
   readonly songId: number | null;
@@ -98,9 +98,9 @@ export function tempoFacts(
   mode: TempoMode | null,
   correction: TempoCorrection,
 ): Pick<SongPlayerState, 'bpm' | 'detectedBpm' | 'tempoMode'> {
-  const detectedBpm = gridBpm(record, mode);
+  const detectedBpm = gridBpm({ ...record, manualTempo: null }, mode);
   return {
-    bpm: correctedBpm(detectedBpm, gridCorrection(record, correction)),
+    bpm: record.manualTempo?.bpm ?? correctedBpm(detectedBpm, correction),
     detectedBpm,
     tempoMode: mode,
   };

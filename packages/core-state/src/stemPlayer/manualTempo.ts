@@ -14,7 +14,7 @@ interface StemManualTempoContext extends ActionContext {
 
 // Until #384 a stem song's own grid cannot be replaced, only a missing one supplied.
 const hasOwnGrid = (record: StemSetRecord | null) =>
-  record !== null && record.beats.length > 0;
+  record !== null && record.beats.length > 0 && record.manualTempo === null;
 
 export function stemManualTempo({
   get,

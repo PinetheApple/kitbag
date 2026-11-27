@@ -12,8 +12,6 @@ import { climbLadder, NO_TEMPO, type TempoLookup } from './ladder.ts';
 import { getTempoLadder, type TempoLadderRuntime } from './runtime.ts';
 import { BPM_SOURCE, type BpmSource } from './sources.ts';
 
-export { TAPS_TO_SET_TEMPO };
-
 export interface TempoLadderStore extends TempoLookup {
   readonly track: SongIdentity | null;
   readonly looking: boolean;

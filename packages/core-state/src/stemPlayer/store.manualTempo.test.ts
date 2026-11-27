@@ -1,7 +1,7 @@
 import { GRID_METER, NO_METER_OVERRIDE } from '@kitbag/core-db';
 import { describe, expect, it } from 'vitest';
 
-import { opened, stem } from './store.test-helper.ts';
+import { meterSaved, opened, stem } from './store.test-helper.ts';
 
 const MANUAL = { bpm: 120, anchor: 0.5, beatsPerBar: GRID_METER.quadruple };
 const PERIOD_SEC = 0.5;
@@ -52,6 +52,42 @@ describe('a manual tempo on a stem song', () => {
     expect(await song.store.getState().setManualTempo(MANUAL)).toBe(false);
     expect(song.records.saveStemSetManualTempo).not.toHaveBeenCalled();
     expect(song.store.getState().beats).toBe(beats);
+  });
+
+  it('stays editable on a gridded song that kept its manual tempo through a re-import', async () => {
+    const song = await opened([stem(1)], { manualTempo: MANUAL });
+    const changed = { ...MANUAL, bpm: 66 };
+    expect(await song.store.getState().setManualTempo(changed)).toBe(true);
+    expect(song.store.getState().manualTempo).toEqual(changed);
+  });
+
+  it('keeps a late bar 1 a downbeat under a meter-only override', async () => {
+    const late = { ...MANUAL, anchor: 10 };
+    const song = await opened([stem(1, { durationSec: 20 })], {
+      beats: [],
+      bars: [],
+      manualTempo: late,
+    });
+    expect(song.store.getState().detectedBarOneSeconds).toBe(late.anchor);
+    const triple = { meterBeatsPerBar: GRID_METER.triple, barOneSeconds: null };
+    meterSaved(song.store, triple);
+    const { beats, downbeatIndices } = song.store.getState();
+    const downbeats = downbeatIndices.map((i) => beats[i]);
+    expect(downbeats).toContain(late.anchor);
+    expect(downbeats).toContain(late.anchor + 3 * PERIOD_SEC);
+  });
+
+  it('opens a stem song with a late bar 1 and a stored meter-only override counting from it', async () => {
+    const late = { ...MANUAL, anchor: 10 };
+    const song = await opened([stem(1, { durationSec: 20 })], {
+      beats: [],
+      bars: [],
+      manualTempo: late,
+      meterBeatsPerBar: GRID_METER.triple,
+      barOneSeconds: null,
+    });
+    const { beats, downbeatIndices } = song.store.getState();
+    expect(downbeatIndices.map((i) => beats[i])).toContain(late.anchor);
   });
 
   it('opens a stored manual tempo as the grid', async () => {

@@ -64,6 +64,7 @@ export type { BpmBounds } from './metronome/config.ts';
 export {
   pushTap,
   TAP_WINDOW_INTERVALS,
+  TAPS_TO_SET_TEMPO,
   tapTempoBpm,
   tapTimeoutMs,
 } from './tapTempo/tapTempo.ts';
@@ -80,7 +81,6 @@ export { useTempoLadder } from './tempoLadder/useTempoLadder.ts';
 export { doubledBpm, halvedBpm } from './tempoLadder/bpmSteps.ts';
 export {
   tempoLadderStore,
-  TAPS_TO_SET_TEMPO,
   type TempoLadderStore,
 } from './tempoLadder/store.ts';
 export {

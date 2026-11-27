@@ -1,6 +1,7 @@
 import type { ManualTempo, ManualTempoChange } from '@kitbag/core-db';
 
 import { manualTempoEditor } from '../manualTempo/editor.ts';
+import { manualBpm } from '../manualTempo/manualTempo.ts';
 import type { SongPlayerRuntime } from './runtime.ts';
 import type { SongPlayerState } from './state.ts';
 
@@ -10,6 +11,14 @@ interface SongManualTempoContext {
   readonly runtimeOf: () => SongPlayerRuntime;
   readonly session: () => number;
   readonly apply: (change: ManualTempoChange) => void;
+}
+
+export function analysedOfferOf(
+  manualTempo: ManualTempo | null,
+  analysedBpm: number | null,
+): number | null {
+  if (manualTempo === null || analysedBpm === null) return null;
+  return manualBpm(analysedBpm) === manualTempo.bpm ? null : analysedBpm;
 }
 
 export function songManualTempo({

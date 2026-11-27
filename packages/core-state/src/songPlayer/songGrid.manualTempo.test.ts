@@ -26,6 +26,30 @@ const manualSong = songRecord({
   chosenTempoMode: TEMPO_MODE.constant,
 });
 
+const LATE_BAR_ONE = {
+  bpm: 120,
+  anchor: 10,
+  beatsPerBar: GRID_METER.quadruple,
+};
+
+describe('bar 1 of a manual tempo marked a few bars in', () => {
+  const late = songRecord({ durationSec: 20, manualTempo: LATE_BAR_ONE });
+
+  it('is the detected bar 1', () => {
+    expect(recordGrid(late).detected).toEqual({
+      meter: LATE_BAR_ONE.beatsPerBar,
+      barOneSeconds: LATE_BAR_ONE.anchor,
+    });
+  });
+
+  it('stays a downbeat under a meter-only override', () => {
+    const grid = recordGrid({ ...late, meterBeatsPerBar: GRID_METER.triple });
+    const downbeats = grid.downbeatIndices.map((i) => grid.beats[i]);
+    expect(downbeats).toContain(LATE_BAR_ONE.anchor);
+    expect(downbeats).toContain(LATE_BAR_ONE.anchor + 1.5);
+  });
+});
+
 describe('the grid of a song with a manual tempo', () => {
   it('is the constant grid from bar 1, whatever the analysis, correction or mode', () => {
     const grid = recordGrid(manualSong);

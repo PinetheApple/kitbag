@@ -8,7 +8,8 @@ import type { HttpGet } from './http.ts';
 import { ladderRuntime } from './ladder.test-helper.ts';
 import { songRow } from './libraryRows.test-helper.ts';
 import { BPM_SOURCE } from './sources.ts';
-import { createTempoLadderStore, TAPS_TO_SET_TEMPO } from './store.ts';
+import { TAPS_TO_SET_TEMPO } from '../tapTempo/tapTempo.ts';
+import { createTempoLadderStore } from './store.ts';
 
 const SONG = { title: 'Under Pressure', artist: 'Queen' };
 const OTHER = { title: 'Radio Ga Ga', artist: 'Queen' };
