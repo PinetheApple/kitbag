@@ -1,10 +1,15 @@
 import type { ImportedAudio, PickedDocument } from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { LibraryFiles } from './runtime.ts';
 import {
   badges,
+  bundleCheck,
   fakeFiles,
+  importedBundle,
+  JOB_ID,
   MP3,
+  settle,
   setup,
   type Store,
   ZIP,
@@ -28,6 +33,24 @@ const BROKEN: PickedDocument = {
   mimeType: 'audio/mpeg',
 };
 
+const RESEPARATED: PickedDocument = {
+  uri: 'content://redbone-reseparated.zip',
+  name: 'Redbone reseparated.stemdeck.zip',
+  mimeType: 'application/zip',
+};
+
+const REMASTERED: PickedDocument = {
+  uri: 'content://redbone-remastered.zip',
+  name: 'Redbone remastered.stemdeck.zip',
+  mimeType: 'application/zip',
+};
+
+const JOB_IDS: Readonly<Record<string, string>> = {
+  [ZIP.uri]: JOB_ID,
+  [RESEPARATED.uri]: 'reseparated-job',
+  [REMASTERED.uri]: 'remastered-job',
+};
+
 const TITLES: Readonly<Record<string, string>> = {
   [MP3.uri]: 'Everlong',
   [WAV.uri]: 'Monkey Wrench',
@@ -44,10 +67,32 @@ function copied(uri: string, dir: string): Promise<ImportedAudio> {
   });
 }
 
-function picking(docs: readonly PickedDocument[]) {
-  const fake = fakeFiles();
+function jobOf(uri: string): string {
+  return JOB_IDS[uri] ?? JOB_ID;
+}
+
+function picking(
+  docs: readonly PickedDocument[],
+  overrides: Parameters<typeof fakeFiles>[0] = {},
+) {
+  const fake = fakeFiles(overrides);
   vi.mocked(fake.files.pickDocuments).mockResolvedValue(docs);
   vi.mocked(fake.files.importAudio).mockImplementation(copied);
+  return fake;
+}
+
+function separatedAgain(docs: readonly PickedDocument[]) {
+  const fake = picking(docs, {
+    importStemBundle: vi.fn<LibraryFiles['importStemBundle']>((uri) =>
+      Promise.resolve({
+        ...importedBundle(`stems/${jobOf(uri)}`),
+        jobId: jobOf(uri),
+      }),
+    ),
+  });
+  fake.files.checkStemBundle.mockImplementation((uri) =>
+    Promise.resolve(bundleCheck({ jobId: jobOf(uri) })),
+  );
   return fake;
 }
 
@@ -146,6 +191,80 @@ describe('importing several picked files', () => {
     expect(kinds(store)).toEqual([
       ['song', 'Monkey Wrench'],
       ['stems', 'Redbone'],
+    ]);
+  });
+
+  it('imports both when a replace is answered with keep both', async () => {
+    const { store, files } = setup(separatedAgain([ZIP]));
+    await store.getState().importSong();
+    vi.mocked(files.pickDocuments).mockResolvedValue([RESEPARATED, WAV]);
+    const running = store.getState().importSong();
+    await vi.waitFor(() => {
+      expect(store.getState().replacePrompt).not.toBeNull();
+    });
+    expect(files.importAudio).not.toHaveBeenCalled();
+    await store.getState().keepBoth();
+    await running;
+    expect(kinds(store)).toEqual([
+      ['song', 'Monkey Wrench'],
+      ['stems', 'Redbone'],
+      ['stems', 'Redbone'],
+    ]);
+  });
+
+  it('opens the second replace prompt only after the first is answered', async () => {
+    const { store, files } = setup(separatedAgain([ZIP]));
+    await store.getState().importSong();
+    vi.mocked(files.pickDocuments).mockResolvedValue([RESEPARATED, REMASTERED]);
+    const running = store.getState().importSong();
+    await vi.waitFor(() => {
+      expect(store.getState().replacePrompt?.name).toBe(RESEPARATED.name);
+    });
+    await settle();
+    expect(store.getState().replacePrompt?.name).toBe(RESEPARATED.name);
+    expect(files.checkStemBundle).toHaveBeenCalledTimes(2);
+    await store.getState().keepBoth();
+    await vi.waitFor(() => {
+      expect(store.getState().replacePrompt?.name).toBe(REMASTERED.name);
+    });
+    await store.getState().confirmReplace();
+    await running;
+    expect(files.importStemBundle).toHaveBeenCalledTimes(3);
+    expect(kinds(store)).toEqual([
+      ['stems', 'Redbone'],
+      ['stems', 'Redbone'],
+    ]);
+  });
+
+  it('ignores a second import while a batch is still running', async () => {
+    const { store, files } = setup(picking([ZIP]));
+    await store.getState().importSong();
+    vi.mocked(files.pickDocuments).mockResolvedValue([ZIP, WAV]);
+    const running = store.getState().importSong();
+    await vi.waitFor(() => {
+      expect(store.getState().replacePrompt).not.toBeNull();
+    });
+    await store.getState().importSong();
+    expect(files.pickDocuments).toHaveBeenCalledTimes(2);
+    expect(store.getState().replacePrompt?.name).toBe(ZIP.name);
+    store.getState().cancelReplace();
+    await running;
+    expect(vi.mocked(files.importAudio).mock.calls).toEqual([
+      [WAV.uri, 'songs/f2'],
+    ]);
+  });
+
+  it('does not wait on a replace prompt left open by an earlier import', async () => {
+    const { store, files } = setup(picking([ZIP]));
+    await store.getState().importSong();
+    await store.getState().importSong();
+    expect(store.getState().replacePrompt?.name).toBe(ZIP.name);
+    vi.mocked(files.pickDocuments).mockResolvedValue([MP3, WAV]);
+    await store.getState().importSong();
+    expect(badges(store).sort()).toEqual([
+      ['Everlong', 'analyzing'],
+      ['Monkey Wrench', 'analyzing'],
+      ['Redbone'],
     ]);
   });
 
