@@ -165,7 +165,8 @@ moot. Two entries survive as instructions rather than deletions:
 
 - **Do not port a second plugin registry.** The Flutter build has two —
   a hardcoded list and a generated manifest that knows 2 of 5 tools and is
-  consumed by nothing. §9.2 keeps the explicit list. Do not write a generator.
+  consumed by nothing. §9.2 keeps one registry; its only generator is
+  `compiledTools.ts`.
 - **Do not port speculative exports.** `PracticeDao.deleteSession`/`deleteAll`,
   `getSetById`/`getSetCount`/`deleteStemsForSet`, `activeTrackCount`/
   `trackFrames`, the AcousticBrainz stub, `mediaSessionPollerProvider`,
@@ -1689,12 +1690,16 @@ can see is wrong beats a tool that silently mutes your practice on a guess.
 
 ### 9.1 Contract
 
-A tool declares: `id` · `name` · `icon` · `routes` · home tile · optional
-audio-node factory · settings schema · optional lazy asset spec. The shell
-aggregates and mounts them.
+A tool declares: `id` · `name` · `icon` · `routes` · home tile · settings schema
+· the tools it requires · and optional contributions the core renders: a
+mini-player, a Home subtext, a Settings section, and an entry under More in
+Metronome. A **metronome extra** is a tool that adds to the Metronome: it has that
+entry and no home tile. The shell aggregates and mounts them.
 
 The Flutter `ToolPlugin` (`core_plugin_api`) is a sound shape and it survives the
-framework change **as an interface** — which is the point of having had it. In TS:
+framework change **as an interface** — which is the point of having had it. The
+target contract (#724, #734), not today's code; the contribution type names are
+placeholders until that work fixes their shapes:
 
 ```ts
 export interface ToolPlugin {
@@ -1702,43 +1707,61 @@ export interface ToolPlugin {
   readonly name: string;
   readonly icon: IconName;
   readonly routes: readonly RouteDescriptor[];
-  readonly homeTile: HomeTileDescriptor;
+  readonly homeTile?: HomeTileDescriptor;
   readonly settingsSchema?: SettingsSchema;
-  readonly assets?: LazyAssetSpec;
+  readonly requires?: readonly string[];
+  readonly miniPlayer?: MiniPlayerContribution;
+  readonly homeSubtext?: HomeSubtextContribution;
+  readonly settingsSection?: SettingsSectionContribution;
+  readonly metronomeEntry?: MetronomeEntryDescriptor;
 }
 ```
 
-`core-plugin-api` depends on nothing but types. No React import, no store import,
-no native import. If it needs one, the contract is wrong.
+`core-plugin-api` today still has `assets?: LazyAssetSpec` and a required
+`homeTile`; the `ToolHost` work removes the one and relaxes the other.
+
+A tool package's entry exports `register(host: ToolHost): ToolPlugin`. The
+compiled-in path imports the package and calls it; the downloaded path calls it
+after evaluating the bundle (§9.5). Both pass the same `ToolHost`, the tool's
+only door to the rest of the app: named engine commands and worklet reads,
+`createToolStore` (§13.4), its own data rows, navigation scoped to its routes,
+its bundle's assets, and the permissions and domain services its manifest names.
+
+`core-plugin-api` depends on nothing but types, `ToolHost`'s included. No React
+import, no store import, no native import. If it needs one, the contract is wrong.
 
 ### 9.2 One registry
 
 The Flutter build has two: a hardcoded list of five plugins, and a generated
-manifest that knows two and is consumed by nothing. Tools are a fixed
-compile-time set, so **the explicit list wins.** Do not port the generator, and
-do not write a new one.
+manifest that knows two and is consumed by nothing. Do not port that generator.
+**Kitbag keeps one registry**, `HOME_TOOLS`: the compiled-in tools plus, on the
+`github` build, the downloaded tools, listed from their verified manifests
+without evaluating their code (§9.5). Home, Settings and the router read only it.
+Tools are not a fixed set, so one generator is allowed: `compiledTools.ts`, the
+static imports of every tool package that the `fdroid` and debug builds compile
+in, drift-checked by `generate:check` like every generated file.
 
 ### 9.3 Tools manager
 
-The Tools screen lists only the built tools, each with an on/off switch (owner,
-2026-10-31; §12.5). It shows no sizes, no "Get" and no `SOON` rows, and upcoming
-tools are not listed.
+Settings → Tools is the one screen that owns tool switches, reached from Settings
+by a single row (settings design §03; §12.5 draws it). It lists **Built in** (the
+Metronome), **Downloaded**, each with version and size, and **To download**, each
+with its download size and summary; tools not yet built are not listed. Every
+tool but the Metronome has an on/off switch once it is on the phone; tapping the
+rest of a row opens the tool's page (§12.4). Tools does not choose Home tiles:
+that is Edit on Home (§12.4; owner, 2026-11-26, #617).
 
-Resolved (settings design §03): the Tools manager is the one screen that owns
-tool toggles, reached from Settings by a single row. The Flutter
-`settings_screen.dart` grew its own per-tool toggle list that nobody had
-reconciled with the designed screen; that list leaves Settings. **ON/OFF badges
-become switches** — the original drew `ON` as a static badge beside `Get`
-buttons, which is two visual languages for one column and a badge that looks like
-a label but was meant to be tapped. Off removes a tool everywhere; nothing is
-deleted. Tools does not choose Home tiles: that is Edit on Home (§12.4; owner,
-2026-11-26, #617).
+**Off and Remove are different.** Off removes a tool everywhere; nothing is
+deleted. Remove deletes the tool's code and keeps its data unless "Also delete
+its data" is ticked, and a removed tool's page can still delete its kept data
+(owner, 2026-11-27).
 
 Each switch is stored as `tool_enabled_<id>` in preferences (`"true"` or
-`"false"`; a missing key is on).
-
-No Play Asset Delivery (breaks F-Droid reproducible builds). No public plugin SDK
-yet — first-party plugins against an internal interface.
+`"false"`; a missing key is on). Whether a tool is installed is read from disk,
+never from a table (§9.5). On the `fdroid` build every tool is compiled in and
+turning one on is how it is added: on first launch it writes `"false"` for every
+tool but the Metronome, and on an update it does the same for each tool new to
+the build, so a user's existing tools stay as they were.
 
 ### 9.4 Boundaries — enforce
 
@@ -1748,6 +1771,64 @@ These hold whatever the stack, and the lint layer enforces them (§13.6):
 - The abstract contract package imports neither the shell nor any tool.
 - Concrete state/DI lives in one package.
 - Nothing enters the core that a plugin can carry.
+
+### 9.5 Delivery
+
+Tools ship compiled in or as signed downloads from one source (**D18**).
+`docs/research/plugin-delivery-design.md` is the design: formats, keys, the
+upgrade path and the build plan. This section holds the rules.
+
+- **What stays core.** The Metronome, with setlists, presets, practice-session
+  logging and the playback card, and the listening core more than one tool
+  shows: the song and stem player stores, the song and stem mini-player, the
+  queue and `LibraryScreen`. Every other tool is downloadable: Tuner, Songs,
+  Stem songs, Play along, Practice history and every #656 feature. The song
+  player screen moves into the Songs bundle and the stem player screen into Stem
+  songs. The app opens on Home.
+- **Only JavaScript moves.** A bundle holds Hermes bytecode and the tool's static
+  assets; nothing else is fetched for a tool. Native code, services, manifest
+  entries and permissions stay in the APK. **Converting a tool** moves one of
+  today's built-in tools into a bundle: its native parts stay as inert stubs only
+  that tool reaches, and it alone requests their permission. A metronome extra
+  ships its native half in an app release and its UI as a tool.
+- **Two builds.** The `github` build, published on GitHub releases, downloads
+  tools. The `fdroid` build compiles every tool in and has no download,
+  verification or loading code, no downloads switch and no opt-in screen; it is
+  not published on GitHub. Debug builds compile tools in.
+- **Signed, from this repo only.** CI rebuilds every tool for every Kitbag
+  release, signs it (ECDSA P-256) and attaches it to that release; the APK embeds
+  the release's signed index, so browsing tools needs no network. Kitbag checks
+  the signature and every file's hash natively, and evaluates only the bytes it
+  checked. There is no unsigned load path. Private keys never enter the repo.
+- **Compatibility.** A tool runs only on a Kitbag release with its `hostApi`
+  major (and minor at least its minimum), a versionCode in its range, and the
+  same Hermes bytecode, React Native, React, Reanimated and worklets versions.
+  An incompatible tool after an app update shows "Needs an update", keeps its
+  data, and updates on one tap.
+- **Required tools.** A tool may require others. Install offers to install them
+  together, a tool loads only when every tool it requires is installed or
+  compiled in, and removing a required tool asks about the tools that need it.
+  Converted tools require none.
+- **Network.** Tool downloads are off on a new install and turn on only through
+  the full-screen opt-in reached from Install; Settings → Tools turns them off
+  after a confirm. While they are off Kitbag makes no tool request. While they
+  are on, the update check runs only when Settings → Tools opens: no background,
+  scheduled or start-up check.
+- **Data outlives code.** Removing a tool keeps its data (§9.3), restore writes
+  it with the tool absent, and converting a tool moves code, never rows, ids or
+  preference keys. New tools keep key-value rows in `tool_data` through
+  `ToolHost`; converted tools keep their tables.
+- **Upgrade.** The release that converts a tool carries its signed bundle in the
+  APK and installs it on first launch, with no network and no tap, for every
+  upgrading user who has it on; one notice says so. If that install fails, one
+  card installs them all on tap, opening the opt-in first while downloads are
+  off. Bundled copies stay in every release until all five conversions have
+  shipped and 180 days have passed since the last.
+- **Routes.** A downloaded tool owns only routes under its id, and one route,
+  `/t/[tool]/[...path]`, mounts them all; its errors show "<Tool> stopped
+  working" with Disable and Back.
+- No Play Asset Delivery (breaks F-Droid reproducible builds) and no community
+  tools yet: those come later, as data packs before code.
 
 ---
 
@@ -1950,7 +2031,8 @@ One migration note that is not obvious from the table:
 | `kitbag-song-player.html` | **The single-song player** (owner-approved 2026-11-07; #297). Supersedes `kitbag-ui.html` §04's Player. Draws the base player, the mini-player on Home and Songs (Stem songs and the Queue key: `kitbag-queue.html`), the Metronome's click-off snackbar, the click sheet, speed (owner-approved 2026-11-20, #528: speed only, in percent, Reset speed in the overflow menu, the speed on the mini-player off 100%), the no-grid states and the A-B loop. Recorded in `docs/decisions.md`, 2026-11-07. |
 | `kitbag-queue.html` | **The play queue** (owner-approved 2026-11-20; #574). Draws the queue sheet (queued songs, a setlist started this session, swipe to remove, nothing playing, empty), Play next and Add to queue, the mini-player's Queue key and its place on Stem songs, the Stem songs app-bar Queue icon, the stem player's app-bar Queue icon and its Previous · Up next · Repeat · Next row (the single-song player takes the same Queue icon, #613), a mixed setlist, Repeat, and filled Previous and Next keys on the Metronome. Adds the Up next row and the Queue icon to `kitbag-stems.html` variant C (the row was built without a binding design); the single-song player takes the same Up next row with no separate mockup (§6.3). Supersedes the mini-player's keys and placement in `kitbag-song-player.html` §1 and the flat skip keys in `kitbag-metronome-setlist.html` D2. Frames draw stem songs; single songs share the queue (§7.9). §f's Before and §i's Superseded frames are not to build. §g's Up next row with a metronome entry next is superseded: the Repeat chip and Open go on a second line, and the source keeps the setlist position (#632, `docs/research/mockups/632-up-next-metronome-entry.html`). Recorded in `docs/decisions.md`, 2026-11-20 and 2026-11-26. |
 | `kitbag-practice-history.html` | **Practice history** (owner-approved 2026-11-07; #286). Draws the session list with Day, Week and Month grouping and its graph, swipe and menu delete with Undo, the Settings doorway and swipe-direction row, the optional Home tile, and the session timeline with Repeat. The ⋮ menu is built as the app's bottom sheet, not the pop-up drawn. Recorded in `docs/decisions.md`: picks 2026-11-02, mockup approved 2026-11-07. |
-| `kitbag-home-arrange.html` | **Option B only** ("Chosen (owner, 2026-10-31)"; #113). Supersedes the "long-press any tile for edit mode" bullet in `kitbag-ui.html` §04 Home and §12.4's customizable-layout bullet as to *how* editing works: Edit, or a long-press on a tile, opens the Arrange sheet. Options A and C are rejected alternatives, kept as reference in `docs/research/mockups/113/`. Recorded in `docs/decisions.md`, 2026-10-31. Its B1 and B5 frames draw the More tools row and sheet (owner, 2026-11-26; #617), superseding the More tools row in `kitbag-ui.html` §04; the approved mockup is `docs/research/mockups/617-more-tools.html` option B. |
+| `kitbag-home-arrange.html` | **Option B only** ("Chosen (owner, 2026-10-31)"; #113). Supersedes the "long-press any tile for edit mode" bullet in `kitbag-ui.html` §04 Home and §12.4's customizable-layout bullet as to *how* editing works: Edit, or a long-press on a tile, opens the Arrange sheet. Options A and C are rejected alternatives, kept as reference in `docs/research/mockups/113/`. Recorded in `docs/decisions.md`, 2026-10-31. Its B1 and B5 frames, which drew the More tools row and sheet (#617), are superseded by `kitbag-tools.html`. |
+| `kitbag-tools.html` | **Downloadable tools** (owner-approved 2026-11-27; #657). Draws Home and the More tools row and sheet with tools to download, Settings → Tools, a tool's page before and after install, installing and its failures, the downloads opt-in and its off confirm, removal with data kept, offline and downloads-off states, the `fdroid` build's Tools screen, tools that need an update after an app update, and the upgrade that moves today's tools out of the app (the one-time notice and the fallback card). Supersedes the More tools row and sheet in `kitbag-home-arrange.html` B1 and B5 and in `kitbag-ui.html` §04, and the Tools manager in `kitbag-settings.html` and `kitbag-ui.html` §04. Versions, sizes and counts in it are illustrative. Recorded in `docs/decisions.md`, 2026-11-27. |
 
 ### 12.1 Principles (kitbag-ui §01)
 
@@ -2077,12 +2159,35 @@ Setlists, Setlist detail, Preset editor, Settings, Latency calibration, Restore.
   on any tile, opens the Arrange sheet (`kitbag-home-arrange.html`): reorder by
   drag handle only, resize (1×1 ↔ 2×1), hide/show. The grid itself never moves
   under a finger.
-- **More tools** (owner, 2026-11-26; #617): one "More tools · N tools" row after the
-  row tools. It opens a sheet of the tools that are on but hidden in Arrange, and a
-  row there only opens its tool. The row is gone when N is 0. Practice history starts
-  hidden, so a fresh install lists it there. A tool that is off is in neither the
-  grid nor More tools, and Home never lists a tool twice.
-- Muted upcoming tools visibly present — the extensibility story is part of the UI.
+- **More tools** (#617; `kitbag-tools.html` 0–1, 7e): one row after the row tools.
+  It opens a sheet of the tools that are on but hidden in Arrange, then **To
+  download**; a hidden tool's row opens the tool, a To download row opens its page.
+  The subtitle counts both ("1 tool · 4 to download"; on a fresh install "N tools
+  to download · Tuner, Songs and more"), and the row is gone when it has nothing to
+  list. With downloads off the sheet shows one quiet row in place of the list and
+  Home shows no download count. An installed Practice history starts hidden. A tool
+  that is off is in neither the grid nor More tools, and Home never lists a tool
+  twice. Discovery stays in this row: Home gets no section or banner for tools to
+  download, and downloaded and built-in tiles look the same.
+- **A downloaded tool's subtext** is its manifest summary until the tool has been
+  loaded.
+- **A tool that cannot open yet keeps its tile, muted**: "Needs update to run"
+  after an app update, under one "Update all" card (§9.5); "Install to open", with
+  its data count, after an upgrade whose bundled install failed, under one "Install
+  all" card; progress in the tile while it installs or updates.
+
+**A tool's page** (`kitbag-tools.html` 3–6) is the only place a tool installs
+from. Before install it states what the tool does, its download size and size on
+the phone, the Kitbag release it was built for, its source and signer, its
+permissions and when each is asked, the tools it requires (§9.5), and what it adds (a Home tile after the
+others, or an entry under More in Metronome), with Install in a bar at the
+bottom. The first Install on the `github` build opens the downloads opt-in
+(§9.5). A new tile goes after the last Home tile with no "New" badge. A file
+that fails the check is deleted, never kept; "Not enough space" quotes the size
+on the phone. Installed, the page shows the space used by the tool and by its
+data, and Remove (§9.3), whose confirm starts with "Also delete its data"
+unticked. When a tool's update needs a newer Kitbag, the page says to update
+Kitbag where it was installed: the app cannot update itself.
 
 **Restore** (settings design §03) is the screen with a precondition:
 
@@ -2146,12 +2251,18 @@ the supersession: ≤7 primary choices.)
   No per-song override; `SongPresets` carries neither column. Volume per song is
   genuinely lost — the quiet acoustic number in a loud set needs this slider.
   Accepted, and it is the reason the Rig section has to be good.
-- **Tools lists only built tools** (owner, 2026-10-31). Each has an on/off switch, and
-  the Settings row reads "N on". `kitbag-settings.html`'s sizes, Get and SOON rows are
-  not built (§9.3). Off removes a tool everywhere and is separate from Home's Hide;
-  `docs/decisions.md` has the ruling. The intro reads "Turn a tool off to hide it
-  everywhere. Nothing is deleted." and the note "Choose Home tiles with Edit on Home.
-  Other tools are under More tools." (#617).
+- **Tools** (`kitbag-tools.html`; §9.3 has the rules). The Settings row reads "N on",
+  plus "· M to download" on the `github` build. The intro reads "Turn a tool off to
+  hide it everywhere. Nothing is deleted." and the note "Choose Home tiles with Edit
+  on Home. Other tools are under More tools." (#617). Then, in order: **Updates**,
+  the check's one line ("Checking for updates…", "Up to date. Checked just now.",
+  or that the phone is offline), shown with downloads on; tools that need an
+  update, with Update per tool and Update all; **Built in** (Metronome, "Core");
+  **Downloaded**; **To download**, which with downloads off says so and stays
+  listed; and **Downloads**, the "Tool downloads" switch. Check results show only
+  here and nothing downloads until a tap. After a failed bundled install, "You used
+  these before" heads the list. The `fdroid` build has neither Updates nor
+  Downloads. Off is separate from Home's Hide; `docs/decisions.md` has the ruling.
 - **Practice opens the history** (#286). The row shows sessions, total time and
   average tempo, with a chevron to the practice history
   (`kitbag-practice-history.html`). Appearance adds the swipe-to-delete
@@ -2308,13 +2419,13 @@ Flutter ones, because §9.4 was never about Dart.
 
 | Package | Role | May import |
 |---|---|---|
-| `app-shell` | Expo entrypoint, router, plugin registry, home hub | everything |
-| `core-plugin-api` | Abstract plugin contract — types only | nothing |
+| `app-shell` | Expo entrypoint, router, plugin registry, home hub, the `ToolHost` object | everything |
+| `core-plugin-api` | Abstract plugin contract and `ToolHost` — types only | nothing |
 | `core-native` | **The only** package that touches JSI/TurboModules | `core-plugin-api` |
-| `core-state` | Zustand stores, the concrete DI layer | `core-native`, `core-db`, `core-plugin-api` |
+| `core-state` | Zustand stores, tool-owned ones through `createToolStore` (§13.4); the concrete DI layer | `core-native`, `core-db`, `core-plugin-api` |
 | `core-db` | Drizzle schema, migrations, DAOs | `core-plugin-api` |
 | `core-design` | Tokens, theme, shared components (incl. the waveform renderer, LEDs, steppers, sheets, numpad) | `core-plugin-api` |
-| `tool-metronome`, `tool-library`, `tool-stems`, `tool-sync`, `tool-tuner` | Plugins | `core-*`, never each other, never `app-shell` |
+| `tool-metronome`, `tool-library`, `tool-stems`, `tool-sync`, `tool-tuner` | Plugins | `core-*` (except downloadable ones), never each other, never `app-shell`. A downloadable tool is marked by a field in its `package.json`, added when the tool converts or present from the start in a new tool; it reaches the app only through `ToolHost` and imports only the allowlist (`docs/research/plugin-delivery-design.md` §2.3): the app's copies of React, Reanimated, worklets, Gesture Handler and SVG, a curated `react-native`, `core-design`, and `core-plugin-api` types |
 | `eslint-plugin-kitbag` | Architecture rules | — |
 
 Two notes where the Flutter layout was wrong and the port fixes it:
@@ -2398,7 +2509,7 @@ load-bearing for it. §5.8's acceptance test starves the JS thread on purpose.
 
 ### 13.4 State
 
-**Zustand**, in `core-state`, one package — the direct analogue of §9.4's
+**Zustand**, created only in `core-state` — the direct analogue of §9.4's
 "concrete DI/providers live in one package" and enforced the same way. Chosen over
 Redux for the same reason Riverpod was chosen: stores are small, colocated, and
 have no ceremony.
@@ -2409,6 +2520,12 @@ Rules:
   engine is the source of truth for what the engine is doing; the store must not
   keep a shadow copy it believes over a poll.
 - Play along holds its own metronome state (§8.9).
+- **Tool-owned stores** are created through `host.store.createToolStore(initial)`,
+  which core-state implements, so a tool package never calls `create()` (§9.1).
+  The stores a converted tool takes with it (`tuner`, `stemDeck`, `playAlong`,
+  `tempoLadder`, `mediaSessions`) keep the preference keys they persist under.
+  Realtime values stay out of these too: a tool reads the engine in its own frame
+  callback through `ToolHost`'s worklet reads (§13.3).
 
 ### 13.5 Background work
 
@@ -2427,12 +2544,15 @@ with custom rules. The four rules from §9.4, translated:
 | Flutter rule | ESLint rule |
 |---|---|
 | `dart:ffi` only in `core_audio_ffi` | JSI/TurboModule imports only in `core-native` |
-| Riverpod providers only in `core_services` | Zustand `create()` only in `core-state` |
+| Riverpod providers only in `core_services` | Zustand `create()` only in `core-state`; tool packages use `createToolStore` |
 | `core_plugin_api` must not import `app_shell` or `tool_*` | same, by package name |
 | PascalCase filenames and class names | PascalCase for component files; camelCase for hooks/utils |
 
 Plus `eslint-plugin-boundaries` for the import graph in §13.1, which is cheaper
-than hand-rolling it.
+than hand-rolling it. A zone restricts the packages marked downloadable (§13.1),
+and only those, to §13.1's allowlist; the tool build and the runtime shims refuse any other import again.
+The eval harness gets a fail scenario for a tool that writes an engine read into
+its store or `useState` from a frame callback.
 
 **The eval harness ports with the rules.** `packages/app-shell/eval/` scores lint
 rules against `*_pass` / `*_fail` scenario files, and it is the reason a rule
@@ -2462,7 +2582,7 @@ retype them.
 | Concern | Choice |
 |---|---|
 | RN flavour | **Expo with prebuild** (config plugins, `expo-dev-client`), not Expo Go — the native core, the foreground service and the notification listener all require custom native code. |
-| Router | Expo Router (file-based), wrapping React Navigation. Plugin routes register through §9.1's `RouteDescriptor`. |
+| Router | Expo Router (file-based), wrapping React Navigation. Tool routes register through §9.1's `RouteDescriptor`; downloaded tools mount under one route (§9.5). |
 | Native build | The existing CMake for `native/audio_core` is consumed by the Android Gradle `externalNativeBuild` and an iOS podspec. **The C++ does not move.** |
 | Styling | **NativeWind 5 (preview) + Tailwind v4**, consuming §12.2's tokens. NativeWind 5 has not shipped GA — the reference pin is `nativewind@5.0.0-preview.3` with `tailwindcss@^4`, `@tailwindcss/postcss`, and `lightningcss` held at `1.30.1`. A pre-release dependency is a material fact on the F-Droid path, where the whole argument rests on one precedent's recipe. The tokens stay the single source of truth — §13.8.1. |
 | Waveform rendering | `react-native-svg` elements with Reanimated animated props (UI thread). Skia was measured and not taken: see the 2026-11-21 entry in `docs/decisions.md`. |
@@ -2525,7 +2645,7 @@ here. What it establishes:
   builds are unhappy with anything that phones home at build time" was too broad.
   F-Droid's build server *does* have network access during `init`/`build` —
   `yarn install` is the documented, canonical RN recipe. What is forbidden is the
-  *shipped app* phoning home at runtime undisclosed. §9.3's Play Asset Delivery
+  *shipped app* phoning home at runtime undisclosed. §9.5's Play Asset Delivery
   rejection is untouched and still correct; that is a runtime CDN mechanism, not
   build-time dependency resolution.
 - **Reproducibility was not a gate for WAFRN.** It was merged despite its
@@ -2981,6 +3101,15 @@ nobody had started. So one queue serves single songs and stem songs, both
 players carry the same Up next row, and a setlist is context only once started
 in this listening session. Decided 2026-11-20 (#574); §7.9 and
 `design/kitbag-queue.html` carry the rules.
+
+### D18 — Tools are **downloadable**. The Metronome stays core.
+
+#657 asked for a lightweight core with tools added on demand: built in, every
+tool cost every user its download size. So today's tools and every #656 feature
+become downloadable, while the Metronome, which setlists, presets and the
+playback card are built on, stays core. The F-Droid build compiles every tool in
+and carries no download code. Decided by the owner 2026-11-27 (#657); §9.3 and
+§9.5 carry the rules.
 
 ---
 
