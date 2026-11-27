@@ -3,7 +3,6 @@ import {
   extrapolatedPositionMs,
   getMediaSessionsStore,
   getPlayAlongStore,
-  tempoLadderStore,
   useMediaSessions,
   useTempoLadder,
   type PlayAlongStore,
@@ -52,19 +51,8 @@ export function useSessionWatchWhileLocked(): void {
   }, []);
 }
 
-export function useSongTempo(session: MediaSessionSnapshot | undefined): void {
-  const title = session?.title ?? null;
-  const artist = session?.artist ?? '';
-  const bpm = useTempoLadder((s) => s.bpm);
-
-  useEffect(() => {
-    if (title !== null)
-      void tempoLadderStore.getState().lookUp({ title, artist });
-  }, [title, artist]);
-
-  useEffect(() => {
-    if (bpm !== null) getPlayAlongStore().getState().setBpm(bpm);
-  }, [bpm]);
+export function useLibraryWatch(): void {
+  useEffect(() => getPlayAlongStore().getState().watchLibrary(), []);
 }
 
 export function msToNextSecond(
@@ -80,13 +68,17 @@ export function useTempoLine(): {
   readonly bpm: number | null;
   readonly line: TempoLine;
 } {
-  const bpm = useTempoLadder((s) => s.bpm);
+  const bpm = usePlayAlong((s) => s.bpm) ?? null;
+  const offered = usePlayAlong((s) => s.offer !== undefined);
   const source = useTempoLadder((s) => s.source);
   const tried = useTempoLadder((s) => s.tried);
   const looking = useTempoLadder((s) => s.looking);
   return useMemo(
-    () => ({ bpm, line: tempoLine({ bpm, source, tried, looking }) }),
-    [bpm, source, tried, looking],
+    () => ({
+      bpm,
+      line: tempoLine({ bpm, source, tried, looking, offered }),
+    }),
+    [bpm, source, tried, looking, offered],
   );
 }
 

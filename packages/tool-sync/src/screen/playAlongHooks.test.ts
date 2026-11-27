@@ -1,14 +1,25 @@
+// react-test-renderer is deprecated, but it alone runs effects with no DOM.
+/* eslint-disable @typescript-eslint/no-deprecated */
+import { act, createElement } from 'react';
+import { create } from 'react-test-renderer';
 import { beforeEach, expect, it, vi } from 'vitest';
+
+const SHOWN_BPM = 120;
 
 interface State {
   readonly lock: object | undefined;
+  readonly bpm?: number;
 }
 type Listener = (state: State) => void;
 
 const store = vi.hoisted(() => {
-  const state: { lock: object | undefined } = { lock: undefined };
+  const state: { lock: object | undefined; bpm?: number } = {
+    lock: undefined,
+  };
   return {
     state,
+    stopWatching: vi.fn(),
+    watchLibrary: vi.fn(),
     listeners: new Set<(state: { lock: object | undefined }) => void>(),
   };
 });
@@ -16,7 +27,7 @@ const store = vi.hoisted(() => {
 vi.mock('@kitbag/core-state', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   getPlayAlongStore: () => ({
-    getState: () => store.state,
+    getState: () => ({ ...store.state, watchLibrary: store.watchLibrary }),
     subscribe: (listener: Listener) => {
       store.listeners.add(listener);
       return () => store.listeners.delete(listener);
@@ -24,7 +35,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
   }),
 }));
 
-const { msToNextSecond, releaseWhenUnlocked } =
+const { msToNextSecond, releaseWhenUnlocked, useLibraryWatch, useTempoLine } =
   await import('./playAlongHooks.ts');
 
 function setLock(lock: object | undefined) {
@@ -36,6 +47,38 @@ function setLock(lock: object | undefined) {
 
 beforeEach(() => {
   store.listeners.clear();
+  vi.clearAllMocks();
+  store.watchLibrary.mockReturnValue(store.stopWatching);
+});
+
+it('watches the library while the screen is mounted', () => {
+  const Probe = () => {
+    useLibraryWatch();
+    return null;
+  };
+  let tree: ReturnType<typeof create> | undefined;
+  act(() => {
+    tree = create(createElement(Probe));
+  });
+  expect(store.watchLibrary).toHaveBeenCalledOnce();
+  expect(store.stopWatching).not.toHaveBeenCalled();
+  act(() => {
+    tree?.unmount();
+  });
+  expect(store.stopWatching).toHaveBeenCalledOnce();
+});
+
+it("shows the play along tempo, not the ladder's", () => {
+  store.state = { lock: undefined, bpm: SHOWN_BPM };
+  let shown: number | null | undefined;
+  const Probe = () => {
+    shown = useTempoLine().bpm;
+    return null;
+  };
+  act(() => {
+    create(createElement(Probe));
+  });
+  expect(shown).toBe(SHOWN_BPM);
 });
 
 it('stops watching at once when nothing is locked', () => {

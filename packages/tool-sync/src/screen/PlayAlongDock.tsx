@@ -1,9 +1,11 @@
 import {
   PlayerDock,
   PlayPauseButton,
+  PrimaryPlayButton,
   stemPlayer,
   TransportKey,
 } from '@kitbag/core-design';
+import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { usePlayAlong } from './playAlongHooks.ts';
@@ -17,6 +19,33 @@ const styles = StyleSheet.create({
     gap: stemPlayer.transportGap,
   },
 });
+
+export function ClickDock({ bottomInset }: { readonly bottomInset: number }) {
+  const clickPlaying = usePlayAlong((s) => s.clickPlaying);
+  const startClick = usePlayAlong((s) => s.startClick);
+  const stopClick = usePlayAlong((s) => s.stopClick);
+  const start = useCallback(() => {
+    try {
+      startClick();
+    } catch {
+      return;
+    }
+  }, [startClick]);
+  return (
+    <PlayerDock bottomInset={bottomInset}>
+      <View style={styles.row}>
+        <PrimaryPlayButton
+          size="dock"
+          glyph={clickPlaying ? 'stop' : 'play'}
+          accessibilityLabel={
+            clickPlaying ? 'Stop the click' : 'Start the click'
+          }
+          onPress={clickPlaying ? stopClick : start}
+        />
+      </View>
+    </PlayerDock>
+  );
+}
 
 export interface PlayAlongDockProps {
   readonly playing: boolean;
