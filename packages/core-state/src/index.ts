@@ -72,6 +72,8 @@ export {
   MANUAL_BPM_STEP,
   manualBpm,
   MANUAL_TEMPO_BOUNDS,
+  MANUAL_TEMPO_LABEL,
+  MANUAL_TEMPO_RULES,
   pushManualTap,
   stepManualBpm,
   tappedManualBpm,

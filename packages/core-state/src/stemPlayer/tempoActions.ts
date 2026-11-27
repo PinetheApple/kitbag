@@ -8,8 +8,14 @@ import {
 
 import { anchoredMeter } from '../manualTempo/manualGrid.ts';
 import { warn } from '../songLibrary/storeSupport.ts';
-import { songFacts, type PlaybackShift } from './facts.ts';
-import { overrideDownbeats } from './meterOverride.ts';
+import {
+  MANUAL_TEMPO_FACT,
+  NO_CLICK_FACT,
+  songFacts,
+  type PlaybackShift,
+  type SongFacts,
+} from './facts.ts';
+import { overrideDownbeats, type DetectedGrid } from './meterOverride.ts';
 import type {
   ActionContext,
   StemPlayerActions,
@@ -28,13 +34,26 @@ type GridState = Pick<
   | 'detectedBarOneSeconds'
 >;
 
+function withTempoFact(
+  facts: SongFacts,
+  record: StemSetRecord,
+  grid: DetectedGrid,
+): SongFacts {
+  if (record.manualTempo !== null) return { ...facts, tempo: MANUAL_TEMPO_FACT };
+  return grid.beats.length === 0 ? { ...facts, tempo: NO_CLICK_FACT } : facts;
+}
+
 export function gridFacts(
   record: StemSetRecord,
   mode: TempoMode | null,
   shift: PlaybackShift,
+  grid: DetectedGrid = effectiveGrid(record, mode),
 ): Pick<GridState, 'facts' | 'recordedFacts'> {
   const source = { ...record, bpm: gridBpm(record, mode) };
-  return { facts: songFacts(source, shift), recordedFacts: songFacts(source) };
+  return {
+    facts: withTempoFact(songFacts(source, shift), record, grid),
+    recordedFacts: withTempoFact(songFacts(source), record, grid),
+  };
 }
 
 export function songGrid(
@@ -53,7 +72,7 @@ export function songGrid(
     marked: grid.downbeatIndices,
     state: {
       tempoMode: mode,
-      ...gridFacts(record, mode, shift),
+      ...gridFacts(record, mode, shift, grid),
       beats: grid.beats,
       downbeatIndices: overrideDownbeats(grid, anchored),
       detectedMeter: detected.meter,

@@ -14,7 +14,7 @@ const SAVED = 'Saved for this song.';
 const UNDO = 'Undo';
 const TRY_AGAIN = 'Try again';
 export const NOT_SAVED = 'The meter was not saved.';
-export const NO_GRID_REASON = 'Needs a beat grid. This song came without one.';
+export const NO_GRID_REASON = 'Needs a beat grid.';
 
 export type MeterEdit =
   | { readonly kind: 'meter'; readonly meter: GridMeter }

@@ -1,18 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
-import {
+import { SONG_SET_TEMPO } from './manualTempoText.ts';
+
+const {
   bpmText,
+  faster,
   nudgedText,
   nudgeLabel,
   offerAction,
   offerText,
   reanalyseBody,
   savedText,
-  SET_TEMPO_TEXT,
+  slower,
   tappedHint,
   typedHint,
   wasAnalysedText,
-} from './manualTempoText.ts';
+} = SONG_SET_TEMPO.text;
 
 const MANUAL = { bpm: 128, anchor: 2.3, beatsPerBar: 4 } as const;
 
@@ -23,8 +26,8 @@ describe('manual tempo copy', () => {
   });
 
   it('names the stepper keys by the step they take', () => {
-    expect(SET_TEMPO_TEXT.slower).toBe('Tempo 0.1 BPM slower');
-    expect(SET_TEMPO_TEXT.faster).toBe('Tempo 0.1 BPM faster');
+    expect(slower).toBe('Tempo 0.1 BPM slower');
+    expect(faster).toBe('Tempo 0.1 BPM faster');
   });
 
   it('repeats what was saved', () => {

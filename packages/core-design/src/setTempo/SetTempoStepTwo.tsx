@@ -1,63 +1,39 @@
-import {
-  barOneLabel,
-  BeatStrip,
-  Button,
-  Chip,
-  createThemedStyles,
-  LiveText,
-  manualTempo,
-  meterCopy,
-  meterLabel,
-  playheadValue,
-  PresetButton,
-  SegmentedControl,
-  space,
-  stemPlayer,
-  Stepper,
-  textRoles,
-  textStyle,
-  type SegmentOption,
-  type StepperKeys,
-} from '@kitbag/core-design';
-import {
-  GRID_METERS,
-  isGridMeter,
-  useLiveSongPlayer,
-  useSongPlayer,
-} from '@kitbag/core-state';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { useDerivedValue } from 'react-native-reanimated';
 
+import { BeatStrip } from '../components/BeatStrip.tsx';
+import { Button } from '../components/Button.tsx';
+import { Chip } from '../components/Chip.tsx';
+import { LiveText } from '../components/LiveText.tsx';
+import { PresetButton } from '../components/PresetButton.tsx';
 import {
-  beatsFromBarOne,
-  NUDGE_MS,
-  type TempoDraft,
-} from '../logic/manualTempoDraft.ts';
+  SegmentedControl,
+  type SegmentOption,
+} from '../components/SegmentedControl.tsx';
+import { Stepper, type StepperKeys } from '../components/Stepper.tsx';
+import { manualTempo } from '../manualTempoRoles.ts';
 import {
-  manualBpmText,
-  nudgedText,
-  nudgeLabel,
-  nudgeSpoken,
-  SET_TEMPO_TEXT,
-} from '../logic/manualTempoText.ts';
-import type { SongPlayhead } from './playhead.ts';
-import { SheetTransport } from './SheetTransport.tsx';
+  barOneLabel,
+  meterCopy,
+  meterLabel,
+  playheadValue,
+} from '../meterText.ts';
+import { space, textRoles } from '../roles.ts';
+import { stemPlayer } from '../stemPlayerRoles.ts';
+import { textStyle } from '../textStyle.ts';
+import { createThemedStyles } from '../ThemeProvider.tsx';
+import { beatsFromBarOne, NUDGE_MS, type TempoDraft } from './draft.ts';
+import {
+  SetTempoTransport,
+  type SetTempoPlayhead,
+  type SetTempoTransportProps,
+} from './SetTempoTransport.tsx';
+import { SET_TEMPO_COPY } from './text.ts';
 import type { SetTempo } from './useSetTempo.ts';
 
 const BACK = -1;
 const FORWARD = 1;
-
-const TEMPO_KEYS: StepperKeys = {
-  earlier: 'decrease',
-  later: 'increase',
-  earlierLabel: SET_TEMPO_TEXT.slower,
-  laterLabel: SET_TEMPO_TEXT.faster,
-};
-
-const METER_OPTIONS: readonly SegmentOption<string>[] = GRID_METERS.map(
-  (meter) => ({ value: String(meter), label: meterLabel(meter) }),
-);
 
 const useStyles = createThemedStyles((theme) => ({
   row: { flexDirection: 'row', gap: space.controlGap },
@@ -92,39 +68,54 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-interface StepProps {
-  readonly tempo: SetTempo;
-  readonly draft: TempoDraft;
-  readonly playhead: SongPlayhead;
+export interface PreviewClickProps {
+  readonly on: boolean;
+  readonly onToggle: () => void;
 }
 
-function BarOneDetail({ draft, playhead }: Omit<StepProps, 'tempo'>) {
+interface StepProps<M extends number> {
+  readonly tempo: SetTempo<M>;
+  readonly draft: TempoDraft<M>;
+  readonly playhead: SetTempoPlayhead;
+}
+
+function BarOneDetail<M extends number>({
+  tempo,
+  draft,
+  playhead,
+}: StepProps<M>) {
   const styles = useStyles();
   const live = useDerivedValue(
     () => `${playheadValue(playhead.songSec.value)}.`,
   );
   if (draft.nudgedMs !== 0)
-    return <Text style={styles.detail}>{nudgedText(draft.nudgedMs)}</Text>;
+    return (
+      <Text style={styles.detail}>
+        {tempo.kit.text.nudgedText(draft.nudgedMs)}
+      </Text>
+    );
   return (
     <>
       <LiveText text={live} role="rowSubtitle" color="text2" align="left" />
-      <Text style={styles.detail}>{SET_TEMPO_TEXT.barOneHelp}</Text>
+      <Text style={styles.detail}>{SET_TEMPO_COPY.barOneHelp}</Text>
     </>
   );
 }
 
-function BarOneRow({ tempo, draft, playhead }: StepProps) {
+function BarOneRow<M extends number>(props: StepProps<M>) {
   const styles = useStyles();
   return (
     <View style={styles.barOne}>
       <View style={styles.barOneText}>
-        <Text style={styles.barOneValue}>{barOneLabel(draft.anchor)}</Text>
-        <BarOneDetail draft={draft} playhead={playhead} />
+        <Text style={styles.barOneValue}>
+          {barOneLabel(props.draft.anchor)}
+        </Text>
+        <BarOneDetail {...props} />
       </View>
       <Button
         label={meterCopy.barOneHere}
         size="target"
-        onPress={tempo.onBarOneHere}
+        onPress={props.tempo.onBarOneHere}
       />
     </View>
   );
@@ -154,44 +145,68 @@ function MoveKey({ amount, label, spoken, onMove, icon }: MoveKeyProps) {
   );
 }
 
-function BarOneMoves({ tempo }: Pick<StepProps, 'tempo'>) {
+function BarOneMoves<M extends number>({
+  tempo,
+}: Pick<StepProps<M>, 'tempo'>) {
   const styles = useStyles();
   const { onBeat, onNudge } = tempo;
+  const { text } = tempo.kit;
   return (
     <View style={styles.row}>
       <MoveKey
         amount={BACK}
         icon="earlier"
-        label={SET_TEMPO_TEXT.beat}
-        spoken={SET_TEMPO_TEXT.beatEarlier}
+        label={SET_TEMPO_COPY.beat}
+        spoken={SET_TEMPO_COPY.beatEarlier}
         onMove={onBeat}
       />
       <MoveKey
         amount={-NUDGE_MS}
-        label={nudgeLabel(-NUDGE_MS)}
-        spoken={nudgeSpoken(-NUDGE_MS)}
+        label={text.nudgeLabel(-NUDGE_MS)}
+        spoken={text.nudgeSpoken(-NUDGE_MS)}
         onMove={onNudge}
       />
       <MoveKey
         amount={NUDGE_MS}
-        label={nudgeLabel(NUDGE_MS)}
-        spoken={nudgeSpoken(NUDGE_MS)}
+        label={text.nudgeLabel(NUDGE_MS)}
+        spoken={text.nudgeSpoken(NUDGE_MS)}
         onMove={onNudge}
       />
       <MoveKey
         amount={FORWARD}
         icon="later"
-        label={SET_TEMPO_TEXT.beat}
-        spoken={SET_TEMPO_TEXT.beatLater}
+        label={SET_TEMPO_COPY.beat}
+        spoken={SET_TEMPO_COPY.beatLater}
         onMove={onBeat}
       />
     </View>
   );
 }
 
-function TempoFields({ tempo, draft }: Omit<StepProps, 'playhead'>) {
+function TempoFields<M extends number>({
+  tempo,
+  draft,
+}: Omit<StepProps<M>, 'playhead'>) {
   const styles = useStyles();
   const { onStep, onMeter } = tempo;
+  const { rules, text } = tempo.kit;
+  const keys = useMemo<StepperKeys>(
+    () => ({
+      earlier: 'decrease',
+      later: 'increase',
+      earlierLabel: text.slower,
+      laterLabel: text.faster,
+    }),
+    [text],
+  );
+  const meters = useMemo<readonly SegmentOption<string>[]>(
+    () =>
+      rules.meters.map((meter) => ({
+        value: String(meter),
+        label: meterLabel(meter),
+      })),
+    [rules],
+  );
   const slower = useCallback(() => {
     onStep(BACK);
   }, [onStep]);
@@ -201,28 +216,28 @@ function TempoFields({ tempo, draft }: Omit<StepProps, 'playhead'>) {
   const pickMeter = useCallback(
     (value: string) => {
       const meter = Number(value);
-      if (isGridMeter(meter)) onMeter(meter);
+      if (rules.isMeter(meter)) onMeter(meter);
     },
-    [onMeter],
+    [rules, onMeter],
   );
   return (
     <>
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>{SET_TEMPO_TEXT.tempo}</Text>
+        <Text style={styles.fieldLabel}>{SET_TEMPO_COPY.tempo}</Text>
         <Stepper
-          value={manualBpmText(draft.bpm)}
-          keys={TEMPO_KEYS}
+          value={text.manualBpmText(draft.bpm)}
+          keys={keys}
           onEarlier={slower}
           onLater={faster}
         />
       </View>
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>{SET_TEMPO_TEXT.beatsPerBar}</Text>
+        <Text style={styles.fieldLabel}>{SET_TEMPO_COPY.beatsPerBar}</Text>
         <SegmentedControl
-          options={METER_OPTIONS}
+          options={meters}
           selected={String(draft.beatsPerBar)}
           onSelect={pickMeter}
-          accessibilityLabel={SET_TEMPO_TEXT.beatsPerBar}
+          accessibilityLabel={SET_TEMPO_COPY.beatsPerBar}
           size="picker"
         />
       </View>
@@ -230,27 +245,33 @@ function TempoFields({ tempo, draft }: Omit<StepProps, 'playhead'>) {
   );
 }
 
-function PreviewClick() {
+function PreviewClick({ on, onToggle }: PreviewClickProps) {
   const styles = useStyles();
-  const click = useSongPlayer((s) => s.click);
-  const toggleClick = useLiveSongPlayer((s) => s.toggleClick);
-  const onToggle = useCallback(() => {
-    void toggleClick();
-  }, [toggleClick]);
   return (
     <View style={styles.field}>
       <Chip
-        label={SET_TEMPO_TEXT.previewClick}
+        label={SET_TEMPO_COPY.previewClick}
         icon="metronome"
-        active={click}
+        active={on}
         onPress={onToggle}
       />
-      <Text style={styles.hint}>{SET_TEMPO_TEXT.previewHint}</Text>
+      <Text style={styles.hint}>{SET_TEMPO_COPY.previewHint}</Text>
     </View>
   );
 }
 
-export function SetTempoStepTwo({ tempo, draft, playhead }: StepProps) {
+export interface SetTempoStepTwoProps<M extends number> extends StepProps<M> {
+  readonly transport: SetTempoTransportProps;
+  readonly previewClick: PreviewClickProps;
+}
+
+export function SetTempoStepTwo<M extends number>({
+  tempo,
+  draft,
+  playhead,
+  transport,
+  previewClick,
+}: SetTempoStepTwoProps<M>) {
   const styles = useStyles();
   const { anchor, bpm } = draft;
   const beats = useDerivedValue(() =>
@@ -263,20 +284,20 @@ export function SetTempoStepTwo({ tempo, draft, playhead }: StepProps) {
         beatsFromBarOne={beats}
         label={barOneLabel(anchor)}
       />
-      <SheetTransport playhead={playhead} />
+      <SetTempoTransport playhead={playhead} {...transport} />
       <BarOneRow tempo={tempo} draft={draft} playhead={playhead} />
       <BarOneMoves tempo={tempo} />
       <TempoFields tempo={tempo} draft={draft} />
-      <PreviewClick />
+      <PreviewClick {...previewClick} />
       <View style={styles.row}>
         <Button
-          label={SET_TEMPO_TEXT.back}
+          label={SET_TEMPO_COPY.back}
           size="target"
           fill
           onPress={tempo.onBack}
         />
         <Button
-          label={SET_TEMPO_TEXT.save}
+          label={SET_TEMPO_COPY.save}
           variant="primary"
           size="target"
           fill

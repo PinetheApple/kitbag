@@ -1,5 +1,6 @@
 import {
   meterOverrideOf,
+  NO_METER_OVERRIDE,
   type BundleTempo,
   type ClickRate,
   type ManualTempo,
@@ -62,6 +63,8 @@ import {
 import { clampedSpeed } from './speedKey.ts';
 import { stemManualTempo, type StemManualTempoActions } from './manualTempo.ts';
 import { anchoredMeter } from '../manualTempo/manualGrid.ts';
+import type { TempoPreview } from '../manualTempo/previewSession.ts';
+import { stemTempoPreview } from './tempoPreview.ts';
 import { speedKeySession } from './speedKeyActions.ts';
 import { songGrid, tempoActions } from './tempoActions.ts';
 import { framesToSeconds } from './time.ts';
@@ -146,6 +149,7 @@ export interface StemPlayerState {
   readonly retimeFailure: RetimeFailure | null;
   readonly manualTempo: ManualTempo | null;
   readonly tempoUndoable: boolean;
+  readonly tempoPreview: TempoPreview | null;
 }
 
 export interface StemPlayerActions
@@ -205,6 +209,7 @@ export interface StemPlayerActions
     override: MeterOverride,
   ) => Promise<void>;
   readonly playheadSeconds: () => number;
+  readonly previewTempo: (tempo: ManualTempo | null) => void;
 }
 
 export type StemPlayerStore = StemPlayerState &
@@ -343,24 +348,48 @@ export function createStemPlayerStore(
       gridReplaced: start.gridReplaced,
       gridSent: clickShape.gridSent,
     };
-    const applyGrid = (mode: TempoMode | null) => {
-      if (openRecord === null) return;
+    const regrid = (
+      record: StemSetRecord,
+      mode: TempoMode | null,
+      override: MeterOverride,
+      kept: Partial<StemPlayerState>,
+    ) => {
       const { marked, state } = songGrid(
-        openRecord,
+        record,
         mode,
-        get().meterOverride,
+        override,
         speedKey.shift(),
       );
       markedDownbeatIndices = marked;
-      set(state);
+      set({ ...state, ...kept });
       void followNewGrid(context, followers);
     };
+    const applyGrid = (mode: TempoMode | null) => {
+      if (openRecord === null) return;
+      regrid(openRecord, mode, get().meterOverride, { tempoPreview: null });
+    };
+    const preview = stemTempoPreview({
+      get,
+      record: () => openRecord,
+      showDraft: (saved, draft, savedGrid) => {
+        const { tempoMode, facts, recordedFacts } = get();
+        regrid({ ...saved, manualTempo: draft }, tempoMode, NO_METER_OVERRIDE, {
+          facts,
+          recordedFacts,
+          tempoPreview: { savedGrid },
+        });
+      },
+      restore: () => {
+        applyGrid(get().tempoMode);
+      },
+    });
     const manual = stemManualTempo({
       ...context,
       record: () => openRecord,
       apply: ({ manualTempo, meterOverride }: ManualTempoChange) => {
         if (openRecord === null) return;
         openRecord = { ...openRecord, manualTempo };
+        preview.reset();
         set({ manualTempo, meterOverride });
         applyGrid(get().tempoMode);
       },
@@ -404,6 +433,7 @@ export function createStemPlayerStore(
 
     const showLoading = (setId: number, advancedTo: number | null = null) => {
       manual.reset();
+      preview.reset();
       set({
         ...closedState,
         exportState: exportAfterLeaving(get().exportState),
@@ -492,6 +522,7 @@ export function createStemPlayerStore(
         runtimeOf().records.saveStemSetMeterOverride(setId, override),
       playheadSeconds: () =>
         framesToSeconds(runtimeOf().engine.position(), get().engineRate),
+      previewTempo: preview.previewTempo,
     };
   });
 }

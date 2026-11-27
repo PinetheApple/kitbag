@@ -29,14 +29,58 @@ vi.mock('./EndedSetlistSnackbar.tsx', () => ({
 vi.mock('./SongClickChips.tsx', async () =>
   (await import('./SongPlayerScreen.mocks.test-helper.ts')).clickChipsMock(),
 );
-vi.mock('./SheetTransport.tsx', () => ({ SheetTransport: () => null }));
+vi.mock('../../../core-design/src/components/Button.tsx', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).designPartMock(['Button']),
+);
+vi.mock('../../../core-design/src/components/Chip.tsx', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).designPartMock(['Chip']),
+);
+vi.mock('../../../core-design/src/components/Snackbar.tsx', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).designPartMock(['Snackbar']),
+);
+vi.mock('../../../core-design/src/components/BeatStrip.tsx', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).designPartMock(['BeatStrip']),
+);
+vi.mock('../../../core-design/src/components/LiveText.tsx', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).designPartMock(['LiveText']),
+);
+vi.mock('../../../core-design/src/components/PresetButton.tsx', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).designPartMock(['PresetButton']),
+);
+vi.mock('../../../core-design/src/components/SegmentedControl.tsx', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).designPartMock(['SegmentedControl']),
+);
+vi.mock('../../../core-design/src/components/Stepper.tsx', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).designPartMock(['Stepper']),
+);
+vi.mock('../../../core-design/src/components/NumpadKeypad.tsx', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).designPartMock(['NumpadKeypad']),
+);
+vi.mock('../../../core-design/src/components/NumpadReadout.tsx', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).designPartMock(['NumpadReadout']),
+);
+vi.mock('../../../core-design/src/components/TapPad.tsx', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).designPartMock(['TapLeds', 'TapPad']),
+);
+vi.mock('../../../core-design/src/components/Icon.tsx', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).designPartMock(['Icon']),
+);
+vi.mock('../../../core-design/src/components/Sheet.tsx', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).designSheetMock(),
+);
+vi.mock('../../../core-design/src/ThemeProvider.tsx', async () =>
+  (await import('./SongPlayerScreen.mocks.test-helper.ts')).designThemeMock(),
+);
+vi.mock('../../../core-design/src/setTempo/SetTempoTransport.tsx', () => ({
+  SetTempoTransport: () => null,
+}));
 vi.mock('react-native-reanimated', async () =>
   (await import('./SongPlayerScreen.mocks.test-helper.ts')).reanimatedMock(),
 );
 vi.mock('@kitbag/core-design', async (original) =>
-  (await import('./SongPlayerScreen.mocks.test-helper.ts')).coreDesignMock(
-    original,
-  ),
+  (
+    await import('./SongPlayerScreen.mocks.test-helper.ts')
+  ).coreDesignWithSetTempoMock(original),
 );
 vi.mock('@kitbag/core-state', async (original) =>
   (await import('./SongPlayerScreen.mocks.test-helper.ts')).coreStateMock(
@@ -147,7 +191,7 @@ describe('a song with no beat grid', () => {
     expect(METER_FAILED).toBe('Needs a beat grid. Set tempo first.');
   });
 
-  it('saves a typed tempo with bar 1 at the playhead, turns the click on, and offers Undo', async () => {
+  it('saves a typed tempo with bar 1 at the playhead and offers Undo, leaving the click as the Preview chip shows it', async () => {
     const tree = mount();
     press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.title));
     expect(
@@ -158,7 +202,7 @@ describe('a song with no beat grid', () => {
     press(withProp(tree, 'Button', 'label', 'Bar 1 here'));
     await save(tree);
     expect(manual.setManualTempo).toHaveBeenCalledWith(MANUAL);
-    expect(transport.toggleClick).toHaveBeenCalledOnce();
+    expect(transport.toggleClick).not.toHaveBeenCalled();
     const undo = withProp(tree, 'Snackbar', 'actionLabel', 'Undo');
     expect(undo.props.message).toBe('Tempo set: 128 BPM, bar 1 at 0:02.3.');
     press(undo, 'onAction');

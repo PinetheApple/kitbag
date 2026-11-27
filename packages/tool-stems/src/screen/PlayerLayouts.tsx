@@ -12,6 +12,7 @@ import { View, type LayoutChangeEvent } from 'react-native';
 import { AdvanceCountIn } from './AdvanceCountIn.tsx';
 import { ExportCancelledSnackbar } from './ExportNotice.tsx';
 import { LoopUndoSnackbar } from './LoopUndoSnackbar.tsx';
+import { TempoUndoSnackbar } from './StemSetTempo.tsx';
 
 export const OVERLAY_ID = 'player-overlay';
 
@@ -75,6 +76,7 @@ export function PlayerOverlays({ notice, dockHeight }: PlayerOverlaysProps) {
       {viewing ? null : (
         <>
           <LoopUndoSnackbar />
+          <TempoUndoSnackbar />
           <ExportCancelledSnackbar />
         </>
       )}

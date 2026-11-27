@@ -149,6 +149,8 @@ const MANUAL_TEMPO_PARTS = [
 
 const MANUAL_TEMPO_STATE = [
   'MANUAL_BPM_STEP',
+  'MANUAL_TEMPO_LABEL',
+  'MANUAL_TEMPO_RULES',
   'constantGrid',
   'GRID_METER',
   'manualBpm',
@@ -170,6 +172,17 @@ const passthroughs = (names: readonly string[]) =>
       (props: Props) => createElement(name, props, props.children),
     ]),
   );
+
+export const designPartMock = (names: readonly string[]) =>
+  passthroughs(names);
+
+export const designSheetMock = () => ({ Sheet: MockSheet });
+
+export const designThemeMock = () => ({
+  useTheme: () => ({ accentInk: 'accent' }),
+  createThemedStyles: (build: (theme: unknown) => unknown) => () =>
+    build({ color: {} }),
+});
 
 export const reactNativeMock = () => ({
   View: 'View',
@@ -238,6 +251,7 @@ export async function coreDesignMock(original: <T>() => Promise<T>) {
     Button: (props: Props) => createElement('Button', props),
     Sheet: MockSheet,
     ...passthroughs(MANUAL_TEMPO_PARTS),
+    SetTempoSheet: nothing,
     SectionHeader: (props: Props) => createElement('SectionHeader', props),
     SegmentedControl: (props: Props) =>
       createElement('SegmentedControl', props),
@@ -274,6 +288,15 @@ export async function coreDesignMock(original: <T>() => Promise<T>) {
     textStyle: () => ({}),
     useTextScaled: () => display.scaled,
   };
+}
+
+export async function coreDesignWithSetTempoMock(
+  original: <T>() => Promise<T>,
+) {
+  const { SetTempoSheet } = await import(
+    '../../../core-design/src/setTempo/SetTempoSheet.tsx'
+  );
+  return { ...(await coreDesignMock(original)), SetTempoSheet };
 }
 
 export async function coreStateMock(original: <T>() => Promise<T>) {

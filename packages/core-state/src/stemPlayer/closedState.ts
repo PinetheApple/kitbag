@@ -43,4 +43,5 @@ export const closedState: StemPlayerState = {
   retimeFailure: null,
   manualTempo: null,
   tempoUndoable: false,
+  tempoPreview: null,
 };
