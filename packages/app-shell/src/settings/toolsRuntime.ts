@@ -1,5 +1,6 @@
 import {
   configureToolsPersistence,
+  getPlayAlongStore,
   getToolsStore,
   songPlayerStore,
   stemPlayerStore,
@@ -27,5 +28,6 @@ stopWhenSwitchedOff(
     metronome: metronomeTransport,
     stemPlayer: stemPlayerStore,
     songPlayer: songPlayerStore,
+    playAlong: { getState: () => getPlayAlongStore().getState() },
   }),
 );
