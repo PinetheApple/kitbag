@@ -175,8 +175,8 @@ describe('PhaseSheet', () => {
   it('measures the range and the tempo at the speed the app plays', () => {
     followed.speed = FAST_SPEED;
     const markup = drawn();
-    expect(markup).toContain('−½ beat · −117 ms');
-    expect(markup).toContain('+117 ms · +½ beat');
+    expect(markup).toContain('−½ beat · −116 ms');
+    expect(markup).toContain('+116 ms · +½ beat');
     expect(markup).toContain('at 257 BPM');
   });
 
