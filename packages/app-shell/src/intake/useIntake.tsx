@@ -1,9 +1,3 @@
-import {
-  getKitbagLibrary,
-  readSharedBackup,
-  takeLaunchIntake,
-  watchIntake,
-} from '@kitbag/core-native';
 import { snackbar, Snackbar } from '@kitbag/core-design';
 import {
   getToolsStore,
@@ -14,18 +8,17 @@ import { router, type Href } from 'expo-router';
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { intakeFiles, intakeSource } from '@/runtime/intakeRuntime';
+
 import { toolOnTest } from '../home/toolsOn.ts';
 import { receiveIntake, type IntakeDeps } from './receive.ts';
 import { intakeSession } from './session.ts';
 
-const session = intakeSession({
-  takeLaunch: takeLaunchIntake,
-  watch: watchIntake,
-});
+const session = intakeSession(intakeSource);
 
 function intakeDeps(notify: (message: string) => void): IntakeDeps {
   return {
-    backupMimeType: () => getKitbagLibrary().getConstants().backupMimeType,
+    ...intakeFiles,
     isOn: (toolId) => toolOnTest(getToolsStore().getState().off)(toolId),
     navigate: (route) => {
       router.navigate(route as Href);
@@ -34,7 +27,6 @@ function intakeDeps(notify: (message: string) => void): IntakeDeps {
     importDocuments: (docs) =>
       songLibraryStore.getState().importDocuments(docs),
     openBackup: (read) => restoreStore.getState().open(read),
-    readBackup: readSharedBackup,
   };
 }
 
@@ -45,7 +37,8 @@ export function useIntake(): ReactElement | null {
     setNotice(null);
   }, []);
   useEffect(
-    () => session.start((items) => receiveIntake(items, intakeDeps(setNotice))),
+    () =>
+      session.start((intake) => receiveIntake(intake, intakeDeps(setNotice))),
     [],
   );
   if (notice === null) return null;
