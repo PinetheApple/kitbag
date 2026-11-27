@@ -47,7 +47,7 @@ class DocumentPicker(
       try {
         promise.resolve(readBackup(Uri.parse(uri)))
       } catch (e: Exception) {
-        rejectLogged(promise, LibraryErrors.PICK_FAILED, "Could not read the shared backup", e)
+        rejectLogged(promise, LibraryErrors.SHARED_BACKUP_UNREADABLE, "Could not read the shared backup", e)
       }
     }
   }
