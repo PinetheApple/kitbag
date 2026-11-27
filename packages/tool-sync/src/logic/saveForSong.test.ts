@@ -3,7 +3,7 @@ import { SAVE_REFUSAL, type PlayAlongPattern } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import {
-  accentedBeats,
+  accentsValue,
   recallLine,
   SAVE_REFUSAL_TEXT,
   saveRows,
@@ -49,13 +49,13 @@ describe('saveRows', () => {
   });
 });
 
-describe('accentedBeats', () => {
+describe('accentsValue', () => {
   it('names every accented beat', () => {
-    expect(accentedBeats([ACC, NORM, ACC, NORM])).toBe('Beats 1, 3');
+    expect(accentsValue([ACC, NORM, ACC, NORM])).toBe('Beats 1, 3');
   });
 
   it('says none when no beat is accented', () => {
-    expect(accentedBeats([NORM, NORM])).toBe('None');
+    expect(accentsValue([NORM, NORM])).toBe('None');
   });
 });
 

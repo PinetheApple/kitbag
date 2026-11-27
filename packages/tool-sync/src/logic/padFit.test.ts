@@ -9,11 +9,11 @@ import { describe, expect, it } from 'vitest';
 import { COMPACT_PAD_FLOOR, compactPadHeight } from './padFit.ts';
 
 const NORMAL_SLOT = stemSections.padMinHeight + space.sectionGap;
-const BPM_CARD = 101;
-const SHORT_REGION = 286;
+const BPM_CARD_BOTTOM = 186;
 const TALL_REGION = 650;
-const FONT_2_BPM_CARD = 194;
-const FONT_2_REGION = 650;
+const FONT_2_BPM_CARD_BOTTOM = 300;
+const SHORT_REGION = 287.5;
+const ROOMY_SHORT_REGION = 320;
 const TINY_REGION = 140;
 
 function bodyWindow(region: number, padHeight: number | null): number {
@@ -26,7 +26,7 @@ describe('compactPadHeight', () => {
       compactPadHeight({
         region: TALL_REGION,
         slot: NORMAL_SLOT,
-        bpmCard: BPM_CARD,
+        bpmCardBottom: BPM_CARD_BOTTOM,
       }),
     ).toBeNull();
   });
@@ -34,31 +34,34 @@ describe('compactPadHeight', () => {
   it('keeps the normal pad at font 2.0 on a full-height screen', () => {
     expect(
       compactPadHeight({
-        region: FONT_2_REGION,
+        region: TALL_REGION,
         slot: NORMAL_SLOT,
-        bpmCard: FONT_2_BPM_CARD,
+        bpmCardBottom: FONT_2_BPM_CARD_BOTTOM,
       }),
     ).toBeNull();
   });
 
-  it('compacts the pad when the body window cannot show the BPM card', () => {
+  it('keeps the whole BPM card above the pad at 360 x 480, below the song card', () => {
     const height = compactPadHeight({
       region: SHORT_REGION,
       slot: NORMAL_SLOT,
-      bpmCard: BPM_CARD,
+      bpmCardBottom: BPM_CARD_BOTTOM,
     });
-    expect(height).not.toBeNull();
-    expect(height).toBeLessThan(stemSections.padMinHeight);
+    expect(height).toBe(COMPACT_PAD_FLOOR);
+    expect(bodyWindow(SHORT_REGION, height)).toBeGreaterThanOrEqual(
+      BPM_CARD_BOTTOM,
+    );
   });
 
-  it('leaves the body window room for the whole BPM card at 360 x 480', () => {
+  it('clears the BPM card of the scroll fade when the window has room', () => {
     const height = compactPadHeight({
-      region: SHORT_REGION,
+      region: ROOMY_SHORT_REGION,
       slot: NORMAL_SLOT,
-      bpmCard: BPM_CARD,
+      bpmCardBottom: BPM_CARD_BOTTOM,
     });
-    expect(bodyWindow(SHORT_REGION, height)).toBeGreaterThanOrEqual(
-      BPM_CARD + metronome.scrollFade,
+    expect(height).toBeGreaterThan(COMPACT_PAD_FLOOR);
+    expect(bodyWindow(ROOMY_SHORT_REGION, height)).toBe(
+      BPM_CARD_BOTTOM + metronome.scrollFade,
     );
   });
 
@@ -66,7 +69,7 @@ describe('compactPadHeight', () => {
     const height = compactPadHeight({
       region: TINY_REGION,
       slot: NORMAL_SLOT,
-      bpmCard: BPM_CARD,
+      bpmCardBottom: BPM_CARD_BOTTOM,
     });
     expect(height).toBe(COMPACT_PAD_FLOOR);
     expect(COMPACT_PAD_FLOOR).toBeGreaterThanOrEqual(stemPlayer.playButton);
@@ -74,13 +77,25 @@ describe('compactPadHeight', () => {
 
   it('waits for every measure before compacting', () => {
     expect(
-      compactPadHeight({ region: SHORT_REGION, slot: 0, bpmCard: BPM_CARD }),
+      compactPadHeight({
+        region: SHORT_REGION,
+        slot: 0,
+        bpmCardBottom: BPM_CARD_BOTTOM,
+      }),
     ).toBeNull();
     expect(
-      compactPadHeight({ region: SHORT_REGION, slot: NORMAL_SLOT, bpmCard: 0 }),
+      compactPadHeight({
+        region: SHORT_REGION,
+        slot: NORMAL_SLOT,
+        bpmCardBottom: 0,
+      }),
     ).toBeNull();
     expect(
-      compactPadHeight({ region: 0, slot: NORMAL_SLOT, bpmCard: BPM_CARD }),
+      compactPadHeight({
+        region: 0,
+        slot: NORMAL_SLOT,
+        bpmCardBottom: BPM_CARD_BOTTOM,
+      }),
     ).toBeNull();
   });
 });

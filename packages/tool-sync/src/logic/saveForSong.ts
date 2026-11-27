@@ -12,7 +12,7 @@ import {
   type SaveRefusal,
 } from '@kitbag/core-state';
 
-import { phaseReading } from './phaseView.ts';
+import { FIRST_BEAT, phaseReading } from './phaseView.ts';
 
 export interface SaveRow {
   readonly label: string;
@@ -30,11 +30,10 @@ export const SAVE_REFUSAL_TEXT: Readonly<Record<SaveRefusal, string>> = {
 };
 
 const NO_ACCENTS = 'None';
-const FIRST_BEAT = 1;
 const LIST_JOIN = ', ';
 const RECALL_LEAD = 'Your saved settings are back: ';
 
-export function accentedBeats(accents: readonly KB_ACCENT[]): string {
+export function accentsValue(accents: readonly KB_ACCENT[]): string {
   const beats = accents.flatMap((accent, beat) =>
     accent === KB_ACCENT.KB_ACCENT_ACCENTED ? [String(beat + FIRST_BEAT)] : [],
   );
@@ -63,7 +62,7 @@ export function saveRows(
     { label: 'Track', value: trackLabel(track) },
     { label: 'Meter', value: meterLabel(pattern) },
     { label: 'Subdivision', value: subdivisionLabel(pattern) },
-    { label: 'Accents', value: accentedBeats(pattern.accents) },
+    { label: 'Accents', value: accentsValue(pattern.accents) },
     { label: 'Sound', value: soundChipLabel(pattern.sounds) },
     { label: 'Phase nudge', value: phaseReading(phaseOffsetMs) },
   ];

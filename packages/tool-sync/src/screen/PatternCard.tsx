@@ -36,8 +36,8 @@ const useStyles = createThemedStyles((theme) => ({
 function RecallLine({ following }: { readonly following: boolean }) {
   const styles = useStyles();
   const pattern = usePlayAlong((s) => s.pattern);
-  const recalled = usePlayAlong((s) => s.hasSavedPreset) && !following;
-  if (!recalled) return null;
+  const hasSaved = usePlayAlong((s) => s.hasSavedPreset) && !following;
+  if (!hasSaved) return null;
   return <Text style={styles.recall}>{recallLine(pattern)}</Text>;
 }
 

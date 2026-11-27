@@ -18,7 +18,7 @@ const PERCENT = 100;
 const HALVES_PER_BEAT = 2;
 const SHARE_TENTHS = 10;
 const FLOAT_NOISE_DIGITS = 12;
-const FIRST_BEAT = 1;
+export const FIRST_BEAT = 1;
 const NORMAL_SPEED = 1;
 const CENTRE = 0.5;
 

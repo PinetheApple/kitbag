@@ -165,6 +165,26 @@ describe('SaveSheet', () => {
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
+  it('takes one save at a time, with Save disabled while it runs', async () => {
+    playAlong.saveForTrack.mockReturnValue(new Promise(() => undefined));
+    shown();
+    expect(button('Save')?.disabled).toBe(false);
+    await press('Save');
+    expect(button('Save')?.disabled).toBe(true);
+    await press('Save');
+    expect(playAlong.saveForTrack).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets Save run again once a refused save returns', async () => {
+    playAlong.saveForTrack.mockResolvedValue({
+      saved: false,
+      reason: SAVE_REFUSAL.writeFailed,
+    });
+    shown();
+    await press('Save');
+    expect(button('Save')?.disabled).toBe(false);
+  });
+
   it('says why when the store refuses, and stays open', async () => {
     playAlong.saveForTrack.mockResolvedValue({
       saved: false,

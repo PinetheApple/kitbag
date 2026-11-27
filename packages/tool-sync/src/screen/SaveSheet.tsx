@@ -62,16 +62,20 @@ function FieldRow({ label, value }: SaveRow) {
 function useSave(onSaved: () => void) {
   const saveForTrack = usePlayAlong((s) => s.saveForTrack);
   const [refusal, setRefusal] = useState<SaveRefusal | undefined>();
+  const [pending, setPending] = useState(false);
   const clear = useCallback(() => {
     setRefusal(undefined);
   }, []);
   const save = useCallback(() => {
+    if (pending) return;
+    setPending(true);
     void saveForTrack().then((outcome) => {
+      setPending(false);
       if (outcome.saved) onSaved();
       else setRefusal(outcome.reason);
     });
-  }, [saveForTrack, onSaved]);
-  return { refusal, clear, save };
+  }, [pending, saveForTrack, onSaved]);
+  return { refusal, pending, clear, save };
 }
 
 export interface SaveSheetProps {
@@ -84,7 +88,7 @@ export function SaveSheet({ visible, bottomInset, onDismiss }: SaveSheetProps) {
   const styles = useStyles();
   const lock = usePlayAlong((s) => s.lock);
   const pattern = usePlayAlong((s) => s.pattern);
-  const { refusal, clear, save } = useSave(onDismiss);
+  const { refusal, pending, clear, save } = useSave(onDismiss);
   return (
     <Sheet
       visible={visible && lock !== undefined}
@@ -109,6 +113,7 @@ export function SaveSheet({ visible, bottomInset, onDismiss }: SaveSheetProps) {
             size="sheet"
             variant="primary"
             label="Save"
+            disabled={pending}
             onPress={save}
           />
         </ButtonRow>

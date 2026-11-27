@@ -1,7 +1,7 @@
 import { createThemedStyles, type ScreenInsets } from '@kitbag/core-design';
 import type { MediaSessionSnapshot } from '@kitbag/core-native';
 import { soundChipLabel, useMediaSessions } from '@kitbag/core-state';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import {
@@ -46,6 +46,11 @@ type OpenSheet =
   | 'phase'
   | PatternSheet;
 
+const NEEDS_LOCK: ReadonlySet<OpenSheet> = new Set(['save', 'phase']);
+
+const unlessNeedsLock = (open: OpenSheet): OpenSheet =>
+  NEEDS_LOCK.has(open) ? 'none' : open;
+
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
 }));
@@ -60,6 +65,9 @@ function useSheets() {
   const [sheet, setSheet] = useState<OpenSheet>('none');
   const close = useCallback(() => {
     setSheet('none');
+  }, []);
+  const closeLockSheets = useCallback(() => {
+    setSheet(unlessNeedsLock);
   }, []);
   const openSource = useCallback(() => {
     setSheet('source');
@@ -88,6 +96,7 @@ function useSheets() {
   return {
     sheet,
     close,
+    closeLockSheets,
     openSource,
     openTempo,
     openMenu,
@@ -141,7 +150,10 @@ function PlayAlongSheets({
   const sounds = usePlayAlong((s) => s.pattern.sounds);
   const locked = usePlayAlong((s) => s.lock !== undefined);
   const { line } = useTempoLine();
-  const { close } = sheets;
+  const { close, closeLockSheets } = sheets;
+  useEffect(() => {
+    if (!locked) closeLockSheets();
+  }, [locked, closeLockSheets]);
   const handleAccess = useCallback(() => {
     close();
     openSettings().catch(() => undefined);

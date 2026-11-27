@@ -21,7 +21,15 @@ const drawn = vi.hoisted(() => ({
   buttons: [] as Props[],
   icons: [] as Props[],
 }));
-const store = vi.hoisted(() => ({ acceptOffer: vi.fn() }));
+const store = vi.hoisted(() => ({
+  acceptOffer: vi.fn(),
+  offer: undefined as
+    | {
+        readonly meter:
+          { beatsPerBar: number; denominator: number } | undefined;
+      }
+    | undefined,
+}));
 
 vi.mock('@kitbag/core-design', async (original) => {
   const { createElement: h } = await import('react');
@@ -49,6 +57,7 @@ const { LibraryOfferCard } = await import('./LibraryOfferCard.tsx');
 beforeEach(() => {
   vi.clearAllMocks();
   store.acceptOffer.mockResolvedValue({ locked: true });
+  store.offer = { meter: undefined };
   drawn.rows.length = 0;
   drawn.buttons.length = 0;
   drawn.icons.length = 0;
@@ -64,6 +73,15 @@ it('says the library holds a beat grid for the song', () => {
     icon: 'beatGrid',
     color: 'accentText',
   });
+});
+
+it('names the meter a saved preset brings', () => {
+  store.offer = { meter: { beatsPerBar: 4, denominator: 4 } };
+  drawn.rows.length = 0;
+  renderToStaticMarkup(createElement(LibraryOfferCard));
+  expect(drawn.rows[0]?.subtitle).toBe(
+    'Beat grid found · 4/4 from your preset',
+  );
 });
 
 it('locks on the stored grid only when Lock is tapped', () => {

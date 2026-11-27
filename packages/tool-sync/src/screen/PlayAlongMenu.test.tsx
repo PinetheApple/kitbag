@@ -22,6 +22,7 @@ const { PlayAlongMenu } = await import('./PlayAlongMenu.tsx');
 
 const onSave = vi.fn();
 const onClickSound = vi.fn();
+const onNotificationAccess = vi.fn();
 
 function drawMenu(save: (() => void) | null) {
   rows.length = 0;
@@ -38,7 +39,6 @@ function drawMenu(save: (() => void) | null) {
     }),
   );
 }
-const onNotificationAccess = vi.fn();
 
 it('lists Save for this song first, then Click sound and Notification access', () => {
   drawMenu(onSave);
