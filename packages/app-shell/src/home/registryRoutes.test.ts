@@ -8,6 +8,7 @@ import { TOOL_ROUTES } from './toolRoutes.ts';
 const APP = join(import.meta.dirname, '..', 'app');
 const ROUTE_EXT = '.tsx';
 const LAYOUT_FILE = /(^|\/)_layout$/;
+const ROUTER_SPECIAL_FILE = /(^|\/)\+/;
 const INDEX_SEGMENT = /(^|\/)index$/;
 const GATE_CALL = /export default gated\(\s*TOOL_ID\.(\w+)/;
 
@@ -31,7 +32,12 @@ function routePath(file: string): string {
 function routeFiles(): readonly string[] {
   return readdirSync(APP, { recursive: true })
     .map(String)
-    .filter((f) => f.endsWith(ROUTE_EXT) && !LAYOUT_FILE.test(routePath(f)));
+    .filter(
+      (f) =>
+        f.endsWith(ROUTE_EXT) &&
+        !LAYOUT_FILE.test(routePath(f)) &&
+        !ROUTER_SPECIAL_FILE.test(routePath(f)),
+    );
 }
 
 function gateOf(file: string): string | undefined {

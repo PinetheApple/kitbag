@@ -46,4 +46,5 @@ loop.log
 *.p12
 *.jks
 *.key
+*.key.enc
 .env

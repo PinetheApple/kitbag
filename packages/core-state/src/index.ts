@@ -1008,6 +1008,7 @@ export {
   getBackup,
   type BackupDeps,
 } from './backup/runtime.ts';
+export { planIntake, type IntakePlan } from './intake/plan.ts';
 export {
   LIBRARY_BACKUP_FILE_NAME,
   saveLibraryBackup,

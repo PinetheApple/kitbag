@@ -60,6 +60,7 @@ export const CODES: LibraryConstants = {
   exportMaxBaseNameBytes: 246,
   databaseCopyNoSpace: 'database-copy-no-space',
   databaseCopyUnreadable: 'database-copy-unreadable',
+  backupMimeType: 'application/json',
   supportedAudioFamilies: ['WAV', 'MP3', 'FLAC', 'AIFF'],
   supportedAudioExtensions: [
     'wav',
