@@ -1,5 +1,6 @@
 import { attempt } from './attempt';
 import { OLDEST_UPGRADABLE_VERSION, SCHEMA_VERSION } from './migrate';
+import { BYTES_PER_KIB } from './units';
 
 export interface MigrationCopyFiles {
   freeBytes(): number;
@@ -14,7 +15,6 @@ export interface MigrationCopySql {
 
 export type MigrationCopyProblem = 'no-space' | 'copy-failed' | 'prune-failed';
 
-const BYTES_PER_KIB = 1024;
 const BYTES_PER_MIB = BYTES_PER_KIB * BYTES_PER_KIB;
 const MARGIN_MIB = 64;
 export const MIGRATION_COPY_MARGIN_BYTES = MARGIN_MIB * BYTES_PER_MIB;

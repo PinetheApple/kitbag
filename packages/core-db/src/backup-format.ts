@@ -1,6 +1,7 @@
 import type { ClickRate } from './click-rate';
 import type { ClickSound } from './click-sound-repository';
 import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
+import type { ToolDataSection } from './backup-tool-data';
 import type { ManualTempoColumns } from './manual-tempo';
 import type { MeterOverride } from './meter-override';
 import { STANDALONE_METRONOME_KEY } from './standalone-metronome-preference';
@@ -200,6 +201,7 @@ export interface BackupFile {
   exportedAt: string;
   categories: Category[];
   records: CategoryRecords;
+  toolData?: ToolDataSection;
 }
 
 export type ImportMode = 'merge' | 'replace';

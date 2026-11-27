@@ -10,6 +10,7 @@ import {
 import { MIGRATE_V31_TO_V32 } from './migrate-manual-tempo';
 import { MIGRATE_V30_TO_V31 } from './migrate-presets';
 import { rebuildTable } from './migrate-rebuild';
+import { MIGRATE_V32_TO_V33 } from './migrate-tool-data';
 
 const UUID4_SQL =
   "lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || " +
@@ -391,6 +392,7 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V29_TO_V30,
   ...MIGRATE_V30_TO_V31,
   ...MIGRATE_V31_TO_V32,
+  ...MIGRATE_V32_TO_V33,
 ];
 
 export const MIGRATE_V7_TO_V8: readonly string[] = [

@@ -7,6 +7,7 @@ import {
 } from './migrate-stems';
 import { MIGRATE_V31_TO_V32 } from './migrate-manual-tempo';
 import { MIGRATE_V30_TO_V31 } from './migrate-presets';
+import { MIGRATE_V32_TO_V33 } from './migrate-tool-data';
 import {
   MIGRATE_V8_TO_V9,
   MIGRATE_V9_TO_V10,
@@ -56,7 +57,8 @@ export const V28_SCHEMA_VERSION = V27_SCHEMA_VERSION + 1;
 export const V29_SCHEMA_VERSION = V28_SCHEMA_VERSION + 1;
 export const V30_SCHEMA_VERSION = V29_SCHEMA_VERSION + 1;
 export const V31_SCHEMA_VERSION = V30_SCHEMA_VERSION + 1;
-export const SCHEMA_VERSION = V31_SCHEMA_VERSION + 1;
+export const V32_SCHEMA_VERSION = V31_SCHEMA_VERSION + 1;
+export const SCHEMA_VERSION = V32_SCHEMA_VERSION + 1;
 
 export const OLDEST_UPGRADABLE_VERSION = V7_SCHEMA_VERSION;
 
@@ -120,7 +122,8 @@ const UPGRADES: readonly {
   { to: V29_SCHEMA_VERSION, steps: MIGRATE_V28_TO_V29 },
   { to: V30_SCHEMA_VERSION, steps: MIGRATE_V29_TO_V30 },
   { to: V31_SCHEMA_VERSION, steps: MIGRATE_V30_TO_V31 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V31_TO_V32 },
+  { to: V32_SCHEMA_VERSION, steps: MIGRATE_V31_TO_V32 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V32_TO_V33 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {
