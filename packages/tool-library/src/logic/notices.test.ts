@@ -100,6 +100,21 @@ describe('stem song added elsewhere', () => {
   });
 });
 
+describe('several picked files failed', () => {
+  const failed = {
+    kind: 'importsFailed',
+    names: ['Voice memo.m4a', 'Broken.mp3'],
+  } as const;
+
+  it('names every file that was not added, as a failure', () => {
+    expect(noticeText(failed)).toEqual({
+      status: 'Import failed',
+      text: '2 files could not be added to your library: “Voice memo.m4a”, “Broken.mp3”. Import each one on its own to see why.',
+    });
+    expect(noticeLook(failed).tone).toBe('danger');
+  });
+});
+
 describe('replaceText', () => {
   it('names the picked file and the song it replaces', () => {
     const text = replaceText('Redbone.stemdeck.zip', 'Redbone', 'job');

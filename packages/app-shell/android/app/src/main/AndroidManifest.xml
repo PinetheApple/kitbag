@@ -2,7 +2,6 @@
   <uses-permission android:name="android.permission.INTERNET"/>
   <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" tools:replace="android:maxSdkVersion"/>
   <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
   <uses-permission android:name="android.permission.VIBRATE"/>
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" tools:replace="android:maxSdkVersion"/>
   <queries>
@@ -28,6 +27,38 @@
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="kitbag"/>
         <data android:scheme="exp+kitbag"/>
+      </intent-filter>
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <data android:mimeType="audio/wav"/>
+        <data android:mimeType="audio/x-wav"/>
+        <data android:mimeType="audio/wave"/>
+        <data android:mimeType="audio/vnd.wave"/>
+        <data android:mimeType="audio/mpeg"/>
+        <data android:mimeType="audio/mp3"/>
+        <data android:mimeType="audio/mpeg3"/>
+        <data android:mimeType="audio/x-mpeg"/>
+        <data android:mimeType="audio/x-mp3"/>
+        <data android:mimeType="audio/mpg"/>
+        <data android:mimeType="audio/flac"/>
+        <data android:mimeType="audio/x-flac"/>
+        <data android:mimeType="audio/aiff"/>
+        <data android:mimeType="audio/x-aiff"/>
+        <data android:mimeType="audio/aifc"/>
+        <data android:mimeType="audio/x-aifc"/>
+        <data android:mimeType="application/zip"/>
+        <data android:mimeType="application/x-zip-compressed"/>
+        <data android:mimeType="application/json"/>
+      </intent-filter>
+      <intent-filter>
+        <action android:name="android.intent.action.SEND"/>
+        <action android:name="android.intent.action.SEND_MULTIPLE"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <data android:mimeType="audio/*"/>
+        <data android:mimeType="application/zip"/>
+        <data android:mimeType="application/x-zip-compressed"/>
+        <data android:mimeType="application/json"/>
       </intent-filter>
     </activity>
   </application>

@@ -32,7 +32,7 @@ configureSongLibrary({
     constants: () => {
       throw new Error('No native library on web');
     },
-    pickDocument: unavailable,
+    pickDocuments: unavailable,
     pickFolder: unavailable,
     sniffUnsupportedFormat: unavailable,
     importAudio: unavailable,

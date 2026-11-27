@@ -1,28 +1,19 @@
 import type {
   LibraryRow,
   MeterOverridePatch,
-  SongFiles,
   TempoCorrection,
 } from '@kitbag/core-db';
 import type {
   AnalysisResult,
-  ImportedAudio,
   LibraryConstants,
   PickedDocument,
 } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
-import {
-  audioFormat,
-  checkAudioFormat,
-  fileRemovals,
-  isStemArchive,
-  songFolder,
-  songRemovals,
-  type Removal,
-} from './logic.ts';
+import { fileRemovals, songRemovals, type Removal } from './logic.ts';
 import { cleanName } from '../names.ts';
 import { resultRecord } from './analysisRecord.ts';
+import { documentImports, isBatch } from './importBatch.ts';
 import {
   availabilityRefresher,
   type RowFilesByKey,
@@ -59,7 +50,6 @@ import {
   enqueue,
   loadCodes,
   warn,
-  whileImporting,
   type Get,
   type SetState,
 } from './storeSupport.ts';
@@ -78,6 +68,7 @@ export type LibraryNotice =
     }
   | { readonly kind: 'copyFailed'; readonly name: string }
   | { readonly kind: 'addFailed'; readonly name: string }
+  | { readonly kind: 'importsFailed'; readonly names: readonly string[] }
   | { readonly kind: 'pickerFailed' }
   | { readonly kind: 'deleteFailed'; readonly name: string }
   | { readonly kind: 'renameFailed'; readonly name: string }
@@ -111,6 +102,7 @@ export interface SongLibraryActions {
   receiveAnalysis: (result: AnalysisResult) => Promise<void>;
   setQuery: (query: string) => void;
   importSong: () => Promise<void>;
+  importDocuments: (docs: readonly PickedDocument[]) => Promise<void>;
   importStemFolder: () => Promise<void>;
   reanalyze: (songId: number) => Promise<void>;
   deleteRow: (row: LibraryRow) => Promise<void>;
@@ -186,42 +178,6 @@ function readActions(deps: SongLibraryDeps, set: SetState, get: Get) {
   };
 }
 
-type ImportOutcome =
-  | { readonly ok: true; readonly song: SongFiles }
-  | { readonly ok: false; readonly kind: 'copyFailed' | 'addFailed' };
-
-async function importAudio(
-  deps: SongLibraryDeps,
-  doc: PickedDocument,
-  songsDir: string,
-): Promise<ImportOutcome> {
-  const files = deps.files();
-  const uuid = deps.newUuid();
-  let imported: ImportedAudio;
-  try {
-    imported = await files.importAudio(doc.uri, songFolder(songsDir, uuid));
-  } catch (error) {
-    warn(`copy of ${doc.name} failed`, error);
-    return { ok: false, kind: 'copyFailed' };
-  }
-  const song = { uuid, filePath: imported.relativePath, waveformPath: null };
-  try {
-    await deps.records().insertSong({
-      uuid,
-      title: imported.title,
-      artist: imported.artist,
-      filePath: imported.relativePath,
-      durationSec: imported.durationSec,
-      format: audioFormat(imported.relativePath),
-    });
-  } catch (error) {
-    warn(`adding ${doc.name} failed`, error);
-    await deleteLeftovers(files, songRemovals(song, songsDir), doc.name);
-    return { ok: false, kind: 'addFailed' };
-  }
-  return { ok: true, song };
-}
-
 function importActions(
   deps: SongLibraryDeps,
   set: SetState,
@@ -229,67 +185,61 @@ function importActions(
   imports: ImportTracker,
 ) {
   const bundles = stemBundleActions(deps, set, get, imports);
-  let picking = false;
-  const pick = async <T>(open: () => Promise<T | null>) => {
-    if (picking) return null;
-    picking = true;
-    set({ notice: null });
+  const importEach = documentImports(deps, set, get, bundles.importBundle);
+  let busy: Promise<void> | null = null;
+  const hold = () => {
+    let finish: (() => void) | null = null;
+    busy = new Promise<void>((resolve) => (finish = resolve));
+    return () => {
+      busy = null;
+      finish?.();
+    };
+  };
+  const openPicker = async <T>(open: () => Promise<T | null>) => {
     try {
       return await open();
     } catch (error) {
       warn('picker failed', error);
       set({ notice: { kind: 'pickerFailed' } });
       return null;
-    } finally {
-      picking = false;
     }
   };
-  const importDocument = async (doc: PickedDocument) => {
-    await whileImporting(set, get, doc.name, async () => {
-      const codes = loadCodes(deps, get);
-      set({ codes });
-      if (codes === null) {
-        set({ notice: { kind: 'copyFailed', name: doc.name } });
-        return;
-      }
-      const headerFormat = await deps
-        .files()
-        .sniffUnsupportedFormat(doc.uri)
-        .catch(() => '');
-      const check = checkAudioFormat(doc, codes, headerFormat);
-      if (!check.supported) {
-        set({
-          notice: {
-            kind: 'formatRefused',
-            name: doc.name,
-            format: check.format,
-            supported: codes.supportedAudioFamilies,
-          },
-        });
-        return;
-      }
-      const outcome = await importAudio(deps, doc, codes.songsDir);
-      if (outcome.ok) enqueue(deps.files(), outcome.song, false);
-      else set({ notice: { kind: outcome.kind, name: doc.name } });
-    });
-    await get().refresh();
+  const pickThen = async <T>(
+    open: () => Promise<T | null>,
+    importPicked: (picked: T) => Promise<unknown>,
+    holdsPicker: (picked: T) => boolean = () => false,
+  ) => {
+    if (busy !== null) return;
+    const release = hold();
+    set({ notice: null });
+    const picked = await openPicker(open);
+    const holds = picked !== null && holdsPicker(picked);
+    if (!holds) release();
+    if (picked === null) return;
+    try {
+      await importPicked(picked);
+    } finally {
+      if (holds) release();
+    }
+  };
+  const importDocuments = async (docs: readonly PickedDocument[]) => {
+    while (busy !== null) await busy;
+    const release = isBatch(docs) ? hold() : null;
+    try {
+      await importEach(docs);
+    } finally {
+      release?.();
+    }
   };
   return {
-    importSong: async () => {
-      const doc = await pick(() => deps.files().pickDocument());
-      if (doc === null) return;
-      if (isStemArchive(doc))
-        await bundles.importBundle(
-          { ...doc, isFolder: false },
-          { announce: true },
-        );
-      else await importDocument(doc);
-    },
-    importStemFolder: async () => {
-      const folder = await pick(() => deps.files().pickFolder());
-      if (folder !== null)
-        await bundles.importBundle({ ...folder, isFolder: true });
-    },
+    importSong: () =>
+      pickThen(() => deps.files().pickDocuments(), importEach, isBatch),
+    importDocuments,
+    importStemFolder: () =>
+      pickThen(
+        () => deps.files().pickFolder(),
+        (folder) => bundles.importBundle({ ...folder, isFolder: true }),
+      ),
     confirmReplace: bundles.confirmReplace,
     keepBoth: bundles.keepBoth,
     cancelReplace: bundles.cancelReplace,

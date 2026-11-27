@@ -45,7 +45,19 @@ interface Job {
 interface Pending {
   readonly job: Job;
   readonly targetId: number;
+  readonly release: (notice: LibraryNotice | null) => void;
 }
+
+export type BundleImport =
+  | { readonly prompted: false; readonly notice: LibraryNotice | null }
+  | {
+      readonly prompted: true;
+      readonly untilAnswered: Promise<LibraryNotice | null>;
+    };
+
+type Examined =
+  | { readonly check: StemBundleCheck; readonly match: Match | null }
+  | { readonly notice: LibraryNotice };
 
 interface Match {
   readonly set: ExistingStemSet;
@@ -176,11 +188,9 @@ export function stemBundleActions(
 ) {
   let pending: Pending | null = null;
 
-  const codesFor = (source: BundleSource) => {
+  const freshCodes = () => {
     const codes = loadCodes(deps, get);
     set({ codes });
-    if (codes === null)
-      set({ notice: { kind: 'copyFailed', name: source.name } });
     return codes;
   };
 
@@ -218,15 +228,23 @@ export function stemBundleActions(
     return { kind: 'added' };
   };
 
-  const run = async (job: Job, targetId: number | null) => {
-    const codes = codesFor(job.source);
-    if (codes === null) return;
+  const add = async (
+    job: Job,
+    targetId: number | null,
+  ): Promise<LibraryNotice | null> => {
+    const codes = freshCodes();
+    if (codes === null) return { kind: 'copyFailed', name: job.source.name };
     const outcome = await whileImporting(set, get, job.source.name, () =>
       imports.track(() => copyAndStore(job, codes, targetId)),
     );
-    const notice = noticeFor(job.source.name, outcome, job.announce);
+    return noticeFor(job.source.name, outcome, job.announce);
+  };
+
+  const run = async (job: Job, targetId: number | null) => {
+    const notice = await add(job, targetId);
     if (notice !== null) set({ notice });
     await get().refresh();
+    return notice;
   };
 
   const inspect = async (
@@ -243,23 +261,23 @@ export function stemBundleActions(
     return { ok: true, check, existing: await findExisting(deps, check.jobId) };
   };
 
-  const examine = async (source: BundleSource) => {
-    const codes = codesFor(source);
-    if (codes === null) return null;
+  const examine = async (source: BundleSource): Promise<Examined> => {
+    const codes = freshCodes();
+    if (codes === null)
+      return { notice: { kind: 'copyFailed', name: source.name } };
     const inspected = await inspect(source, codes);
     if (inspected.ok)
       return {
         check: inspected.check,
         match: await findMatch(deps, inspected.check, inspected.existing),
       };
-    set({
+    return {
       notice: {
         kind: 'bundleRefused',
         name: source.name,
         refusal: inspected.refusal,
       },
-    });
-    return null;
+    };
   };
 
   // Unattended: no prompt and no notice; the caller reports the outcome.
@@ -267,8 +285,7 @@ export function stemBundleActions(
     source: BundleSource,
     choice: ReplaceChoice,
   ): Promise<BundleAddOutcome> => {
-    const codes = loadCodes(deps, get);
-    set({ codes });
+    const codes = freshCodes();
     if (codes === null) return { kind: 'copyFailed' };
     const inspected = await inspect(source, codes);
     if (!inspected.ok) return { kind: 'refused', refusal: inspected.refusal };
@@ -292,22 +309,41 @@ export function stemBundleActions(
     return taken;
   };
 
+  const holdForAnswer = (job: Job, targetId: number) => {
+    pending?.release(null);
+    return new Promise<LibraryNotice | null>((release) => {
+      pending = { job, targetId, release };
+    });
+  };
+
+  const answerWith = async (target: (taken: Pending) => number | null) => {
+    const taken = takePending();
+    if (taken === null) return;
+    let notice: LibraryNotice | null = null;
+    try {
+      notice = await run(taken.job, target(taken));
+    } finally {
+      taken.release(notice);
+    }
+  };
+
   return {
     importBundle: async (
       source: BundleSource,
       { announce = false }: { readonly announce?: boolean } = {},
-    ) => {
+    ): Promise<BundleImport> => {
       const examined = await whileImporting(set, get, source.name, () =>
         examine(source),
       );
-      if (examined === null) return;
+      if ('notice' in examined) {
+        set({ notice: examined.notice });
+        return { prompted: false, notice: examined.notice };
+      }
       const job = { source, check: examined.check, announce };
       const { match } = examined;
-      if (match === null) {
-        await run(job, null);
-        return;
-      }
-      pending = { job, targetId: match.set.id };
+      if (match === null)
+        return { prompted: false, notice: await run(job, null) };
+      const untilAnswered = holdForAnswer(job, match.set.id);
       set({
         replacePrompt: {
           name: source.name,
@@ -315,17 +351,12 @@ export function stemBundleActions(
           match: match.kind,
         },
       });
+      return { prompted: true, untilAnswered };
     },
-    confirmReplace: async () => {
-      const taken = takePending();
-      if (taken !== null) await run(taken.job, taken.targetId);
-    },
-    keepBoth: async () => {
-      const taken = takePending();
-      if (taken !== null) await run(taken.job, null);
-    },
+    confirmReplace: () => answerWith((taken) => taken.targetId),
+    keepBoth: () => answerWith(() => null),
     cancelReplace: () => {
-      takePending();
+      takePending()?.release(null);
     },
     addFetchedBundle,
   };

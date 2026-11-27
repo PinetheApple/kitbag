@@ -55,7 +55,7 @@ const fitTempo: TempoFitter = (beatTimesSec, downbeatIndices) =>
 // Resolved per call: getKitbagLibrary throws in a build without the module.
 const files: LibraryFiles = {
   constants: () => getKitbagLibrary().getConstants(),
-  pickDocument: () => getKitbagLibrary().pickDocument(),
+  pickDocuments: () => getKitbagLibrary().pickDocuments(),
   sniffUnsupportedFormat: (uri) =>
     getKitbagLibrary().sniffUnsupportedFormat(uri),
   pickFolder: () => getKitbagLibrary().pickFolder(),

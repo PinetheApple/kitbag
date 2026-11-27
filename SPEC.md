@@ -954,6 +954,11 @@ the single most RN-specific piece of §5** — see §13.9.
   phone call is still a session.
 - **A recents swipe stops all playback** and removes its notifications; Home,
   an app switch, lock and Back keep playing (#338).
+- **Interruptions** (owner, 2026-11-27, #691). Songs and stem songs (§6, §7)
+  take media audio focus while playing and pause on output loss (unplug,
+  Bluetooth drop), a call or a focus loss, never resuming by themselves. The
+  metronome and the Play along click never take focus. The metronome pauses on
+  output loss or a call; the Play along click keeps running (D10, §8.9).
 
 ### 5.7 Practice
 
@@ -1014,6 +1019,8 @@ working. Changes:
   Breaks on iOS, where the container UUID changes per launch. Paths are relative
   to the data folder, always.
 - **Downbeats** into the grid (§4.3).
+- The file picker takes several files; they import one at a time, a batch waits
+  on each replace prompt, and failures are named together.
 - **Re-analyse** action for a song.
 - Each song records the analyser version (`KB_BEAT_ANALYSIS_VERSION`) that made
   its grid. At launch, songs whose analysis succeeded on an older version
@@ -2192,7 +2199,8 @@ From `kitbag-ui.html` §06. Distilled from NN/g, Android haptics/a11y guidelines
 Laws of UX, and Mobbin pattern research. Each is testable and gets checked per
 milestone.
 
-- **Sound in 5 seconds, no tour.** First launch lands on a working metronome. No
+- **Sound in 5 seconds, no tour.** The app always opens on Home, and the Continue card
+  or the Metronome tile reaches a working metronome in one tap. No
   slideshow, no signup. Hidden gestures teach themselves via a one-time hint
   animation on first encounter, dismissed forever after first successful use.
 - **Every gesture has a visible twin.** Swipe-anywhere tempo is backed by the

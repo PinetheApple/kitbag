@@ -58,6 +58,55 @@ function review(state: ReturnType<ReturnType<typeof harness>['state']>) {
   return state;
 }
 
+describe('opening a backup another app shared', () => {
+  it('reviews the shared file without applying it', async () => {
+    const { text } = await seededExport();
+    const target = openBackupDatabase();
+    const apply = vi.spyOn(target.backup, 'apply');
+    const h = harness(target, () => Promise.reject(new Error('no picker')));
+    const opened = await h.store.getState().open(file(text));
+    expect(opened).toBe(true);
+    expect(review(h.state()).source.name).toBe('kitbag_export.json');
+    expect(apply).not.toHaveBeenCalled();
+    expect(h.afterRestore).not.toHaveBeenCalled();
+    expect(await records(target)).toEqual(await records(openBackupDatabase()));
+  });
+
+  it('reports a shared file it cannot read', async () => {
+    const h = harness(openBackupDatabase(), () => Promise.resolve(null));
+    await h.store.getState().open(() => Promise.reject(new Error('gone')));
+    expect(h.state()).toEqual({
+      phase: 'failed',
+      failure: { kind: 'unreadable' },
+    });
+  });
+
+  it('leaves a restore that is applying alone', async () => {
+    const { text } = await seededExport();
+    const target = openBackupDatabase();
+    const applyNow = target.backup.apply.bind(target.backup);
+    let release: () => void = () => undefined;
+    vi.spyOn(target.backup, 'apply').mockImplementation(
+      (...args) =>
+        new Promise((resolve) => {
+          release = () => {
+            resolve(applyNow(...args));
+          };
+        }),
+    );
+    const h = harness(target, file(text));
+    await h.store.getState().pick();
+    const applying = h.store.getState().apply();
+    expect(h.state().phase).toBe('applying');
+    const read = vi.fn(file(text));
+    expect(await h.store.getState().open(read)).toBe(false);
+    expect(read).not.toHaveBeenCalled();
+    expect(h.state().phase).toBe('applying');
+    release();
+    await applying;
+  });
+});
+
 describe('picking a file', () => {
   it('stays empty when the picker is cancelled', async () => {
     const h = harness(openBackupDatabase(), () => Promise.resolve(null));

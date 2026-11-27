@@ -1,6 +1,6 @@
 import type { StemMix } from '@kitbag/core-db';
 
-import { debounce } from './debounce.ts';
+import { debounce } from '../debounce.ts';
 
 export interface MixSaver {
   readonly queue: (mix: StemMix) => void;

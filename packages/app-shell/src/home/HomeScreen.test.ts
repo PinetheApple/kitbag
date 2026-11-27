@@ -222,6 +222,26 @@ describe('HomeScreen tiles and More tools', () => {
 });
 
 describe('HomeScreen Play along row', () => {
+  afterEach(() => {
+    storeState.off = [];
+  });
+
+  const rowTitles = (off: string[]) => {
+    storeState.off = off;
+    home.rows.length = 0;
+    renderRecorded(createElement(HomeScreen));
+    return home.rows.map((row) => row.title);
+  };
+
+  it('leaves the row out while Play along is off', () => {
+    expect(rowTitles([TOOL_ID.sync])).not.toContain('Play along');
+  });
+
+  it('restores the row when Play along is back on', () => {
+    rowTitles([TOOL_ID.sync]);
+    expect(rowTitles([])).toEqual(['Play along']);
+  });
+
   const syncSubtitle = (locked: string | undefined) => {
     home.lockedSubtext = locked;
     home.rows.length = 0;

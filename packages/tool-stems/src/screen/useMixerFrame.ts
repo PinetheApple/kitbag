@@ -1,6 +1,11 @@
 import { KITBAG_HOST_OBJECT_KEY } from '@kitbag/core-native';
 import type { KitbagHostObject } from '@kitbag/core-native';
-import { formatClock, framesToSeconds } from '@kitbag/core-state';
+import {
+  formatClock,
+  framesToSeconds,
+  onMixerSeek,
+  onSongStarting,
+} from '@kitbag/core-state';
 import { useCallback, useEffect } from 'react';
 import {
   useFrameCallback,
@@ -24,6 +29,10 @@ const MAX_LEAD_SECONDS = 0.1;
 // A released scrub shows where it was let go until the seek lands near there.
 const HOLD_NEAR_SECONDS = 0.5;
 const HOLD_TIMEOUT_MS = 1000;
+const NOT_IDLE = -1;
+const IDLE_AFTER_MS = 250;
+// A paused song can still start or seek from the notification without telling the app.
+export const IDLE_POLL_MS = 100;
 
 export interface MixerFrameValues {
   readonly progress: SharedValue<number>;
@@ -37,6 +46,31 @@ export interface MixerFrameValues {
 export interface MixerFrameOptions {
   readonly countEndFrame?: number | null;
   readonly heldFrame?: number | null;
+}
+
+function isIdle(
+  started: number,
+  moved: boolean,
+  holding: boolean,
+  countingIn: number,
+): boolean {
+  'worklet';
+  return started === 0 && !moved && !holding && countingIn === 0;
+}
+
+function idleFrom(idle: boolean, idleSince: number, now: number): number {
+  'worklet';
+  if (!idle) return NOT_IDLE;
+  return idleSince === NOT_IDLE ? now : idleSince;
+}
+
+function skipsFrame(now: number, idleSince: number, polledAt: number): boolean {
+  'worklet';
+  return (
+    idleSince !== NOT_IDLE &&
+    now - idleSince > IDLE_AFTER_MS &&
+    now - polledAt < IDLE_POLL_MS
+  );
 }
 
 export function useMixerFrame(
@@ -60,13 +94,24 @@ export function useMixerFrame(
   const held = useSharedValue(NOT_HELD);
   const heldSince = useSharedValue(NOT_HELD);
   const viewed = useSharedValue(heldFrame ?? NOT_HELD);
+  const idleSince = useSharedValue(NOT_IDLE);
+  const polledAt = useSharedValue(0);
+
+  const wake = useCallback(() => {
+    idleSince.value = NOT_IDLE;
+  }, [idleSince]);
+
+  useEffect(() => onSongStarting(wake), [wake]);
+  useEffect(() => onMixerSeek(wake), [wake]);
 
   useEffect(() => {
+    wake();
     rate.value = engineRate;
     duration.value = durationFrames;
     loopEnd.value = loopEndFrames ?? NO_LOOP;
     second.value = NO_SECOND;
   }, [
+    wake,
     engineRate,
     durationFrames,
     loopEndFrames,
@@ -77,8 +122,9 @@ export function useMixerFrame(
   ]);
 
   useEffect(() => {
+    wake();
     countEnd.value = countEndFrame ?? NO_COUNT;
-  }, [countEndFrame, countEnd]);
+  }, [wake, countEndFrame, countEnd]);
 
   const showFrame = useCallback(
     (shown: number, frameRate: number) => {
@@ -96,25 +142,30 @@ export function useMixerFrame(
   );
 
   useEffect(() => {
+    wake();
     viewed.value = heldFrame ?? NOT_HELD;
     if (heldFrame === null) return;
     held.value = NOT_HELD;
     playing.value = 0;
     second.value = NO_SECOND;
     showFrame(heldFrame, engineRate);
-  }, [heldFrame, engineRate, viewed, held, playing, second, showFrame]);
+  }, [wake, heldFrame, engineRate, viewed, held, playing, second, showFrame]);
 
   const hold = useCallback(
     (fraction: number) => {
+      wake();
       held.value = fraction * duration.value;
       heldSince.value = NOT_HELD;
     },
-    [held, heldSince, duration],
+    [wake, held, heldSince, duration],
   );
 
   useFrameCallback((frame) => {
     'worklet';
     if (viewed.value !== NOT_HELD) return;
+    const now = frame.timestamp;
+    if (skipsFrame(now, idleSince.value, polledAt.value)) return;
+    polledAt.value = now;
     const host = (globalThis as unknown as HostGlobal)[KITBAG_HOST_OBJECT_KEY];
     if (host === undefined) return;
     const position = host.mixer_position;
@@ -123,25 +174,31 @@ export function useMixerFrame(
       countEnd.value !== NO_COUNT && host.frames_rendered < countEnd.value;
     const started = isPlaying !== 0 || counting ? 1 : 0;
     if (playing.value !== started) playing.value = started;
-    if (position !== published.value) {
+    const moved = position !== published.value;
+    const idle = isIdle(
+      started,
+      moved,
+      held.value !== NOT_HELD,
+      host.counting_in,
+    );
+    idleSince.value = idleFrom(idle, idleSince.value, now);
+    if (moved) {
       if (position < published.value) lastShown.value = position;
       published.value = position;
-      publishedAt.value = frame.timestamp;
+      publishedAt.value = now;
     }
     let shown = position;
     if (held.value !== NOT_HELD) {
-      if (heldSince.value === NOT_HELD) heldSince.value = frame.timestamp;
+      if (heldSince.value === NOT_HELD) heldSince.value = now;
       const landed =
         Math.abs(position - held.value) < HOLD_NEAR_SECONDS * rate.value ||
-        frame.timestamp - heldSince.value > HOLD_TIMEOUT_MS;
+        now - heldSince.value > HOLD_TIMEOUT_MS;
       if (landed) held.value = NOT_HELD;
       else shown = held.value;
     } else if (isPlaying !== 0) {
       const lead =
-        Math.min(
-          (frame.timestamp - publishedAt.value) / MS_PER_SECOND,
-          MAX_LEAD_SECONDS,
-        ) * rate.value;
+        Math.min((now - publishedAt.value) / MS_PER_SECOND, MAX_LEAD_SECONDS) *
+        rate.value;
       const limit = loopEnd.value > position ? loopEnd.value : duration.value;
       shown = Math.max(
         lastShown.value,

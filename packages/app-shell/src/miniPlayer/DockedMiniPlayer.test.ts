@@ -6,6 +6,7 @@ type Props = Record<string, unknown>;
 
 const world = vi.hoisted(() => ({
   songShown: false,
+  off: [] as string[],
   drawn: [] as [string, Props][],
   push: vi.fn<(href: string) => void>(),
 }));
@@ -20,6 +21,11 @@ vi.mock('@kitbag/tool-library', () => ({
   MiniPlayer: recorder('MiniPlayer'),
   useMiniPlayerShown: () => world.songShown,
 }));
+vi.mock('@kitbag/core-state', async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  useTools: <T>(selector: (state: { readonly off: string[] }) => T) =>
+    selector(world),
+}));
 vi.mock('@kitbag/tool-stems', () => ({ useMixerFrame: () => undefined }));
 vi.mock('@kitbag/tool-sync', () => ({
   PLAY_ALONG_NAME: 'Play along',
@@ -30,12 +36,13 @@ vi.mock('@/runtime/libraryRoutes', () => ({
 }));
 
 const { DockedMiniPlayer } = await import('./DockedMiniPlayer.tsx');
-const { PLAY_ALONG_ROUTE } = await import('../home/registry.ts');
+const { TOOL_ID, TOOL_ROUTES } = await import('../home/toolRoutes.ts');
 
 const BOTTOM = 24;
 
-function render(songShown: boolean) {
+function render(songShown: boolean, off: string[] = []) {
   world.songShown = songShown;
+  world.off = off;
   world.drawn.length = 0;
   renderToStaticMarkup(
     createElement(DockedMiniPlayer, {
@@ -64,6 +71,16 @@ describe('the docked mini-player', () => {
   it('reopens Play along from its mini-player', () => {
     const [[, props] = ['', {}]] = render(false);
     (props.onOpen as () => void)();
-    expect(world.push).toHaveBeenCalledExactlyOnceWith(PLAY_ALONG_ROUTE);
+    expect(world.push).toHaveBeenCalledExactlyOnceWith(TOOL_ROUTES.sync.home);
+  });
+
+  it('shows no Play along mini-player while Play along is off', () => {
+    expect(render(false, [TOOL_ID.sync])).toEqual([]);
+  });
+
+  it('still shows the song mini-player while Play along is off', () => {
+    expect(render(true, [TOOL_ID.sync]).map(([name]) => name)).toEqual([
+      'MiniPlayer',
+    ]);
   });
 });
