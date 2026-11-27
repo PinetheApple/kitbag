@@ -3,12 +3,23 @@ import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { BUILT_TOOL_IDS, HOME_TOOLS, TOOL_ID } from './registry.ts';
+import { TOOL_ROUTES } from './toolRoutes.ts';
 
 const APP = join(import.meta.dirname, '..', 'app');
 const ROUTE_EXT = '.tsx';
 const LAYOUT_FILE = /(^|\/)_layout$/;
 const INDEX_SEGMENT = /(^|\/)index$/;
-const GATE_CALL = /\bgated\(\s*TOOL_ID\.(\w+)/;
+const GATE_CALL = /export default gated\(\s*TOOL_ID\.(\w+)/;
+
+const SHELL_ROUTES: readonly string[] = [
+  '/',
+  '/gate',
+  '/settings',
+  '/settings/attributions',
+  '/settings/calibrate',
+  '/settings/restore',
+  '/settings/tools',
+];
 
 type ToolKey = keyof typeof TOOL_ID;
 
@@ -37,6 +48,7 @@ function expectedGate(path: string): string | undefined {
 
 const FILES = routeFiles();
 const PATHS = FILES.map(routePath);
+const DECLARED = HOME_TOOLS.flatMap((t) => t.routes.map((r) => r.path));
 
 describe('tool routes', () => {
   it('gates each route file by the registry tool that owns it, and nothing else', () => {
@@ -47,14 +59,30 @@ describe('tool routes', () => {
     expect(gates).toEqual(expected);
   });
 
+  it('owns every route file by a registry tool or the shell', () => {
+    const strays = PATHS.filter(
+      (p) => !DECLARED.includes(p) && !SHELL_ROUTES.includes(p),
+    );
+    expect(strays).toEqual([]);
+    expect(DECLARED.filter((p) => SHELL_ROUTES.includes(p))).toEqual([]);
+  });
+
+  it('builds each registry entry from its own route group', () => {
+    const entries = Object.fromEntries(
+      HOME_TOOLS.map((t) => [t.id, t.routes.map((r) => r.path)]),
+    );
+    const groups = Object.fromEntries(
+      Object.entries(TOOL_ROUTES).map(([id, g]) => [id, Object.values(g)]),
+    );
+    expect(entries).toEqual(groups);
+  });
+
   it('names only routes that have a route file', () => {
-    const declared = HOME_TOOLS.flatMap((t) => t.routes.map((r) => r.path));
-    expect(declared.filter((p) => !PATHS.includes(p))).toEqual([]);
+    expect(DECLARED.filter((p) => !PATHS.includes(p))).toEqual([]);
   });
 
   it('gives each route one owner', () => {
-    const declared = HOME_TOOLS.flatMap((t) => t.routes.map((r) => r.path));
-    expect(new Set(declared).size).toBe(declared.length);
+    expect(new Set(DECLARED).size).toBe(DECLARED.length);
   });
 
   it('opens each Home tile on one of its own routes', () => {

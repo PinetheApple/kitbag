@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 
-import { TOOL_ROUTE } from '@/home/toolRoutes';
+import { TOOL_ROUTES } from '@/home/toolRoutes';
 import { PracticeHistoryScreen } from '@/practice/PracticeHistoryScreen';
 import { useSettingsRoutes } from '@/settings/settingsRoutes';
 
@@ -10,12 +10,15 @@ export default function PracticeHistoryRoute() {
   const router = useRouter();
   const openSession = useCallback(
     (uuid: string) => {
-      router.push({ pathname: TOOL_ROUTE.practiceSession, params: { uuid } });
+      router.push({
+        pathname: TOOL_ROUTES.practiceHistory.session,
+        params: { uuid },
+      });
     },
     [router],
   );
   const openMetronome = useCallback(() => {
-    router.push(TOOL_ROUTE.metronome);
+    router.push(TOOL_ROUTES.metronome.home);
   }, [router]);
   return (
     <PracticeHistoryScreen

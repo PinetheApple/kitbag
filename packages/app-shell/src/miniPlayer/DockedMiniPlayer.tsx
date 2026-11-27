@@ -4,7 +4,7 @@ import { PlayAlongMiniPlayer } from '@kitbag/tool-sync';
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 
-import { PLAY_ALONG_ROUTE } from '@/home/registry';
+import { TOOL_ROUTES } from '@/home/toolRoutes';
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
 export interface DockedMiniPlayerProps {
@@ -20,7 +20,7 @@ export function DockedMiniPlayer({
   const router = useRouter();
   const song = useMiniPlayerShown();
   const openPlayAlong = useCallback(() => {
-    router.push(PLAY_ALONG_ROUTE);
+    router.push(TOOL_ROUTES.sync.home);
   }, [router]);
   if (!song)
     return (

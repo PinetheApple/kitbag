@@ -2,18 +2,9 @@ import type { IconName, ToolStatus, ToolTileSize } from '@kitbag/core-design';
 import type { ToolPlugin } from '@kitbag/core-plugin-api';
 import { PLAY_ALONG_NAME } from '@kitbag/tool-sync';
 
-import { TOOL_ROUTE } from './toolRoutes.ts';
+import { TOOL_ID, TOOL_ROUTES } from './toolRoutes.ts';
 
-export const TOOL_ID = {
-  metronome: 'metronome',
-  tuner: 'tuner',
-  library: 'library',
-  stems: 'stems',
-  sync: 'sync',
-  practiceHistory: 'practiceHistory',
-} as const;
-
-export const PLAY_ALONG_ROUTE = TOOL_ROUTE.playAlong;
+export { TOOL_ID };
 
 export type HomeLayout = ToolTileSize | 'row';
 
@@ -36,22 +27,17 @@ export interface HomeToolEntry extends Pick<ToolPlugin, 'id' | 'name'> {
 
 const CORE_SUMMARY = 'Core';
 
-const routesOf = (...paths: readonly string[]): readonly ToolRoute[] =>
-  paths.map((path) => ({ path }));
+const routesOf = (
+  group: Readonly<Record<string, string>>,
+): readonly ToolRoute[] => Object.values(group).map((path) => ({ path }));
 
 export const HOME_TOOLS: readonly HomeToolEntry[] = [
   {
     id: TOOL_ID.metronome,
     name: 'Metronome',
     icon: 'metronome',
-    routes: routesOf(
-      TOOL_ROUTE.metronome,
-      TOOL_ROUTE.allSongs,
-      TOOL_ROUTE.preset,
-      TOOL_ROUTE.setlists,
-      TOOL_ROUTE.setlist,
-    ),
-    homeTile: { label: 'Metronome', route: TOOL_ROUTE.metronome },
+    routes: routesOf(TOOL_ROUTES.metronome),
+    homeTile: { label: 'Metronome', route: TOOL_ROUTES.metronome.home },
     layout: '1x1',
     summary: CORE_SUMMARY,
   },
@@ -59,8 +45,8 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
     id: TOOL_ID.tuner,
     name: 'Tuner',
     icon: 'tuner',
-    routes: routesOf(TOOL_ROUTE.tuner),
-    homeTile: { label: 'Tuner', route: TOOL_ROUTE.tuner },
+    routes: routesOf(TOOL_ROUTES.tuner),
+    homeTile: { label: 'Tuner', route: TOOL_ROUTES.tuner.home },
     layout: '1x1',
     summary: CORE_SUMMARY,
   },
@@ -68,8 +54,8 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
     id: TOOL_ID.library,
     name: 'Songs',
     icon: 'songs',
-    routes: routesOf(TOOL_ROUTE.library, TOOL_ROUTE.song),
-    homeTile: { label: 'Songs', route: TOOL_ROUTE.library },
+    routes: routesOf(TOOL_ROUTES.library),
+    homeTile: { label: 'Songs', route: TOOL_ROUTES.library.home },
     layout: '1x1',
     summary: 'Imported songs, beats analyzed',
   },
@@ -77,15 +63,8 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
     id: TOOL_ID.stems,
     name: 'Stem songs',
     icon: 'stems',
-    routes: routesOf(
-      TOOL_ROUTE.stems,
-      TOOL_ROUTE.stemSet,
-      TOOL_ROUTE.stemDeck,
-      TOOL_ROUTE.stemDeckCamera,
-      TOOL_ROUTE.stemDeckImport,
-      TOOL_ROUTE.stemDeckSongs,
-    ),
-    homeTile: { label: 'Stem songs', route: TOOL_ROUTE.stems },
+    routes: routesOf(TOOL_ROUTES.stems),
+    homeTile: { label: 'Stem songs', route: TOOL_ROUTES.stems.home },
     layout: '1x1',
     summary: 'Mix and loop imported stems',
   },
@@ -93,8 +72,8 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
     id: TOOL_ID.sync,
     name: PLAY_ALONG_NAME,
     icon: 'playAlong',
-    routes: routesOf(PLAY_ALONG_ROUTE),
-    homeTile: { label: PLAY_ALONG_NAME, route: PLAY_ALONG_ROUTE },
+    routes: routesOf(TOOL_ROUTES.sync),
+    homeTile: { label: PLAY_ALONG_NAME, route: TOOL_ROUTES.sync.home },
     layout: 'row',
     summary: 'Needs notification access',
   },
@@ -102,8 +81,11 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
     id: TOOL_ID.practiceHistory,
     name: 'Practice history',
     icon: 'practice',
-    routes: routesOf(TOOL_ROUTE.practice, TOOL_ROUTE.practiceSession),
-    homeTile: { label: 'Practice history', route: TOOL_ROUTE.practice },
+    routes: routesOf(TOOL_ROUTES.practiceHistory),
+    homeTile: {
+      label: 'Practice history',
+      route: TOOL_ROUTES.practiceHistory.home,
+    },
     layout: '1x1',
     shortcut: true,
   },
