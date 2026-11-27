@@ -64,6 +64,10 @@ export function songManualTempo({
       dismissAnalysedOffer: () => {
         set({ analysedOffer: null });
       },
+      offerAnalysed: () => {
+        const { manualTempo, analysedBpm } = get();
+        set({ analysedOffer: analysedOfferOf(manualTempo, analysedBpm) });
+      },
     },
   };
 }

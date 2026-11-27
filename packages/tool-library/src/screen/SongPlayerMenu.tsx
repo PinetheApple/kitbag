@@ -42,6 +42,7 @@ import {
   REANALYZE_LABEL,
   SONG_SPEED_TEXT,
 } from '../logic/viewText.ts';
+import { SetTempoRow, UseAnalysedRow } from './ManualTempoRows.tsx';
 import { useSongFailure } from './rowFailureHooks.ts';
 
 interface SongPlayerMenuProps {
@@ -54,6 +55,9 @@ interface SongPlayerMenuProps {
   readonly onTempoMode: () => void;
   readonly onTempoCorrection: () => void;
   readonly onCountIn: () => void;
+  readonly onSetTempo: () => void;
+  readonly onAskReanalyse: () => void;
+  readonly onUseAnalysed: () => void;
   readonly notice: Notice;
   readonly onOpenQueue: () => void;
   readonly onOpenSetlist: (setlistId: number) => void;
@@ -216,10 +220,14 @@ export function SongPlayerMenu({
   onTempoMode,
   onTempoCorrection,
   onCountIn,
+  onSetTempo,
+  onAskReanalyse,
+  onUseAnalysed,
   notice,
   onOpenQueue,
   onOpenSetlist,
 }: SongPlayerMenuProps) {
+  const manual = useSongPlayer((s) => s.manualTempo !== null);
   const close = useLiveSongPlayer((s) => s.close);
   const viewing = useSongViewing();
   const reanalyze = useSongLibrary((s) => s.reanalyze);
@@ -231,8 +239,17 @@ export function SongPlayerMenu({
   }, [onDismiss, onBack, close]);
   const onReanalyze = useCallback(() => {
     onDismiss();
-    void reanalyze(songId);
-  }, [onDismiss, reanalyze, songId]);
+    if (manual) onAskReanalyse();
+    else void reanalyze(songId);
+  }, [onDismiss, manual, onAskReanalyse, reanalyze, songId]);
+  const openSetTempo = useCallback(() => {
+    onDismiss();
+    onSetTempo();
+  }, [onDismiss, onSetTempo]);
+  const switchToAnalysed = useCallback(() => {
+    onDismiss();
+    onUseAnalysed();
+  }, [onDismiss, onUseAnalysed]);
   const openMeter = useCallback(() => {
     onDismiss();
     onMeter();
@@ -273,9 +290,15 @@ export function SongPlayerMenu({
           onPress={onReanalyze}
         />
       ) : null}
+      <SetTempoRow onPress={openSetTempo} />
+      <UseAnalysedRow onPress={switchToAnalysed} />
       <SongMeterRow onPress={openMeter} />
-      <SongTempoModeRow onPress={openTempoMode} />
-      <TempoCorrectionRow onPress={openTempoCorrection} />
+      {manual ? null : (
+        <>
+          <SongTempoModeRow onPress={openTempoMode} />
+          <TempoCorrectionRow onPress={openTempoCorrection} />
+        </>
+      )}
       <CountInRow onPress={openCountIn} />
       {viewing ? null : (
         <MenuRow

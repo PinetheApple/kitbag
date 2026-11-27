@@ -149,6 +149,7 @@ export {
 } from './tempo-correction';
 export {
   TEMPO_MAX_BPM,
+  TEMPO_MIN_ANCHOR_SECONDS,
   TEMPO_MIN_BPM,
   TEMPO_MODE,
   TEMPO_SOURCE,

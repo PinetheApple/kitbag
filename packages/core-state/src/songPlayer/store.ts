@@ -66,6 +66,7 @@ import {
   type SongGrid,
 } from './songGrid.ts';
 import { analysedOfferOf, songManualTempo } from './manualTempo.ts';
+import { tempoPreview } from './tempoPreview.ts';
 import { heldWhileSaving } from './heldWhileSaving.ts';
 import { songTempo } from './songTempo.ts';
 import {
@@ -256,6 +257,7 @@ export function createSongPlayerStore(
       });
       if (regrid) void followNewGrid(context, gridFollowers);
     };
+    const preview = tempoPreview({ get, analysed: () => analysed, showGrid });
 
     const applyTempoMode = (mode: TempoMode) => {
       const { meterOverride, tempoCorrection } = get();
@@ -269,6 +271,7 @@ export function createSongPlayerStore(
       meterOverride,
     }: ManualTempoChange) => {
       analysed = { ...analysed, manualTempo };
+      preview.reset();
       const { tempoMode, tempoCorrection } = get();
       showGrid(
         analysedSongGrid(analysed, tempoMode, meterOverride, tempoCorrection),
@@ -277,6 +280,7 @@ export function createSongPlayerStore(
           manualTempo,
           meterOverride,
           meterNotice: null,
+          tempoPreview: null,
         },
       );
     };
@@ -297,7 +301,8 @@ export function createSongPlayerStore(
           : { ...stored, tempoCorrection: correction };
       const ready = get().status === 'ready';
       const mode = modes.modeFor(record);
-      const grid = recordGrid(record, mode);
+      const previewed = ready ? preview.over(record, mode) : null;
+      const grid = previewed?.grid ?? recordGrid(record, mode);
       const regrid = ready && !sameGrid(get(), grid);
       const reanalysed = ready && !sameGrid(analysed, record);
       if (ready) analysed = record;
@@ -314,6 +319,7 @@ export function createSongPlayerStore(
           : {}),
         ...(notice ? { meterNotice: grid.detected } : {}),
         ...(regrid ? shownGrid(grid) : {}),
+        ...(previewed === null ? {} : { tempoPreview: previewed.tempoPreview }),
       });
       if (ready) waveform.show(opened, record.waveformPath);
       if (regrid) void followNewGrid(context, gridFollowers);
@@ -358,6 +364,7 @@ export function createSongPlayerStore(
       heldCorrection.reset();
       modes.reset();
       manual.reset();
+      preview.reset();
       waveform.reset(bars);
       set({
         ...closedState,
@@ -444,6 +451,7 @@ export function createSongPlayerStore(
         if (get().songId === songId) heldCorrection.settle();
       },
       playheadBeatSeconds: () => playheadBeatSeconds(get(), runtimeOf()),
+      previewTempo: preview.previewTempo,
       playheadSeconds: () =>
         framesToSeconds(runtimeOf().engine.position(), get().engineRate),
       dismissMeterNotice: () => {

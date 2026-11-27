@@ -31,7 +31,12 @@ import { frameAtTap } from '../logic/waveSeek.ts';
 import type { SongPlayhead, UsePlayhead } from './playhead.ts';
 import { EndedSetlistSnackbar } from './EndedSetlistSnackbar.tsx';
 import { SongAppBar } from './SongAppBar.tsx';
-import { SongClickChips } from './SongClickChips.tsx';
+import {
+  ManualTempoNotices,
+  useManualTempoNotices,
+} from './ManualTempoNotices.tsx';
+import { SetTempoSheet } from './SetTempoSheet.tsx';
+import { SongGridActions } from './SongGridActions.tsx';
 import { SongLockCard } from './SongLockCard.tsx';
 import {
   SongClickSheet,
@@ -46,6 +51,11 @@ import { SongTransport } from './SongTransport.tsx';
 import { useFollowQueueArrivals } from './useFollowQueueArrivals.ts';
 import { useLeaveOnStop } from './useLeaveOnStop.ts';
 import { useLoopHandles } from './useLoopHandles.ts';
+import {
+  useSetTempo,
+  useSetTempoOpen,
+  useTempoPreview,
+} from './useSetTempo.ts';
 import { NotReady } from './NotReady.tsx';
 
 export const BODY_SLOT_ID = 'song-body-slot';
@@ -119,6 +129,10 @@ interface BodyProps {
   readonly meterOpen: boolean;
   readonly tempoModeOpen: boolean;
   readonly tempoOpen: boolean;
+  readonly setTempoOpen: boolean;
+  readonly onSetTempo: () => void;
+  readonly onCloseSetTempo: () => void;
+  readonly onTempoSaved: (message: string) => void;
   readonly onBack: () => void;
   readonly onCloseMeter: () => void;
   readonly onCloseTempoMode: () => void;
@@ -136,6 +150,10 @@ function Body({
   meterOpen,
   tempoModeOpen,
   tempoOpen,
+  setTempoOpen,
+  onSetTempo,
+  onCloseSetTempo,
+  onTempoSaved,
   onBack,
   onCloseMeter,
   onCloseTempoMode,
@@ -155,6 +173,11 @@ function Body({
   const playhead = usePlayhead(rate, frames, loopEnd, { heldFrame: held });
   const scrub = useLoopScrub(useSongPlayer);
   const handles = useLoopHandles();
+  const tempo = useSetTempo({
+    onSaved: onTempoSaved,
+    onClose: onCloseSetTempo,
+  });
+  useTempoPreview(tempo, setTempoOpen);
   if (status !== 'ready')
     return (
       <View style={styles.bodyContent}>
@@ -175,7 +198,10 @@ function Body({
               <ScrubRow frame={playhead} {...scrub} loopHandles={handles} />
             </Card>
             <SongLockCard songId={songId} />
-            <SongClickChips onOpen={clickSheet.open} />
+            <SongGridActions
+              onOpenClick={clickSheet.open}
+              onSetTempo={onSetTempo}
+            />
           </ScrollView>
         </View>
         <SongTransport
@@ -190,6 +216,15 @@ function Body({
         bottomInset={bottom}
         onDismiss={clickSheet.close}
       />
+      {viewing ? null : (
+        <SetTempoSheet
+          visible={setTempoOpen}
+          bottomInset={bottom}
+          playhead={playhead}
+          tempo={tempo}
+          onClose={onCloseSetTempo}
+        />
+      )}
       {viewing ? null : (
         <LiveSheets
           songId={songId}
@@ -316,6 +351,8 @@ function SongPlayerContent({
     setTempoOpen(false);
   }, []);
   const clickSheet = useSongClickSheet();
+  const setTempo = useSetTempoOpen(songId);
+  const tempoNotices = useManualTempoNotices(songId);
   const { open: openClick } = clickSheet;
   const openCountIn = useCallback(() => {
     openClick(CLICK_GROUP.countIn);
@@ -331,6 +368,10 @@ function SongPlayerContent({
         meterOpen={meterOpen}
         tempoModeOpen={tempoModeOpen}
         tempoOpen={tempoOpen}
+        setTempoOpen={setTempo.open}
+        onSetTempo={setTempo.show}
+        onCloseSetTempo={setTempo.hide}
+        onTempoSaved={tempoNotices.setUndoNote}
         onBack={leave}
         onCloseMeter={closeMeter}
         onCloseTempoMode={closeTempoMode}
@@ -353,9 +394,13 @@ function SongPlayerContent({
         onTempoMode={openTempoMode}
         onTempoCorrection={openTempo}
         onCountIn={openCountIn}
+        onSetTempo={setTempo.show}
+        onAskReanalyse={tempoNotices.onAsk}
+        onUseAnalysed={tempoNotices.onUseAnalysed}
         onOpenQueue={onOpenQueue}
         onOpenSetlist={onOpenSetlist}
       />
+      <ManualTempoNotices notices={tempoNotices} />
       <EndedSetlistSnackbar notice={notice} />
     </View>
   );

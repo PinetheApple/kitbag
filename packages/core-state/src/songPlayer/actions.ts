@@ -1,4 +1,8 @@
-import type { MeterOverride, TempoCorrection } from '@kitbag/core-db';
+import type {
+  ManualTempo,
+  MeterOverride,
+  TempoCorrection,
+} from '@kitbag/core-db';
 
 import type { MixerHold } from '../stemPlayer/mixerSession.ts';
 import type { StemPlayerActions } from '../stemPlayer/store.ts';
@@ -51,6 +55,7 @@ export type SongPlayerActions = Pick<
     ) => void;
     readonly tempoCorrectionSettled: (songId: number) => void;
     readonly playheadBeatSeconds: () => number | null;
+    readonly previewTempo: (tempo: ManualTempo | null) => void;
     readonly dismissMeterNotice: () => void;
     readonly saveForSong: () => Promise<void>;
     readonly resetSpeed: () => Promise<void>;

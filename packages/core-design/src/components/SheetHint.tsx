@@ -13,20 +13,24 @@ const useStyles = createThemedStyles((theme) => ({
   centered: {
     textAlign: 'center',
   },
+  warning: { color: theme.feedback.warning.ink },
   hintLarge: textStyle(textRoles.sheetHint),
 }));
 
 export type SheetHintSize = 'default' | 'large';
+export type SheetHintTone = 'plain' | 'warning';
 
 export interface SheetHintProps {
   readonly centered?: boolean;
   readonly size?: SheetHintSize;
+  readonly tone?: SheetHintTone;
   readonly children: ReactNode;
 }
 
 export function SheetHint({
   centered = false,
   size: hintSize = 'default',
+  tone = 'plain',
   children,
 }: SheetHintProps) {
   const styles = useStyles();
@@ -36,6 +40,7 @@ export function SheetHint({
         styles.hint,
         hintSize === 'large' && styles.hintLarge,
         centered && styles.centered,
+        tone === 'warning' && styles.warning,
       ]}
     >
       {children}

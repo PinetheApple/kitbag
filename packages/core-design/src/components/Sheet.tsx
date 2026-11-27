@@ -60,6 +60,7 @@ export {
   SheetHint,
   type SheetHintProps,
   type SheetHintSize,
+  type SheetHintTone,
 } from './SheetHint.tsx';
 
 const INDICATOR_INSETS = { top: SHEET_TOUCH_ROOM, bottom: SHEET_TOUCH_ROOM };

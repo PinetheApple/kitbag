@@ -19,10 +19,25 @@ const lockOf = (input: Partial<LockTextInput>) =>
     bpmText: null,
     failure: null,
     speed: FULL,
+    manual: false,
     ...input,
   });
 
 describe('lockText', () => {
+  it('marks a manual tempo, without the phase, while the click runs', () => {
+    expect(lockOf({ click: true, bpmText: '128 BPM', manual: true })).toEqual({
+      title: 'Metronome locked',
+      detail: '128 BPM · manual tempo',
+      action: 'click',
+    });
+  });
+
+  it('marks a manual tempo with the click off', () => {
+    expect(lockOf({ bpmText: '66 BPM', manual: true }).detail).toBe(
+      '66 BPM · manual tempo',
+    );
+  });
+
   it('headlines the lock while the click runs', () => {
     expect(lockOf({ click: true, bpmText: '158 BPM' })).toEqual({
       title: 'Metronome locked',
@@ -166,7 +181,8 @@ describe('playerStatusBadge', () => {
 });
 
 describe('the app-bar badge', () => {
-  const failed = { analysisStatus: 'failed', beats: [] } as const;
+  const stored = { tempoPreview: null } as const;
+  const failed = { ...stored, analysisStatus: 'failed', beats: [] } as const;
 
   it('waits for the song to be ready before naming its grid', () => {
     expect(barStatusOf({ ...failed, status: 'loading' })).toBeNull();
@@ -175,8 +191,24 @@ describe('the app-bar badge', () => {
 
   it('keeps the grid while a re-analysis runs', () => {
     expect(
-      barStatusOf({ status: 'ready', analysisStatus: 'analyzing', beats: [0] }),
+      barStatusOf({
+        ...stored,
+        status: 'ready',
+        analysisStatus: 'analyzing',
+        beats: [0],
+      }),
     ).toBeNull();
+  });
+
+  it('still reads NO GRID while the Set tempo sheet previews a draft grid', () => {
+    const previewing = { ...failed, status: 'ready', beats: [0, 1] } as const;
+    expect(
+      barStatusOf({ ...previewing, tempoPreview: { savedGrid: false } })?.label,
+    ).toBe('NO GRID');
+    expect(
+      barStatusOf({ ...previewing, tempoPreview: { savedGrid: true } }),
+    ).toBeNull();
+    expect(barStatusOf(previewing)).toBeNull();
   });
 
   it('shows the status over the BPM, else the BPM', () => {

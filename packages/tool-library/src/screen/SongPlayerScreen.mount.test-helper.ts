@@ -23,7 +23,12 @@ export const onOpenSong = vi.fn();
 export const onOpenQueue = vi.fn();
 export const onOpenSetlist = vi.fn();
 
-const playhead = () => ({}) as never;
+const playhead = () =>
+  ({
+    songSec: { value: 0 },
+    progress: { value: 0 },
+    playing: { value: 0 },
+  }) as never;
 
 export function screen(
   focused: boolean,
