@@ -22,6 +22,6 @@ const tools = persistedStore<ToolsPersistence, ToolsStore>(
   }),
 );
 
-export const createToolsStore = tools.create;
+export const createToolSwitchesStore = tools.create;
 export const configureToolsPersistence = tools.configure;
 export const getToolsStore = tools.get;

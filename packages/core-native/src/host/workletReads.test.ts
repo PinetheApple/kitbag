@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   KB_STOPPED_BEAT,
   KITBAG_HOST_OBJECT_KEY,
-  type KitbagHostObject,
+  type HostGlobal,
 } from './KitbagHostObject.ts';
 import {
   readBarPhase,
@@ -11,14 +11,16 @@ import {
   readCurrentBpm,
 } from './workletReads.ts';
 
-type TransportHost = Pick<
-  KitbagHostObject,
-  'bar_phase' | 'current_beat' | 'current_bpm'
->;
-type HostSlot = Partial<Record<typeof KITBAG_HOST_OBJECT_KEY, TransportHost>>;
+type InstalledHost = NonNullable<HostGlobal[typeof KITBAG_HOST_OBJECT_KEY]>;
 
-const slot = globalThis as unknown as HostSlot;
+const slot = globalThis as HostGlobal;
 const reads = [readBarPhase, readCurrentBeat, readCurrentBpm];
+
+function install(
+  transport: Pick<InstalledHost, 'bar_phase' | 'current_beat' | 'current_bpm'>,
+): void {
+  slot[KITBAG_HOST_OBJECT_KEY] = transport as InstalledHost;
+}
 
 function readAll(): number[] {
   return reads.map((read) => read());
@@ -30,18 +32,10 @@ afterEach(() => {
 
 describe('worklet engine reads', () => {
   it('read the installed HostObject on every call', () => {
-    slot[KITBAG_HOST_OBJECT_KEY] = {
-      bar_phase: 0.25,
-      current_beat: 3,
-      current_bpm: 132.5,
-    };
+    install({ bar_phase: 0.25, current_beat: 3, current_bpm: 132.5 });
     expect(readAll()).toEqual([0.25, 3, 132.5]);
 
-    slot[KITBAG_HOST_OBJECT_KEY] = {
-      bar_phase: 0.5,
-      current_beat: 0,
-      current_bpm: 90,
-    };
+    install({ bar_phase: 0.5, current_beat: 0, current_bpm: 90 });
     expect(readAll()).toEqual([0.5, 0, 90]);
   });
 

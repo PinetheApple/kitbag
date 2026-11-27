@@ -7,7 +7,6 @@ export function useDrillFrame(host: ToolHost) {
   const { barPhase, currentBeat } = host.engine.reads;
   const phase = useSharedValue(0);
   const [bars, setBars] = useState(0);
-  const store = host.store.createToolStore({ open: false });
   const countBar = useCallback(() => {
     setBars((count) => count + 1);
   }, []);
@@ -18,8 +17,5 @@ export function useDrillFrame(host: ToolHost) {
     if (currentBeat() === 0) scheduleOnRN(countBar);
   });
 
-  const open = () => {
-    store.setState({ open: true });
-  };
-  return { phase, bars, open };
+  return { phase, bars };
 }

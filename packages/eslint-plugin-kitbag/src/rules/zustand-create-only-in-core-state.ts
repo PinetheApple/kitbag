@@ -1,7 +1,7 @@
 import { AST_NODE_TYPES, type TSESTree } from '@typescript-eslint/utils';
 
-import { createRule } from '../utils/create-rule';
-import { isInPackage } from '../utils/package-path';
+import { createRule } from '../utils/create-rule.ts';
+import { isInPackage } from '../utils/package-path.ts';
 
 // SPEC §13.6 (Riverpod-providers-only-in-core_services, translated) + §13.4:
 // Zustand store constructors live ONLY in core-state. The store is the concrete

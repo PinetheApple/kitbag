@@ -239,7 +239,7 @@ export {
 export { useTools } from './tools/useTools.ts';
 export {
   configureToolsPersistence,
-  createToolsStore,
+  createToolSwitchesStore,
   getToolsStore,
   type ToolsPersistence,
   type ToolsStore,

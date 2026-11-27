@@ -1,4 +1,4 @@
-import { createToolsStore } from '@kitbag/core-state';
+import { createToolSwitchesStore } from '@kitbag/core-state';
 import { describe, expect, it, vi } from 'vitest';
 
 import { TOOL_ID } from '../home/registry.ts';
@@ -78,7 +78,7 @@ describe('toolStoppers', () => {
 
 describe('stopWhenSwitchedOff', () => {
   it('stops only the tool that was just switched off', () => {
-    const store = createToolsStore();
+    const store = createToolSwitchesStore();
     const metronome = vi.fn();
     const stems = vi.fn();
     stopWhenSwitchedOff(store, {

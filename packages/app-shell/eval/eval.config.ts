@@ -1,16 +1,3 @@
-// The lint config the eval harness scores against — the intended §13.6
-// enforcement, assembled from data its owners already export (SPEC §13.7):
-//
-//   - the four custom rules from `eslint-plugin-kitbag` (spread verbatim from
-//     its `recommended` config; each self-scopes by package path), and
-//   - the §13.1 import graph, wired into `eslint-plugin-boundaries` from the
-//     `boundariesElements` / `boundariesElementTypes` graph data the same
-//     plugin owns.
-//
-// This is precisely the config the root `eslint.config.mjs` becomes once the
-// boundaries wire-up (README of eslint-plugin-kitbag) lands. Proving it here
-// de-risks that step: a rule change can be VERIFIED, not hoped at.
-
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,11 +7,9 @@ import boundaries from 'eslint-plugin-boundaries';
 import kitbag, {
   boundariesElements,
   boundariesElementTypes,
-} from 'eslint-plugin-kitbag';
-import {
   downloadablePackages,
-  downloadableRestrictions,
-} from 'eslint-plugin-kitbag/src/downloadableZone';
+  downloadableZoneConfig,
+} from 'eslint-plugin-kitbag';
 import tseslint from 'typescript-eslint';
 
 // The scenario fixtures are TypeScript; boundaries resolves their relative
@@ -64,9 +49,7 @@ export const evalConfig: Linter.Config[] = [
     },
   },
 
-  // typescript-eslint rule types carry readonly defaultOptions, which ESLint's
-  // Config type rejects, so the cast goes through unknown.
-  ...(kitbag.configs.recommended as unknown as Linter.Config[]),
+  ...kitbag.configs.recommended,
 
   // The import graph — SPEC §13.6 names eslint-plugin-boundaries as the tool.
   {
@@ -81,17 +64,5 @@ export const evalConfig: Linter.Config[] = [
     },
   },
 
-  ...(downloadableFiles.length === 0
-    ? []
-    : [
-        {
-          files: downloadableFiles,
-          rules: {
-            'no-restricted-imports': [
-              'error',
-              downloadableRestrictions(),
-            ] satisfies Linter.RuleEntry,
-          },
-        },
-      ]),
+  ...downloadableZoneConfig(downloadableFiles),
 ];

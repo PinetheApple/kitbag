@@ -1,5 +1,3 @@
-// Types only: this package imports nothing (SPEC §9.1, §13.1).
-
 // A bare string so the contract does not retype the icon set core-design owns.
 export type IconName = string;
 
