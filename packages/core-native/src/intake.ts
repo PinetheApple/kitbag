@@ -8,9 +8,7 @@ export function takeLaunchIntake(): Promise<IntakeEvent> {
   return getKitbagLibrary().takeLaunchIntake();
 }
 
-export function watchIntake(
-  listener: (intake: IntakeEvent) => void,
-): () => void {
+export function watchIntake(listener: () => void): () => void {
   const subscription = getKitbagLibrary().onIntake(listener);
   return () => {
     subscription.remove();

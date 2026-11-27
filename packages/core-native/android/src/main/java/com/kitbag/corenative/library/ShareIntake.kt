@@ -1,5 +1,6 @@
 package com.kitbag.corenative.library
 
+import android.app.Activity
 import android.content.ContentResolver
 import android.content.Intent
 import android.net.Uri
@@ -9,24 +10,22 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.WritableMap
 import java.util.concurrent.Executor
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.ConcurrentLinkedQueue
 
 class ShareIntake(
   private val io: Executor,
   private val describe: (Uri) -> WritableMap,
-  private val emit: (WritableMap) -> Unit,
+  private val emit: () -> Unit,
   private val warn: (String, Exception) -> Unit,
 ) : ActivityEventListener {
 
   fun takeLaunch(promise: Promise) {
-    val uris = launch.getAndSet(null)?.let(::take).orEmpty()
+    val uris = generateSequence { held.poll() }.flatMap { take(it) }.toList()
     io.execute { promise.resolve(describeAll(uris)) }
   }
 
   override fun onNewIntent(intent: Intent) {
-    val uris = take(intent)
-    if (uris.isEmpty()) return
-    io.execute { emit(describeAll(uris)) }
+    if (intent.action in ACTIONS) emit()
   }
 
   override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) = Unit
@@ -58,10 +57,10 @@ class ShareIntake(
     private const val UNREADABLE = "unreadable"
     private val ACTIONS = setOf(Intent.ACTION_VIEW, Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE)
     private val FILE_SCHEMES = setOf(ContentResolver.SCHEME_CONTENT, ContentResolver.SCHEME_FILE)
-    private val launch = AtomicReference<Intent?>(null)
+    private val held = ConcurrentLinkedQueue<Intent>()
 
     fun hold(intent: Intent) {
-      launch.set(intent)
+      if (intent.action in ACTIONS) held.add(intent)
     }
 
     fun markTaken(intent: Intent) {

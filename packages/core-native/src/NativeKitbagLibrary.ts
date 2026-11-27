@@ -301,7 +301,7 @@ export interface Spec extends TurboModule {
   pickBackup(): Promise<PickedBackup | null>;
   readSharedBackup(uri: string): Promise<PickedBackup>;
   takeLaunchIntake(): Promise<IntakeEvent>;
-  readonly onIntake: CodegenTypes.EventEmitter<IntakeEvent>;
+  readonly onIntake: CodegenTypes.EventEmitter<void>;
   shareBackup(fileName: string, contents: string): Promise<void>;
   /** Resolves false when the user cancels the save dialog. */
   saveBackup(fileName: string, contents: string): Promise<boolean>;

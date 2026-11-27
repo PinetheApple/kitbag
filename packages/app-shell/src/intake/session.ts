@@ -2,7 +2,7 @@ import type { IntakeEvent } from '@kitbag/core-native';
 
 export interface IntakeSource {
   readonly takeLaunch: () => Promise<IntakeEvent>;
-  readonly watch: (listener: (intake: IntakeEvent) => void) => () => void;
+  readonly watch: (listener: () => void) => () => void;
 }
 
 const warn = (error: unknown) => {
@@ -13,11 +13,14 @@ export function intakeSession(source: IntakeSource) {
   let queue: Promise<void> = Promise.resolve();
   return {
     start: (receive: (intake: IntakeEvent) => Promise<void>) => {
-      const deliver = (intake: IntakeEvent) => {
-        queue = queue.then(() => receive(intake)).catch(warn);
+      const drain = () => {
+        queue = queue
+          .then(() => source.takeLaunch())
+          .then(receive)
+          .catch(warn);
       };
-      const stop = source.watch(deliver);
-      source.takeLaunch().then(deliver, warn);
+      const stop = source.watch(drain);
+      drain();
       return stop;
     },
   };

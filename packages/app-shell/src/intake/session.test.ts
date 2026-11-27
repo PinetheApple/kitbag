@@ -22,17 +22,18 @@ const event = (...items: PickedDocument[]): IntakeEvent => ({
 
 const NOTHING = event();
 
-function fakeSource(launch: IntakeEvent) {
-  const listeners = new Set<(intake: IntakeEvent) => void>();
+function fakeSource(...held: IntakeEvent[]) {
+  const listeners = new Set<() => void>();
   const source: IntakeSource = {
-    takeLaunch: vi.fn(() => Promise.resolve(launch)),
-    watch: vi.fn((listener: (intake: IntakeEvent) => void) => {
+    takeLaunch: vi.fn(() => Promise.resolve(held.shift() ?? NOTHING)),
+    watch: vi.fn((listener: () => void) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
     }),
   };
   const share = (intake: IntakeEvent) => {
-    for (const listener of listeners) listener(intake);
+    held.push(intake);
+    for (const listener of listeners) listener();
   };
   return { source, share, listeners };
 }
@@ -72,6 +73,17 @@ describe('the intake session', () => {
     share(event(LATER));
     await settle();
     expect(receive.mock.calls).toEqual([[NOTHING], [event(LATER)]]);
+  });
+
+  it('takes a share from the source on each signal, so one held before subscribing is delivered once', async () => {
+    const { source, share } = fakeSource();
+    share(event(SONG));
+    const receive = vi.fn(() => Promise.resolve());
+    intakeSession(source).start(receive);
+    await settle();
+    share(event(LATER));
+    await settle();
+    expect(receive.mock.calls).toEqual([[event(SONG)], [event(LATER)]]);
   });
 
   it('stops listening when unmounted', async () => {
