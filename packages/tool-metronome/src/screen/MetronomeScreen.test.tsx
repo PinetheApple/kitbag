@@ -89,6 +89,7 @@ vi.mock('@kitbag/core-design', async (original) => ({
 vi.mock('@kitbag/core-state', () => ({
   BPM_BOUNDS: { min: 20, max: 300 },
   getPracticeSessionStore: () => ({ getState: () => ({ pending: [] }) }),
+  useHoldEngine: () => undefined,
   useLibrary: (select: (state: unknown) => unknown) =>
     select({ loaded: null, presets: [] }),
   useMetronome: (select: (state: unknown) => unknown) =>
@@ -109,7 +110,6 @@ vi.mock('../logic/belowTempo.ts', async (original) => ({
 vi.mock('../library/useLibraryRefresh.ts', () => ({
   useLibraryRefresh: () => undefined,
 }));
-vi.mock('./useHoldEngine.ts', () => ({ useHoldEngine: () => undefined }));
 vi.mock('./useEndPracticeOnLeave.ts', () => ({
   useEndPracticeOnLeave: () => undefined,
 }));

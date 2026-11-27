@@ -20,7 +20,7 @@ import {
   useUpNext,
   useUpNextCount,
 } from '@kitbag/core-state';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import {
   miniPlayerDetail,
@@ -71,6 +71,10 @@ function LiveMiniPlayer({
     loopEnd,
   );
   const upNextCount = useUpNextCount();
+  const queue = useMemo(
+    () => ({ label: queueKeyLabel(upNextCount), onPress: onOpenQueue }),
+    [upNextCount, onOpenQueue],
+  );
   const stop = useCallback(() => {
     stopSongAndSession();
   }, []);
@@ -85,10 +89,9 @@ function LiveMiniPlayer({
       playLabel={`Play ${title}`}
       pauseLabel={`Pause ${title}`}
       closeLabel={`Stop ${title}`}
-      queueLabel={queueKeyLabel(upNextCount)}
+      queue={queue}
       bottomInset={bottomInset}
       onOpen={shown.onOpen}
-      onQueue={onOpenQueue}
       onTogglePlay={shown.onTogglePlay}
       onClose={stop}
     />

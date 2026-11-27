@@ -10,7 +10,6 @@ export default defineConfig({
   test: {
     include: [
       'src/logic/**/*.test.ts',
-      'src/screen/useHoldEngine.test.ts',
       'src/screen/useEndPracticeOnLeave.test.ts',
       'src/screen/muteStrips.test.ts',
       'src/screen/SwipeHint.test.ts',

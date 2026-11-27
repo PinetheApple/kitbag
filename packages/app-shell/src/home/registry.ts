@@ -1,5 +1,6 @@
 import type { IconName, ToolStatus, ToolTileSize } from '@kitbag/core-design';
 import type { ToolPlugin } from '@kitbag/core-plugin-api';
+import { PLAY_ALONG_NAME } from '@kitbag/tool-sync';
 
 export const TOOL_ID = {
   metronome: 'metronome',
@@ -9,6 +10,8 @@ export const TOOL_ID = {
   sync: 'sync',
   practiceHistory: 'practiceHistory',
 } as const;
+
+export const PLAY_ALONG_ROUTE = '/sync';
 
 export type HomeLayout = ToolTileSize | 'row';
 
@@ -62,9 +65,9 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
   },
   {
     id: TOOL_ID.sync,
-    name: 'Play along',
+    name: PLAY_ALONG_NAME,
     icon: 'playAlong',
-    homeTile: { label: 'Play along', route: '/sync' },
+    homeTile: { label: PLAY_ALONG_NAME, route: PLAY_ALONG_ROUTE },
     layout: 'row',
     summary: 'Needs notification access',
   },

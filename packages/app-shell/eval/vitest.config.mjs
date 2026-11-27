@@ -20,6 +20,9 @@ export default defineConfig({
       '@kitbag/tool-metronome': fileURLToPath(
         new URL('../../tool-metronome/src/pure.ts', import.meta.url),
       ),
+      '@kitbag/tool-sync': fileURLToPath(
+        new URL('../../tool-sync/src/pure.ts', import.meta.url),
+      ),
     },
   },
 });

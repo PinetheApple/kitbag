@@ -1,5 +1,6 @@
-import { useMetronome } from '@kitbag/core-state';
 import { useEffect } from 'react';
+
+import { useMetronome } from './useMetronome.ts';
 
 export function useHoldEngine(active = true): void {
   const holdEngine = useMetronome((state) => state.holdEngine);

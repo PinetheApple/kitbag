@@ -1,6 +1,6 @@
-import type { MetronomeStore } from '@kitbag/core-state';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { MetronomeStore } from './store.ts';
 import { useHoldEngine } from './useHoldEngine.ts';
 
 const { effects, release, holdEngine } = vi.hoisted(() => {
@@ -29,7 +29,7 @@ const { effects, release, holdEngine } = vi.hoisted(() => {
 
 // A mount without a renderer: effects rerun on changed deps and clean up first.
 vi.mock('react', () => ({ useEffect: effects.run }));
-vi.mock('@kitbag/core-state', () => ({
+vi.mock('./useMetronome.ts', () => ({
   useMetronome: (
     select: (state: Pick<MetronomeStore, 'holdEngine'>) => unknown,
   ) => select({ holdEngine }),

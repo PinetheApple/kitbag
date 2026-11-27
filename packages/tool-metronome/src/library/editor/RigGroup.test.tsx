@@ -39,7 +39,7 @@ vi.mock('@kitbag/core-design', async (original) => {
 });
 
 vi.mock('../../screen/SoundSheet.tsx', () => ({
-  SoundPickerSheet: () => null,
+  MetronomeSoundSheet: () => null,
 }));
 vi.mock('../../screen/CustomSounds.tsx', () => ({
   useCustomSoundViews: () => [],
