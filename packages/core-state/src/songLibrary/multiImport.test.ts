@@ -298,6 +298,65 @@ describe('importing several picked files', () => {
     });
   });
 
+  it('imports opened or shared files without opening the picker', async () => {
+    const { store, files } = setup(picking([]));
+    await store.getState().importDocuments([MP3, ZIP]);
+    expect(files.pickDocuments).not.toHaveBeenCalled();
+    expect(vi.mocked(files.importAudio).mock.calls).toEqual([
+      [MP3.uri, 'songs/f1'],
+    ]);
+    expect(files.importStemBundle).toHaveBeenCalledWith(ZIP.uri, false);
+    expect(kinds(store)).toEqual([
+      ['song', 'Everlong'],
+      ['stems', 'Redbone'],
+    ]);
+  });
+
+  it('refuses a shared file of an unsupported type with the format notice and keeps the library as it was', async () => {
+    const { store, files } = setup(picking([WAV]));
+    await store.getState().importSong();
+    const before = store.getState().rows;
+    await store.getState().importDocuments([M4A]);
+    expect(store.getState().rows).toEqual(before);
+    expect(files.importAudio).toHaveBeenCalledOnce();
+    expect(store.getState().notice).toMatchObject({
+      kind: 'formatRefused',
+      name: M4A.name,
+    });
+  });
+
+  it('holds a shared batch until a picked batch has finished', async () => {
+    const { store, files } = setup(picking([ZIP]));
+    await store.getState().importSong();
+    vi.mocked(files.pickDocuments).mockResolvedValue([ZIP, WAV]);
+    const picked = store.getState().importSong();
+    await vi.waitFor(() => {
+      expect(store.getState().replacePrompt).not.toBeNull();
+    });
+    const shared = store.getState().importDocuments([MP3]);
+    await settle();
+    expect(files.importAudio).not.toHaveBeenCalled();
+    store.getState().cancelReplace();
+    await Promise.all([picked, shared]);
+    expect(vi.mocked(files.importAudio).mock.calls).toEqual([
+      [WAV.uri, 'songs/f2'],
+      [MP3.uri, 'songs/f3'],
+    ]);
+  });
+
+  it('ignores the picker while a shared batch is running', async () => {
+    const { store, files } = setup(picking([ZIP]));
+    await store.getState().importSong();
+    const shared = store.getState().importDocuments([ZIP, WAV]);
+    await vi.waitFor(() => {
+      expect(store.getState().replacePrompt).not.toBeNull();
+    });
+    await store.getState().importSong();
+    expect(files.pickDocuments).toHaveBeenCalledOnce();
+    store.getState().cancelReplace();
+    await shared;
+  });
+
   it('does nothing when the picker returns no files', async () => {
     const { store, files } = setup(picking([]));
     await store.getState().importSong();

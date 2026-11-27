@@ -2199,7 +2199,8 @@ From `kitbag-ui.html` §06. Distilled from NN/g, Android haptics/a11y guidelines
 Laws of UX, and Mobbin pattern research. Each is testable and gets checked per
 milestone.
 
-- **Sound in 5 seconds, no tour.** First launch lands on a working metronome. No
+- **Sound in 5 seconds, no tour.** The app always opens on Home, and the Continue card
+  or the Metronome tile reaches a working metronome in one tap. No
   slideshow, no signup. Hidden gestures teach themselves via a one-time hint
   animation on first encounter, dismissed forever after first successful use.
 - **Every gesture has a visible twin.** Swipe-anywhere tempo is backed by the
