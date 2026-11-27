@@ -10,6 +10,7 @@ import com.facebook.react.bridge.ActivityEventListener
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.WritableArray
 import com.facebook.react.bridge.WritableMap
 import java.io.File
 import java.io.IOException
@@ -35,6 +36,16 @@ class DocumentPicker(
       putExtra(Intent.EXTRA_MIME_TYPES, PICKABLE_MIME_TYPES)
     }
     startPick(intent, REQUEST_PICK_DOCUMENT, promise)
+  }
+
+  fun pickDocuments(promise: Promise) {
+    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+      addCategory(Intent.CATEGORY_OPENABLE)
+      type = "*/*"
+      putExtra(Intent.EXTRA_MIME_TYPES, PICKABLE_MIME_TYPES)
+      putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+    }
+    startPick(intent, REQUEST_PICK_DOCUMENTS, promise)
   }
 
   fun pickBackup(promise: Promise) {
@@ -131,6 +142,10 @@ class DocumentPicker(
       copy(resultCode == Activity.RESULT_OK, uri, taken.source, promise)
       return
     }
+    if (requestCode == REQUEST_PICK_DOCUMENTS) {
+      describeAll(if (resultCode == Activity.RESULT_OK) pickedUris(data) else emptyList(), promise)
+      return
+    }
     if (resultCode != Activity.RESULT_OK || uri == null) {
       promise.resolve(null)
       return
@@ -171,6 +186,25 @@ class DocumentPicker(
       }
     }
   }
+
+  private fun describeAll(uris: List<Uri>, promise: Promise) {
+    io.execute {
+      try {
+        promise.resolve(describeDocuments(uris))
+      } catch (e: Exception) {
+        rejectLogged(promise, LibraryErrors.PICK_FAILED, "Could not read the picked items", e)
+      }
+    }
+  }
+
+  // A multi-select result carries its items in clipData, and may leave data null.
+  private fun pickedUris(data: Intent?): List<Uri> {
+    val clip = data?.clipData ?: return listOfNotNull(data?.data)
+    return (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
+  }
+
+  private fun describeDocuments(uris: List<Uri>): WritableArray =
+    Arguments.createArray().apply { uris.forEach { pushMap(describeDocument(it)) } }
 
   private fun openForWrite(uri: String, mode: String): OutputStream? =
     context.contentResolver.openOutputStream(Uri.parse(uri), mode)
@@ -221,8 +255,10 @@ class DocumentPicker(
     private const val REQUEST_PICK_BACKUP = 0x4b44
     private const val REQUEST_SAVE_BACKUP = 0x4b46
     private const val REQUEST_SAVE_DATABASE = 0x4b47
+    private const val REQUEST_PICK_DOCUMENTS = 0x4b48
     private val PICK_REQUESTS = setOf(
       REQUEST_PICK_DOCUMENT,
+      REQUEST_PICK_DOCUMENTS,
       REQUEST_PICK_FOLDER,
       REQUEST_PICK_BACKUP,
       REQUEST_SAVE_BACKUP,

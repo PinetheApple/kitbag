@@ -7,14 +7,9 @@ import {
   importedBundle,
   JOB_ID,
   setup,
+  ZIP,
   type Store,
 } from './store.test-helper.ts';
-
-const ZIP: PickedDocument = {
-  uri: 'content://redbone.zip',
-  name: 'Redbone.stemdeck.zip',
-  mimeType: 'application/zip',
-};
 
 const RESEPARATED = 'reseparated-job';
 
@@ -33,7 +28,9 @@ function reseparatedFiles() {
       jobId: RESEPARATED,
     });
   const fake = fakeFiles({
-    pickDocument: vi.fn(() => Promise.resolve<PickedDocument | null>(ZIP)),
+    pickDocuments: vi.fn(() =>
+      Promise.resolve<readonly PickedDocument[]>([ZIP]),
+    ),
     importStemBundle,
   });
   fake.files.checkStemBundle

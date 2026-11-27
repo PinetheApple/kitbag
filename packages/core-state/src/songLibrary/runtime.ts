@@ -13,7 +13,7 @@ import type {
 
 export interface LibraryFiles {
   readonly constants: () => LibraryConstants;
-  readonly pickDocument: () => Promise<PickedDocument | null>;
+  readonly pickDocuments: () => Promise<readonly PickedDocument[]>;
   readonly pickFolder: () => Promise<PickedFolder | null>;
   readonly sniffUnsupportedFormat: (uri: string) => Promise<string>;
   readonly importAudio: (

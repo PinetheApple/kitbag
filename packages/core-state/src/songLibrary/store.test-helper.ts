@@ -31,6 +31,12 @@ export const MP3: PickedDocument = {
   mimeType: 'audio/mpeg',
 };
 
+export const ZIP: PickedDocument = {
+  uri: 'content://redbone.zip',
+  name: 'Redbone.stemdeck.zip',
+  mimeType: 'application/zip',
+};
+
 export const CODES: LibraryConstants = {
   ...DATA_FOLDER_CODES,
   songsDir: 'songs',
@@ -195,10 +201,10 @@ export function importedBundle(relativeDir: string): ImportedStemBundle {
   };
 }
 
-type Native = Omit<LibraryFiles, 'importAudio' | 'pickDocument'>;
+type Native = Omit<LibraryFiles, 'importAudio' | 'pickDocuments'>;
 type Overridable =
   | 'importAudio'
-  | 'pickDocument'
+  | 'pickDocuments'
   | 'importStemBundle'
   | 'sniffUnsupportedFormat';
 
@@ -250,7 +256,9 @@ export function fakeFiles(
   };
   const files = {
     ...native,
-    pickDocument: vi.fn(() => Promise.resolve<PickedDocument | null>(MP3)),
+    pickDocuments: vi.fn(() =>
+      Promise.resolve<readonly PickedDocument[]>([MP3]),
+    ),
     sniffUnsupportedFormat: vi.fn<LibraryFiles['sniffUnsupportedFormat']>(() =>
       Promise.resolve(''),
     ),

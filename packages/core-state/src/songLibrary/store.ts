@@ -23,6 +23,7 @@ import {
 } from './logic.ts';
 import { cleanName } from '../names.ts';
 import { resultRecord } from './analysisRecord.ts';
+import { importEach } from './importBatch.ts';
 import {
   availabilityRefresher,
   type RowFilesByKey,
@@ -78,6 +79,7 @@ export type LibraryNotice =
     }
   | { readonly kind: 'copyFailed'; readonly name: string }
   | { readonly kind: 'addFailed'; readonly name: string }
+  | { readonly kind: 'importsFailed'; readonly names: readonly string[] }
   | { readonly kind: 'pickerFailed' }
   | { readonly kind: 'deleteFailed'; readonly name: string }
   | { readonly kind: 'renameFailed'; readonly name: string }
@@ -274,16 +276,24 @@ function importActions(
     });
     await get().refresh();
   };
+  const importOne = async (doc: PickedDocument) => {
+    if (isStemArchive(doc))
+      await bundles.importBundle(
+        { ...doc, isFolder: false },
+        { announce: true },
+      );
+    else await importDocument(doc);
+  };
   return {
     importSong: async () => {
-      const doc = await pick(() => deps.files().pickDocument());
-      if (doc === null) return;
-      if (isStemArchive(doc))
-        await bundles.importBundle(
-          { ...doc, isFolder: false },
-          { announce: true },
+      const docs = await pick(() => deps.files().pickDocuments());
+      if (docs !== null)
+        await importEach(
+          docs,
+          { importOne, answered: bundles.answered },
+          set,
+          get,
         );
-      else await importDocument(doc);
     },
     importStemFolder: async () => {
       const folder = await pick(() => deps.files().pickFolder());

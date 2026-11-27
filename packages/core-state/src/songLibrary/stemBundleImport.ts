@@ -45,6 +45,7 @@ interface Job {
 interface Pending {
   readonly job: Job;
   readonly targetId: number;
+  readonly answered: () => void;
 }
 
 interface Match {
@@ -175,6 +176,7 @@ export function stemBundleActions(
   imports: ImportTracker,
 ) {
   let pending: Pending | null = null;
+  let answer: Promise<void> = Promise.resolve();
 
   const codesFor = (source: BundleSource) => {
     const codes = loadCodes(deps, get);
@@ -292,6 +294,25 @@ export function stemBundleActions(
     return taken;
   };
 
+  const awaitAnswer = (job: Job, targetId: number) => {
+    pending?.answered();
+    let answered: () => void = () => undefined;
+    answer = new Promise<void>((resolve) => {
+      answered = resolve;
+    });
+    pending = { job, targetId, answered };
+  };
+
+  const answerWith = async (target: (taken: Pending) => number | null) => {
+    const taken = takePending();
+    if (taken === null) return;
+    try {
+      await run(taken.job, target(taken));
+    } finally {
+      taken.answered();
+    }
+  };
+
   return {
     importBundle: async (
       source: BundleSource,
@@ -307,7 +328,7 @@ export function stemBundleActions(
         await run(job, null);
         return;
       }
-      pending = { job, targetId: match.set.id };
+      awaitAnswer(job, match.set.id);
       set({
         replacePrompt: {
           name: source.name,
@@ -316,17 +337,12 @@ export function stemBundleActions(
         },
       });
     },
-    confirmReplace: async () => {
-      const taken = takePending();
-      if (taken !== null) await run(taken.job, taken.targetId);
-    },
-    keepBoth: async () => {
-      const taken = takePending();
-      if (taken !== null) await run(taken.job, null);
-    },
+    confirmReplace: () => answerWith((taken) => taken.targetId),
+    keepBoth: () => answerWith(() => null),
     cancelReplace: () => {
-      takePending();
+      takePending()?.answered();
     },
+    answered: () => answer,
     addFetchedBundle,
   };
 }
