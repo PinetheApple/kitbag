@@ -1,0 +1,1 @@
+• Play along shows how far the click is from the song once locked: a drift meter that goes amber when it slips, re-tap to fix it, and clear states when the song pauses, the app goes away or the track changes. Meter, subdivision and accents use the metronome's own controls.
