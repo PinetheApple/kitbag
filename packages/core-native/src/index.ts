@@ -21,6 +21,7 @@ export type {
   ImportedStemBundle,
   DataFolderVolume,
   DataFolderVolumes,
+  IntakeEvent,
   LibraryAvailability,
   LibraryConstants,
   MoveErrors,
@@ -80,6 +81,7 @@ export {
   saveDatabaseCopy,
   shareBackup,
 } from './backupFiles';
+export { readSharedBackup, takeInitialIntake, watchIntake } from './intake';
 export {
   databaseFreeBytes,
   removeDatabaseCopy,

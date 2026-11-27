@@ -19,6 +19,7 @@ import com.kitbag.corenative.library.AnalysisFailure
 import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisStore
 import com.kitbag.corenative.library.AnalysisTarget
+import com.kitbag.corenative.library.BackupFiles
 import com.kitbag.corenative.library.BackupShare
 import com.kitbag.corenative.library.ClickSoundFiles
 import com.kitbag.corenative.library.DataFolder
@@ -33,6 +34,7 @@ import com.kitbag.corenative.library.LibraryStorage
 import com.kitbag.corenative.library.LibraryUsage
 import com.kitbag.corenative.library.NativeClickSound
 import com.kitbag.corenative.library.NativeWaveform
+import com.kitbag.corenative.library.ShareIntake
 import com.kitbag.corenative.library.StemBundleBridge
 import com.kitbag.corenative.library.StemBundleRefusedException
 import com.kitbag.corenative.library.toMap
@@ -54,6 +56,9 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private val nameLock = Any()
   private val bundles = StemBundleBridge(reactContext.contentResolver, ::libraryRoot)
   private val picker = DocumentPicker(reactContext, io, ::rejectLogged)
+  private val intake = ShareIntake(io, picker::describeDocument, ::emitOnIntake) { message, cause ->
+    Log.w(TAG, message, cause)
+  }
   private val files = FileShare(reactContext, io, ::rejectLogged)
   private val backups = BackupShare(reactContext, files)
   private val moves = DataFolderBridge(
@@ -75,6 +80,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
 
   init {
     reactContext.addActivityEventListener(picker)
+    reactContext.addActivityEventListener(intake)
     AnalysisEvents.listener.set(listener)
     io.execute { bundles.clearStaging() }
     volumes.start()
@@ -86,6 +92,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     volumes.stop()
     moves.stop()
     reactApplicationContext.removeActivityEventListener(picker)
+    reactApplicationContext.removeActivityEventListener(intake)
     io.shutdownNow()
     picker.cancel()
     super.invalidate()
@@ -121,6 +128,10 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun pickFolder(promise: Promise) = picker.pickFolder(promise)
 
   override fun pickBackup(promise: Promise) = picker.pickBackup(promise)
+
+  override fun readSharedBackup(uri: String, promise: Promise) = picker.readSharedBackup(uri, promise)
+
+  override fun takeInitialIntake(promise: Promise) = intake.takeInitial(reactApplicationContext.currentActivity, promise)
 
   override fun shareBackup(fileName: String, contents: String, promise: Promise) =
     backups.share(fileName, contents, promise)
@@ -466,6 +477,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       "failureInternal" to AnalysisFailure.INTERNAL,
       "failureUnavailable" to AnalysisFailure.UNAVAILABLE,
       "dataFolderUnavailable" to LibraryErrors.DATA_FOLDER_UNAVAILABLE,
+      "backupMimeType" to BackupFiles.JSON_MIME,
       "supportedAudioFamilies" to SupportedAudio.FAMILY_NAMES,
       "supportedAudioExtensions" to SupportedAudio.EXTENSIONS,
       "supportedAudioMimeTypes" to SupportedAudio.MIME_TYPES,

@@ -8,6 +8,7 @@ import type {
   Resolution,
   Resolutions,
 } from '@kitbag/core-db';
+import type { PickedBackup } from '@kitbag/core-native';
 import { createStore } from 'zustand/vanilla';
 
 import {
@@ -48,6 +49,7 @@ export type RestoreState =
 
 export interface RestoreActions {
   pick: () => Promise<void>;
+  open: (read: () => Promise<PickedBackup | null>) => Promise<boolean>;
   setMode: (mode: ImportMode) => Promise<void>;
   toggleCategory: (category: Category) => Promise<void>;
   resolve: (conflict: Conflict, resolution: Resolution) => Promise<void>;
@@ -153,27 +155,34 @@ export function createRestoreStore(
       show({ phase: 'failed', failure: result.error });
     };
 
+    const readAndPlan = async (read: () => Promise<PickedBackup | null>) => {
+      request += 1;
+      show({ phase: 'reading' });
+      let picked;
+      try {
+        picked = await read();
+      } catch {
+        show({ phase: 'failed', failure: { kind: 'unreadable' } });
+        return;
+      }
+      if (picked === null) {
+        show(EMPTY);
+        return;
+      }
+      const source = { name: picked.name, bytes: picked.bytes };
+      await replan(
+        { source, contents: picked.contents },
+        { mode: 'merge', resolutions: {} },
+      );
+    };
+
     return {
       restore: EMPTY,
-      pick: async () => {
-        request += 1;
-        show({ phase: 'reading' });
-        let picked;
-        try {
-          picked = await deps().pick();
-        } catch {
-          show({ phase: 'failed', failure: { kind: 'unreadable' } });
-          return;
-        }
-        if (picked === null) {
-          show(EMPTY);
-          return;
-        }
-        const source = { name: picked.name, bytes: picked.bytes };
-        await replan(
-          { source, contents: picked.contents },
-          { mode: 'merge', resolutions: {} },
-        );
+      pick: () => readAndPlan(() => deps().pick()),
+      open: async (read) => {
+        if (get().restore.phase === 'applying') return false;
+        await readAndPlan(read);
+        return true;
       },
       setMode: (mode) =>
         replanCurrent(({ plan, resolutions }) => ({

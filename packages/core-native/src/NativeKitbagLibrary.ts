@@ -15,6 +15,10 @@ export type PickedBackup = Readonly<{
   contents: string;
 }>;
 
+export type IntakeEvent = Readonly<{
+  items: readonly PickedDocument[];
+}>;
+
 export type PickedFolder = Readonly<{
   uri: string;
   name: string;
@@ -275,6 +279,7 @@ export type LibraryConstants = Readonly<{
   /** Reject codes of saveDatabaseCopy when an unfinished journal could not be settled in a private copy. */
   databaseCopyNoSpace: string;
   databaseCopyUnreadable: string;
+  backupMimeType: string;
   supportedAudioFamilies: readonly string[];
   supportedAudioExtensions: readonly string[];
   supportedAudioMimeTypes: readonly string[];
@@ -293,6 +298,10 @@ export interface Spec extends TurboModule {
   pickDocuments(): Promise<readonly PickedDocument[]>;
   pickFolder(): Promise<PickedFolder | null>;
   pickBackup(): Promise<PickedBackup | null>;
+  readSharedBackup(uri: string): Promise<PickedBackup>;
+  /** Files the launching intent opened or shared; empty once that intent was taken. */
+  takeInitialIntake(): Promise<readonly PickedDocument[]>;
+  readonly onIntake: CodegenTypes.EventEmitter<IntakeEvent>;
   shareBackup(fileName: string, contents: string): Promise<void>;
   /** Resolves false when the user cancels the save dialog. */
   saveBackup(fileName: string, contents: string): Promise<boolean>;

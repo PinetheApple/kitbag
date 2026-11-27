@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 
 export const SHEET_PARAM = 'sheet';
 export const DATA_FOLDER_SHEET = 'dataFolder';
+export const RESTORE_ROUTE = '/settings/restore';
 
 export function useSettingsRoutes() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export function useSettingsRoutes() {
         router.push('/settings/tools');
       },
       openRestore: () => {
-        router.push('/settings/restore');
+        router.push(RESTORE_ROUTE);
       },
       openPractice: () => {
         router.push('/practice');
