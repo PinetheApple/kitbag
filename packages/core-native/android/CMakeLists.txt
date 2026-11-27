@@ -25,6 +25,7 @@ add_subdirectory("${KITBAG_CORE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/audio_core")
 
 add_library(kitbag_jsi SHARED
   "${KITBAG_GLUE_DIR}/KitbagHostObject.cpp"
+  "${KITBAG_GLUE_DIR}/KitbagBundleEval.cpp"
   "${KITBAG_GLUE_DIR}/KitbagEngine.cpp"
   "${KITBAG_GLUE_DIR}/KitbagCommands.cpp"
   # Android-only JNI bridge (staged for #33): exposes kitbagInstall + command*

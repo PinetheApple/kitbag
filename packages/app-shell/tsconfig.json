@@ -12,6 +12,7 @@
   },
   "include": [
     "src",
+    "spike",
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "nativewind-env.d.ts"
