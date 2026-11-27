@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 
+import { TOOL_ROUTE } from '@/home/toolRoutes';
+
 export const SHEET_PARAM = 'sheet';
 export const DATA_FOLDER_SHEET = 'dataFolder';
 
@@ -33,7 +35,7 @@ export function useSettingsRoutes() {
         router.push('/settings/restore');
       },
       openPractice: () => {
-        router.push('/practice');
+        router.push(TOOL_ROUTE.practice);
       },
     }),
     [router],

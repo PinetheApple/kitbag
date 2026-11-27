@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 
+import { TOOL_ROUTE } from '@/home/toolRoutes';
+
 import { useBackOrHome } from './backOrHome.ts';
 
 export function useStemDeckRoutes() {
@@ -10,20 +12,20 @@ export function useStemDeckRoutes() {
     () => ({
       back,
       openConnect: () => {
-        router.push('/stemdeck');
+        router.push(TOOL_ROUTE.stemDeck);
       },
       openCameraExplainer: () => {
-        router.push('/stemdeck/camera');
+        router.push(TOOL_ROUTE.stemDeckCamera);
       },
       openSongs: () => {
-        router.push('/stemdeck/songs');
+        router.push(TOOL_ROUTE.stemDeckSongs);
       },
       openImport: () => {
-        router.push('/stemdeck/import');
+        router.push(TOOL_ROUTE.stemDeckImport);
       },
       // A cold start from the notification has no Stem songs below it to return to.
       openStemSongs: () => {
-        router.dismissTo('/stems');
+        router.dismissTo(TOOL_ROUTE.stems);
       },
     }),
     [router, back],

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
+import { TOOL_ROUTE } from '@/home/toolRoutes';
 import { useBackOrHome } from '@/runtime/backOrHome';
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
@@ -20,7 +21,7 @@ function MetronomeRoute() {
   }, [markUsed]);
 
   const openSetlists = useCallback(() => {
-    router.push('/setlists');
+    router.push(TOOL_ROUTE.setlists);
   }, [router]);
 
   const goBack = useBackOrHome();
