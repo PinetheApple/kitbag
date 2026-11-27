@@ -17,17 +17,23 @@ const display = vi.hoisted(() => ({ fontScale: 1 }));
 const suffixes = vi.hoisted(() => [] as Props[]);
 const views = vi.hoisted(() => [] as Props[]);
 const glyphs = vi.hoisted(() => [] as Props[]);
+const pressables = vi.hoisted(() => [] as Props[]);
 
 vi.mock('react-native', async (original) => {
   const actual = await original<Record<string, unknown>>();
   const { createElement } = await import('react');
   const Text = actual.Text as (props: Props) => ReactNode;
   const View = actual.View as (props: Props) => ReactNode;
+  const Pressable = actual.Pressable as (props: Props) => ReactNode;
   return {
     ...actual,
     View: (props: Props) => {
       views.push(props);
       return createElement(View, props);
+    },
+    Pressable: (props: Props) => {
+      pressables.push(props);
+      return createElement(Pressable, props);
     },
     useWindowDimensions: () => ({ fontScale: display.fontScale }),
     Text: (props: Props) => {
@@ -134,4 +140,46 @@ describe('StepControl key glyphs under font scale', () => {
       );
     },
   );
+});
+
+describe('StepControl with a long inline value', () => {
+  function layout(wrapValue: boolean) {
+    views.length = 0;
+    pressables.length = 0;
+    renderToStaticMarkup(
+      <ThemeProvider mode="dark">
+        <StepControl
+          variant="inline"
+          label="Tempo"
+          value="Tempo from the song"
+          wrapValue={wrapValue}
+          onStep={vi.fn()}
+        />
+      </ThemeProvider>,
+    );
+    const style = (props: Props | undefined) =>
+      flatStyle(props?.style as StyleProp<ViewStyle>);
+    return {
+      cluster: style(views[0]),
+      valueBox: style(
+        views.find((view) => style(view).minWidth === size.stepValueMinWidth),
+      ),
+      keys: pressables.map(style),
+    };
+  }
+
+  it('shrinks the cluster and value box to the row and keeps both keys whole', () => {
+    const { cluster, valueBox, keys } = layout(true);
+    expect(cluster).toMatchObject({ flexShrink: 1, maxWidth: '100%' });
+    expect(valueBox.flexShrink).toBe(1);
+    expect(keys).toHaveLength(2);
+    for (const key of keys) expect(key.flexShrink).toBe(0);
+  });
+
+  it('leaves every other caller’s layout as it was', () => {
+    const { cluster, valueBox, keys } = layout(false);
+    expect(cluster.flexShrink).toBeUndefined();
+    expect(valueBox.flexShrink).toBeUndefined();
+    for (const key of keys) expect(key.flexShrink).toBeUndefined();
+  });
 });
