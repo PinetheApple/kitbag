@@ -1,0 +1,1 @@
+• Song presets saved from Play along show "Tempo from the song" instead of a number, and keep following the song until you pick a tempo. Fixed: saving such a preset no longer pins its ramp to 120 BPM, and it is no longer labelled as a stem song in a setlist.
