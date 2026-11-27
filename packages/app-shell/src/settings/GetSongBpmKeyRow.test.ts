@@ -144,7 +144,29 @@ describe('GetSongBPM key row', () => {
       autoCapitalize: 'none',
       autoCorrect: false,
       spellCheck: false,
+      secureTextEntry: true,
+      importantForAutofill: 'no',
     });
+  });
+
+  it('empties the field after saving the key it already had', () => {
+    act(() => {
+      getGetSongBpmKeyStore().getState().setKey(TYPED_KEY);
+    });
+    const root = openSheet();
+    type(root, TYPED_KEY);
+    press(button(root, SAVE_KEY));
+    expect(only(root, 'TextField').props.value).toBe('');
+  });
+
+  it('empties the field after removing the key', () => {
+    act(() => {
+      getGetSongBpmKeyStore().getState().setKey(TYPED_KEY);
+    });
+    const root = openSheet();
+    type(root, 'half-typed');
+    press(button(root, REMOVE_KEY));
+    expect(only(root, 'TextField').props.value).toBe('');
   });
 
   it('offers no Save for a blank entry', () => {

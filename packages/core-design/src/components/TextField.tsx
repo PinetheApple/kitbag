@@ -86,6 +86,8 @@ export interface TextFieldProps {
   readonly autoCapitalize?: TextInputProps['autoCapitalize'];
   readonly autoCorrect?: boolean;
   readonly spellCheck?: boolean;
+  readonly secureTextEntry?: boolean;
+  readonly importantForAutofill?: TextInputProps['importantForAutofill'];
   readonly editable?: boolean;
   readonly ref?: Ref<TextInputInstance>;
   readonly onSubmitEditing?: () => void;
@@ -120,6 +122,8 @@ export function TextField(props: TextFieldProps) {
         autoCapitalize={props.autoCapitalize}
         autoCorrect={props.autoCorrect}
         spellCheck={props.spellCheck}
+        secureTextEntry={props.secureTextEntry}
+        importantForAutofill={props.importantForAutofill}
         editable={props.editable ?? true}
         onSubmitEditing={props.onSubmitEditing}
       />

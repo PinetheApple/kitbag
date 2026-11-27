@@ -11,9 +11,7 @@ export function getSongBpmKeyPersistence(
 ): GetSongBpmKeyPersistence {
   return {
     load: () => stored.read() ?? NO_GET_SONG_BPM_KEY,
-    save: (key) => {
-      stored.write(key);
-    },
+    save: stored.write,
   };
 }
 

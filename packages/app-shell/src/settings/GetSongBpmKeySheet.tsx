@@ -50,22 +50,32 @@ function CreditRow() {
   );
 }
 
-function KeyActions({ draft }: { readonly draft: string }) {
+interface KeyActionsProps {
+  readonly draft: string;
+  readonly hasSavedKey: boolean;
+  readonly onDone: () => void;
+}
+
+function KeyActions({ draft, hasSavedKey, onDone }: KeyActionsProps) {
   const styles = useStyles();
-  const savedKey = useGetSongBpmKey((s) => s.key);
   const setKey = useGetSongBpmKey((s) => s.setKey);
   const removeKey = useGetSongBpmKey((s) => s.removeKey);
   const save = useCallback(() => {
     setKey(draft);
-  }, [setKey, draft]);
+    onDone();
+  }, [setKey, draft, onDone]);
+  const remove = useCallback(() => {
+    removeKey();
+    onDone();
+  }, [removeKey, onDone]);
   return (
     <View style={styles.actions}>
-      {hasGetSongBpmKey(savedKey) ? (
+      {hasSavedKey ? (
         <Button
           fill
           variant="destructive"
           label={REMOVE_KEY}
-          onPress={removeKey}
+          onPress={remove}
         />
       ) : null}
       <Button
@@ -90,13 +100,11 @@ export function GetSongBpmKeySheet({
 }: GetSongBpmKeySheetProps) {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
-  const savedKey = useGetSongBpmKey((s) => s.key);
+  const hasSavedKey = useGetSongBpmKey((s) => hasGetSongBpmKey(s.key));
   const [draft, setDraft] = useState('');
-  const [shownKey, setShownKey] = useState(savedKey);
-  if (shownKey !== savedKey) {
-    setShownKey(savedKey);
+  const clearDraft = useCallback(() => {
     setDraft('');
-  }
+  }, []);
   const dismiss = useCallback(() => {
     setDraft('');
     onDismiss();
@@ -112,7 +120,7 @@ export function GetSongBpmKeySheet({
       <View style={styles.stack}>
         <SheetHint>{KEY_SHEET_HINT}</SheetHint>
         <CreditRow />
-        {hasGetSongBpmKey(savedKey) ? (
+        {hasSavedKey ? (
           <EditRow label={SAVED_KEY_LABEL}>
             <EditValue>{KEY_SET}</EditValue>
           </EditRow>
@@ -125,9 +133,15 @@ export function GetSongBpmKeySheet({
           autoCapitalize="none"
           autoCorrect={false}
           spellCheck={false}
+          secureTextEntry
+          importantForAutofill="no"
         />
         <SheetHint>{KEY_PRIVACY_HINT}</SheetHint>
-        <KeyActions draft={draft} />
+        <KeyActions
+          draft={draft}
+          hasSavedKey={hasSavedKey}
+          onDone={clearDraft}
+        />
       </View>
     </Sheet>
   );
