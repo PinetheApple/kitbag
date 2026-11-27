@@ -5,6 +5,7 @@ vi.mock('expo-router', () => ({ useRouter: vi.fn() }));
 
 import { TOOL_ID } from '../home/registry.ts';
 import { RESTORE_ROUTE } from '../settings/settingsRoutes.ts';
+import { RESTORE_BUSY_TEXT } from './intakeText.ts';
 import { receiveIntake, type IntakeDeps } from './receive.ts';
 
 const JSON_MIME = 'application/json';
@@ -121,6 +122,13 @@ describe('receiving opened or shared files', () => {
       expect(deps.notify.mock.calls[0]?.[0]).toContain(name);
     },
   );
+
+  it('says only that a restore is running when files beside a backup were skipped too', async () => {
+    const deps = harness();
+    deps.openBackup.mockResolvedValue(false);
+    await receiveIntake([SONG, BACKUP], deps);
+    expect(deps.notify.mock.calls).toEqual([[RESTORE_BUSY_TEXT]]);
+  });
 
   it('opens a backup whatever tools are off', async () => {
     const deps = harness([TOOL_ID.library, TOOL_ID.stems]);

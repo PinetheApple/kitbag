@@ -30,10 +30,11 @@ const SONGS = tool(TOOL_ID.library);
 const STEM_SONGS = tool(TOOL_ID.stems);
 
 async function openRestore(plan: RestorePlan, deps: IntakeDeps) {
-  if (plan.skipped.length > 0) deps.notify(skippedText(plan.skipped.length));
   deps.navigate(RESTORE_ROUTE);
   const opened = await deps.openBackup(() => deps.readBackup(plan.backup.uri));
   if (!opened) deps.notify(RESTORE_BUSY_TEXT);
+  else if (plan.skipped.length > 0)
+    deps.notify(skippedText(plan.skipped.length));
 }
 
 async function importAll(plan: ImportPlan, deps: IntakeDeps) {
