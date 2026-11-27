@@ -6,11 +6,11 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
+import android.util.Log
 import com.facebook.react.bridge.ActivityEventListener
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.bridge.WritableArray
 import com.facebook.react.bridge.WritableMap
 import java.io.File
 import java.io.IOException
@@ -181,22 +181,28 @@ class DocumentPicker(
 
   private fun describeAll(uris: List<Uri>, promise: Promise) {
     io.execute {
-      try {
-        promise.resolve(describeDocuments(uris))
-      } catch (e: Exception) {
-        rejectLogged(promise, LibraryErrors.PICK_FAILED, "Could not read the picked items", e)
+      val described = uris.mapNotNull(::describeOrSkip)
+      if (uris.isNotEmpty() && described.isEmpty()) {
+        promise.reject(LibraryErrors.PICK_FAILED, "Could not read any of the picked items")
+      } else {
+        promise.resolve(Arguments.createArray().apply { described.forEach { pushMap(it) } })
       }
     }
   }
+
+  private fun describeOrSkip(uri: Uri): WritableMap? =
+    try {
+      describeDocument(uri)
+    } catch (e: Exception) {
+      Log.w(TAG, "Skipped a picked item that could not be read", e)
+      null
+    }
 
   // A multi-select result carries its items in clipData, and may leave data null.
   private fun pickedUris(data: Intent?): List<Uri> {
     val clip = data?.clipData ?: return listOfNotNull(data?.data)
     return (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
   }
-
-  private fun describeDocuments(uris: List<Uri>): WritableArray =
-    Arguments.createArray().apply { uris.forEach { pushMap(describeDocument(it)) } }
 
   private fun openForWrite(uri: String, mode: String): OutputStream? =
     context.contentResolver.openOutputStream(Uri.parse(uri), mode)
@@ -242,6 +248,7 @@ class DocumentPicker(
       }
 
   internal companion object {
+    private const val TAG = "KitbagDocumentPicker"
     private const val REQUEST_PICK_DOCUMENT = 0x4b42
     private const val REQUEST_PICK_FOLDER = 0x4b43
     private const val REQUEST_PICK_BACKUP = 0x4b44
