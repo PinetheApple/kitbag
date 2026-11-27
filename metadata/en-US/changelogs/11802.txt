@@ -1,0 +1,4 @@
+• Kitbag no longer asks for the "Display over other apps" permission.
+• Developer-only screens are no longer reachable through links in the released app.
+• A paused stem song, song or mini-player no longer reads the audio engine on every screen frame.
+• Swiping the metronome tempo now saves once when you stop, instead of on every step.
