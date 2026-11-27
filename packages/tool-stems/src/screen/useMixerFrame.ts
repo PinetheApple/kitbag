@@ -3,6 +3,7 @@ import type { KitbagHostObject } from '@kitbag/core-native';
 import {
   formatClock,
   framesToSeconds,
+  onMixerSeek,
   onSongStarting,
 } from '@kitbag/core-state';
 import { useCallback, useEffect } from 'react';
@@ -28,10 +29,10 @@ const MAX_LEAD_SECONDS = 0.1;
 // A released scrub shows where it was let go until the seek lands near there.
 const HOLD_NEAR_SECONDS = 0.5;
 const HOLD_TIMEOUT_MS = 1000;
-const NOT_QUIET = -1;
-const QUIET_AFTER_MS = 250;
+const NOT_IDLE = -1;
+const IDLE_AFTER_MS = 250;
 // A paused song can still start or seek from the notification without telling the app.
-const QUIET_POLL_MS = 100;
+export const IDLE_POLL_MS = 100;
 
 export interface MixerFrameValues {
   readonly progress: SharedValue<number>;
@@ -47,14 +48,29 @@ export interface MixerFrameOptions {
   readonly heldFrame?: number | null;
 }
 
-function isQuiet(
-  host: KitbagHostObject,
+function isIdle(
   started: number,
   moved: boolean,
   holding: boolean,
+  countingIn: number,
 ): boolean {
   'worklet';
-  return started === 0 && !moved && !holding && host.counting_in === 0;
+  return started === 0 && !moved && !holding && countingIn === 0;
+}
+
+function idleFrom(idle: boolean, idleSince: number, now: number): number {
+  'worklet';
+  if (!idle) return NOT_IDLE;
+  return idleSince === NOT_IDLE ? now : idleSince;
+}
+
+function skipsFrame(now: number, idleSince: number, polledAt: number): boolean {
+  'worklet';
+  return (
+    idleSince !== NOT_IDLE &&
+    now - idleSince > IDLE_AFTER_MS &&
+    now - polledAt < IDLE_POLL_MS
+  );
 }
 
 export function useMixerFrame(
@@ -78,14 +94,15 @@ export function useMixerFrame(
   const held = useSharedValue(NOT_HELD);
   const heldSince = useSharedValue(NOT_HELD);
   const viewed = useSharedValue(heldFrame ?? NOT_HELD);
-  const quietSince = useSharedValue(NOT_QUIET);
+  const idleSince = useSharedValue(NOT_IDLE);
   const polledAt = useSharedValue(0);
 
   const wake = useCallback(() => {
-    quietSince.value = NOT_QUIET;
-  }, [quietSince]);
+    idleSince.value = NOT_IDLE;
+  }, [idleSince]);
 
   useEffect(() => onSongStarting(wake), [wake]);
+  useEffect(() => onMixerSeek(wake), [wake]);
 
   useEffect(() => {
     wake();
@@ -147,9 +164,7 @@ export function useMixerFrame(
     'worklet';
     if (viewed.value !== NOT_HELD) return;
     const now = frame.timestamp;
-    const asleep =
-      quietSince.value !== NOT_QUIET && now - quietSince.value > QUIET_AFTER_MS;
-    if (asleep && now - polledAt.value < QUIET_POLL_MS) return;
+    if (skipsFrame(now, idleSince.value, polledAt.value)) return;
     polledAt.value = now;
     const host = (globalThis as unknown as HostGlobal)[KITBAG_HOST_OBJECT_KEY];
     if (host === undefined) return;
@@ -160,28 +175,30 @@ export function useMixerFrame(
     const started = isPlaying !== 0 || counting ? 1 : 0;
     if (playing.value !== started) playing.value = started;
     const moved = position !== published.value;
-    if (isQuiet(host, started, moved, held.value !== NOT_HELD)) {
-      if (quietSince.value === NOT_QUIET) quietSince.value = now;
-    } else quietSince.value = NOT_QUIET;
+    const idle = isIdle(
+      started,
+      moved,
+      held.value !== NOT_HELD,
+      host.counting_in,
+    );
+    idleSince.value = idleFrom(idle, idleSince.value, now);
     if (moved) {
       if (position < published.value) lastShown.value = position;
       published.value = position;
-      publishedAt.value = frame.timestamp;
+      publishedAt.value = now;
     }
     let shown = position;
     if (held.value !== NOT_HELD) {
-      if (heldSince.value === NOT_HELD) heldSince.value = frame.timestamp;
+      if (heldSince.value === NOT_HELD) heldSince.value = now;
       const landed =
         Math.abs(position - held.value) < HOLD_NEAR_SECONDS * rate.value ||
-        frame.timestamp - heldSince.value > HOLD_TIMEOUT_MS;
+        now - heldSince.value > HOLD_TIMEOUT_MS;
       if (landed) held.value = NOT_HELD;
       else shown = held.value;
     } else if (isPlaying !== 0) {
       const lead =
-        Math.min(
-          (frame.timestamp - publishedAt.value) / MS_PER_SECOND,
-          MAX_LEAD_SECONDS,
-        ) * rate.value;
+        Math.min((now - publishedAt.value) / MS_PER_SECOND, MAX_LEAD_SECONDS) *
+        rate.value;
       const limit = loopEnd.value > position ? loopEnd.value : duration.value;
       shown = Math.max(
         lastShown.value,

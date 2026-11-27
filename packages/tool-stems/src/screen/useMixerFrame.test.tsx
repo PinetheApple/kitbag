@@ -6,18 +6,30 @@ import { create, type ReactTestRenderer } from 'react-test-renderer';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { FRAME_MS, runFrame } from '../testing/reanimatedDriver.ts';
-import { useMixerFrame, type MixerFrameValues } from './useMixerFrame.ts';
+import {
+  IDLE_POLL_MS,
+  useMixerFrame,
+  type MixerFrameValues,
+} from './useMixerFrame.ts';
 
-const starting = vi.hoisted(() => new Set<() => void>());
+const signals = vi.hoisted(() => ({
+  starting: new Set<() => void>(),
+  seeked: new Set<() => void>(),
+}));
+
+function subscriber(listeners: Set<() => void>) {
+  return (listener: () => void) => {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  };
+}
 
 vi.mock('@kitbag/core-state', async (actual) => ({
   ...(await actual<Record<string, unknown>>()),
-  onSongStarting: (listener: () => void) => {
-    starting.add(listener);
-    return () => {
-      starting.delete(listener);
-    };
-  },
+  onSongStarting: subscriber(signals.starting),
+  onMixerSeek: subscriber(signals.seeked),
 }));
 
 (
@@ -30,9 +42,10 @@ const HEAD = RATE * 2;
 const COUNT_END = RATE * 3;
 const SEEKED = RATE * 6;
 const SECOND_MS = 1000;
-const POLL_FRAMES = 10;
+const FRAMES_PER_SECOND = Math.ceil(SECOND_MS / FRAME_MS);
+const POLL_FRAMES = Math.ceil(IDLE_POLL_MS / FRAME_MS) + 1;
 
-const reads = { count: 0 };
+let reads = 0;
 
 let renderer: ReactTestRenderer | undefined;
 
@@ -83,7 +96,7 @@ function setHost(
   for (const [key, value] of Object.entries(fields))
     Object.defineProperty(host, key, {
       get: () => {
-        reads.count++;
+        reads++;
         return value;
       },
     });
@@ -96,21 +109,31 @@ function runFrames(count: number) {
 }
 
 function settle() {
-  runFrames(Math.ceil(SECOND_MS / FRAME_MS));
+  runFrames(FRAMES_PER_SECOND);
 }
 
 function framesThatRead(count: number): number {
   let reading = 0;
   for (let frame = 0; frame < count; frame++) {
-    const before = reads.count;
+    const before = reads;
     runFrame();
-    if (reads.count > before) reading++;
+    if (reads > before) reading++;
   }
   return reading;
 }
 
-function startInApp() {
-  for (const listener of starting) listener();
+function settleToPoll() {
+  settle();
+  for (let frame = 0; frame < POLL_FRAMES; frame++) {
+    const before = reads;
+    runFrame();
+    if (reads > before) return;
+  }
+  throw new Error('the paused playhead never polled the engine');
+}
+
+function signal(listeners: Set<() => void>) {
+  for (const listener of listeners) listener();
 }
 
 afterEach(() => {
@@ -173,16 +196,17 @@ describe('the playhead while the song is paused', () => {
     mount(null);
     setHost(0, 0);
     settle();
-    const frames = Math.ceil(SECOND_MS / FRAME_MS);
-    expect(framesThatRead(frames)).toBeLessThan(frames / 4);
+    expect(framesThatRead(FRAMES_PER_SECOND)).toBeLessThanOrEqual(
+      Math.ceil(SECOND_MS / IDLE_POLL_MS),
+    );
   });
 
   it('moves on the first frame after a start in the app', () => {
     const frame = mount(null);
     setHost(0, 0);
-    settle();
+    settleToPoll();
     setHost(1, 0, 0, SEEKED);
-    startInApp();
+    signal(signals.starting);
     runFrame();
     expect(frame.playing.value).toBe(1);
     expect(frame.songSec.value).toBeGreaterThanOrEqual(SEEKED / RATE);
@@ -207,6 +231,16 @@ describe('the playhead while the song is paused', () => {
     setHost(0, 0, 0, SEEKED);
     settle();
     expect(frame.progress.value).toBe(SEEKED / DURATION);
+  });
+
+  it('jumps on the first frame after a seek in the app', () => {
+    const frame = mount(null);
+    setHost(0, 0);
+    settleToPoll();
+    setHost(0, 0, 0, SEEKED);
+    signal(signals.seeked);
+    runFrame();
+    expect(frame.songSec.value).toBe(SEEKED / RATE);
   });
 
   it('jumps to a seek from the notification', () => {

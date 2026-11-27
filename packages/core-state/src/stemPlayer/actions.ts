@@ -2,6 +2,7 @@ import type { Debounced } from './debounce.ts';
 import { clamp } from '../metronome/config.ts';
 import { soloAfter, UNITY_GAIN } from './mix.ts';
 import type { MixSaver } from './mixSaver.ts';
+import { mixerSeeked } from './mixerSeeked.ts';
 import type { MixerRuntime, StemPlayerCommands } from './runtime.ts';
 import type { SongStart } from './songStart.ts';
 import { songStarting } from './songStarting.ts';
@@ -161,6 +162,7 @@ export function transportActions(
     scrubSeek.cancel();
     const clamped = clamp(frame, 0, get().durationFrames);
     runtimeOf().commands.mixerSeek(clamped);
+    mixerSeeked();
     afterSeek?.(clamped);
   };
   const playFrom = (frame: number) => {
