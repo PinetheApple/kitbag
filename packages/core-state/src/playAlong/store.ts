@@ -223,6 +223,7 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
     );
     const click = clickAlone(runtime, access, slot);
     const follow = follower(runtime, access, slot, () => {
+      presets.unlocked();
       offers.refresh();
       tempo.resync();
     });
@@ -250,7 +251,7 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
     const presets = trackPresets(runtime, access);
     const lockOn: typeof follow.lockOn = (seen, lock) => {
       follow.lockOn(seen, lock);
-      const savedPhaseMs = presets.savedPhaseMs();
+      const { savedPhaseMs } = access.getState();
       if (savedPhaseMs !== undefined) phase.setPhaseOffset(savedPhaseMs);
     };
     const setBpm = (bpm: number) => {
@@ -283,6 +284,8 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
       unlockReason: undefined,
       clickPlaying: false,
       hasSavedPreset: false,
+      savedPhaseMs: undefined,
+      presetRecalled: false,
       phaseStepMs: DEFAULT_PHASE_STEP_MS,
       latencyOffsetMs: initialConfig().latencyOffset,
       ...NO_LOCK_STATE,
