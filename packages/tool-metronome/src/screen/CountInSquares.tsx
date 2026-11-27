@@ -1,4 +1,4 @@
-import { CountSquare } from '@kitbag/core-design';
+import { CountSquare, TEXT_PLACEHOLDER } from '@kitbag/core-design';
 import { KB_STOPPED_BEAT } from '@kitbag/core-native';
 import { useCallback, useMemo } from 'react';
 import { Text, View } from 'react-native';
@@ -9,7 +9,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import type { LedRowLayout } from '@kitbag/core-state';
 
-import { TEXT_PLACEHOLDER } from '../logic/textPlaceholder.ts';
 import { useBeatDotStyles } from './beatDotStyles.ts';
 import { BeatGrid } from './BeatGrid.tsx';
 

@@ -1,8 +1,12 @@
 // A keypress is rejected only when no digit fits; the range clamps once, at
 // confirm.
 
-import type { BpmBounds } from '@kitbag/core-state';
 import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
+
+export interface NumberBounds {
+  readonly min: number;
+  readonly max: number;
+}
 
 const RADIX = 10;
 const NOTHING_ENTERED = 'nothing entered';
@@ -10,27 +14,25 @@ const NOTHING_ENTERED = 'nothing entered';
 export interface NumpadEntry {
   readonly digits: string;
   /**
-   * The sheet opens showing the current tempo, as the design draws it. That
-   * value is a starting point, not typing: the first digit replaces it, so the
-   * first keypress is never swallowed by the digit-width cap.
+   * The sheet opens showing the current value. That value is a starting point,
+   * not typing: the first digit replaces it, so the first keypress is never
+   * swallowed by the digit-width cap.
    */
   readonly untouched: boolean;
 }
 
-export function openEntry(bpm: number): NumpadEntry {
-  return { digits: String(bpm), untouched: true };
+export function openNumpadEntry(value: number): NumpadEntry {
+  return { digits: String(value), untouched: true };
 }
 
-// Width of the largest in-range tempo. A full-width entry can still be out of
-// range (999 with a 400 ceiling) — that is what the confirm clamp is for.
-function maxDigits(bounds: BpmBounds): number {
+function maxDigits(bounds: NumberBounds): number {
   return String(bounds.max).length;
 }
 
-export function pressDigit(
+export function pressNumpadDigit(
   entry: NumpadEntry,
   digit: number,
-  bounds: BpmBounds,
+  bounds: NumberBounds,
 ): NumpadEntry {
   if (entry.untouched) return { digits: String(digit), untouched: false };
   if (entry.digits.length >= maxDigits(bounds)) return entry;
@@ -40,18 +42,18 @@ export function pressDigit(
   return { digits, untouched: false };
 }
 
-export function pressBackspace(entry: NumpadEntry): NumpadEntry {
+export function pressNumpadBackspace(entry: NumpadEntry): NumpadEntry {
   // Backspacing a still-untouched entry clears it, rather than editing a number
   // the finger never typed.
   if (entry.untouched) return { digits: '', untouched: false };
   return { digits: entry.digits.slice(0, -1), untouched: false };
 }
 
-export function displayDigits(entry: NumpadEntry): string {
+export function numpadDigits(entry: NumpadEntry): string {
   return entry.digits === '' ? TEXT_PLACEHOLDER : entry.digits;
 }
 
-export function entryLabel(
+export function numpadEntryLabel(
   entry: NumpadEntry,
   title: string,
   unit: string,
@@ -60,13 +62,13 @@ export function entryLabel(
   return `${title}, ${entry.digits} ${unit}`;
 }
 
-/**
- * The BPM a confirm commits, or undefined if the pad was cleared. Clamps rather
- * than rejects — an out-of-range entry is a reachable state by design.
- */
-export function confirmEntry(
+export function numpadBoundsHint(bounds: NumberBounds, unit: string): string {
+  return `${String(bounds.min)} – ${String(bounds.max)} ${unit}`;
+}
+
+export function confirmNumpadEntry(
   entry: NumpadEntry,
-  bounds: BpmBounds,
+  bounds: NumberBounds,
 ): number | undefined {
   if (entry.digits.length === 0) return undefined;
   const typed = Number.parseInt(entry.digits, RADIX);
