@@ -217,6 +217,7 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
     );
     const click = clickAlone(runtime, access, slot);
     const follow = follower(runtime, access, slot, () => {
+      presets.unlocked();
       offers.refresh();
       tempo.resync();
     });
@@ -262,6 +263,8 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
       unlockReason: undefined,
       clickPlaying: false,
       hasSavedPreset: false,
+      savedPhaseMs: undefined,
+      presetRecalled: false,
       phaseStepMs: DEFAULT_PHASE_STEP_MS,
       latencyOffsetMs: initialConfig().latencyOffset,
       ...NO_LOCK_STATE,

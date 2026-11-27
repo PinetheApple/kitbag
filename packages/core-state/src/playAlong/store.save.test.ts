@@ -24,6 +24,8 @@ const DUPLET = 2;
 const WOOD = 2;
 const CLAVE = 3;
 const NUDGE_MS = 30;
+const FRACTIONAL_NUDGE_MS = 12.6;
+const ROUNDED_NUDGE_MS = 13;
 const FAR_NUDGE_MS = 1000;
 const LIBRARY_SONG_ID = 7;
 const OTHER_SONG_ID = 99;
@@ -380,5 +382,92 @@ describe('recall for the chosen track', () => {
     fake.ladder.found(MATCH);
     await settle();
     expect(fake.store.getState().pattern.beatsPerBar).toBe(DUPLET);
+  });
+});
+
+describe('what Play along says about a saved preset', () => {
+  it('says nothing and reads nothing before it watches', () => {
+    const fake = fakePlayAlong({ shelf: presetShelf([savedPreset()]) });
+    expect(fake.store.getState()).toMatchObject({
+      savedPhaseMs: undefined,
+      presetRecalled: false,
+    });
+    expect(fake.shelf.repository.list).not.toHaveBeenCalled();
+  });
+
+  it('names a recalled preset and its phase', async () => {
+    const fake = watched(
+      fakePlayAlong({ shelf: presetShelf([savedPreset()]) }),
+    );
+    await settle();
+    expect(fake.store.getState()).toMatchObject({
+      savedPhaseMs: NUDGE_MS,
+      presetRecalled: true,
+    });
+  });
+
+  it('gives a saved phase in whole ms', async () => {
+    const fake = watched(
+      fakePlayAlong({
+        shelf: presetShelf([savedPreset({ phaseNudge: FRACTIONAL_NUDGE_MS })]),
+      }),
+    );
+    await settle();
+    expect(fake.store.getState().savedPhaseMs).toBe(ROUNDED_NUDGE_MS);
+  });
+
+  it('names no phase when no preset matches', async () => {
+    const fake = watched(
+      fakePlayAlong({ shelf: presetShelf([savedPreset(OTHER_TRACK)]) }),
+    );
+    await settle();
+    expect(fake.store.getState()).toMatchObject({
+      savedPhaseMs: undefined,
+      presetRecalled: false,
+    });
+  });
+
+  it('names the phase just saved without calling it recalled', async () => {
+    const fake = watched(
+      fakePlayAlong({ shelf: presetShelf([savedPreset()]) }),
+    );
+    await settle();
+    locked(fake);
+    fake.store.getState().nudgePhase(1);
+    const { phaseOffsetMs } = fake.store.getState().lock ?? {};
+    await fake.store.getState().saveForTrack();
+    expect(fake.store.getState()).toMatchObject({
+      savedPhaseMs: phaseOffsetMs,
+      presetRecalled: false,
+    });
+    fake.store.getState().unlock();
+    await settle();
+    expect(fake.store.getState().presetRecalled).toBe(false);
+  });
+
+  it('stops calling it recalled once it unlocks', async () => {
+    const fake = watched(
+      fakePlayAlong({ shelf: presetShelf([savedPreset()]) }),
+    );
+    await settle();
+    locked(fake);
+    fake.store.getState().unlock();
+    expect(fake.store.getState()).toMatchObject({
+      savedPhaseMs: NUDGE_MS,
+      presetRecalled: false,
+    });
+  });
+
+  it('forgets both when the track changes', async () => {
+    const fake = watched(
+      fakePlayAlong({ shelf: presetShelf([savedPreset()]) }),
+    );
+    await settle();
+    fake.report([snapshot(OTHER_TRACK)]);
+    await settle();
+    expect(fake.store.getState()).toMatchObject({
+      savedPhaseMs: undefined,
+      presetRecalled: false,
+    });
   });
 });

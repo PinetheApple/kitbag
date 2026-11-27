@@ -36,6 +36,8 @@ export type SaveOutcome =
 
 export interface TrackPresetState {
   readonly hasSavedPreset: boolean;
+  readonly savedPhaseMs: number | undefined;
+  readonly presetRecalled: boolean;
 }
 
 export interface TrackPresetActions {
@@ -129,7 +131,6 @@ export function trackPresets(
 ) {
   let recalledFor: TrackIdentity | undefined;
   let appliedId: number | undefined;
-  let savedPhaseMs: number | undefined;
   let saving: Promise<SaveOutcome> = Promise.resolve(SAVED);
 
   const linkedSongId = (seen: MediaSessionSnapshot) => {
@@ -199,8 +200,11 @@ export function trackPresets(
     } catch {
       return refusedSave(SAVE_REFUSAL.writeFailed);
     }
-    savedPhaseMs = lock.phaseOffsetMs;
-    setState({ hasSavedPreset: true });
+    setState({
+      hasSavedPreset: true,
+      savedPhaseMs: Math.round(lock.phaseOffsetMs),
+      presetRecalled: false,
+    });
     return SAVED;
   };
 
@@ -216,7 +220,7 @@ export function trackPresets(
     store.setAccents(accentsOf(preset.accents));
     const sounds = perAccentSoundsOf(preset.perAccentSounds, preset.sound);
     store.setSounds(sounds.normal, sounds.accent);
-    savedPhaseMs = preset.phaseNudge;
+    setState({ savedPhaseMs: Math.round(preset.phaseNudge) });
     appliedId = preset.id;
   };
 
@@ -228,7 +232,10 @@ export function trackPresets(
       () => undefined,
     );
     if (recalledFor !== identity || preset === undefined) return;
-    if (preset.id !== appliedId) apply(preset);
+    if (preset.id !== appliedId) {
+      apply(preset);
+      setState({ presetRecalled: true });
+    }
     setState({ hasSavedPreset: true });
   };
 
@@ -243,8 +250,11 @@ export function trackPresets(
       return;
     if (!sameIdentity(recalledFor, identity)) {
       appliedId = undefined;
-      savedPhaseMs = undefined;
-      setState({ hasSavedPreset: false });
+      setState({
+        hasSavedPreset: false,
+        savedPhaseMs: undefined,
+        presetRecalled: false,
+      });
     }
     recalledFor = identity;
     if (seen !== undefined && identity !== undefined)
@@ -266,5 +276,12 @@ export function trackPresets(
     };
   };
 
-  return { saveForTrack, watch, savedPhaseMs: () => savedPhaseMs };
+  return {
+    saveForTrack,
+    watch,
+    savedPhaseMs: () => getState().savedPhaseMs,
+    unlocked: () => {
+      setState({ presetRecalled: false });
+    },
+  };
 }
