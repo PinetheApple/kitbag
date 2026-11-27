@@ -25,6 +25,7 @@ function harness(target: BackupDatabase, picked: () => Promise<Picked>) {
     pick: picked,
     share: () => Promise.resolve(),
     save: () => Promise.resolve(true),
+    beforeRestore: () => Promise.resolve(),
     afterRestore,
   };
   const store = createRestoreStore(() => deps);
@@ -86,7 +87,7 @@ describe('opening a backup another app shared', () => {
     const target = openBackupDatabase();
     const applyNow = target.backup.apply.bind(target.backup);
     let release: () => void = () => undefined;
-    vi.spyOn(target.backup, 'apply').mockImplementation(
+    const apply = vi.spyOn(target.backup, 'apply').mockImplementation(
       (...args) =>
         new Promise((resolve) => {
           release = () => {
@@ -102,6 +103,9 @@ describe('opening a backup another app shared', () => {
     expect(await h.store.getState().open(read)).toBe(false);
     expect(read).not.toHaveBeenCalled();
     expect(h.state().phase).toBe('applying');
+    await vi.waitFor(() => {
+      expect(apply).toHaveBeenCalled();
+    });
     release();
     await applying;
   });

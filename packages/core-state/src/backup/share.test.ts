@@ -24,6 +24,7 @@ function deps() {
     pick: vi.fn(),
     share: vi.fn(() => Promise.resolve()),
     save: vi.fn(() => Promise.resolve(true)),
+    beforeRestore: vi.fn(() => Promise.resolve()),
     afterRestore: vi.fn(),
     calls: service,
   } satisfies BackupDeps & { calls: unknown };

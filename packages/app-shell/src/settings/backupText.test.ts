@@ -259,6 +259,14 @@ describe('failures', () => {
     );
   });
 
+  it('names the click sound that kept the copy from being made', () => {
+    expect(
+      failureText({ kind: 'snapshotFailed', reason: 'x', sound: 'Rim' }),
+    ).toBe(
+      'Could not keep a copy of your data first: the click sound “Rim” is not on this phone. Nothing was changed.',
+    );
+  });
+
   it('refuses a foreign or damaged file and says nothing changed', () => {
     expect(failureText({ kind: 'malformedFile', reason: 'x' })).toBe(
       'This file is not a Kitbag backup. Nothing was changed.',

@@ -28,7 +28,7 @@ export interface RouteLatencyState {
 export interface RouteLatencyActions {
   readonly start: () => Promise<void>;
   readonly stop: () => void;
-  readonly flush: () => void;
+  readonly flush: () => Promise<void>;
   readonly reload: () => Promise<void>;
   readonly step: (deltaMs: number) => void;
   readonly record: (entry: RouteLatency) => Promise<void>;
@@ -74,10 +74,10 @@ export function createRouteLatencyStore(
       pending = null;
     };
 
-    const flush = () => {
+    const flush = async () => {
       const entry = pending;
       cancelPending();
-      if (entry !== null) deps.save(entry).catch(warn);
+      if (entry !== null) await deps.save(entry).catch(warn);
     };
 
     const load = async () => {
@@ -93,7 +93,7 @@ export function createRouteLatencyStore(
 
     const onRoute = (route: OutputRoute) => {
       const same = get().live?.id === route.id;
-      if (pending?.route !== route.id) flush();
+      if (pending?.route !== route.id) void flush();
       set({ live: route });
       if (!same) deps.applyLatency(get().stored[route.id]?.offsetMs ?? 0);
     };
@@ -116,7 +116,7 @@ export function createRouteLatencyStore(
       },
 
       stop: () => {
-        flush();
+        void flush();
         unwatch?.();
         unwatch = null;
       },
@@ -137,7 +137,7 @@ export function createRouteLatencyStore(
         set({ stored: { ...stored, [live.id]: entry } });
         if (timer !== null) clearTimeout(timer);
         pending = entry;
-        timer = setTimeout(flush, ROUTE_LATENCY_SAVE_DELAY_MS);
+        timer = setTimeout(() => void flush(), ROUTE_LATENCY_SAVE_DELAY_MS);
       },
 
       record: async (entry) => {

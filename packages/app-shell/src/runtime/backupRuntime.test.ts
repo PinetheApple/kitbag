@@ -36,9 +36,14 @@ const engine = vi.hoisted(() => ({
   setBarMute: vi.fn(),
 }));
 
-const rig = vi.hoisted(() => ({
-  reloadRigSettings: vi.fn(() => Promise.resolve()),
-}));
+const rig = vi.hoisted(() => {
+  const flush = vi.fn(() => Promise.resolve());
+  return {
+    flush,
+    reloadRigSettings: vi.fn(() => Promise.resolve()),
+    routeLatency: { getState: () => ({ flush }) },
+  };
+});
 
 vi.mock('@/settings/rigRuntime', () => rig);
 vi.mock('./database.ts', () => ({
@@ -138,6 +143,14 @@ it('applies restored theme, Home layout and rig settings without a restart', asy
   expect(getAppearanceStore().getState().theme).toBe('dark');
   expect(getHomeLayoutStore().getState().arrangement).toEqual(RESTORED_LAYOUT);
   expect(rig.reloadRigSettings).toHaveBeenCalledOnce();
+});
+
+it('stores a pending route latency change before a restore applies', async () => {
+  rig.flush.mockClear();
+
+  await getBackup().beforeRestore();
+
+  expect(rig.flush).toHaveBeenCalledOnce();
 });
 
 it('restores through the app database', () => {

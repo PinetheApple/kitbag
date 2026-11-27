@@ -229,7 +229,7 @@ export type ImportFailure =
   | { kind: 'unresolvedConflicts'; conflicts: Conflict[] }
   | { kind: 'replaceNotConfirmed' }
   | { kind: 'stalePlan' }
-  | { kind: 'snapshotFailed'; reason: string }
+  | { kind: 'snapshotFailed'; reason: string; sound?: string }
   | { kind: 'databaseError'; reason: string };
 
 export interface Conflict {

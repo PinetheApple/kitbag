@@ -188,6 +188,7 @@ export {
 } from './backup-format';
 export type { StaleSlots } from './backup-apply';
 export type { ApplyOptions, ApplyReport, BackupService } from './backup';
+export type { KeptBeforeReplace } from './backup-before-replace';
 export type { BackupRules } from './backup-rules';
 export type { MigrationCopyFiles } from './migration-copy';
 export {

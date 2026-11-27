@@ -63,6 +63,7 @@ function backupDeps(target = openBackupDatabase()) {
       }),
     share: () => Promise.resolve(),
     save: () => Promise.resolve(true),
+    beforeRestore: () => Promise.resolve(),
     afterRestore: () => Promise.resolve(),
   };
   return { deps, target };

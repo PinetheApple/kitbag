@@ -243,7 +243,9 @@ export function failureText(failure: RestoreFailure): string {
     case 'unreadable':
       return `Could not read that file. ${NOTHING_CHANGED}`;
     case 'snapshotFailed':
-      return `Could not keep a copy of your data first. ${NOTHING_CHANGED}`;
+      return failure.sound === undefined
+        ? `Could not keep a copy of your data first. ${NOTHING_CHANGED}`
+        : `Could not keep a copy of your data first: the click sound “${failure.sound}” is ${NOT_ON_DEVICE}. ${NOTHING_CHANGED}`;
     default:
       return `Restoring failed. ${NOTHING_CHANGED}`;
   }

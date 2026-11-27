@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CATEGORIES } from './backup-format';
+import { CATEGORIES, type Category } from './backup-format';
 import {
   openBackupDatabase,
   presetValues,
@@ -9,7 +9,9 @@ import {
   unwrap,
   type BackupDatabase,
 } from './backup.test-helper';
+import { TEST_BACKUP_RULES } from './backup-rules.test-helper';
 import { RIG_PREFERENCE_KEYS } from './rig-preferences';
+import { createRouteLatencyRepository } from './route-latency-repository';
 
 const REPLACE_ALL = { mode: 'replace', categories: CATEGORIES } as const;
 const MISSING_SOUND = {
@@ -33,9 +35,21 @@ async function seededTarget() {
   return target;
 }
 
-async function replace(target: BackupDatabase, file: string) {
-  const plan = unwrap(await target.backup.plan(file, REPLACE_ALL));
+async function replace(
+  target: BackupDatabase,
+  file: string,
+  categories: readonly Category[] = CATEGORIES,
+) {
+  const plan = unwrap(
+    await target.backup.plan(file, { mode: 'replace', categories }),
+  );
   return target.backup.apply(plan, { confirmReplace: true });
+}
+
+async function keptCopy(target: BackupDatabase) {
+  const kept = await target.backup.keptBeforeReplace();
+  if (kept === null) throw new Error('no copy kept');
+  return kept;
 }
 
 const portable = (file: string) => {
@@ -57,18 +71,23 @@ describe('the copy kept before a replace', () => {
     const target = await seededTarget();
     const before = await records(target);
     expect((await replace(target, await backupFile())).ok).toBe(true);
-    const copy = await target.backup.keptBeforeReplace();
-    if (copy === null) throw new Error('no copy kept');
-    expect(portable(copy)).toEqual(before);
+    expect(portable((await keptCopy(target)).contents)).toEqual(before);
+  });
+
+  it('remembers which categories the replace took', async () => {
+    const target = await seededTarget();
+    expect((await replace(target, await backupFile(), ['tunings'])).ok).toBe(
+      true,
+    );
+    expect((await keptCopy(target)).categories).toEqual(['tunings']);
   });
 
   it('restores the replaced data through a replace of its own', async () => {
     const target = await seededTarget();
     const before = await records(target);
     await replace(target, await backupFile());
-    const copy = await target.backup.keptBeforeReplace();
-    if (copy === null) throw new Error('no copy kept');
-    expect((await replace(target, copy)).ok).toBe(true);
+    const { contents } = await keptCopy(target);
+    expect((await replace(target, contents)).ok).toBe(true);
     expect(await records(target)).toEqual(before);
   });
 
@@ -91,9 +110,42 @@ describe('the copy kept before a replace', () => {
     const result = await replace(target, await backupFile());
     expect(result).toMatchObject({
       ok: false,
+      error: { kind: 'snapshotFailed', sound: MISSING_SOUND.name },
+    });
+    expect(await rows(target)).toEqual(before);
+    expect(await target.backup.keptBeforeReplace()).toBeNull();
+  });
+
+  it('aborts the replace when the copy would not restore', async () => {
+    const target = await seededTarget();
+    await createRouteLatencyRepository(target.handle).save({
+      route: 'speaker',
+      offsetMs: TEST_BACKUP_RULES.latencyOffsetMs.max + 1,
+      name: null,
+      kind: null,
+    });
+    const before = await rows(target);
+    expect(await replace(target, await backupFile())).toMatchObject({
+      ok: false,
       error: { kind: 'snapshotFailed' },
     });
     expect(await rows(target)).toEqual(before);
     expect(await target.backup.keptBeforeReplace()).toBeNull();
+  });
+
+  it('keeps the previous copy when a replace fails after taking its own', async () => {
+    const target = await seededTarget();
+    const file = await backupFile();
+    expect((await replace(target, file)).ok).toBe(true);
+    const previous = await keptCopy(target);
+    await target.presets.create(presetValues('Added later', null));
+    const withSound = JSON.parse(file) as Record<string, unknown>;
+    withSound.clickSounds = [
+      { slot: 0, uuid: MISSING_SOUND.uuid, name: 'Rim', wav: 'UklGRg==' },
+    ];
+    target.clickSoundFiles.files.write = () =>
+      Promise.reject(new Error('disk full'));
+    expect((await replace(target, JSON.stringify(withSound))).ok).toBe(false);
+    expect(await keptCopy(target)).toEqual(previous);
   });
 });

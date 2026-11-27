@@ -59,7 +59,7 @@ export function startRig({
     console.warn('[kitbag] rig settings not applied', error);
   }
   appState.addEventListener('change', (state) => {
-    if (state === 'background') routeLatency.getState().flush();
+    if (state === 'background') void routeLatency.getState().flush();
   });
   routeLatency
     .getState()

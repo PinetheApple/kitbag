@@ -74,6 +74,27 @@ function withDependencies(categories: readonly Category[]): Category[] {
   );
 }
 
+class UnreadableSound extends Error {
+  constructor(
+    readonly sound: string,
+    cause: unknown,
+  ) {
+    super(`${sound}: ${reasonOf(cause)}`, { cause });
+  }
+}
+
+async function readSound(
+  files: ClickSoundFiles,
+  fileName: string,
+  name: string,
+) {
+  try {
+    return await files.read(fileName);
+  } catch (error) {
+    throw new UnreadableSound(name, error);
+  }
+}
+
 async function withAudio(
   records: LocalRecords,
   files: ClickSoundFiles,
@@ -83,7 +104,7 @@ async function withAudio(
   const clickSounds = await Promise.all(
     local.map(async ({ fileName, ...sound }) => ({
       ...sound,
-      wav: await files.read(fileName),
+      wav: await readSound(files, fileName, sound.name),
     })),
   );
   return {
@@ -143,16 +164,19 @@ interface ServiceContext {
   rules: BackupRules;
 }
 
-async function keepCurrentData({ handle, files }: ServiceContext) {
+async function keepCurrentData(
+  { handle, files, rules }: ServiceContext,
+  categories: Category[],
+) {
   try {
-    await keepBeforeReplace(
-      handle.db,
-      await exportBackup(handle, files, CATEGORIES),
-    );
+    const contents = await exportBackup(handle, files, CATEGORIES);
+    parseBackup(contents, rules);
+    await keepBeforeReplace(handle.db, { categories, contents });
   } catch (error) {
     throw new ImportRejected({
       kind: 'snapshotFailed',
       reason: reasonOf(error),
+      ...(error instanceof UnreadableSound ? { sound: error.sound } : {}),
     });
   }
 }
@@ -177,7 +201,7 @@ async function applyPlan(
   const fresh = computePlan(file, snapshot, plan, rules.deviceRoutes);
   if (planFingerprint(fresh.plan) !== planFingerprint(plan))
     throw new ImportRejected({ kind: 'stalePlan' });
-  if (plan.mode === 'replace') await keepCurrentData(context);
+  if (plan.mode === 'replace') await keepCurrentData(context, plan.categories);
   const sounds = await applyWrites(
     db,
     fresh.plan,

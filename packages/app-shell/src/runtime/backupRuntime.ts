@@ -13,7 +13,7 @@ import {
   tunerStore,
 } from '@kitbag/core-state';
 
-import { reloadRigSettings } from '@/settings/rigRuntime';
+import { reloadRigSettings, routeLatency } from '@/settings/rigRuntime';
 
 import { getDatabase } from './database.ts';
 
@@ -40,5 +40,6 @@ configureBackup({
   pick: pickBackup,
   share: shareBackup,
   save: saveBackup,
+  beforeRestore: () => routeLatency.getState().flush(),
   afterRestore: refreshAfterRestore,
 });
