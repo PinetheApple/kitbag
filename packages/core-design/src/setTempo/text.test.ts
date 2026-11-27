@@ -66,8 +66,12 @@ describe('tap and nudge copy', () => {
   it('signs a nudge with the rules minus', () => {
     expect(nudgeLabel(-10)).toBe('−10 ms');
     expect(nudgeLabel(10)).toBe('+10 ms');
-    expect(nudgedText(20)).toBe(
+    expect(nudgedText(20, true)).toBe(
       'Moved +20 ms. Playing with the click: check late in the song for drift.',
     );
+  });
+
+  it('asks for a drift check only while the click plays', () => {
+    expect(nudgedText(20, false)).toBe('Moved +20 ms.');
   });
 });

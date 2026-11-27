@@ -6,6 +6,7 @@ type BarOneTempo = Pick<TempoValue<number>, 'bpm' | 'anchor'>;
 
 const UNIT = 'BPM';
 const PLUS = '+';
+const DRIFT_CHECK = 'Playing with the click: check late in the song for drift.';
 
 export const SET_TEMPO_COPY = {
   title: 'Set tempo',
@@ -79,8 +80,10 @@ export function setTempoText<M extends number>(rules: SetTempoRules<M>) {
     tappedHint: (taps: number) =>
       `From ${String(taps)} taps. Keep tapping to refine.`,
     nudgeLabel,
-    nudgedText: (ms: number) =>
-      `Moved ${nudgeLabel(ms)}. Playing with the click: check late in the song for drift.`,
+    nudgedText: (ms: number, clickOn: boolean) =>
+      clickOn
+        ? `Moved ${nudgeLabel(ms)}. ${DRIFT_CHECK}`
+        : `Moved ${nudgeLabel(ms)}.`,
     nudgeSpoken: (ms: number) =>
       `Nudge ${String(Math.abs(ms))} ms ${ms < 0 ? 'earlier' : 'later'}`,
   };

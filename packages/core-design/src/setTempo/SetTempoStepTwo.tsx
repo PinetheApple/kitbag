@@ -66,6 +66,11 @@ const useStyles = createThemedStyles((theme) => ({
     flex: 1,
     color: theme.color.text2,
   },
+  meter: { gap: space.controlGap },
+  meterLabel: {
+    ...textStyle(textRoles.sectionLabel),
+    color: theme.color.text2,
+  },
 }));
 
 export interface PreviewClickProps {
@@ -79,11 +84,16 @@ interface StepProps<M extends number> {
   readonly playhead: SetTempoPlayhead;
 }
 
+interface BarOneProps<M extends number> extends StepProps<M> {
+  readonly clickOn: boolean;
+}
+
 function BarOneDetail<M extends number>({
   tempo,
   draft,
   playhead,
-}: StepProps<M>) {
+  clickOn,
+}: BarOneProps<M>) {
   const styles = useStyles();
   const live = useDerivedValue(
     () => `${playheadValue(playhead.songSec.value)}.`,
@@ -91,7 +101,7 @@ function BarOneDetail<M extends number>({
   if (draft.nudgedMs !== 0)
     return (
       <Text style={styles.detail}>
-        {tempo.kit.text.nudgedText(draft.nudgedMs)}
+        {tempo.kit.text.nudgedText(draft.nudgedMs, clickOn)}
       </Text>
     );
   return (
@@ -102,7 +112,7 @@ function BarOneDetail<M extends number>({
   );
 }
 
-function BarOneRow<M extends number>(props: StepProps<M>) {
+function BarOneRow<M extends number>(props: BarOneProps<M>) {
   const styles = useStyles();
   return (
     <View style={styles.barOne}>
@@ -229,8 +239,8 @@ function TempoFields<M extends number>({
           onLater={faster}
         />
       </View>
-      <View style={styles.field}>
-        <Text style={styles.fieldLabel}>{SET_TEMPO_COPY.beatsPerBar}</Text>
+      <View style={styles.meter}>
+        <Text style={styles.meterLabel}>{SET_TEMPO_COPY.beatsPerBar}</Text>
         <SegmentedControl
           options={meters}
           selected={String(draft.beatsPerBar)}
@@ -284,7 +294,12 @@ export function SetTempoStepTwo<M extends number>({
         label={barOneLabel(anchor)}
       />
       <SetTempoTransport playhead={playhead} {...transport} />
-      <BarOneRow tempo={tempo} draft={draft} playhead={playhead} />
+      <BarOneRow
+        tempo={tempo}
+        draft={draft}
+        playhead={playhead}
+        clickOn={previewClick.on}
+      />
       <BarOneMoves tempo={tempo} />
       <TempoFields tempo={tempo} draft={draft} />
       <PreviewClick {...previewClick} />

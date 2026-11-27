@@ -157,6 +157,17 @@ describe('a song with no beat grid', () => {
     });
   });
 
+  it('lets the reason beside Set tempo wrap instead of cutting it off', () => {
+    const tree = mount();
+    const reason = only(
+      byType(tree, 'Text').find((node) =>
+        node.children.includes(SET_TEMPO_TEXT.entryReason),
+      ),
+    );
+    expect(reason.props.numberOfLines).toBeUndefined();
+    expect(reason.props.style).toMatchObject({ flex: 1, minWidth: 0 });
+  });
+
   it('lists Set tempo in the Player sheet and says Meter needs it first', () => {
     const tree = openMenu();
     expect(menuRow(tree, SET_TEMPO_TEXT.title)?.props.detail).toBe(

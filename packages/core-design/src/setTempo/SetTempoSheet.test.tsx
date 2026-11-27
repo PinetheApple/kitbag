@@ -162,6 +162,17 @@ function toStepTwo(tree: ReactTestRenderer) {
   call(one(tree, 'NumpadKeypad'), 'onConfirm');
 }
 
+const texts = (tree: ReactTestRenderer) =>
+  all(tree, 'Text').flatMap((node) =>
+    node.children.filter((child) => typeof child === 'string'),
+  );
+
+const styleOf = (node: ReactTestInstance) =>
+  Object.assign({}, ...[node.props.style as unknown].flat()) as Record<
+    string,
+    unknown
+  >;
+
 const detail = (tree: ReactTestRenderer) =>
   one(tree, 'Sheet').props.titleDetail as string;
 
@@ -249,6 +260,35 @@ describe('step 2', () => {
       anchor: 2.31,
       beatsPerBar: 3,
     });
+  });
+
+  it('asks for a drift check after a nudge only while the preview click is on', () => {
+    const quiet = mount(NO_SEED, false);
+    toStepTwo(quiet);
+    call(one(quiet, 'PresetButton', '+10 ms'), 'onPress');
+    expect(texts(quiet)).toContain('Moved +10 ms.');
+    expect(texts(quiet).some((t) => t.includes('drift'))).toBe(false);
+    const clicking = mount();
+    toStepTwo(clicking);
+    call(one(clicking, 'PresetButton', '+10 ms'), 'onPress');
+    expect(texts(clicking)).toContain(
+      'Moved +10 ms. Playing with the click: check late in the song for drift.',
+    );
+  });
+
+  it('puts beats per bar on its own line above a full-width control', () => {
+    const tree = mount();
+    toStepTwo(tree);
+    const meter = one(tree, 'SegmentedControl');
+    let group = meter.parent;
+    while (group !== null && String(group.type) !== 'View')
+      group = group.parent;
+    if (group === null) throw new Error('no meter group');
+    expect(styleOf(group).flexDirection).toBeUndefined();
+    const label = group.findAllByType('Text' as never)[0];
+    expect(label?.children).toEqual([SET_TEMPO_COPY.beatsPerBar]);
+    expect(styleOf(label ?? group)).not.toHaveProperty('flex');
+    expect(meter.props).not.toHaveProperty('style');
   });
 
   it('shows and toggles the click through the Preview click chip', () => {
