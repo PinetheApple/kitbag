@@ -245,7 +245,7 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
     const presets = trackPresets(runtime, access);
     const lockOn: typeof follow.lockOn = (seen, lock) => {
       follow.lockOn(seen, lock);
-      const savedPhaseMs = presets.savedPhaseMs();
+      const { savedPhaseMs } = access.getState();
       if (savedPhaseMs !== undefined) phase.setPhaseOffset(savedPhaseMs);
     };
     const setBpm = (bpm: number) => {

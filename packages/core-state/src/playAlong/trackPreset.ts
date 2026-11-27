@@ -202,7 +202,7 @@ export function trackPresets(
     }
     setState({
       hasSavedPreset: true,
-      savedPhaseMs: Math.round(lock.phaseOffsetMs),
+      savedPhaseMs: lock.phaseOffsetMs,
       presetRecalled: false,
     });
     return SAVED;
@@ -220,7 +220,6 @@ export function trackPresets(
     store.setAccents(accentsOf(preset.accents));
     const sounds = perAccentSoundsOf(preset.perAccentSounds, preset.sound);
     store.setSounds(sounds.normal, sounds.accent);
-    setState({ savedPhaseMs: Math.round(preset.phaseNudge) });
     appliedId = preset.id;
   };
 
@@ -232,11 +231,16 @@ export function trackPresets(
       () => undefined,
     );
     if (recalledFor !== identity || preset === undefined) return;
-    if (preset.id !== appliedId) {
-      apply(preset);
-      setState({ presetRecalled: true });
+    if (preset.id === appliedId) {
+      setState({ hasSavedPreset: true });
+      return;
     }
-    setState({ hasSavedPreset: true });
+    apply(preset);
+    setState({
+      hasSavedPreset: true,
+      savedPhaseMs: preset.phaseNudge,
+      presetRecalled: true,
+    });
   };
 
   const onTrack = (force: boolean) => {
@@ -279,7 +283,6 @@ export function trackPresets(
   return {
     saveForTrack,
     watch,
-    savedPhaseMs: () => getState().savedPhaseMs,
     unlocked: () => {
       setState({ presetRecalled: false });
     },
