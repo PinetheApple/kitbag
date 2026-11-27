@@ -9,7 +9,7 @@ import type { AppStateStatus } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { AppStateSource } from './rigClickLifecycle.ts';
-import { startRig } from './rigStart.ts';
+import { reloadRig, startRig } from './rigStart.ts';
 
 function commands(): MetronomeCommands {
   const none = () => undefined;
@@ -36,8 +36,13 @@ function harness(storedVolume?: number) {
       return { remove: () => undefined };
     },
   };
+  const reloads = vi.fn(() => Promise.resolve());
   const routeLatency = {
-    getState: () => ({ start: () => Promise.resolve(), flush: flushes }),
+    getState: () => ({
+      start: () => Promise.resolve(),
+      flush: flushes,
+      reload: reloads,
+    }),
   } as unknown as RouteLatencyStore;
   startRig({
     routeLatency,
@@ -52,11 +57,42 @@ function harness(storedVolume?: number) {
   });
   return {
     metronome,
+    routeLatency,
+    reloads,
     saved,
     flushes,
     appState: (state: AppStateStatus) => listener?.(state),
   };
 }
+
+describe('reloading the rig after a restore', () => {
+  const RESTORED_VOLUME = 0.6;
+
+  it('applies the restored volume, accents and route latencies', async () => {
+    const { metronome, routeLatency, reloads } = harness();
+    const reloadAccents = vi.fn();
+    await reloadRig({
+      routeLatency,
+      metronome,
+      volume: { load: () => RESTORED_VOLUME, save: () => undefined },
+      reloadAccents,
+    });
+    expect(metronome.getState().volume).toBe(RESTORED_VOLUME);
+    expect(reloadAccents).toHaveBeenCalledOnce();
+    expect(reloads).toHaveBeenCalledOnce();
+  });
+
+  it('returns to the default volume when the restore left none stored', async () => {
+    const { metronome, routeLatency } = harness(1.7);
+    await reloadRig({
+      routeLatency,
+      metronome,
+      volume: { load: () => undefined, save: () => undefined },
+      reloadAccents: () => undefined,
+    });
+    expect(metronome.getState().volume).toBe(1);
+  });
+});
 
 describe('starting the rig', () => {
   it('restores the stored click volume', () => {

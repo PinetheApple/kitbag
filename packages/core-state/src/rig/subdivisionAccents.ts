@@ -70,30 +70,29 @@ const accents = persistedStore<
 >(
   'Subdivision accents',
   { load: () => ({}), save: () => undefined },
-  (persistence, commit) => {
+  (persistence, commit, access) => {
     const stored = persistence.load();
-    let masks = loadedMasks(stored.masks);
+    const masksNow = () => access.getState().masks;
     const write = (count: number, mask: number) => {
       if (!isCount(count)) return;
       commit('lastCount', count, (lastCount) => {
         persistence.save({ lastCount });
       });
-      const next = [...masks];
+      const next = [...masksNow()];
       next[count] = engineMask(mask, count);
-      if (next[count] === masks[count]) return;
-      masks = next;
+      if (next[count] === masksNow()[count]) return;
       commit('masks', next, (changed) => {
         persistence.save({ masks: changed });
       });
     };
     return {
-      masks,
+      masks: loadedMasks(stored.masks),
       lastCount:
         stored.lastCount !== undefined && isCount(stored.lastCount)
           ? stored.lastCount
           : KB_SUBDIVISION_BOUNDS.min,
       toggle: (count, slot) => {
-        write(count, toggleSlotMask(masks[count] ?? 0, slot));
+        write(count, toggleSlotMask(masksNow()[count] ?? 0, slot));
       },
       reset: (count) => {
         write(count, 0);
@@ -105,6 +104,7 @@ const accents = persistedStore<
 export const createSubdivisionAccentsStore = accents.create;
 export const configureSubdivisionAccentsPersistence = accents.configure;
 export const getSubdivisionAccentsStore = accents.get;
+export const reloadSubdivisionAccentsStore = accents.reload;
 
 export function replaySubdivisionAccents(
   store: SubdivisionAccentsStoreApi,

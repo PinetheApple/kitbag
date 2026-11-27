@@ -21,6 +21,11 @@ export interface TunerField {
   readonly scale: number;
 }
 
+export interface FixedOutputRoute {
+  readonly id: string;
+  readonly kind: string;
+}
+
 export interface TunerFields {
   readonly note: TunerField;
   readonly cents: TunerField;
@@ -59,6 +64,7 @@ export interface NativeSources {
   readonly constantTempoHeader: string;
   /** native/audio_core/include/kitbag_metronome_slot_api.h — kb_metronome_slot. */
   readonly metronomeSlotHeader: string;
+  readonly outputRoutes: string;
 }
 
 export interface NativeConstants {
@@ -106,6 +112,7 @@ export interface NativeConstants {
   readonly accent: readonly EnumMember[];
   readonly latencyOffsetMsBounds: RangeBound;
   readonly barPhaseBounds: RangeBound;
+  readonly fixedOutputRoutes: readonly FixedOutputRoute[];
   readonly tunerFields: TunerFields;
   readonly tunerMaxStrings: number;
   readonly tunerAutoString: number;

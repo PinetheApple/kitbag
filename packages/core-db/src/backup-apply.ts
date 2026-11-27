@@ -1,4 +1,4 @@
-import { eq, inArray, isNotNull, sql } from 'drizzle-orm';
+import { eq, inArray, isNotNull, notInArray } from 'drizzle-orm';
 
 import { ANALYSIS_STATUS } from './analysis-status';
 import {
@@ -12,7 +12,7 @@ import {
   type ClickSoundRecord,
   type LibrarySongRecord,
   type PracticeSessionRecord,
-  type PreferenceRecord,
+  type RigRecord,
   type SetlistRecord,
   type SongPresetRecord,
   type StemSongRecord,
@@ -26,6 +26,8 @@ import {
   loadStemEntries,
   type SetlistEntryContext,
 } from './backup-setlist-entries';
+import { upsertPreference } from './backup-apply-preference';
+import { upsertRigSetting } from './backup-apply-rig';
 import { restoreStemSong } from './backup-stem-songs';
 import {
   freshClickSoundFileName,
@@ -39,6 +41,7 @@ import {
   clickSounds,
   practiceSessions,
   preferences,
+  routeLatency,
   setlistItems,
   setlists,
   songPresets,
@@ -168,19 +171,6 @@ function simpleUpsert(
   };
 }
 
-async function upsertPreference(
-  db: Database,
-  record: PreferenceRecord,
-): Promise<number> {
-  const { key, value } = record;
-  const rows = await db
-    .insert(preferences)
-    .values({ key, value })
-    .onConflictDoUpdate({ target: preferences.key, set: { value } })
-    .returning({ id: sql<number>`rowid` });
-  return found(rows, 'Preference upsert').id;
-}
-
 async function upsertClickSound(
   db: Database,
   record: ClickSoundRecord,
@@ -211,14 +201,24 @@ const UPSERTS: Record<Category, Upsert> = {
   clickSounds: upsertClickSound as Upsert,
   stemSongs: (db, record, localId) =>
     restoreStemSong(db, record as StemSongRecord, localId),
+  rigSettings: (db, record) => upsertRigSetting(db, record as RigRecord),
+  appearanceSettings: upsertPreference as Upsert,
 };
 
-async function deleteCategory(db: Database, category: Category) {
+async function deleteCategory(
+  db: Database,
+  category: Category,
+  deviceRoutes: readonly string[],
+) {
   if (category === 'stemSongs') return;
   if (isPreferenceCategory(category)) {
     await db
       .delete(preferences)
       .where(inArray(preferences.key, [...PREFERENCE_KEYS[category]]));
+    if (category === 'rigSettings')
+      await db
+        .delete(routeLatency)
+        .where(notInArray(routeLatency.route, [...deviceRoutes]));
   } else if (category === 'setlists') {
     await db.delete(setlistItems);
     await db.update(practiceSessions).set({ setlistId: null });
@@ -350,13 +350,14 @@ export async function applyWrites(
   writes: Writes,
   snapshot: Snapshot,
   fileContext: FileContext,
+  deviceRoutes: readonly string[],
 ): Promise<SoundOutcome> {
   const { ids } = snapshot;
   const deviceStemSets = new Map(ids.stemSongs);
   const stemEntries = await loadStemEntries(db);
   if (plan.mode === 'replace') {
     for (const category of [...plan.categories].reverse()) {
-      await deleteCategory(db, category);
+      await deleteCategory(db, category, deviceRoutes);
       ids[category].clear();
     }
     if (plan.categories.includes('clickSounds'))

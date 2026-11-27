@@ -1,5 +1,6 @@
 import { KB_RESULT, getOutputRoute } from '@kitbag/core-native';
 import type { RouteLatency } from '@kitbag/core-db';
+import { metronomeStore } from '@kitbag/core-state';
 
 import {
   storedWebPreference,
@@ -8,8 +9,9 @@ import {
 
 import { presentationFrame } from './presentationClock.ts';
 import { applyLatency, bootRig } from './rigBoot.ts';
-import type { RigKey } from './rigPreferences.ts';
+import { volumePersistence, type RigKey } from './rigPreferences.ts';
 import type * as Native from './rigRuntime.ts';
+import { reloadRig } from './rigStart.ts';
 
 export const rigEngineDeps: typeof Native.rigEngineDeps = {
   startClick: () => Promise.resolve(KB_RESULT.KB_OK),
@@ -22,8 +24,10 @@ export const setLiveVolume: typeof Native.setLiveVolume = () => undefined;
 
 const routes = new Map<string, RouteLatency>();
 
+const stored = (key: RigKey) => storedWebPreference(`${WEB_KEY_PREFIX}${key}`);
+
 export const routeLatency: typeof Native.routeLatency = bootRig({
-  stored: (key: RigKey) => storedWebPreference(`${WEB_KEY_PREFIX}${key}`),
+  stored,
   sendAccents: () => undefined,
   routes: {
     list: () => Promise.resolve([...routes.values()]),
@@ -41,3 +45,10 @@ export const routeLatency: typeof Native.routeLatency = bootRig({
     },
   },
 });
+
+export const reloadRigSettings: typeof Native.reloadRigSettings = () =>
+  reloadRig({
+    routeLatency,
+    metronome: metronomeStore,
+    volume: volumePersistence(stored),
+  });

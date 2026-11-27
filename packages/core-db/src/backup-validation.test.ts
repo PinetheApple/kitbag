@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { CATEGORIES, type ImportFailure } from './backup-format';
+import {
+  BACKUP_VERSION,
+  CATEGORIES,
+  type ImportFailure,
+} from './backup-format';
 import { openBackupDatabase, records, seed } from './backup.test-helper';
 import { SOUND_ID_COUNT } from './preset-rules';
 
@@ -35,9 +39,10 @@ const first = <T>(list: T[]): T => {
 
 describe('backup validation', () => {
   it('refuses a newer version by number', async () => {
-    expect(await rejected((file) => (file.version = 6))).toEqual({
+    const newer = BACKUP_VERSION + 1;
+    expect(await rejected((file) => (file.version = newer))).toEqual({
       kind: 'unsupportedVersion',
-      version: 6,
+      version: newer,
     });
   });
 
@@ -53,6 +58,38 @@ describe('backup validation', () => {
     if (!plan.ok) throw new Error(plan.error.kind);
     expect((await target.backup.apply(plan.value)).ok).toBe(true);
     expect(await records(target)).toEqual(await records(source));
+  });
+
+  it('reads a category it does not know in a current file as a newer one', async () => {
+    expect(
+      await rejected((file) => {
+        file.categories = [...CATEGORIES, 'toolData'];
+        file.toolData = [];
+      }),
+    ).toEqual({ kind: 'unsupportedVersion', version: BACKUP_VERSION });
+  });
+
+  it('reads a category it does not know in a v4 file as damage', async () => {
+    expect(
+      await rejected((file) => {
+        file.version = 4;
+        file.categories = [...CATEGORIES, 'toolData'];
+      }),
+    ).toMatchObject({
+      kind: 'invalidField',
+      path: `$.categories[${String(CATEGORIES.length)}]`,
+    });
+  });
+
+  it('reads a repeated category in a current file as damage', async () => {
+    expect(
+      await rejected((file) => {
+        file.categories = [...CATEGORIES, 'tunings'];
+      }),
+    ).toMatchObject({
+      kind: 'invalidField',
+      path: `$.categories[${String(CATEGORIES.length)}]`,
+    });
   });
 
   it('refuses a v3 file by number', async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CATEGORIES } from './backup-format';
+import { BACKUP_VERSION, CATEGORIES } from './backup-format';
 import {
   openBackupDatabase,
   records,
@@ -148,6 +148,8 @@ describe('backup round trip', () => {
       metronomeSettings: 1,
       clickSounds: 0,
       stemSongs: 0,
+      rigSettings: 0,
+      appearanceSettings: 0,
     });
   });
 
@@ -259,7 +261,10 @@ describe('backup round trip', () => {
     const file = JSON.parse(
       await database.backup.export(['tunings']),
     ) as Record<string, unknown>;
-    expect(file).toMatchObject({ version: 5, categories: ['tunings'] });
+    expect(file).toMatchObject({
+      version: BACKUP_VERSION,
+      categories: ['tunings'],
+    });
     expect(file.setlists).toBeUndefined();
   });
 });

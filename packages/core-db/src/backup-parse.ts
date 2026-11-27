@@ -17,6 +17,7 @@ import {
   type PracticeSessionRecord,
   type PreferenceCategory,
   type PreferenceRecord,
+  type RigRecord,
   type SetlistItemRecord,
   type SetlistRecord,
   type SongPresetRecord,
@@ -31,6 +32,8 @@ import {
   type Reader,
 } from './backup-reader';
 import { readManualTempo } from './backup-manual-tempo';
+import { routeLatencyReader } from './backup-rig-read';
+import type { BackupRules } from './backup-rules';
 import { readSongTempo } from './backup-song-tempo';
 import { readStemSong } from './backup-stem-song-read';
 import { decodeBase64, presetBytes } from './base64';
@@ -272,9 +275,21 @@ function preferenceReader(category: PreferenceCategory) {
   };
 }
 
-const READERS: {
+const readRigPreference = preferenceReader('rigSettings');
+
+function rigSettingReader(rules: BackupRules) {
+  const readRouteLatency = routeLatencyReader(rules.latencyOffsetMs);
+  return (value: unknown, path: string): RigRecord =>
+    'route' in asObject(value, path)
+      ? readRouteLatency(value, path)
+      : readRigPreference(value, path);
+}
+
+type Readers = {
   [C in Category]: (value: unknown, path: string) => CategoryRecords[C][number];
-} = {
+};
+
+const READERS: Omit<Readers, 'rigSettings'> = {
   librarySongs: readLibrarySong,
   songPresets: readSongPreset,
   setlists: readSetlist,
@@ -284,12 +299,14 @@ const READERS: {
   metronomeSettings: preferenceReader('metronomeSettings'),
   clickSounds: readClickSound,
   stemSongs: readStemSong,
+  appearanceSettings: preferenceReader('appearanceSettings'),
 };
 
 function readCategory<C extends Category>(
   root: Record<string, unknown>,
   category: C,
   listed: boolean,
+  read: Readers[C],
 ): CategoryRecords[C] {
   const path = `$.${category}`;
   if (!listed) {
@@ -297,23 +314,27 @@ function readCategory<C extends Category>(
       invalidField(path, 'present but not listed in categories');
     return [];
   }
-  const read = READERS[category];
   return asArray(root[category], path).map((value, index) =>
     read(value, `${path}[${String(index)}]`),
   ) as CategoryRecords[C];
 }
 
-function readCategories(value: unknown): Category[] {
+// A current-version reader refuses a category it does not know rather than
+// dropping its records, so one it has never seen means a newer writer.
+function readCategories(value: unknown, version: number): Category[] {
   const listed = asArray(value, '$.categories');
   const known: readonly unknown[] = CATEGORIES;
   listed.forEach((category, index) => {
-    if (!known.includes(category) || listed.indexOf(category) !== index)
-      invalidField(`$.categories[${String(index)}]`, 'unknown or repeated');
+    const repeated = listed.indexOf(category) !== index;
+    if (known.includes(category) && !repeated) return;
+    if (version === BACKUP_VERSION && typeof category === 'string' && !repeated)
+      reject({ kind: 'unsupportedVersion', version });
+    invalidField(`$.categories[${String(index)}]`, 'unknown or repeated');
   });
   return listed as Category[];
 }
 
-const isRestorableVersion = (version: unknown) =>
+const isRestorableVersion = (version: unknown): version is number =>
   typeof version === 'number' &&
   version >= OLDEST_RESTORABLE_BACKUP_VERSION &&
   version <= BACKUP_VERSION;
@@ -327,7 +348,7 @@ function readHeader(root: Record<string, unknown>) {
     reject({ kind: 'malformedFile', reason: 'not a Kitbag backup' });
   return {
     exportedAt: reader(root, '$').string('exportedAt'),
-    categories: readCategories(root.categories),
+    categories: readCategories(root.categories, version),
   };
 }
 
@@ -393,13 +414,19 @@ function parseJson(text: string): Record<string, unknown> {
   return asObject(root, '$');
 }
 
-export function parseBackup(input: string): BackupFile {
+export function parseBackup(input: string, rules: BackupRules): BackupFile {
   const root = parseJson(input);
   const header = readHeader(root);
+  const readers: Readers = { ...READERS, rigSettings: rigSettingReader(rules) };
   const records = Object.fromEntries(
     CATEGORIES.map((category) => [
       category,
-      readCategory(root, category, header.categories.includes(category)),
+      readCategory(
+        root,
+        category,
+        header.categories.includes(category),
+        readers[category],
+      ),
     ]),
   ) as unknown as CategoryRecords;
   const file: BackupFile = { ...header, version: BACKUP_VERSION, records };

@@ -1,12 +1,10 @@
-import type { Preferences } from '@kitbag/core-db';
+import { HOME_LAYOUT_KEY, type Preferences } from '@kitbag/core-db';
 import type {
   HomeLayoutPersistence,
   SavedArrangement,
 } from '@kitbag/core-state';
 
 import { storedPreference, type StoredPreference } from './storedPreference';
-
-export const HOME_LAYOUT_KEY = 'home_layout';
 
 type SavedTile = SavedArrangement[number];
 

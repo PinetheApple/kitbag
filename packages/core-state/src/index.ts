@@ -5,6 +5,7 @@ export {
   BPM_BOUNDS,
   DEFAULT_BPM,
   DEFAULT_POLY_BEATS,
+  DEFAULT_VOLUME,
   DEFAULT_TRAINER_BARS,
   createMetronomeStore,
   metronomeStore,
@@ -219,6 +220,7 @@ export {
   configureHomeLayoutPersistence,
   createHomeLayoutStore,
   getHomeLayoutStore,
+  reloadHomeLayoutStore,
   type HomeLayoutPersistence,
   type HomeLayoutStore,
   type SavedArrangement,
@@ -267,6 +269,7 @@ export {
   createAppearanceStore,
   DEFAULT_APPEARANCE,
   getAppearanceStore,
+  reloadAppearanceStore,
   THEME_CHOICES,
   type AppearanceKey,
   type AppearancePersistence,
@@ -915,6 +918,7 @@ export {
   createSubdivisionAccentsStore,
   getSubdivisionAccentsStore,
   ON_BEAT_SLOT,
+  reloadSubdivisionAccentsStore,
   replaySubdivisionAccents,
   toggleSlotMask,
   type SendSubdivisionAccents,
@@ -1028,6 +1032,7 @@ export {
   type RestoreStore,
 } from './backup/restore.ts';
 export { useRestore } from './backup/useRestore.ts';
+export { openableBeforeReplace } from './backup/beforeReplace.ts';
 export {
   isReplaceConfirmed,
   REPLACE_CONFIRMATION,

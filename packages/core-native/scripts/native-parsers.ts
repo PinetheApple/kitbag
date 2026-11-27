@@ -1,5 +1,6 @@
 import type {
   EnumMember,
+  FixedOutputRoute,
   RangeBound,
   TunerField,
   TunerFields,
@@ -207,4 +208,25 @@ export function parseTunerFields(apiHeader: string): TunerFields {
     cents: toField(cents),
     confidence: toField(confidence),
   };
+}
+
+const WIRE_KIND = /val\s+wire:\s*String\s+get\(\)\s*=\s*name\.lowercase\(\)/;
+const FAMILY_ENTRY =
+  /\b[A-Z_]+\(\s*"([a-z0-9-]+)",\s*RouteKind\.([A-Z]+),\s*Keying\.([A-Z]+),/g;
+
+export function parseFixedOutputRoutes(
+  outputRoutes: string,
+): FixedOutputRoute[] {
+  if (!WIRE_KIND.test(outputRoutes))
+    fail('RouteKind.wire as the lowercased name');
+  const block = /enum\s+class\s+Family\b([\s\S]*?)companion\s+object/.exec(
+    outputRoutes,
+  );
+  if (block === null) fail('the Family enum in OutputRoutes.kt');
+  const routes: FixedOutputRoute[] = [];
+  for (const [, id, kind, keying] of (block[1] ?? '').matchAll(FAMILY_ENTRY))
+    if (keying === 'FIXED')
+      routes.push({ id: id ?? '', kind: (kind ?? '').toLowerCase() });
+  if (routes.length === 0) fail('Family entries keyed FIXED');
+  return routes;
 }

@@ -2202,6 +2202,12 @@ Kitbag where it was installed: the app cannot update itself.
   between two described outcomes, not two words.
 - **Replace is destructive and is treated that way**: red button, "Deletes your 3
   setlists and 24 songs", typed confirm.
+- **Replace keeps one copy first.** In the same transaction, before it changes
+  anything, Replace stores a full backup of the current data in the database; a
+  copy that cannot be made, or would not restore, refuses the replace and
+  nothing changes. One slot: the next Replace overwrites it. The copy opens in
+  the Restore review as a Replace of the categories it replaced. Its entry
+  point is not built yet (#718).
 - **Selective is per category, not per item.** Practice history and library songs
   default off — history is rarely what you're restoring, and library rows point at
   audio files a JSON backup does not contain. A row that would import 17 broken
@@ -2277,6 +2283,14 @@ the supersession: ≤7 primary choices.)
   and where, and offers "Remove missing files". Storage reports; Data folder
   relocates.
 - **Theme and haptics are new**, and they are the cheapest rows here.
+- **Backup:** Rig is its own Restore category, on by default: volume,
+  subdivision accents and every route's latency. Replace keeps this phone's own
+  latency for a built-in route it has measured (speaker, earpiece, wired: no
+  device identity) and takes the backup's for Bluetooth and the rest. Merge
+  reviews a route measured differently as a conflict (#718).
+- **Backup:** Appearance and Home is its own Restore category, on by default:
+  theme, haptics, keep awake and the Home layout. The GetSongBPM key is never in
+  a backup. Both categories apply on restore without a restart (#718).
 - **Data moves through the system.** Backup goes out through the share sheet
   or the system save dialog, restore comes in through the picker. **Kitbag writes to no path of its own
   choosing.**

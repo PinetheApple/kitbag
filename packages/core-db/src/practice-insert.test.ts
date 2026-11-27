@@ -8,6 +8,7 @@ import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 import type { NewPracticeSession } from './practice-repository';
 import { memoryClickSoundFiles } from './click-sound-files.test-helper';
 import { unusedMigrationCopyFiles } from './migration-copy-files.test-helper';
+import { TEST_BACKUP_RULES } from './backup-rules.test-helper';
 
 const STARTED_AT = new Date('2026-11-01T18:00:00Z');
 
@@ -17,6 +18,7 @@ function open() {
     connection,
     memoryClickSoundFiles().files,
     unusedMigrationCopyFiles,
+    TEST_BACKUP_RULES,
   );
 }
 

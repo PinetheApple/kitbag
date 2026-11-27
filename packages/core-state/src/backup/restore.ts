@@ -22,6 +22,10 @@ import { getBackup, type BackupDeps } from './runtime.ts';
 
 export type RestoreFailure = ImportFailure | { readonly kind: 'unreadable' };
 
+export interface OpenableBackup extends PickedBackup {
+  readonly replace?: readonly Category[];
+}
+
 export interface RestoreSource {
   readonly name: string;
   readonly bytes: number;
@@ -50,7 +54,7 @@ export type RestoreState =
 
 export interface RestoreActions {
   pick: () => Promise<void>;
-  open: (read: () => Promise<PickedBackup | null>) => Promise<boolean>;
+  open: (read: () => Promise<OpenableBackup | null>) => Promise<boolean>;
   setMode: (mode: ImportMode) => Promise<void>;
   toggleCategory: (category: Category) => Promise<void>;
   resolve: (conflict: Conflict, resolution: Resolution) => Promise<void>;
@@ -137,6 +141,7 @@ export function createRestoreStore(
     const finish = async (state: RestoreReview, confirmReplace: boolean) => {
       show({ ...state, phase: 'applying' });
       flushStandaloneMetronomePersistence();
+      await deps().beforeRestore();
       const result = await lock.run(() =>
         deps().service().apply(state.plan, { confirmReplace }),
       );
@@ -157,7 +162,7 @@ export function createRestoreStore(
       show({ phase: 'failed', failure: result.error });
     };
 
-    const readAndPlan = async (read: () => Promise<PickedBackup | null>) => {
+    const readAndPlan = async (read: () => Promise<OpenableBackup | null>) => {
       request += 1;
       show({ phase: 'reading' });
       let picked;
@@ -174,7 +179,9 @@ export function createRestoreStore(
       const source = { name: picked.name, bytes: picked.bytes };
       await replan(
         { source, contents: picked.contents },
-        { mode: 'merge', resolutions: {} },
+        picked.replace === undefined
+          ? { mode: 'merge', resolutions: {} }
+          : { mode: 'replace', categories: picked.replace, resolutions: {} },
       );
     };
 
