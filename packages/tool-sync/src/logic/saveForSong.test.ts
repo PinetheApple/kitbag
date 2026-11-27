@@ -71,6 +71,20 @@ describe('recallLine', () => {
       'Your saved settings are back: 4/4, eighths, Woodblock',
     );
   });
+
+  it('ends with the saved phase nudge', () => {
+    expect(recallLine({ ...pattern, subdivision: EIGHTHS }, NUDGE_MS)).toBe(
+      'Your saved settings are back: 4/4, eighths, Woodblock, +10 ms',
+    );
+  });
+
+  it('leaves the phase out when the saved nudge is zero or unknown', () => {
+    const line = 'Your saved settings are back: 4/4, eighths, Woodblock';
+    expect(recallLine({ ...pattern, subdivision: EIGHTHS }, 0)).toBe(line);
+    expect(recallLine({ ...pattern, subdivision: EIGHTHS }, undefined)).toBe(
+      line,
+    );
+  });
 });
 
 it('has words for every save refusal', () => {

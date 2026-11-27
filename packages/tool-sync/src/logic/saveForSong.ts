@@ -68,11 +68,16 @@ export function saveRows(
   ];
 }
 
-export function recallLine(pattern: PlayAlongPattern): string {
+export function recallLine(
+  pattern: PlayAlongPattern,
+  savedPhaseMs?: number,
+): string {
   const facts = [
     meterLabel(pattern),
     subdivisionLabel(pattern).toLowerCase(),
     soundChipLabel(pattern.sounds),
   ];
+  if (savedPhaseMs !== undefined && savedPhaseMs !== 0)
+    facts.push(phaseReading(savedPhaseMs));
   return `${RECALL_LEAD}${facts.join(LIST_JOIN)}`;
 }

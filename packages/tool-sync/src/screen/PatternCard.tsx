@@ -36,9 +36,10 @@ const useStyles = createThemedStyles((theme) => ({
 function RecallLine({ following }: { readonly following: boolean }) {
   const styles = useStyles();
   const pattern = usePlayAlong((s) => s.pattern);
-  const hasSaved = usePlayAlong((s) => s.hasSavedPreset) && !following;
-  if (!hasSaved) return null;
-  return <Text style={styles.recall}>{recallLine(pattern)}</Text>;
+  const savedPhaseMs = usePlayAlong((s) => s.savedPhaseMs);
+  const recalled = usePlayAlong((s) => s.presetRecalled) && !following;
+  if (!recalled) return null;
+  return <Text style={styles.recall}>{recallLine(pattern, savedPhaseMs)}</Text>;
 }
 
 function cycleBeat(beat: number): void {
