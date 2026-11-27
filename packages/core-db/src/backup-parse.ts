@@ -323,17 +323,22 @@ function readCategory<C extends Category>(
   ) as CategoryRecords[C];
 }
 
-function readCategories(value: unknown): Category[] {
+// A current-version reader refuses a category it does not know rather than
+// dropping its records, so one it has never seen means a newer writer.
+function readCategories(value: unknown, version: number): Category[] {
   const listed = asArray(value, '$.categories');
   const known: readonly unknown[] = CATEGORIES;
   listed.forEach((category, index) => {
-    if (!known.includes(category) || listed.indexOf(category) !== index)
-      invalidField(`$.categories[${String(index)}]`, 'unknown or repeated');
+    const repeated = listed.indexOf(category) !== index;
+    if (known.includes(category) && !repeated) return;
+    if (version === BACKUP_VERSION && typeof category === 'string' && !repeated)
+      reject({ kind: 'unsupportedVersion', version });
+    invalidField(`$.categories[${String(index)}]`, 'unknown or repeated');
   });
   return listed as Category[];
 }
 
-const isRestorableVersion = (version: unknown) =>
+const isRestorableVersion = (version: unknown): version is number =>
   typeof version === 'number' &&
   version >= OLDEST_RESTORABLE_BACKUP_VERSION &&
   version <= BACKUP_VERSION;
@@ -347,7 +352,7 @@ function readHeader(root: Record<string, unknown>) {
     reject({ kind: 'malformedFile', reason: 'not a Kitbag backup' });
   return {
     exportedAt: reader(root, '$').string('exportedAt'),
-    categories: readCategories(root.categories),
+    categories: readCategories(root.categories, version),
   };
 }
 

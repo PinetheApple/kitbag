@@ -60,6 +60,38 @@ describe('backup validation', () => {
     expect(await records(target)).toEqual(await records(source));
   });
 
+  it('reads a category it does not know in a current file as a newer one', async () => {
+    expect(
+      await rejected((file) => {
+        file.categories = [...CATEGORIES, 'toolData'];
+        file.toolData = [];
+      }),
+    ).toEqual({ kind: 'unsupportedVersion', version: BACKUP_VERSION });
+  });
+
+  it('reads a category it does not know in a v4 file as damage', async () => {
+    expect(
+      await rejected((file) => {
+        file.version = 4;
+        file.categories = [...CATEGORIES, 'toolData'];
+      }),
+    ).toMatchObject({
+      kind: 'invalidField',
+      path: `$.categories[${String(CATEGORIES.length)}]`,
+    });
+  });
+
+  it('reads a repeated category in a current file as damage', async () => {
+    expect(
+      await rejected((file) => {
+        file.categories = [...CATEGORIES, 'tunings'];
+      }),
+    ).toMatchObject({
+      kind: 'invalidField',
+      path: `$.categories[${String(CATEGORIES.length)}]`,
+    });
+  });
+
   it('refuses a v3 file by number', async () => {
     expect(await rejected((file) => (file.version = 3))).toEqual({
       kind: 'unsupportedVersion',
