@@ -226,7 +226,9 @@ export function HomeScreen() {
       },
     ];
   });
-  const rows = HOME_TOOLS.filter((tool) => tool.layout === 'row');
+  const rows = HOME_TOOLS.filter(
+    (tool) => tool.layout === 'row' && isOn(tool.id),
+  );
   const moreItems: MoreToolsItem[] = more.map((tool) => ({
     tool,
     subtitle: subtextOf(tool),
