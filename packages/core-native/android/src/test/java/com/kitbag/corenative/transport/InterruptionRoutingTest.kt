@@ -44,8 +44,43 @@ class InterruptionRoutingTest {
   }
 
   @Test
-  fun `a click joined to a playing song is left to the song's pause`() {
-    assertEquals(songOnly, pauses(Interruption.OUTPUT_LOST, playing(song = true, metronome = true)))
+  fun `a song and the tool's metronome playing together both pause on lost output`() {
+    val now = NowPlaying.of(
+      metronomeShowing = true,
+      metronome = Playback.PLAYING,
+      songShownPlaying = true,
+      playAlongFollowing = false,
+    )
+    assertEquals(Pauses(song = true, metronome = true), pauses(Interruption.OUTPUT_LOST, now))
+  }
+
+  @Test
+  fun `a lone metronome under a paused song card pauses on lost output`() {
+    val now = NowPlaying.of(
+      metronomeShowing = true,
+      metronome = Playback.PLAYING,
+      songShownPlaying = false,
+      playAlongFollowing = false,
+    )
+    assertEquals(metronomeOnly, pauses(Interruption.OUTPUT_LOST, now))
+  }
+
+  @Test
+  fun `the metronome counts as playing only while its card shows playing`() {
+    fun metronome(showing: Boolean, playback: Playback?) =
+      NowPlaying.of(showing, playback, songShownPlaying = false, playAlongFollowing = false).metronome
+    assertEquals(true, metronome(showing = true, Playback.PLAYING))
+    assertEquals(false, metronome(showing = false, Playback.PLAYING))
+    Playback.entries.filter { it != Playback.PLAYING }.forEach { assertEquals(it.name, false, metronome(true, it)) }
+    assertEquals(false, metronome(showing = true, null))
+  }
+
+  @Test
+  fun `calls are watched while a song or a metronome of its own plays`() {
+    assertEquals(true, playing(song = true).interruptible)
+    assertEquals(true, playing(metronome = true).interruptible)
+    assertEquals(false, playing(metronome = true, following = true).interruptible)
+    assertEquals(false, playing().interruptible)
   }
 
   @Test

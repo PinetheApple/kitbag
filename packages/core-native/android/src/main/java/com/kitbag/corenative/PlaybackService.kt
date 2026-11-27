@@ -20,7 +20,6 @@ import com.kitbag.corenative.transport.CardRouting
 import com.kitbag.corenative.transport.Interruption
 import com.kitbag.corenative.transport.InterruptionRouting
 import com.kitbag.corenative.transport.MetronomeControls
-import com.kitbag.corenative.transport.MetronomeEngine
 import com.kitbag.corenative.transport.NowPlaying
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
@@ -32,7 +31,6 @@ import com.kitbag.corenative.transport.SongCommand
 import com.kitbag.corenative.transport.SongOrder
 import com.kitbag.corenative.transport.TransportAction
 import com.kitbag.corenative.transport.TransportChange
-import com.kitbag.corenative.transport.TransportCommand
 import com.kitbag.corenative.transport.TransportModel
 import com.kitbag.corenative.transport.TransportState
 import com.kitbag.corenative.transport.TransportView
@@ -71,13 +69,13 @@ class PlaybackService : Service() {
       ::actionIntent,
     )
     focus = SongFocus(this, ::interrupted)
-    interruptions = AudioInterruptions(this, ::interrupted).also { it.start() }
+    interruptions = AudioInterruptions(this, { nowPlaying().interruptible }, ::interrupted).also { it.start() }
   }
 
   override fun onDestroy() {
     starts.stopped()
     interruptions.stop()
-    focus.release()
+    focus.follow(playing = false)
     clock.removeCallbacks(tick)
     song?.release()
     poster.finish()
@@ -128,6 +126,7 @@ class PlaybackService : Service() {
       CardEffect.RemoveCard -> finish()
       is CardEffect.StopPlayback -> stopPlayback(effect)
     }
+    interruptions.playbackChanged()
     // The service can outlive its card while a queued start is pending, so the session ends with the card.
     if (!routing.cardShowing) releaseSession()
   }
@@ -195,26 +194,24 @@ class PlaybackService : Service() {
   }
 
   private fun releaseSong() {
-    focus.release()
+    focus.follow(playing = false)
     song?.release()
     song = null
   }
 
   private fun postSong(notification: Notification, playing: Boolean, cardNumber: Int) {
-    focus.hold(playing)
+    focus.follow(playing)
     poster.post(notification, playing, fences.song, cardNumber)
+    interruptions.playbackChanged()
   }
 
-  // Pauses take the cards' own Pause path, which the JS store already follows.
+  private fun nowPlaying() =
+    NowPlaying.of(routing.metronomeShowing, state?.playback, song?.shownPlaying() == true, PlayAlongService.following)
+
   private fun interrupted(interruption: Interruption) {
-    val playing = NowPlaying(
-      song = song?.shownPlaying() == true,
-      metronome = routing.metronomeCardShown && state?.playback == Playback.PLAYING,
-      playAlongFollowing = PlayAlongService.following,
-    )
-    val pauses = InterruptionRouting.pauses(interruption, playing)
+    val pauses = InterruptionRouting.pauses(interruption, nowPlaying())
     if (pauses.song) song?.handle(SongAction.PAUSE)
-    if (pauses.metronome) handle(TransportAction.PAUSE)
+    if (pauses.metronome && press(TransportAction.PAUSE) != null && !routing.songShowing) render()
   }
 
   private fun show(intent: Intent) {
@@ -246,15 +243,20 @@ class PlaybackService : Service() {
   }
 
   private fun handle(action: TransportAction) {
-    val transportModel = model ?: return
-    val current = state?.let(::withEngineTempo) ?: return
+    val next = press(action) ?: return
+    if (model?.endsCard(action, next) == true) route(CardEvent.MetronomeStopped) else render()
+  }
+
+  private fun press(action: TransportAction): TransportState? {
+    val transportModel = model ?: return null
+    val current = state?.let(::withEngineTempo) ?: return null
     val engineBpm = EngineTransport.currentBpm()
-    val next = metronomeControls.press(metronomeCardNumber, transportModel, current, action) ?: return
+    val next = metronomeControls.press(metronomeCardNumber, transportModel, current, action) ?: return null
     practice = practice.afterPlaying(next.playback == Playback.PLAYING, System.currentTimeMillis())
     state = next
     val step = transportModel.tempoStep(action)
     listener?.invoke(TransportChange(next, practice, shownCardNumber, action, step, engineBpm))
-    if (transportModel.endsCard(action, next)) route(CardEvent.MetronomeStopped) else render()
+    return next
   }
 
   // A running ramp moves the tempo without telling the service, so read it live.
@@ -488,16 +490,5 @@ class PlaybackService : Service() {
       context.startService(Intent(context, PlaybackService::class.java).setAction(ACTION_SONG_HIDE))
     }
 
-  }
-}
-
-private object EngineMetronome : MetronomeEngine {
-  override fun execute(command: TransportCommand) {
-    when (command) {
-      TransportCommand.Start, TransportCommand.Resume -> EngineTransport.start()
-      TransportCommand.Pause -> EngineTransport.pause()
-      TransportCommand.Stop -> EngineTransport.stop()
-      is TransportCommand.SetTempo -> EngineTransport.setTempo(command.bpm)
-    }
   }
 }

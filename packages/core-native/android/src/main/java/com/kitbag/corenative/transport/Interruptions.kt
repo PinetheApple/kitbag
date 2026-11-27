@@ -8,29 +8,72 @@ enum class Interruption {
   FOCUS_LOST,
 }
 
-data class NowPlaying(val song: Boolean, val metronome: Boolean, val playAlongFollowing: Boolean)
+data class NowPlaying(val song: Boolean, val metronome: Boolean, val playAlongFollowing: Boolean) {
+  val interruptible: Boolean
+    get() = song || (metronome && !playAlongFollowing)
+
+  companion object {
+    fun of(
+      metronomeShowing: Boolean,
+      metronome: Playback?,
+      songShownPlaying: Boolean,
+      playAlongFollowing: Boolean,
+    ) = NowPlaying(
+      song = songShownPlaying,
+      metronome = metronomeShowing && metronome == Playback.PLAYING,
+      playAlongFollowing = playAlongFollowing,
+    )
+  }
+}
 
 data class Pauses(val song: Boolean, val metronome: Boolean)
 
 object InterruptionRouting {
-  private val LONE_METRONOME_PAUSES = setOf(Interruption.OUTPUT_LOST, Interruption.CALL)
+  private val METRONOME_PAUSES = setOf(Interruption.OUTPUT_LOST, Interruption.CALL)
 
-  // A click joined to a song stops with the song; Play along's click is the followed app's to stop.
   fun pauses(interruption: Interruption, playing: NowPlaying): Pauses =
     Pauses(
       song = playing.song,
-      metronome = playing.metronome &&
-        !playing.song &&
-        !playing.playAlongFollowing &&
-        interruption in LONE_METRONOME_PAUSES,
+      metronome = playing.metronome && !playing.playAlongFollowing && interruption in METRONOME_PAUSES,
     )
 
-  // Media focus is ducked by the system itself (API 26+), and a regained focus never resumes a pause.
+  // A regained focus never resumes a pause.
   fun ofFocusChange(change: Int): Interruption? =
     when (change) {
       AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> Interruption.FOCUS_LOST
       else -> null
     }
+}
+
+enum class FocusCall {
+  REQUEST,
+  ABANDON,
+  NONE,
+}
+
+class FocusHold {
+  var held = false
+    private set
+
+  fun follow(playing: Boolean): FocusCall =
+    when {
+      playing && !held -> FocusCall.REQUEST
+      !playing && held -> {
+        held = false
+        FocusCall.ABANDON
+      }
+      else -> FocusCall.NONE
+    }
+
+  fun requested(result: Int): Interruption? {
+    held = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+    return if (held) null else Interruption.FOCUS_LOST
+  }
+
+  fun changed(change: Int): Interruption? {
+    if (change == AudioManager.AUDIOFOCUS_LOSS) held = false
+    return InterruptionRouting.ofFocusChange(change)
+  }
 }
 
 class CallWatch(mode: Int) {
@@ -43,6 +86,7 @@ class CallWatch(mode: Int) {
   }
 
   private companion object {
+    // The mode, unlike telephony call state, also shows voice-chat calls.
     val CALL_MODES = setOf(
       AudioManager.MODE_RINGTONE,
       AudioManager.MODE_IN_CALL,

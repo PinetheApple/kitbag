@@ -110,7 +110,7 @@ internal class SongCard(
     }
   }
 
-  fun shownPlaying(): Boolean = transport != null && progress().shownPlaying
+  fun shownPlaying(): Boolean = postedPlaying == true
 
   fun release() {
     clock.removeCallbacks(tick)

@@ -16,22 +16,23 @@ import java.util.concurrent.Executor
 
 internal class AudioInterruptions(
   private val context: Context,
+  private val playing: () -> Boolean,
   private val onInterruption: (Interruption) -> Unit,
 ) {
   private val audio = context.getSystemService(AudioManager::class.java)
   private val handler = Handler(Looper.getMainLooper())
-  private val calls = CallWatch(audio.mode)
+  private var calls = CallWatch(audio.mode)
   private var modeChanges: ModeChanges? = null
+  private var polling = false
 
   private val noisy = object : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-      if (intent.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) onInterruption(Interruption.OUTPUT_LOST)
-    }
+    override fun onReceive(context: Context, intent: Intent) = onInterruption(Interruption.OUTPUT_LOST)
   }
 
   private val pollMode = Runnable {
     onMode(audio.mode)
-    schedulePoll()
+    polling = playing()
+    if (polling) schedulePoll()
   }
 
   fun start() {
@@ -43,14 +44,20 @@ internal class AudioInterruptions(
     )
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
       modeChanges = ModeChanges(audio, ContextCompat.getMainExecutor(context), ::onMode).also { it.add() }
-    } else {
-      schedulePoll()
     }
+  }
+
+  fun playbackChanged() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S || polling || !playing()) return
+    polling = true
+    calls = CallWatch(audio.mode)
+    schedulePoll()
   }
 
   fun stop() {
     context.unregisterReceiver(noisy)
     handler.removeCallbacks(pollMode)
+    polling = false
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) modeChanges?.remove()
     modeChanges = null
   }
@@ -59,7 +66,6 @@ internal class AudioInterruptions(
     if (calls.began(mode)) onInterruption(Interruption.CALL)
   }
 
-  // Below API 31 there is no mode callback; the mode, unlike telephony call state, also shows voice-chat calls.
   private fun schedulePoll() {
     handler.postDelayed(pollMode, MODE_POLL_MILLIS)
   }

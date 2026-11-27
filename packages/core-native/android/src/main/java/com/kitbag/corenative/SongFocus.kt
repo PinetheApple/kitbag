@@ -7,33 +7,33 @@ import android.os.Looper
 import androidx.media.AudioAttributesCompat
 import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
+import com.kitbag.corenative.transport.FocusCall
+import com.kitbag.corenative.transport.FocusHold
 import com.kitbag.corenative.transport.Interruption
-import com.kitbag.corenative.transport.InterruptionRouting
 
-internal class SongFocus(context: Context, onLoss: (Interruption) -> Unit) {
+internal class SongFocus(context: Context, private val onLoss: (Interruption) -> Unit) {
   private val audio = context.getSystemService(AudioManager::class.java)
-  private var held = false
+  private val handler = Handler(Looper.getMainLooper())
+  private val hold = FocusHold()
 
   private val request = AudioFocusRequestCompat.Builder(AudioManagerCompat.AUDIOFOCUS_GAIN)
     .setAudioAttributes(MEDIA)
+    // The system ducks media focus itself on API 26+; below that a duck is ignored.
     .setWillPauseWhenDucked(false)
-    .setOnAudioFocusChangeListener(
-      { change -> InterruptionRouting.ofFocusChange(change)?.let(onLoss) },
-      Handler(Looper.getMainLooper()),
-    )
+    .setOnAudioFocusChangeListener({ change -> hold.changed(change)?.let(onLoss) }, handler)
     .build()
 
-  fun hold(playing: Boolean) = if (playing) acquire() else release()
-
-  fun release() {
-    if (!held) return
-    held = false
-    AudioManagerCompat.abandonAudioFocusRequest(audio, request)
+  fun follow(playing: Boolean) {
+    when (hold.follow(playing)) {
+      FocusCall.REQUEST -> refused(AudioManagerCompat.requestAudioFocus(audio, request))
+      FocusCall.ABANDON -> AudioManagerCompat.abandonAudioFocusRequest(audio, request)
+      FocusCall.NONE -> Unit
+    }
   }
 
-  private fun acquire() {
-    if (held) return
-    held = AudioManagerCompat.requestAudioFocus(audio, request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+  // The request runs inside the song card's refresh, so its pause waits for that refresh to finish.
+  private fun refused(result: Int) {
+    hold.requested(result)?.let { handler.post { onLoss(it) } }
   }
 
   private companion object {

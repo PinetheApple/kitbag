@@ -307,16 +307,16 @@ class CardRoutingTest {
   }
 
   @Test
-  fun `the metronome card is the shown one only while no song card covers it`() {
-    assertFalse(routing.metronomeCardShown)
+  fun `the metronome stays showing under a song card until it is hidden`() {
+    assertFalse(routing.metronomeShowing)
     showMetronome()
-    assertTrue(routing.metronomeCardShown)
     showSong()
-    assertFalse(routing.metronomeCardShown)
+    assertTrue(routing.metronomeShowing)
+    assertTrue(routing.songShowing)
     routing.on(CardEvent.SongStopped)
-    assertTrue(routing.metronomeCardShown)
+    assertFalse(routing.songShowing)
     routing.on(CardEvent.MetronomeHidden)
-    assertFalse(routing.metronomeCardShown)
+    assertFalse(routing.metronomeShowing)
   }
 
   @Test
