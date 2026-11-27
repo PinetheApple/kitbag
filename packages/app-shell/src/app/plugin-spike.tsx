@@ -3,11 +3,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, type ComponentType } from 'react';
 import { Text } from 'react-native';
 
-import {
-  loadSpikeScreen,
-  shippedSpikeSource,
-  type SpikeSource,
-} from '@/spike/pluginLoader';
+import { loadSpikeScreen, shippedSpikeLocation } from '@/spike/pluginLoader';
 import { SpikeScreen, type SpikeScreenProps } from '@/spike/SpikeScreen';
 
 const FLAG_ON = '1';
@@ -25,11 +21,8 @@ interface SpikeParams {
   readonly [key: string]: string | undefined;
 }
 
-function sourceFor(hbc?: string, src?: string): SpikeSource {
-  const bytecode = hbc === FLAG_ON;
-  return src === undefined
-    ? shippedSpikeSource(bytecode)
-    : { uri: src, bytecode };
+function locationFor(hbc?: string, src?: string): string {
+  return src ?? shippedSpikeLocation(hbc === FLAG_ON);
 }
 
 export default function PluginSpikeRoute() {
@@ -48,7 +41,8 @@ export default function PluginSpikeRoute() {
       console.log(`KB_SPIKE load failed: ${String(error)}`);
       if (live) setLoad({ kind: 'failed', message: String(error) });
     };
-    loadSpikeScreen(sourceFor(params.hbc, params.src)).then(onReady, onFailed);
+    const location = locationFor(params.hbc, params.src);
+    Promise.resolve(location).then(loadSpikeScreen).then(onReady, onFailed);
     return () => {
       live = false;
     };

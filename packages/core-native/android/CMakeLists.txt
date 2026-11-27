@@ -56,4 +56,5 @@ target_link_libraries(kitbag_jsi
   ReactAndroid::jsi
   ReactAndroid::reactnative
   fbjni::fbjni
+  android
   log)

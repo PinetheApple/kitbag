@@ -1,5 +1,4 @@
-import { evaluateBundleBytes } from '@kitbag/core-native';
-import Constants from 'expo-constants';
+import { evaluateBundle } from '@kitbag/core-native';
 import type { ComponentType } from 'react';
 import * as React from 'react';
 import * as JsxRuntime from 'react/jsx-runtime';
@@ -23,27 +22,12 @@ const HOST_MODULES: Readonly<Record<SpikeExternal, unknown>> = {
   'react-native-worklets': Worklets,
 };
 
-const RAW_JS = 'kb_spike_plugin_js';
-const RAW_BYTECODE = 'kb_spike_plugin_hbc';
+const ASSET_JS = 'kb_spike_plugin.js';
+const ASSET_BYTECODE = 'kb_spike_plugin.hbc';
 
-export interface SpikeSource {
-  readonly uri: string;
-  readonly bytecode: boolean;
+export function shippedSpikeLocation(bytecode: boolean): string {
+  return bytecode ? ASSET_BYTECODE : ASSET_JS;
 }
-
-export function shippedSpikeSource(bytecode: boolean): SpikeSource {
-  const pkg = Constants.expoConfig?.android?.package;
-  if (pkg === undefined)
-    throw new Error('android package is not in the manifest');
-  return {
-    uri: `android.resource://${pkg}/raw/${bytecode ? RAW_BYTECODE : RAW_JS}`,
-    bytecode,
-  };
-}
-
-const globalEval = (
-  globalThis as unknown as { eval: (source: string) => unknown }
-).eval;
 
 type Descriptors = ReadonlyMap<string, PropertyDescriptor | undefined>;
 
@@ -75,21 +59,16 @@ function restoreGlobals(before: Descriptors): string[] {
   return touched;
 }
 
-export async function loadSpikeScreen(
-  source: SpikeSource,
-): Promise<ComponentType<SpikeScreenProps>> {
+export function loadSpikeScreen(
+  location: string,
+): ComponentType<SpikeScreenProps> {
   installSpikeRegistry(HOST_MODULES);
-  const response = await fetch(source.uri);
-  const payload = source.bytecode
-    ? await response.arrayBuffer()
-    : await response.text();
   const startedMs = performance.now();
   const before = globalDescriptors();
-  if (typeof payload === 'string') globalEval(payload);
-  else evaluateBundleBytes(payload, source.uri);
+  evaluateBundle(location);
   const touched = restoreGlobals(before);
   console.log(
-    `KB_SPIKE loaded uri=${source.uri} bytecode=${String(source.bytecode)} evalMs=${(performance.now() - startedMs).toFixed(1)} restored=${touched.join(',')}`,
+    `KB_SPIKE loaded location=${location} evalMs=${(performance.now() - startedMs).toFixed(1)} restored=${touched.join(',')}`,
   );
   const screen = spikeRegistry().screen;
   if (screen === undefined) throw new Error('bundle registered no screen');

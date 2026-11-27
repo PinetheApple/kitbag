@@ -1,5 +1,6 @@
 package com.kitbag.corenative
 
+import android.content.res.AssetManager
 import android.view.Choreographer
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityNodeInfo
@@ -42,7 +43,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   init {
     val runtimePtr = reactContext.javaScriptContextHolder?.get() ?: 0L
     if (runtimePtr != 0L) {
-      nativeInstall(runtimePtr)
+      nativeInstall(runtimePtr, reactContext.assets)
     }
     PlaybackService.listener = transportListener
     PlaybackService.songStoppedListener = songStoppedListener
@@ -547,7 +548,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     promise.resolve(nativeTunerResetNotePresence(pauseMs))
   }
 
-  private external fun nativeInstall(runtimePtr: Long)
+  private external fun nativeInstall(runtimePtr: Long, assets: AssetManager)
   private external fun nativeStart(): Int
   private external fun nativeStop()
   private external fun nativeHold(): Int

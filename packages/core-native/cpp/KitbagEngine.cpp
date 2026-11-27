@@ -3,7 +3,6 @@
 
 #include "KitbagEngine.h"
 
-#include "KitbagBundleEval.h"
 #include "KitbagHostObject.h"
 #include "kitbag_api.h"
 
@@ -28,7 +27,6 @@ void kitbagInstall(facebook::jsi::Runtime& rt) {
   // The engine outlives a JS reload; the old runtime's surfaces never released.
   kb_engine_reset_holders(g_engine);
   installKitbagHostObject(rt, g_engine);
-  installBundleEval(rt);
 }
 
 }  // namespace kitbag

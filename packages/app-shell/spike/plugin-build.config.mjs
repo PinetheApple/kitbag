@@ -10,9 +10,9 @@ const spikeDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(spikeDir, '..');
 const monorepoRoot = path.resolve(projectRoot, '../..');
 const shimDir = path.join(spikeDir, '.externals');
-const rawDir = path.join(projectRoot, 'android/app/src/main/res/raw');
-const jsOut = path.join(rawDir, 'kb_spike_plugin_js.js');
-const hbcOut = path.join(rawDir, 'kb_spike_plugin_hbc.hbc');
+const assetDir = path.join(projectRoot, 'android/app/src/main/assets');
+const jsOut = path.join(assetDir, 'kb_spike_plugin.js');
+const hbcOut = path.join(assetDir, 'kb_spike_plugin.hbc');
 const require = createRequire(path.join(projectRoot, 'package.json'));
 
 function writeShims() {
@@ -58,7 +58,7 @@ function hermesc() {
 }
 
 const shims = writeShims();
-mkdirSync(rawDir, { recursive: true });
+mkdirSync(assetDir, { recursive: true });
 const Metro = require('metro');
 await Metro.runBuild(pluginConfig(shims), {
   entry: path.join(spikeDir, 'plugin-entry.tsx'),

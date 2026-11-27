@@ -1,8 +1,17 @@
+#ifdef __ANDROID__
+
 #include "KitbagBundleEval.h"
+
+#include <android/asset_manager.h>
 
 #include <cstddef>
 #include <cstdint>
+#include <fstream>
+#include <iterator>
 #include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
 #include <vector>
 
 namespace kitbag {
@@ -15,11 +24,12 @@ using facebook::jsi::PropNameID;
 using facebook::jsi::Runtime;
 using facebook::jsi::Value;
 
-constexpr unsigned kArgCount = 2;
+constexpr unsigned kArgCount = 1;
+constexpr std::string_view kFileScheme = "file://";
 
 class OwnedBuffer final : public facebook::jsi::Buffer {
  public:
-  OwnedBuffer(const uint8_t* data, size_t size) : bytes_(data, data + size) {}
+  explicit OwnedBuffer(std::vector<uint8_t> bytes) : bytes_(std::move(bytes)) {}
   size_t size() const override { return bytes_.size(); }
   const uint8_t* data() const override { return bytes_.data(); }
 
@@ -27,24 +37,40 @@ class OwnedBuffer final : public facebook::jsi::Buffer {
   std::vector<uint8_t> bytes_;
 };
 
-Value evalBundle(Runtime& rt, const Value&, const Value* args, size_t count) {
-  if (count < kArgCount || !args[0].isObject() || !args[1].isString()) {
-    throw JSError(rt, "expected (ArrayBuffer, sourceUrl)");
-  }
-  auto bytes = args[0].getObject(rt);
-  if (!bytes.isArrayBuffer(rt)) throw JSError(rt, "expected an ArrayBuffer");
-  auto arrayBuffer = bytes.getArrayBuffer(rt);
-  auto buffer = std::make_shared<OwnedBuffer>(arrayBuffer.data(rt), arrayBuffer.size(rt));
-  return rt.evaluateJavaScript(buffer, args[1].getString(rt).utf8(rt));
+std::optional<std::vector<uint8_t>> readFile(const std::string& path) {
+  std::ifstream in(path, std::ios::binary);
+  if (!in) return std::nullopt;
+  return std::vector<uint8_t>(std::istreambuf_iterator<char>(in), {});
+}
+
+std::optional<std::vector<uint8_t>> readAsset(AAssetManager* assets, const std::string& name) {
+  AAsset* asset = AAssetManager_open(assets, name.c_str(), AASSET_MODE_BUFFER);
+  if (asset == nullptr) return std::nullopt;
+  const auto* start = static_cast<const uint8_t*>(AAsset_getBuffer(asset));
+  std::optional<std::vector<uint8_t>> bytes;
+  if (start != nullptr) bytes.emplace(start, start + AAsset_getLength64(asset));
+  AAsset_close(asset);
+  return bytes;
 }
 
 }  // namespace
 
-void installBundleEval(Runtime& rt) {
+void installBundleEval(Runtime& rt, AAssetManager* assets) {
+  auto evalBundle = [assets](Runtime& rt, const Value&, const Value* args, size_t count) {
+    if (count < kArgCount || !args[0].isString()) throw JSError(rt, "expected (location)");
+    const std::string location = args[0].getString(rt).utf8(rt);
+    auto bytes = location.starts_with(kFileScheme)
+                     ? readFile(location.substr(kFileScheme.size()))
+                     : readAsset(assets, location);
+    if (!bytes) throw JSError(rt, "cannot read bundle " + location);
+    return rt.evaluateJavaScript(std::make_shared<OwnedBuffer>(std::move(*bytes)), location);
+  };
   rt.global().setProperty(
       rt, kBundleEvalKey,
       Function::createFromHostFunction(rt, PropNameID::forAscii(rt, kBundleEvalKey), kArgCount,
-                                       evalBundle));
+                                       std::move(evalBundle)));
 }
 
 }  // namespace kitbag
+
+#endif  // __ANDROID__

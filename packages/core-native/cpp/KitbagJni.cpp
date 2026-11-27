@@ -6,6 +6,9 @@
 #include <cstdint>
 #include <vector>
 
+#include <android/asset_manager_jni.h>
+
+#include "KitbagBundleEval.h"
 #include "KitbagCommands.h"
 #include "KitbagEngine.h"
 #include "KitbagJniUtf.h"
@@ -32,10 +35,16 @@ extern "C" {
 
 
 JNIEXPORT void JNICALL
-Java_com_kitbag_corenative_KitbagCommandsModule_nativeInstall(JNIEnv*, jobject, jlong runtimePtr) {
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeInstall(JNIEnv* env, jobject, jlong runtimePtr,
+                                                              jobject assets) {
   auto* rt = reinterpret_cast<Runtime*>(runtimePtr);
   if (rt == nullptr) return;
   kitbag::kitbagInstall(*rt);
+  // AAssetManager is valid only while its Java AssetManager is reachable.
+  static jobject assetsRef = nullptr;
+  if (assetsRef != nullptr) env->DeleteGlobalRef(assetsRef);
+  assetsRef = env->NewGlobalRef(assets);
+  kitbag::installBundleEval(*rt, AAssetManager_fromJava(env, assetsRef));
 }
 
 JNIEXPORT jint JNICALL
