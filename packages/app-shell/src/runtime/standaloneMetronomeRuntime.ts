@@ -3,7 +3,7 @@ import {
   flushStandaloneMetronomePersistence,
 } from '@kitbag/core-state';
 
-import { onAppBackground } from './appForeground';
+import { onAppBackground } from './appState';
 import { getDatabase } from './database';
 import { standaloneMetronomePreference } from './standaloneMetronomePreference';
 

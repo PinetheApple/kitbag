@@ -9,7 +9,7 @@ import {
 
 // Configures the appearance store before getAppearanceStore() below reads it.
 import './appearanceRuntime';
-import { onAppForeground } from './appForeground';
+import { onAppForeground } from './appState';
 import { wireKeepAwake } from './keepAwake.ts';
 
 const MIXER_POLL_MS = 1000;

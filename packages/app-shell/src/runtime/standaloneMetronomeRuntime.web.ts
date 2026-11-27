@@ -4,7 +4,7 @@ import {
   flushStandaloneMetronomePersistence,
 } from '@kitbag/core-state';
 
-import { onAppBackground } from './appForeground';
+import { onAppBackground } from './appState';
 import { standaloneMetronomePersistence } from './standaloneMetronomePreference';
 import { storedWebPreference, WEB_KEY_PREFIX } from './storedWebPreference';
 import { queriedTempoWins } from './tempoQuery';

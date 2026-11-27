@@ -7,7 +7,10 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { createRestoreStore } from '../backup/restore.ts';
 import type { BackupDeps } from '../backup/runtime.ts';
-import { shareLibraryBackup } from '../backup/share.ts';
+import {
+  LIBRARY_BACKUP_FILE_NAME,
+  shareLibraryBackup,
+} from '../backup/share.ts';
 import { stubMetronomeRuntime } from './runtime.test-helper.ts';
 import type { MetronomeSettingsInput } from './standalone.ts';
 import {
@@ -24,7 +27,6 @@ const EDITED_BPM = 128;
 const RESTORED_BPM = 140;
 const BUILT_IN = 2;
 const REMOVED = customSoundId(0);
-const BACKUP_FILE = 'kitbag_export.json';
 
 stubMetronomeRuntime(STORED_BPM);
 
@@ -54,7 +56,11 @@ function backupDeps(target = openBackupDatabase()) {
   const deps: BackupDeps = {
     service: () => target.backup,
     pick: () =>
-      Promise.resolve({ name: BACKUP_FILE, bytes: contents.length, contents }),
+      Promise.resolve({
+        name: LIBRARY_BACKUP_FILE_NAME,
+        bytes: contents.length,
+        contents,
+      }),
     share: () => Promise.resolve(),
     save: () => Promise.resolve(true),
     afterRestore: () => Promise.resolve(),
@@ -91,7 +97,11 @@ it('writes the pending standalone settings before a backup is applied', async ()
   const contents = await source.backup.export();
   const { deps, target } = backupDeps();
   const pick = () =>
-    Promise.resolve({ name: BACKUP_FILE, bytes: contents.length, contents });
+    Promise.resolve({
+      name: LIBRARY_BACKUP_FILE_NAME,
+      bytes: contents.length,
+      contents,
+    });
   let appliedOverBpm: number | undefined;
   const apply = target.backup.apply.bind(target.backup);
   vi.spyOn(target.backup, 'apply').mockImplementation((...args) => {

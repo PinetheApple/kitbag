@@ -2,7 +2,7 @@ import { KB_DENOMINATORS } from '@kitbag/core-native';
 import type { StoreApi } from 'zustand/vanilla';
 
 import { libraryStore, type LibraryStore } from '../library/store.ts';
-import { debounce } from '../stemPlayer/debounce.ts';
+import { debounce } from '../debounce.ts';
 import { rangeRamp, usesSound, withoutSound } from './config.ts';
 import {
   applyMetronomeSettings,
