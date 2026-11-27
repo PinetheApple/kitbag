@@ -1,6 +1,10 @@
 import { KITBAG_HOST_OBJECT_KEY } from '@kitbag/core-native';
 import type { KitbagHostObject } from '@kitbag/core-native';
-import { formatClock, framesToSeconds } from '@kitbag/core-state';
+import {
+  formatClock,
+  framesToSeconds,
+  onSongStarting,
+} from '@kitbag/core-state';
 import { useCallback, useEffect } from 'react';
 import {
   useFrameCallback,
@@ -24,6 +28,10 @@ const MAX_LEAD_SECONDS = 0.1;
 // A released scrub shows where it was let go until the seek lands near there.
 const HOLD_NEAR_SECONDS = 0.5;
 const HOLD_TIMEOUT_MS = 1000;
+const NOT_QUIET = -1;
+const QUIET_AFTER_MS = 250;
+// A paused song can still start or seek from the notification without telling the app.
+const QUIET_POLL_MS = 100;
 
 export interface MixerFrameValues {
   readonly progress: SharedValue<number>;
@@ -37,6 +45,16 @@ export interface MixerFrameValues {
 export interface MixerFrameOptions {
   readonly countEndFrame?: number | null;
   readonly heldFrame?: number | null;
+}
+
+function isQuiet(
+  host: KitbagHostObject,
+  started: number,
+  moved: boolean,
+  holding: boolean,
+): boolean {
+  'worklet';
+  return started === 0 && !moved && !holding && host.counting_in === 0;
 }
 
 export function useMixerFrame(
@@ -60,13 +78,23 @@ export function useMixerFrame(
   const held = useSharedValue(NOT_HELD);
   const heldSince = useSharedValue(NOT_HELD);
   const viewed = useSharedValue(heldFrame ?? NOT_HELD);
+  const quietSince = useSharedValue(NOT_QUIET);
+  const polledAt = useSharedValue(0);
+
+  const wake = useCallback(() => {
+    quietSince.value = NOT_QUIET;
+  }, [quietSince]);
+
+  useEffect(() => onSongStarting(wake), [wake]);
 
   useEffect(() => {
+    wake();
     rate.value = engineRate;
     duration.value = durationFrames;
     loopEnd.value = loopEndFrames ?? NO_LOOP;
     second.value = NO_SECOND;
   }, [
+    wake,
     engineRate,
     durationFrames,
     loopEndFrames,
@@ -77,8 +105,9 @@ export function useMixerFrame(
   ]);
 
   useEffect(() => {
+    wake();
     countEnd.value = countEndFrame ?? NO_COUNT;
-  }, [countEndFrame, countEnd]);
+  }, [wake, countEndFrame, countEnd]);
 
   const showFrame = useCallback(
     (shown: number, frameRate: number) => {
@@ -96,25 +125,32 @@ export function useMixerFrame(
   );
 
   useEffect(() => {
+    wake();
     viewed.value = heldFrame ?? NOT_HELD;
     if (heldFrame === null) return;
     held.value = NOT_HELD;
     playing.value = 0;
     second.value = NO_SECOND;
     showFrame(heldFrame, engineRate);
-  }, [heldFrame, engineRate, viewed, held, playing, second, showFrame]);
+  }, [wake, heldFrame, engineRate, viewed, held, playing, second, showFrame]);
 
   const hold = useCallback(
     (fraction: number) => {
+      wake();
       held.value = fraction * duration.value;
       heldSince.value = NOT_HELD;
     },
-    [held, heldSince, duration],
+    [wake, held, heldSince, duration],
   );
 
   useFrameCallback((frame) => {
     'worklet';
     if (viewed.value !== NOT_HELD) return;
+    const now = frame.timestamp;
+    const asleep =
+      quietSince.value !== NOT_QUIET && now - quietSince.value > QUIET_AFTER_MS;
+    if (asleep && now - polledAt.value < QUIET_POLL_MS) return;
+    polledAt.value = now;
     const host = (globalThis as unknown as HostGlobal)[KITBAG_HOST_OBJECT_KEY];
     if (host === undefined) return;
     const position = host.mixer_position;
@@ -123,7 +159,11 @@ export function useMixerFrame(
       countEnd.value !== NO_COUNT && host.frames_rendered < countEnd.value;
     const started = isPlaying !== 0 || counting ? 1 : 0;
     if (playing.value !== started) playing.value = started;
-    if (position !== published.value) {
+    const moved = position !== published.value;
+    if (isQuiet(host, started, moved, held.value !== NOT_HELD)) {
+      if (quietSince.value === NOT_QUIET) quietSince.value = now;
+    } else quietSince.value = NOT_QUIET;
+    if (moved) {
       if (position < published.value) lastShown.value = position;
       published.value = position;
       publishedAt.value = frame.timestamp;
