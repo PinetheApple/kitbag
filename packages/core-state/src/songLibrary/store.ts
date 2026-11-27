@@ -3,7 +3,11 @@ import type {
   MeterOverridePatch,
   TempoCorrection,
 } from '@kitbag/core-db';
-import type { AnalysisResult, LibraryConstants } from '@kitbag/core-native';
+import type {
+  AnalysisResult,
+  LibraryConstants,
+  PickedDocument,
+} from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { fileRemovals, songRemovals, type Removal } from './logic.ts';
@@ -98,6 +102,7 @@ export interface SongLibraryActions {
   receiveAnalysis: (result: AnalysisResult) => Promise<void>;
   setQuery: (query: string) => void;
   importSong: () => Promise<void>;
+  importDocuments: (docs: readonly PickedDocument[]) => Promise<void>;
   importStemFolder: () => Promise<void>;
   reanalyze: (songId: number) => Promise<void>;
   deleteRow: (row: LibraryRow) => Promise<void>;
@@ -181,7 +186,15 @@ function importActions(
 ) {
   const bundles = stemBundleActions(deps, set, get, imports);
   const importEach = documentImports(deps, set, get, bundles.importBundle);
-  let busy = false;
+  let busy: Promise<void> | null = null;
+  const hold = () => {
+    let finish: (() => void) | null = null;
+    busy = new Promise<void>((resolve) => (finish = resolve));
+    return () => {
+      busy = null;
+      finish?.();
+    };
+  };
   const openPicker = async <T>(open: () => Promise<T | null>) => {
     try {
       return await open();
@@ -196,22 +209,32 @@ function importActions(
     importPicked: (picked: T) => Promise<unknown>,
     holdsPicker: (picked: T) => boolean = () => false,
   ) => {
-    if (busy) return;
-    busy = true;
+    if (busy !== null) return;
+    const release = hold();
     set({ notice: null });
     const picked = await openPicker(open);
     const holds = picked !== null && holdsPicker(picked);
-    busy = holds;
+    if (!holds) release();
     if (picked === null) return;
     try {
       await importPicked(picked);
     } finally {
-      if (holds) busy = false;
+      if (holds) release();
+    }
+  };
+  const importDocuments = async (docs: readonly PickedDocument[]) => {
+    while (busy !== null) await busy;
+    const release = isBatch(docs) ? hold() : null;
+    try {
+      await importEach(docs);
+    } finally {
+      release?.();
     }
   };
   return {
     importSong: () =>
       pickThen(() => deps.files().pickDocuments(), importEach, isBatch),
+    importDocuments,
     importStemFolder: () =>
       pickThen(
         () => deps.files().pickFolder(),

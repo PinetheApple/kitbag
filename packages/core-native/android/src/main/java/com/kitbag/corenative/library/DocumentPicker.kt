@@ -42,6 +42,16 @@ class DocumentPicker(
     startPick(openDocumentIntent(BACKUP_MIME_TYPES), REQUEST_PICK_BACKUP, promise)
   }
 
+  fun readSharedBackup(uri: String, promise: Promise) {
+    io.execute {
+      try {
+        promise.resolve(readBackup(Uri.parse(uri)))
+      } catch (e: Exception) {
+        rejectLogged(promise, LibraryErrors.SHARED_BACKUP_UNREADABLE, "Could not read the shared backup", e)
+      }
+    }
+  }
+
   fun saveBackup(fileName: String, contents: String, promise: Promise) {
     if (!BackupFiles.isSafeFileName(fileName)) {
       promise.reject(LibraryErrors.BAD_FILE_NAME, "Not a backup file name: $fileName")
@@ -211,7 +221,7 @@ class DocumentPicker(
     DocumentsContract.deleteDocument(context.contentResolver, Uri.parse(uri))
   }
 
-  private fun describeDocument(uri: Uri): WritableMap =
+  fun describeDocument(uri: Uri): WritableMap =
     Arguments.createMap().apply {
       putString("uri", uri.toString())
       putString("name", displayName(uri) ?: uri.lastPathSegment.orEmpty())
