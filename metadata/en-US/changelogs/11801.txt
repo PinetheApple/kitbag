@@ -1,0 +1,1 @@
+• Songs and stem songs now pause when headphones are unplugged, a Bluetooth device disconnects, a call comes in or another app starts playing, and they stay paused until you press play. The metronome pauses on unplug or a call when it plays on its own; Play along keeps clicking over the app it follows. Kitbag no longer has to stop other apps' music for the metronome.
