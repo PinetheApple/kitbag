@@ -3,7 +3,9 @@ import { MenuRow, Sheet } from '@kitbag/core-design';
 export interface PlayAlongMenuProps {
   readonly visible: boolean;
   readonly access: boolean;
+  readonly soundLabel: string;
   readonly bottomInset: number;
+  readonly onClickSound: () => void;
   readonly onNotificationAccess: () => void;
   readonly onDismiss: () => void;
 }
@@ -11,7 +13,9 @@ export interface PlayAlongMenuProps {
 export function PlayAlongMenu({
   visible,
   access,
+  soundLabel,
   bottomInset,
+  onClickSound,
   onNotificationAccess,
   onDismiss,
 }: PlayAlongMenuProps) {
@@ -23,6 +27,12 @@ export function PlayAlongMenu({
       bottomInset={bottomInset}
       onDismiss={onDismiss}
     >
+      <MenuRow
+        icon="sound"
+        label="Click sound"
+        value={soundLabel}
+        onPress={onClickSound}
+      />
       <MenuRow
         icon="info"
         label="Notification access"

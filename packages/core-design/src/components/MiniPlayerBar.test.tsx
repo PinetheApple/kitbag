@@ -63,14 +63,14 @@ const PROGRESS = 0.42;
 const LATER = 0.6;
 const LINE_WIDTH = 320;
 const progress = { value: PROGRESS };
+const onQueue = vi.fn();
 const handlers = {
   onOpen: vi.fn(),
-  onQueue: vi.fn(),
   onTogglePlay: vi.fn(),
   onClose: vi.fn(),
 };
 
-function render(playing: number) {
+function render(playing: number, queued = true) {
   pressables.length = 0;
   views.length = 0;
   animated.length = 0;
@@ -88,7 +88,9 @@ function render(playing: number) {
         playLabel="Play Everlong"
         pauseLabel="Pause Everlong"
         closeLabel="Stop Everlong"
-        queueLabel="Queue, 2 up next"
+        queue={
+          queued ? { label: 'Queue, 2 up next', onPress: onQueue } : undefined
+        }
         bottomInset={0}
         {...handlers}
       />
@@ -133,13 +135,27 @@ describe('MiniPlayerBar', () => {
 
   it.each([
     ['Open Everlong', 'onOpen'],
-    ['Queue, 2 up next', 'onQueue'],
     ['Play Everlong', 'onTogglePlay'],
     ['Stop Everlong', 'onClose'],
   ] as const)('routes %s to %s', (label, handler) => {
     render(0);
     (pressable(label).onPress as () => void)();
     expect(handlers[handler]).toHaveBeenCalledOnce();
+  });
+
+  it('opens the queue from its Queue key', () => {
+    render(0);
+    (pressable('Queue, 2 up next').onPress as () => void)();
+    expect(onQueue).toHaveBeenCalledOnce();
+  });
+
+  it('draws no Queue key for a bar without a queue', () => {
+    render(0, false);
+    expect(pressables.map((p) => p.accessibilityLabel)).toEqual([
+      'Open Everlong',
+      'Play Everlong',
+      'Stop Everlong',
+    ]);
   });
 
   it('draws the progress line on an svg from the shared value', () => {

@@ -21,9 +21,12 @@ const world = vi.hoisted(() => ({
   access: undefined as boolean | undefined,
   session: undefined as object | undefined,
   lock: undefined as object | undefined,
+  sounds: { normal: 1, accent: 1 },
+  menu: undefined as Props | undefined,
 }));
 
-vi.mock('@kitbag/core-state', () => ({
+vi.mock('@kitbag/core-state', async (original) => ({
+  soundChipLabel: (await original<Record<string, unknown>>()).soundChipLabel,
   useMediaSessions: <T,>(selector: (state: Record<string, unknown>) => T) =>
     selector({
       access: world.access,
@@ -39,7 +42,7 @@ vi.mock('@kitbag/core-design', () => ({
 vi.mock('./playAlongHooks.ts', () => ({
   useFollowedSession: () => world.session,
   usePlayAlong: <T,>(selector: (state: Record<string, unknown>) => T) =>
-    selector({ lock: world.lock }),
+    selector({ lock: world.lock, pattern: { sounds: world.sounds } }),
   useSessionWatchWhileLocked: () => undefined,
   useSongTempo: () => undefined,
   useTempoLine: () => ({ bpm: null, line: { lead: '', rung: '' } }),
@@ -63,7 +66,13 @@ vi.mock('./PermissionExplainer.tsx', marker('PermissionExplainer'));
 vi.mock('./PlayAlongBody.tsx', marker('PlayAlongBody'));
 vi.mock('./PlayAlongDock.tsx', marker('PlayAlongDock'));
 vi.mock('./PlayAlongAppBar.tsx', () => ({ PlayAlongAppBar: () => null }));
-vi.mock('./PlayAlongMenu.tsx', () => ({ PlayAlongMenu: () => null }));
+vi.mock('./PlayAlongMenu.tsx', () => ({
+  PlayAlongMenu: (props: Props) => {
+    world.menu = props;
+    return null;
+  },
+}));
+vi.mock('./ClickSoundSheet.tsx', () => ({ ClickSoundSheet: () => null }));
 vi.mock('./SourceSheet.tsx', () => ({ SourceSheet: () => null }));
 vi.mock('./TempoSheet.tsx', () => ({ TempoSheet: () => null }));
 vi.mock('./PatternSheets.tsx', () => ({
@@ -72,6 +81,7 @@ vi.mock('./PatternSheets.tsx', () => ({
 }));
 
 const { PlayAlongScreen } = await import('./PlayAlongScreen.tsx');
+const { soundChipLabel } = await import('@kitbag/core-state');
 
 function shown(): string {
   return renderToStaticMarkup(
@@ -83,6 +93,7 @@ beforeEach(() => {
   world.access = undefined;
   world.session = undefined;
   world.lock = undefined;
+  world.menu = undefined;
 });
 
 describe('PlayAlongScreen', () => {
@@ -116,5 +127,12 @@ describe('PlayAlongScreen', () => {
     world.access = true;
     world.lock = {};
     expect(shown()).toContain('PlayAlongDock');
+  });
+
+  it('names the play along click sound in the menu', () => {
+    world.access = true;
+    world.sounds = { normal: 1, accent: 3 };
+    shown();
+    expect(world.menu?.soundLabel).toBe(soundChipLabel(world.sounds));
   });
 });
