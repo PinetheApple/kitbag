@@ -31,6 +31,8 @@ export * from './waveform.ts';
 export * from './clampUnit.ts';
 export * from './percent.ts';
 export * from './stemPlayerRoles.ts';
+export * from './tapPadRoles.ts';
+export * from './dialogRoles.ts';
 export * from './manualTempoRoles.ts';
 export * from './beatStripWindow.ts';
 export * from './stepperRoles.ts';

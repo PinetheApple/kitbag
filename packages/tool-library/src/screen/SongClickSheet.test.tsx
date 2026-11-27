@@ -85,6 +85,7 @@ function givenSong(
     status: 'ready',
     analysisStatus: 'done',
     beats: [0, 1],
+    tempoPreview: null,
     clickSettings: {
       countInBars: 0,
       sounds: { normal: WOODBLOCK, accent: BEEP },

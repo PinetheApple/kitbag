@@ -7,13 +7,14 @@ const MANUAL_BPM = 128;
 const result = (
   status: 'pending' | 'analyzing' | 'done' | 'failed',
   analysedBpm: number | null,
-) => ({ status, analysedBpm, manualBpm: MANUAL_BPM });
+) => ({ status, analysedBpm, manualTempoBpm: MANUAL_BPM });
 
 describe('watchReanalysis', () => {
   it('says nothing unless a re-analysis was asked for', () => {
     expect(watchReanalysis(REANALYSIS.idle, result('failed', null))).toEqual({
       phase: REANALYSIS.idle,
       notice: null,
+      offer: false,
     });
   });
 
@@ -30,6 +31,7 @@ describe('watchReanalysis', () => {
     expect(watchReanalysis(REANALYSIS.running, result('failed', 132))).toEqual({
       phase: REANALYSIS.idle,
       notice: SET_TEMPO_TEXT.reanalysisFailed,
+      offer: false,
     });
   });
 
@@ -41,15 +43,19 @@ describe('watchReanalysis', () => {
 
   it('says when the analysis agrees with the manual tempo', () => {
     expect(
-      watchReanalysis(REANALYSIS.running, result('done', MANUAL_BPM + 0.04))
-        .notice,
-    ).toBe(SET_TEMPO_TEXT.reanalysisAgrees);
+      watchReanalysis(REANALYSIS.running, result('done', MANUAL_BPM + 0.04)),
+    ).toEqual({
+      phase: REANALYSIS.idle,
+      notice: SET_TEMPO_TEXT.reanalysisAgrees,
+      offer: false,
+    });
   });
 
-  it('leaves a different tempo to the analysed offer', () => {
+  it('asks for the analysed offer when the tempo differs', () => {
     expect(watchReanalysis(REANALYSIS.running, result('done', 132))).toEqual({
       phase: REANALYSIS.idle,
       notice: null,
+      offer: true,
     });
   });
 });

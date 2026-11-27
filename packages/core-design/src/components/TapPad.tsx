@@ -8,11 +8,7 @@ import {
 } from 'react-native';
 
 import { size, space } from '../roles.ts';
-import {
-  stemSections,
-  stemSectionsMix,
-  stemSectionsText,
-} from '../stemPlayerRoles.ts';
+import { tapPad, tapPadMix, tapPadText } from '../tapPadRoles.ts';
 import { textStyle } from '../textStyle.ts';
 import { mixHex } from '../theme.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
@@ -20,28 +16,28 @@ import { ledRadius } from '../tokens.ts';
 
 const useStyles = createThemedStyles((theme) => ({
   pad: {
-    minHeight: stemSections.padMinHeight,
+    minHeight: tapPad.minHeight,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: stemSections.padGap,
-    borderRadius: stemSections.padRadius,
-    borderWidth: stemSections.padBorder,
+    gap: tapPad.gap,
+    borderRadius: tapPad.radius,
+    borderWidth: tapPad.border,
     borderStyle: 'dashed',
     borderColor: theme.color.accentDim,
     backgroundColor: mixHex(
       theme.color.accent,
       theme.color.surface2,
-      stemSectionsMix.pad,
+      tapPadMix.fill,
     ),
   },
   pressed: { borderStyle: 'solid', borderColor: theme.color.accent },
   title: {
-    ...textStyle(stemSectionsText.padTitle),
+    ...textStyle(tapPadText.title),
     color: theme.color.text,
     textAlign: 'center',
   },
   hint: {
-    ...textStyle(stemSectionsText.padHint),
+    ...textStyle(tapPadText.hint),
     color: theme.color.text2,
     textAlign: 'center',
   },

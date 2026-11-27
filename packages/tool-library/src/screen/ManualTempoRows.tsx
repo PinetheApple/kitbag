@@ -6,7 +6,7 @@ import {
   type SongPlayerStore,
 } from '@kitbag/core-state';
 
-import { lockBadgeOf } from '../logic/lockText.ts';
+import { isNoGridBadge, lockBadgeOf } from '../logic/lockText.ts';
 import { bpmText, SET_TEMPO_TEXT } from '../logic/manualTempoText.ts';
 
 type TempoFacts = Pick<
@@ -31,8 +31,7 @@ export type TempoRow = (typeof TEMPO_ROW)[keyof typeof TEMPO_ROW];
 export function tempoRowOf(state: TempoFacts): TempoRow {
   if (state.status !== 'ready') return TEMPO_ROW.none;
   if (state.manualTempo !== null) return TEMPO_ROW.manual;
-  const badge = lockBadgeOf(state);
-  if (badge === 'failed' || badge === 'noGrid') return TEMPO_ROW.set;
+  if (isNoGridBadge(lockBadgeOf(state))) return TEMPO_ROW.set;
   return state.analysedBpm === null ? TEMPO_ROW.none : TEMPO_ROW.fix;
 }
 

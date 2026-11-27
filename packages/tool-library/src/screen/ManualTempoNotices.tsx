@@ -4,7 +4,7 @@ import {
   useSongLibrary,
   useSongPlayer,
 } from '@kitbag/core-state';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import {
   offerAction,
@@ -20,25 +20,45 @@ import {
 } from '../logic/reanalysisWatch.ts';
 import { UNDO_LABEL } from '../logic/songMeterText.ts';
 import { NoteAnchor } from './NoteAnchor.tsx';
+import { useSongKeyed } from './useSongKeyed.ts';
 
-function useReanalysisWatch() {
-  const [stage, setStage] = useState<ReanalysisPhase>(REANALYSIS.idle);
-  const [notice, setNotice] = useState<string | null>(null);
+const IDLE: ReanalysisPhase = REANALYSIS.idle;
+
+function useReanalysisWatch(songId: number) {
+  const [phase, setPhase] = useSongKeyed(songId, IDLE);
+  const [notice, setNotice] = useSongKeyed<string | null>(songId, null);
   const status = useSongPlayer((s) => s.analysisStatus);
   const analysedBpm = useSongPlayer((s) => s.analysedBpm);
-  const manualBpm = useSongPlayer((s) => s.manualTempo?.bpm ?? null);
+  const manualTempoBpm = useSongPlayer((s) => s.manualTempo?.bpm ?? null);
+  const offerAnalysed = useLiveSongPlayer((s) => s.offerAnalysed);
   useEffect(() => {
-    const next = watchReanalysis(stage, { status, analysedBpm, manualBpm });
-    if (next.phase !== stage) setStage(next.phase);
+    const next = watchReanalysis(phase, {
+      status,
+      analysedBpm,
+      manualTempoBpm,
+    });
+    if (next.phase !== phase) setPhase(next.phase);
     if (next.notice !== null) setNotice(next.notice);
-  }, [stage, status, analysedBpm, manualBpm]);
+    if (next.offer) offerAnalysed();
+  }, [
+    phase,
+    status,
+    analysedBpm,
+    manualTempoBpm,
+    setPhase,
+    setNotice,
+    offerAnalysed,
+  ]);
   const arm = useCallback(() => {
-    setStage(REANALYSIS.asked);
-  }, []);
+    setPhase(REANALYSIS.asked);
+  }, [setPhase]);
+  const disarm = useCallback(() => {
+    setPhase(IDLE);
+  }, [setPhase]);
   const clear = useCallback(() => {
     setNotice(null);
-  }, []);
-  return { notice, arm, clear };
+  }, [setNotice]);
+  return { notice, arm, disarm, clear };
 }
 
 function useAnalysedSwitch(onUndoable: (message: string) => void) {
@@ -53,23 +73,23 @@ function useAnalysedSwitch(onUndoable: (message: string) => void) {
 }
 
 export function useManualTempoNotices(songId: number) {
-  const [undoNote, setUndoNote] = useState<string | null>(null);
-  const [asking, setAsking] = useState(false);
+  const [undoNote, setUndoNote] = useSongKeyed<string | null>(songId, null);
+  const [asking, setAsking] = useSongKeyed(songId, false);
   const reanalyze = useSongLibrary((s) => s.reanalyze);
-  const watch = useReanalysisWatch();
-  const { arm } = watch;
+  const watch = useReanalysisWatch(songId);
+  const { arm, disarm } = watch;
   const onUseAnalysed = useAnalysedSwitch(setUndoNote);
   const onAsk = useCallback(() => {
     setAsking(true);
-  }, []);
+  }, [setAsking]);
   const onCancel = useCallback(() => {
     setAsking(false);
-  }, []);
+  }, [setAsking]);
   const onConfirm = useCallback(() => {
     setAsking(false);
     arm();
-    void reanalyze(songId);
-  }, [arm, reanalyze, songId]);
+    reanalyze(songId).catch(disarm);
+  }, [setAsking, arm, disarm, reanalyze, songId]);
   return {
     undoNote,
     setUndoNote,
@@ -84,7 +104,11 @@ export function useManualTempoNotices(songId: number) {
 
 export type ManualTempoNoticeState = ReturnType<typeof useManualTempoNotices>;
 
-function UndoNotice({ notices }: { readonly notices: ManualTempoNoticeState }) {
+interface NoticesProps {
+  readonly notices: ManualTempoNoticeState;
+}
+
+function UndoNotice({ notices }: NoticesProps) {
   const undoTempo = useLiveSongPlayer((s) => s.undoTempo);
   const dismiss = useLiveSongPlayer((s) => s.dismissTempoUndo);
   const { undoNote, setUndoNote } = notices;
@@ -108,11 +132,7 @@ function UndoNotice({ notices }: { readonly notices: ManualTempoNoticeState }) {
   );
 }
 
-function OfferNotice({
-  notices,
-}: {
-  readonly notices: ManualTempoNoticeState;
-}) {
+function OfferNotice({ notices }: NoticesProps) {
   const offer = useSongPlayer((s) => s.analysedOffer);
   const dismiss = useLiveSongPlayer((s) => s.dismissAnalysedOffer);
   if (offer === null) return null;
@@ -127,11 +147,7 @@ function OfferNotice({
   );
 }
 
-function ResultNotice({
-  notices,
-}: {
-  readonly notices: ManualTempoNoticeState;
-}) {
+function ResultNotice({ notices }: NoticesProps) {
   const { notice, clear } = notices.watch;
   if (notice === null) return null;
   return (
@@ -145,11 +161,14 @@ function ResultNotice({
   );
 }
 
-function ReanalyseDialog({
-  notices,
-}: {
-  readonly notices: ManualTempoNoticeState;
-}) {
+function ActiveNotice({ notices }: NoticesProps) {
+  const offering = useSongPlayer((s) => s.analysedOffer !== null);
+  if (notices.undoNote !== null) return <UndoNotice notices={notices} />;
+  if (offering) return <OfferNotice notices={notices} />;
+  return <ResultNotice notices={notices} />;
+}
+
+function ReanalyseDialog({ notices }: NoticesProps) {
   const manualTempo = useSongPlayer((s) => s.manualTempo);
   if (!notices.asking || manualTempo === null) return null;
   return (
@@ -164,20 +183,12 @@ function ReanalyseDialog({
   );
 }
 
-export function ManualTempoNotices({
-  notices,
-}: {
-  readonly notices: ManualTempoNoticeState;
-}) {
-  const offering = useSongPlayer((s) => s.analysedOffer !== null);
-  const notice = (() => {
-    if (notices.undoNote !== null) return <UndoNotice notices={notices} />;
-    if (offering) return <OfferNotice notices={notices} />;
-    return <ResultNotice notices={notices} />;
-  })();
+export function ManualTempoNotices({ notices }: NoticesProps) {
   return (
     <>
-      <NoteAnchor>{notice}</NoteAnchor>
+      <NoteAnchor>
+        <ActiveNotice notices={notices} />
+      </NoteAnchor>
       <ReanalyseDialog notices={notices} />
     </>
   );

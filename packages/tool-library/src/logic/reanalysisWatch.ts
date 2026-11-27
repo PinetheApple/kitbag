@@ -14,35 +14,39 @@ type AnalysisStatus = SongPlayerStore['analysisStatus'];
 export interface ReanalysisStep {
   readonly phase: ReanalysisPhase;
   readonly notice: string | null;
+  readonly offer: boolean;
 }
 
 export interface ReanalysisResult {
   readonly status: AnalysisStatus;
   readonly analysedBpm: number | null;
-  readonly manualBpm: number | null;
+  readonly manualTempoBpm: number | null;
 }
 
 const RUNNING: ReadonlySet<AnalysisStatus> = new Set(['pending', 'analyzing']);
+const QUIET = { notice: null, offer: false } as const;
 
-function resultNotice({
+function ended({
   status,
   analysedBpm,
-  manualBpm: manual,
-}: ReanalysisResult): string | null {
-  if (status === 'failed') return SET_TEMPO_TEXT.reanalysisFailed;
-  if (analysedBpm === null) return SET_TEMPO_TEXT.reanalysisNoBeat;
-  return manualBpm(analysedBpm) === manual
-    ? SET_TEMPO_TEXT.reanalysisAgrees
-    : null;
+  manualTempoBpm,
+}: ReanalysisResult): Omit<ReanalysisStep, 'phase'> {
+  if (status === 'failed')
+    return { notice: SET_TEMPO_TEXT.reanalysisFailed, offer: false };
+  if (analysedBpm === null)
+    return { notice: SET_TEMPO_TEXT.reanalysisNoBeat, offer: false };
+  return manualBpm(analysedBpm) === manualTempoBpm
+    ? { notice: SET_TEMPO_TEXT.reanalysisAgrees, offer: false }
+    : { notice: null, offer: true };
 }
 
 export function watchReanalysis(
   phase: ReanalysisPhase,
   result: ReanalysisResult,
 ): ReanalysisStep {
-  if (phase === REANALYSIS.idle) return { phase, notice: null };
+  if (phase === REANALYSIS.idle) return { phase, ...QUIET };
   if (RUNNING.has(result.status))
-    return { phase: REANALYSIS.running, notice: null };
-  if (phase === REANALYSIS.asked) return { phase, notice: null };
-  return { phase: REANALYSIS.idle, notice: resultNotice(result) };
+    return { phase: REANALYSIS.running, ...QUIET };
+  if (phase === REANALYSIS.asked) return { phase, ...QUIET };
+  return { phase: REANALYSIS.idle, ...ended(result) };
 }

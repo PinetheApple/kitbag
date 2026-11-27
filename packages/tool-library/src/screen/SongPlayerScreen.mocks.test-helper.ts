@@ -39,7 +39,7 @@ export const library = {
 export const commands = {
   close: vi.fn(),
   saveForSong: vi.fn(),
-  reanalyze: vi.fn(),
+  reanalyze: vi.fn(() => Promise.resolve()),
   save: vi.fn(() => Promise.resolve(true)),
   dismissMeterNotice: vi.fn(),
 };
@@ -55,6 +55,7 @@ export const manual = {
   dismissTempoUndo: vi.fn(),
   dismissAnalysedOffer: vi.fn(),
   previewTempo: vi.fn(),
+  offerAnalysed: vi.fn(),
 };
 export const songTempo: {
   tempo: unknown;
@@ -121,7 +122,11 @@ function MockSheet(props: Props) {
   return props.visible === true
     ? createElement(
         'Sheet',
-        { title: props.title, titleDetail: props.titleDetail },
+        {
+          title: props.title,
+          titleDetail: props.titleDetail,
+          onDismiss: props.onDismiss,
+        },
         props.notice as ReactNode,
         props.children,
       )
@@ -143,6 +148,7 @@ const MANUAL_TEMPO_PARTS = [
 ];
 
 const MANUAL_TEMPO_STATE = [
+  'MANUAL_BPM_STEP',
   'constantGrid',
   'GRID_METER',
   'manualBpm',
@@ -384,7 +390,8 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
       dismissTempoUndo: manual.dismissTempoUndo,
       dismissAnalysedOffer: manual.dismissAnalysedOffer,
       previewTempo: manual.previewTempo,
-      tempoPreview: false,
+      tempoPreview: null,
+      offerAnalysed: manual.offerAnalysed,
       playheadSeconds: () => manual.playheadSeconds,
       tempoCorrectionChanged: vi.fn(),
       tempoCorrectionSettled: vi.fn(),

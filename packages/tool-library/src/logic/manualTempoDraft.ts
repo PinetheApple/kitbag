@@ -89,13 +89,13 @@ export function anchorWithin(anchor: number, durationSec: number): number {
 
 export function startDraft(
   bpm: number,
-  seed: TempoSeed,
+  from: Pick<TempoSeed, 'anchor' | 'beatsPerBar'>,
   playheadSec: number,
 ): TempoDraft {
   return {
     bpm: manualBpm(bpm),
-    anchor: seed.anchor ?? playheadSec,
-    beatsPerBar: seed.beatsPerBar,
+    anchor: from.anchor ?? playheadSec,
+    beatsPerBar: from.beatsPerBar,
     nudgedMs: 0,
   };
 }

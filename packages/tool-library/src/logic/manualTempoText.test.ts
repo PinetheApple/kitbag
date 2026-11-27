@@ -8,6 +8,7 @@ import {
   offerText,
   reanalyseBody,
   savedText,
+  SET_TEMPO_TEXT,
   tappedHint,
   typedHint,
   wasAnalysedText,
@@ -19,6 +20,11 @@ describe('manual tempo copy', () => {
   it('shows a whole tempo bare and a tapped one to a tenth', () => {
     expect(bpmText(128)).toBe('128 BPM');
     expect(bpmText(127.64)).toBe('127.6 BPM');
+  });
+
+  it('names the stepper keys by the step they take', () => {
+    expect(SET_TEMPO_TEXT.slower).toBe('Tempo 0.1 BPM slower');
+    expect(SET_TEMPO_TEXT.faster).toBe('Tempo 0.1 BPM faster');
   });
 
   it('repeats what was saved', () => {

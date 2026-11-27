@@ -5,6 +5,7 @@ import {
 } from '@kitbag/core-design';
 import {
   manualBpm,
+  MANUAL_BPM_STEP,
   MANUAL_TEMPO_BOUNDS,
   MINUS,
   type ManualTempo,
@@ -45,8 +46,8 @@ export const SET_TEMPO_TEXT = {
   previewClick: 'Preview click',
   previewHint: 'Hear it against the song before you save.',
   beatsPerBar: meterCopy.beatsPerBar,
-  slower: 'Tempo 0.1 BPM slower',
-  faster: 'Tempo 0.1 BPM faster',
+  slower: `Tempo ${String(MANUAL_BPM_STEP)} BPM slower`,
+  faster: `Tempo ${String(MANUAL_BPM_STEP)} BPM faster`,
   back: 'Back',
   save: 'Save',
   saveFailed: 'Could not save the tempo.',

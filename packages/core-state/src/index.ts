@@ -790,9 +790,9 @@ export {
   TEMPO_CORRECTIONS,
   type TempoCorrection,
 } from '@kitbag/core-db';
-export { MS_PER_SECOND } from '@kitbag/core-db';
 export {
   canBuildTempoMode,
+  MS_PER_SECOND,
   TEMPO_MIN_ANCHOR_SECONDS,
   TEMPO_MODE,
   TEMPO_SOURCE,

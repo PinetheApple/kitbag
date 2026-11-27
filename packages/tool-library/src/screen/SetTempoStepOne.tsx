@@ -17,7 +17,7 @@ import {
 import { TAPS_TO_SET_TEMPO } from '@kitbag/core-state';
 import { View } from 'react-native';
 
-import { doubleOf, halfOf, typedValue } from '../logic/manualTempoDraft.ts';
+import { doubleOf, halfOf } from '../logic/manualTempoDraft.ts';
 import {
   doubleLabel,
   doubleSpoken,
@@ -50,15 +50,15 @@ function TypeEntry({ tempo }: StepProps) {
   const styles = useStyles();
   const { entry, seed, onTyped } = tempo;
   const { shown } = entry;
-  const seeded = entry.entry.untouched && seed.bpm !== null;
-  const hint = typedHint(seeded ? shown : typedValue(entry.entry));
+  const seeded = entry.numpad.untouched && seed.bpm !== null;
+  const hint = typedHint(shown);
   return (
     <>
       <NumpadReadout
         digits={
           seeded && shown !== undefined
             ? manualBpmText(shown)
-            : numpadDigits(entry.entry)
+            : numpadDigits(entry.numpad)
         }
         hint={hint.text}
         hintTone={hint.tone}

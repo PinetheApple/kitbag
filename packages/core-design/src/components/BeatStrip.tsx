@@ -74,21 +74,26 @@ export interface BeatStripProps {
   readonly label: string;
 }
 
+interface StripView {
+  readonly start: number;
+  readonly playhead: number;
+}
+
 interface SlotProps {
   readonly slot: number;
   readonly beatsPerBar: number;
-  readonly windowStart: SharedValue<number>;
+  readonly view: SharedValue<StripView>;
 }
 
-function StripSlot({ slot, beatsPerBar, windowStart }: SlotProps) {
+function StripSlot({ slot, beatsPerBar, view }: SlotProps) {
   const styles = useStyles();
   const markStyle = useAnimatedStyle(() => ({
-    height: isStripDownbeat(windowStart.value + slot, beatsPerBar)
+    height: isStripDownbeat(view.value.start + slot, beatsPerBar)
       ? DOWNBEAT_MARK
       : BEAT_MARK,
   }));
   const labelStyle = useAnimatedStyle(() => ({
-    opacity: windowStart.value + slot === 0 ? 1 : 0,
+    opacity: view.value.start + slot === 0 ? 1 : 0,
   }));
   return (
     <View style={styles.slot}>
@@ -106,17 +111,19 @@ export function BeatStrip({
   label,
 }: BeatStripProps) {
   const styles = useStyles();
-  const windowStart = useSharedValue(FIRST_STRIP_BEAT);
+  const view = useSharedValue<StripView>({
+    start: FIRST_STRIP_BEAT,
+    playhead: stripPlayheadFraction(FIRST_STRIP_BEAT, 0),
+  });
   useAnimatedReaction(
     () => beatsFromBarOne.value,
     (beat) => {
-      windowStart.value = stripWindowStart(windowStart.value, beat);
+      const start = stripWindowStart(view.value.start, beat);
+      view.value = { start, playhead: stripPlayheadFraction(start, beat) };
     },
   );
   const playheadStyle = useAnimatedStyle(() => ({
-    left: asPercent(
-      stripPlayheadFraction(windowStart.value, beatsFromBarOne.value),
-    ),
+    left: asPercent(view.value.playhead),
   }));
   return (
     <View accessible accessibilityLabel={label} style={styles.strip}>
@@ -125,7 +132,7 @@ export function BeatStrip({
           key={slot}
           slot={slot}
           beatsPerBar={beatsPerBar}
-          windowStart={windowStart}
+          view={view}
         />
       ))}
       <Text style={styles.label}>{label}</Text>

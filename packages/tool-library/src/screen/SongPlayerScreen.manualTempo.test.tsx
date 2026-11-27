@@ -47,6 +47,7 @@ vi.mock('@kitbag/core-state', async (original) =>
 const MANUAL = { bpm: 128, anchor: 2.3, beatsPerBar: 4 };
 const NO_GRID = { analysisStatus: 'failed', beats: [] };
 const TAP_GAP_MS = 500;
+const NEXT_SONG = 2;
 
 beforeEach(resetScreenState);
 
@@ -97,6 +98,20 @@ function typeTempo(tree: ReactTestRenderer, digits: readonly number[]) {
       (pad.props.onDigit as (d: number) => void)(digit);
   });
   press(pad, 'onConfirm');
+}
+
+function confirmReanalyse(tree: ReactTestRenderer) {
+  press(only(menuRow(tree, REANALYZE_LABEL)));
+  press(first(tree, 'ConfirmDialog'), 'onConfirm');
+}
+
+function runAnalysis(tree: ReactTestRenderer, statuses: readonly string[]) {
+  for (const analysisStatus of statuses) {
+    display.analysis = { analysisStatus, beats: [0] };
+    act(() => {
+      tree.update(screen(true));
+    });
+  }
 }
 
 async function save(tree: ReactTestRenderer) {
@@ -189,6 +204,41 @@ describe('a song with no beat grid', () => {
     expect(transport.toggleClick).toHaveBeenCalledOnce();
   });
 
+  it('drops the preview when the sheet is closed', () => {
+    const tree = mount();
+    press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.title));
+    typeTempo(tree, [1, 2, 8]);
+    press(withProp(tree, 'Sheet', 'title', SET_TEMPO_TEXT.title), 'onDismiss');
+    expect(manual.previewTempo).toHaveBeenLastCalledWith(null);
+  });
+
+  it('drops the preview when the player goes away', () => {
+    const tree = mount();
+    press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.title));
+    typeTempo(tree, [1, 2, 8]);
+    act(() => {
+      tree.unmount();
+    });
+    expect(manual.previewTempo).toHaveBeenLastCalledWith(null);
+  });
+
+  it('closes the sheet and forgets the Undo when the queue moves to the next song', async () => {
+    const tree = mount();
+    press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.title));
+    typeTempo(tree, [1, 2, 8]);
+    await save(tree);
+    press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.title));
+    act(() => {
+      tree.update(screen(true, { songId: NEXT_SONG }));
+    });
+    expect(byType(tree, 'Sheet')).toHaveLength(0);
+    expect(
+      byType(tree, 'Snackbar').filter(
+        (bar) => bar.props.actionLabel === 'Undo',
+      ),
+    ).toHaveLength(0);
+  });
+
   it('sets the tempo from the fourth tap on', () => {
     const tree = mount();
     press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.title));
@@ -253,14 +303,26 @@ describe('a song with a manual tempo', () => {
     manual.analysedBpm = 132;
   });
 
-  it('shows the manual tempo in accent and the way back to the analysis', () => {
-    const tree = openMenu();
-    expect(menuRow(tree, SET_TEMPO_TEXT.tempo)?.props).toMatchObject({
+  it('shows the manual tempo in accent', () => {
+    expect(menuRow(openMenu(), SET_TEMPO_TEXT.tempo)?.props).toMatchObject({
       value: '128 BPM',
       valueTone: 'accent',
     });
-    press(only(menuRow(tree, SET_TEMPO_TEXT.useAnalysed)));
+  });
+
+  it('switches back to the analysed tempo, with Undo', async () => {
+    const tree = openMenu();
+    await act(async () => {
+      (
+        only(menuRow(tree, SET_TEMPO_TEXT.useAnalysed)).props.onPress as Press
+      )();
+      await Promise.resolve();
+    });
     expect(manual.useAnalysedTempo).toHaveBeenCalledOnce();
+    const undo = withProp(tree, 'Snackbar', 'actionLabel', 'Undo');
+    expect(undo.props.message).toBe('Back to the analysed tempo: 132 BPM.');
+    press(undo, 'onAction');
+    expect(manual.undoTempo).toHaveBeenCalledOnce();
   });
 
   it('hides the tempo mode and correction rows, which a manual tempo ignores', () => {
@@ -281,14 +343,8 @@ describe('a song with a manual tempo', () => {
 
   it('reports a failed re-analysis and keeps the manual tempo', () => {
     const tree = openMenu();
-    press(only(menuRow(tree, REANALYZE_LABEL)));
-    press(first(tree, 'ConfirmDialog'), 'onConfirm');
-    for (const analysisStatus of ['pending', 'failed']) {
-      display.analysis = { analysisStatus, beats: [0] };
-      act(() => {
-        tree.update(screen(true));
-      });
-    }
+    confirmReanalyse(tree);
+    runAnalysis(tree, ['pending', 'failed']);
     expect(
       withProp(tree, 'Snackbar', 'message', SET_TEMPO_TEXT.reanalysisFailed),
     ).toBeDefined();
@@ -297,18 +353,35 @@ describe('a song with a manual tempo', () => {
 
   it('says so when a re-analysis agrees with the manual tempo', () => {
     const tree = openMenu();
-    press(only(menuRow(tree, REANALYZE_LABEL)));
-    press(first(tree, 'ConfirmDialog'), 'onConfirm');
+    confirmReanalyse(tree);
     manual.analysedBpm = MANUAL.bpm;
-    for (const analysisStatus of ['pending', 'done']) {
-      display.analysis = { analysisStatus, beats: [0] };
-      act(() => {
-        tree.update(screen(true));
-      });
-    }
+    runAnalysis(tree, ['pending', 'done']);
     expect(
       withProp(tree, 'Snackbar', 'message', SET_TEMPO_TEXT.reanalysisAgrees),
     ).toBeDefined();
+    expect(manual.offerAnalysed).not.toHaveBeenCalled();
+  });
+
+  it('offers the analysed tempo when the run brings back the same grid at another BPM', () => {
+    const tree = openMenu();
+    confirmReanalyse(tree);
+    runAnalysis(tree, ['pending', 'done']);
+    expect(manual.offerAnalysed).toHaveBeenCalledOnce();
+  });
+
+  it('forgets a re-analysis that could not be queued', async () => {
+    commands.reanalyze.mockRejectedValueOnce(new Error('busy'));
+    const tree = openMenu();
+    confirmReanalyse(tree);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    runAnalysis(tree, ['pending', 'failed']);
+    expect(
+      byType(tree, 'Snackbar').filter(
+        (bar) => bar.props.message === SET_TEMPO_TEXT.reanalysisFailed,
+      ),
+    ).toHaveLength(0);
   });
 
   it('offers a newer analysed tempo in a snackbar', () => {

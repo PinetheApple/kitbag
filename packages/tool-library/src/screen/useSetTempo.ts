@@ -21,6 +21,7 @@ import {
 } from '../logic/manualTempoDraft.ts';
 import { SET_TEMPO_TEXT, savedText } from '../logic/manualTempoText.ts';
 import { useSetTempoEntry, type SetTempoEntry } from './useSetTempoEntry.ts';
+import { useSongKeyed } from './useSongKeyed.ts';
 
 export const SET_TEMPO_STEP = { tempo: 1, barOne: 2 } as const;
 export type SetTempoStep = (typeof SET_TEMPO_STEP)[keyof typeof SET_TEMPO_STEP];
@@ -121,15 +122,14 @@ function useStepFlow({ seed, entry, draft, setDraft }: StepFlowInputs) {
   const toBarOne = useCallback(
     (bpm: number | null | undefined) => {
       if (bpm === null || bpm === undefined) return;
-      const from = { ...seed, ...draft };
-      setDraft(startDraft(bpm, from, playheadSeconds()));
+      setDraft(startDraft(bpm, draft ?? seed, playheadSeconds()));
       setStep(SET_TEMPO_STEP.barOne);
     },
     [draft, seed, setDraft, playheadSeconds],
   );
   const onTyped = useCallback(() => {
-    toBarOne(chosenTypedBpm(entry.entry, seed.bpm));
-  }, [toBarOne, entry.entry, seed.bpm]);
+    toBarOne(chosenTypedBpm(entry.numpad, seed.bpm));
+  }, [toBarOne, entry.numpad, seed.bpm]);
   const onTapped = useCallback(() => {
     toBarOne(entry.tappedBpm);
   }, [toBarOne, entry.tappedBpm]);
@@ -161,7 +161,24 @@ export function useSetTempo({ onSaved, onClose }: SetTempoCallbacks) {
     setFailed(false);
     setStep(SET_TEMPO_STEP.tempo);
   }, [seedNow, resetModes, setDraft, setFailed, setStep]);
-  return { seed, durationSec, entry, ...moves, ...saving, ...flow, onShow };
+  return {
+    seed,
+    entry,
+    draft,
+    step: flow.step,
+    failed: saving.failed,
+    clearFailed: saving.clearFailed,
+    onSave: saving.onSave,
+    onShow,
+    onTyped: flow.onTyped,
+    onTapped: flow.onTapped,
+    onBack: flow.onBack,
+    onBarOneHere: moves.onBarOneHere,
+    onBeat: moves.onBeat,
+    onNudge: moves.onNudge,
+    onStep: moves.onStep,
+    onMeter: moves.onMeter,
+  };
 }
 
 export type SetTempo = ReturnType<typeof useSetTempo>;
@@ -187,13 +204,13 @@ export function useTempoPreview(
   );
 }
 
-export function useSetTempoOpen() {
-  const [open, setOpen] = useState(false);
+export function useSetTempoOpen(songId: number) {
+  const [open, setOpen] = useSongKeyed(songId, false);
   const show = useCallback(() => {
     setOpen(true);
-  }, []);
+  }, [setOpen]);
   const hide = useCallback(() => {
     setOpen(false);
-  }, []);
+  }, [setOpen]);
   return { open, show, hide };
 }

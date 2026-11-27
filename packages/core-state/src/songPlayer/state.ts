@@ -41,7 +41,11 @@ export interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
   readonly analysedBpm: number | null;
   readonly analysedOffer: number | null;
   readonly tempoUndoable: boolean;
-  readonly tempoPreview: boolean;
+  readonly tempoPreview: TempoPreview | null;
+}
+
+export interface TempoPreview {
+  readonly savedGrid: boolean;
 }
 
 export const closedState: SongPlayerState = {
@@ -73,7 +77,7 @@ export const closedState: SongPlayerState = {
   analysedBpm: null,
   analysedOffer: null,
   tempoUndoable: false,
-  tempoPreview: false,
+  tempoPreview: null,
 };
 
 type SongFacts = Pick<

@@ -45,8 +45,8 @@ import type { SongPlayhead } from './playhead.ts';
 import { SheetTransport } from './SheetTransport.tsx';
 import type { SetTempo } from './useSetTempo.ts';
 
-const EARLIER = -1;
-const LATER = 1;
+const BACK = -1;
+const FORWARD = 1;
 
 const TEMPO_KEYS: StepperKeys = {
   earlier: 'decrease',
@@ -100,7 +100,9 @@ interface StepProps {
 
 function BarOneDetail({ draft, playhead }: Omit<StepProps, 'tempo'>) {
   const styles = useStyles();
-  const live = useDerivedValue(() => playheadValue(playhead.songSec.value));
+  const live = useDerivedValue(
+    () => `${playheadValue(playhead.songSec.value)}.`,
+  );
   if (draft.nudgedMs !== 0)
     return <Text style={styles.detail}>{nudgedText(draft.nudgedMs)}</Text>;
   return (
@@ -158,7 +160,7 @@ function BarOneMoves({ tempo }: Pick<StepProps, 'tempo'>) {
   return (
     <View style={styles.row}>
       <MoveKey
-        amount={EARLIER}
+        amount={BACK}
         icon="back"
         label={SET_TEMPO_TEXT.beat}
         spoken={SET_TEMPO_TEXT.beatEarlier}
@@ -177,7 +179,7 @@ function BarOneMoves({ tempo }: Pick<StepProps, 'tempo'>) {
         onMove={onNudge}
       />
       <MoveKey
-        amount={LATER}
+        amount={FORWARD}
         icon="forward"
         label={SET_TEMPO_TEXT.beat}
         spoken={SET_TEMPO_TEXT.beatLater}
@@ -191,10 +193,10 @@ function TempoFields({ tempo, draft }: Omit<StepProps, 'playhead'>) {
   const styles = useStyles();
   const { onStep, onMeter } = tempo;
   const slower = useCallback(() => {
-    onStep(EARLIER);
+    onStep(BACK);
   }, [onStep]);
   const faster = useCallback(() => {
-    onStep(LATER);
+    onStep(FORWARD);
   }, [onStep]);
   const pickMeter = useCallback(
     (value: string) => {

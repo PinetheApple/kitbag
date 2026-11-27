@@ -24,6 +24,8 @@ export * from './sheetRoom.ts';
 export * from './switch.ts';
 export * from './editRowGaps.ts';
 export * from './stemPlayerRoles.ts';
+export * from './tapPadRoles.ts';
+export * from './dialogRoles.ts';
 export * from './fontFaces.ts';
 export * from './readerHiding.ts';
 export * from './meterText.ts';

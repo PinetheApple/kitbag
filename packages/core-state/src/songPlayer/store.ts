@@ -280,7 +280,7 @@ export function createSongPlayerStore(
           manualTempo,
           meterOverride,
           meterNotice: null,
-          tempoPreview: false,
+          tempoPreview: null,
         },
       );
     };
@@ -301,7 +301,8 @@ export function createSongPlayerStore(
           : { ...stored, tempoCorrection: correction };
       const ready = get().status === 'ready';
       const mode = modes.modeFor(record);
-      const grid = recordGrid(record, mode);
+      const previewed = ready ? preview.over(record, mode) : null;
+      const grid = previewed?.grid ?? recordGrid(record, mode);
       const regrid = ready && !sameGrid(get(), grid);
       const reanalysed = ready && !sameGrid(analysed, record);
       if (ready) analysed = record;
@@ -318,6 +319,7 @@ export function createSongPlayerStore(
           : {}),
         ...(notice ? { meterNotice: grid.detected } : {}),
         ...(regrid ? shownGrid(grid) : {}),
+        ...(previewed === null ? {} : { tempoPreview: previewed.tempoPreview }),
       });
       if (ready) waveform.show(opened, record.waveformPath);
       if (regrid) void followNewGrid(context, gridFollowers);

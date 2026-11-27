@@ -351,7 +351,7 @@ function SongPlayerContent({
     setTempoOpen(false);
   }, []);
   const clickSheet = useSongClickSheet();
-  const setTempo = useSetTempoOpen();
+  const setTempo = useSetTempoOpen(songId);
   const tempoNotices = useManualTempoNotices(songId);
   const { open: openClick } = clickSheet;
   const openCountIn = useCallback(() => {

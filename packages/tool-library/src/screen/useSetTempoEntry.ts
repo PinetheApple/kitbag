@@ -34,24 +34,24 @@ const typedEntry = (bpm: number): NumpadEntry => ({
 });
 
 function useTyping(seed: TempoSeed) {
-  const [entry, setEntry] = useState(EMPTY_ENTRY);
-  const shown = shownTypedBpm(entry, seed.bpm);
+  const [numpad, setNumpad] = useState(EMPTY_ENTRY);
+  const shown = shownTypedBpm(numpad, seed.bpm);
   const onDigit = useCallback((digit: number) => {
-    setEntry((now) => pressNumpadDigit(now, digit, MANUAL_TEMPO_BOUNDS));
+    setNumpad((now) => pressNumpadDigit(now, digit, MANUAL_TEMPO_BOUNDS));
   }, []);
   const onBackspace = useCallback(() => {
-    setEntry(pressNumpadBackspace);
+    setNumpad(pressNumpadBackspace);
   }, []);
   const onHalve = useCallback(() => {
-    if (shown !== undefined) setEntry(typedEntry(halfOf(shown)));
+    if (shown !== undefined) setNumpad(typedEntry(halfOf(shown)));
   }, [shown]);
   const onDouble = useCallback(() => {
-    if (shown !== undefined) setEntry(typedEntry(doubleOf(shown)));
+    if (shown !== undefined) setNumpad(typedEntry(doubleOf(shown)));
   }, [shown]);
   const resetEntry = useCallback((next: TempoSeed) => {
-    setEntry(entryOf(next.bpm));
+    setNumpad(entryOf(next.bpm));
   }, []);
-  return { entry, shown, onDigit, onBackspace, onHalve, onDouble, resetEntry };
+  return { numpad, shown, onDigit, onBackspace, onHalve, onDouble, resetEntry };
 }
 
 function useTapping() {
