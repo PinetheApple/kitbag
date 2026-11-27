@@ -13,6 +13,8 @@ import {
   type LibrarySongRecord,
   type PracticeSessionRecord,
   type PreferenceRecord,
+  type RigRecord,
+  type RouteLatencyRecord,
   type SetlistRecord,
   type SongPresetRecord,
   type StemSongRecord,
@@ -39,6 +41,7 @@ import {
   clickSounds,
   practiceSessions,
   preferences,
+  routeLatency,
   setlistItems,
   setlists,
   songPresets,
@@ -181,6 +184,27 @@ async function upsertPreference(
   return found(rows, 'Preference upsert').id;
 }
 
+async function upsertRouteLatency(
+  db: Database,
+  record: RouteLatencyRecord,
+): Promise<number> {
+  const { offsetMs, name, kind } = record;
+  const rows = await db
+    .insert(routeLatency)
+    .values(record)
+    .onConflictDoUpdate({
+      target: routeLatency.route,
+      set: { offsetMs, name, kind },
+    })
+    .returning({ id: sql<number>`rowid` });
+  return found(rows, 'Route latency upsert').id;
+}
+
+const upsertRigSetting = (db: Database, record: RigRecord) =>
+  'route' in record
+    ? upsertRouteLatency(db, record)
+    : upsertPreference(db, record);
+
 async function upsertClickSound(
   db: Database,
   record: ClickSoundRecord,
@@ -211,6 +235,8 @@ const UPSERTS: Record<Category, Upsert> = {
   clickSounds: upsertClickSound as Upsert,
   stemSongs: (db, record, localId) =>
     restoreStemSong(db, record as StemSongRecord, localId),
+  rigSettings: (db, record) => upsertRigSetting(db, record as RigRecord),
+  appearanceSettings: upsertPreference as Upsert,
 };
 
 async function deleteCategory(db: Database, category: Category) {
@@ -219,6 +245,7 @@ async function deleteCategory(db: Database, category: Category) {
     await db
       .delete(preferences)
       .where(inArray(preferences.key, [...PREFERENCE_KEYS[category]]));
+    if (category === 'rigSettings') await db.delete(routeLatency);
   } else if (category === 'setlists') {
     await db.delete(setlistItems);
     await db.update(practiceSessions).set({ setlistId: null });

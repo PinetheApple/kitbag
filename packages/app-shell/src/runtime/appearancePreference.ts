@@ -1,4 +1,4 @@
-import type { Preferences } from '@kitbag/core-db';
+import { APPEARANCE_PREFERENCE_KEYS, type Preferences } from '@kitbag/core-db';
 import {
   THEME_CHOICES,
   type AppearanceKey,
@@ -13,12 +13,6 @@ import {
   writeChanged,
   type StoredPreference,
 } from './storedPreference';
-
-export const APPEARANCE_KEYS: Readonly<Record<AppearanceKey, string>> = {
-  theme: 'appearance_theme',
-  haptics: 'appearance_haptics',
-  keepScreenAwake: 'appearance_keep_screen_awake',
-};
 
 function encode(value: AppearanceSettings[AppearanceKey]): string {
   if (typeof value === 'boolean') return encodeFlag(value);
@@ -49,6 +43,10 @@ export function appearancePreference(
   preferences: () => Preferences,
 ): AppearancePersistence {
   return appearancePersistence((key) =>
-    storedPreference(preferences, APPEARANCE_KEYS[key], 'appearance setting'),
+    storedPreference(
+      preferences,
+      APPEARANCE_PREFERENCE_KEYS[key],
+      'appearance setting',
+    ),
   );
 }

@@ -10,6 +10,7 @@ configureBackup({
     exportSetlist: unavailable,
     plan: unavailable,
     apply: unavailable,
+    beforeReplace: unavailable,
   }),
   pick: () => Promise.resolve(null),
   share: unavailable,

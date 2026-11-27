@@ -1,0 +1,165 @@
+{
+  "format": "kitbag-backup",
+  "version": 4,
+  "exportedAt": "2026-11-27T10:40:51.380Z",
+  "categories": [
+    "librarySongs",
+    "songPresets",
+    "setlists",
+    "tunings",
+    "practiceSessions",
+    "countInSettings",
+    "metronomeSettings",
+    "clickSounds",
+    "stemSongs"
+  ],
+  "librarySongs": [
+    {
+      "title": "Reference",
+      "artist": "Someone",
+      "filePath": "music/ref.flac",
+      "duration": 210.5,
+      "format": "flac",
+      "createdAt": 1767323045,
+      "beatGrid": "AAAAPwAAoD8=",
+      "downbeatIndices": "AA==",
+      "bpm": 128,
+      "waveformPath": null,
+      "uuid": "5fe73761-9b02-4069-bf8f-af8927ab26e2",
+      "analysisVersion": null,
+      "meterBeatsPerBar": null,
+      "barOneSeconds": null,
+      "tempoCorrection": null,
+      "speed": 1,
+      "tempoMode": null,
+      "tempoBpm": null,
+      "tempoAnchor": null,
+      "tempoBeatsPerBar": null,
+      "tempoSource": null,
+      "chosenTempoMode": null
+    }
+  ],
+  "songPresets": [
+    {
+      "name": "Opener",
+      "bpm": 128.5,
+      "beatsPerBar": 4,
+      "subdivision": 3,
+      "denominator": 8,
+      "accents": "AgEAAQ==",
+      "perAccentSounds": "AQM=",
+      "polyAccents": "AgEB",
+      "polyEnabled": true,
+      "polyBeats": 3,
+      "polyAgainst": 2,
+      "sound": 2,
+      "rampEnabled": true,
+      "rampStartBpm": 100,
+      "rampEndBpm": 140,
+      "rampLength": 2.5,
+      "rampStep": 1,
+      "rampUnit": 2,
+      "rampLoop": true,
+      "barMuteEnabled": true,
+      "barMutePlayBars": 3,
+      "barMuteMuteBars": 1,
+      "countInBars": 2,
+      "notes": "Fingerstyle — count 3",
+      "phaseNudge": -12.5,
+      "title": "Song",
+      "artist": "Artist",
+      "source": "file",
+      "lengthSeconds": 210.25,
+      "uuid": "cbd3d53f-c404-48f4-8310-c2770e1522bf",
+      "librarySongUuid": "5fe73761-9b02-4069-bf8f-af8927ab26e2"
+    },
+    {
+      "name": "Closer",
+      "bpm": 128.5,
+      "beatsPerBar": 4,
+      "subdivision": 3,
+      "denominator": 8,
+      "accents": "AgEAAQ==",
+      "perAccentSounds": "AQM=",
+      "polyAccents": "AgEB",
+      "polyEnabled": true,
+      "polyBeats": 3,
+      "polyAgainst": 2,
+      "sound": 2,
+      "rampEnabled": true,
+      "rampStartBpm": 100,
+      "rampEndBpm": 140,
+      "rampLength": 2.5,
+      "rampStep": 1,
+      "rampUnit": 2,
+      "rampLoop": true,
+      "barMuteEnabled": true,
+      "barMutePlayBars": 3,
+      "barMuteMuteBars": 1,
+      "countInBars": 2,
+      "notes": "Fingerstyle — count 3",
+      "phaseNudge": -12.5,
+      "title": "Song",
+      "artist": "Artist",
+      "source": "file",
+      "lengthSeconds": 210.25,
+      "uuid": "7b9ccf4a-b193-4969-b951-cab8b0c11f45",
+      "librarySongUuid": null
+    }
+  ],
+  "setlists": [
+    {
+      "uuid": "d641112b-885a-40f2-9341-7ba0cfb46730",
+      "name": "Friday",
+      "active": true,
+      "presetUuids": [
+        "7b9ccf4a-b193-4969-b951-cab8b0c11f45",
+        "cbd3d53f-c404-48f4-8310-c2770e1522bf"
+      ],
+      "items": [
+        { "preset": "7b9ccf4a-b193-4969-b951-cab8b0c11f45" },
+        { "preset": "cbd3d53f-c404-48f4-8310-c2770e1522bf" }
+      ]
+    },
+    {
+      "uuid": "d1aa95aa-33c3-4a6d-a2aa-53a39baad661",
+      "name": "Acoustic",
+      "active": false,
+      "presetUuids": ["cbd3d53f-c404-48f4-8310-c2770e1522bf"],
+      "items": [{ "preset": "cbd3d53f-c404-48f4-8310-c2770e1522bf" }]
+    }
+  ],
+  "tunings": [
+    {
+      "uuid": "504a7072-dcee-4d7d-be4f-ae824fa1f55b",
+      "name": "Drop D",
+      "notes": "Ji0yNztA",
+      "instrument": 1
+    }
+  ],
+  "practiceSessions": [
+    {
+      "uuid": "7bdba016-93f1-43b9-8070-14065f5487b0",
+      "startTime": 1784059200,
+      "durationSeconds": 1800,
+      "avgBpm": 120,
+      "setlistUuid": "d641112b-885a-40f2-9341-7ba0cfb46730",
+      "songsPlayed": "[\"cbd3d53f-c404-48f4-8310-c2770e1522bf\",\"7b9ccf4a-b193-4969-b951-cab8b0c11f45\"]",
+      "setlistName": "Friday",
+      "log": "{\"v\":1,\"stretches\":[{\"from\":0,\"to\":1800000,\"end\":\"end\",\"song\":{\"uuid\":\"opener\",\"title\":\"Opener\"},\"setlist\":{\"uuid\":\"friday\",\"name\":\"Friday\",\"position\":2},\"settings\":null,\"countIn\":{\"bars\":1,\"distinct\":true,\"sound\":0},\"tempo\":[[600000,124]],\"endBpm\":124,\"avgBpm\":122}]}"
+    }
+  ],
+  "countInSettings": [
+    { "key": "count_in_bars", "value": "2" },
+    { "key": "count_in_distinct", "value": "0" },
+    { "key": "count_in_scope", "value": "always" }
+  ],
+  "metronomeSettings": [
+    {
+      "key": "metronome_standalone",
+      "value": "{\"bpm\":132,\"beatsPerBar\":7,\"denominator\":8}"
+    }
+  ],
+  "clickSounds": [],
+  "stemSongs": []
+}

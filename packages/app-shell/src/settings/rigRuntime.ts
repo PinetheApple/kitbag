@@ -3,13 +3,14 @@ import {
   getKitbagHostObject,
   watchOutputRoute,
 } from '@kitbag/core-native';
-import type { CalibrationDeps } from '@kitbag/core-state';
+import { metronomeStore, type CalibrationDeps } from '@kitbag/core-state';
 
 import { getDatabase } from '@/runtime/database';
 import { storedPreference } from '@/runtime/storedPreference';
 
 import { applyLatency, bootRig } from './rigBoot.ts';
-import type { RigKey } from './rigPreferences.ts';
+import { volumePersistence, type RigKey } from './rigPreferences.ts';
+import { reloadRig } from './rigStart.ts';
 
 export type RigEngineDeps = Pick<
   CalibrationDeps,
@@ -30,9 +31,11 @@ export function setLiveVolume(volume: number): void {
   getKitbagCommands().setVolume(volume);
 }
 
+const stored = (key: RigKey) =>
+  storedPreference(() => getDatabase().preferences, key, 'rig setting');
+
 export const routeLatency = bootRig({
-  stored: (key: RigKey) =>
-    storedPreference(() => getDatabase().preferences, key, 'rig setting'),
+  stored,
   sendAccents: (count, slotMask) => {
     getKitbagCommands().setSubdivisionAccents(count, slotMask);
   },
@@ -43,3 +46,11 @@ export const routeLatency = bootRig({
     watchOutputRoute,
   },
 });
+
+export function reloadRigSettings(): Promise<void> {
+  return reloadRig({
+    routeLatency,
+    metronome: metronomeStore,
+    volume: volumePersistence(stored),
+  });
+}

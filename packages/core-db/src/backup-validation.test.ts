@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { CATEGORIES, type ImportFailure } from './backup-format';
+import {
+  BACKUP_VERSION,
+  CATEGORIES,
+  type ImportFailure,
+} from './backup-format';
 import { openBackupDatabase, records, seed } from './backup.test-helper';
 import { SOUND_ID_COUNT } from './preset-rules';
 
@@ -35,9 +39,10 @@ const first = <T>(list: T[]): T => {
 
 describe('backup validation', () => {
   it('refuses a newer version by number', async () => {
-    expect(await rejected((file) => (file.version = 6))).toEqual({
+    const newer = BACKUP_VERSION + 1;
+    expect(await rejected((file) => (file.version = newer))).toEqual({
       kind: 'unsupportedVersion',
-      version: 6,
+      version: newer,
     });
   });
 

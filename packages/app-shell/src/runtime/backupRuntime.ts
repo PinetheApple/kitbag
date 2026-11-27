@@ -5,11 +5,15 @@ import {
   configureBackup,
   libraryStore,
   releaseStaleSounds,
+  reloadAppearancePersistence,
   reloadCountInPersistence,
+  reloadHomeLayoutPersistence,
   reloadStandaloneMetronomePersistence,
   songLibraryStore,
   tunerStore,
 } from '@kitbag/core-state';
+
+import { reloadRigSettings } from '@/settings/rigRuntime';
 
 import { getDatabase } from './database.ts';
 
@@ -19,12 +23,15 @@ export async function refreshAfterRestore(report: ApplyReport): Promise<void> {
   libraryStore.setState({ loaded: null, discarded: null, played: [] });
   reloadCountInPersistence();
   reloadStandaloneMetronomePersistence();
+  reloadAppearancePersistence();
+  reloadHomeLayoutPersistence();
   releaseStaleSounds(report);
   await Promise.all([
     libraryStore.getState().refresh(),
     songLibraryStore.getState().refresh(),
     tunerStore.getState().loadCustomTunings(),
     clickSoundStore.getState().sync(),
+    reloadRigSettings(),
   ]);
 }
 

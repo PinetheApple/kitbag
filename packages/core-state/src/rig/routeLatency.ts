@@ -29,6 +29,7 @@ export interface RouteLatencyActions {
   readonly start: () => Promise<void>;
   readonly stop: () => void;
   readonly flush: () => void;
+  readonly reload: () => Promise<void>;
   readonly step: (deltaMs: number) => void;
   readonly record: (entry: RouteLatency) => Promise<void>;
   readonly clear: (route: string) => Promise<void>;
@@ -79,6 +80,17 @@ export function createRouteLatencyStore(
       if (entry !== null) deps.save(entry).catch(warn);
     };
 
+    const load = async () => {
+      try {
+        const rows = await deps.list();
+        set({
+          stored: Object.fromEntries(rows.map((row) => [row.route, row])),
+        });
+      } catch (error) {
+        warn(error);
+      }
+    };
+
     const onRoute = (route: OutputRoute) => {
       const same = get().live?.id === route.id;
       if (pending?.route !== route.id) flush();
@@ -92,15 +104,15 @@ export function createRouteLatencyStore(
 
       start: async () => {
         get().stop();
-        try {
-          const rows = await deps.list();
-          set({
-            stored: Object.fromEntries(rows.map((row) => [row.route, row])),
-          });
-        } catch (error) {
-          warn(error);
-        }
+        await load();
         unwatch = deps.watchOutputRoute(onRoute);
+      },
+
+      reload: async () => {
+        cancelPending();
+        await load();
+        const { live, stored } = get();
+        if (live !== null) deps.applyLatency(stored[live.id]?.offsetMs ?? 0);
       },
 
       stop: () => {

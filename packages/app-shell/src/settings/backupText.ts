@@ -45,6 +45,8 @@ export const RESTORE_ORDER: readonly Category[] = [
   'countInSettings',
   'metronomeSettings',
   'clickSounds',
+  'rigSettings',
+  'appearanceSettings',
 ];
 
 export const CATEGORY_LABELS: Readonly<Record<Category, string>> = {
@@ -57,6 +59,8 @@ export const CATEGORY_LABELS: Readonly<Record<Category, string>> = {
   metronomeSettings: 'Metronome',
   clickSounds: 'Click sounds',
   stemSongs: 'Stem songs',
+  rigSettings: 'Rig',
+  appearanceSettings: 'Appearance and Home',
 };
 
 const NOUNS: Readonly<Record<Category, readonly [string, string]>> = {
@@ -69,6 +73,8 @@ const NOUNS: Readonly<Record<Category, readonly [string, string]>> = {
   metronomeSettings: ['metronome setup', 'metronome setups'],
   clickSounds: ['click sound', 'click sounds'],
   stemSongs: STEM_SONG_NOUNS,
+  rigSettings: ['rig setting', 'rig settings'],
+  appearanceSettings: ['appearance setting', 'appearance settings'],
 };
 
 const MONTHS = [
@@ -236,6 +242,8 @@ export function failureText(failure: RestoreFailure): string {
       return `This backup is damaged. ${NOTHING_CHANGED}`;
     case 'unreadable':
       return `Could not read that file. ${NOTHING_CHANGED}`;
+    case 'snapshotFailed':
+      return `Could not keep a copy of your data first. ${NOTHING_CHANGED}`;
     default:
       return `Restoring failed. ${NOTHING_CHANGED}`;
   }

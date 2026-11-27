@@ -70,7 +70,7 @@ export function openBackupDatabase() {
   return backupDatabase(handle);
 }
 
-export const UNRELATED_PREFERENCE = 'appearance_theme';
+export const UNRELATED_PREFERENCE = 'last_tool';
 
 export const SEEDED_COUNT_IN: Readonly<Record<string, string>> = {
   [COUNT_IN_PREFERENCE_KEYS.scope]: 'always',

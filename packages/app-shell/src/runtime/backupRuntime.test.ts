@@ -4,7 +4,11 @@ import {
   configureStandaloneMetronomePersistence,
   createMetronomeStore,
   flushStandaloneMetronomePersistence,
+  configureAppearancePersistence,
+  configureHomeLayoutPersistence,
+  getAppearanceStore,
   getBackup,
+  getHomeLayoutStore,
   libraryStore,
   metronomeStore,
   songLibraryStore,
@@ -32,6 +36,11 @@ const engine = vi.hoisted(() => ({
   setBarMute: vi.fn(),
 }));
 
+const rig = vi.hoisted(() => ({
+  reloadRigSettings: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('@/settings/rigRuntime', () => rig);
 vi.mock('./database.ts', () => ({
   getDatabase: () => ({ backup: service }),
 }));
@@ -103,6 +112,33 @@ function loadSong() {
   });
   metronomeStore.getState().setTempo(SONG_BPM);
 }
+
+let storedTheme: 'light' | 'dark' = 'light';
+configureAppearancePersistence({
+  load: () => ({ theme: storedTheme }),
+  save: () => undefined,
+});
+const RESTORED_LAYOUT = [{ toolId: 'tuner', size: '2x1', hidden: false }];
+let storedLayout: typeof RESTORED_LAYOUT | undefined;
+configureHomeLayoutPersistence({
+  load: () => storedLayout,
+  save: () => undefined,
+});
+
+it('applies restored theme, Home layout and rig settings without a restart', async () => {
+  stubRefreshes();
+  expect(getAppearanceStore().getState().theme).toBe('light');
+  expect(getHomeLayoutStore().getState().arrangement).toBeUndefined();
+  storedTheme = 'dark';
+  storedLayout = RESTORED_LAYOUT;
+  rig.reloadRigSettings.mockClear();
+
+  await getBackup().afterRestore(NO_SOUND_CHANGES);
+
+  expect(getAppearanceStore().getState().theme).toBe('dark');
+  expect(getHomeLayoutStore().getState().arrangement).toEqual(RESTORED_LAYOUT);
+  expect(rig.reloadRigSettings).toHaveBeenCalledOnce();
+});
 
 it('restores through the app database', () => {
   expect(getBackup().service()).toBe(service);

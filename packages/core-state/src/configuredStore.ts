@@ -6,7 +6,15 @@ export interface ConfiguredStore<R, S> {
   readonly create: (runtime?: R) => StoreApi<S>;
   readonly configure: (runtime: R) => void;
   readonly get: () => StoreApi<S>;
+  readonly reload: () => void;
 }
+
+const dataOf = <S>(state: S): Partial<S> =>
+  Object.fromEntries(
+    Object.entries(state as object).filter(
+      ([, value]) => typeof value !== 'function',
+    ),
+  ) as Partial<S>;
 
 export function configuredStore<R, S>(
   name: string,
@@ -18,6 +26,7 @@ export function configuredStore<R, S>(
       init(runtime, { getState: get, setState: set }),
     );
   let configured: StoreApi<S> | undefined;
+  let runtimeInUse = fallback;
   return {
     create,
     configure: (runtime) => {
@@ -26,11 +35,15 @@ export function configuredStore<R, S>(
           `${name} store already exists; configure it before first use`,
         );
       }
+      runtimeInUse = runtime;
       configured = create(runtime);
     },
     get: () => {
       configured ??= create();
       return configured;
+    },
+    reload: () => {
+      configured?.setState(dataOf(create(runtimeInUse).getState()));
     },
   };
 }

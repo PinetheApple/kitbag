@@ -15,6 +15,7 @@ import {
   type FileContext,
   type SoundOutcome,
 } from './backup-apply';
+import { keepBeforeReplace, readBeforeReplace } from './backup-before-replace';
 import { parseBackup } from './backup-parse';
 import {
   computePlan,
@@ -36,14 +37,19 @@ export interface ApplyReport extends SoundOutcome {
   counts: Partial<Record<Category, CategoryPlan>>;
 }
 
+const reasonOf = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
+
 async function asResult<T>(work: () => Promise<T>): Promise<ImportResult<T>> {
   try {
     return { ok: true, value: await work() };
   } catch (error) {
     if (error instanceof ImportRejected)
       return { ok: false, error: error.failure };
-    const reason = error instanceof Error ? error.message : String(error);
-    return { ok: false, error: { kind: 'databaseError', reason } };
+    return {
+      ok: false,
+      error: { kind: 'databaseError', reason: reasonOf(error) },
+    };
   }
 }
 
@@ -133,12 +139,27 @@ async function summary({ db }: DatabaseHandle) {
 
 const revalidated = (file: BackupFile) => parseBackup(serializeBackup(file));
 
+async function keepCurrentData(handle: DatabaseHandle, files: ClickSoundFiles) {
+  try {
+    await keepBeforeReplace(
+      handle.db,
+      await exportBackup(handle, files, CATEGORIES),
+    );
+  } catch (error) {
+    throw new ImportRejected({
+      kind: 'snapshotFailed',
+      reason: reasonOf(error),
+    });
+  }
+}
+
 async function applyPlan(
-  { db }: DatabaseHandle,
+  handle: DatabaseHandle,
   fileContext: FileContext,
   plan: ImportPlan,
   options: ApplyOptions,
 ): Promise<ApplyReport> {
+  const { db } = handle;
   if (plan.mode === 'replace' && options.confirmReplace !== true)
     throw new ImportRejected({ kind: 'replaceNotConfirmed' });
   if (plan.unresolved.length > 0)
@@ -151,6 +172,7 @@ async function applyPlan(
   const fresh = computePlan(file, snapshot, plan);
   if (planFingerprint(fresh.plan) !== planFingerprint(plan))
     throw new ImportRejected({ kind: 'stalePlan' });
+  if (plan.mode === 'replace') await keepCurrentData(handle, fileContext.files);
   const sounds = await applyWrites(
     db,
     fresh.plan,
@@ -196,6 +218,7 @@ export function createBackupService(
         ),
       ),
     apply,
+    beforeReplace: () => serial(() => readBeforeReplace(handle.db)),
   };
 }
 

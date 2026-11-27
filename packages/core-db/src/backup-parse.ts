@@ -17,6 +17,8 @@ import {
   type PracticeSessionRecord,
   type PreferenceCategory,
   type PreferenceRecord,
+  type RigRecord,
+  type RouteLatencyRecord,
   type SetlistItemRecord,
   type SetlistRecord,
   type SongPresetRecord,
@@ -270,6 +272,24 @@ function preferenceReader(category: PreferenceCategory) {
   };
 }
 
+const readRigPreference = preferenceReader('rigSettings');
+
+function readRouteLatency(value: unknown, path: string): RouteLatencyRecord {
+  const r = reader(value, path);
+  return {
+    route: r.string('route'),
+    offsetMs: r.number('offsetMs'),
+    name: r.nullableString('name'),
+    kind: r.nullableString('kind'),
+  };
+}
+
+function readRigSetting(value: unknown, path: string): RigRecord {
+  return 'route' in asObject(value, path)
+    ? readRouteLatency(value, path)
+    : readRigPreference(value, path);
+}
+
 const READERS: {
   [C in Category]: (value: unknown, path: string) => CategoryRecords[C][number];
 } = {
@@ -282,6 +302,8 @@ const READERS: {
   metronomeSettings: preferenceReader('metronomeSettings'),
   clickSounds: readClickSound,
   stemSongs: readStemSong,
+  rigSettings: readRigSetting,
+  appearanceSettings: preferenceReader('appearanceSettings'),
 };
 
 function readCategory<C extends Category>(
