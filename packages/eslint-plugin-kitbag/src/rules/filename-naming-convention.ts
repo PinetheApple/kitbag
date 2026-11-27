@@ -1,7 +1,7 @@
 import type { TSESTree } from '@typescript-eslint/utils';
 
-import { createRule } from '../utils/create-rule';
-import { basename } from '../utils/package-path';
+import { createRule } from '../utils/create-rule.ts';
+import { basename } from '../utils/package-path.ts';
 
 // SPEC §13.6, last rule (PascalCase filenames + class names, translated):
 //   - component files (`.tsx`)      → PascalCase   (e.g. BeatSweep.tsx)

@@ -1,7 +1,7 @@
 import { AST_NODE_TYPES, type TSESTree } from '@typescript-eslint/utils';
 
-import { createRule } from '../utils/create-rule';
-import { isInPackage } from '../utils/package-path';
+import { createRule } from '../utils/create-rule.ts';
+import { isInPackage } from '../utils/package-path.ts';
 
 // SPEC §13.2 / §9.4 / §13.6: JSI + TurboModule access lives ONLY in core-native.
 // It is the single holder of the `kb_engine*`. Every other package reaches the
