@@ -135,7 +135,7 @@ interface MoveKeyProps {
   readonly label: string;
   readonly spoken: string;
   readonly onMove: (amount: number) => void;
-  readonly icon?: 'back' | 'forward';
+  readonly icon?: 'earlier' | 'later';
 }
 
 function MoveKey({ amount, label, spoken, onMove, icon }: MoveKeyProps) {
@@ -149,7 +149,7 @@ function MoveKey({ amount, label, spoken, onMove, icon }: MoveKeyProps) {
       onPress={onPress}
       {...(icon === undefined
         ? {}
-        : { icon, iconAt: icon === 'back' ? 'start' : 'end' })}
+        : { icon, iconAt: icon === 'earlier' ? 'start' : 'end' })}
     />
   );
 }
@@ -161,7 +161,7 @@ function BarOneMoves({ tempo }: Pick<StepProps, 'tempo'>) {
     <View style={styles.row}>
       <MoveKey
         amount={BACK}
-        icon="back"
+        icon="earlier"
         label={SET_TEMPO_TEXT.beat}
         spoken={SET_TEMPO_TEXT.beatEarlier}
         onMove={onBeat}
@@ -180,7 +180,7 @@ function BarOneMoves({ tempo }: Pick<StepProps, 'tempo'>) {
       />
       <MoveKey
         amount={FORWARD}
-        icon="forward"
+        icon="later"
         label={SET_TEMPO_TEXT.beat}
         spoken={SET_TEMPO_TEXT.beatLater}
         onMove={onBeat}
