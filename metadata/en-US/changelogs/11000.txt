@@ -1,0 +1,1 @@
+• Play along keeps following when you leave it: a mini-player on Home and the lists shows the song and the app it is locked to, pauses the other app, and closes to stop. Choose the click sound from Play along's menu. Settings > About credits GetSongBPM.
