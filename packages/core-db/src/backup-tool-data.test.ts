@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { BACKUP_VERSION, CATEGORIES } from './backup-format';
 import { parseBackup } from './backup-parse';
+import { TEST_BACKUP_RULES } from './backup-rules.test-helper';
 import { openBackupDatabase, seed, unwrap } from './backup.test-helper';
 import { TOOL_DATA_SECTION_VERSION } from './backup-tool-data';
 import { createToolDataRepository } from './tool-data-repository';
@@ -67,7 +68,9 @@ describe('exporting tool data', () => {
 
   it('keeps the export parseable', async () => {
     const { backup } = await withToolData();
-    expect(parseBackup(await backup.export()).categories).toEqual(CATEGORIES);
+    expect(
+      parseBackup(await backup.export(), TEST_BACKUP_RULES).categories,
+    ).toEqual(CATEGORIES);
   });
 
   it('leaves tool data out of a shared setlist', async () => {
