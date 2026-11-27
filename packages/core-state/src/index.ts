@@ -242,6 +242,16 @@ export {
   type ToolSwitchResult,
 } from './tools/switches.ts';
 export { useAppearance } from './appearance/useAppearance.ts';
+export { useGetSongBpmKey } from './getSongBpmKey/useGetSongBpmKey.ts';
+export {
+  configureGetSongBpmKeyPersistence,
+  createGetSongBpmKeyStore,
+  getGetSongBpmKeyStore,
+  hasGetSongBpmKey,
+  NO_GET_SONG_BPM_KEY,
+  type GetSongBpmKeyPersistence,
+  type GetSongBpmKeyStore,
+} from './getSongBpmKey/store.ts';
 export {
   configureAppearancePersistence,
   createAppearanceStore,

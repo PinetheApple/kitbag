@@ -10,6 +10,7 @@ import '@/runtime/songPlayerRuntime';
 import '@/runtime/dataFolderRuntime';
 import '@/runtime/tunerRuntime';
 import '@/runtime/mediaSessionsRuntime';
+import '@/runtime/getSongBpmKeyRuntime';
 import '@/runtime/tempoLadderRuntime';
 import '@/runtime/lastToolRuntime';
 import '@/runtime/homeLayoutRuntime';

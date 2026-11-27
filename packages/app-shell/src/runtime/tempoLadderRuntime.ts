@@ -1,6 +1,13 @@
-import { configureTempoLadder } from '@kitbag/core-state';
+import {
+  configureTempoLadder,
+  defaultOnlineLookups,
+  getGetSongBpmKeyStore,
+  type HttpGet,
+} from '@kitbag/core-state';
 
 import { getDatabase } from './database.ts';
+
+const httpGet: HttpGet = (url, init) => fetch(url, init);
 
 configureTempoLadder({
   cache: {
@@ -12,5 +19,6 @@ configureTempoLadder({
     readSong: (id) => getDatabase().songLibrary.readSong(id),
     readStemSet: (id) => getDatabase().songLibrary.readStemSet(id),
   },
-  onlineLookups: () => [],
+  onlineLookups: () =>
+    defaultOnlineLookups(httpGet, getGetSongBpmKeyStore().getState().key),
 });
