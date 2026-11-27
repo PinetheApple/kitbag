@@ -8,7 +8,7 @@ import {
   songFolder,
   songRemovals,
 } from './logic.ts';
-import type { stemBundleActions } from './stemBundleImport.ts';
+import type { BundleImport, BundleSource } from './stemBundleImport.ts';
 import type { LibraryNotice, SongLibraryDeps } from './store.ts';
 import {
   deleteLeftovers,
@@ -40,10 +40,10 @@ type ImportOutcome =
   | { readonly ok: true; readonly song: SongFiles }
   | { readonly ok: false; readonly kind: 'copyFailed' | 'addFailed' };
 
-type BatchSteps = Pick<
-  ReturnType<typeof stemBundleActions>,
-  'importBundle' | 'untilAnswered'
->;
+type ImportBundle = (
+  source: BundleSource,
+  options: { readonly announce: boolean },
+) => Promise<BundleImport>;
 
 export const isBatch = (docs: readonly PickedDocument[]) => docs.length > 1;
 
@@ -95,7 +95,7 @@ export function documentImports(
   deps: SongLibraryDeps,
   set: SetState,
   get: Get,
-  bundles: BatchSteps,
+  importBundle: ImportBundle,
 ) {
   const addAudio = async (
     doc: PickedDocument,
@@ -130,25 +130,23 @@ export function documentImports(
     return notice;
   };
 
-  const importOne = async (doc: PickedDocument) => {
-    if (isStemArchive(doc))
-      await bundles.importBundle(
-        { ...doc, isFolder: false },
-        { announce: true },
-      );
-    else await importDocument(doc);
+  const importOne = async (doc: PickedDocument, batch: boolean) => {
+    if (!isStemArchive(doc)) return importDocument(doc);
+    const result = await importBundle(
+      { ...doc, isFolder: false },
+      { announce: true },
+    );
+    if (!result.prompted) return result.notice;
+    // A lone file returns with its prompt open; a batch waits so two never overlap.
+    return batch ? result.untilAnswered : null;
   };
 
   return async (docs: readonly PickedDocument[]) => {
     const batch = isBatch(docs);
     const failures: ImportFailure[] = [];
     for (const doc of docs) {
-      const before = get().notice;
-      await importOne(doc);
-      // A lone file returns with its prompt open; a batch waits so two never overlap.
-      if (batch) await bundles.untilAnswered();
-      const after = get().notice;
-      if (after !== before && isImportFailure(after)) failures.push(after);
+      const notice = await importOne(doc, batch);
+      if (isImportFailure(notice)) failures.push(notice);
     }
     const notice = batchNotice(failures);
     if (notice !== null) set({ notice });

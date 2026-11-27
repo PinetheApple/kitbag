@@ -9,7 +9,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { fileRemovals, songRemovals, type Removal } from './logic.ts';
 import { cleanName } from '../names.ts';
 import { resultRecord } from './analysisRecord.ts';
-import { documentImports } from './importBatch.ts';
+import { documentImports, isBatch } from './importBatch.ts';
 import {
   availabilityRefresher,
   type RowFilesByKey,
@@ -180,32 +180,43 @@ function importActions(
   imports: ImportTracker,
 ) {
   const bundles = stemBundleActions(deps, set, get, imports);
-  const importEach = documentImports(deps, set, get, bundles);
-  let picking = false;
-  const pick = async <T>(open: () => Promise<T | null>) => {
-    if (picking) return null;
-    picking = true;
-    set({ notice: null });
+  const importEach = documentImports(deps, set, get, bundles.importBundle);
+  let busy = false;
+  const openPicker = async <T>(open: () => Promise<T | null>) => {
     try {
       return await open();
     } catch (error) {
       warn('picker failed', error);
       set({ notice: { kind: 'pickerFailed' } });
       return null;
+    }
+  };
+  const pickThen = async <T>(
+    open: () => Promise<T | null>,
+    importPicked: (picked: T) => Promise<unknown>,
+    holdsPicker: (picked: T) => boolean = () => false,
+  ) => {
+    if (busy) return;
+    busy = true;
+    set({ notice: null });
+    const picked = await openPicker(open);
+    const holds = picked !== null && holdsPicker(picked);
+    busy = holds;
+    if (picked === null) return;
+    try {
+      await importPicked(picked);
     } finally {
-      picking = false;
+      if (holds) busy = false;
     }
   };
   return {
-    importSong: async () => {
-      const docs = await pick(() => deps.files().pickDocuments());
-      if (docs !== null) await importEach(docs);
-    },
-    importStemFolder: async () => {
-      const folder = await pick(() => deps.files().pickFolder());
-      if (folder !== null)
-        await bundles.importBundle({ ...folder, isFolder: true });
-    },
+    importSong: () =>
+      pickThen(() => deps.files().pickDocuments(), importEach, isBatch),
+    importStemFolder: () =>
+      pickThen(
+        () => deps.files().pickFolder(),
+        (folder) => bundles.importBundle({ ...folder, isFolder: true }),
+      ),
     confirmReplace: bundles.confirmReplace,
     keepBoth: bundles.keepBoth,
     cancelReplace: bundles.cancelReplace,
