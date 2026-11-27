@@ -40,6 +40,7 @@ export {
 } from './metronome/standalone.ts';
 export {
   configureStandaloneMetronomePersistence,
+  flushStandaloneMetronomePersistence,
   reloadStandaloneMetronomePersistence,
   type StandaloneMetronomePersistence,
 } from './metronome/standalonePersistence.ts';
@@ -711,6 +712,8 @@ export {
   secondsToFrames,
 } from './stemPlayer/time.ts';
 export { SKIP_SECONDS } from './stemPlayer/songTransport.ts';
+export { onSongStarting } from './stemPlayer/songStarting.ts';
+export { onMixerSeek } from './stemPlayer/mixerSeeked.ts';
 export { ADVANCE_OUTCOME, type AdvanceOutcome } from './stemPlayer/songEnd.ts';
 export { RETIME_PLAYBACK_RATE } from './stemPlayer/retimeSpeed.ts';
 export {

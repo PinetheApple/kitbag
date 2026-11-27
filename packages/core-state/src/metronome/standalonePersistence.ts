@@ -2,6 +2,7 @@ import { KB_DENOMINATORS } from '@kitbag/core-native';
 import type { StoreApi } from 'zustand/vanilla';
 
 import { libraryStore, type LibraryStore } from '../library/store.ts';
+import { debounce } from '../debounce.ts';
 import { rangeRamp, usesSound, withoutSound } from './config.ts';
 import {
   applyMetronomeSettings,
@@ -12,9 +13,16 @@ import {
 } from './standalone.ts';
 import { initialConfig, metronomeStore, type MetronomeStore } from './store.ts';
 
+export const STANDALONE_METRONOME_SAVE_DELAY_MS = 600;
+
 export interface StandaloneMetronomePersistence {
   readonly load: () => Partial<MetronomeSettingsInput>;
   readonly save: (settings: StandaloneMetronome) => void;
+}
+
+export interface StandaloneMetronomeBinding {
+  readonly flush: () => void;
+  readonly unbind: () => void;
 }
 
 function storedSettings(
@@ -41,20 +49,26 @@ export function bindStandaloneMetronomePersistence(
   metronome: StoreApi<MetronomeStore>,
   library: StoreApi<LibraryStore>,
   persistence: StandaloneMetronomePersistence,
-): () => void {
+): StandaloneMetronomeBinding {
   restore(metronome, persistence);
-  let pending = false;
-  const flush = () => {
-    pending = false;
+  const write = debounce(persistence.save, STANDALONE_METRONOME_SAVE_DELAY_MS);
+  let queued = false;
+  const capture = () => {
+    if (!queued) return;
+    queued = false;
     if (library.getState().loaded !== null) return;
-    persistence.save(standaloneMetronomeOf(metronome.getState()));
+    write(standaloneMetronomeOf(metronome.getState()));
   };
   // Deferred because a song load applies the preset before it sets `loaded`;
-  // by the flush the change reads as the song's, not the standalone's.
+  // by the capture the change reads as the song's, not the standalone's.
   const schedule = () => {
-    if (pending) return;
-    pending = true;
-    queueMicrotask(flush);
+    if (queued) return;
+    queued = true;
+    queueMicrotask(capture);
+  };
+  const flush = () => {
+    capture();
+    write.flush();
   };
   const unbindMetronome = metronome.subscribe((next, prev) => {
     if (standaloneMetronomeChanged(next, prev)) schedule();
@@ -62,28 +76,36 @@ export function bindStandaloneMetronomePersistence(
   const unbindLibrary = library.subscribe((next, prev) => {
     if (next.loaded === null && prev.loaded !== null) schedule();
   });
-  return () => {
-    unbindMetronome();
-    unbindLibrary();
+  return {
+    flush,
+    unbind: () => {
+      flush();
+      unbindMetronome();
+      unbindLibrary();
+    },
   };
 }
 
-let unbind: (() => void) | undefined;
+let binding: StandaloneMetronomeBinding | undefined;
 let configured: StandaloneMetronomePersistence | undefined;
 
 export function configureStandaloneMetronomePersistence(
   persistence: StandaloneMetronomePersistence,
 ): () => void {
-  if (unbind !== undefined) {
+  if (binding !== undefined) {
     throw new Error('Standalone metronome persistence is already configured');
   }
   configured = persistence;
-  unbind = bindStandaloneMetronomePersistence(
+  binding = bindStandaloneMetronomePersistence(
     metronomeStore,
     libraryStore,
     persistence,
   );
-  return unbind;
+  return binding.unbind;
+}
+
+export function flushStandaloneMetronomePersistence(): void {
+  binding?.flush();
 }
 
 export function reloadStandaloneMetronomePersistence(): void {
@@ -92,10 +114,12 @@ export function reloadStandaloneMetronomePersistence(): void {
   const state = metronomeStore.getState();
   const base = stored === undefined ? initialConfig() : state;
   applyMetronomeSettings(state, { ...standaloneMetronomeOf(base), ...stored });
+  binding?.flush();
 }
 
 export function releaseStandaloneSound(soundId: number): void {
   if (configured === undefined) return;
+  binding?.flush();
   const stored = storedSettings(configured);
   if (stored?.sounds === undefined || !usesSound(stored.sounds, soundId))
     return;
