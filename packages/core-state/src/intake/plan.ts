@@ -13,8 +13,8 @@ export type IntakePlan =
   | {
       readonly kind: 'import';
       readonly docs: readonly PickedDocument[];
-      readonly songs: readonly PickedDocument[];
-      readonly stemSongs: readonly PickedDocument[];
+      readonly hasSongs: boolean;
+      readonly hasStemSongs: boolean;
     };
 
 function isBackup(doc: PickedDocument, backupMimeType: string): boolean {
@@ -39,7 +39,7 @@ export function planIntake(
   return {
     kind: 'import',
     docs: items,
-    songs: items.filter((doc) => !isStemArchive(doc)),
-    stemSongs: items.filter(isStemArchive),
+    hasSongs: items.some((doc) => !isStemArchive(doc)),
+    hasStemSongs: items.some(isStemArchive),
   };
 }

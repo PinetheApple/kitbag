@@ -24,8 +24,8 @@ describe('planning what was opened or shared', () => {
     expect(planIntake([SONG], JSON_MIME)).toEqual({
       kind: 'import',
       docs: [SONG],
-      songs: [SONG],
-      stemSongs: [],
+      hasSongs: true,
+      hasStemSongs: false,
     });
   });
 
@@ -36,8 +36,8 @@ describe('planning what was opened or shared', () => {
     expect(planIntake([bundle], JSON_MIME)).toEqual({
       kind: 'import',
       docs: [bundle],
-      songs: [],
-      stemSongs: [bundle],
+      hasSongs: false,
+      hasStemSongs: true,
     });
   });
 
@@ -45,8 +45,8 @@ describe('planning what was opened or shared', () => {
     expect(planIntake([STEMS, SONG], JSON_MIME)).toEqual({
       kind: 'import',
       docs: [STEMS, SONG],
-      songs: [SONG],
-      stemSongs: [STEMS],
+      hasSongs: true,
+      hasStemSongs: true,
     });
   });
 
@@ -73,7 +73,7 @@ describe('planning what was opened or shared', () => {
   it('sends a file of an unknown type to the song import, which refuses it by format', () => {
     expect(planIntake([UNKNOWN], JSON_MIME)).toMatchObject({
       kind: 'import',
-      songs: [UNKNOWN],
+      hasSongs: true,
     });
   });
 

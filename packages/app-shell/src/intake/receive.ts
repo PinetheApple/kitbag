@@ -38,8 +38,8 @@ async function openRestore(plan: RestorePlan, deps: IntakeDeps) {
 
 async function importAll(plan: ImportPlan, deps: IntakeDeps) {
   const needed = [
-    ...(plan.songs.length > 0 ? [SONGS] : []),
-    ...(plan.stemSongs.length > 0 ? [STEM_SONGS] : []),
+    ...(plan.hasSongs ? [SONGS] : []),
+    ...(plan.hasStemSongs ? [STEM_SONGS] : []),
   ];
   const off = needed.filter(({ id }) => !deps.isOn(id));
   if (off.length > 0) {
@@ -51,7 +51,7 @@ async function importAll(plan: ImportPlan, deps: IntakeDeps) {
     );
     return;
   }
-  deps.navigate((needed[0] ?? SONGS).route);
+  deps.navigate(plan.hasSongs ? SONGS.route : STEM_SONGS.route);
   await deps.importDocuments(plan.docs);
 }
 
