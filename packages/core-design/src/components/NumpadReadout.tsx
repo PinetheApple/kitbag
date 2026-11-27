@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 import { space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
-import { SheetHint } from './SheetHint.tsx';
+import { SheetHint, type SheetHintTone } from './SheetHint.tsx';
 
 const useStyles = createThemedStyles((theme) => ({
   readout: { alignItems: 'center', gap: space.controlGap },
@@ -18,6 +18,7 @@ const useStyles = createThemedStyles((theme) => ({
 export interface NumpadReadoutProps {
   readonly digits: string;
   readonly hint: string;
+  readonly hintTone?: SheetHintTone;
   readonly accessibilityLabel?: string;
   readonly children?: ReactNode;
 }
@@ -25,6 +26,7 @@ export interface NumpadReadoutProps {
 export function NumpadReadout({
   digits,
   hint,
+  hintTone = 'plain',
   accessibilityLabel,
   children,
 }: NumpadReadoutProps) {
@@ -39,7 +41,7 @@ export function NumpadReadout({
         {digits}
       </Text>
       {children}
-      <SheetHint centered size="large">
+      <SheetHint centered size="large" tone={hintTone}>
         {hint}
       </SheetHint>
     </View>

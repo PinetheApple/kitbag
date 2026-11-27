@@ -20,6 +20,7 @@ const useStyles = createThemedStyles((theme) => ({
   label: { ...textStyle(textRoles.menuRow), color: theme.color.text },
   detail: { ...textStyle(textRoles.rowSubtitle), color: theme.color.text2 },
   value: { ...textStyle(textRoles.menuValue), color: theme.color.text2 },
+  accentValue: { color: theme.color[theme.accentInk] },
 }));
 
 export interface MenuRowProps {
@@ -28,6 +29,7 @@ export interface MenuRowProps {
   readonly detail?: string | undefined;
   readonly value?: string | undefined;
   readonly spokenValue?: string | undefined;
+  readonly valueTone?: 'plain' | 'accent';
   readonly disabled?: boolean;
   readonly onPress: () => void;
 }
@@ -47,6 +49,7 @@ export function MenuRow({
   detail,
   value,
   spokenValue = value,
+  valueTone = 'plain',
   disabled = false,
   onPress,
 }: MenuRowProps) {
@@ -67,7 +70,13 @@ export function MenuRow({
           <Text style={styles.detail}>{detail}</Text>
         )}
       </View>
-      {value === undefined ? null : <Text style={styles.value}>{value}</Text>}
+      {value === undefined ? null : (
+        <Text
+          style={[styles.value, valueTone === 'accent' && styles.accentValue]}
+        >
+          {value}
+        </Text>
+      )}
       {disabled ? null : <Icon name="forward" size="title" color="decor" />}
     </Pressable>
   );

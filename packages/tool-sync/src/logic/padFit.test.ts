@@ -1,14 +1,9 @@
-import {
-  metronome,
-  space,
-  stemPlayer,
-  stemSections,
-} from '@kitbag/core-design';
+import { metronome, space, stemPlayer, tapPad } from '@kitbag/core-design';
 import { describe, expect, it } from 'vitest';
 
 import { COMPACT_PAD_FLOOR, compactPadHeight } from './padFit.ts';
 
-const NORMAL_SLOT = stemSections.padMinHeight + space.sectionGap;
+const NORMAL_SLOT = tapPad.minHeight + space.sectionGap;
 const BPM_CARD_BOTTOM = 186;
 const TALL_REGION = 650;
 const FONT_2_BPM_CARD_BOTTOM = 300;
@@ -17,7 +12,7 @@ const ROOMY_SHORT_REGION = 320;
 const TINY_REGION = 140;
 
 function bodyWindow(region: number, padHeight: number | null): number {
-  return region - (padHeight ?? stemSections.padMinHeight) - space.sectionGap;
+  return region - (padHeight ?? tapPad.minHeight) - space.sectionGap;
 }
 
 describe('compactPadHeight', () => {

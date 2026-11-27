@@ -33,6 +33,15 @@ vi.mock('react-native', async (original) => {
   };
 });
 
+const icons = vi.hoisted(() => [] as Props[]);
+
+vi.mock('./IconGlyph.tsx', () => ({
+  InlineIcon: (props: Props) => {
+    icons.push(props);
+    return null;
+  },
+}));
+
 vi.mock('../useOneLineFit.tsx', async (original) => {
   const actual = await original<typeof import('../useOneLineFit.tsx')>();
   return {
@@ -132,4 +141,31 @@ it('fires a press-in key on touch-down with the touch event', () => {
   expect(presses[0]?.onPress).toBeUndefined();
   (presses[0]?.onPressIn as (pressed: unknown) => void)(event);
   expect(onPressIn).toHaveBeenCalledWith(event);
+});
+
+describe('PresetButton with an icon', () => {
+  const drawWith = (iconAt: 'start' | 'end') => {
+    faces.length = 0;
+    icons.length = 0;
+    renderToStaticMarkup(
+      <ThemeProvider mode="dark">
+        <PresetButton
+          label={LABEL}
+          icon="forward"
+          iconAt={iconAt}
+          onPress={vi.fn()}
+        />
+      </ThemeProvider>,
+    );
+    return flatStyle(faces[0]?.style as StyleProp<ViewStyle>);
+  };
+
+  it('draws the glyph before the label at the start', () => {
+    expect(drawWith('start').flexDirection).toBe('row-reverse');
+    expect(icons[0]?.name).toBe('forward');
+  });
+
+  it('draws the glyph after the label at the end', () => {
+    expect(drawWith('end').flexDirection).toBe('row');
+  });
 });

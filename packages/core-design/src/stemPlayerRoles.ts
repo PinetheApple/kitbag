@@ -138,31 +138,16 @@ export const stemSections = {
   retimeGap: 10,
   doneTimeRight: 10,
   doneTimeIconGap: 2,
-  padMinHeight: 180,
-  padRadius: 20,
-  padBorder: 2,
-  padGap: 8,
   shiftMinHeight: 48,
   shiftV: 4,
   shiftRight: 10,
   saveEnd: 4,
-  dialogMargin: 24,
-  dialogRadius: 20,
-  dialogTop: 20,
-  dialogH: 20,
-  dialogBottom: 16,
-  dialogTitleBottom: 8,
-  dialogBodyBottom: 6,
-  dialogBodyRatio: 1.45,
-  dialogActionsTop: 6,
-  dialogActionsGap: 8,
 } as const;
 
 export const stemSectionsMix = {
   tint: 0.22,
   loopKeyOnCurrent: 0.16,
   loopKeyOnIdle: 0.14,
-  pad: 0.14,
 } as const;
 
 const display = fontFamily.display;
@@ -191,9 +176,5 @@ export const stemSectionsText = {
   emptyTitle: { family: display, weight: 500, size: 17 },
   emptyBody: { family: body, weight: 400, size: 14 },
   doneTime: { family: display, weight: 500, size: 12.5, tabular: true },
-  padTitle: { family: display, weight: 600, size: 19 },
-  padHint: { family: body, weight: 400, size: 13.5 },
   shift: { family: body, weight: 400, size: 14 },
-  dialogTitle: { family: display, weight: 500, size: 18 },
-  dialogBody: { family: body, weight: 400, size: 14 },
 } as const;

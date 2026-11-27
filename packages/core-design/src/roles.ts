@@ -172,6 +172,7 @@ export const mix = {
   cardBorder: 0.35,
   pegGlow: 0.4,
   switchOn: 0.3,
+  accentTonal: 0.12,
 } as const;
 
 export const presetActionGrow = 1.3;

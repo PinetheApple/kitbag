@@ -1,4 +1,10 @@
-import { createElement, type ReactNode } from 'react';
+import {
+  createElement,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type ReactNode,
+} from 'react';
 import { vi } from 'vitest';
 
 export const OPEN_SONG = {
@@ -33,11 +39,24 @@ export const library = {
 export const commands = {
   close: vi.fn(),
   saveForSong: vi.fn(),
-  reanalyze: vi.fn(),
+  reanalyze: vi.fn(() => Promise.resolve()),
   save: vi.fn(() => Promise.resolve(true)),
   dismissMeterNotice: vi.fn(),
 };
 export const tempo = { correction: 'none' };
+export const manual = {
+  tempo: null as unknown,
+  analysedBpm: null as number | null,
+  offer: null as number | null,
+  playheadSeconds: 0,
+  setManualTempo: vi.fn(() => Promise.resolve(true)),
+  useAnalysedTempo: vi.fn(() => Promise.resolve(true)),
+  undoTempo: vi.fn(() => Promise.resolve(true)),
+  dismissTempoUndo: vi.fn(),
+  dismissAnalysedOffer: vi.fn(),
+  previewTempo: vi.fn(),
+  offerAnalysed: vi.fn(),
+};
 export const songTempo: {
   tempo: unknown;
   mode: unknown;
@@ -83,10 +102,74 @@ export function resetScreenState() {
   meter.override = { meterBeatsPerBar: null, barOneSeconds: null };
   meter.notice = null;
   tempo.correction = 'none';
+  manual.tempo = null;
+  manual.analysedBpm = null;
+  manual.offer = null;
+  manual.playheadSeconds = 0;
   songTempo.tempo = null;
   songTempo.mode = null;
   Object.assign(mixer, { session: 0, opens: 0, displaced: 0, releases: 0 });
 }
+
+function MockSheet(props: Props) {
+  const onShow = useRef(props.onShow as (() => void) | undefined);
+  useLayoutEffect(() => {
+    onShow.current = props.onShow as (() => void) | undefined;
+  });
+  useEffect(() => {
+    if (props.visible === true) onShow.current?.();
+  }, [props.visible]);
+  return props.visible === true
+    ? createElement(
+        'Sheet',
+        {
+          title: props.title,
+          titleDetail: props.titleDetail,
+          onDismiss: props.onDismiss,
+        },
+        props.notice as ReactNode,
+        props.children,
+      )
+    : null;
+}
+
+const MANUAL_TEMPO_PARTS = [
+  'BeatStrip',
+  'ConfirmDialog',
+  'Icon',
+  'LiveText',
+  'NumpadKeypad',
+  'NumpadReadout',
+  'PlayPauseButton',
+  'PresetButton',
+  'Stepper',
+  'TapLeds',
+  'TapPad',
+];
+
+const MANUAL_TEMPO_STATE = [
+  'MANUAL_BPM_STEP',
+  'constantGrid',
+  'GRID_METER',
+  'manualBpm',
+  'MANUAL_TEMPO_BOUNDS',
+  'MINUS',
+  'MS_PER_SECOND',
+  'pushManualTap',
+  'SECONDS_PER_MINUTE',
+  'stepManualBpm',
+  'TAPS_TO_SET_TEMPO',
+  'tappedManualBpm',
+  'TEMPO_MIN_ANCHOR_SECONDS',
+];
+
+const passthroughs = (names: readonly string[]) =>
+  Object.fromEntries(
+    names.map((name) => [
+      name,
+      (props: Props) => createElement(name, props, props.children),
+    ]),
+  );
 
 export const reactNativeMock = () => ({
   View: 'View',
@@ -103,6 +186,7 @@ export function clickChipsMock() {
 
 export const reanimatedMock = () => ({
   useSharedValue: (value: unknown) => ({ value }),
+  useDerivedValue: (derive: () => unknown) => ({ value: derive() }),
 });
 
 export async function coreDesignMock(original: <T>() => Promise<T>) {
@@ -152,10 +236,8 @@ export async function coreDesignMock(original: <T>() => Promise<T>) {
         props.trailing as ReactNode,
       ),
     Button: (props: Props) => createElement('Button', props),
-    Sheet: (props: Props) =>
-      props.visible === true
-        ? createElement('Sheet', { title: props.title }, props.children)
-        : null,
+    Sheet: MockSheet,
+    ...passthroughs(MANUAL_TEMPO_PARTS),
     SectionHeader: (props: Props) => createElement('SectionHeader', props),
     SegmentedControl: (props: Props) =>
       createElement('SegmentedControl', props),
@@ -171,7 +253,7 @@ export async function coreDesignMock(original: <T>() => Promise<T>) {
       props.visible === true ? createElement('TempoModeSheet', props) : null,
     BeatWaveform: nothing,
     Card: parent,
-    Chip: () => createElement('Chip'),
+    Chip: (props: Props) => createElement('Chip', props),
     RowIcon: (props: Props) => createElement('RowIcon', props),
     useTheme: () => ({ accentInk: 'accent' }),
     PickerGrid: nothing,
@@ -299,6 +381,18 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
       tempoMode: songTempo.mode,
       setTempoMode: songTempo.setTempoMode,
       detectedBpm: 104,
+      manualTempo: manual.tempo,
+      analysedBpm: manual.analysedBpm,
+      analysedOffer: manual.offer,
+      setManualTempo: manual.setManualTempo,
+      useAnalysedTempo: manual.useAnalysedTempo,
+      undoTempo: manual.undoTempo,
+      dismissTempoUndo: manual.dismissTempoUndo,
+      dismissAnalysedOffer: manual.dismissAnalysedOffer,
+      previewTempo: manual.previewTempo,
+      tempoPreview: null,
+      offerAnalysed: manual.offerAnalysed,
+      playheadSeconds: () => manual.playheadSeconds,
       tempoCorrectionChanged: vi.fn(),
       tempoCorrectionSettled: vi.fn(),
       playheadBeatSeconds: () => null,
@@ -313,7 +407,11 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
       saveForSong: commands.saveForSong,
       ...transport,
     });
+  const actual = await original<Record<string, unknown>>();
   return {
+    ...Object.fromEntries(
+      MANUAL_TEMPO_STATE.map((name) => [name, actual[name]]),
+    ),
     ARRIVAL: { arriving: 'arriving' },
     arrivalStore: createStore(() => ({ arrival: null })),
     GRID_METERS: [3, 4],

@@ -9,7 +9,7 @@ import type {
   SongBadge,
 } from '@kitbag/core-state';
 
-export const METER_FAILED = 'Needs a beat grid. Re-analyse first.';
+export const METER_FAILED = 'Needs a beat grid. Set tempo first.';
 export const UNDO_LABEL = 'Undo';
 export const METER_SAVE_FAILED = 'Could not save the meter.';
 export const DETECTED_RESTORED =

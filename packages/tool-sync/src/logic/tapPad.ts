@@ -1,4 +1,4 @@
-import { FACT_SEPARATOR } from '@kitbag/core-design';
+import { FACT_SEPARATOR, tapsLeftText } from '@kitbag/core-design';
 import { TAPS_TO_SET_TEMPO } from '@kitbag/core-state';
 
 import { shownBpm } from './tempoLine.ts';
@@ -30,8 +30,7 @@ export interface TapPadCopy {
 export const TAP_TEMPO_TITLE = 'Tap four times on the beat';
 
 export function tapsLeftHint(tapsLanded: number): string {
-  const left = TAPS_TO_SET_TEMPO - tapsLanded;
-  return left === 1 ? '1 more tap' : `${String(left)} more taps`;
+  return tapsLeftText(tapsLanded, TAPS_TO_SET_TEMPO);
 }
 
 function tempoHint({ tappedBpm, tapsLanded }: TapPadInputs): string {

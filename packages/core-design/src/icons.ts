@@ -36,6 +36,8 @@ export const iconGlyphs = {
   increase: 'plus',
   search: 'magnify',
   forward: 'chevron-right',
+  earlier: 'chevron-left',
+  later: 'chevron-right',
   add: 'plus',
   play: 'play',
   pause: 'pause',

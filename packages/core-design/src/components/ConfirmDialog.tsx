@@ -1,44 +1,42 @@
-import {
-  Button,
-  createThemedStyles,
-  focusReaderOn,
-  onHardwareBack,
-  WindowOverlay,
-  stemSections,
-  stemSectionsText,
-  textStyle,
-} from '@kitbag/core-design';
 import { useEffect } from 'react';
 import { Text, View } from 'react-native';
+
+import { dialog, dialogText } from '../dialogRoles.ts';
+import { focusReaderOn } from '../readerFocus';
+import { textStyle } from '../textStyle.ts';
+import { createThemedStyles } from '../ThemeProvider.tsx';
+import { Button } from './Button.tsx';
+import { onHardwareBack } from './hardwareBack';
+import { WindowOverlay } from './WindowOverlay.tsx';
 
 const useStyles = createThemedStyles((theme) => ({
   column: {
     justifyContent: 'center',
-    paddingHorizontal: stemSections.dialogMargin,
+    paddingHorizontal: dialog.margin,
   },
   dialog: {
     backgroundColor: theme.color.surface2,
-    borderRadius: stemSections.dialogRadius,
-    paddingTop: stemSections.dialogTop,
-    paddingHorizontal: stemSections.dialogH,
-    paddingBottom: stemSections.dialogBottom,
+    borderRadius: dialog.radius,
+    paddingTop: dialog.top,
+    paddingHorizontal: dialog.h,
+    paddingBottom: dialog.bottom,
     boxShadow: theme.shadow,
   },
   title: {
-    ...textStyle(stemSectionsText.dialogTitle),
+    ...textStyle(dialogText.title),
     color: theme.color.text,
-    marginBottom: stemSections.dialogTitleBottom,
+    marginBottom: dialog.titleBottom,
   },
   body: {
-    ...textStyle(stemSectionsText.dialogBody),
-    lineHeight: stemSectionsText.dialogBody.size * stemSections.dialogBodyRatio,
+    ...textStyle(dialogText.body),
+    lineHeight: dialogText.body.size * dialog.bodyRatio,
     color: theme.color.text2,
-    marginBottom: stemSections.dialogBodyBottom,
+    marginBottom: dialog.bodyBottom,
   },
   actions: {
     flexDirection: 'row',
-    gap: stemSections.dialogActionsGap,
-    marginTop: stemSections.dialogActionsTop,
+    gap: dialog.actionsGap,
+    marginTop: dialog.actionsTop,
   },
 }));
 

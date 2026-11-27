@@ -1,6 +1,6 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
-import { space, stemSections } from '@kitbag/core-design';
+import { space, tapPad } from '@kitbag/core-design';
 import { act, createElement } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
 import { create } from 'react-test-renderer';
@@ -13,7 +13,7 @@ const { COMPACT_PAD_FLOOR } = await import('../logic/padFit.ts');
 
 type PadFit = ReturnType<typeof usePadFit>;
 
-const NORMAL_SLOT = stemSections.padMinHeight + space.sectionGap;
+const NORMAL_SLOT = tapPad.minHeight + space.sectionGap;
 const BPM_CARD = 101.5;
 const BPM_CARD_TOP = 84.6;
 const SHORT_REGION = 287.5;
@@ -62,7 +62,7 @@ describe('usePadFit', () => {
   it('compacts the pad on a short window', () => {
     const height = mounted().measure(SHORT_REGION, NORMAL_SLOT, BPM_CARD);
     expect(height).not.toBeNull();
-    expect(height).toBeLessThan(stemSections.padMinHeight);
+    expect(height).toBeLessThan(tapPad.minHeight);
   });
 
   it('fits the BPM card by its bottom edge, under the song card above it', () => {
