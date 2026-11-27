@@ -70,12 +70,14 @@ describe('what Play along says about a saved preset', () => {
     });
   });
 
-  it('keeps a fractional saved phase as stored and locks with it', async () => {
+  it('keeps a fractional saved phase as stored and locks at whole ms', async () => {
     const fake = recalling({ phaseNudge: FRACTIONAL_NUDGE_MS });
     await settle();
     expect(fake.store.getState().savedPhaseMs).toBe(FRACTIONAL_NUDGE_MS);
     locked(fake);
-    expect(fake.store.getState().lock?.phaseOffsetMs).toBe(FRACTIONAL_NUDGE_MS);
+    expect(fake.store.getState().lock?.phaseOffsetMs).toBe(
+      Math.round(FRACTIONAL_NUDGE_MS),
+    );
   });
 
   it('names no phase when no preset matches', async () => {

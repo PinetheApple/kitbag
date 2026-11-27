@@ -10,7 +10,7 @@ export interface PlayAlongSlot {
 export function playAlongSlot(
   runtime: PlayAlongRuntime,
   pattern: () => PlayAlongPattern,
-  entered: (latencyOffsetMs: number) => void,
+  latencyApplied: (latencyOffsetMs: number) => void,
 ): PlayAlongSlot {
   let leaving: (() => void) | undefined;
   return {
@@ -23,9 +23,14 @@ export function playAlongSlot(
         latencyOffsetMs,
         runtime.yieldStandalone,
       );
-      entered(latencyOffsetMs);
+      latencyApplied(latencyOffsetMs);
       const stopStarts = runtime.onClickStarting(otherClickStarting);
+      const stopLatency = runtime.onLatencyOffset((offsetMs) => {
+        runtime.commands.setLatencyOffset(offsetMs);
+        latencyApplied(offsetMs);
+      });
       leaving = () => {
+        stopLatency();
         stopStarts();
         leaveSlot();
       };

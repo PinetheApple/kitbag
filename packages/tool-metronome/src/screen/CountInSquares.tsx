@@ -1,4 +1,9 @@
-import { CountSquare, TEXT_PLACEHOLDER } from '@kitbag/core-design';
+import {
+  BeatGrid,
+  CountSquare,
+  TEXT_PLACEHOLDER,
+  useBeatDotStyles,
+} from '@kitbag/core-design';
 import { KB_STOPPED_BEAT } from '@kitbag/core-native';
 import { useCallback, useMemo } from 'react';
 import { Text, View } from 'react-native';
@@ -8,9 +13,6 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import type { LedRowLayout } from '@kitbag/core-state';
-
-import { useBeatDotStyles } from './beatDotStyles.ts';
-import { BeatGrid } from './BeatGrid.tsx';
 
 interface CountInSquaresProps {
   readonly lines: readonly LedRowLayout[];

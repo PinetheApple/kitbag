@@ -82,17 +82,26 @@ export interface TapPadProps {
   readonly copy: TapPadCopy;
   readonly tapsLanded: number;
   readonly onTap: () => void;
+  readonly onRelease: () => void;
+  readonly minHeight?: number | null;
 }
 
-export function TapPad({ copy, tapsLanded, onTap }: TapPadProps) {
+export function TapPad({
+  copy,
+  tapsLanded,
+  onTap,
+  onRelease,
+  minHeight,
+}: TapPadProps) {
   const styles = useStyles();
   const theme = useTheme();
   const padStyle = useCallback(
     ({ pressed }: PressableStateCallbackType) => [
       styles.pad,
+      typeof minHeight === 'number' && { minHeight },
       pressed && styles.pressed,
     ],
-    [styles],
+    [styles, minHeight],
   );
   return (
     <Pressable
@@ -101,6 +110,7 @@ export function TapPad({ copy, tapsLanded, onTap }: TapPadProps) {
       accessibilityHint={copy.hint}
       style={padStyle}
       onPressIn={onTap}
+      onPressOut={onRelease}
     >
       {copy.mode === TAP_PAD_MODE.tempo ? (
         <TapLeds landed={tapsLanded} />

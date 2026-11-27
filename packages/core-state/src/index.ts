@@ -1,4 +1,5 @@
 export { useMetronome } from './metronome/useMetronome.ts';
+export { useHoldEngine } from './metronome/useHoldEngine.ts';
 export { practiceElapsedMs, type PracticeClock } from './metronome/practice.ts';
 export {
   BPM_BOUNDS,
@@ -97,7 +98,13 @@ export {
   type LadderRung,
   type SourceCredit,
 } from './tempoLadder/sources.ts';
-export { layoutBeatLeds, type LedRowLayout } from './metronome/ledLayout.ts';
+export {
+  layoutBeatLeds,
+  ledStateFor,
+  ledStatesFor,
+  type AccentLedState,
+  type LedRowLayout,
+} from './metronome/ledLayout.ts';
 export { countInBarsFromOption } from './metronome/countInOption.ts';
 export {
   effectivePolyAgainst,
@@ -936,6 +943,12 @@ export {
   releaseStaleSounds,
 } from './clickSounds/released.ts';
 export { useClickSounds } from './clickSounds/useClickSounds.ts';
+export {
+  useSoundPicker,
+  type SoundPicker,
+  type SoundPreview,
+  type SoundsUpdate,
+} from './clickSounds/useSoundPicker.ts';
 export type {
   ClickSoundNotice,
   ClickSoundProblem,
@@ -948,6 +961,7 @@ export {
   customSoundViews,
   rolesUsing,
   SOUND_OPTIONS,
+  SOUND_PICKER_HINT,
   SOUND_ROLE,
   SOUND_ROLE_OPTIONS,
   soundChipLabel,

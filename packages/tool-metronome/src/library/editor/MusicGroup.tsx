@@ -9,6 +9,7 @@ import {
   space,
   StepControl,
   type StepDelta,
+  subdivisionLabel,
   useTextScaled,
 } from '@kitbag/core-design';
 import { KB_STOPPED_BEAT, KB_SUBDIVISION_BOUNDS } from '@kitbag/core-native';
@@ -25,7 +26,6 @@ import {
   withPolyBeats,
 } from '../../logic/presetDraft.ts';
 import { polyAgainstLabel } from '../../logic/polyRow.ts';
-import { subdivisionLabel } from '../../logic/subdivision.ts';
 import { BeatLeds } from '../../screen/BeatLeds.tsx';
 
 const SUB_ROW = { paddingLeft: metronomeEditor.subRowIndent } as const;

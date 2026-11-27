@@ -4,14 +4,10 @@ import {
   stemPlayer,
   TransportKey,
 } from '@kitbag/core-design';
-import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useSharedValue } from 'react-native-reanimated';
 
 import { usePlayAlong } from './playAlongHooks.ts';
-
-const PLAYING = 1;
-const STOPPED = 0;
+import { usePlayingValue } from './usePlayingValue.ts';
 
 const styles = StyleSheet.create({
   row: {
@@ -36,11 +32,7 @@ export function PlayAlongDock({
   const previous = usePlayAlong((s) => s.previous);
   const playPause = usePlayAlong((s) => s.playPause);
   const next = usePlayAlong((s) => s.next);
-  const shown = useSharedValue(playing ? PLAYING : STOPPED);
-
-  useEffect(() => {
-    shown.value = playing ? PLAYING : STOPPED;
-  }, [playing, shown]);
+  const shown = usePlayingValue(playing);
 
   return (
     <PlayerDock bottomInset={bottomInset}>

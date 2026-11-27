@@ -13,11 +13,13 @@ import { LOCK_REFUSAL, UNLOCK_REASON } from './lockOutcome.ts';
 import { REANCHOR_INTERVAL_MS } from './store.ts';
 import {
   BPM,
+  call,
   fakePlayAlong,
   LATENCY_MS,
   locked,
   snapshot,
   settle,
+  STANDALONE,
 } from './store.test-helper.ts';
 
 const MATCH = { kind: 'song', id: 3, bpm: 113 } as const;
@@ -31,6 +33,7 @@ const THREE_BEAT_GRID = {
   downbeatIndices: [0, 3, 6, 9],
 };
 const THREE_BEAT_BACK_ONE = [2, 5, 8];
+const THREE_BEAT_BAR = 3;
 const PICKUP_DOWNBEATS = [6, 10];
 const PICKUP_SHIFTED = [7, 11];
 const NO_DOWNBEAT_GRID = { beats: GRID.beats, downbeatIndices: [] };
@@ -48,6 +51,15 @@ const BEAT_SEC = SECONDS_PER_MINUTE / BPM;
 const BAR_SEC = BEAT_SEC * BEATS;
 const HALF_BEAT_MS_AT_BPM = (BEAT_SEC * MS_PER_SECOND) / 2;
 const PRECISION = 9;
+const UNEVEN_BPM = 171;
+const UNEVEN_LIMIT_MS = 175;
+const FRACTIONAL_MS = 12.6;
+const ROUNDED_MS = 13;
+const NEGATIVE_HALF_MS = -12.5;
+const NEGATIVE_ROUNDED_MS = -13;
+const NEGATIVE_FRACTION_MS = -0.3;
+const ROUTE_LATENCY_MS = 240;
+const LATER_ROUTE_LATENCY_MS = 90;
 
 afterEach(() => {
   vi.useRealTimers();
@@ -59,6 +71,7 @@ async function gridLocked(
   const fake = fakePlayAlong(options);
   fake.store.getState().watchLibrary();
   fake.ladder.found(MATCH);
+  await settle();
   await fake.store.getState().acceptOffer();
   await settle();
   return fake;
@@ -83,9 +96,8 @@ describe('phase limit', () => {
   });
 
   it('is half a beat at the tempo the player is heard at', () => {
-    expect(phaseLimitMs(BPM, QUARTER, FAST)).toBeCloseTo(
-      HALF_BEAT_MS_AT_BPM / FAST,
-      PRECISION,
+    expect(phaseLimitMs(BPM, QUARTER, FAST)).toBe(
+      Math.trunc(HALF_BEAT_MS_AT_BPM / FAST),
     );
   });
 });
@@ -139,9 +151,8 @@ describe('phase while locked', () => {
       fakePlayAlong({ sessions: [snapshot({ speed: FAST })] }),
     );
     fake.store.getState().setPhaseOffset(FAR_MS);
-    expect(fake.store.getState().lock?.phaseOffsetMs).toBeCloseTo(
-      HALF_BEAT_MS_AT_BPM / FAST,
-      PRECISION,
+    expect(fake.store.getState().lock?.phaseOffsetMs).toBe(
+      Math.trunc(HALF_BEAT_MS_AT_BPM / FAST),
     );
   });
 
@@ -161,6 +172,70 @@ describe('phase while locked', () => {
     expect(fake.store.getState().lock?.phaseOffsetMs).toBe(
       HALF_BEAT_MS_AT_BPM / 2,
     );
+  });
+
+  it('keeps the offset whole, inside a half beat that is not', () => {
+    const fake = locked();
+    fake.store.getState().setBpm(UNEVEN_BPM);
+    fake.store.getState().setPhaseOffset(FAR_MS);
+    expect(fake.store.getState().lock?.phaseOffsetMs).toBe(UNEVEN_LIMIT_MS);
+    fake.store.getState().setPhaseOffset(-FAR_MS);
+    expect(fake.store.getState().lock?.phaseOffsetMs).toBe(-UNEVEN_LIMIT_MS);
+    fake.store.getState().setPhaseOffset(FRACTIONAL_MS);
+    expect(fake.store.getState().lock?.phaseOffsetMs).toBe(ROUNDED_MS);
+  });
+
+  it('rounds a negative offset away from zero and never to -0', () => {
+    const fake = locked();
+    fake.store.getState().setPhaseOffset(NEGATIVE_HALF_MS);
+    expect(fake.store.getState().lock?.phaseOffsetMs).toBe(NEGATIVE_ROUNDED_MS);
+    fake.store.getState().setPhaseOffset(NEGATIVE_FRACTION_MS);
+    expect(fake.store.getState().lock?.phaseOffsetMs).toBe(0);
+  });
+
+  it('follows a route change while it holds its slot', () => {
+    const fake = locked();
+    fake.store.getState().nudgePhase(1);
+    fake.calls.length = 0;
+    fake.routeLatency(ROUTE_LATENCY_MS);
+    const { lock, latencyOffsetMs } = fake.store.getState();
+    expect(latencyOffsetMs).toBe(ROUTE_LATENCY_MS);
+    expect((lock?.phaseOffsetMs ?? 0) + latencyOffsetMs).toBe(
+      DEFAULT_PHASE_STEP_MS + ROUTE_LATENCY_MS,
+    );
+    expect(fake.calls).toEqual([call('setLatencyOffset', ROUTE_LATENCY_MS)]);
+  });
+
+  it('hands the standalone slot the latest latency once it is selected again', () => {
+    const fake = locked(
+      fakePlayAlong({
+        yieldStandalone: () => () => {
+          fake.commands.setLatencyOffset(fake.latencyRead());
+        },
+      }),
+    );
+    fake.routeLatency(ROUTE_LATENCY_MS);
+    fake.calls.length = 0;
+    fake.store.getState().unlock();
+    const standalone = fake.calls.indexOf(
+      call('metronomeSelectSlot', STANDALONE),
+    );
+    expect(standalone).toBeGreaterThanOrEqual(0);
+    expect(
+      fake.calls.filter((sent) => sent.startsWith('setLatencyOffset')),
+    ).toEqual([call('setLatencyOffset', ROUTE_LATENCY_MS)]);
+    expect(
+      fake.calls.indexOf(call('setLatencyOffset', ROUTE_LATENCY_MS)),
+    ).toBeGreaterThan(standalone);
+  });
+
+  it('stops following route changes once it leaves its slot', () => {
+    const fake = locked();
+    fake.store.getState().unlock();
+    fake.calls.length = 0;
+    fake.routeLatency(LATER_ROUTE_LATENCY_MS);
+    expect(fake.calls).toEqual([]);
+    expect(fake.latencyListeners()).toBe(0);
   });
 
   it('ignores phase edits with no lock, but keeps the step', () => {
@@ -241,11 +316,11 @@ describe('phase on a library grid lock', () => {
     expect(fake.store.getState().lock?.grid).toBe(GRID);
   });
 
-  it('wraps a grid shift by the grid own bar, not the pattern meter', async () => {
+  it('wraps a grid shift by the grid own bar, which the pattern takes', async () => {
     const fake = await gridLocked({ grid: THREE_BEAT_GRID });
     fake.store.getState().shiftDownbeat(-1);
     await settle();
-    expect(fake.store.getState().pattern.beatsPerBar).toBe(BEATS);
+    expect(fake.store.getState().pattern.beatsPerBar).toBe(THREE_BEAT_BAR);
     expect(downbeatCalls(fake)).toEqual([THREE_BEAT_BACK_ONE]);
   });
 

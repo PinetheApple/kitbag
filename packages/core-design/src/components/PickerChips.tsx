@@ -1,21 +1,15 @@
-import {
-  createThemedStyles,
-  hitBoxStyle,
-  hitExtension,
-  Icon,
-  metronome,
-  minTouchTargetDp,
-  NotationGlyph,
-  radius,
-  size,
-  space,
-  textRoles,
-  textStyle,
-} from '@kitbag/core-design';
 import { Pressable, Text, View } from 'react-native';
 
-import { meterLabel, spokenMeter } from '../logic/meter.ts';
-import { subdivisionName } from '../logic/subdivision.ts';
+import { metronome } from '../metronomeRoles.ts';
+import { radius, size, space, textRoles } from '../roles.ts';
+import { subdivisionName } from '../subdivisionText.ts';
+import { textStyle } from '../textStyle.ts';
+import { createThemedStyles } from '../ThemeProvider.tsx';
+import { spokenTimeSignature, timeSignatureLabel } from '../timeSignature.ts';
+import { minTouchTargetDp } from '../tokens.ts';
+import { hitBoxStyle, hitExtension } from '../touchTarget.ts';
+import { Icon } from './Icon.tsx';
+import { NotationGlyph } from './NotationGlyph.tsx';
 
 const CHIP_HIT_BOX = hitBoxStyle(
   hitExtension(minTouchTargetDp, metronome.pickerChip, {
@@ -59,7 +53,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-interface PickerChipsProps {
+export interface PickerChipsProps {
   readonly beatsPerBar: number;
   readonly denominator: number;
   readonly subdivision: number;
@@ -81,13 +75,13 @@ export function PickerChips({
     <View style={styles.row}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Time signature, ${spokenMeter(meter)}`}
+        accessibilityLabel={`Time signature, ${spokenTimeSignature(meter)}`}
         accessibilityHint="Changes the time signature"
         style={CHIP_HIT_BOX}
         onPress={onOpenMeter}
       >
         <View style={[styles.chip, styles.meter]}>
-          <Text style={styles.label}>{meterLabel(meter)}</Text>
+          <Text style={styles.label}>{timeSignatureLabel(meter)}</Text>
           <Icon name="caretDown" size="caret" color="decor" />
         </View>
       </Pressable>

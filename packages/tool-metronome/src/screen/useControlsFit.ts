@@ -1,8 +1,11 @@
-import { contentOverflows, metronome } from '@kitbag/core-design';
+import {
+  contentOverflows,
+  metronome,
+  type ScreenDensity,
+} from '@kitbag/core-design';
 import { useCallback, useState } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
 
-import type { ScreenDensity } from '../logic/screenDensity.ts';
 import { useOverflowLatch } from './useOverflowLatch.ts';
 import { useScreenDensity } from './useScreenDensity.ts';
 

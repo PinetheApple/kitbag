@@ -1,15 +1,21 @@
 import { createThemedStyles, type ScreenInsets } from '@kitbag/core-design';
-import { useMediaSessions } from '@kitbag/core-state';
+import { soundChipLabel, useMediaSessions } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { PLAY_ALONG_VIEW, playAlongView } from '../logic/playAlongView.ts';
 import { MIN_SESSIONS_TO_CHOOSE } from '../logic/sourceRows.ts';
+import { ClickSoundSheet } from './ClickSoundSheet.tsx';
 import { PermissionExplainer } from './PermissionExplainer.tsx';
 import { PlayAlongAppBar, type SourceChipProps } from './PlayAlongAppBar.tsx';
 import { PlayAlongBody } from './PlayAlongBody.tsx';
 import { PlayAlongDock } from './PlayAlongDock.tsx';
 import { PlayAlongMenu } from './PlayAlongMenu.tsx';
+import {
+  PATTERN_SHEET,
+  PatternSheets,
+  type PatternSheet,
+} from './PatternSheets.tsx';
 import { pickSource } from './pickSource.ts';
 import {
   useFollowedSession,
@@ -23,7 +29,7 @@ import { TempoSheet } from './TempoSheet.tsx';
 import { useAccessFlow, type AccessFlow } from './useAccessFlow.ts';
 import { useLastSeen } from './useLastSeen.ts';
 
-type OpenSheet = 'none' | 'source' | 'tempo' | 'menu';
+type OpenSheet = 'none' | 'source' | 'tempo' | 'menu' | 'sound' | PatternSheet;
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
@@ -48,7 +54,25 @@ function useSheets() {
   const openMenu = useCallback(() => {
     setSheet('menu');
   }, []);
-  return { sheet, close, openSource, openTempo, openMenu };
+  const openSound = useCallback(() => {
+    setSheet('sound');
+  }, []);
+  const openMeter = useCallback(() => {
+    setSheet(PATTERN_SHEET.meter);
+  }, []);
+  const openSubdivision = useCallback(() => {
+    setSheet(PATTERN_SHEET.subdivision);
+  }, []);
+  return {
+    sheet,
+    close,
+    openSource,
+    openTempo,
+    openMenu,
+    openSound,
+    openMeter,
+    openSubdivision,
+  };
 }
 
 function useSourceChip(onOpen: () => void): SourceChipProps | null {
@@ -68,6 +92,12 @@ function useSourceChip(onOpen: () => void): SourceChipProps | null {
   }, [appLabel, count, session, locked, onOpen]);
 }
 
+function patternSheet(sheet: OpenSheet): PatternSheet | null {
+  return sheet === PATTERN_SHEET.meter || sheet === PATTERN_SHEET.subdivision
+    ? sheet
+    : null;
+}
+
 interface SheetsProps {
   readonly sheets: ReturnType<typeof useSheets>;
   readonly followedId: string | undefined;
@@ -78,6 +108,7 @@ function PlayAlongSheets({ sheets, followedId, bottomInset }: SheetsProps) {
   const access = useMediaSessions((s) => s.access);
   const sessions = useMediaSessions((s) => s.sessions);
   const openSettings = useMediaSessions((s) => s.openSettings);
+  const sounds = usePlayAlong((s) => s.pattern.sounds);
   const { line } = useTempoLine();
   const { close } = sheets;
   const handleAccess = useCallback(() => {
@@ -100,11 +131,23 @@ function PlayAlongSheets({ sheets, followedId, bottomInset }: SheetsProps) {
         bottomInset={bottomInset}
         onDismiss={close}
       />
+      <PatternSheets
+        open={patternSheet(sheets.sheet)}
+        bottomInset={bottomInset}
+        onDismiss={close}
+      />
       <PlayAlongMenu
         visible={sheets.sheet === 'menu'}
         access={access === true}
+        soundLabel={soundChipLabel(sounds)}
         bottomInset={bottomInset}
+        onClickSound={sheets.openSound}
         onNotificationAccess={handleAccess}
+        onDismiss={close}
+      />
+      <ClickSoundSheet
+        visible={sheets.sheet === 'sound'}
+        bottomInset={bottomInset}
         onDismiss={close}
       />
     </>
@@ -159,6 +202,8 @@ export function PlayAlongScreen({ insets, onBack }: PlayAlongScreenProps) {
           lock={lock}
           onExplainAgain={flow.explainAgain}
           onOpenTempo={sheets.openTempo}
+          onOpenMeter={sheets.openMeter}
+          onOpenSubdivision={sheets.openSubdivision}
         />
       ) : null}
       {song ? (

@@ -226,8 +226,9 @@ describe('the mini-player', () => {
   it('opens the queue from its Queue key, named with the count up next', () => {
     players.upNextCount = 3;
     const shown = bar(mount());
-    expect(shown.queueLabel).toBe('Queue, 3 up next');
-    (shown.onQueue as () => void)();
+    const queue = shown.queue as { label: string; onPress: () => void };
+    expect(queue.label).toBe('Queue, 3 up next');
+    queue.onPress();
     expect(onOpenQueue).toHaveBeenCalledOnce();
     expect(onOpenSong).not.toHaveBeenCalled();
   });
