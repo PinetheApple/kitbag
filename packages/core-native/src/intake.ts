@@ -4,8 +4,8 @@ import {
   type PickedDocument,
 } from './NativeKitbagLibrary';
 
-export function takeInitialIntake(): Promise<readonly PickedDocument[]> {
-  return getKitbagLibrary().takeInitialIntake();
+export function takeLaunchIntake(): Promise<readonly PickedDocument[]> {
+  return getKitbagLibrary().takeLaunchIntake();
 }
 
 export function watchIntake(

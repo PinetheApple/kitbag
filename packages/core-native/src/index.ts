@@ -81,7 +81,7 @@ export {
   saveDatabaseCopy,
   shareBackup,
 } from './backupFiles';
-export { readSharedBackup, takeInitialIntake, watchIntake } from './intake';
+export { readSharedBackup, takeLaunchIntake, watchIntake } from './intake';
 export {
   databaseFreeBytes,
   removeDatabaseCopy,

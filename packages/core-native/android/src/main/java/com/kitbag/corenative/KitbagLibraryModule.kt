@@ -131,7 +131,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
 
   override fun readSharedBackup(uri: String, promise: Promise) = picker.readSharedBackup(uri, promise)
 
-  override fun takeInitialIntake(promise: Promise) = intake.takeInitial(reactApplicationContext.currentActivity, promise)
+  override fun takeLaunchIntake(promise: Promise) = intake.takeLaunch(reactApplicationContext.currentActivity, promise)
 
   override fun shareBackup(fileName: String, contents: String, promise: Promise) =
     backups.share(fileName, contents, promise)

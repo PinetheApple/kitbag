@@ -3,7 +3,7 @@ import type { PickedDocument } from '@kitbag/core-native';
 type Items = readonly PickedDocument[];
 
 export interface IntakeSource {
-  readonly takeInitial: () => Promise<Items>;
+  readonly takeLaunch: () => Promise<Items>;
   readonly watch: (listener: (items: Items) => void) => () => void;
 }
 
@@ -22,7 +22,7 @@ export function intakeSession(source: IntakeSource) {
       const stop = source.watch(deliver);
       if (!initialTaken) {
         initialTaken = true;
-        source.takeInitial().then(deliver, warn);
+        source.takeLaunch().then(deliver, warn);
       }
       return stop;
     },

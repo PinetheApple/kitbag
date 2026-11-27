@@ -1,6 +1,6 @@
 import type * as Native from './intake.ts';
 
-export const takeInitialIntake: typeof Native.takeInitialIntake = () =>
+export const takeLaunchIntake: typeof Native.takeLaunchIntake = () =>
   Promise.resolve([]);
 
 export const watchIntake: typeof Native.watchIntake = () => () => undefined;

@@ -20,7 +20,7 @@ type Items = readonly PickedDocument[];
 function fakeSource(initial: Items) {
   const listeners = new Set<(items: Items) => void>();
   const source: IntakeSource = {
-    takeInitial: vi.fn(() => Promise.resolve(initial)),
+    takeLaunch: vi.fn(() => Promise.resolve(initial)),
     watch: vi.fn((listener: (items: Items) => void) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -53,7 +53,7 @@ describe('the intake session', () => {
     session.start(receive);
     await settle();
     expect(receive).toHaveBeenCalledOnce();
-    expect(source.takeInitial).toHaveBeenCalledOnce();
+    expect(source.takeLaunch).toHaveBeenCalledOnce();
   });
 
   it('delivers files shared while the app is open', async () => {

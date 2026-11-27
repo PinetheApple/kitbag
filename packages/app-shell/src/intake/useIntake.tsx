@@ -1,7 +1,7 @@
 import {
   getKitbagLibrary,
   readSharedBackup,
-  takeInitialIntake,
+  takeLaunchIntake,
   watchIntake,
 } from '@kitbag/core-native';
 import { snackbar, Snackbar } from '@kitbag/core-design';
@@ -19,7 +19,7 @@ import { receiveIntake, type IntakeDeps } from './receive.ts';
 import { intakeSession } from './session.ts';
 
 const session = intakeSession({
-  takeInitial: takeInitialIntake,
+  takeLaunch: takeLaunchIntake,
   watch: watchIntake,
 });
 

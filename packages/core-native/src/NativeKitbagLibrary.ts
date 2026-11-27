@@ -299,8 +299,7 @@ export interface Spec extends TurboModule {
   pickFolder(): Promise<PickedFolder | null>;
   pickBackup(): Promise<PickedBackup | null>;
   readSharedBackup(uri: string): Promise<PickedBackup>;
-  /** Files the launching intent opened or shared; empty once that intent was taken. */
-  takeInitialIntake(): Promise<readonly PickedDocument[]>;
+  takeLaunchIntake(): Promise<readonly PickedDocument[]>;
   readonly onIntake: CodegenTypes.EventEmitter<IntakeEvent>;
   shareBackup(fileName: string, contents: string): Promise<void>;
   /** Resolves false when the user cancels the save dialog. */

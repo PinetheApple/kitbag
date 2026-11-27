@@ -19,7 +19,7 @@ class ShareIntake(
   private val warn: (String, Exception) -> Unit,
 ) : ActivityEventListener {
 
-  fun takeInitial(activity: Activity?, promise: Promise) {
+  fun takeLaunch(activity: Activity?, promise: Promise) {
     val uris = activity?.intent?.let(::take).orEmpty()
     io.execute { promise.resolve(describeAll(uris)) }
   }
