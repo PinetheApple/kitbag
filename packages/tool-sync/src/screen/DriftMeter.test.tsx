@@ -9,7 +9,12 @@ type Props = Record<string, unknown> & { readonly children?: ReactNode };
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
   const host = (props: Props) => h('div', null, props.children);
-  return { View: host, Text: host, StyleSheet: { create: <T,>(s: T) => s } };
+  return {
+    View: host,
+    Text: host,
+    Pressable: host,
+    StyleSheet: { create: <T,>(s: T) => s },
+  };
 });
 
 vi.mock('react-native-reanimated', () => ({
@@ -19,6 +24,7 @@ vi.mock('react-native-reanimated', () => ({
 const strips = vi.hoisted(() => [] as Props[]);
 const cards = vi.hoisted(() => [] as Props[]);
 const buttons = vi.hoisted(() => [] as Props[]);
+const steppers = vi.hoisted(() => [] as Props[]);
 
 vi.mock('@kitbag/core-design', async (original) => {
   const { createElement: h } = await import('react');
@@ -27,6 +33,11 @@ vi.mock('@kitbag/core-design', async (original) => {
     createThemedStyles: () => () => ({}),
     useTextScaled: () => false,
     Badge: (props: Props) => h('b', null, props.label as string),
+    SectionHeader: (props: Props) => h('h6', null, props.label as string),
+    Stepper: (props: Props) => {
+      steppers.push(props);
+      return null;
+    },
     DrawnFigures: (props: Props) => h('i', null, props.text as string),
     Button: (props: Props) => {
       buttons.push(props);
@@ -43,8 +54,13 @@ vi.mock('@kitbag/core-design', async (original) => {
   };
 });
 
+vi.mock('./playAlongHooks.ts', () => ({
+  usePlayAlong: <T,>(selector: (state: { nudgePhase: () => void }) => T) =>
+    selector({ nudgePhase: vi.fn() }),
+}));
+
 const { DRIFT_STRIP_STOPS } = await import('@kitbag/core-design');
-const { DriftMeterCard } = await import('./DriftMeter.tsx');
+const { DriftMeter, DriftMeterCard } = await import('./DriftMeter.tsx');
 
 const locked: DriftView = {
   state: DRIFT_STATE.locked,
@@ -82,12 +98,15 @@ const paused: DriftView = {
   retapEnabled: false,
 };
 
+const phase = { reading: '+10 ms', onNudge: vi.fn(), onOpen: vi.fn() };
+
 function drawn(view: DriftView) {
   strips.length = 0;
   cards.length = 0;
   buttons.length = 0;
+  steppers.length = 0;
   return renderToStaticMarkup(
-    createElement(DriftMeterCard, { view, onRetap: vi.fn() }),
+    createElement(DriftMeterCard, { view, phase, onRetap: vi.fn() }),
   );
 }
 
@@ -131,5 +150,59 @@ describe('DriftMeterCard', () => {
     expect(buttons[0]).toMatchObject({ label: 'Re-tap', disabled: true });
     drawn(locked);
     expect(buttons[0]).toMatchObject({ disabled: false });
+  });
+
+  it('puts the phase stepper under the strip, its value opening the sheet', () => {
+    const markup = drawn(locked);
+    expect(markup).toContain('<h6>Phase</h6>');
+    expect(steppers[0]).toMatchObject({
+      value: '+10 ms',
+      onValuePress: phase.onOpen,
+    });
+    (steppers[0]?.onEarlier as () => void)();
+    (steppers[0]?.onLater as () => void)();
+    expect(phase.onNudge.mock.calls).toEqual([[-1], [1]]);
+  });
+
+  it('keeps the phase stepper while paused', () => {
+    drawn(paused);
+    expect(steppers).toHaveLength(1);
+  });
+
+  it('drops the phase stepper on drift', () => {
+    const markup = drawn(drift);
+    expect(markup).not.toContain('Phase');
+    expect(steppers).toHaveLength(0);
+  });
+});
+
+describe('DriftMeter', () => {
+  it('shows a nudge clamped at the half-beat limit in whole milliseconds', () => {
+    steppers.length = 0;
+    renderToStaticMarkup(
+      createElement(DriftMeter, {
+        lock: {
+          sessionId: 'spotify',
+          track: { title: 'Song', artist: 'Artist', durationMs: null },
+          downbeatSec: 0,
+          bpm: 171,
+          lockedAtBoottimeMs: 0,
+          grid: undefined,
+          phaseOffsetMs: 30000 / 171,
+          downbeatShift: 0,
+          downbeatShiftAvailable: true,
+          gridDownbeats: undefined,
+        },
+        session: undefined,
+        drift: {
+          songAheadOfClickMs: 0,
+          playing: true,
+          sourceGoneAtMs: undefined,
+        },
+        onRetap: vi.fn(),
+        onOpenPhase: vi.fn(),
+      }),
+    );
+    expect(steppers[0]).toMatchObject({ value: '+175 ms' });
   });
 });

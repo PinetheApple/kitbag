@@ -165,6 +165,7 @@ function draw(
       onOpenTempo: vi.fn(),
       onOpenMeter: vi.fn(),
       onOpenSubdivision: vi.fn(),
+      onOpenPhase: vi.fn(),
     }),
   );
 }

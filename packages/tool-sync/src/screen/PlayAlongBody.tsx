@@ -73,6 +73,7 @@ export interface PlayAlongBodyProps extends SongCardProps {
   readonly onOpenTempo: () => void;
   readonly onOpenMeter: () => void;
   readonly onOpenSubdivision: () => void;
+  readonly onOpenPhase: () => void;
 }
 
 const NEW_TRACK_NOTICE = 'New track. The click stopped until you tap.';
@@ -171,6 +172,7 @@ export function PlayAlongBody(props: PlayAlongBodyProps) {
         session={session}
         drift={drift}
         onRetap={locked.onRetap}
+        onOpenPhase={props.onOpenPhase}
       />
     );
   return (
