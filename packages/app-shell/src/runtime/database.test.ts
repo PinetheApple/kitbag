@@ -1,8 +1,10 @@
 import {
   DATABASE_NAME,
   DatabaseOpenError,
+  type BackupRules,
   type MigrationCopyFiles,
 } from '@kitbag/core-db';
+import { KB_LATENCY_OFFSET_MS_BOUNDS } from '@kitbag/core-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { storedPreference } from './storedPreference.ts';
@@ -23,7 +25,10 @@ const native = vi.hoisted(() => ({
   writeClickSound: vi.fn(),
 }));
 
-vi.mock('@kitbag/core-native', () => native);
+vi.mock('@kitbag/core-native', async (actual) => ({
+  ...(await actual<typeof import('@kitbag/core-native')>()),
+  ...native,
+}));
 
 const REFUSED = new DatabaseOpenError('newer-version', { fromVersion: 99 });
 const ACCESSES = 10;
@@ -132,6 +137,20 @@ describe('the migration copy files', () => {
       'kitbag.v24.bak.part',
       'kitbag.v24.bak',
     );
+  });
+});
+
+describe('the backup rules', () => {
+  it('bound route latency by the engine and keep the built-in routes on Replace', async () => {
+    core.openDatabase.mockReturnValue(OPENED);
+    const { databaseStatus } = await freshDatabase();
+    databaseStatus();
+    const rules = core.openDatabase.mock.calls[0]?.[2] as BackupRules;
+
+    expect(rules).toEqual({
+      latencyOffsetMs: KB_LATENCY_OFFSET_MS_BOUNDS,
+      deviceRoutes: ['speaker', 'earpiece', 'wired'],
+    });
   });
 });
 

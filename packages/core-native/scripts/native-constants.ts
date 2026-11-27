@@ -7,6 +7,7 @@ import {
   parseDefineNumber,
   parseDocumentedSymmetricBound,
   parseEnum,
+  parseFixedOutputRoutes,
   parseRangeAfter,
   parseSoundNames,
   parseTunerFields,
@@ -145,6 +146,7 @@ export function collectConstants(sources: NativeSources): NativeConstants {
       sources.apiHeader,
       'Output latency offset in ms',
     ),
+    fixedOutputRoutes: parseFixedOutputRoutes(sources.outputRoutes),
     barPhaseBounds: parseRangeAfter(
       sources.apiHeader,
       'Position within the bar,',

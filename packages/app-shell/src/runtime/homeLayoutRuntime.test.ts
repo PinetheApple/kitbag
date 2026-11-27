@@ -1,8 +1,6 @@
-import type { Preferences } from '@kitbag/core-db';
+import { HOME_LAYOUT_KEY, type Preferences } from '@kitbag/core-db';
 import { getHomeLayoutStore } from '@kitbag/core-state';
 import { describe, expect, it, vi } from 'vitest';
-
-import { HOME_LAYOUT_KEY } from './homeLayoutPreference.ts';
 
 const stored = vi.hoisted(() => new Map<string, string>());
 

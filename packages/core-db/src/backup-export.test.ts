@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { CATEGORIES, type Category } from './backup-format';
 import { parseBackup } from './backup-parse';
+import { TEST_BACKUP_RULES } from './backup-rules.test-helper';
 import {
   backupDatabase,
   openBackupDatabase,
@@ -111,7 +112,7 @@ describe('export is always importable', () => {
     it.each(SUBSETS)('%s parses and plans', async (_label, subset) => {
       const { source, target } = prepared();
       const text = await source.backup.export(subset);
-      const file = parseBackup(text);
+      const file = parseBackup(text, TEST_BACKUP_RULES);
       const plan = await target.backup.plan(text, {
         categories: file.categories,
       });
@@ -122,7 +123,10 @@ describe('export is always importable', () => {
   it('exporting setlists carries the presets they list', async () => {
     const source = openBackupDatabase();
     await seed(source);
-    const file = parseBackup(await source.backup.export(['setlists']));
+    const file = parseBackup(
+      await source.backup.export(['setlists']),
+      TEST_BACKUP_RULES,
+    );
     expect(file.categories).toEqual(['songPresets', 'setlists']);
     expect(file.records.songPresets).toHaveLength(2);
   });

@@ -1,0 +1,249 @@
+{
+  "format": "kitbag-backup",
+  "version": 4,
+  "exportedAt": "2026-11-27T11:16:39.896Z",
+  "categories": [
+    "librarySongs",
+    "songPresets",
+    "setlists",
+    "tunings",
+    "practiceSessions",
+    "countInSettings",
+    "metronomeSettings",
+    "clickSounds",
+    "stemSongs"
+  ],
+  "librarySongs": [
+    {
+      "title": "Reference",
+      "artist": "Someone",
+      "filePath": "music/ref.flac",
+      "duration": 210.5,
+      "format": "flac",
+      "createdAt": 1767323045,
+      "beatGrid": "AAAAPwAAoD8=",
+      "downbeatIndices": "AA==",
+      "bpm": 128,
+      "waveformPath": null,
+      "uuid": "00000000-0000-4000-8000-000000000001",
+      "analysisVersion": null,
+      "meterBeatsPerBar": null,
+      "barOneSeconds": null,
+      "tempoCorrection": null,
+      "speed": 1,
+      "tempoMode": null,
+      "tempoBpm": null,
+      "tempoAnchor": null,
+      "tempoBeatsPerBar": null,
+      "tempoSource": null,
+      "chosenTempoMode": null
+    }
+  ],
+  "songPresets": [
+    {
+      "name": "Opener",
+      "bpm": 128.5,
+      "beatsPerBar": 4,
+      "subdivision": 3,
+      "denominator": 8,
+      "accents": "AgEAAQ==",
+      "perAccentSounds": "AQM=",
+      "polyAccents": "AgEB",
+      "polyEnabled": true,
+      "polyBeats": 3,
+      "polyAgainst": 2,
+      "sound": 2,
+      "rampEnabled": true,
+      "rampStartBpm": 100,
+      "rampEndBpm": 140,
+      "rampLength": 2.5,
+      "rampStep": 1,
+      "rampUnit": 2,
+      "rampLoop": true,
+      "barMuteEnabled": true,
+      "barMutePlayBars": 3,
+      "barMuteMuteBars": 1,
+      "countInBars": 2,
+      "notes": "Fingerstyle — count 3",
+      "phaseNudge": -12.5,
+      "title": "Song",
+      "artist": "Artist",
+      "source": "file",
+      "lengthSeconds": 210.25,
+      "uuid": "00000000-0000-4000-8000-000000000002",
+      "librarySongUuid": "00000000-0000-4000-8000-000000000001"
+    },
+    {
+      "name": "Closer",
+      "bpm": 128.5,
+      "beatsPerBar": 4,
+      "subdivision": 3,
+      "denominator": 8,
+      "accents": "AgEAAQ==",
+      "perAccentSounds": "AQM=",
+      "polyAccents": "AgEB",
+      "polyEnabled": true,
+      "polyBeats": 3,
+      "polyAgainst": 2,
+      "sound": 2,
+      "rampEnabled": true,
+      "rampStartBpm": 100,
+      "rampEndBpm": 140,
+      "rampLength": 2.5,
+      "rampStep": 1,
+      "rampUnit": 2,
+      "rampLoop": true,
+      "barMuteEnabled": true,
+      "barMutePlayBars": 3,
+      "barMuteMuteBars": 1,
+      "countInBars": 2,
+      "notes": "Fingerstyle — count 3",
+      "phaseNudge": -12.5,
+      "title": "Song",
+      "artist": "Artist",
+      "source": "file",
+      "lengthSeconds": 210.25,
+      "uuid": "00000000-0000-4000-8000-000000000003",
+      "librarySongUuid": null
+    }
+  ],
+  "setlists": [
+    {
+      "uuid": "00000000-0000-4000-8000-000000000004",
+      "name": "Friday",
+      "active": true,
+      "presetUuids": [
+        "00000000-0000-4000-8000-000000000003",
+        "00000000-0000-4000-8000-000000000002"
+      ],
+      "items": [
+        {
+          "preset": "00000000-0000-4000-8000-000000000003"
+        },
+        {
+          "preset": "00000000-0000-4000-8000-000000000002"
+        }
+      ]
+    },
+    {
+      "uuid": "00000000-0000-4000-8000-000000000005",
+      "name": "Acoustic",
+      "active": false,
+      "presetUuids": ["00000000-0000-4000-8000-000000000002"],
+      "items": [
+        {
+          "preset": "00000000-0000-4000-8000-000000000002"
+        }
+      ]
+    }
+  ],
+  "tunings": [
+    {
+      "uuid": "00000000-0000-4000-8000-000000000006",
+      "name": "Drop D",
+      "notes": "Ji0yNztA",
+      "instrument": 1
+    }
+  ],
+  "practiceSessions": [
+    {
+      "uuid": "00000000-0000-4000-8000-000000000007",
+      "startTime": 1784059200,
+      "durationSeconds": 1800,
+      "avgBpm": 120,
+      "setlistUuid": "00000000-0000-4000-8000-000000000004",
+      "songsPlayed": "[\"00000000-0000-4000-8000-000000000002\",\"00000000-0000-4000-8000-000000000003\"]",
+      "setlistName": "Friday",
+      "log": "{\"v\":1,\"stretches\":[{\"from\":0,\"to\":1800000,\"end\":\"end\",\"song\":{\"uuid\":\"opener\",\"title\":\"Opener\"},\"setlist\":{\"uuid\":\"friday\",\"name\":\"Friday\",\"position\":2},\"settings\":null,\"countIn\":{\"bars\":1,\"distinct\":true,\"sound\":0},\"tempo\":[[600000,124]],\"endBpm\":124,\"avgBpm\":122}]}"
+    }
+  ],
+  "countInSettings": [
+    {
+      "key": "count_in_bars",
+      "value": "2"
+    },
+    {
+      "key": "count_in_distinct",
+      "value": "0"
+    },
+    {
+      "key": "count_in_scope",
+      "value": "always"
+    }
+  ],
+  "metronomeSettings": [
+    {
+      "key": "metronome_standalone",
+      "value": "{\"bpm\":132,\"beatsPerBar\":7,\"denominator\":8}"
+    }
+  ],
+  "clickSounds": [],
+  "stemSongs": [
+    {
+      "source": "stemdeck",
+      "stemdeckJobId": "job-echo",
+      "uuid": null,
+      "label": "Echo",
+      "title": null,
+      "meterBeatsPerBar": null,
+      "barOneSeconds": null,
+      "speed": 1,
+      "pitch": 0,
+      "lyricsRetimed": null,
+      "clickGrouping": [],
+      "clickRate": "single",
+      "chosenTempoMode": null,
+      "stems": [
+        {
+          "role": "vocals",
+          "name": null,
+          "gain": 1,
+          "muted": false,
+          "soloed": false,
+          "pitch": 0
+        },
+        {
+          "role": "drums",
+          "name": null,
+          "gain": 1,
+          "muted": false,
+          "soloed": false,
+          "pitch": 0
+        }
+      ]
+    },
+    {
+      "source": "folder",
+      "stemdeckJobId": null,
+      "uuid": "7d4c1f8e-2b6a-4f3d-9c1e-5a8b7e6d4c3b",
+      "label": "Echo",
+      "title": null,
+      "meterBeatsPerBar": null,
+      "barOneSeconds": null,
+      "speed": 1,
+      "pitch": 0,
+      "lyricsRetimed": null,
+      "clickGrouping": [],
+      "clickRate": "single",
+      "chosenTempoMode": null,
+      "stems": [
+        {
+          "role": "vocals",
+          "name": null,
+          "gain": 1,
+          "muted": false,
+          "soloed": false,
+          "pitch": 0
+        },
+        {
+          "role": "drums",
+          "name": null,
+          "gain": 1,
+          "muted": false,
+          "soloed": false,
+          "pitch": 0
+        }
+      ]
+    }
+  ]
+}
