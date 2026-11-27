@@ -53,6 +53,11 @@ describe('song list sheet', () => {
     ]);
   });
 
+  it('shows no tempo for a song that saves none', () => {
+    const [row] = songListRows([entry(1, 'Click only', null)], null, NO_STEMS);
+    expect(row?.bpm).toBeNull();
+  });
+
   it('marks nothing when the loaded song is not in the set', () => {
     const rows = songListRows([entry(1, 'Opener')], null, NO_STEMS);
     expect(rows.some((r) => r.now)).toBe(false);

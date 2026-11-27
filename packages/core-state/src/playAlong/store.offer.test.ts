@@ -13,6 +13,7 @@ import {
   snapshot,
   STANDALONE,
   START_MS,
+  settle,
 } from './store.test-helper.ts';
 
 const MATCH = { kind: 'song', id: 3, bpm: 113 } as const;
@@ -30,10 +31,6 @@ const REANCHORED_FRAME = (START_MS + REANCHOR_INTERVAL_MS) * FRAMES_PER_MS;
 afterEach(() => {
   vi.useRealTimers();
 });
-
-async function settle() {
-  for (let turn = 0; turn < 5; turn++) await Promise.resolve();
-}
 
 function offered(fake = fakePlayAlong({ grid: DRIFTING })) {
   fake.store.getState().watchLibrary();

@@ -25,6 +25,7 @@ import {
   V27_SCHEMA_VERSION,
   V28_SCHEMA_VERSION,
   V29_SCHEMA_VERSION,
+  V30_SCHEMA_VERSION,
 } from './migrate';
 import {
   MIGRATE_V14_TO_V15,
@@ -51,6 +52,7 @@ import {
   MIGRATE_V26_TO_V27,
   MIGRATE_V27_TO_V28,
   MIGRATE_V28_TO_V29,
+  MIGRATE_V29_TO_V30,
 } from './migrate-steps';
 
 const V7_DDL: readonly string[] = [
@@ -399,5 +401,12 @@ export function buildV29Fixture(): DatabaseSync {
   const db = buildV28Fixture();
   applyInTransaction(db, MIGRATE_V28_TO_V29);
   db.exec(`PRAGMA user_version = ${String(V29_SCHEMA_VERSION)}`);
+  return db;
+}
+
+export function buildV30Fixture(): DatabaseSync {
+  const db = buildV29Fixture();
+  applyInTransaction(db, MIGRATE_V29_TO_V30);
+  db.exec(`PRAGMA user_version = ${String(V30_SCHEMA_VERSION)}`);
   return db;
 }
