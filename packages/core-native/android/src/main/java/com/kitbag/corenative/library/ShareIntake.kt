@@ -1,6 +1,5 @@
 package com.kitbag.corenative.library
 
-import android.app.Activity
 import android.content.ContentResolver
 import android.content.Intent
 import android.net.Uri
@@ -11,6 +10,7 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.WritableArray
 import com.facebook.react.bridge.WritableMap
 import java.util.concurrent.Executor
+import java.util.concurrent.atomic.AtomicReference
 
 class ShareIntake(
   private val io: Executor,
@@ -19,8 +19,8 @@ class ShareIntake(
   private val warn: (String, Exception) -> Unit,
 ) : ActivityEventListener {
 
-  fun takeLaunch(activity: Activity?, promise: Promise) {
-    val uris = activity?.intent?.let(::take).orEmpty()
+  fun takeLaunch(promise: Promise) {
+    val uris = launch.getAndSet(null)?.let(::take).orEmpty()
     io.execute { promise.resolve(describeAll(uris)) }
   }
 
@@ -48,8 +48,12 @@ class ShareIntake(
     private const val ITEMS = "items"
     private val ACTIONS = setOf(Intent.ACTION_VIEW, Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE)
     private val FILE_SCHEMES = setOf(ContentResolver.SCHEME_CONTENT, ContentResolver.SCHEME_FILE)
+    private val launch = AtomicReference<Intent?>(null)
 
-    // A restored activity is handed its original intent again, so MainActivity marks it taken.
+    fun hold(intent: Intent) {
+      launch.set(intent)
+    }
+
     fun markTaken(intent: Intent) {
       intent.putExtra(TAKEN, true)
     }

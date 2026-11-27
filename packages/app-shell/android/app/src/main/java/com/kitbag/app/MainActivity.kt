@@ -1,6 +1,7 @@
 package com.kitbag.app
 import expo.modules.splashscreen.SplashScreenManager
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 
@@ -21,8 +22,15 @@ class MainActivity : ReactActivity() {
     // @generated begin expo-splashscreen - expo prebuild (DO NOT MODIFY) sync-f3ff59a738c56c9a6119210cb55f0b613eb8b6af
     SplashScreenManager.registerOnActivity(this)
     // @generated end expo-splashscreen
-    if (savedInstanceState != null) ShareIntake.markTaken(intent)
+    // A restored activity is handed its original intent again; marking it taken stops a second import.
+    if (savedInstanceState != null) ShareIntake.markTaken(intent) else ShareIntake.hold(intent)
     super.onCreate(null)
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    setIntent(intent)
+    ShareIntake.hold(intent)
+    super.onNewIntent(intent)
   }
 
   /**
