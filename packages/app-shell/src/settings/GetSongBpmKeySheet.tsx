@@ -20,8 +20,8 @@ import {
   KEY_CREDIT_TEXT,
   KEY_PLACEHOLDER,
   KEY_PRIVACY_HINT,
+  KEY_SET,
   KEY_SHEET_HINT,
-  maskedKey,
   REMOVE_KEY,
   SAVE_KEY,
   SAVED_KEY_LABEL,
@@ -114,7 +114,7 @@ export function GetSongBpmKeySheet({
         <CreditRow />
         {hasGetSongBpmKey(savedKey) ? (
           <EditRow label={SAVED_KEY_LABEL}>
-            <EditValue>{maskedKey(savedKey)}</EditValue>
+            <EditValue>{KEY_SET}</EditValue>
           </EditRow>
         ) : null}
         <TextField

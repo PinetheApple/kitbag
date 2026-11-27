@@ -56,7 +56,8 @@ const { GetSongBpmKeyRow } = await import('./GetSongBpmKeyRow.tsx');
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
 const TYPED_KEY = 'typed-key-0042';
-const MASKED_TYPED_KEY = '••••0042';
+const KEY_TAIL = '0042';
+const KEY_MASK = '•';
 
 let mounted: ReactTestRenderer | undefined;
 
@@ -152,12 +153,14 @@ describe('GetSongBPM key row', () => {
     expect(button(root, SAVE_KEY).props.disabled).toBe(true);
   });
 
-  it('shows the saved key masked, never in full', () => {
+  it('says a key is saved without rendering any of its characters', () => {
     const root = openSheet();
     type(root, TYPED_KEY);
     press(button(root, SAVE_KEY));
-    expect(value(root, SAVED_KEY_LABEL)).toBe(MASKED_TYPED_KEY);
-    expect(JSON.stringify(mounted?.toJSON())).not.toContain(TYPED_KEY);
+    expect(value(root, SAVED_KEY_LABEL)).toBe(KEY_SET);
+    const rendered = JSON.stringify(mounted?.toJSON());
+    expect(rendered).not.toContain(KEY_TAIL);
+    expect(rendered).not.toContain(KEY_MASK);
   });
 
   it('forgets the key when it is removed', () => {
