@@ -40,6 +40,7 @@ export {
 } from './metronome/standalone.ts';
 export {
   configureStandaloneMetronomePersistence,
+  flushStandaloneMetronomePersistence,
   reloadStandaloneMetronomePersistence,
   type StandaloneMetronomePersistence,
 } from './metronome/standalonePersistence.ts';

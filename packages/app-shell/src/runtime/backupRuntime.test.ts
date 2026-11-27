@@ -3,6 +3,7 @@ import {
   configureClickSounds,
   configureStandaloneMetronomePersistence,
   createMetronomeStore,
+  flushStandaloneMetronomePersistence,
   getBackup,
   libraryStore,
   metronomeStore,
@@ -188,6 +189,7 @@ it('keeps edits made after a restore across a relaunch', async () => {
   });
   metronomeStore.getState().setTempo(EDITED_BPM);
   await Promise.resolve();
+  flushStandaloneMetronomePersistence();
 
   vi.resetModules();
   const relaunched = await import('@kitbag/core-state');
