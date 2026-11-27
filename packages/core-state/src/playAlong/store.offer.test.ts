@@ -1,12 +1,16 @@
 import { MS_PER_SECOND } from '@kitbag/core-db';
-import { KB_RESULT } from '@kitbag/core-native';
+import { KB_ACCENT, KB_RESULT } from '@kitbag/core-native';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { LOCK_REFUSAL, REANCHOR_INTERVAL_MS } from './store.ts';
+import { accentsOf, toBlob } from '../library/presetMapping.ts';
+import { initialConfig } from '../metronome/store.ts';
 import {
   BPM,
   call,
+  presetShelf,
   fakePlayAlong,
+  locked,
   FRAMES_PER_MS,
   OTHER_ID,
   SESSION_ID,
@@ -23,6 +27,62 @@ const DRIFTING = {
   downbeatIndices: [0, 4],
 };
 const AHEAD_MS = 20;
+const PRESET_BEATS = 3;
+const QUARTER = 4;
+const PRESET_METER = { beatsPerBar: PRESET_BEATS, denominator: QUARTER };
+const PRESET_DOWNBEATS = [0, 3, 6];
+const TRACK_SECONDS = (snapshot().durationMs ?? 0) / MS_PER_SECOND;
+const PRESET_ROW = {
+  name: 'Song',
+  title: 'Song',
+  artist: 'Band',
+  bpm: BPM,
+  beatsPerBar: PRESET_BEATS,
+  denominator: QUARTER,
+  subdivision: 1,
+  accents: toBlob([2, 0, 0]),
+  sound: 0,
+};
+const presetOnSong = () =>
+  presetShelf([{ ...PRESET_ROW, librarySongId: MATCH.id }]);
+const presetOnTrack = () =>
+  presetShelf([
+    {
+      ...PRESET_ROW,
+      librarySongId: null,
+      source: SESSION_ID,
+      lengthSeconds: TRACK_SECONDS,
+    },
+  ]);
+const BEAT_SEC = 0.5;
+const PICKUP_GRID = {
+  beats: Array.from({ length: 13 }, (_, beat) => SONG_SEC + beat * BEAT_SEC),
+  downbeatIndices: [2, 6, 10],
+};
+const PICKUP_PRESET_DOWNBEATS = [2, 5, 8, 11];
+const DRIFTING_BAR = 4;
+const UNGRIDDED_METERS = [
+  [6, 8],
+  [5, 4],
+] as const;
+
+function gated(shelf: ReturnType<typeof presetShelf>) {
+  let open: () => void = () => undefined;
+  const gate = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+  const read = shelf.repository.forLibrarySong;
+  shelf.repository.forLibrarySong = vi.fn((songId: number) => {
+    const found = read(songId);
+    return gate.then(() => found);
+  });
+  return {
+    shelf,
+    open: () => {
+      open();
+    },
+  };
+}
 const FAST = 1.25;
 const NOW_FRAME = START_MS * FRAMES_PER_MS;
 const REANCHORED_SEC = SONG_SEC + REANCHOR_INTERVAL_MS / MS_PER_SECOND;
@@ -39,6 +99,7 @@ function offered(fake = fakePlayAlong({ grid: DRIFTING })) {
 }
 
 async function accepted(fake = offered()) {
+  await settle();
   const outcome = await fake.store.getState().acceptOffer();
   await settle();
   return { ...fake, outcome };
@@ -54,8 +115,9 @@ describe('the library offer', () => {
     });
   });
 
-  it('offers an analysed library song that matches the track', () => {
+  it('offers an analysed library song that matches the track', async () => {
     const fake = offered();
+    await settle();
     expect(fake.store.getState().offer).toEqual({
       sessionId: SESSION_ID,
       track: { title: 'Song', artist: 'Band', durationMs: 200_000 },
@@ -114,11 +176,13 @@ describe('the library offer', () => {
     expect(fake.store.getState().offer).toBeUndefined();
   });
 
-  it('offers again on the next matching track after a dismiss', () => {
+  it('offers again on the next matching track after a dismiss', async () => {
     const fake = offered();
+    await settle();
     fake.store.getState().dismissOffer();
     fake.report([snapshot({ title: 'Next song' })]);
     fake.ladder.found(MATCH);
+    await settle();
     expect(fake.store.getState().offer?.track.title).toBe('Next song');
   });
 
@@ -156,6 +220,7 @@ describe('accepting the offer', () => {
           gridIn = resolve;
         }),
     );
+    await settle();
     await fake.store.getState().acceptOffer();
     await settle();
     expect(fake.grids()).toHaveLength(1);
@@ -279,6 +344,7 @@ describe('accepting the offer', () => {
 
   it('refuses a song whose stored grid is empty', async () => {
     const fake = offered(fakePlayAlong());
+    await settle();
     expect(await fake.store.getState().acceptOffer()).toEqual({
       locked: false,
       reason: LOCK_REFUSAL.noGrid,
@@ -317,6 +383,166 @@ describe('accepting the offer', () => {
   it('offers again after unlocking the same track', async () => {
     const fake = await accepted();
     fake.store.getState().unlock();
+    await settle();
     expect(fake.store.getState().offer?.match).toEqual(MATCH);
+  });
+});
+
+describe('the meter from the song preset', () => {
+  it('names the preset meter on the offer', async () => {
+    const fake = offered(
+      fakePlayAlong({ grid: DRIFTING, shelf: presetOnSong() }),
+    );
+    await settle();
+    expect(fake.store.getState().offer?.meter).toEqual(PRESET_METER);
+  });
+
+  it('names no meter when the song has no preset', async () => {
+    const fake = offered();
+    await settle();
+    expect(fake.store.getState().offer).toBeDefined();
+    expect(fake.store.getState().offer?.meter).toBeUndefined();
+  });
+
+  it('locks with the preset meter and its downbeats', async () => {
+    const fake = offered(
+      fakePlayAlong({ grid: DRIFTING, shelf: presetOnSong() }),
+    );
+    await settle();
+    await accepted(fake);
+    expect(fake.store.getState().pattern).toMatchObject(PRESET_METER);
+    expect(fake.grids().at(-1)?.[1]).toEqual(PRESET_DOWNBEATS);
+  });
+
+  it('counts preset bars from the detected bar one after a pickup', async () => {
+    const fake = offered(
+      fakePlayAlong({ grid: PICKUP_GRID, shelf: presetOnSong() }),
+    );
+    await settle();
+    await accepted(fake);
+    expect(fake.grids().at(-1)?.[1]).toEqual(PICKUP_PRESET_DOWNBEATS);
+  });
+
+  it('names and locks with a preset matched by the track, not linked', async () => {
+    const fake = offered(
+      fakePlayAlong({ grid: DRIFTING, shelf: presetOnTrack() }),
+    );
+    await settle();
+    expect(fake.store.getState().offer?.meter).toEqual(PRESET_METER);
+    fake.store.getState().setBeats(initialConfig().beatsPerBar, QUARTER);
+    await accepted(fake);
+    expect(fake.store.getState().pattern).toMatchObject(PRESET_METER);
+    expect(fake.grids().at(-1)?.[1]).toEqual(PRESET_DOWNBEATS);
+  });
+
+  it('names a preset saved while locked once it offers again', async () => {
+    const fake = await accepted();
+    fake.store.getState().setBeats(PRESET_BEATS, QUARTER);
+    await fake.store.getState().saveForTrack();
+    fake.store.getState().unlock();
+    await settle();
+    expect(fake.store.getState().offer?.meter).toEqual(PRESET_METER);
+  });
+
+  it('puts the preset meter back over a meter edited before accepting', async () => {
+    const fake = offered(
+      fakePlayAlong({ grid: DRIFTING, shelf: presetOnSong() }),
+    );
+    await settle();
+    fake.store.getState().setBeats(initialConfig().beatsPerBar, QUARTER);
+    await accepted(fake);
+    expect(fake.store.getState().pattern).toMatchObject(PRESET_METER);
+  });
+
+  it('keeps the detected downbeats without a preset', async () => {
+    const fake = offered();
+    await settle();
+    await accepted(fake);
+    expect(fake.store.getState().pattern.beatsPerBar).toBe(
+      initialConfig().beatsPerBar,
+    );
+    expect(fake.grids().at(-1)?.[1]).toEqual(DRIFTING.downbeatIndices);
+  });
+
+  it('holds the offer until the preset read settles', async () => {
+    const reads = gated(presetOnSong());
+    const fake = offered(fakePlayAlong({ grid: DRIFTING, shelf: reads.shelf }));
+    await settle();
+    expect(fake.store.getState().offer).toBeUndefined();
+    reads.open();
+    await settle();
+    expect(fake.store.getState().offer?.meter).toEqual(PRESET_METER);
+  });
+
+  it('locks with the preset when the offer is replaced while accepting', async () => {
+    const fake = offered(
+      fakePlayAlong({ grid: DRIFTING, shelf: presetOnSong() }),
+    );
+    await settle();
+    const accepting = fake.store.getState().acceptOffer();
+    fake.ladder.found({ ...MATCH, bpm: MATCH.bpm + 1 });
+    expect(await accepting).toMatchObject({ locked: true });
+    expect(fake.store.getState().pattern).toMatchObject(PRESET_METER);
+  });
+
+  it.each(UNGRIDDED_METERS)(
+    'keeps the detected meter for a %i/%i preset',
+    async (beatsPerBar, denominator) => {
+      const shelf = presetShelf([
+        {
+          ...PRESET_ROW,
+          librarySongId: MATCH.id,
+          beatsPerBar,
+          denominator,
+          accents: toBlob(Array<number>(beatsPerBar).fill(0)),
+        },
+      ]);
+      const fake = offered(fakePlayAlong({ grid: DRIFTING, shelf }));
+      await settle();
+      expect(fake.store.getState().offer).toBeDefined();
+      expect(fake.store.getState().offer?.meter).toBeUndefined();
+      await accepted(fake);
+      expect(fake.store.getState().pattern).toMatchObject({
+        beatsPerBar: DRIFTING_BAR,
+        denominator: initialConfig().denominator,
+      });
+      expect(fake.grids().at(-1)?.[1]).toEqual(DRIFTING.downbeatIndices);
+    },
+  );
+
+  it('brings the preset accents back over an edit', async () => {
+    const fake = offered(
+      fakePlayAlong({ grid: DRIFTING, shelf: presetOnSong() }),
+    );
+    await settle();
+    fake.store
+      .getState()
+      .setAccents(
+        Array<KB_ACCENT>(PRESET_BEATS).fill(KB_ACCENT.KB_ACCENT_NORMAL),
+      );
+    await accepted(fake);
+    expect(fake.store.getState().pattern.accents).toEqual(
+      accentsOf(PRESET_ROW.accents),
+    );
+  });
+
+  it('drops a preset read still running when it locks', async () => {
+    const shelf = presetOnSong();
+    const reads = gated(shelf);
+    const fake = offered(fakePlayAlong({ grid: DRIFTING, shelf: reads.shelf }));
+    await settle();
+    locked(fake);
+    await settle();
+    await shelf.repository.update(1, {
+      beatsPerBar: initialConfig().beatsPerBar,
+    });
+    fake.store.getState().unlock();
+    await settle();
+    reads.open();
+    await settle();
+    expect(fake.store.getState().offer?.meter).toEqual({
+      beatsPerBar: initialConfig().beatsPerBar,
+      denominator: QUARTER,
+    });
   });
 });

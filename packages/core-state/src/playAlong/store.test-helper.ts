@@ -66,7 +66,10 @@ function fakeLadder() {
     track: null,
     libraryMatch: null,
     bpm: null,
+    source: null,
+    tapsLanded: 0,
     lookUp,
+    tap: vi.fn(),
     enter: vi.fn((bpm: number) => {
       ladder.setState({ bpm });
     }),
@@ -198,6 +201,7 @@ export function fakePlayAlong({
   downbeatsResult = () => KB_RESULT.KB_OK,
   nowFrame = () => Date.now() * FRAMES_PER_MS,
   shelf = presetShelf(),
+  ladder,
 }: {
   readonly grid?: DetectedGrid;
   readonly gridResult?: number;
@@ -207,6 +211,7 @@ export function fakePlayAlong({
   readonly yieldStandalone?: PlayAlongRuntime['yieldStandalone'];
   readonly nowFrame?: PlayAlongRuntime['nowFrame'];
   readonly shelf?: ReturnType<typeof presetShelf>;
+  readonly ladder?: FollowedLadder;
 } = {}) {
   vi.useFakeTimers({ now: START_MS });
   const calls: string[] = [];
@@ -233,17 +238,25 @@ export function fakePlayAlong({
   const playbackStarted = vi.fn();
   const cardListeners = new Set<(request: PlayAlongCardRequest) => void>();
   const sessionsRead = vi.fn(() => media);
-  const latencyRead = vi.fn(() => LATENCY_MS);
+  let latencyMs = LATENCY_MS;
+  const latencyRead = vi.fn(() => latencyMs);
+  const latencyListeners = new Set<(offsetMs: number) => void>();
   const runtime: PlayAlongRuntime = {
     commands,
     boottimeNowMs: () => Date.now(),
     nowFrame,
     engineFrameAtBoottimeMs: frameAt,
     sessions: sessionsRead,
-    ladder: () => library.ladder,
+    ladder: () => ladder ?? library.ladder,
     readGrid,
     sessionCommand,
     latencyOffsetMs: latencyRead,
+    onLatencyOffset: (listener) => {
+      latencyListeners.add(listener);
+      return () => {
+        latencyListeners.delete(listener);
+      };
+    },
     onClickStarting,
     yieldStandalone: yieldStandalone ?? loggedYield,
     onCardRequest: (listener) => {
@@ -279,6 +292,11 @@ export function fakePlayAlong({
     report: (next: readonly MediaSessionSnapshot[]) => {
       media.setState({ sessions: next });
     },
+    routeLatency: (offsetMs: number) => {
+      latencyMs = offsetMs;
+      for (const listener of [...latencyListeners]) listener(offsetMs);
+    },
+    latencyListeners: () => latencyListeners.size,
     anchors: () => commands.metronomeAnchorExternal.mock.calls,
     grids: () => commands.setGrid.mock.calls,
     gridAnchors: () => commands.metronomeAnchorGrid.mock.calls,
