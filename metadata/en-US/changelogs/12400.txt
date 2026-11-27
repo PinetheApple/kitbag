@@ -1,0 +1,1 @@
+• A song whose beat analysis failed, or whose tempo is wrong, can now get a tempo by hand: type or tap the BPM, mark bar 1 at the playhead, and the click follows it. Re-analysing asks first and never replaces your tempo without your choice.
