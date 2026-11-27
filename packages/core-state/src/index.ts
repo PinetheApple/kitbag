@@ -67,6 +67,15 @@ export {
   tapTempoBpm,
   tapTimeoutMs,
 } from './tapTempo/tapTempo.ts';
+export {
+  MANUAL_BPM_STEP,
+  manualBpm,
+  MANUAL_TEMPO_BOUNDS,
+  pushManualTap,
+  stepManualBpm,
+  tappedManualBpm,
+} from './manualTempo/manualTempo.ts';
+export type { ManualTempo } from '@kitbag/core-db';
 export { useTempoLadder } from './tempoLadder/useTempoLadder.ts';
 export { doubledBpm, halvedBpm } from './tempoLadder/bpmSteps.ts';
 export {

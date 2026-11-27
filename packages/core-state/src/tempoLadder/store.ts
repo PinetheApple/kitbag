@@ -2,13 +2,17 @@ import { songMatchKey, type SongIdentity } from '@kitbag/core-db';
 import { createStore } from 'zustand/vanilla';
 
 import { BPM_BOUNDS, withinBpmBounds } from '../metronome/config.ts';
-import { pushTap, tapTempoBpm } from '../tapTempo/tapTempo.ts';
+import {
+  pushTap,
+  TAPS_TO_SET_TEMPO,
+  tapTempoBpm,
+} from '../tapTempo/tapTempo.ts';
 import { doubledBpm, halvedBpm } from './bpmSteps.ts';
 import { climbLadder, NO_TEMPO, type TempoLookup } from './ladder.ts';
 import { getTempoLadder, type TempoLadderRuntime } from './runtime.ts';
 import { BPM_SOURCE, type BpmSource } from './sources.ts';
 
-export const TAPS_TO_SET_TEMPO = 4;
+export { TAPS_TO_SET_TEMPO };
 
 export interface TempoLadderStore extends TempoLookup {
   readonly track: SongIdentity | null;

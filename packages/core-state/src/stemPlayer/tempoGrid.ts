@@ -17,7 +17,7 @@ const BEAT_TIME_DECIMALS = 6;
 
 export type TempoSong = Pick<
   StemSetRecord,
-  'beats' | 'bars' | 'tempo' | 'chosenTempoMode' | 'stems'
+  'beats' | 'bars' | 'tempo' | 'chosenTempoMode' | 'stems' | 'manualTempo'
 >;
 
 export interface ConstantBeats {
@@ -56,9 +56,14 @@ export function longestSeconds({ stems }: Pick<TempoSong, 'stems'>): number {
 }
 
 export function gridBpm(
-  { bpm, tempo }: Pick<StemSetRecord, 'bpm' | 'tempo'>,
+  {
+    bpm,
+    tempo,
+    manualTempo,
+  }: Pick<StemSetRecord, 'bpm' | 'tempo' | 'manualTempo'>,
   mode: TempoMode | null,
 ): number | null {
+  if (manualTempo !== null) return manualTempo.bpm;
   return mode === TEMPO_MODE.constant ? (tempo?.bpm ?? bpm) : bpm;
 }
 
@@ -69,7 +74,7 @@ export function tempoModeOf({
   return chosenTempoMode ?? tempo?.mode ?? null;
 }
 
-function rebuiltGrid(
+export function constantGrid(
   { bpm, anchor, beatsPerBar }: FittedTempo,
   duration: number,
 ): DetectedGrid {
@@ -88,13 +93,15 @@ export function tempoGrid(
     return stored;
   const { bpm, anchor, beatsPerBar } = tempo;
   if (bpm === null || anchor === null) return stored;
-  return rebuiltGrid({ bpm, anchor, beatsPerBar }, durationSec);
+  return constantGrid({ bpm, anchor, beatsPerBar }, durationSec);
 }
 
 export function effectiveGrid(
   song: TempoSong,
   mode: TempoMode | null = tempoModeOf(song),
 ): DetectedGrid {
+  if (song.manualTempo !== null)
+    return constantGrid(song.manualTempo, longestSeconds(song));
   const stored = {
     beats: song.beats,
     downbeatIndices: barMarkDownbeats(song.bars, song.beats.length),

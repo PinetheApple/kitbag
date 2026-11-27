@@ -8,9 +8,13 @@ configureSongPlayer({
     readSong: () => Promise.resolve(undefined),
     saveSongSpeed: () => Promise.resolve(),
     saveSongChosenTempoMode: () => Promise.resolve(),
+    saveSongManualTempo: () => Promise.resolve(),
     forLibrarySong: () => Promise.resolve(undefined),
     saveForLibrarySong: () =>
       Promise.reject(new Error('The web build has no song library')),
   },
-  library: { correctDuration: () => Promise.resolve() },
+  library: {
+    correctDuration: () => Promise.resolve(),
+    refresh: () => Promise.resolve(),
+  },
 });
