@@ -954,6 +954,11 @@ the single most RN-specific piece of §5** — see §13.9.
   phone call is still a session.
 - **A recents swipe stops all playback** and removes its notifications; Home,
   an app switch, lock and Back keep playing (#338).
+- **Interruptions** (owner, 2026-11-27, #691). Songs and stem songs (§6, §7)
+  take media audio focus while playing and pause on output loss (unplug,
+  Bluetooth drop), a call or a focus loss, never resuming by themselves. The
+  metronome and the Play along click never take focus. The metronome pauses on
+  output loss or a call; the Play along click keeps running (D10, §8.9).
 
 ### 5.7 Practice
 
