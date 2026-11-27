@@ -1,15 +1,13 @@
-import {
-  Button,
-  createThemedStyles,
-  focusReaderOn,
-  onHardwareBack,
-  WindowOverlay,
-  stemSections,
-  stemSectionsText,
-  textStyle,
-} from '@kitbag/core-design';
 import { useEffect } from 'react';
 import { Text, View } from 'react-native';
+
+import { focusReaderOn } from '../readerFocus';
+import { stemSections, stemSectionsText } from '../stemPlayerRoles.ts';
+import { textStyle } from '../textStyle.ts';
+import { createThemedStyles } from '../ThemeProvider.tsx';
+import { Button } from './Button.tsx';
+import { onHardwareBack } from './hardwareBack';
+import { WindowOverlay } from './WindowOverlay.tsx';
 
 const useStyles = createThemedStyles((theme) => ({
   column: {

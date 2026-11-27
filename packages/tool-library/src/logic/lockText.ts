@@ -9,6 +9,7 @@ import {
   type SongPlayerStore,
 } from '@kitbag/core-state';
 
+import { MANUAL_TEMPO_LABEL } from './manualTempoText.ts';
 import { canReanalyze } from './notices.ts';
 import { songStatusBadge, type BadgeSpec } from './rowText.ts';
 
@@ -54,7 +55,8 @@ const PLAYER_NO_GRID: BadgeSpec = {
   tone: 'danger',
 };
 
-function lockSource(speed: number): string {
+function lockSource(speed: number, manual: boolean): string {
+  if (manual) return MANUAL_TEMPO_LABEL;
   const how = isUnitySpeed(speed)
     ? LOCK_PHASE
     : `${speedPercentText(speed)} speed`;
@@ -130,6 +132,7 @@ export interface LockTextInput {
   readonly bpmText: string | null;
   readonly failure: AnalysisFailure | null;
   readonly speed: number;
+  readonly manual: boolean;
 }
 
 export function lockText({
@@ -138,6 +141,7 @@ export function lockText({
   bpmText,
   failure,
   speed,
+  manual,
 }: LockTextInput): LockText {
   switch (badge) {
     case 'pending':
@@ -151,12 +155,12 @@ export function lockText({
       return click
         ? {
             title: 'Metronome locked',
-            detail: withBpm(bpmText, lockSource(speed)),
+            detail: withBpm(bpmText, lockSource(speed, manual)),
             action: 'click',
           }
         : {
             title: 'Click off',
-            detail: withBpm(bpmText, GRID_READY),
+            detail: withBpm(bpmText, manual ? MANUAL_TEMPO_LABEL : GRID_READY),
             action: 'click',
           };
   }

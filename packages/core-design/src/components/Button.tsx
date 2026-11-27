@@ -6,6 +6,7 @@ import {
   bodyLineHeight,
   iconSizes,
   inset,
+  mix,
   opacity,
   radius,
   size,
@@ -14,6 +15,7 @@ import {
   type IconSize,
 } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
+import { mixHex } from '../theme.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 import {
@@ -25,7 +27,8 @@ import {
 } from '../touchTarget.ts';
 import { InlineIcon } from './IconGlyph.tsx';
 
-export type ButtonVariant = 'primary' | 'tonal' | 'ghost' | 'destructive';
+export type ButtonVariant =
+  'primary' | 'tonal' | 'accentTonal' | 'ghost' | 'destructive';
 export type ButtonAlign = 'center' | 'start';
 export type ButtonDisabledLook = 'cleared' | 'outlined' | 'faded';
 export type ButtonSize =
@@ -125,6 +128,14 @@ const useStyles = createThemedStyles((theme) => ({
     backgroundColor: theme.color.surface2,
     borderColor: theme.color.line,
   },
+  accentTonal: {
+    backgroundColor: mixHex(
+      theme.color.accent,
+      theme.color.surface2,
+      mix.accentTonal,
+    ),
+    borderColor: theme.color.accentDim,
+  },
   ghost: {
     backgroundColor: 'transparent',
     borderColor: theme.color.line,
@@ -145,6 +156,9 @@ const useStyles = createThemedStyles((theme) => ({
   },
   tonalLabel: {
     color: theme.color.text,
+  },
+  accentTonalLabel: {
+    color: theme.color[theme.accentInk],
   },
   ghostLabel: {
     color: theme.color.text2,

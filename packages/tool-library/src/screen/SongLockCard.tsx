@@ -53,6 +53,7 @@ export function SongLockCard({ songId }: { readonly songId: number }) {
   const click = useSongPlayer((s) => s.click);
   const badge = useSongPlayer(lockBadgeOf);
   const speed = useSongPlayer((s) => s.speed);
+  const manual = useSongPlayer((s) => s.manualTempo !== null);
   const bpm = bpmFact(useSongPlayer((s) => playedBpm(s.bpm, s.speed)));
   const toggleClick = useLiveSongPlayer((s) => s.toggleClick);
   const viewing = useSongViewing();
@@ -71,6 +72,7 @@ export function SongLockCard({ songId }: { readonly songId: number }) {
     bpmText: bpm?.text ?? null,
     failure,
     speed,
+    manual,
   });
   const row = (
     <View style={[styles.lock, scaled && styles.lockStacked]}>

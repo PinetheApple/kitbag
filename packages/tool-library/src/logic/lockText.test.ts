@@ -19,10 +19,25 @@ const lockOf = (input: Partial<LockTextInput>) =>
     bpmText: null,
     failure: null,
     speed: FULL,
+    manual: false,
     ...input,
   });
 
 describe('lockText', () => {
+  it('marks a manual tempo, without the phase, while the click runs', () => {
+    expect(lockOf({ click: true, bpmText: '128 BPM', manual: true })).toEqual({
+      title: 'Metronome locked',
+      detail: '128 BPM · manual tempo',
+      action: 'click',
+    });
+  });
+
+  it('marks a manual tempo with the click off', () => {
+    expect(lockOf({ bpmText: '66 BPM', manual: true }).detail).toBe(
+      '66 BPM · manual tempo',
+    );
+  });
+
   it('headlines the lock while the click runs', () => {
     expect(lockOf({ click: true, bpmText: '158 BPM' })).toEqual({
       title: 'Metronome locked',

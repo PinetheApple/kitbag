@@ -775,6 +775,7 @@ export {
   type DetectedMeter,
 } from './stemPlayer/meterOverride.ts';
 export { impliedMeter } from './stemPlayer/barMeter.ts';
+export { constantGrid } from './stemPlayer/tempoGrid.ts';
 export {
   GRID_METER,
   GRID_METERS,
@@ -789,8 +790,10 @@ export {
   TEMPO_CORRECTIONS,
   type TempoCorrection,
 } from '@kitbag/core-db';
+export { MS_PER_SECOND } from '@kitbag/core-db';
 export {
   canBuildTempoMode,
+  TEMPO_MIN_ANCHOR_SECONDS,
   TEMPO_MODE,
   TEMPO_SOURCE,
   type BundleTempo,

@@ -1,0 +1,18 @@
+export const manualTempo = {
+  stripHeight: 56,
+  stripRadius: 12,
+  stripBeats: 12,
+  stripBeatsBeforeBarOne: 1,
+  beatMark: 10,
+  downbeatMark: 22,
+  markStroke: 2,
+  markBottom: 4,
+  playheadTop: 4,
+  playheadBottom: 2,
+  stripLabelLeft: 8,
+  stripLabelTop: 4,
+  barOneLabelLeft: 3,
+  barOneLabelBottom: 18,
+  fieldRowMinHeight: 44,
+  entryReasonLines: 2,
+} as const;

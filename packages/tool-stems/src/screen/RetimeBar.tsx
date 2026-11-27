@@ -2,6 +2,7 @@ import {
   AppBar,
   BarIconButton,
   Button,
+  ConfirmDialog,
   createThemedStyles,
   onHardwareBack,
   stemSections,
@@ -16,7 +17,6 @@ import {
   leaveRetimeBody,
   retimeSubtitle,
 } from '../logic/retimeView.ts';
-import { ConfirmDialog } from './ConfirmDialog.tsx';
 
 const NO_NEIGHBOUR_CONTROLS: NeighbourGaps = {};
 
