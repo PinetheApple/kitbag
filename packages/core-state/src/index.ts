@@ -241,7 +241,7 @@ export {
 export { useTools } from './tools/useTools.ts';
 export {
   configureToolsPersistence,
-  createToolsStore,
+  createToolSwitchesStore,
   getToolsStore,
   type ToolsPersistence,
   type ToolsStore,
@@ -253,6 +253,7 @@ export {
   type ToolSwitch,
   type ToolSwitchResult,
 } from './tools/switches.ts';
+export { createToolStore } from './toolStore/createToolStore.ts';
 export { useAppearance } from './appearance/useAppearance.ts';
 export { useGetSongBpmKey } from './getSongBpmKey/useGetSongBpmKey.ts';
 export {

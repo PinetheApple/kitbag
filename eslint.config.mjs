@@ -12,6 +12,12 @@ import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactNative from 'eslint-plugin-react-native';
 import prettier from 'eslint-config-prettier';
+import path from 'node:path';
+
+import {
+  downloadablePackages,
+  downloadableZoneConfig,
+} from './packages/eslint-plugin-kitbag/src/index.ts';
 
 // --- §13.7 shared literals ----------------------------------------------------
 // Numbers ESLint should not flag as "magic". Kept deliberately tiny: the C++
@@ -155,6 +161,19 @@ const REALTIME_SYNTAX = [
     message: REALTIME_STATE_MESSAGE,
   },
 ];
+
+// The downloadable zone replaces the shared rule options for its files, so it
+// carries the root's own import bans and syntax checks along with its own.
+const DOWNLOADABLE_ZONE = downloadableZoneConfig(
+  downloadablePackages(path.join(import.meta.dirname, 'packages')).map(
+    (name) => `packages/${name}/**`,
+  ),
+  {
+    paths: [...FONT_INDEX_IMPORTS, ...NATIVE_ONLY_IMPORTS.paths],
+    patterns: NATIVE_ONLY_IMPORTS.patterns,
+    syntax: [...REALTIME_SYNTAX, ...PICTOGRAPH_SYNTAX],
+  },
+);
 
 export default tseslint.config(
   // --- ignores --------------------------------------------------------------
@@ -396,6 +415,8 @@ export default tseslint.config(
       ),
     },
   },
+
+  ...DOWNLOADABLE_ZONE,
 
   // app-shell — may import everything (§13.1), but is NOT core-native, so the
   // native binding ban still applies: even the shell reaches the engine only

@@ -1,5 +1,5 @@
 import type { IconName, ToolStatus, ToolTileSize } from '@kitbag/core-design';
-import type { ToolPlugin } from '@kitbag/core-plugin-api';
+import type { HomeTileDescriptor, ToolPlugin } from '@kitbag/core-plugin-api';
 import { PLAY_ALONG_NAME } from '@kitbag/tool-sync';
 
 import { TOOL_ID, TOOL_ROUTES } from './toolRoutes.ts';
@@ -92,7 +92,7 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
 ];
 
 export interface BuiltTool extends HomeToolEntry {
-  readonly homeTile: ToolPlugin['homeTile'];
+  readonly homeTile: HomeTileDescriptor;
 }
 
 export const BUILT_TOOLS: readonly BuiltTool[] = HOME_TOOLS.filter(

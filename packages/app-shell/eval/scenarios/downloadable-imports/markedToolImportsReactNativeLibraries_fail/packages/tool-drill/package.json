@@ -1,0 +1,7 @@
+{
+  "name": "@kitbag/tool-drill",
+  "private": true,
+  "kitbag": {
+    "downloadable": true
+  }
+}
