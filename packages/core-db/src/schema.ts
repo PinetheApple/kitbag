@@ -86,7 +86,7 @@ export const songs = sqliteTable('songs', {
 export const songPresets = sqliteTable('song_presets', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
-  bpm: real('bpm').notNull(),
+  bpm: real('bpm'),
   beatsPerBar: integer('beats_per_bar').notNull(),
   subdivision: integer('subdivision').notNull(),
   denominator: integer('denominator').notNull().default(DEFAULT_DENOMINATOR),

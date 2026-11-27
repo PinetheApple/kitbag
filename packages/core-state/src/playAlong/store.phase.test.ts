@@ -17,6 +17,7 @@ import {
   LATENCY_MS,
   locked,
   snapshot,
+  settle,
 } from './store.test-helper.ts';
 
 const MATCH = { kind: 'song', id: 3, bpm: 113 } as const;
@@ -51,10 +52,6 @@ const PRECISION = 9;
 afterEach(() => {
   vi.useRealTimers();
 });
-
-async function settle() {
-  for (let turn = 0; turn < 5; turn++) await Promise.resolve();
-}
 
 async function gridLocked(
   options: Parameters<typeof fakePlayAlong>[0] = { grid: GRID },

@@ -229,6 +229,23 @@ describe('poly cycle through save and load', () => {
     expect(metronome.getState().polyAgainst).toBe(KB_POLY_AGAINST_BAR);
   });
 
+  it('keeps the live tempo when a song saves none', async () => {
+    const { metronome, repos } = setup();
+    metronome.getState().setTempo(137);
+    const song = await repos.presets.create({
+      ...presetFromMetronome(metronome.getState()),
+      name: 'Click only',
+      bpm: null,
+      rampStartBpm: null,
+      rampEndBpm: null,
+      beatsPerBar: 3,
+      accents: toBlob([1, 1, 1]),
+    });
+    applyPreset(song, () => metronome.getState());
+    expect(metronome.getState()).toMatchObject({ bpm: 137, beatsPerBar: 3 });
+    expect(isLoadedSongUnsaved(song, metronome.getState())).toBe(false);
+  });
+
   it('applies the meter before the poly cycle on load', async () => {
     const { library, metronome, commands } = setup();
     const s = library.getState();
