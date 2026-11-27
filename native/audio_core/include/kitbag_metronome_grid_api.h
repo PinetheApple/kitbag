@@ -46,6 +46,19 @@ KB_EXPORT kb_result kb_metronome_set_grid(
     int32_t downbeat_count,
     uint64_t anchor_frame
 );
+/* Replace the downbeats of the grid set by kb_metronome_set_grid, keeping its
+ * beats, its anchor_frame and the kb_metronome_anchor_grid mapping: the click
+ * plays on without a re-seek, every beat sounds once, and from the next beat
+ * the accent follows the new downbeats. downbeat_indices are as in set_grid;
+ * NULL with downbeat_count 0 leaves the grid without downbeats, so no beat is
+ * accented. The grid's grouping and rate still apply. Returns
+ * KB_ERROR_INVALID_ARGUMENT, changing nothing, with no grid set on the selected
+ * slot or for downbeats set_grid would refuse. */
+KB_EXPORT kb_result kb_metronome_set_grid_downbeats(
+    kb_engine* engine,
+    const int32_t* downbeat_indices,
+    int32_t downbeat_count
+);
 /* Return to constant-tempo mode. The click keeps its phase: the first click at
  * the constant tempo falls one whole beat after the last grid beat that
  * sounded, not on the next sample. */
@@ -99,13 +112,36 @@ KB_EXPORT kb_result kb_metronome_set_grid_rate(kb_engine* engine, int32_t rate);
  * does not apply while anchored; the latency offset still lands the click at the
  * speaker, not the buffer.
  * A measured grid set via kb_metronome_set_grid takes precedence: while a grid
- * is set this anchor is a no-op, taking effect only after kb_metronome_clear_grid.
+ * is set this anchor is a no-op, taking effect only after kb_metronome_clear_grid;
+ * kb_metronome_anchor_grid re-anchors a grid.
  * at_frame is exact up to KB_MAX_EXACT_FRAME. */
 KB_EXPORT void kb_metronome_anchor_external(
     kb_engine* engine,
     double song_pos_sec,
     uint64_t at_frame,
     double bpm
+);
+/* Anchor the grid set by kb_metronome_set_grid to an external transport without
+ * moving it. Declares that at engine frame at_frame the song was song_pos_sec
+ * into playback, in song seconds like the grid, and that it advances rate song
+ * seconds per engine second: grid beat t sounds at engine frame
+ * at_frame + (t - song_pos_sec) * sample_rate / rate, moved earlier by the
+ * latency offset. Starts the click on the grid if it was stopped.
+ * Set the grid once per lock and re-anchor with this call. A correction under
+ * half a click interval never sounds a beat twice and never drops one: a beat
+ * it skips over sounds at once, late. A larger move forward is a seek and drops
+ * the beats it skips; a move back of at least one grid interval replays the
+ * beats from the new position; any other move back sounds no beat again.
+ * set_grid resets the mapping to song second 0 at its anchor_frame, rate 1. The
+ * anchor applies to the grid set last on the selected slot: one made before
+ * that set_grid, with no grid set, or while following the mixer is dropped,
+ * as is one with a non-finite song_pos_sec or a rate that is not finite and
+ * positive. at_frame is exact up to KB_MAX_EXACT_FRAME. */
+KB_EXPORT void kb_metronome_anchor_grid(
+    kb_engine* engine,
+    double song_pos_sec,
+    uint64_t at_frame,
+    double rate
 );
 
 #ifdef __cplusplus

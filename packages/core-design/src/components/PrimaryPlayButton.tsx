@@ -9,6 +9,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import {
   iconSizes,
+  opacity,
   pauseGlyphPath,
   playGlyphPath,
   playGlyphPathLarge,
@@ -21,7 +22,7 @@ import { createThemedStyles } from '../ThemeProvider.tsx';
 import type { TransportKeySize } from './TransportKey.tsx';
 
 export type PlayGlyph = 'play' | 'stop';
-export type PlayButtonSize = 'default' | 'large';
+export type PlayButtonSize = 'default' | 'large' | 'dock';
 
 const UNIT = size.playGlyphBox / playGlyphPath.viewBox;
 const GLYPH_HEIGHT = playGlyphPath.height * UNIT;
@@ -110,6 +111,7 @@ const useStyles = createThemedStyles((theme) => ({
     width: stemPlayer.playButton,
     height: stemPlayer.playButton,
   },
+  disabled: { opacity: opacity.muted },
   dockGlyphBox: {
     transform: [{ scale: iconSizes.dockPlay / size.playGlyphBox }],
   },
@@ -150,16 +152,26 @@ export function PrimaryPlayButton({
 }: PrimaryPlayButtonProps) {
   const styles = useStyles();
   const large = buttonSize === 'large';
+  const dock = buttonSize === 'dock';
   const playStyle = large ? styles.playLarge : styles.play;
   const stopStyle = large ? styles.stopLarge : styles.stop;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      style={[styles.button, large && styles.buttonLarge]}
+      style={[
+        styles.button,
+        large && styles.buttonLarge,
+        dock && styles.dockButton,
+      ]}
       onPress={onPress}
     >
-      <View style={large ? styles.glyphBoxLarge : styles.glyphBox}>
+      <View
+        style={[
+          large ? styles.glyphBoxLarge : styles.glyphBox,
+          dock && styles.dockGlyphBox,
+        ]}
+      >
         <View style={glyph === 'play' ? playStyle : stopStyle} />
       </View>
     </Pressable>
@@ -172,6 +184,7 @@ export interface PlayPauseButtonProps {
   readonly pauseLabel: string;
   readonly onPress: () => void;
   readonly size?: TransportKeySize;
+  readonly disabled?: boolean;
 }
 
 // Glyphs follow the engine's playing flag on the UI thread; only the spoken
@@ -199,6 +212,7 @@ export function PlayPauseButton({
   pauseLabel,
   onPress,
   size: buttonSize = 'standard',
+  disabled = false,
 }: PlayPauseButtonProps) {
   const styles = useStyles();
   const dock = buttonSize === 'dock';
@@ -207,7 +221,13 @@ export function PlayPauseButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={isPlaying ? pauseLabel : playLabel}
-      style={[styles.button, dock && styles.dockButton]}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      style={[
+        styles.button,
+        dock && styles.dockButton,
+        disabled && styles.disabled,
+      ]}
       onPress={onPress}
     >
       <View style={[styles.glyphBox, dock && styles.dockGlyphBox]}>

@@ -38,8 +38,10 @@ describe('continueTarget', () => {
     ).toBe('/stems');
   });
 
-  it('never resumes an upcoming tool', () => {
-    expect(continueTarget(TOOL_ID.sync, HOME_TOOLS, ALL_ON)).toBeUndefined();
+  it('resumes Play along', () => {
+    expect(
+      continueTarget(TOOL_ID.sync, HOME_TOOLS, ALL_ON)?.homeTile?.route,
+    ).toBe('/sync');
   });
 
   it('opens Songs and Stem songs on their own screens, with no filter', () => {

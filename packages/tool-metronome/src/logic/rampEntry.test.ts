@@ -1,12 +1,12 @@
+import {
+  confirmNumpadEntry,
+  openNumpadEntry,
+  pressNumpadDigit,
+  type NumpadEntry,
+} from '@kitbag/core-design';
+import type { BpmBounds } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
-import type { BpmBounds } from '@kitbag/core-state';
-import {
-  confirmEntry,
-  openEntry,
-  pressDigit,
-  type NumpadEntry,
-} from './numpad.ts';
 import { RAMP_BPM_ENTRY, withRampBpm, type RampBpmField } from './rampEntry.ts';
 
 const BOUNDS: BpmBounds = { min: 20, max: 400 };
@@ -14,10 +14,10 @@ const RAMP = { startBpm: 100, targetBpm: 140, loop: false };
 
 const typeInto = (field: RampBpmField, digits: readonly number[]) => {
   const entry = digits.reduce<NumpadEntry>(
-    (current, digit) => pressDigit(current, digit, BOUNDS),
-    openEntry(RAMP[field]),
+    (current, digit) => pressNumpadDigit(current, digit, BOUNDS),
+    openNumpadEntry(RAMP[field]),
   );
-  const typed = confirmEntry(entry, BOUNDS);
+  const typed = confirmNumpadEntry(entry, BOUNDS);
   return typed === undefined ? RAMP : withRampBpm(RAMP, field, typed);
 };
 

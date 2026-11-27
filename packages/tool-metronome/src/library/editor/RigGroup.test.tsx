@@ -9,11 +9,16 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 import { songPreset } from '../../logic/fixtures.test-helper.ts';
-import { draftFrom } from '../../logic/presetDraft.ts';
+import {
+  draftFrom,
+  editFrom,
+  type PresetDraft,
+} from '../../logic/presetDraft.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const tracks = vi.hoisted(() => [] as Props[]);
+const steppers = vi.hoisted(() => [] as Props[]);
 
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
@@ -30,7 +35,10 @@ vi.mock('@kitbag/core-design', async (original) => {
     EditGroup: passThrough,
     EditRow: passThrough,
     EditValue: passThrough,
-    StepControl: () => null,
+    StepControl: (props: Props) => {
+      steppers.push(props);
+      return null;
+    },
     SegmentedControl: (props: Props) => {
       tracks.push(props);
       return null;
@@ -39,7 +47,7 @@ vi.mock('@kitbag/core-design', async (original) => {
 });
 
 vi.mock('../../screen/SoundSheet.tsx', () => ({
-  SoundPickerSheet: () => null,
+  MetronomeSoundSheet: () => null,
 }));
 vi.mock('../../screen/CustomSounds.tsx', () => ({
   useCustomSoundViews: () => [],
@@ -89,6 +97,26 @@ describe('preset editor rig tracks', () => {
     expect(verticalGaps()['Ramp interval unit']).toEqual({
       top: space.controlGap,
       bottom: EDIT_ROW_CONTROL_GAP,
+    });
+  });
+});
+
+describe('preset editor ramp tempos', () => {
+  it('save the ramp start once it is stepped on a song with no tempo', () => {
+    let draft = draftFrom(
+      songPreset({ bpm: null, rampStartBpm: null, rampEndBpm: null }),
+    );
+    const update = (change: (d: PresetDraft) => PresetDraft) => {
+      draft = change(draft);
+    };
+    steppers.length = 0;
+    const editor = { draft, dirty: false, update, save: vi.fn() };
+    renderToStaticMarkup(createElement(RigGroup, { editor, bottomInset: 0 }));
+    const from = steppers.find((props) => props.label === 'Ramp from');
+    (from?.onStep as (delta: number) => void)(1);
+    expect(editFrom(draft)).toMatchObject({
+      rampStartBpm: draft.ramp.startBpm,
+      rampEndBpm: null,
     });
   });
 });

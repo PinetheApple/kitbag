@@ -11,6 +11,10 @@ internal object EngineTransport {
 
   fun stop() = nativeStop()
 
+  fun stopPlayAlongClick() = nativePlayAlongClickStop()
+
+  fun endPlayAlong() = nativePlayAlongEnd()
+
   fun setTempo(bpm: Double) = nativeSetTempo(bpm)
 
   fun currentBpm(): Double = nativeCurrentBpm()
@@ -38,6 +42,8 @@ internal object EngineTransport {
   private external fun nativeStart()
   private external fun nativePause()
   private external fun nativeStop()
+  private external fun nativePlayAlongClickStop()
+  private external fun nativePlayAlongEnd()
   private external fun nativeSetTempo(bpm: Double)
   private external fun nativeCurrentBpm(): Double
   private external fun nativeMixerPlay()

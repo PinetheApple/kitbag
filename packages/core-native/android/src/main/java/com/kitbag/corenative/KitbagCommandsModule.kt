@@ -34,6 +34,8 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private val songStoppedListener: () -> Unit = ::emitOnSongStopped
   private val songEndedListener: () -> Unit = ::emitOnSongEnded
   private val songRequestListener: (SongCommand, Int) -> Unit = ::emitSongRequest
+  private val songStartedListener: () -> Unit = ::emitOnSongCardStarted
+  private val playAlongListener: (PlayAlongCardAction) -> Unit = ::emitPlayAlongRequest
   private val outputRoutes =
     OutputRouteWatcher(reactContext, ::outputDeviceId, ::emitOutputRoute)
 
@@ -46,7 +48,17 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     PlaybackService.songStoppedListener = songStoppedListener
     PlaybackService.songEndedListener = songEndedListener
     PlaybackService.songRequestListener = songRequestListener
+    PlaybackService.songStartedListener = songStartedListener
+    PlayAlongService.requestListener = playAlongListener
+    endOrphanedFollow(reactContext)
     outputRoutes.start()
+  }
+
+  // A reloaded JS has no follow, so a card still up from the old one would hold a click no one ends.
+  private fun endOrphanedFollow(context: ReactApplicationContext) {
+    if (!PlayAlongService.following) return
+    EngineTransport.endPlayAlong()
+    PlayAlongService.hide(context)
   }
 
   // A reloaded module's init can run before the old one's invalidate.
@@ -60,6 +72,12 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     }
     if (PlaybackService.songRequestListener === songRequestListener) {
       PlaybackService.songRequestListener = null
+    }
+    if (PlaybackService.songStartedListener === songStartedListener) {
+      PlaybackService.songStartedListener = null
+    }
+    if (PlayAlongService.requestListener === playAlongListener) {
+      PlayAlongService.requestListener = null
     }
     outputRoutes.stop()
     super.invalidate()
@@ -120,6 +138,21 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     PlaybackService.hideSong(reactApplicationContext)
   }
 
+  override fun playAlongCardShow(state: ReadableMap) {
+    PlayAlongService.show(
+      reactApplicationContext,
+      PlayAlongCard(
+        app = state.getString("app").orEmpty(),
+        title = state.getString("title"),
+        playing = state.getBoolean("playing"),
+      ),
+    )
+  }
+
+  override fun playAlongCardHide() {
+    PlayAlongService.hide(reactApplicationContext)
+  }
+
   override fun setKeepScreenOn(on: Boolean) {
     val activity = reactApplicationContext.currentActivity ?: return
     activity.runOnUiThread {
@@ -163,6 +196,10 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
         if (request is SongCommand.Seek) putDouble("frame", request.frame.toDouble()) else putNull("frame")
       },
     )
+  }
+
+  private fun emitPlayAlongRequest(action: PlayAlongCardAction) {
+    emitOnPlayAlongCard(Arguments.createMap().apply { putString("action", action.wire) })
   }
 
   override fun getOutputRoute(promise: Promise) {
@@ -233,6 +270,10 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     nativeMetronomeAnchorExternal(songPosSec, atFrame, bpm)
   }
 
+  override fun metronomeAnchorGrid(songPosSec: Double, atFrame: Double, rate: Double) {
+    nativeMetronomeAnchorGrid(songPosSec, atFrame, rate)
+  }
+
   override fun setTempo(bpm: Double) {
     nativeSetTempo(bpm)
   }
@@ -267,6 +308,11 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   override fun setGridRate(rate: Double, promise: Promise) {
     promise.resolve(nativeSetGridRate(rate.toInt()))
+  }
+
+  override fun metronomeSetGridDownbeats(downbeatIndices: ReadableArray, promise: Promise) {
+    val indices = IntArray(downbeatIndices.size()) { i -> downbeatIndices.getInt(i) }
+    promise.resolve(nativeSetGridDownbeats(indices))
   }
 
   override fun metronomeFollowMixer(enabled: Boolean) {
@@ -518,6 +564,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeMetronomePause()
   private external fun nativeMetronomeSelectSlot(slot: Int)
   private external fun nativeMetronomeAnchorExternal(songPosSec: Double, atFrame: Double, bpm: Double)
+  private external fun nativeMetronomeAnchorGrid(songPosSec: Double, atFrame: Double, rate: Double)
   private external fun nativeSetTempo(bpm: Double)
   private external fun nativeSetGrid(
     beatTimesSec: DoubleArray,
@@ -527,6 +574,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeSetBeats(beatsPerBar: Int, denominator: Int)
   private external fun nativeSetGridGrouping(sizes: IntArray): Int
   private external fun nativeSetGridRate(rate: Int): Int
+  private external fun nativeSetGridDownbeats(indices: IntArray): Int
   private external fun nativeSetSubdivision(subdivision: Int)
   private external fun nativeSetSubdivisionAccents(subdivision: Int, slotMask: Int)
   private external fun nativeSetAccent(beatIndex: Int, accent: Int)

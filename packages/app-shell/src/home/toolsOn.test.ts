@@ -21,8 +21,14 @@ describe('toolOnTest', () => {
     expect(toolOnTest([TOOL_ID.tuner])(TOOL_ID.tuner)).toBe(false);
   });
 
-  it('never switches off a tool that is not built', () => {
-    expect(toolOnTest([TOOL_ID.sync])(TOOL_ID.sync)).toBe(true);
+  it('never switches off a tool the Tools screen does not list', () => {
+    expect(toolOnTest([TOOL_ID.practiceHistory])(TOOL_ID.practiceHistory)).toBe(
+      true,
+    );
+  });
+
+  it('switches Play along off like any built tool', () => {
+    expect(toolOnTest([TOOL_ID.sync])(TOOL_ID.sync)).toBe(false);
   });
 });
 

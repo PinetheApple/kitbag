@@ -35,10 +35,24 @@ const first = <T>(list: T[]): T => {
 
 describe('backup validation', () => {
   it('refuses a newer version by number', async () => {
-    expect(await rejected((file) => (file.version = 5))).toEqual({
+    expect(await rejected((file) => (file.version = 6))).toEqual({
       kind: 'unsupportedVersion',
-      version: 5,
+      version: 6,
     });
+  });
+
+  it('restores a v4 file, from before a song could save no tempo', async () => {
+    const source = openBackupDatabase();
+    await seed(source);
+    const file = JSON.parse(await source.backup.export()) as Mutable;
+    file.version = 4;
+    const target = openBackupDatabase();
+    const plan = await target.backup.plan(JSON.stringify(file), {
+      categories: CATEGORIES,
+    });
+    if (!plan.ok) throw new Error(plan.error.kind);
+    expect((await target.backup.apply(plan.value)).ok).toBe(true);
+    expect(await records(target)).toEqual(await records(source));
   });
 
   it('refuses a v3 file by number', async () => {

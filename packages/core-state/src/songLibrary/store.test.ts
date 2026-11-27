@@ -165,7 +165,7 @@ describe('song library store', () => {
 
   it('does nothing when the picker is cancelled', async () => {
     const { store, files } = setup(
-      fakeFiles({ pickDocument: vi.fn(() => Promise.resolve(null)) }),
+      fakeFiles({ pickDocuments: vi.fn(() => Promise.resolve([])) }),
     );
     await store.getState().importSong();
     expect(files.importAudio).not.toHaveBeenCalled();
@@ -192,12 +192,14 @@ describe('song library store', () => {
   it('refuses a format the core cannot open before copying, naming it', async () => {
     const { store, files } = setup(
       fakeFiles({
-        pickDocument: vi.fn(() =>
-          Promise.resolve({
-            uri: 'content://voice-memo',
-            name: 'Voice memo.m4a',
-            mimeType: 'audio/mp4',
-          }),
+        pickDocuments: vi.fn(() =>
+          Promise.resolve([
+            {
+              uri: 'content://voice-memo',
+              name: 'Voice memo.m4a',
+              mimeType: 'audio/mp4',
+            },
+          ]),
         ),
       }),
     );
@@ -227,12 +229,14 @@ describe('song library store', () => {
   it('refuses an M4A that Android labels as MP3, by its extension', async () => {
     const { store, files } = setup(
       fakeFiles({
-        pickDocument: vi.fn(() =>
-          Promise.resolve({
-            uri: 'content://mislabelled',
-            name: 'Mislabelled.m4a',
-            mimeType: 'audio/mpeg',
-          }),
+        pickDocuments: vi.fn(() =>
+          Promise.resolve([
+            {
+              uri: 'content://mislabelled',
+              name: 'Mislabelled.m4a',
+              mimeType: 'audio/mpeg',
+            },
+          ]),
         ),
       }),
     );
@@ -248,12 +252,14 @@ describe('song library store', () => {
     let importingWhileSniffed: readonly string[] = [];
     const { store, files } = setup(
       fakeFiles({
-        pickDocument: vi.fn(() =>
-          Promise.resolve({
-            uri: 'content://tone-noext',
-            name: 'tone-noext',
-            mimeType: 'audio/mpeg',
-          }),
+        pickDocuments: vi.fn(() =>
+          Promise.resolve([
+            {
+              uri: 'content://tone-noext',
+              name: 'tone-noext',
+              mimeType: 'audio/mpeg',
+            },
+          ]),
         ),
         sniffUnsupportedFormat: vi.fn(() => {
           importingWhileSniffed = store.getState().importing;

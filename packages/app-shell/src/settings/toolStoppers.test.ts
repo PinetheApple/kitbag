@@ -8,16 +8,20 @@ function fakeTools(
   running: boolean,
   stemSetId: number | null,
   songId: number | null = null,
+  lock?: object,
 ) {
   const release = vi.fn();
   const close = vi.fn();
   const closeSong = vi.fn();
+  const unlock = vi.fn();
+  const stopClick = vi.fn();
   const stoppers = toolStoppers({
     metronome: { active: () => running, release },
     stemPlayer: { getState: () => ({ setId: stemSetId, close }) },
     songPlayer: { getState: () => ({ songId, close: closeSong }) },
+    playAlong: { getState: () => ({ lock, unlock, stopClick }) },
   });
-  return { stoppers, release, close, closeSong };
+  return { stoppers, release, close, closeSong, unlock, stopClick };
 }
 
 describe('toolStoppers', () => {
@@ -55,6 +59,20 @@ describe('toolStoppers', () => {
     const { stoppers, closeSong } = fakeTools(false, null);
     stoppers[TOOL_ID.library]?.();
     expect(closeSong).not.toHaveBeenCalled();
+  });
+
+  it('unlocks a following Play along and stops its click', () => {
+    const { stoppers, unlock, stopClick } = fakeTools(false, null, null, {});
+    stoppers[TOOL_ID.sync]?.();
+    expect(unlock).toHaveBeenCalledOnce();
+    expect(stopClick).toHaveBeenCalledOnce();
+  });
+
+  it('stops a click-alone Play along without unlocking', () => {
+    const { stoppers, unlock, stopClick } = fakeTools(false, null);
+    stoppers[TOOL_ID.sync]?.();
+    expect(unlock).not.toHaveBeenCalled();
+    expect(stopClick).toHaveBeenCalledOnce();
   });
 });
 

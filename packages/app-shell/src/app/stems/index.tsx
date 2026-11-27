@@ -13,7 +13,7 @@ import { useLibraryFolder } from '@/dataFolder/useLibraryFolder';
 import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
 import { DockedMiniPlayer } from '@/miniPlayer/DockedMiniPlayer';
-import { useMiniPlayerDocked } from '@/miniPlayer/useMiniPlayerDocked';
+import { useAnyMiniPlayerDocked } from '@/miniPlayer/useMiniPlayerDocked';
 import { useQueueSheet } from '@/queue/useQueueSheet';
 import { ADD_STEM_SONGS, useLibraryRoutes } from '@/runtime/libraryRoutes';
 import { useStemDeckRoutes } from '@/runtime/stemDeckRoutes';
@@ -29,7 +29,7 @@ function StemSongsRoute() {
   const [adding, setAdding] = useState(params[ADD_STEM_SONGS] !== undefined);
   const showImport = useStemDeck((s) => importCardShows(s.importView));
   const folder = useLibraryFolder('stems');
-  const docked = useMiniPlayerDocked();
+  const docked = useAnyMiniPlayerDocked();
   const queue = useQueueSheet(insets.bottom);
 
   useEffect(() => {

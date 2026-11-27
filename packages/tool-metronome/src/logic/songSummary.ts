@@ -1,4 +1,4 @@
-import { countLabel } from '@kitbag/core-design';
+import { countLabel, TEXT_PLACEHOLDER } from '@kitbag/core-design';
 import { KB_COUNT_IN_OFF } from '@kitbag/core-native';
 import {
   soundLabel,
@@ -8,15 +8,18 @@ import {
 } from '@kitbag/core-state';
 
 import { countInLabel } from './countIn.ts';
-import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
 import { rampChipValue } from './trainer.ts';
+
+export const TEMPO_FROM_SONG = 'Tempo from the song';
 
 function modifier(
   preset: SongPreset,
   custom: readonly CustomSoundView[],
 ): string {
-  if (preset.rampEnabled) {
-    return `ramp ${rampChipValue(preset.rampStartBpm ?? preset.bpm, preset.rampEndBpm ?? preset.bpm)}`;
+  const rampStart = preset.rampStartBpm ?? preset.bpm;
+  const rampEnd = preset.rampEndBpm ?? preset.bpm;
+  if (preset.rampEnabled && rampStart !== null && rampEnd !== null) {
+    return `ramp ${rampChipValue(rampStart, rampEnd)}`;
   }
   if ((preset.notes ?? '') !== '') return 'notes';
   const countIn = countInBarsFromOption(String(preset.countInBars));
@@ -31,7 +34,9 @@ export function songSubtitle(
   custom: readonly CustomSoundView[] = [],
 ): string {
   const signature = `${String(preset.beatsPerBar)}/${String(preset.denominator)}`;
-  return `${String(Math.round(preset.bpm))} · ${signature} · ${modifier(preset, custom)}`;
+  const tempo =
+    preset.bpm === null ? TEMPO_FROM_SONG : String(Math.round(preset.bpm));
+  return [tempo, signature, modifier(preset, custom)].join(' · ');
 }
 
 export function setlistSubtitle(

@@ -209,6 +209,7 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
     SOUND_ROLE,
     SOUND_ROLE_OPTIONS,
     layoutBeatLeds,
+    ledStateFor,
     soundLabel,
     soundPickerLabel,
     soundsWith,
@@ -241,6 +242,7 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
     SOUND_ROLE: unknown;
     SOUND_ROLE_OPTIONS: unknown;
     layoutBeatLeds: unknown;
+    ledStateFor: unknown;
     soundLabel: unknown;
     soundPickerLabel: unknown;
     soundsWith: unknown;
@@ -330,6 +332,7 @@ export async function coreStateMock(original: <T>() => Promise<T>) {
     SOUND_ROLE,
     SOUND_ROLE_OPTIONS,
     layoutBeatLeds,
+    ledStateFor,
     soundLabel,
     soundPickerLabel,
     soundsWith,

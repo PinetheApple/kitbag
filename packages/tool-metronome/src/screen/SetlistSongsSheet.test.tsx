@@ -9,6 +9,7 @@ import { entry } from '../logic/fixtures.test-helper.ts';
 const SETLIST_ID = 4;
 const NIGHT_BUS = 9;
 const STEM_ITEM = 2;
+const UNTIMED_ITEM = 3;
 
 const fake = vi.hoisted(() => ({
   openStemEntry: vi.fn(() => Promise.resolve(true)),
@@ -39,6 +40,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
         [SETLIST_ID]: [
           entry(1, 'Warm-up'),
           { kind: 'stem', item: { id: STEM_ITEM }, stemSetId: NIGHT_BUS },
+          entry(UNTIMED_ITEM, 'Saved', null),
         ],
       },
       loadSong: vi.fn(),
@@ -108,5 +110,24 @@ describe('a stem row in the setlist song list', () => {
     const [stopped] = fake.stop.mock.invocationCallOrder;
     const [opened] = onOpenStemSet.mock.invocationCallOrder;
     expect(stopped).toBeLessThan(opened ?? 0);
+  });
+});
+
+describe('a song that saves no tempo in the setlist song list', () => {
+  it('reads as the song’s tempo and carries no stems badge', () => {
+    const tree = mount();
+    const row = tree.root.find(
+      (node) =>
+        node.type === ('Pressable' as never) &&
+        node.props.accessibilityLabel === '3. Saved, Tempo from the song',
+    );
+    expect(row.findAll((node) => node.type === ('Badge' as never))).toEqual([]);
+    expect(
+      row.findAll(
+        (node) =>
+          node.type === ('Text' as never) &&
+          node.props.children === 'Tempo from the song',
+      ),
+    ).toHaveLength(1);
   });
 });

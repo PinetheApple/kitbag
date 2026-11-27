@@ -1,7 +1,7 @@
+import { TEXT_PLACEHOLDER } from '@kitbag/core-design';
 import { describe, expect, it } from 'vitest';
 
 import { setlistTitle } from './songSummary.ts';
-import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
 
 describe('setlistTitle', () => {
   it('shows the setlist name once it has loaded', () => {

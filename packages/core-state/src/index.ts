@@ -1,4 +1,5 @@
 export { useMetronome } from './metronome/useMetronome.ts';
+export { useHoldEngine } from './metronome/useHoldEngine.ts';
 export { practiceElapsedMs, type PracticeClock } from './metronome/practice.ts';
 export {
   BPM_BOUNDS,
@@ -39,6 +40,7 @@ export {
 } from './metronome/standalone.ts';
 export {
   configureStandaloneMetronomePersistence,
+  flushStandaloneMetronomePersistence,
   reloadStandaloneMetronomePersistence,
   type StandaloneMetronomePersistence,
 } from './metronome/standalonePersistence.ts';
@@ -66,6 +68,7 @@ export {
   tapTimeoutMs,
 } from './tapTempo/tapTempo.ts';
 export { useTempoLadder } from './tempoLadder/useTempoLadder.ts';
+export { doubledBpm, halvedBpm } from './tempoLadder/bpmSteps.ts';
 export {
   tempoLadderStore,
   TAPS_TO_SET_TEMPO,
@@ -96,7 +99,13 @@ export {
   type LadderRung,
   type SourceCredit,
 } from './tempoLadder/sources.ts';
-export { layoutBeatLeds, type LedRowLayout } from './metronome/ledLayout.ts';
+export {
+  layoutBeatLeds,
+  ledStateFor,
+  ledStatesFor,
+  type AccentLedState,
+  type LedRowLayout,
+} from './metronome/ledLayout.ts';
 export { countInBarsFromOption } from './metronome/countInOption.ts';
 export {
   effectivePolyAgainst,
@@ -234,6 +243,16 @@ export {
   type ToolSwitchResult,
 } from './tools/switches.ts';
 export { useAppearance } from './appearance/useAppearance.ts';
+export { useGetSongBpmKey } from './getSongBpmKey/useGetSongBpmKey.ts';
+export {
+  configureGetSongBpmKeyPersistence,
+  createGetSongBpmKeyStore,
+  getGetSongBpmKeyStore,
+  hasGetSongBpmKey,
+  NO_GET_SONG_BPM_KEY,
+  type GetSongBpmKeyPersistence,
+  type GetSongBpmKeyStore,
+} from './getSongBpmKey/store.ts';
 export {
   configureAppearancePersistence,
   createAppearanceStore,
@@ -597,16 +616,43 @@ export {
   REANCHOR_INTERVAL_MS,
   SEEK_JUMP_MS,
   SOURCE_GONE_HOLD_MS,
-  TAP_REFUSAL,
+  LOCK_REFUSAL,
   type PlayAlongActions,
   type PlayAlongLock,
   type PlayAlongState,
   type PlayAlongStore,
   type PlayAlongTrack,
-  type TapOutcome,
-  type TapRefusal,
+  type LockOutcome,
+  type LockRefusal,
 } from './playAlong/store.ts';
+export type {
+  LibraryOffer,
+  LibraryOfferActions,
+  LibraryOfferState,
+} from './playAlong/libraryOffer.ts';
+export type {
+  ClickAloneActions,
+  ClickAloneState,
+} from './playAlong/clickAlone.ts';
+export {
+  DEFAULT_PHASE_STEP_MS,
+  PHASE_STEPS_MS,
+  phaseLimitMs,
+  type LockPhase,
+  type PhaseActions,
+  type PhaseState,
+  type PhaseStepMs,
+} from './playAlong/phase.ts';
+export { UNLOCK_REASON, type UnlockReason } from './playAlong/lockOutcome.ts';
+export {
+  SAVE_REFUSAL,
+  type SaveOutcome,
+  type SaveRefusal,
+  type TrackPresetActions,
+  type TrackPresetState,
+} from './playAlong/trackPreset.ts';
 export type { PlayAlongPattern } from './playAlong/pattern.ts';
+export { extrapolatedPositionMs } from './playAlong/position.ts';
 export type { PlayAlongRuntime } from './playAlong/runtime.ts';
 export { useSwipeHint } from './firstUse/useSwipeHint.ts';
 export {
@@ -666,6 +712,8 @@ export {
   secondsToFrames,
 } from './stemPlayer/time.ts';
 export { SKIP_SECONDS } from './stemPlayer/songTransport.ts';
+export { onSongStarting } from './stemPlayer/songStarting.ts';
+export { onMixerSeek } from './stemPlayer/mixerSeeked.ts';
 export { ADVANCE_OUTCOME, type AdvanceOutcome } from './stemPlayer/songEnd.ts';
 export { RETIME_PLAYBACK_RATE } from './stemPlayer/retimeSpeed.ts';
 export {
@@ -908,6 +956,12 @@ export {
   releaseStaleSounds,
 } from './clickSounds/released.ts';
 export { useClickSounds } from './clickSounds/useClickSounds.ts';
+export {
+  useSoundPicker,
+  type SoundPicker,
+  type SoundPreview,
+  type SoundsUpdate,
+} from './clickSounds/useSoundPicker.ts';
 export type {
   ClickSoundNotice,
   ClickSoundProblem,
@@ -920,6 +974,7 @@ export {
   customSoundViews,
   rolesUsing,
   SOUND_OPTIONS,
+  SOUND_PICKER_HINT,
   SOUND_ROLE,
   SOUND_ROLE_OPTIONS,
   soundChipLabel,

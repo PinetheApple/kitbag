@@ -1,4 +1,5 @@
 import {
+  beatLabel,
   BeatLedRow,
   Button,
   PickerGrid,
@@ -11,6 +12,7 @@ import { KB_STOPPED_BEAT } from '@kitbag/core-native';
 import {
   countInBarsFromOption,
   layoutBeatLeds,
+  ledStateFor,
   SOUND_OPTIONS,
   SOUND_ROLE,
   SOUND_ROLE_OPTIONS,
@@ -25,7 +27,6 @@ import { useCallback, useMemo, useRef, useState, type RefObject } from 'react';
 import { View, type ViewInstance } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
-import { accentLedLabel, accentLedState } from '../logic/accentLeds.ts';
 import {
   CLICK_GROUP,
   COUNT_IN_OPTIONS,
@@ -120,7 +121,7 @@ function AccentsGroup({ headerRef }: Pick<GroupHeaderProps, 'headerRef'>) {
   const accents = useSongPlayer((s) => s.clickSettings.accents);
   const cycle = useSongPlayer((s) => s.cycleClickAccent);
   const layout = useMemo(() => layoutBeatLeds(accents.length), [accents]);
-  const states = useMemo(() => accents.map(accentLedState), [accents]);
+  const states = useMemo(() => accents.map(ledStateFor), [accents]);
   return (
     <>
       <GroupHeader label={SONG_CLICK_TEXT.accents} headerRef={headerRef} />
@@ -129,7 +130,7 @@ function AccentsGroup({ headerRef }: Pick<GroupHeaderProps, 'headerRef'>) {
           layout={layout}
           states={states}
           activeBeat={silent}
-          ledLabel={accentLedLabel}
+          ledLabel={beatLabel}
           onPressBeat={cycle}
         />
       </View>

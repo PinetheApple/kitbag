@@ -8,7 +8,8 @@ import type {
   subscribeMediaSessions,
 } from '@kitbag/core-native';
 
-import { configuredStore } from '../configuredStore.ts';
+import type { SeenFlagPersistence } from '../firstUse/store.ts';
+import { persistedStore } from '../persistedStore.ts';
 
 export interface SessionChoice {
   readonly chosenId: string | undefined;
@@ -31,6 +32,7 @@ export interface MediaSessionsSource {
 export interface MediaSessionsRuntime {
   readonly source: MediaSessionsSource;
   readonly choose: SessionChooser;
+  readonly explainerDeclined: SeenFlagPersistence;
 }
 
 export interface MediaSessionsStore extends SessionChoice {
@@ -41,6 +43,8 @@ export interface MediaSessionsStore extends SessionChoice {
   readonly openSettings: () => Promise<boolean>;
   readonly pick: (sessionId: string) => void;
   readonly command: (command: MediaSessionCommand) => void;
+  readonly explainerDeclined: boolean;
+  readonly declineExplainer: () => void;
 }
 
 const ignore = (): undefined => undefined;
@@ -54,6 +58,7 @@ const unsupported: MediaSessionsRuntime = {
     rearm: ignore,
   },
   choose: ignore,
+  explainerDeclined: { load: () => false, save: ignore },
 };
 
 const liveId = (
@@ -64,10 +69,10 @@ const liveId = (
     ? sessionId
     : undefined;
 
-const mediaSessions = configuredStore<MediaSessionsRuntime, MediaSessionsStore>(
+const mediaSessions = persistedStore<MediaSessionsRuntime, MediaSessionsStore>(
   'Media sessions',
   unsupported,
-  ({ source, choose }, { getState, setState }) => {
+  ({ source, choose, explainerDeclined }, commit, { getState, setState }) => {
     const settle = (
       sessions: readonly MediaSessionSnapshot[],
       wantedId = getState().pickedId,
@@ -107,6 +112,10 @@ const mediaSessions = configuredStore<MediaSessionsRuntime, MediaSessionsStore>(
       command: (command) => {
         const { chosenId } = getState();
         if (chosenId !== undefined) source.command(chosenId, command);
+      },
+      explainerDeclined: explainerDeclined.load(),
+      declineExplainer: () => {
+        commit('explainerDeclined', true, explainerDeclined.save);
       },
     };
   },

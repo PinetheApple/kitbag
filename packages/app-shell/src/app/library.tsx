@@ -8,7 +8,7 @@ import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
 import { useToolOn } from '@/home/toolsOn';
 import { DockedMiniPlayer } from '@/miniPlayer/DockedMiniPlayer';
-import { useMiniPlayerDocked } from '@/miniPlayer/useMiniPlayerDocked';
+import { useAnyMiniPlayerDocked } from '@/miniPlayer/useMiniPlayerDocked';
 import { useQueueSheet } from '@/queue/useQueueSheet';
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
@@ -17,7 +17,7 @@ function SongsRoute() {
   const routes = useLibraryRoutes();
   const markUsed = useLastTool((s) => s.markUsed);
   const metronomeOn = useToolOn()(TOOL_ID.metronome);
-  const docked = useMiniPlayerDocked();
+  const docked = useAnyMiniPlayerDocked();
   const folder = useLibraryFolder('songs');
   const queue = useQueueSheet(insets.bottom);
 

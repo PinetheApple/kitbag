@@ -17,6 +17,7 @@ import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { radii, type ColorToken } from '../tokens.ts';
 import { EllipsizedText } from './EllipsizedText.tsx';
 import { Icon } from './Icon.tsx';
+import { LiveDot } from './LiveDot.tsx';
 import { SwitchTrack } from './Switch.tsx';
 
 const useStyles = createThemedStyles((theme) => ({
@@ -49,19 +50,30 @@ const useStyles = createThemedStyles((theme) => ({
   subtitle: { ...textStyle(textRoles.rowSubtitle), color: theme.color.text2 },
   bodyLinesTitle: { lineHeight: rowLineHeight.title },
   bodyLinesSubtitle: { lineHeight: rowLineHeight.subtitle },
+  liveLine: { flexDirection: 'row', alignItems: 'center', gap: space.chipGap },
 }));
 
 export interface RowTextProps {
   readonly title: string;
   readonly subtitle?: string | undefined;
+  readonly liveDot?: boolean | undefined;
 }
 
 export function RowText({
   title,
   subtitle,
+  liveDot = false,
   bodyLines = false,
 }: RowTextProps & { readonly bodyLines?: boolean }) {
   const styles = useStyles();
+  const subtitleText =
+    subtitle === undefined ? null : (
+      <EllipsizedText
+        style={[styles.subtitle, bodyLines && styles.bodyLinesSubtitle]}
+      >
+        {subtitle}
+      </EllipsizedText>
+    );
   return (
     <View style={styles.body}>
       <EllipsizedText
@@ -69,12 +81,13 @@ export function RowText({
       >
         {title}
       </EllipsizedText>
-      {subtitle === undefined ? null : (
-        <EllipsizedText
-          style={[styles.subtitle, bodyLines && styles.bodyLinesSubtitle]}
-        >
-          {subtitle}
-        </EllipsizedText>
+      {subtitle === undefined ? null : liveDot ? (
+        <View style={styles.liveLine}>
+          <LiveDot />
+          {subtitleText}
+        </View>
+      ) : (
+        subtitleText
       )}
     </View>
   );
@@ -117,7 +130,7 @@ export interface ListRowProps extends RowTextProps {
 
 export function ListRow(props: ListRowProps) {
   const styles = useStyles();
-  const { icon, title, subtitle, trailing, active = false } = props;
+  const { icon, title, subtitle, liveDot, trailing, active = false } = props;
   return (
     <Pressable
       accessibilityRole="button"
@@ -128,7 +141,7 @@ export function ListRow(props: ListRowProps) {
       onLongPress={props.onLongPress}
     >
       <RowIcon icon={icon} />
-      <RowText title={title} subtitle={subtitle} />
+      <RowText title={title} subtitle={subtitle} liveDot={liveDot} />
       {trailing ?? <Icon name="forward" size="action" />}
     </Pressable>
   );

@@ -11,7 +11,8 @@ import {
 } from '@kitbag/core-state';
 import { chooseSession } from '@kitbag/tool-sync';
 
-import { onAppForeground } from './appForeground.ts';
+import { onAppForeground } from './appState.ts';
+import { listenerExplainerFlag } from './listenerExplainerFlag';
 
 configureMediaSessions({
   source: {
@@ -22,6 +23,7 @@ configureMediaSessions({
     rearm: rearmMediaSessions,
   },
   choose: chooseSession,
+  explainerDeclined: listenerExplainerFlag,
 });
 
 onAppForeground(() => {

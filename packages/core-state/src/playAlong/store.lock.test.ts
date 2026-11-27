@@ -1,7 +1,15 @@
 import { MS_PER_SECOND } from '@kitbag/core-db';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { TAP_REFUSAL } from './store.ts';
+import { halvedBpm, doubledBpm } from '../tempoLadder/bpmSteps.ts';
+import { ladderRuntime } from '../tempoLadder/ladder.test-helper.ts';
+import { songRow } from '../tempoLadder/libraryRows.test-helper.ts';
+import { BPM_SOURCE } from '../tempoLadder/sources.ts';
+import {
+  createTempoLadderStore,
+  TAPS_TO_SET_TEMPO,
+} from '../tempoLadder/store.ts';
+import { LOCK_REFUSAL } from './store.ts';
 import {
   BPM,
   FRAMES_PER_MS,
@@ -9,6 +17,7 @@ import {
   OTHER_ID,
   PLAY_ALONG,
   SESSION_ID,
+  settle,
   snapshot,
   START_MS,
 } from './store.test-helper.ts';
@@ -33,9 +42,10 @@ function tapped(fake = fakePlayAlong()) {
 describe('tap to align', () => {
   it('refuses a tap with no tempo and leaves the engine alone', () => {
     const fake = fakePlayAlong();
+    fake.store.getState().watchLibrary();
     expect(fake.store.getState().tap(START_MS)).toEqual({
       locked: false,
-      reason: TAP_REFUSAL.noBpm,
+      reason: LOCK_REFUSAL.noBpm,
     });
     expect(fake.store.getState().lock).toBeUndefined();
     expect(fake.calls).toEqual([]);
@@ -46,7 +56,7 @@ describe('tap to align', () => {
     fake.store.getState().setBpm(BPM);
     expect(fake.store.getState().tap(START_MS)).toEqual({
       locked: false,
-      reason: TAP_REFUSAL.noSession,
+      reason: LOCK_REFUSAL.noSession,
     });
   });
 
@@ -55,7 +65,7 @@ describe('tap to align', () => {
     fake.store.getState().setBpm(BPM);
     expect(fake.store.getState().tap(START_MS)).toEqual({
       locked: false,
-      reason: TAP_REFUSAL.unknownPosition,
+      reason: LOCK_REFUSAL.unknownPosition,
     });
     expect(fake.calls).toEqual([]);
   });
@@ -67,7 +77,7 @@ describe('tap to align', () => {
     fake.store.getState().setBpm(BPM);
     expect(fake.store.getState().tap(START_MS)).toEqual({
       locked: false,
-      reason: TAP_REFUSAL.paused,
+      reason: LOCK_REFUSAL.paused,
     });
     expect(fake.calls).toEqual([]);
   });
@@ -81,6 +91,9 @@ describe('tap to align', () => {
       downbeatSec: TAP_SONG_SEC,
       bpm: BPM,
       lockedAtBoottimeMs: START_MS + TAP_AFTER_MS,
+      phaseOffsetMs: 0,
+      downbeatShift: 0,
+      downbeatShiftAvailable: true,
     });
   });
 
@@ -146,5 +159,96 @@ describe('tap to align', () => {
     fake.store.getState().setBpm(BPM / 2);
     expect(fake.anchors().at(-1)?.[2]).toBe(BPM / 2);
     expect(fake.store.getState().lock?.bpm).toBe(BPM / 2);
+  });
+});
+
+describe('a tempo entered while locked', () => {
+  const ENTERED_BPM = 100;
+  const FOUND_BPM = 130;
+
+  it('hands the entered tempo to the tempo ladder', () => {
+    const fake = tapped();
+    fake.store.getState().setBpm(ENTERED_BPM);
+    expect(fake.ladder.ladder.getState().enter).toHaveBeenLastCalledWith(
+      ENTERED_BPM,
+    );
+    expect(fake.ladder.ladder.getState().bpm).toBe(ENTERED_BPM);
+  });
+
+  it('keeps the locked tempo when the ladder finds another', () => {
+    const fake = tapped();
+    fake.store.getState().watchLibrary();
+    fake.store.getState().setBpm(ENTERED_BPM);
+    fake.ladder.tempo(FOUND_BPM);
+    expect(fake.store.getState().lock?.bpm).toBe(ENTERED_BPM);
+    expect(fake.store.getState().bpm).toBe(ENTERED_BPM);
+  });
+});
+
+describe('tempo changes while locked, against the tempo ladder', () => {
+  const TAPPED_BPM = 100;
+  const TAP_GAP_MS = 600;
+  const TYPED_BPM = 90;
+  const LIBRARY_GRID = {
+    beats: [8.9, 9.4, 9.95, 10.55, 11.2],
+    downbeatIndices: [0, 4],
+  };
+  const LIBRARY_ROW = songRow({
+    id: 3,
+    title: 'Song',
+    artist: 'Band',
+    bpm: 113,
+    durationSec: 200,
+  });
+
+  function onRealLadder() {
+    const ladder = createTempoLadderStore(() =>
+      ladderRuntime({ rows: [LIBRARY_ROW] }),
+    );
+    return {
+      fake: fakePlayAlong({ ladder, grid: LIBRARY_GRID }),
+      tempos: ladder,
+    };
+  }
+
+  it.each([
+    ['halveBpm', halvedBpm],
+    ['doubleBpm', doubledBpm],
+  ] as const)('%s retimes the lock and names it typed', (action, step) => {
+    const real = onRealLadder();
+    const fake = tapped(real.fake);
+    fake.store.getState()[action]();
+    expect(fake.store.getState().lock?.bpm).toBe(step(BPM));
+    expect(real.tempos.getState()).toMatchObject({
+      bpm: step(BPM),
+      source: BPM_SOURCE.manual,
+    });
+  });
+
+  it('takes a tapped tempo while locked and names it tapped', () => {
+    const real = onRealLadder();
+    const fake = tapped(real.fake);
+    for (let tap = 0; tap < TAPS_TO_SET_TEMPO; tap += 1)
+      fake.store.getState().tapTempo(tap * TAP_GAP_MS);
+    expect(fake.store.getState().lock?.bpm).toBe(TAPPED_BPM);
+    expect(real.tempos.getState().source).toBe(BPM_SOURCE.tap);
+  });
+
+  it('credits the library again when its offer is accepted again', async () => {
+    const real = onRealLadder();
+    const fake = real.fake;
+    fake.store.getState().watchLibrary();
+    await settle();
+    await fake.store.getState().acceptOffer();
+    fake.store.getState().setBpm(TYPED_BPM);
+    fake.store.getState().unlock();
+    await settle();
+    expect(await fake.store.getState().acceptOffer()).toMatchObject({
+      locked: true,
+    });
+    expect(real.tempos.getState()).toMatchObject({
+      bpm: LIBRARY_ROW.bpm,
+      source: BPM_SOURCE.library,
+    });
   });
 });

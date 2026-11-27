@@ -1,5 +1,5 @@
 import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { insertStemSet } from '@kitbag/core-db/src/stem-entries.test-helper';
 
@@ -12,6 +12,7 @@ import {
 } from './standalone.ts';
 import {
   bindStandaloneMetronomePersistence,
+  STANDALONE_METRONOME_SAVE_DELAY_MS,
   type StandaloneMetronomePersistence,
 } from './standalonePersistence.ts';
 
@@ -20,6 +21,9 @@ const SONG_BPM = 90;
 const SONG_EDIT_BPM = 95;
 const SONG_SUBDIVISION = 4;
 const RAMPED_BPM = 130;
+const SWIPE_STEPS = 40;
+const SWIPE_STEP_MS = 16;
+const SWIPE_LAST_BPM = STANDALONE_BPM + SWIPE_STEPS - 1;
 const RAMP = {
   enabled: false,
   startBpm: 100,
@@ -47,17 +51,36 @@ type Memory = ReturnType<typeof memoryPersistence>;
 
 function launch(memory: Memory, engineBpm?: () => number) {
   const app = setup(engineBpm);
-  bindStandaloneMetronomePersistence(
+  const binding = bindStandaloneMetronomePersistence(
     app.metronome,
     app.library,
     memory.persistence,
   );
-  return app;
+  return { ...app, binding };
 }
 
-const settled = () => Promise.resolve();
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+});
 
-async function saveSongInSetlist(app: ReturnType<typeof setup>) {
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+const settled = async () => {
+  await Promise.resolve();
+  vi.advanceTimersByTime(STANDALONE_METRONOME_SAVE_DELAY_MS);
+};
+
+async function swipeTempo(app: ReturnType<typeof launch>) {
+  for (let step = 0; step < SWIPE_STEPS; step++) {
+    app.metronome.getState().setTempo(STANDALONE_BPM + step);
+    await Promise.resolve();
+    vi.advanceTimersByTime(SWIPE_STEP_MS);
+  }
+}
+
+async function saveSongInSetlist(app: ReturnType<typeof launch>) {
   const s = app.library.getState();
   const setlistId = await s.createSetlist('Gig');
   const presetId = await s.newSongFromCurrent('Ballad', setlistId);
@@ -258,5 +281,82 @@ describe('standalone metronome across an app restart', () => {
       SONG_BPM,
     );
     expect(state.loaded).toEqual(song);
+  });
+});
+
+describe('standalone metronome writes during a burst of changes', () => {
+  it('writes a tempo swipe once, with its last tempo, after it settles', async () => {
+    const memory = memoryPersistence();
+    const app = launch(memory);
+
+    await swipeTempo(app);
+    expect(memory.saves()).toBe(0);
+    vi.advanceTimersByTime(STANDALONE_METRONOME_SAVE_DELAY_MS);
+
+    expect(memory.saves()).toBe(1);
+    expect(memory.stored().bpm).toBe(SWIPE_LAST_BPM);
+  });
+
+  it('writes the pending tempo at once when flushed, and not again', async () => {
+    const memory = memoryPersistence();
+    const app = launch(memory);
+    await swipeTempo(app);
+
+    app.binding.flush();
+    expect(memory.saves()).toBe(1);
+    expect(memory.stored().bpm).toBe(SWIPE_LAST_BPM);
+    vi.advanceTimersByTime(STANDALONE_METRONOME_SAVE_DELAY_MS);
+    expect(memory.saves()).toBe(1);
+  });
+
+  it('flushes a change made in the same tick it is asked to', () => {
+    const memory = memoryPersistence();
+    const app = launch(memory);
+
+    app.metronome.getState().setTempo(STANDALONE_BPM);
+    app.binding.flush();
+
+    expect(memory.stored().bpm).toBe(STANDALONE_BPM);
+  });
+
+  it('keeps the last tempo when torn down inside the delay', async () => {
+    const memory = memoryPersistence();
+    const app = launch(memory);
+    await swipeTempo(app);
+
+    app.binding.unbind();
+
+    expect(memory.saves()).toBe(1);
+    expect(launch(memory).metronome.getState().bpm).toBe(SWIPE_LAST_BPM);
+  });
+
+  it('writes sound, meter and accent changes together in one save', async () => {
+    const memory = memoryPersistence();
+    const app = launch(memory);
+    const state = app.metronome.getState();
+    state.setSounds(2, 4);
+    await Promise.resolve();
+    state.setBeats(7, 8);
+    await Promise.resolve();
+    state.cycleAccent(1);
+    await settled();
+
+    expect(memory.saves()).toBe(1);
+    expect(memory.stored()).toEqual(
+      standaloneMetronomeOf(app.metronome.getState()),
+    );
+  });
+
+  it('keeps a standalone change that a song load follows inside the delay', async () => {
+    const memory = memoryPersistence();
+    const app = launch(memory);
+    const song = await saveSongInSetlist(app);
+    app.metronome.getState().setTempo(STANDALONE_BPM);
+    await Promise.resolve();
+
+    await app.library.getState().loadSong(song.presetId);
+    await settled();
+
+    expect(memory.stored().bpm).toBe(STANDALONE_BPM);
   });
 });

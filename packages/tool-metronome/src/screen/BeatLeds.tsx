@@ -1,14 +1,13 @@
 import {
+  beatLabel,
   BeatLedRow,
   type LedSize,
   type NeighbourGaps,
 } from '@kitbag/core-design';
-import { KB_ACCENT } from '@kitbag/core-native';
+import type { KB_ACCENT } from '@kitbag/core-native';
 import { useMemo } from 'react';
 import type { SharedValue } from 'react-native-reanimated';
-import { layoutBeatLeds } from '@kitbag/core-state';
-
-import { beatLabel, ledStateFor } from '../logic/beatDot.ts';
+import { layoutBeatLeds, ledStatesFor } from '@kitbag/core-state';
 
 interface BeatLedsProps {
   readonly beatCount: number;
@@ -29,10 +28,7 @@ export function BeatLeds({
 }: BeatLedsProps) {
   const layout = useMemo(() => layoutBeatLeds(beatCount), [beatCount]);
   const states = useMemo(
-    () =>
-      Array.from({ length: beatCount }, (_unused, beat) =>
-        ledStateFor(accents[beat] ?? KB_ACCENT.KB_ACCENT_NORMAL),
-      ),
+    () => ledStatesFor(accents, beatCount),
     [accents, beatCount],
   );
 

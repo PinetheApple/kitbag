@@ -171,9 +171,17 @@ describe('climbLadder', () => {
       get: () => Promise.reject(new Error('disk')),
       put: () => Promise.reject(new Error('disk')),
     };
+    const working = ladderRuntime({
+      cache: failing,
+      httpGet: offline,
+      key: KEY,
+    });
     const runtime = {
-      ...ladderRuntime({ cache: failing, httpGet: offline, key: KEY }),
-      library: { list: () => Promise.reject(new Error('disk')) },
+      ...working,
+      library: {
+        ...working.library,
+        list: () => Promise.reject(new Error('disk')),
+      },
     };
     expect(await climbLadder(SONG, runtime)).toEqual({
       bpm: null,

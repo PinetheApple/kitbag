@@ -4,7 +4,7 @@ import {
   type LoggedCountIn,
   type LoggedSettings,
 } from '@kitbag/core-db';
-import { countLabel } from '@kitbag/core-design';
+import { countLabel, subdivisionName } from '@kitbag/core-design';
 import { KB_COUNT_IN_OFF, KB_RAMP_UNIT } from '@kitbag/core-native';
 import {
   effectivePolyAgainst,
@@ -15,11 +15,7 @@ import {
   soundChipLabel,
   type TimelineStretch,
 } from '@kitbag/core-state';
-import {
-  countInLabel,
-  polyRatioLabel,
-  subdivisionName,
-} from '@kitbag/tool-metronome';
+import { countInLabel, polyRatioLabel } from '@kitbag/tool-metronome';
 
 import { SEPARATOR } from '../settings/separator.ts';
 import { bpmText } from './historyText.ts';

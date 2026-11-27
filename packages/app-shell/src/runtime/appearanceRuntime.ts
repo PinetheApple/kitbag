@@ -11,7 +11,7 @@ import * as SystemUI from 'expo-system-ui';
 
 import { appearanceApplier, keepNightMode } from './appearance';
 import { appearancePreference } from './appearancePreference';
-import { onAppForeground } from './appForeground';
+import { onAppForeground } from './appState';
 import { getDatabase } from './database';
 
 configureAppearancePersistence(

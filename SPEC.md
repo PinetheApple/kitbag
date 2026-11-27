@@ -336,6 +336,20 @@ KB_EXPORT void kb_metronome_anchor_external(kb_engine* engine,
                                             double song_pos_sec,
                                             uint64_t at_frame,
                                             double bpm);
+
+/* Anchor the set grid to an external transport without moving it.
+   Declares: at engine frame at_frame, the song was song_pos_sec in, advancing
+   rate song seconds per engine second. Re-callable; must not glitch the click. */
+KB_EXPORT void kb_metronome_anchor_grid(kb_engine* engine,
+                                        double song_pos_sec,
+                                        uint64_t at_frame,
+                                        double rate);
+
+/* Replace the set grid's downbeats, keeping its beats, anchor and mapping.
+   Refused with no grid set or a table set_grid would refuse. */
+KB_EXPORT kb_result kb_metronome_set_grid_downbeats(kb_engine* engine,
+                                                    const int32_t* downbeat_indices,
+                                                    int32_t downbeat_count);
 ```
 
 Requirements:
@@ -346,6 +360,27 @@ Requirements:
   non-constant-tempo songs work, which a single `setTempo` cannot.
 - Re-anchoring mid-playback must be glitch-free (no double-click, no dropped
   beat).
+- A grid that follows an external transport is set once, in song seconds, and
+  re-anchored with `anchor_grid`, which changes only the song→engine mapping
+  (§4.2.2: beat `t` lands on `F + (t − P) × sr / rate`). Re-sending a moved grid
+  through `set_grid` is not a re-anchor: the cursor re-seeks against grid times
+  that moved, so a small correction double-clicks or drops a beat. Under
+  `anchor_grid` the onset floor stays in song seconds. A correction under half a
+  click interval keeps the timeline, as `anchor_external` does: no beat sounds
+  twice and a beat it skips over sounds at once, late. A larger move forward is
+  a seek and drops the beats it skips; a move back of at least one grid interval
+  replays from the new position (§4.7's rule). `set_grid` resets the mapping to
+  song second 0 at its `anchor_frame`, rate 1; an anchor made before the latest
+  `set_grid` is dropped. Pinned by `RunGridAnchorTests` (metronome_verify) and
+  `RunGridAnchorAbiTests` (abi_verify).
+- Moving the bar-ones of a set grid is `set_grid_downbeats`, not a re-send:
+  `set_grid` would reset the mapping until the next `anchor_grid`, dropping
+  beats or sounding stray ones. The swap keeps the beats, the click epoch (so the
+  mapping, grouping and rate), the cursor and the onset floor; the current beat
+  is re-read in the new bars and the next downbeat of the new table is accented.
+  An empty table leaves the grid without downbeats, so nothing is accented
+  (#300: never invent a downbeat). Pinned by `RunGridDownbeatTests`
+  (metronome_verify) and `RunGridDownbeatAbiTests` (abi_verify).
 - `set_grid` and `anchor_external` compose with the existing latency offset so
   the click lands on the beat *at the speaker*, not at the buffer.
 - `kb_metronome_start_at`'s `start_frame` is buffer (mixer) time. The song and
@@ -643,8 +678,8 @@ clamp. Both are now fixed and pinned by
 - **Under a grid a mid-run change jumps the click with the song** (owner,
   2026-10-31, #245). Grid mode reads the offset through `GridSeconds`, so a change
   moves the song position the click is on. Every change re-seeks the cursor, and
-  on the engine clock no re-seek (a republished grid and `anchor_external`
-  included) lands on a beat or subdivision tick at or before the last one heard
+  on the engine clock no re-seek (a republished grid, `anchor_external` and
+  `anchor_grid` included) lands on a beat or subdivision tick at or before the last one heard
   this run on the same grid anchor. The follow-mixer clock has no such floor: its
   loop wraps and song seeks replay beats by design. Forward, the crossed beats are
   dropped: the next click is the first beat at or after the new position, on its
@@ -919,6 +954,11 @@ the single most RN-specific piece of §5** — see §13.9.
   phone call is still a session.
 - **A recents swipe stops all playback** and removes its notifications; Home,
   an app switch, lock and Back keep playing (#338).
+- **Interruptions** (owner, 2026-11-27, #691). Songs and stem songs (§6, §7)
+  take media audio focus while playing and pause on output loss (unplug,
+  Bluetooth drop), a call or a focus loss, never resuming by themselves. The
+  metronome and the Play along click never take focus. The metronome pauses on
+  output loss or a call; the Play along click keeps running (D10, §8.9).
 
 ### 5.7 Practice
 
@@ -979,6 +1019,8 @@ working. Changes:
   Breaks on iOS, where the container UUID changes per launch. Paths are relative
   to the data folder, always.
 - **Downbeats** into the grid (§4.3).
+- The file picker takes several files; they import one at a time, a batch waits
+  on each replace prompt, and failures are named together.
 - **Re-analyse** action for a song.
 - Each song records the analyser version (`KB_BEAT_ANALYSIS_VERSION`) that made
   its grid. At launch, songs whose analysis succeeded on an older version
@@ -1418,7 +1460,13 @@ None of this exists; the source data never leaves Kotlin.
   `getPlaybackSpeed()` — it currently reads raw `position` only, and the
   extrapolation needs both.
 - Extrapolate `pos + (now - lastUpdate) * speed`.
-- Re-anchor every 1–2s via `kb_metronome_anchor_external` (§4.2). The report's
+- Re-anchor every 1–2s (§4.2). A constant-tempo lock (tap, a single BPM)
+  re-anchors with `kb_metronome_anchor_external`. A library grid lock sends the
+  stored grid once per lock through `kb_metronome_set_grid`, in song seconds,
+  and re-anchors with `kb_metronome_anchor_grid` (position, frame, playback
+  speed as `rate`), never by re-sending a shifted grid. A downbeat shift on
+  that lock moves the bars with `kb_metronome_set_grid_downbeats`; the grid is
+  still sent once per lock. The report's
   `elapsedRealtime` instant becomes `at_frame` through
   `kb_engine_frame_at_boottime` (`kitbag_engine_clock_api.h`).
 
@@ -1478,7 +1526,8 @@ retrying the same thing.
   library song, a card appears with a `Lock` button — **one tap, not zero.** The
   original flow promised zero taps; a tool that starts clicking at you unasked is
   a tool you stop trusting. It feeds the stored per-beat grid to
-  `kb_metronome_set_grid`, so non-constant tempo works — which no BPM number can
+  `kb_metronome_set_grid` once and re-anchors it with `kb_metronome_anchor_grid`
+  (§8.4), so non-constant tempo works — which no BPM number can
   do. This is ~90% built and unused: `sync_screen.dart:63` confirms
   `match.beatGrid != null`, then `:64` uses only `match.bpm` and discards the
   grid one line later.
@@ -1522,7 +1571,8 @@ retrying the same thing.
   number with both parts named is worth the line.
 - **Downbeat shift** — `‹ beat 1 ›`. Tap on three instead of one and you are out
   by beats, not milliseconds; no ms control fixes that, and it is the more common
-  mistake.
+  mistake. On a library grid lock it moves the bars with
+  `kb_metronome_set_grid_downbeats` (§4.2), never by re-sending the grid.
 
 ### 8.7 The pattern card is the metronome's
 
@@ -1561,13 +1611,15 @@ selected. **The acceptance criterion:** opening Play along and closing it must
 leave the standalone metronome exactly as it was, including mid-run
 (`abi_verify`, slots).
 
-**Leaving Play along while locked keeps the click following.** Kitbag runs it in
-the background under the metronome's foreground service (§5.6), so switching to
-the other app to skip a song does not drop the lock. Home and the lists show the
+**Leaving Play along while locked keeps the click following.** Following runs
+under its own foreground service of the media-playback type, so switching to the
+other app to skip a song does not drop the lock. Home and the lists show the
 docked mini-player: the Play along tile, the track's title, a line naming the
 app it is locked to, a key that pauses and resumes the other app, and a close
-key. A tap reopens Play along. The notification while away offers the other
-app's play/pause and Stop, with no tempo − or +.
+key. A tap reopens Play along. The service's notification, "Play along · ‹app›"
+on the Metronome channel, offers the other app's play/pause and Stop, with no
+tempo − or +. It has no media session, so headset buttons stay with the
+followed app.
 
 Only one mini-player shows. Starting a Kitbag song, the stem player or the
 standalone metronome ends Play along's following, since one click sounds at a
@@ -1830,6 +1882,7 @@ than its own (`newer-version`), before writing anything.
 | `setlist_items`: + `stem_set_id` (FK to `stem_sets`, cascade), `song_preset_id` nullable, a CHECK that exactly one is set (a table rebuild); `play_queue`: `stem_set_id` (unique, FK cascade), `position` | #382 — a setlist holds stem songs beside metronome songs, and stem songs queue to play next, each once; a re-import moves both to the new stem set; schema v25 |
 | `play_queue`: + `song_id` (unique, FK to `songs`, cascade), `stem_set_id` nullable, a CHECK that exactly one is set (a table rebuild) | §7.9, #572 — one queue holds single songs beside stem songs, each once; schema v29 |
 | `Songs`: + `tempo_mode`, `tempo_bpm`, `tempo_anchor`, `tempo_beats_per_bar`, `tempo_source`, `chosen_tempo_mode`, the `StemSets` columns of v22 with the same meanings; `tempo_source` gains `analysed`, Kitbag's own constant-tempo fit, stored as a `follow` tempo (bpm and anchor NULL when the fit found no steady tempo). A stem song whose bundle has beats but no tempo gets an `analysed` fit once, on import or at the next start. Backups carry a song's fit and chosen mode; a Merge difference in the fit alone is not a conflict | #474 — constant tempo or follow for songs Kitbag analyses; schema v30 |
+| `SongPresets`: `bpm` nullable (a table rebuild): a song preset saved by Play along carries no tempo (§8.8) | #671; schema v31 |
 | **All paths relative** to the data folder | §2.3 (iOS) and **D11** (the folder can move between internal storage and an SD card) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
 | BPM cache table | §8.5 |
@@ -2146,7 +2199,8 @@ From `kitbag-ui.html` §06. Distilled from NN/g, Android haptics/a11y guidelines
 Laws of UX, and Mobbin pattern research. Each is testable and gets checked per
 milestone.
 
-- **Sound in 5 seconds, no tour.** First launch lands on a working metronome. No
+- **Sound in 5 seconds, no tour.** The app always opens on Home, and the Continue card
+  or the Metronome tile reaches a working metronome in one tap. No
   slideshow, no signup. Hidden gestures teach themselves via a one-time hint
   animation on first encounter, dismissed forever after first successful use.
 - **Every gesture has a visible twin.** Swipe-anywhere tempo is backed by the
@@ -2214,8 +2268,9 @@ decisions they carry are the reason the files read as they now do:
 
 - **Standalone song library** — the metronome spec draws the entry point (the
   "All songs" row) but not the screen behind it.
-- **GetSongBPM key row** (D7) — a Settings row that takes a personal key. Small,
-  but undesigned, and it needs the attribution copy.
+- **GetSongBPM key row** (D7) — built in #689 from the existing Settings row and
+  text-entry sheet patterns, last row of Data, with no mockup. Its placement and
+  copy have not had a design review.
 
 **Open:** wordmark/logo pass · swipe sensitivity confirmation on device.
 (Landscape is **deferred past v1** — D13.)
