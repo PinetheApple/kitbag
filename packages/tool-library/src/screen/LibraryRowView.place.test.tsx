@@ -21,8 +21,11 @@ vi.mock('react-native', () => ({
 
 vi.mock('@kitbag/core-design', async (original) => {
   const pure = await original<{ opacity: { muted: number } }>();
+  const { usePlayingEdge } =
+    await import('../../../core-design/src/components/usePlayingEdge.ts');
   return {
     ...pure,
+    usePlayingEdge,
     Badge: 'Badge',
     EllipsizedText: 'EllipsizedText',
     Icon: () => null,

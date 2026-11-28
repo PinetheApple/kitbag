@@ -1,11 +1,8 @@
-import { useState } from 'react';
 import { Pressable, View, type ViewStyle } from 'react-native';
 import Animated, {
-  useAnimatedReaction,
   useAnimatedStyle,
   type SharedValue,
 } from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
 
 import {
   iconSizes,
@@ -20,6 +17,7 @@ import { stemPlayer } from '../stemPlayerRoles.ts';
 import { TRANSPARENT } from '../styleConstants.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import type { TransportKeySize } from './TransportKey.tsx';
+import { usePlayingEdge } from './usePlayingEdge.ts';
 
 export type PlayGlyph = 'play' | 'stop';
 export type PlayButtonSize = 'default' | 'large' | 'dock';
@@ -190,13 +188,7 @@ export interface PlayPauseButtonProps {
 // Glyphs follow the engine's playing flag on the UI thread; only the spoken
 // label renders, and it changes on a press or at the song's end.
 export function usePlayPauseLayers(playing: SharedValue<number>) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  useAnimatedReaction(
-    () => playing.value !== 0,
-    (now, before) => {
-      if (now !== before) scheduleOnRN(setIsPlaying, now);
-    },
-  );
+  const isPlaying = usePlayingEdge(playing);
   const playStyle = useAnimatedStyle(() => ({
     opacity: playing.value === 0 ? 1 : 0,
   }));

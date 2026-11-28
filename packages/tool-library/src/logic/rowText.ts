@@ -1,6 +1,7 @@
 import {
   countLabel,
   FACT_SEPARATOR,
+  PAUSED,
   PLAYING,
   type BadgeTone,
   type IconName,
@@ -164,9 +165,16 @@ export function rowSubtitle(
   return parts.map(unbroken).join(FACT_JOIN);
 }
 
-export function playingSubtitle(row: LibraryRow, subtitle: string): string {
+export type NowPlaying = 'playing' | 'paused';
+
+export function nowPlayingSubtitle(
+  row: LibraryRow,
+  subtitle: string,
+  now: NowPlaying,
+): string {
   if (row.kind !== 'stems') return subtitle;
-  return [PLAYING, subtitle].filter((part) => part !== '').join(FACT_SEPARATOR);
+  const label = now === 'playing' ? PLAYING : PAUSED;
+  return [label, subtitle].filter((part) => part !== '').join(FACT_SEPARATOR);
 }
 
 export function spokenRow(

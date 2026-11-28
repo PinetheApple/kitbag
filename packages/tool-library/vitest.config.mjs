@@ -14,6 +14,12 @@ export default defineConfig({
       '@kitbag/core-design': stub('../core-design/src/pure.ts'),
       '@kitbag/core-state': stub('../core-state/src/pure.ts'),
       'react-native': stub('../core-state/src/testing/reactNativeStub.ts'),
+      'react-native-reanimated': stub(
+        '../core-state/src/testing/reanimatedDriver.ts',
+      ),
+      'react-native-worklets': stub(
+        '../core-state/src/testing/reanimatedDriver.ts',
+      ),
       'expo-haptics': stub('../core-state/src/testing/expoHapticsStub.ts'),
       '@op-engineering/op-sqlite': stub(
         '../core-state/src/testing/opSqliteStub.ts',

@@ -37,14 +37,15 @@ import { Pressable, useWindowDimensions, View } from 'react-native';
 import { failureText } from '../logic/notices.ts';
 import { rowLayout } from '../logic/rowLayout.ts';
 import {
-  playingSubtitle,
+  nowPlayingSubtitle,
   rowBadges,
   rowSubtitle,
   showsGridIcon,
   spokenRow,
+  type NowPlaying,
   type RowPlace,
 } from '../logic/rowText.ts';
-import { useNowPlaying } from './nowPlaying.ts';
+import { useIsCurrentRow, useShownPlaying } from './nowPlaying.ts';
 import { useRowFailure, useRowFiles } from './rowFailureHooks.ts';
 
 const MORE_HIT_BOX = hitBoxStyle(
@@ -132,19 +133,24 @@ function rowStatus(row: LibraryRow): SongBadge {
   return row.hasGrid ? 'grid' : 'noGrid';
 }
 
-function tileIcon(stems: boolean, playing: boolean): IconName {
+const TILE_ICON: Record<NowPlaying, IconName> = {
+  playing: 'pause',
+  paused: 'play',
+};
+
+function tileIcon(stems: boolean, playState: NowPlaying | null): IconName {
   if (stems) return 'stems';
-  return playing ? 'pause' : 'song';
+  return playState === null ? 'song' : TILE_ICON[playState];
 }
 
 function RowTile({
   stems,
   muted,
-  playing,
+  playState,
 }: {
   readonly stems: boolean;
   readonly muted: boolean;
-  readonly playing: boolean;
+  readonly playState: NowPlaying | null;
 }) {
   const styles = useStyles();
   const theme = useTheme();
@@ -153,7 +159,7 @@ function RowTile({
       style={[styles.tile, stems && styles.stemTile, muted && styles.muted]}
     >
       <Icon
-        name={tileIcon(stems, playing)}
+        name={tileIcon(stems, playState)}
         size="listTile"
         color={stems ? theme.accentInk : 'text2'}
       />
@@ -188,15 +194,30 @@ function useRowPlace(row: LibraryRow, moving: boolean): RowPlace {
   return moving ? 'moving' : 'here';
 }
 
-export function LibraryRowView({
+export function LibraryRowView(props: LibraryRowViewProps) {
+  const current = useIsCurrentRow(props.row);
+  return current ? (
+    <CurrentRow {...props} />
+  ) : (
+    <RowView {...props} playState={null} />
+  );
+}
+
+function CurrentRow(props: LibraryRowViewProps) {
+  const playing = useShownPlaying(props.row.kind);
+  return <RowView {...props} playState={playing ? 'playing' : 'paused'} />;
+}
+
+function RowView({
   row,
   selected,
   moving,
+  playState,
   onActions,
   onOpenStemSet,
   onOpenSong,
   onUnavailable,
-}: LibraryRowViewProps) {
+}: LibraryRowViewProps & { readonly playState: NowPlaying | null }) {
   const styles = useStyles();
   const { fontScale, width } = useWindowDimensions();
   const { dividerInset } = listEdges(width);
@@ -209,7 +230,6 @@ export function LibraryRowView({
   const failure = useRowFailure(row);
   const place = useRowPlace(row, moving);
   const away = place === 'unavailable';
-  const playing = useNowPlaying(row);
   const tap = useRowTap(row);
   const openActions = useCallback(() => {
     onActions(row);
@@ -263,12 +283,16 @@ export function LibraryRowView({
         onLongPress={openActions}
         onPress={open}
       >
-        <RowTile stems={row.kind === 'stems'} muted={away} playing={playing} />
+        <RowTile
+          stems={row.kind === 'stems'}
+          muted={away}
+          playState={playState}
+        />
         <View style={styles.text}>
           <EllipsizedText
             style={[
               styles.title,
-              playing && styles.playingTitle,
+              playState !== null && styles.playingTitle,
               away && styles.muted,
             ]}
             numberOfLines={titleLines}
@@ -276,9 +300,13 @@ export function LibraryRowView({
             {row.title}
           </EllipsizedText>
           <EllipsizedText style={styles.facts} numberOfLines={factsLines}>
-            {playing
-              ? playingSubtitle(row, rowSubtitle(row, status, failure))
-              : rowSubtitle(row, status, failure)}
+            {playState === null
+              ? rowSubtitle(row, status, failure)
+              : nowPlayingSubtitle(
+                  row,
+                  rowSubtitle(row, status, failure),
+                  playState,
+                )}
           </EllipsizedText>
           {badgesUnderText && badges}
         </View>

@@ -68,6 +68,7 @@ export function removeFromQueueLabel(title: string): string {
 }
 
 export const PLAYING = 'Playing';
+export const PAUSED = 'Paused';
 
 export function placeLabel(number: number, of: number): string {
   return `${String(number)} of ${String(of)}`;
