@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LICENCE_NAME, LICENCE_URL } from './about.ts';
 import { formatAppVersion } from './appVersion.ts';
-import { BackUpRow, RestoreRow } from './BackupRows.tsx';
+import { BackUpRow, RestoreRow, UndoReplaceRow } from './BackupRows.tsx';
 import { DataFolderRow, ReturnedCardRow } from './DataFolderRow.tsx';
 import { DataFolderSheets } from './DataFolderSheets.tsx';
 import { mediaSize } from './dataFolderText.ts';
@@ -128,6 +128,7 @@ function DataSection({
       <EditGroup>
         {backups && <BackUpRow />}
         {backups && <RestoreRow onOpenRestore={onOpenRestore} />}
+        {backups && <UndoReplaceRow onOpenRestore={onOpenRestore} />}
         <EditRow label="Practice" onPress={onOpenPractice}>
           <PracticeValue />
         </EditRow>

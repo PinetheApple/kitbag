@@ -11,7 +11,10 @@ import type { OutputRoute } from '@kitbag/core-native';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createRouteLatencyStore } from '../rig/routeLatency.ts';
-import { openableBeforeReplace } from './beforeReplace.ts';
+import {
+  beforeReplaceTakenAt,
+  openableBeforeReplace,
+} from './beforeReplace.ts';
 import { createRestoreStore } from './restore.ts';
 import type { BackupDeps } from './runtime.ts';
 
@@ -24,6 +27,13 @@ const EARBUDS: OutputRoute = {
   certain: true,
 };
 const STEP_MS = 5;
+const TAKEN_AT = '2026-11-27T14:32:00.000Z';
+const MISSING_SOUND = {
+  slot: 0,
+  uuid: '00000000-0000-4000-8000-0000000000aa',
+  name: 'Rim',
+  fileName: 'missing.wav',
+};
 
 function deps(
   service: BackupDeps['service'],
@@ -94,6 +104,20 @@ describe('the copy kept before a replace', () => {
     ).toBeNull();
   });
 
+  it('has no date before any replace', async () => {
+    const target = openBackupDatabase();
+    expect(await beforeReplaceTakenAt(deps(() => target.backup))).toBeNull();
+  });
+
+  it('is dated when the replace took it', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(TAKEN_AT) });
+    const { target } = await replacedTarget();
+    vi.useRealTimers();
+    expect(await beforeReplaceTakenAt(deps(() => target.backup))).toBe(
+      TAKEN_AT,
+    );
+  });
+
   it('opens in the restore review as a replace of what was replaced', async () => {
     const { target } = await replacedTarget(PRESETS_AND_SETLISTS);
     const store = await openCopy(target);
@@ -102,6 +126,20 @@ describe('the copy kept before a replace', () => {
       source: { name: COPY_NAME },
       plan: { mode: 'replace', categories: PRESETS_AND_SETLISTS },
     });
+  });
+
+  it('stays as it was when restoring it fails', async () => {
+    const { target } = await replacedTarget();
+    const before = await target.backup.keptBeforeReplace();
+    await target.clickSounds.put(MISSING_SOUND);
+    const store = await openCopy(target);
+    await store.getState().apply('replace');
+
+    expect(store.getState().restore).toMatchObject({
+      phase: 'failed',
+      failure: { kind: 'snapshotFailed' },
+    });
+    expect(await target.backup.keptBeforeReplace()).toEqual(before);
   });
 
   it('puts the replaced songs back', async () => {

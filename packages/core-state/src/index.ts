@@ -1043,7 +1043,10 @@ export {
   type RestoreStore,
 } from './backup/restore.ts';
 export { useRestore } from './backup/useRestore.ts';
-export { openableBeforeReplace } from './backup/beforeReplace.ts';
+export {
+  beforeReplaceTakenAt,
+  openableBeforeReplace,
+} from './backup/beforeReplace.ts';
 export {
   isReplaceConfirmed,
   REPLACE_CONFIRMATION,

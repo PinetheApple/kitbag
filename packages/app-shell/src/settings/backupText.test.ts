@@ -13,6 +13,7 @@ import {
   categoryValue,
   conflictBanner,
   conflictDetail,
+  copyKeptNote,
   failureText,
   modeHint,
   replaceConfirmBody,
@@ -20,6 +21,7 @@ import {
   restoreCategories,
   restorePrompt,
   sourceDetail,
+  undoReplaceValue,
 } from './backupText.ts';
 
 function counts(fields: Partial<CategoryPlan>): CategoryPlan {
@@ -60,6 +62,28 @@ describe('restore source card', () => {
     expect(sourceDetail(4, '2026-07-14T12:00:00.000Z', 1_200_000)).toBe(
       'v4 · 14 Jul 2026 · 1.2 MB',
     );
+  });
+});
+
+describe('the copy kept before a replace', () => {
+  it('is announced after a replace and not after a merge', () => {
+    expect(copyKeptNote('replace')).toBe(
+      'A copy of what was here before is kept on this phone.',
+    );
+    expect(copyKeptNote('merge')).toBe(null);
+  });
+
+  it('is dated by day and time in Settings', () => {
+    expect(undoReplaceValue(new Date(2026, 10, 27, 14, 32).toISOString())).toBe(
+      '27 Nov · 14:32',
+    );
+    expect(undoReplaceValue(new Date(2026, 0, 5, 9, 5).toISOString())).toBe(
+      '5 Jan · 09:05',
+    );
+  });
+
+  it('has no Settings row before any replace', () => {
+    expect(undoReplaceValue(null)).toBe(null);
   });
 });
 

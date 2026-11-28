@@ -15,3 +15,9 @@ export async function openableBeforeReplace(
     replace: categories,
   };
 }
+
+export function beforeReplaceTakenAt(
+  deps: BackupDeps = getBackup(),
+): Promise<string | null> {
+  return deps.service().keptBeforeReplaceAt();
+}

@@ -16,7 +16,11 @@ import {
   type ClickSoundFileLog,
   type SoundOutcome,
 } from './backup-apply';
-import { keepBeforeReplace, readBeforeReplace } from './backup-before-replace';
+import {
+  keepBeforeReplace,
+  readBeforeReplace,
+  readBeforeReplaceTakenAt,
+} from './backup-before-replace';
 import { parseBackup } from './backup-parse';
 import type { BackupRules } from './backup-rules';
 import {
@@ -187,8 +191,8 @@ async function keepCurrentData(
       CATEGORIES,
       categories.includes(TOOL_DATA_CATEGORY),
     );
-    parseBackup(contents, rules);
-    await keepBeforeReplace(handle.db, { categories, contents });
+    const { exportedAt } = parseBackup(contents, rules);
+    await keepBeforeReplace(handle.db, { categories, contents }, exportedAt);
   } catch (error) {
     throw new ImportRejected({
       kind: 'snapshotFailed',
@@ -269,6 +273,8 @@ export function createBackupService(
       ),
     apply,
     keptBeforeReplace: () => serial(() => readBeforeReplace(handle.db)),
+    keptBeforeReplaceAt: () =>
+      serial(() => readBeforeReplaceTakenAt(handle.db, rules)),
   };
 }
 

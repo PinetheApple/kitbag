@@ -11,6 +11,7 @@ configureBackup({
     plan: unavailable,
     apply: unavailable,
     keptBeforeReplace: unavailable,
+    keptBeforeReplaceAt: unavailable,
   }),
   pick: () => Promise.resolve(null),
   share: unavailable,

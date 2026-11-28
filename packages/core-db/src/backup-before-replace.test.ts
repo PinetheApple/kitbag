@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { keepBeforeReplace } from './backup-before-replace';
 
 import { CATEGORIES, type Category } from './backup-format';
 import {
@@ -14,6 +16,8 @@ import { RIG_PREFERENCE_KEYS } from './rig-preferences';
 import { createRouteLatencyRepository } from './route-latency-repository';
 
 const REPLACE_ALL = { mode: 'replace', categories: CATEGORIES } as const;
+const TAKEN_AT = '2026-11-27T14:32:00.000Z';
+const STORED_AT = '2026-11-28T09:05:00.000Z';
 const MISSING_SOUND = {
   slot: 0,
   uuid: '00000000-0000-4000-8000-0000000000aa',
@@ -66,6 +70,49 @@ async function rows(target: BackupDatabase) {
   };
 }
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe('the date of the copy kept before a replace', () => {
+  it('is absent before any replace', async () => {
+    const target = await seededTarget();
+    expect(await target.backup.keptBeforeReplaceAt()).toBeNull();
+  });
+
+  it('is stored beside the copy when the replace takes it', async () => {
+    const target = await seededTarget();
+    const file = await backupFile();
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(TAKEN_AT) });
+    await replace(target, file);
+    vi.useRealTimers();
+    expect(await target.backup.keptBeforeReplaceAt()).toBe(TAKEN_AT);
+  });
+
+  it('is read from beside the copy, not from inside it', async () => {
+    const target = await seededTarget();
+    await replace(target, await backupFile());
+    const kept = await keptCopy(target);
+    await keepBeforeReplace(target.handle.db, kept, STORED_AT);
+    expect(await target.backup.keptBeforeReplaceAt()).toBe(STORED_AT);
+  });
+
+  it('falls back to the export time of a copy stored without one', async () => {
+    const target = await seededTarget();
+    await replace(target, await backupFile());
+    const { categories, contents } = await keptCopy(target);
+    await keepBeforeReplace(target.handle.db, { categories, contents });
+    const { exportedAt } = JSON.parse(contents) as { exportedAt: string };
+    expect(await target.backup.keptBeforeReplaceAt()).toBe(exportedAt);
+  });
+
+  it('stays out of backups', async () => {
+    const target = await seededTarget();
+    await replace(target, await backupFile());
+    expect(await target.backup.export()).not.toContain('backup_before_replace');
+  });
+});
+
 describe('the copy kept before a replace', () => {
   it('holds every category as it was just before the replace', async () => {
     const target = await seededTarget();
@@ -89,6 +136,25 @@ describe('the copy kept before a replace', () => {
     const { contents } = await keptCopy(target);
     expect((await replace(target, contents)).ok).toBe(true);
     expect(await records(target)).toEqual(before);
+  });
+
+  it('keeps what an undo replaced, so the undo can be undone', async () => {
+    const target = await seededTarget();
+    await replace(target, await backupFile());
+    const replacedIn = await records(target);
+    const { contents } = await keptCopy(target);
+    expect((await replace(target, contents)).ok).toBe(true);
+    expect(portable((await keptCopy(target)).contents)).toEqual(replacedIn);
+  });
+
+  it('holds only the latest replace', async () => {
+    const target = await seededTarget();
+    const file = await backupFile();
+    await replace(target, file);
+    await target.presets.create(presetValues('Added later', null));
+    const beforeSecond = await records(target);
+    expect((await replace(target, file)).ok).toBe(true);
+    expect(portable((await keptCopy(target)).contents)).toEqual(beforeSecond);
   });
 
   it('is not taken by a merge or an unconfirmed replace', async () => {
