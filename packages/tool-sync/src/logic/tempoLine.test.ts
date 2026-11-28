@@ -12,8 +12,30 @@ const text = (line: TempoLine) => line.lead + line.rung + line.tail;
 
 const NO_LOOKUP = { bpm: null, source: null, tried: [], looking: false };
 const SONG_BPM = 171;
+const TAP_COUNT = 7;
 
 describe('tempoLine', () => {
+  it('names the taps that set the tempo', () => {
+    const line = tempoLine({
+      ...NO_LOOKUP,
+      bpm: SONG_BPM,
+      source: BPM_SOURCE.tap,
+      tried: [BPM_SOURCE.library],
+      tapCount: TAP_COUNT,
+    });
+    expect(text(line)).toBe('from your 7 taps · tap to change');
+    expect(line).toMatchObject({ rung: 'your 7 taps', noTempo: false });
+  });
+
+  it('keeps tap tempo named when the pad did not count the taps', () => {
+    const line = tempoLine({
+      ...NO_LOOKUP,
+      bpm: SONG_BPM,
+      source: BPM_SOURCE.tap,
+    });
+    expect(text(line)).toBe('from tap tempo · tap to change');
+  });
+
   it('names the library beat grid while the grid is offered', () => {
     const line = tempoLine({
       ...NO_LOOKUP,

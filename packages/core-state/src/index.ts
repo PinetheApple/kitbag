@@ -663,6 +663,24 @@ export {
 } from './playAlong/phase.ts';
 export { UNLOCK_REASON, type UnlockReason } from './playAlong/lockOutcome.ts';
 export {
+  BEAT_SOURCE,
+  TAP_LOCK_MISS,
+  TAP_LOCK_WINDOW,
+  TAP_OUTLIER_MS,
+  type BeatSource,
+  type TapLockMiss,
+  type TapLockResult,
+  type TapOffset,
+} from './playAlong/tapLock.ts';
+export {
+  TAP_STEP,
+  TAPS_CLEARED,
+  type TapAlong,
+  type TappedTempo,
+  type TapStep,
+  type TempoChoice,
+} from './playAlong/tapAlongState.ts';
+export {
   SAVE_REFUSAL,
   type SaveOutcome,
   type SaveRefusal,
@@ -670,7 +688,7 @@ export {
   type TrackPresetState,
 } from './playAlong/trackPreset.ts';
 export type { PlayAlongPattern } from './playAlong/pattern.ts';
-export { extrapolatedPositionMs } from './playAlong/position.ts';
+export { beatSeconds, extrapolatedPositionMs } from './playAlong/position.ts';
 export type { PlayAlongRuntime } from './playAlong/runtime.ts';
 export { useSwipeHint } from './firstUse/useSwipeHint.ts';
 export {
@@ -880,10 +898,13 @@ export {
   type ClockParts,
 } from './text.ts';
 export { CALIBRATION } from './rig/calibrationRules.ts';
+export { positiveMod } from './metronome/config.ts';
 export {
   analyseTaps,
   BEAT_MS,
+  circularCentre,
   mean,
+  median,
   sampleSd,
   storedOffsetMs,
   unwrapDeviations,

@@ -4,7 +4,7 @@ import { act, createElement, type ReactNode } from 'react';
 import { create, type ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { UNLOCK_REASON } from '@kitbag/core-state';
+import { TAPS_CLEARED, UNLOCK_REASON } from '@kitbag/core-state';
 
 import { PLAY_ALONG_VIEW } from '../logic/playAlongView.ts';
 
@@ -33,7 +33,19 @@ const seen = vi.hoisted(() => ({
   hideNotice: undefined as (() => void) | undefined,
 }));
 const playAlong = vi.hoisted(() => ({
-  tap: vi.fn(() => ({ locked: true })),
+  tapAlong: {
+    step: 'tapping',
+    taps: [] as number[],
+    offsets: [] as { ms: number; kept: boolean }[],
+    result: undefined,
+    halfOrDoubleBpm: undefined,
+    tempoChoice: undefined,
+    movedBeats: 0,
+    cleared: undefined as string | undefined,
+  },
+  tapToLock: vi.fn(() => true),
+  forgetClearedTaps: vi.fn(),
+  dropRetapTaps: vi.fn(),
   songAheadOfClickMs: undefined as number | undefined,
   sourceGoneAtBoottimeMs: undefined as number | undefined,
   unlockReason: undefined as string | undefined,
@@ -184,6 +196,7 @@ beforeEach(() => {
   playAlong.songAheadOfClickMs = undefined;
   playAlong.sourceGoneAtBoottimeMs = undefined;
   playAlong.unlockReason = undefined;
+  playAlong.tapAlong.cleared = undefined;
 });
 
 const TRACK_CHANGED = UNLOCK_REASON.trackChanged;
@@ -195,10 +208,10 @@ describe('re-tap from the drift meter', () => {
     expect(seen.pads).toHaveLength(0);
 
     await press(lastMeter(), 'onRetap');
-    expect(lastPad()?.copy).toMatchObject({ title: 'Re-tap on a downbeat' });
+    expect(lastPad()?.copy).toMatchObject({ title: 'Tap along to re-align' });
 
     await press(lastPad(), 'onTap');
-    expect(playAlong.tap).toHaveBeenCalledWith(NOW_MS);
+    expect(playAlong.tapToLock).toHaveBeenCalledWith(NOW_MS);
     await show(firstSong, lockOn(firstSong, NOW_MS));
     expect(lastPad()?.copy).toMatchObject({ title: 'Locked on beat 1' });
 
@@ -215,6 +228,14 @@ describe('re-tap from the drift meter', () => {
     expect(seen.pads).toHaveLength(0);
   });
 
+  it('drops unlocked re-tap taps once re-tap ends', async () => {
+    await show(firstSong, lockOn(firstSong, 0));
+    await press(lastMeter(), 'onRetap');
+    playAlong.dropRetapTaps.mockClear();
+    await show(firstSong, lockOn(firstSong, NOW_MS));
+    expect(playAlong.dropRetapTaps).toHaveBeenCalled();
+  });
+
   it('never offers the re-tap pad while the song is paused', async () => {
     const held = lockOn(firstSong, 0);
     await show(firstSong, held);
@@ -222,6 +243,22 @@ describe('re-tap from the drift meter', () => {
     expect(seen.pads).toHaveLength(1);
     await show({ ...firstSong, playing: false }, held);
     expect(seen.pads).toHaveLength(0);
+  });
+});
+
+describe('taps cleared by a new track', () => {
+  it('says the taps were cleared and forgets it once the notice times out', async () => {
+    playAlong.tapAlong.cleared = TAPS_CLEARED.track;
+    await show(nextSong, undefined);
+    expect(seen.notices).toEqual(['New track. Your taps were cleared.']);
+    seen.hideNotice?.();
+    expect(playAlong.forgetClearedTaps).toHaveBeenCalledOnce();
+  });
+
+  it('says nothing for taps cleared by a seek', async () => {
+    playAlong.tapAlong.cleared = TAPS_CLEARED.seek;
+    await show(firstSong, undefined);
+    expect(seen.notices).toEqual([]);
   });
 });
 

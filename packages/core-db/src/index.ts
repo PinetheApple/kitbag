@@ -111,7 +111,12 @@ export {
   type StemKey,
   type StemSetSpeedKey,
 } from './stem-speed-key';
-export { MS_PER_SECOND, SECONDS_PER_MINUTE, UNITY_GAIN } from './units';
+export {
+  MS_PER_MINUTE,
+  MS_PER_SECOND,
+  SECONDS_PER_MINUTE,
+  UNITY_GAIN,
+} from './units';
 export { parseLrc, plainLyricTexts, type LyricLine } from './lrc';
 export {
   retimeFits,

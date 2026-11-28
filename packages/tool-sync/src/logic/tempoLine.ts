@@ -15,6 +15,7 @@ export interface TempoLineInputs {
   readonly tried: readonly LadderRung[];
   readonly looking: boolean;
   readonly offered?: boolean;
+  readonly tapCount?: number | null;
 }
 
 export interface TempoLine {
@@ -70,15 +71,26 @@ function notFound(tried: readonly LadderRung[]): string {
   return [NOT_FOUND_TEXT, names].join(FACT_SEPARATOR);
 }
 
+const fromTaps = (tapCount: number): TempoLine => ({
+  lead: 'from ',
+  rung: `your ${String(tapCount)} taps`,
+  tail: CHANGE_HINT,
+  noTempo: false,
+  credit: null,
+});
+
 export function tempoLine({
   bpm,
   source,
   tried,
   looking,
   offered = false,
+  tapCount = null,
 }: TempoLineInputs): TempoLine {
   if (offered && bpm !== null && source === BPM_SOURCE.library)
     return OFFERED_GRID;
+  if (bpm !== null && source === BPM_SOURCE.tap && tapCount !== null)
+    return fromTaps(tapCount);
   if (bpm !== null && source !== null) {
     return {
       ...FOUND_WORDS[source],

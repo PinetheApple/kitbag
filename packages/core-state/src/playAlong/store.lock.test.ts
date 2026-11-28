@@ -7,7 +7,6 @@ import { songRow } from '../tempoLadder/libraryRows.test-helper.ts';
 import { BPM_SOURCE } from '../tempoLadder/sources.ts';
 import { TAPS_TO_SET_TEMPO } from '../tapTempo/tapTempo.ts';
 import { createTempoLadderStore } from '../tempoLadder/store.ts';
-import { LOCK_REFUSAL } from './store.ts';
 import {
   BPM,
   FRAMES_PER_MS,
@@ -18,10 +17,12 @@ import {
   settle,
   snapshot,
   START_MS,
+  tapAlongLock,
 } from './store.test-helper.ts';
 
 const TAP_AFTER_MS = 300;
 const TAP_SONG_SEC = 10.3;
+const RETAPPED_SONG_SEC = 10.1;
 const LATE_MS = 40;
 const FOUR_FOUR_BARS_BACK = 6;
 const FOUR_FOUR_BAR_SEC = 2;
@@ -33,57 +34,40 @@ afterEach(() => {
 function tapped(fake = fakePlayAlong()) {
   fake.store.getState().setBpm(BPM);
   vi.advanceTimersByTime(TAP_AFTER_MS);
-  const outcome = fake.store.getState().tap(START_MS + TAP_AFTER_MS);
+  const outcome = tapAlongLock(fake);
   return { ...fake, outcome };
 }
 
-describe('tap to align', () => {
-  it('refuses a tap with no tempo and leaves the engine alone', () => {
-    const fake = fakePlayAlong();
-    fake.store.getState().watchLibrary();
-    expect(fake.store.getState().tap(START_MS)).toEqual({
-      locked: false,
-      reason: LOCK_REFUSAL.noBpm,
-    });
+describe('tap along to lock', () => {
+  it('ignores taps with nothing playing and leaves the engine alone', () => {
+    const fake = fakePlayAlong({ sessions: [] });
+    fake.store.getState().setBpm(BPM);
+    expect(tapAlongLock(fake)).toBe(false);
     expect(fake.store.getState().lock).toBeUndefined();
     expect(fake.calls).toEqual([]);
   });
 
-  it('refuses a tap with nothing playing', () => {
-    const fake = fakePlayAlong({ sessions: [] });
-    fake.store.getState().setBpm(BPM);
-    expect(fake.store.getState().tap(START_MS)).toEqual({
-      locked: false,
-      reason: LOCK_REFUSAL.noSession,
-    });
-  });
-
-  it('refuses a tap when the app reports no position', () => {
+  it('ignores taps when the app reports no position', () => {
     const fake = fakePlayAlong({ sessions: [snapshot({ positionMs: null })] });
     fake.store.getState().setBpm(BPM);
-    expect(fake.store.getState().tap(START_MS)).toEqual({
-      locked: false,
-      reason: LOCK_REFUSAL.unknownPosition,
-    });
+    expect(tapAlongLock(fake)).toBe(false);
     expect(fake.calls).toEqual([]);
   });
 
-  it('refuses a tap while the song is paused', () => {
+  it('ignores taps while the song is paused', () => {
     const fake = fakePlayAlong({
       sessions: [snapshot({ playing: false, speed: 0 })],
     });
     fake.store.getState().setBpm(BPM);
-    expect(fake.store.getState().tap(START_MS)).toEqual({
-      locked: false,
-      reason: LOCK_REFUSAL.paused,
-    });
+    expect(tapAlongLock(fake)).toBe(false);
+    expect(fake.store.getState().tapAlong.taps).toEqual([]);
     expect(fake.calls).toEqual([]);
   });
 
-  it('records the tapped song position as the downbeat and locks', () => {
+  it('puts beat 1 on the tapped song position and locks', () => {
     const { store, outcome } = tapped();
-    expect(outcome).toEqual({ locked: true });
-    expect(store.getState().lock).toEqual({
+    expect(outcome).toBe(true);
+    expect(store.getState().lock).toMatchObject({
       sessionId: SESSION_ID,
       track: { title: 'Song', artist: 'Band', durationMs: 200_000 },
       downbeatSec: TAP_SONG_SEC,
@@ -95,7 +79,7 @@ describe('tap to align', () => {
     });
   });
 
-  it('anchors the tapped downbeat on a bar line at the tap instant', () => {
+  it('anchors the tapped downbeat on a bar line at the lock instant', () => {
     const { anchors } = tapped();
     const now = START_MS + TAP_AFTER_MS;
     expect(anchors()).toEqual([
@@ -103,11 +87,11 @@ describe('tap to align', () => {
     ]);
   });
 
-  it('anchors at now a tap that landed a moment ago', () => {
+  it('anchors at now taps that landed a moment ago', () => {
     const fake = fakePlayAlong();
     fake.store.getState().setBpm(BPM);
     vi.advanceTimersByTime(TAP_AFTER_MS + LATE_MS);
-    fake.store.getState().tap(START_MS + TAP_AFTER_MS);
+    tapAlongLock(fake, START_MS + TAP_AFTER_MS);
     const [songSec, frame] = fake.anchors()[0] ?? [];
     expect(songSec).toBeCloseTo(
       FOUR_FOUR_BARS_BACK * FOUR_FOUR_BAR_SEC + LATE_MS / MS_PER_SECOND,
@@ -139,12 +123,13 @@ describe('tap to align', () => {
     expect(pick).toHaveBeenCalledWith(SESSION_ID);
   });
 
-  it('re-tapping keeps the slot and moves the downbeat', () => {
+  it('re-tapping keeps the slot and moves the downbeat to the new taps', () => {
     const fake = tapped();
+    fake.store.getState().keepAccent();
     vi.advanceTimersByTime(TAP_AFTER_MS);
-    fake.store.getState().tap(START_MS + 2 * TAP_AFTER_MS);
+    tapAlongLock(fake);
     expect(fake.store.getState().lock?.downbeatSec).toBeCloseTo(
-      TAP_SONG_SEC + TAP_AFTER_MS / MS_PER_SECOND,
+      RETAPPED_SONG_SEC,
       9,
     );
     expect(fake.commands.engineHold).toHaveBeenCalledOnce();

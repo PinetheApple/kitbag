@@ -55,8 +55,9 @@ vi.mock('@kitbag/core-design', async (original) => {
 });
 
 vi.mock('./playAlongHooks.ts', () => ({
-  usePlayAlong: <T,>(selector: (state: { nudgePhase: () => void }) => T) =>
-    selector({ nudgePhase: vi.fn() }),
+  usePlayAlong: <T,>(
+    selector: (state: { nudgePhase: () => void; askForOne: () => void }) => T,
+  ) => selector({ nudgePhase: vi.fn(), askForOne: vi.fn() }),
 }));
 
 const { DRIFT_STRIP_STOPS } = await import('@kitbag/core-design');
@@ -99,6 +100,7 @@ const paused: DriftView = {
 };
 
 const phase = { reading: '+10 ms', onNudge: vi.fn(), onOpen: vi.fn() };
+const onSetOne = vi.fn();
 
 function drawn(view: DriftView) {
   strips.length = 0;
@@ -106,7 +108,7 @@ function drawn(view: DriftView) {
   buttons.length = 0;
   steppers.length = 0;
   return renderToStaticMarkup(
-    createElement(DriftMeterCard, { view, phase, onRetap: vi.fn() }),
+    createElement(DriftMeterCard, { view, phase, onRetap: vi.fn(), onSetOne }),
   );
 }
 
@@ -121,6 +123,15 @@ describe('DriftMeterCard', () => {
     expect(markup).toContain('<i>1:12</i>');
     expect(markup).toContain('<i>+2 ms</i>');
     expect(markup).toContain('Re-tap');
+  });
+
+  it('puts Set the 1 beside Re-tap, reopening the choose-the-1 step', () => {
+    drawn(locked);
+    expect(buttons.map((button) => button.label)).toEqual([
+      'Re-tap',
+      'Set the 1',
+    ]);
+    expect(buttons[1]).toMatchObject({ onPress: onSetOne, disabled: false });
   });
 
   it('draws the strip on the drift scale with a plain needle when quiet', () => {

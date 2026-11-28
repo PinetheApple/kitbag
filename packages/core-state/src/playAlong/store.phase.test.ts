@@ -20,6 +20,7 @@ import {
   snapshot,
   settle,
   STANDALONE,
+  tapAlongLock,
 } from './store.test-helper.ts';
 
 const MATCH = { kind: 'song', id: 3, bpm: 113 } as const;
@@ -131,7 +132,7 @@ describe('phase while locked', () => {
     fake.store.getState().nudgePhase(-1);
     expect(fake.store.getState().lock?.phaseOffsetMs).toBe(-COARSE_MS);
     fake.store.getState().unlock();
-    fake.store.getState().tap(Date.now());
+    tapAlongLock(fake);
     expect(fake.store.getState().phaseStepMs).toBe(COARSE_MS);
     expect(fake.store.getState().lock?.phaseOffsetMs).toBe(0);
   });
@@ -379,7 +380,7 @@ describe('why the lock ended', () => {
     expect(fake.store.getState().lock).toBeUndefined();
     expect(fake.store.getState().unlockReason).toBe(UNLOCK_REASON.trackChanged);
     fake.store.getState().setBpm(BPM);
-    fake.store.getState().tap(Date.now());
+    tapAlongLock(fake);
     expect(fake.store.getState().unlockReason).toBeUndefined();
   });
 

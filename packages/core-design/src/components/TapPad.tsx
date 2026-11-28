@@ -51,14 +51,16 @@ const useStyles = createThemedStyles((theme) => ({
     borderColor: theme.color.line,
   },
   lit: { backgroundColor: theme.color.accent, borderColor: theme.color.accent },
+  out: { borderColor: theme.color.amber },
 }));
 
 export interface TapLedsProps {
   readonly landed: number;
   readonly total: number;
+  readonly out?: number;
 }
 
-export function TapLeds({ landed, total }: TapLedsProps) {
+export function TapLeds({ landed, total, out = 0 }: TapLedsProps) {
   const styles = useStyles();
   return (
     <View
@@ -67,7 +69,14 @@ export function TapLeds({ landed, total }: TapLedsProps) {
       style={styles.leds}
     >
       {Array.from({ length: total }, (_u, index) => (
-        <View key={index} style={[styles.led, index < landed && styles.lit]} />
+        <View
+          key={index}
+          style={
+            index >= landed && index < landed + out
+              ? [styles.led, styles.out]
+              : [styles.led, index < landed && styles.lit]
+          }
+        />
       ))}
     </View>
   );
@@ -79,6 +88,8 @@ export interface TapPadProps {
   readonly onTap: (event: GestureResponderEvent) => void;
   readonly onRelease?: (() => void) | undefined;
   readonly minHeight?: number | null | undefined;
+  readonly active?: boolean | undefined;
+  readonly footer?: ReactNode;
   readonly children: ReactNode;
 }
 
@@ -88,6 +99,8 @@ export function TapPad({
   onTap,
   onRelease,
   minHeight,
+  active = false,
+  footer,
   children,
 }: TapPadProps) {
   const styles = useStyles();
@@ -95,9 +108,9 @@ export function TapPad({
     ({ pressed }: PressableStateCallbackType) => [
       styles.pad,
       typeof minHeight === 'number' && { minHeight },
-      pressed && styles.pressed,
+      (pressed || active) && styles.pressed,
     ],
-    [styles, minHeight],
+    [styles, minHeight, active],
   );
   return (
     <Pressable
@@ -111,6 +124,7 @@ export function TapPad({
       {children}
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.hint}>{hint}</Text>
+      {footer}
     </Pressable>
   );
 }

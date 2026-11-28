@@ -11,6 +11,7 @@ import {
   snapshot,
   STANDALONE,
   START_MS,
+  tapAlongLock,
 } from './store.test-helper.ts';
 
 const TAPPED_BPM = 96;
@@ -139,7 +140,7 @@ describe('the click alone, with no song to follow', () => {
     expect(holds('standaloneReturned()')).toBe(1);
     fake.calls.length = 0;
     fake.store.getState().setBpm(BPM);
-    expect(fake.store.getState().tap(START_MS).locked).toBe(true);
+    expect(tapAlongLock(fake)).toBe(true);
     expect(fake.calls.slice(0, 3)).toEqual([
       'yieldStandalone()',
       'engineHold()',
@@ -236,7 +237,7 @@ describe('the tempo on a track change', () => {
     const fake = fakePlayAlong();
     const stop = fake.store.getState().watchLibrary();
     fake.ladder.tempo(FOUND_BPM);
-    fake.store.getState().tap(START_MS);
+    tapAlongLock(fake);
     fake.store.getState().setBpm(TYPED_BPM);
     fake.store.getState().unlock();
     fake.report([snapshot({ playing: false })]);
@@ -266,7 +267,7 @@ describe('the tempo on a track change', () => {
     const fake = fakePlayAlong();
     const stop = fake.store.getState().watchLibrary();
     fake.store.getState().setBpm(BPM);
-    fake.store.getState().tap(START_MS);
+    tapAlongLock(fake);
     fake.ladder.tempo(FOUND_BPM + TYPED_BPM);
     expect(fake.store.getState().lock?.bpm).toBe(BPM);
     expect(fake.store.getState().bpm).toBe(BPM);

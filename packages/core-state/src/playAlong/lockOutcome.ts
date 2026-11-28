@@ -1,8 +1,4 @@
 export const LOCK_REFUSAL = {
-  noBpm: 'no-bpm',
-  noSession: 'no-session',
-  paused: 'paused',
-  unknownPosition: 'unknown-position',
   noOffer: 'no-offer',
   noGrid: 'no-grid',
   gridRejected: 'grid-rejected',

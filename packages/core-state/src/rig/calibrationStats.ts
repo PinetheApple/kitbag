@@ -67,17 +67,20 @@ export function median(values: readonly number[]): number {
   return mean(sorted.slice(middle - 1, middle + 1));
 }
 
-function circularCentre(deviations: readonly number[]): number {
-  const angles = deviations.map((d) => (FULL_TURN * d) / BEAT_MS);
+export function circularCentre(
+  values: readonly number[],
+  beatMs: number,
+): number {
+  const angles = values.map((v) => (FULL_TURN * v) / beatMs);
   const sin = angles.reduce((sum, a) => sum + Math.sin(a), 0);
   const cos = angles.reduce((sum, a) => sum + Math.cos(a), 0);
-  return (Math.atan2(sin, cos) * BEAT_MS) / FULL_TURN;
+  return (Math.atan2(sin, cos) * beatMs) / FULL_TURN;
 }
 
 // A deviation is only known modulo one beat, so a route near half a beat
 // late lands on both sides; unwrap around the circular mean before the median.
 export function unwrapDeviations(deviations: readonly number[]): number[] {
-  const centre = circularCentre(deviations);
+  const centre = circularCentre(deviations, BEAT_MS);
   return deviations.map(
     (d) => d - BEAT_MS * Math.round((d - centre) / BEAT_MS),
   );

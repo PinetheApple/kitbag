@@ -68,6 +68,7 @@ const playAlong = vi.hoisted(() => ({
   setPhaseStep: vi.fn(),
   shiftDownbeat: vi.fn(),
   resetPhase: vi.fn(),
+  askForOne: vi.fn(),
 }));
 
 vi.mock('./playAlongHooks.ts', () => ({
@@ -203,6 +204,38 @@ describe('PhaseSheet', () => {
       label: 'Reset',
       onPress: playAlong.resetPhase,
     });
+  });
+
+  it('asks for a tap on the 1 and closes the sheet from the downbeat row', () => {
+    const onDismiss = vi.fn();
+    seen.buttons.length = 0;
+    renderToStaticMarkup(
+      createElement(PhaseSheet, {
+        visible: true,
+        route: BLUETOOTH,
+        bottomInset: 0,
+        onDismiss,
+      }),
+    );
+    const tapTheOne = seen.buttons.find((b) => b.label === 'Tap the 1');
+    expect(tapTheOne).toMatchObject({ icon: 'tapAlong', disabled: false });
+    (tapTheOne?.onPress as () => void)();
+    expect(playAlong.askForOne).toHaveBeenCalledOnce();
+    expect(onDismiss).toHaveBeenCalledOnce();
+  });
+
+  it('disables Tap the 1 when the grid has no downbeat to move', () => {
+    playAlong.lock = { ...lock, downbeatShiftAvailable: false };
+    drawn();
+    expect(seen.buttons.find((b) => b.label === 'Tap the 1')).toMatchObject({
+      disabled: true,
+    });
+  });
+
+  it('says what Reset puts back', () => {
+    expect(drawn()).toContain(
+      'Reset puts the nudge to 0 and beat 1 back where your taps put it.',
+    );
   });
 
   it('stays closed with no lock', () => {

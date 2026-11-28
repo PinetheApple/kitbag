@@ -18,6 +18,7 @@ import {
   snapshot,
   STANDALONE,
   START_MS,
+  tapAlongLock,
 } from './store.test-helper.ts';
 
 const BAR_OFFSET_SEC = 2;
@@ -256,7 +257,7 @@ describe('the followed app going away', () => {
     fake.report([]);
     fake.store.getState().unlock();
     fake.report([reportAt(0)]);
-    fake.store.getState().tap(START_MS);
+    tapAlongLock(fake);
     vi.advanceTimersByTime(SOURCE_GONE_HOLD_MS);
     expect(fake.store.getState().lock).toBeDefined();
   });

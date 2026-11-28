@@ -12,6 +12,8 @@ import type {
   SongPreset,
 } from '@kitbag/core-db';
 
+import { MS_PER_SECOND } from '@kitbag/core-db';
+
 import { NO_GRID } from '../songPlayer/songGrid.ts';
 import type { DetectedGrid } from '../stemPlayer/meterOverride.ts';
 import type { LibraryMatch } from '../tempoLadder/libraryMatch.ts';
@@ -20,7 +22,9 @@ import type {
   FollowedSessions,
   PlayAlongRuntime,
 } from './runtime.ts';
+import { beatSeconds } from './position.ts';
 import { createPlayAlongStore } from './store.ts';
+import { TAP_LOCK_WINDOW } from './tapLock.ts';
 
 export const START_MS = 1_000_000;
 export const FRAMES_PER_MS = 48;
@@ -29,6 +33,8 @@ export const SESSION_ID = 'player';
 export const OTHER_ID = 'other';
 export const BPM = 120;
 const SETTLE_TURNS = 8;
+const FIRST_TAP_LATE_MS = 100;
+const NORMAL_SPEED = 1;
 export const PLAY_ALONG = KB_METRONOME_SLOT.KB_METRONOME_SLOT_PLAY_ALONG;
 export const STANDALONE = KB_METRONOME_SLOT.KB_METRONOME_SLOT_STANDALONE;
 
@@ -305,9 +311,36 @@ export function fakePlayAlong({
   };
 }
 
+function playingSpeed(fake: ReturnType<typeof fakePlayAlong>): number {
+  const speed = fake.media.getState().sessions[0]?.speed ?? NORMAL_SPEED;
+  return speed > 0 ? speed : NORMAL_SPEED;
+}
+
+// The newest tap lands on now; the first, late enough to be ignored, sits
+// whole bars back, so beat 1 is the beat at now, as one tap there used to be.
+export function tapAlongLock(
+  fake: ReturnType<typeof fakePlayAlong>,
+  nowMs = Date.now(),
+): boolean {
+  const { bpm, pattern } = fake.store.getState();
+  const speed = playingSpeed(fake);
+  const beatMs =
+    (beatSeconds(bpm ?? BPM, pattern.denominator) * MS_PER_SECOND) / speed;
+  const bars = Math.ceil(TAP_LOCK_WINDOW / pattern.beatsPerBar);
+  const tap = (beatsBack: number, lateMs = 0) =>
+    fake.store
+      .getState()
+      .tapToLock(nowMs - beatsBack * beatMs + lateMs / speed);
+  tap(bars * pattern.beatsPerBar, FIRST_TAP_LATE_MS);
+  let committed = false;
+  for (let back = TAP_LOCK_WINDOW - 1; back >= 0; back -= 1)
+    committed = tap(back);
+  return committed;
+}
+
 export function locked(fake = fakePlayAlong()) {
   fake.store.getState().setBpm(BPM);
-  fake.store.getState().tap(START_MS);
+  tapAlongLock(fake);
   return fake;
 }
 

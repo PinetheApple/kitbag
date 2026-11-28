@@ -1,4 +1,4 @@
-import { MS_PER_SECOND, SECONDS_PER_MINUTE } from '@kitbag/core-db';
+import { MS_PER_MINUTE } from '@kitbag/core-db';
 
 import type { BpmBounds } from '../metronome/config.ts';
 
@@ -9,7 +9,6 @@ const TIMEOUT_SLACK = 1.5;
 export const TAP_WINDOW_INTERVALS = 4;
 export const TAPS_TO_SET_TEMPO = 4;
 
-const MS_PER_MINUTE = SECONDS_PER_MINUTE * MS_PER_SECOND;
 const MIN_TAPS_FOR_TEMPO = 2;
 
 // Derived from the slowest legal tempo: a fixed 2 s would sit at 30 BPM and put

@@ -40,10 +40,22 @@ const ladder = vi.hoisted(() => ({
   },
 }));
 const clock = vi.hoisted(() => ({ gapMs: 0 }));
+const noTaps = vi.hoisted(() => ({
+  step: 'tapping',
+  taps: [] as number[],
+  offsets: [] as { ms: number; kept: boolean }[],
+  result: undefined,
+  halfOrDoubleBpm: undefined,
+  tempoChoice: undefined as object | undefined,
+  movedBeats: 0,
+  cleared: undefined,
+}));
 const playAlong = vi.hoisted(() => ({
   offer: undefined as object | undefined,
   bpm: undefined as number | undefined,
-  tap: vi.fn(() => ({ locked: true })),
+  tapAlong: noTaps,
+  tapToLock: vi.fn(() => false),
+  forgetClearedTaps: vi.fn(),
   songAheadOfClickMs: undefined as number | undefined,
   sourceGoneAtBoottimeMs: undefined as number | undefined,
 }));
@@ -105,6 +117,12 @@ vi.mock('./DriftMeter.tsx', () => ({
 vi.mock('./LibraryOfferCard.tsx', () => ({
   LibraryOfferCard: () => {
     order.push('offer');
+    return null;
+  },
+}));
+vi.mock('./TempoChoiceCard.tsx', () => ({
+  TempoChoiceCard: () => {
+    if (playAlong.tapAlong.tempoChoice !== undefined) order.push('choice');
     return null;
   },
 }));
@@ -188,27 +206,32 @@ beforeEach(() => {
   playAlong.bpm = undefined;
   playAlong.songAheadOfClickMs = undefined;
   playAlong.sourceGoneAtBoottimeMs = undefined;
+  playAlong.tapAlong = noTaps;
 });
 
 describe('the tap pad', () => {
-  it('locks the click to the song on one tap once the tempo is known', () => {
+  it('hands each tap to the tap-along lock once the tempo is known', () => {
     playAlong.bpm = SONG_BPM;
     tapPad(PLAY_ALONG_VIEW.song).onTap(touch());
-    expect(playAlong.tap).toHaveBeenCalledWith(TOUCHED_AT_MS);
+    expect(playAlong.tapToLock).toHaveBeenCalledWith(TOUCHED_AT_MS);
     expect(ladder.state.tap).not.toHaveBeenCalled();
   });
 
-  it('counts tap tempo when the song has no tempo yet', () => {
-    tapPad(PLAY_ALONG_VIEW.song).onTap(touch());
-    expect(ladder.state.tap).toHaveBeenCalledWith(TOUCHED_AT_MS);
-    expect(playAlong.tap).not.toHaveBeenCalled();
+  it('taps along on the same pad when the song has no tempo yet', () => {
+    const pad = tapPad(PLAY_ALONG_VIEW.song);
+    pad.onTap(touch());
+    expect(pad.copy).toMatchObject({
+      hint: 'Your taps set the tempo and the beat. 4 or more.',
+    });
+    expect(playAlong.tapToLock).toHaveBeenCalledWith(TOUCHED_AT_MS);
+    expect(ladder.state.tap).not.toHaveBeenCalled();
   });
 
-  it('re-locks on a tap once the lock drifted', () => {
+  it('taps along to re-align once the lock drifted', () => {
     playAlong.bpm = SONG_BPM;
     playAlong.songAheadOfClickMs = DRIFT_MS;
     tapPad(PLAY_ALONG_VIEW.song, true).onTap(touch());
-    expect(playAlong.tap).toHaveBeenCalledWith(TOUCHED_AT_MS);
+    expect(playAlong.tapToLock).toHaveBeenCalledWith(TOUCHED_AT_MS);
     expect(ladder.state.tap).not.toHaveBeenCalled();
   });
 
@@ -216,7 +239,15 @@ describe('the tap pad', () => {
     playAlong.bpm = SONG_BPM;
     tapPad(PLAY_ALONG_VIEW.denied).onTap(touch());
     expect(ladder.state.tap).toHaveBeenCalledWith(TOUCHED_AT_MS);
-    expect(playAlong.tap).not.toHaveBeenCalled();
+    expect(playAlong.tapToLock).not.toHaveBeenCalled();
+  });
+
+  it('stays in the pad slot to ask for the 1 after a fresh lock', () => {
+    playAlong.bpm = SONG_BPM;
+    playAlong.tapAlong = { ...noTaps, step: 'chooseOne' };
+    draw(PLAY_ALONG_VIEW.song, true);
+    expect(order).not.toContain('meter');
+    expect(pads[0]?.copy).toMatchObject({ title: 'Now tap once on the 1' });
   });
 
   it('reads the deep-sleep gap again on every tap', () => {
@@ -225,7 +256,7 @@ describe('the tap pad', () => {
     pad.onTap(touch());
     clock.gapMs = LATER_GAP_MS;
     pad.onTap(touch());
-    expect(playAlong.tap).toHaveBeenLastCalledWith(
+    expect(playAlong.tapToLock).toHaveBeenLastCalledWith(
       TOUCH_UPTIME_MS + LATER_GAP_MS,
     );
   });
@@ -249,8 +280,17 @@ describe('the library offer', () => {
     playAlong.bpm = SONG_BPM;
     playAlong.offer = {};
     expect(tapPad(PLAY_ALONG_VIEW.song).copy).toMatchObject({
-      hint: 'Or tap on a downbeat to lock it yourself',
+      hint: 'Or tap along to lock it yourself',
     });
+  });
+});
+
+describe('the tempo choice', () => {
+  it('sits between the song and the tempo when the taps disagree', () => {
+    playAlong.bpm = SONG_BPM;
+    playAlong.tapAlong = { ...noTaps, step: 'chooseTempo', tempoChoice: {} };
+    draw(PLAY_ALONG_VIEW.song, true);
+    expect(order.slice(0, 3)).toEqual(['song', 'choice', 'bpm']);
   });
 });
 
@@ -268,7 +308,7 @@ describe('the drift meter', () => {
     draw(PLAY_ALONG_VIEW.song, true);
     expect(order).toEqual(['meter', 'song', 'bpm', 'pattern']);
     expect(pads).toHaveLength(1);
-    expect(pads[0]?.copy).toMatchObject({ title: 'Re-tap on a downbeat' });
+    expect(pads[0]?.copy).toMatchObject({ title: 'Tap along to re-align' });
   });
 
   it('stays last with no pad while the followed app is gone', () => {
