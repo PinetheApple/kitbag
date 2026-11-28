@@ -1,5 +1,8 @@
-import { KITBAG_HOST_OBJECT_KEY } from '@kitbag/core-native';
-import type { KitbagHostObject } from '@kitbag/core-native';
+import { KITBAG_HOST_OBJECT_KEY, type HostGlobal } from '@kitbag/core-native';
+import type {
+  MixerFrameOptions,
+  MixerFrameValues,
+} from '@kitbag/core-plugin-api';
 import {
   formatClock,
   framesToSeconds,
@@ -7,16 +10,7 @@ import {
   onSongStarting,
 } from '@kitbag/core-state';
 import { useCallback, useEffect } from 'react';
-import {
-  useFrameCallback,
-  useSharedValue,
-  type SharedValue,
-} from 'react-native-reanimated';
-
-export type HostGlobal = Record<
-  typeof KITBAG_HOST_OBJECT_KEY,
-  KitbagHostObject | undefined
->;
+import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
 
 const NO_SECOND = -1;
 const NOT_HELD = -1;
@@ -33,20 +27,6 @@ const NOT_IDLE = -1;
 const IDLE_AFTER_MS = 250;
 // A paused song can still start or seek from the notification without telling the app.
 export const IDLE_POLL_MS = 100;
-
-export interface MixerFrameValues {
-  readonly progress: SharedValue<number>;
-  readonly playing: SharedValue<number>;
-  readonly elapsed: SharedValue<string>;
-  readonly second: SharedValue<number>;
-  readonly songSec: SharedValue<number>;
-  readonly hold: (fraction: number) => void;
-}
-
-export interface MixerFrameOptions {
-  readonly countEndFrame?: number | null;
-  readonly heldFrame?: number | null;
-}
 
 function isIdle(
   started: number,

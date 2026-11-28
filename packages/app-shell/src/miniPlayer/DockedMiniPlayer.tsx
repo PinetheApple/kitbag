@@ -1,11 +1,11 @@
 import { MiniPlayer, useMiniPlayerShown } from '@kitbag/tool-library';
-import { useMixerFrame } from '@kitbag/tool-stems';
 import { PlayAlongMiniPlayer } from '@kitbag/tool-sync';
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 
 import { TOOL_ID, TOOL_ROUTES } from '@/home/toolRoutes';
 import { useToolOn } from '@/home/toolsOn';
+import { useMixerFrame } from '@/listening/useMixerFrame';
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
 export interface DockedMiniPlayerProps {

@@ -31,7 +31,7 @@ import {
   installFakeRuntime,
   SET_ID,
 } from './playerHarness.test-helper.tsx';
-import { StemPlayerScreen } from '@kitbag/tool-stems/src/screen/StemPlayerScreen.tsx';
+import { StemPlayerScreen } from './stemPlayerScreen.test-helper.ts';
 import { WAVEFORM_BARS } from '@kitbag/tool-stems/src/screen/StemRowView.tsx';
 import { NO_GRID_REASON } from '@kitbag/tool-stems/src/logic/meterEdit.ts';
 

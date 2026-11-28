@@ -46,7 +46,7 @@ import {
 import { useCallback, useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { setlistRowSubtitle } from '../logic/upNextText.ts';
+import { setlistRowSubtitle } from './upNextText.ts';
 
 type PlayQueueEntry = PlayOrderStore['queue'][number];
 

@@ -26,7 +26,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
   useTools: <T>(selector: (state: { readonly off: string[] }) => T) =>
     selector(world),
 }));
-vi.mock('@kitbag/tool-stems', () => ({ useMixerFrame: () => undefined }));
+vi.mock('@/listening/useMixerFrame', () => ({ useMixerFrame: () => undefined }));
 vi.mock('@kitbag/tool-sync', () => ({
   PlayAlongMiniPlayer: recorder('PlayAlongMiniPlayer'),
 }));

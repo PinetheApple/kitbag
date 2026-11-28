@@ -21,9 +21,11 @@ import {
   useStemViewing,
   type StemPlayerStatus,
 } from '@kitbag/core-state';
+import type { MixerFrameValues } from '@kitbag/core-plugin-api';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
+import { useStemsHost } from '../host.tsx';
 import { useArrivalFollow, useRouteAcquire } from './advanceFollow.ts';
 import { detailTabLabel } from '../logic/detailView.ts';
 import { hasUnsavedRetime } from '../logic/retimeView.ts';
@@ -46,10 +48,8 @@ import { SpeedKeyControls } from './SpeedKeyControls.tsx';
 import { StemList } from './StemList.tsx';
 import { WAVEFORM_BARS } from './StemRowView.tsx';
 import { StemTransport } from './StemTransport.tsx';
-import { UpNextRow } from './UpNextRow.tsx';
 import { usePlayerRoutes, useStemPresses } from './playerRoutes.ts';
 import { usePlayerSheet } from './usePlayerSheet.ts';
-import { useMixerFrame, type MixerFrameValues } from './useMixerFrame.ts';
 
 export interface StemPlayerScreenProps {
   readonly setId: number;
@@ -90,6 +90,7 @@ interface DockProps {
 }
 
 function Dock({ frame, bottom, onOpenUpNext, onSpeedKey }: DockProps) {
+  const { UpNextRow } = useStemsHost().listening;
   const presses = useStemPresses();
   const viewing = useStemViewing();
   return (
@@ -202,6 +203,7 @@ function NotReady({
 }
 
 function useStemFrame(viewing: boolean): MixerFrameValues {
+  const { useMixerFrame } = useStemsHost().listening;
   const rate = useStemPlayer((s) => s.engineRate);
   const frames = useStemPlayer((s) => s.durationFrames);
   const loopEnd = useStemPlayer(loopEndFrames);

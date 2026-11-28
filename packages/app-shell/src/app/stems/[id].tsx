@@ -1,8 +1,8 @@
-import { StemPlayerScreen } from '@kitbag/tool-stems';
 import { useIsFocused, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { compiledTools } from '@/compiledTools';
 import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
 import { useViewedPlayerDock } from '@/miniPlayer/useViewedPlayerDock';
@@ -12,6 +12,8 @@ import {
   VIEW_SONG,
   type FollowParams,
 } from '@/runtime/libraryRoutes';
+
+const StemPlayerScreen = compiledTools.stems.screens.player;
 
 interface StemRouteNavigation {
   readonly setParams: (params: FollowParams) => void;

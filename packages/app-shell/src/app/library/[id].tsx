@@ -3,13 +3,14 @@ import {
   SongPlayerScreen,
   type SongPlayerScreenProps,
 } from '@kitbag/tool-library';
-import { UpNextRow, useMixerFrame } from '@kitbag/tool-stems';
 import { useIsFocused, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
+import { UpNextRow } from '@/listening/UpNextRow';
+import { useMixerFrame } from '@/listening/useMixerFrame';
 import { useQueueSheet } from '@/queue/useQueueSheet';
 import { useViewedPlayerDock } from '@/miniPlayer/useViewedPlayerDock';
 import {

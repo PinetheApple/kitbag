@@ -9,7 +9,11 @@ import {
   stemPlayerMix,
   withAlpha,
 } from '@kitbag/core-design';
-import { KB_STOPPED_BEAT, KITBAG_HOST_OBJECT_KEY } from '@kitbag/core-native';
+import {
+  KB_STOPPED_BEAT,
+  KITBAG_HOST_OBJECT_KEY,
+  type HostGlobal,
+} from '@kitbag/core-native';
 import { useStemPlayer } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
@@ -20,7 +24,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import type { HostGlobal } from './useMixerFrame.ts';
 
 const NOT_COUNTING = 0;
 

@@ -39,7 +39,7 @@ import {
   unmountTracked,
   type Player,
 } from './playerHarness.test-helper.tsx';
-import { UP_NEXT } from '@kitbag/tool-stems/src/screen/UpNextRow.tsx';
+import { UP_NEXT } from '@/listening/UpNextRow.tsx';
 
 const NIGHT_BUS = 21;
 const TIN_ROOF = 22;

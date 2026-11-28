@@ -6,5 +6,9 @@
   "types": "src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/react": "~19.3.0",
+    "react-native-reanimated": "4.7.2"
   }
 }

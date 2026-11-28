@@ -16,6 +16,7 @@ import {
   useStemViewing,
   viewOnlyReason,
 } from '@kitbag/core-state';
+import type { MixerFrameValues } from '@kitbag/core-plugin-api';
 import { useCallback, useMemo } from 'react';
 
 import { UNDO } from '../logic/meterEdit.ts';
@@ -25,7 +26,6 @@ import {
   STEM_TEMPO_ENTRY,
   stemTempoEntry,
 } from '../logic/setTempoView.ts';
-import type { MixerFrameValues } from './useMixerFrame.ts';
 
 interface PressProps {
   readonly onPress: () => void;

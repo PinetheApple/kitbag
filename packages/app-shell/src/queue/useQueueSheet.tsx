@@ -5,9 +5,9 @@ import {
   useNotice,
 } from '@kitbag/core-design';
 import { useLibrary } from '@kitbag/core-state';
-import { QueueSheet, type QueueSheetProps } from '@kitbag/tool-stems';
 import { useCallback, useMemo, useState } from 'react';
 
+import { QueueSheet, type QueueSheetProps } from '@/listening/QueueSheet';
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
 type PlayerRoutes = Pick<QueueSheetProps, 'onOpenStemSet' | 'onOpenSong'>;

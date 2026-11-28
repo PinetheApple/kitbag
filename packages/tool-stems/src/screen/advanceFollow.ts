@@ -1,3 +1,4 @@
+import type { PlayOrderRoutes } from '@kitbag/core-plugin-api';
 import {
   ARRIVAL,
   arrivalStore,
@@ -9,7 +10,6 @@ import {
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { arrivalText } from '../logic/arrivalText.ts';
-import type { PlayOrderRoutes } from './usePlayOrderNav.ts';
 
 // A route change onto the song the store advanced to keeps the screen's hold:
 // re-acquiring would reload a song that is already open and playing.

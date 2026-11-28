@@ -1,13 +1,7 @@
 import type { QueuedSong } from '@kitbag/core-state';
 import { useAfterSheetClosed } from '@kitbag/core-design';
+import type { PlayOrderRoutes } from '@kitbag/core-plugin-api';
 import { useCallback } from 'react';
-
-export interface PlayOrderRoutes {
-  readonly onOpenStemSet: (stemSetId: number) => void;
-  readonly onOpenSong: (songId: number) => void;
-  readonly onOpenMetronome: () => void;
-  readonly onNotice: (message: string) => void;
-}
 
 export const TO_METRONOME = { kind: 'metronome' } as const;
 

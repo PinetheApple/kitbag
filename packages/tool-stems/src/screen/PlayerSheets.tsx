@@ -1,22 +1,26 @@
 import type { AddedToSetlist, Notice, QueuePresses } from '@kitbag/core-design';
+import type {
+  MixerFrameValues,
+  PlayOrderRoutes,
+  QueueSheetProps,
+} from '@kitbag/core-plugin-api';
+import type { LeftSetlist } from '@kitbag/core-state';
 
+import { useStemsHost } from '../host.tsx';
 import { CLICK_SECTION, type ClickSection } from '../logic/clickView.ts';
 import { ClickSheet } from './ClickSheet.tsx';
 import { ExportSheet } from './ExportSheet.tsx';
 import { PlayerMenu } from './PlayerMenu.tsx';
 import { SetlistSheet } from './queueActions.tsx';
-import { QueueSheet, type QueueSheetProps } from './QueueSheet.tsx';
 import { SpeedKeySheet } from './SpeedKeySheet.tsx';
 import { StemMeterSheet } from './StemMeterSheet.tsx';
 import { StemSetTempoSheet } from './StemSetTempo.tsx';
 import { TempoSheet } from './TempoSheet.tsx';
-import type { MixerFrameValues } from './useMixerFrame.ts';
 import {
   clickSectionOf,
   TEMPO_SHEET,
   type OpenSheet,
 } from './usePlayerSheet.ts';
-import type { PlayOrderRoutes } from './usePlayOrderNav.ts';
 
 export interface PlayerSheetsProps {
   readonly routes: PlayOrderRoutes;
@@ -24,7 +28,7 @@ export interface PlayerSheetsProps {
   readonly queue: QueuePresses;
   readonly onAddToSetlist: () => void;
   readonly onAddedToSetlist: (added: AddedToSetlist) => void;
-  readonly onLeftSetlist: QueueSheetProps['onLeftSetlist'];
+  readonly onLeftSetlist: QueueSheetProps<Notice, LeftSetlist>['onLeftSetlist'];
   readonly sheet: OpenSheet | null;
   readonly bottomInset: number;
   readonly frame: MixerFrameValues;
@@ -55,6 +59,7 @@ function OpenClickSheet({
 
 export function PlayerSheets(props: PlayerSheetsProps) {
   const { sheet, bottomInset, onClose } = props;
+  const { QueueSheet } = useStemsHost().listening;
   return (
     <>
       <PlayerMenu

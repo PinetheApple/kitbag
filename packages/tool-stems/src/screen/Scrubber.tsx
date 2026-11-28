@@ -1,9 +1,9 @@
 import { ScrubRow, type ScrubNote } from '@kitbag/core-design';
+import type { MixerFrameValues } from '@kitbag/core-plugin-api';
 import { useLoopScrub, useStemPlayer } from '@kitbag/core-state';
 
 import { loopNoteText, songSeconds } from '../logic/sectionView.ts';
 import { SectionNotches, SectionTint } from './SectionMarks.tsx';
-import type { MixerFrameValues } from './useMixerFrame.ts';
 
 function useSectionNote(
   note: ScrubNote | null,

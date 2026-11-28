@@ -125,6 +125,7 @@ export {
 
 // --- #30 (P2-A3) JSI HostObject: polled realtime reads (§13.2, §13.3) --------
 export {
+  type HostGlobal,
   type KitbagHostObject,
   KITBAG_HOST_OBJECT_KEY,
   KB_STOPPED_BEAT,
