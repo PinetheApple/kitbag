@@ -1730,8 +1730,9 @@ the core renders and tools reuse), its own data rows, navigation scoped to its r
 its bundle's assets, and the permissions and domain services its manifest names.
 
 `core-plugin-api` depends on nothing but types, `ToolHost`'s included. No runtime
-React, no store import, no native import; type-only React imports (`ComponentType`,
-`ReactNode`) may type the listening slice. If it needs more, the contract is wrong.
+React, no store import, no native import; type-only React and Reanimated imports
+(`ComponentType`, `SharedValue`) may type the listening slice. If it needs more,
+the contract is wrong.
 
 ### 9.2 One registry
 

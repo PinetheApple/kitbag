@@ -1,10 +1,5 @@
-export {
-  StemPlayerScreen,
-  type StemPlayerScreenProps,
-} from './screen/StemPlayerScreen.tsx';
-export { useMixerFrame } from './screen/useMixerFrame.ts';
-export { QueueSheet, type QueueSheetProps } from './screen/QueueSheet.tsx';
-export { UpNextRow, type UpNextRowProps } from './screen/UpNextRow.tsx';
+export type { StemPlayerScreenProps } from './screen/StemPlayerScreen.tsx';
+export { register, type StemsPlugin, type StemsScreens } from './register.tsx';
 export {
   AddStemSongSheet,
   type AddStemSongSheetProps,

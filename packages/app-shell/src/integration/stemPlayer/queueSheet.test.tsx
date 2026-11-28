@@ -52,10 +52,7 @@ import {
   stemRow,
   stems,
 } from './playQueue.test-helper.ts';
-import {
-  QueueSheet,
-  type QueueSheetProps,
-} from '@kitbag/tool-stems/src/screen/QueueSheet.tsx';
+import { QueueSheet, type QueueSheetProps } from '@/listening/QueueSheet.tsx';
 
 const NIGHT_BUS = 21;
 const TIN_ROOF = 22;

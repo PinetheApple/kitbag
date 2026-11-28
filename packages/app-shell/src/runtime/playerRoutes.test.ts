@@ -55,15 +55,17 @@ function captureScreen(props: (typeof screens.props)[number]) {
 }
 
 vi.mock('@kitbag/tool-library', () => ({ SongPlayerScreen: captureScreen }));
-vi.mock('@kitbag/tool-stems', () => ({
-  StemPlayerScreen: captureScreen,
-  QueueSheet: () => null,
+vi.mock('@/compiledTools', () => ({
+  compiledTools: { stems: { screens: { player: captureScreen } } },
+}));
+vi.mock('@/listening/QueueSheet', () => ({ QueueSheet: () => null }));
+vi.mock('@/listening/UpNextRow', () => ({
   UpNextRow: (props: Record<string, unknown>) => {
     screens.upNext.push(props);
     return null;
   },
-  useMixerFrame: () => ({}),
 }));
+vi.mock('@/listening/useMixerFrame', () => ({ useMixerFrame: () => ({}) }));
 
 const ROUTES = {
   song: (await import('../app/library/[id].tsx')).default,

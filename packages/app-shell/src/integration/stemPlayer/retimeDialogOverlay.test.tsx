@@ -9,7 +9,7 @@ import {
   RESET,
   retiming,
 } from './playerHarness.test-helper.tsx';
-import { StemPlayerScreen } from '@kitbag/tool-stems/src/screen/StemPlayerScreen.tsx';
+import { StemPlayerScreen } from './stemPlayerScreen.test-helper.ts';
 
 async function askedToReset() {
   const p = await retiming();

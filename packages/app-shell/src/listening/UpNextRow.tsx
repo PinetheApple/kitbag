@@ -28,14 +28,11 @@ import {
 } from '@kitbag/core-state';
 import { useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import type { UpNextRowProps } from '@kitbag/core-plugin-api';
 import { useAnimatedReaction, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import {
-  repeatedText,
-  upNextText,
-  type UpNextText,
-} from '../logic/upNextText.ts';
+import { repeatedText, upNextText, type UpNextText } from './upNextText.ts';
 import { RepeatChip } from './RepeatChip.tsx';
 
 export const UP_NEXT = 'Up next';
@@ -109,13 +106,6 @@ function useUpNextRowText(): UpNextRowText | null {
   if (repeatsOne && playing !== null)
     return { shown: repeatedText(playing, library, loopHeld), next };
   return { shown: next, next };
-}
-
-export interface UpNextRowProps {
-  readonly songSec: SharedValue<number>;
-  readonly onOpenSheet: () => void;
-  readonly onNext: () => void;
-  readonly onPrevious: () => void;
 }
 
 function NextKey({

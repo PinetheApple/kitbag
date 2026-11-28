@@ -20,6 +20,14 @@ ruleTester.run('plugin-api-imports-nothing', pluginApiImportsNothing, {
     // and may import react.
     { code: "import { start } from '@kitbag/core-native';", filename: STATE },
     { code: "import type { ReactNode } from 'react';", filename: STATE },
+    {
+      code: "import type { ComponentType } from 'react';",
+      filename: PLUGIN_API,
+    },
+    {
+      code: "import type { SharedValue } from 'react-native-reanimated';",
+      filename: PLUGIN_API,
+    },
   ],
   invalid: [
     // The contract reaching into a concrete package — bites (§13.1).
@@ -33,10 +41,13 @@ ruleTester.run('plugin-api-imports-nothing', pluginApiImportsNothing, {
       filename: PLUGIN_API,
       errors: [{ messageId: 'forbiddenImport' }],
     },
-    // §9.1: "No React import." Even a type-only react import is a violation —
-    // PluginScreen is React-agnostic so the contract needs none.
     {
-      code: "import type { ReactNode } from 'react';",
+      code: "import { useState } from 'react';",
+      filename: PLUGIN_API,
+      errors: [{ messageId: 'forbiddenImport' }],
+    },
+    {
+      code: "import { useSharedValue } from 'react-native-reanimated';",
       filename: PLUGIN_API,
       errors: [{ messageId: 'forbiddenImport' }],
     },

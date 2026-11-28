@@ -15,6 +15,7 @@ import {
   upNextCountLabel,
   type Notice,
 } from '@kitbag/core-design';
+import type { QueueSheetProps as ListeningQueueSheetProps } from '@kitbag/core-plugin-api';
 import {
   isPresetEntry,
   playQueuedNow,
@@ -40,7 +41,7 @@ import {
 import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
-import { clearQueueBody } from '../logic/upNextText.ts';
+import { clearQueueBody } from './upNextText.ts';
 import { RepeatChip } from './RepeatChip.tsx';
 import {
   MetronomeHint,
@@ -53,7 +54,6 @@ import {
   leaveForQueued,
   TO_METRONOME,
   useLeaveAfterClose,
-  type PlayOrderRoutes,
 } from './usePlayOrderNav.ts';
 
 const useStyles = createThemedStyles(() => ({
@@ -238,14 +238,7 @@ function ClearQueueSheet({
 
 type Shown = 'list' | 'confirm' | null;
 
-export interface QueueSheetProps extends PlayOrderRoutes {
-  readonly visible: boolean;
-  readonly bottomInset: number;
-  readonly playsInPlace: boolean;
-  readonly onDismiss: () => void;
-  readonly onLeftSetlist: (left: LeftSetlist) => void;
-  readonly notice: Notice;
-}
+export type QueueSheetProps = ListeningQueueSheetProps<Notice, LeftSetlist>;
 
 type StartSong = typeof playQueuedNow;
 

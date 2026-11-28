@@ -1,8 +1,7 @@
 import { useNotice } from '@kitbag/core-design';
+import type { PlayOrderRoutes } from '@kitbag/core-plugin-api';
 import { useLiveStemPlayer } from '@kitbag/core-state';
 import { useMemo } from 'react';
-
-import type { PlayOrderRoutes } from './usePlayOrderNav.ts';
 
 export function usePlayerRoutes(
   onOpenStemSet: (stemSetId: number) => void,

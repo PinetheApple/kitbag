@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { StemPlayerScreen } from '@kitbag/tool-stems/src/screen/StemPlayerScreen.tsx';
+import { StemPlayerScreen } from './stemPlayerScreen.test-helper.ts';
 
 const SET_ID = 7;
 const INSETS = { top: 0, bottom: 0 };
@@ -48,9 +48,7 @@ vi.mock('@kitbag/core-state', async (original) => {
 });
 
 const nothing = () => null;
-vi.mock('@kitbag/tool-stems/src/screen/useMixerFrame.ts', () => ({
-  useMixerFrame: () => ({}),
-}));
+vi.mock('@/listening/useMixerFrame.ts', () => ({ useMixerFrame: () => ({}) }));
 vi.mock('@kitbag/tool-stems/src/screen/PlayerMenu.tsx', () => ({
   PlayerMenu: () => nothing(),
 }));
@@ -91,10 +89,8 @@ vi.mock('@kitbag/tool-stems/src/screen/StemTransport.tsx', () => ({
 vi.mock('@kitbag/tool-stems/src/screen/StemRowView.tsx', () => ({
   WAVEFORM_BARS: spies.bars,
 }));
-vi.mock('@kitbag/tool-stems/src/screen/QueueSheet.tsx', () => ({
-  QueueSheet: () => nothing(),
-}));
-vi.mock('@kitbag/tool-stems/src/screen/usePlayOrderNav.ts', () => ({
+vi.mock('@/listening/QueueSheet.tsx', () => ({ QueueSheet: () => nothing() }));
+vi.mock('@/listening/usePlayOrderNav.ts', () => ({
   usePlayOrderNav: () => ({ skip: nothing }),
 }));
 vi.mock('@kitbag/tool-stems/src/screen/queueActions.tsx', () => ({

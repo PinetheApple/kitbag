@@ -1,6 +1,7 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
 import { KITBAG_HOST_OBJECT_KEY } from '@kitbag/core-native';
+import type { MixerFrameValues } from '@kitbag/core-plugin-api';
 import { act } from 'react';
 import { create, type ReactTestRenderer } from 'react-test-renderer';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -9,11 +10,7 @@ import {
   FRAME_MS,
   runFrame,
 } from '@kitbag/core-state/src/testing/reanimatedDriver.ts';
-import {
-  IDLE_POLL_MS,
-  useMixerFrame,
-  type MixerFrameValues,
-} from './useMixerFrame.ts';
+import { IDLE_POLL_MS, useMixerFrame } from './useMixerFrame.ts';
 
 const signals = vi.hoisted(() => ({
   starting: new Set<() => void>(),

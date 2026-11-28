@@ -25,7 +25,7 @@ import { afterEach, vi } from 'vitest';
 
 import { takeAccessibilityEvents } from '@kitbag/core-state/src/testing/reactNativeHosts.ts';
 import { runFrame } from '@kitbag/core-state/src/testing/reanimatedDriver.ts';
-import { StemPlayerScreen } from '@kitbag/tool-stems/src/screen/StemPlayerScreen.tsx';
+import { StemPlayerScreen } from './stemPlayerScreen.test-helper.ts';
 
 (
   globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }
