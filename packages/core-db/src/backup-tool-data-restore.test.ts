@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CATEGORIES,
+  IMPORT_CATEGORIES,
   TOOL_DATA_CATEGORY,
   type ImportCategory,
   type ImportMode,
 } from './backup-format';
+import { toSeconds } from './backup-snapshot';
+import { TOOL_DATA_SECTION_VERSION } from './backup-tool-data';
 import {
   openBackupDatabase,
   seed,
@@ -21,10 +24,6 @@ import {
 
 const SAVED_AT = new Date('2026-11-27T10:00:00Z');
 const LATER = new Date('2026-11-28T10:00:00Z');
-const WITH_TOOL_DATA: readonly ImportCategory[] = [
-  ...CATEGORIES,
-  TOOL_DATA_CATEGORY,
-];
 
 async function withToolData(
   entries: readonly [string, string, string][],
@@ -70,14 +69,17 @@ async function restore(
 
 function withRecords(text: string, records: unknown[]) {
   const root = JSON.parse(text) as Record<string, unknown>;
-  return JSON.stringify({ ...root, toolData: { version: 1, records } });
+  return JSON.stringify({
+    ...root,
+    toolData: { version: TOOL_DATA_SECTION_VERSION, records },
+  });
 }
 
 const record = (fields: Record<string, unknown>) => ({
   toolId: 'chords',
   key: 'favourites',
   value: '["Am7"]',
-  updatedAt: 1764237600,
+  updatedAt: toSeconds(SAVED_AT),
   ...fields,
 });
 
@@ -92,31 +94,44 @@ describe('restoring tool data', () => {
           target,
           await source.backup.export(),
           mode,
-          WITH_TOOL_DATA,
+          IMPORT_CATEGORIES,
         ),
       );
       expect(await rows(target)).toEqual(await rows(source));
     },
   );
 
-  it('offers tool data as a row, selected by default, only when the file has it', async () => {
+  it('selects tool data by default when the file carries it', async () => {
     const source = await withToolData(SOURCE_ENTRIES);
-    const target = openBackupDatabase();
     const planned = unwrap(
-      await plan(target, await source.backup.export(), 'merge'),
+      await plan(openBackupDatabase(), await source.backup.export(), 'merge'),
     );
     expect(planned.categories).toContain(TOOL_DATA_CATEGORY);
+  });
+
+  it('counts the records the file carries', async () => {
+    const source = await withToolData(SOURCE_ENTRIES);
+    const planned = unwrap(
+      await plan(openBackupDatabase(), await source.backup.export(), 'merge'),
+    );
     expect(planned.counts.toolData).toMatchObject({ incoming: 2, new: 2 });
+  });
+
+  it('leaves tool data out of the selection when the file has none', async () => {
     const bare = openBackupDatabase();
     await seed(bare);
-    const without = unwrap(
-      await plan(target, await bare.backup.export(), 'merge'),
+    const planned = unwrap(
+      await plan(openBackupDatabase(), await bare.backup.export(), 'merge'),
     );
-    expect(without.categories).not.toContain(TOOL_DATA_CATEGORY);
+    expect(planned.categories).not.toContain(TOOL_DATA_CATEGORY);
+  });
+
+  it('refuses tool data asked for from a file without it', async () => {
+    const bare = openBackupDatabase();
+    await seed(bare);
+    const text = await bare.backup.export();
     expect(
-      await plan(target, await bare.backup.export(), 'merge', [
-        TOOL_DATA_CATEGORY,
-      ]),
+      await plan(openBackupDatabase(), text, 'merge', [TOOL_DATA_CATEGORY]),
     ).toMatchObject({ ok: false, error: { kind: 'categoryNotInFile' } });
   });
 });
@@ -130,7 +145,7 @@ describe('replacing with tool data', () => {
         target,
         await source.backup.export(),
         'replace',
-        WITH_TOOL_DATA,
+        IMPORT_CATEGORIES,
       ),
     );
     expect(await rows(target)).toEqual(await rows(source));
@@ -153,7 +168,7 @@ describe('replacing with tool data', () => {
 
   it('counts the tool data it deletes', async () => {
     const source = await withToolData(SOURCE_ENTRIES);
-    const target = await withToolData([['a', 'b', '1']]);
+    const target = await withToolData([['looper', 'bars', '1']]);
     const planned = unwrap(
       await plan(target, await source.backup.export(), 'replace', [
         TOOL_DATA_CATEGORY,
@@ -272,17 +287,33 @@ describe('the copy kept before a replace of tool data', () => {
     expect(await rows(target)).toEqual(before);
   });
 
-  it('names only the categories the copy can restore', async () => {
+  async function replacedOntoNone() {
     const source = await withToolData(SOURCE_ENTRIES);
     const target = openBackupDatabase();
     await seed(target);
     const text = await source.backup.export();
-    unwrap(await restore(target, text, 'replace', WITH_TOOL_DATA));
-    const kept = await keptCopy(target);
-    expect(kept.categories).toEqual(CATEGORIES);
-    expect(
-      (await plan(target, kept.contents, 'replace', kept.categories)).ok,
-    ).toBe(true);
+    unwrap(await restore(target, text, 'replace', IMPORT_CATEGORIES));
+    return { target, kept: await keptCopy(target) };
+  }
+
+  it('carries an empty tool data section from a phone that had none', async () => {
+    const { kept } = await replacedOntoNone();
+    const root = JSON.parse(kept.contents) as Record<string, unknown>;
+    expect(root.toolData).toEqual({
+      version: TOOL_DATA_SECTION_VERSION,
+      records: [],
+    });
+  });
+
+  it('lists tool data among the categories it replaced', async () => {
+    const { kept } = await replacedOntoNone();
+    expect(kept.categories).toEqual(IMPORT_CATEGORIES);
+  });
+
+  it('clears the tool data the replace added when undone', async () => {
+    const { target, kept } = await replacedOntoNone();
+    unwrap(await restore(target, kept.contents, 'replace', kept.categories));
+    expect(await rows(target)).toEqual([]);
   });
 });
 
@@ -295,6 +326,7 @@ describe('a tool data record the repository would refuse', () => {
     ['a value over the size cap', record({ value: tooLarge })],
     ['a key over the size cap', record({ key: longKey })],
     ['an empty tool id', record({ toolId: '' })],
+    ['a tool id the manifest rules refuse', record({ toolId: 'a:b' })],
     ['a missing value', record({ value: undefined })],
     ['a negative time', record({ updatedAt: -1 })],
   ])('rejects the file for %s, writing nothing', async (_name, bad) => {

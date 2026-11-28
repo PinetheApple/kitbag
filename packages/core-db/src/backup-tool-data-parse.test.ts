@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { CATEGORIES, type ImportMode } from './backup-format';
+import {
+  CATEGORIES,
+  TOOL_DATA_CATEGORY,
+  type ImportMode,
+} from './backup-format';
 import { parseBackup } from './backup-parse';
 import { TEST_BACKUP_RULES } from './backup-rules.test-helper';
+import { TOOL_DATA_SECTION_VERSION } from './backup-tool-data';
 import {
   openBackupDatabase,
   records,
@@ -12,7 +17,7 @@ import {
 } from './backup.test-helper';
 
 const VERSION_1_SECTION = {
-  version: 1,
+  version: TOOL_DATA_SECTION_VERSION,
   records: [
     {
       toolId: 'chords',
@@ -23,8 +28,13 @@ const VERSION_1_SECTION = {
   ],
 };
 
+const LATER_SECTION = {
+  version: TOOL_DATA_SECTION_VERSION + 1,
+  records: 'opaque',
+};
+
 const UNREADABLE_SECTIONS: [string, unknown][] = [
-  ['a later version', { version: 99, records: 'opaque' }],
+  ['a later version', LATER_SECTION],
   ['not an object', 'opaque'],
 ];
 
@@ -73,6 +83,26 @@ describe('a backup carrying toolData', () => {
       const { source, text } = await seededExport();
       const target = openBackupDatabase();
       await restore(target, withToolData(text, VERSION_1_SECTION), mode);
+      expect(await records(target)).toEqual(await records(source));
+    },
+  );
+});
+
+describe('a backup whose toolData is from a later section version', () => {
+  it('does not offer tool data', async () => {
+    const { text } = await seededExport();
+    const planned = unwrap(
+      await openBackupDatabase().backup.plan(withToolData(text, LATER_SECTION)),
+    );
+    expect(planned.categories).not.toContain(TOOL_DATA_CATEGORY);
+  });
+
+  it.each<ImportMode>(['merge', 'replace'])(
+    'restores every category on %s',
+    async (mode) => {
+      const { source, text } = await seededExport();
+      const target = openBackupDatabase();
+      await restore(target, withToolData(text, LATER_SECTION), mode);
       expect(await records(target)).toEqual(await records(source));
     },
   );

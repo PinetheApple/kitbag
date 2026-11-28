@@ -1,4 +1,8 @@
-import type { CategoryPlan, ImportPlan } from '@kitbag/core-db';
+import {
+  TOOL_DATA_SECTION_VERSION,
+  type CategoryPlan,
+  type ImportPlan,
+} from '@kitbag/core-db';
 import { REPLACE_CONFIRMATION } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
@@ -87,30 +91,43 @@ describe('category rows', () => {
 });
 
 describe('tool data row', () => {
-  const file = (toolData?: ImportPlan['file']['toolData']) =>
+  const file = (toolData?: object) =>
     ({
       categories: ['tunings', 'appearanceSettings'],
       ...(toolData === undefined ? {} : { toolData }),
     }) as unknown as ImportPlan['file'];
 
-  it('lists tool data last, and only when the file carries it', () => {
+  it('leaves the row out when the file has no tool data', () => {
     expect(restoreCategories(file())).toEqual([
       'tunings',
       'appearanceSettings',
     ]);
-    expect(restoreCategories(file({ version: 1, records: [] }))).toEqual([
+  });
+
+  it('lists the row last when the file carries tool data', () => {
+    const empty = { version: TOOL_DATA_SECTION_VERSION, records: [] };
+    expect(restoreCategories(file(empty))).toEqual([
       'tunings',
       'appearanceSettings',
       'toolData',
     ]);
   });
 
-  it('labels the row and counts its records like any category', () => {
+  it('labels the row', () => {
     expect(CATEGORY_LABELS.toolData).toBe('Tool data');
+  });
+
+  it('shows only the file count while the row is unselected', () => {
     expect(categoryValue('toolData', 3, undefined)).toBe('3');
+  });
+
+  it('shows the new count while the row is selected', () => {
     expect(categoryValue('toolData', 3, counts({ incoming: 3, new: 1 }))).toBe(
       '3 · 1 new',
     );
+  });
+
+  it('names tool data entries in the result', () => {
     expect(restoredText('merge', { toolData: counts({ incoming: 2 }) })).toBe(
       'Merged 2 tool data entries.',
     );

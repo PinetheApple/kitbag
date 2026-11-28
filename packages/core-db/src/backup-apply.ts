@@ -375,7 +375,7 @@ export async function applyWrites(
     stemEntries,
   });
   if (plan.categories.includes(TOOL_DATA_CATEGORY))
-    await restoreToolData(db, plan.mode === 'replace', writes.toolData ?? []);
+    await restoreToolData(db, plan.mode, writes.toolData ?? []);
   if (plan.mode === 'replace') await relinkUntouched(db, plan, snapshot);
   if (plan.categories.includes('setlists'))
     await adoptActiveSetlist(db, plan, ids);

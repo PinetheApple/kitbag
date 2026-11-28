@@ -1,3 +1,4 @@
+import type { ImportMode } from './backup-format';
 import { fromSeconds, loadToolDataRecords } from './backup-snapshot';
 import type { Database } from './repository';
 import { toolData } from './schema';
@@ -21,18 +22,19 @@ export const toolDataKey = ({ toolId, key }: ToolDataRecord) =>
 
 export async function loadToolDataSection(
   db: Database,
+  keepEmpty = false,
 ): Promise<ToolDataSection | undefined> {
   const records = await loadToolDataRecords(db);
-  if (records.length === 0) return undefined;
+  if (records.length === 0 && !keepEmpty) return undefined;
   return { version: TOOL_DATA_SECTION_VERSION, records };
 }
 
 export async function restoreToolData(
   db: Database,
-  replace: boolean,
+  mode: ImportMode,
   records: readonly ToolDataRecord[],
 ): Promise<void> {
-  if (replace) await db.delete(toolData);
+  if (mode === 'replace') await db.delete(toolData);
   for (const record of records) {
     const set = {
       value: record.value,

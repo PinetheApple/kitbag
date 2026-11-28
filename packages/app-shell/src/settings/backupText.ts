@@ -162,8 +162,7 @@ function stemSongsValue(incoming: number, plan: CategoryPlan | undefined) {
 export function restoreCategories(
   file: Pick<ImportPlan['file'], 'categories' | 'toolData'>,
 ): ImportCategory[] {
-  const inFile = importableCategories(file);
-  return RESTORE_ORDER.filter((category) => inFile.includes(category));
+  return ordered({ categories: importableCategories(file) });
 }
 
 export function categoryValue(

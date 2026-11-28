@@ -21,11 +21,17 @@ import {
   type SetlistRecord,
   type StemSongRecord,
   stemSongKey,
-  TOOL_DATA_CATEGORY,
 } from './backup-format';
 import type { Snapshot } from './backup-snapshot';
 import { storedManualTempoColumns } from './backup-manual-tempo';
-import { toolDataKey, type ToolDataRecord } from './backup-tool-data';
+import type { ToolDataRecord } from './backup-tool-data';
+import {
+  emptyMergeState,
+  emptyPlan,
+  planToolData,
+  settleConflict,
+  type MergeState,
+} from './backup-tool-data-plan';
 import { fittedToDevice, stemSongChange } from './backup-stem-song-plan';
 import { meterOverrideOf, NO_METER_OVERRIDE } from './meter-override';
 import { TEMPO_COLUMN_OF } from './stem-tempo';
@@ -133,17 +139,6 @@ function selectCategories(
   return selected;
 }
 
-function emptyPlan(incoming: number): CategoryPlan {
-  return {
-    incoming,
-    new: 0,
-    unchanged: 0,
-    updates: 0,
-    conflicts: [],
-    deletes: 0,
-  };
-}
-
 function planReplace(incoming: readonly BackupRecord[], localCount: number) {
   const summary = emptyPlan(incoming.length);
   summary.new = incoming.length;
@@ -152,73 +147,18 @@ function planReplace(incoming: readonly BackupRecord[], localCount: number) {
   return { summary, writes, unresolved: [] as Conflict[] };
 }
 
-interface MergeState<W = Write> {
-  summary: CategoryPlan;
-  writes: W[];
-  unresolved: Conflict[];
-}
-
-function emptyMergeState<W = Write>(incoming: number): MergeState<W> {
-  return { summary: emptyPlan(incoming), writes: [], unresolved: [] };
-}
-
-function settleConflict<W>(
-  conflict: Conflict,
-  write: W,
-  resolutions: Resolutions,
-  state: MergeState<W>,
-) {
-  state.summary.conflicts.push(conflict);
-  const resolution = resolutions[conflict.category]?.[conflict.key];
-  if (resolution === undefined) state.unresolved.push(conflict);
-  if (resolution !== 'theirs') return;
-  state.summary.updates += 1;
-  state.writes.push(write);
-}
+type CategoryState = MergeState<Write>;
 
 function mergeConflict(
   category: Category,
   record: BackupRecord,
   localId: number | undefined,
   resolutions: Resolutions,
-  state: MergeState,
+  state: CategoryState,
 ) {
   const key = recordKey(category, record);
   const conflict = { category, key, label: recordLabel(category, record) };
   settleConflict(conflict, { record, localId }, resolutions, state);
-}
-
-function planToolData(
-  mode: ImportMode,
-  incoming: readonly ToolDataRecord[],
-  local: readonly ToolDataRecord[],
-  resolutions: Resolutions,
-): MergeState<ToolDataRecord> {
-  const state = emptyMergeState<ToolDataRecord>(incoming.length);
-  if (mode === 'replace') {
-    state.summary.new = incoming.length;
-    state.summary.deletes = local.length;
-    state.writes.push(...incoming);
-    return state;
-  }
-  const mine = new Map(local.map((record) => [toolDataKey(record), record]));
-  for (const record of incoming) {
-    const key = toolDataKey(record);
-    const existing = mine.get(key);
-    if (existing === undefined) {
-      state.summary.new += 1;
-      state.writes.push(record);
-    } else if (existing.value === record.value) state.summary.unchanged += 1;
-    else {
-      const conflict: Conflict = {
-        category: TOOL_DATA_CATEGORY,
-        key,
-        label: key,
-      };
-      settleConflict(conflict, record, resolutions, state);
-    }
-  }
-  return state;
 }
 
 function planMerge(
@@ -226,9 +166,9 @@ function planMerge(
   incoming: readonly BackupRecord[],
   snapshot: Snapshot,
   resolutions: Resolutions,
-): MergeState {
+): CategoryState {
   const local = localRecords(category, snapshot);
-  const state = emptyMergeState(incoming.length);
+  const state = emptyMergeState<Write>(incoming.length);
   for (const record of incoming) {
     const key = recordKey(category, record);
     const mine = local.get(key);
@@ -260,12 +200,12 @@ function planStemSongs(
   incoming: readonly StemSongRecord[],
   snapshot: Snapshot,
   resolutions: Resolutions,
-): MergeState {
+): CategoryState {
   const category = 'stemSongs';
   const local = new Map(
     snapshot.records.stemSongs.map((song) => [stemSongKey(song), song]),
   );
-  const state = emptyMergeState(incoming.length);
+  const state = emptyMergeState<Write>(incoming.length);
   state.summary.notOnDevice = 0;
   for (const backup of incoming) {
     const key = stemSongKey(backup);
@@ -308,7 +248,7 @@ function planSetlists(
   incoming: readonly SetlistRecord[],
   snapshot: Snapshot,
   resolutions: Resolutions,
-): MergeState {
+): CategoryState {
   const { records, dropped } = setlistsOnDevice(incoming, snapshot);
   const state =
     mode === 'replace'
@@ -383,7 +323,7 @@ function planRigReplace(
   incoming: readonly BackupRecord[],
   snapshot: Snapshot,
   deviceRoutes: readonly string[],
-): MergeState {
+): CategoryState {
   const kept = new Set(
     snapshot.records.rigSettings
       .filter(isRouteLatencyRecord)
@@ -409,7 +349,7 @@ function planCategory(
   snapshot: Snapshot,
   resolutions: Resolutions,
   deviceRoutes: readonly string[],
-): MergeState {
+): CategoryState {
   if (category === 'stemSongs')
     return planStemSongs(
       mode,
@@ -431,6 +371,45 @@ function planCategory(
   return planMerge(category, incoming, snapshot, resolutions);
 }
 
+interface PlanContext {
+  file: BackupFile;
+  snapshot: Snapshot;
+  mode: ImportMode;
+  categories: readonly ImportCategory[];
+  resolutions: Resolutions;
+  deviceRoutes: readonly string[];
+}
+
+interface Planned {
+  summary: CategoryPlan;
+  unresolved: Conflict[];
+  writes: Writes;
+}
+
+function planImportCategory(
+  category: ImportCategory,
+  context: PlanContext,
+): Planned {
+  const { file, snapshot, mode, categories, resolutions } = context;
+  if (!isRecordCategory(category)) {
+    const incoming = file.toolData?.records ?? [];
+    const state = planToolData(mode, incoming, snapshot.toolData, resolutions);
+    return { ...state, writes: { toolData: state.writes } };
+  }
+  const incoming = incomingRecords(category, file, snapshot).map((record) =>
+    effective(category, record, categories, snapshot),
+  );
+  const state = planCategory(
+    category,
+    mode,
+    incoming,
+    snapshot,
+    resolutions,
+    context.deviceRoutes,
+  );
+  return { ...state, writes: { [category]: state.writes } };
+}
+
 export function computePlan(
   file: BackupFile,
   snapshot: Snapshot,
@@ -444,34 +423,20 @@ export function computePlan(
     ...{ mode, categories, file, resolutions },
     ...{ counts: {}, unresolved: [] },
   };
+  const context = {
+    file,
+    snapshot,
+    mode,
+    categories,
+    resolutions,
+    deviceRoutes,
+  };
   const writes: Writes = {};
   for (const category of categories) {
-    if (!isRecordCategory(category)) {
-      const result = planToolData(
-        mode,
-        file.toolData?.records ?? [],
-        snapshot.toolData,
-        resolutions,
-      );
-      plan.counts[category] = result.summary;
-      plan.unresolved.push(...result.unresolved);
-      writes.toolData = result.writes;
-      continue;
-    }
-    const incoming = incomingRecords(category, file, snapshot).map((record) =>
-      effective(category, record, categories, snapshot),
-    );
-    const result = planCategory(
-      category,
-      mode,
-      incoming,
-      snapshot,
-      resolutions,
-      deviceRoutes,
-    );
-    plan.counts[category] = result.summary;
-    plan.unresolved.push(...result.unresolved);
-    writes[category] = result.writes;
+    const planned = planImportCategory(category, context);
+    plan.counts[category] = planned.summary;
+    plan.unresolved.push(...planned.unresolved);
+    Object.assign(writes, planned.writes);
   }
   return { plan, writes };
 }

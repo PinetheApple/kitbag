@@ -2,8 +2,8 @@ import {
   BACKUP_FORMAT,
   BACKUP_VERSION,
   CATEGORIES,
-  importableCategories,
   ImportRejected,
+  TOOL_DATA_CATEGORY,
   type BackupFile,
   type Category,
   type CategoryRecords,
@@ -125,10 +125,11 @@ async function exportBackup(
   { db }: DatabaseHandle,
   files: ClickSoundFiles,
   requested: readonly Category[],
+  keepEmptyToolData = false,
 ): Promise<string> {
   const { records } = await loadSnapshot(db);
   const toolData = isFullExport(requested)
-    ? await loadToolDataSection(db)
+    ? await loadToolDataSection(db, keepEmptyToolData)
     : undefined;
   const categories = withDependencies(requested);
   return serializeBackup({
@@ -180,14 +181,14 @@ async function keepCurrentData(
   categories: ImportCategory[],
 ) {
   try {
-    const contents = await exportBackup(handle, files, CATEGORIES);
-    const restorable = importableCategories(parseBackup(contents, rules));
-    await keepBeforeReplace(handle.db, {
-      categories: categories.filter((category) =>
-        restorable.includes(category),
-      ),
-      contents,
-    });
+    const contents = await exportBackup(
+      handle,
+      files,
+      CATEGORIES,
+      categories.includes(TOOL_DATA_CATEGORY),
+    );
+    parseBackup(contents, rules);
+    await keepBeforeReplace(handle.db, { categories, contents });
   } catch (error) {
     throw new ImportRejected({
       kind: 'snapshotFailed',

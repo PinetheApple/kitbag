@@ -1,3 +1,4 @@
+import { TOOL_ID_PATTERN } from '@kitbag/core-plugin-api';
 import { and, asc, eq } from 'drizzle-orm';
 
 import type { Database, DatabaseHandle } from './repository';
@@ -12,7 +13,7 @@ export const MAX_TOOL_DATA_KEY_BYTES = 256;
 export type ToolDataRow = typeof toolData.$inferSelect;
 export type ToolDataEntry = Omit<ToolDataRow, 'toolId'>;
 export type ToolDataRejection =
-  'emptyId' | 'keyTooLong' | 'invalidJson' | 'tooLarge';
+  'emptyId' | 'invalidToolId' | 'keyTooLong' | 'invalidJson' | 'tooLarge';
 
 export class ToolDataRejected extends Error {
   constructor(readonly reason: ToolDataRejection) {
@@ -49,6 +50,8 @@ export function checkToolDataWrite(
   value: string,
 ): void {
   if (toolId === '' || key === '') throw new ToolDataRejected('emptyId');
+  if (!TOOL_ID_PATTERN.test(toolId))
+    throw new ToolDataRejected('invalidToolId');
   if (utf8.encode(key).byteLength > MAX_TOOL_DATA_KEY_BYTES)
     throw new ToolDataRejected('keyTooLong');
   if (utf8.encode(value).byteLength > MAX_TOOL_DATA_VALUE_BYTES)
