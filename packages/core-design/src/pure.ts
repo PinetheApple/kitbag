@@ -52,3 +52,8 @@ export * from './textPlaceholder.ts';
 export * from './queueText.ts';
 export * from './queueRoles.ts';
 export * from './setlistPickText.ts';
+export * from './setTempo/draft.ts';
+export * from './setTempo/rules.ts';
+export * from './setTempo/text.ts';
+export * from './setTempo/useSetTempo.ts';
+export * from './setTempo/useSetTempoEntry.ts';

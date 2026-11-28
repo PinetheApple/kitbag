@@ -38,6 +38,7 @@ import {
   shownMeter,
 } from '../logic/meterEdit.ts';
 import { ClickRows } from './ClickRows.tsx';
+import { StemSetTempoRow } from './StemSetTempo.tsx';
 import { TempoRow } from './TempoSheet.tsx';
 import { useMixdownProgress } from './useMixdownProgress.ts';
 
@@ -227,6 +228,7 @@ interface PlayerMenuProps extends QueueRowsProps {
   readonly onClose: () => void;
   readonly onExport: () => void;
   readonly onMeter: () => void;
+  readonly onSetTempo: () => void;
   readonly onTempo: () => void;
   readonly onClick: (section: ClickSection) => void;
 }
@@ -237,6 +239,7 @@ export function PlayerMenu({
   onClose,
   onExport,
   onMeter,
+  onSetTempo,
   onTempo,
   onClick,
   queue,
@@ -264,6 +267,7 @@ export function PlayerMenu({
         onPress={reset}
       />
       <ResetSpeedKeyRow onDone={onClose} />
+      <StemSetTempoRow onPress={onSetTempo} />
       <StemMeterRow onMeter={onMeter} />
       <TempoRow onOpen={onTempo} />
       <ClickRows onOpen={onClick} />

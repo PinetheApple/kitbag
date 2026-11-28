@@ -2,6 +2,7 @@ import type { ColorToken, IconName } from '@kitbag/core-design';
 import {
   bpmFact,
   isUnitySpeed,
+  MANUAL_TEMPO_LABEL,
   playerSongBadge,
   speedPercentText,
   type AnalysisFailure,
@@ -9,7 +10,6 @@ import {
   type SongPlayerStore,
 } from '@kitbag/core-state';
 
-import { MANUAL_TEMPO_LABEL } from './manualTempoText.ts';
 import { canReanalyze } from './notices.ts';
 import { songStatusBadge, type BadgeSpec } from './rowText.ts';
 

@@ -157,3 +157,4 @@ export * from './useTextScaled.ts';
 export * from './useReduceMotion.ts';
 export * from './useKeyboardDidHide.ts';
 export * from './sliderMath.ts';
+export * from './setTempo/index.ts';

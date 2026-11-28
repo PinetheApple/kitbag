@@ -263,10 +263,10 @@ svg.i{fill:currentColor;display:block;flex:none}
 
 <section>
 <div class="kicker">State 7</div><h2>Stem player</h2>
-<p>A stem song with no tempo shows no BPM chip today (<code>SongFactChips</code> drops it when <code>bpm</code> is null), and Meter and Count-in are off with "Needs a beat grid." A Set tempo button takes the BPM chip's place, and the Player sheet gets the same row. The sheet's two steps are unchanged. The stem screen has no waveform, so the strip inside the sheet is the only grid view. Until #384 lands, Set tempo is offered only on a stem song with no grid.</p>
+<p>A stem song with no tempo shows no BPM chip today (<code>SongFactChips</code> drops it when <code>bpm</code> is null), and Meter is off with "Needs a beat grid." A Set tempo button takes the BPM chip's place, and the Player sheet gets the same row. The sheet's two steps are unchanged. The stem screen has no waveform, so the strip inside the sheet is the only grid view. Until #384 lands, Set tempo is offered only on a stem song with no grid.</p>
 <div class="frames">
 <figure><figcaption><b>7a · No tempo</b>Set tempo where the BPM chip would be, before the key chip. "no click" replaces "steady tempo".</figcaption><div data-frame="stemNoTempo"></div></figure>
-<figure><figcaption><b>7b · ⋮ Player sheet</b>The Set tempo row explains what it unlocks. Meter and Count-in say why they are off.</figcaption><div data-frame="stemMenu"></div></figure>
+<figure><figcaption><b>7b · ⋮ Player sheet</b>The Set tempo row explains what it unlocks. Meter says why it is off. The stem Player sheet has no Count-in row, so none is drawn.</figcaption><div data-frame="stemMenu"></div></figure>
 <figure><figcaption><b>7c · Step 2 over the stem player</b>Same sheet as 3a.</figcaption><div data-frame="stemBar"></div></figure>
 <figure><figcaption><b>7d · Saved</b>The BPM chip returns with "manual tempo" beside it, and an Undo snackbar shows above the dock.</figcaption><div data-frame="stemSaved"></div></figure>
 </div>
@@ -472,7 +472,7 @@ const ICONS={"arrow-left":"M20.02 11.02V12.98H8.02L13.5 18.52L12.09 19.92L4.17 1
       reResult: () => (SAVED_PLAYER({ extra: snack("Analysis found 132 BPM. Your manual tempo is still in use.", "Use 132", 150) })),
       reFailed: () => (SAVED_PLAYER({ extra: snack("Analysis found no beat. Your manual tempo is kept.", "OK", 150) })),
       stemNoTempo: () => (stemScreen({ facts: STEM_NOTEMPO })),
-      stemMenu: () => (stemScreen({ facts: STEM_NOTEMPO }) + stemMenu([row({ icon: "refresh", k: "Reset mix", v: "mutes, levels, loop, speed" }), row({ icon: "gesture-tap", k: "Set tempo", sub: "Turns on the click, meter and count-in" }), row({ icon: "metronome", k: "Meter", sub: "Needs a beat grid.", cls: "dis" }), row({ icon: "timer-sand", k: "Count-in", sub: "Needs a beat grid.", cls: "dis" })])),
+      stemMenu: () => (stemScreen({ facts: STEM_NOTEMPO }) + stemMenu([row({ icon: "refresh", k: "Reset mix", v: "mutes, levels, loop, speed" }), row({ icon: "gesture-tap", k: "Set tempo", sub: "Turns on the click, meter and count-in" }), row({ icon: "metronome", k: "Meter", sub: "Needs a beat grid.", cls: "dis" })])),
       stemBar: () => (stemScreen({ facts: STEM_NOTEMPO }) + barStep({ tempo: "128", bar: "0:00.8", time: "0:00.8", total: "5:11" })),
       stemSaved: () => (stemScreen({ facts: STEM_MANUAL, extra: snack("Tempo set: 128 BPM, bar 1 at 0:00.8.", "Undo", 178) }))
     };

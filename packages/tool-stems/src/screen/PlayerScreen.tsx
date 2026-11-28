@@ -136,11 +136,17 @@ function PlayerTabs({ label, picked, onPick }: PlayerTabsProps) {
 
 interface PlayerContentProps {
   readonly frame: MixerFrameValues;
+  readonly onSetTempo: () => void;
   readonly picked: Tab;
   readonly onPick: (tab: Tab) => void;
 }
 
-function PlayerContent({ frame, picked, onPick }: PlayerContentProps) {
+function PlayerContent({
+  frame,
+  onSetTempo,
+  picked,
+  onPick,
+}: PlayerContentProps) {
   const styles = useStyles();
   const label = useStemPlayer((s) =>
     detailTabLabel(s.sections.length > 0, s.lyrics),
@@ -148,7 +154,7 @@ function PlayerContent({ frame, picked, onPick }: PlayerContentProps) {
   const tab = label === null ? MIX : picked;
   return (
     <View style={[styles.body, tab === DETAILS && styles.bodyFlush]}>
-      <SongFactChips />
+      <SongFactChips onSetTempo={onSetTempo} />
       <Notices />
       {label === null ? null : (
         <PlayerTabs label={label} picked={tab} onPick={onPick} />
@@ -214,6 +220,7 @@ interface BodyProps {
   readonly onOpenUpNext: () => void;
   readonly notice: Notice;
   readonly onSpeedKey: () => void;
+  readonly onSetTempo: () => void;
 }
 
 function Body({
@@ -223,6 +230,7 @@ function Body({
   onOpenUpNext,
   notice,
   onSpeedKey,
+  onSetTempo,
 }: BodyProps) {
   const styles = useStyles();
   const status = useStemPlayer((s) => s.status);
@@ -253,7 +261,12 @@ function Body({
         </RetimeLayout>
       ) : (
         <PlayerLayout dock={dock} onDockLayout={onDockLayout}>
-          <PlayerContent frame={frame} picked={picked} onPick={setPicked} />
+          <PlayerContent
+            frame={frame}
+            onSetTempo={onSetTempo}
+            picked={picked}
+            onPick={setPicked}
+          />
         </PlayerLayout>
       )}
       <PlayerOverlays notice={notice} dockHeight={dockHeight} />
@@ -311,7 +324,8 @@ function StemPlayerContent({
   const acquireSong = useLiveStemPlayer((s) => s.acquireSong);
   const { retiming, shown, askReset, askLeave, closeAsk } =
     useRetimeAsk(focused);
-  const sheets = usePlayerSheet(retiming);
+  const shownSet = useStemPlayer((s) => s.setId);
+  const sheets = usePlayerSheet(retiming, shownSet);
   const queue = useQueueActions(
     notice,
     sheets.closeSheet,
@@ -351,6 +365,7 @@ function StemPlayerContent({
           onOpenUpNext={sheets.openUpNext}
           notice={notice}
           onSpeedKey={sheets.openSpeedKey}
+          onSetTempo={sheets.openSetTempo}
         />
         {docked ? renderMiniPlayer(sheets.openUpNext) : null}
       </View>
@@ -363,8 +378,10 @@ function StemPlayerContent({
         onLeftSetlist={queue.leftSetlist}
         sheet={sheets.sheet}
         bottomInset={insets.bottom}
-        playhead={frame.songSec}
+        frame={frame}
+        viewing={viewing}
         onMeter={sheets.openMeter}
+        onSetTempo={sheets.openSetTempo}
         onExport={sheets.openExport}
         onTempo={sheets.openTempo}
         onClick={sheets.openClick}

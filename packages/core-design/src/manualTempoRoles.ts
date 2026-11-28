@@ -14,5 +14,4 @@ export const manualTempo = {
   barOneLabelLeft: 3,
   barOneLabelBottom: 18,
   fieldRowMinHeight: 44,
-  entryReasonLines: 2,
 } as const;

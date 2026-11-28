@@ -8,6 +8,7 @@ import { SetlistSheet } from './queueActions.tsx';
 import { QueueSheet, type QueueSheetProps } from './QueueSheet.tsx';
 import { SpeedKeySheet } from './SpeedKeySheet.tsx';
 import { StemMeterSheet } from './StemMeterSheet.tsx';
+import { StemSetTempoSheet } from './StemSetTempo.tsx';
 import { TempoSheet } from './TempoSheet.tsx';
 import type { MixerFrameValues } from './useMixerFrame.ts';
 import {
@@ -26,8 +27,10 @@ export interface PlayerSheetsProps {
   readonly onLeftSetlist: QueueSheetProps['onLeftSetlist'];
   readonly sheet: OpenSheet | null;
   readonly bottomInset: number;
-  readonly playhead: MixerFrameValues['songSec'];
+  readonly frame: MixerFrameValues;
+  readonly viewing: boolean;
   readonly onMeter: () => void;
+  readonly onSetTempo: () => void;
   readonly onExport: () => void;
   readonly onTempo: () => void;
   readonly onClick: (section: ClickSection) => void;
@@ -59,6 +62,7 @@ export function PlayerSheets(props: PlayerSheetsProps) {
         bottomInset={bottomInset}
         onClose={onClose}
         onMeter={props.onMeter}
+        onSetTempo={props.onSetTempo}
         onExport={props.onExport}
         onTempo={props.onTempo}
         onClick={props.onClick}
@@ -83,9 +87,17 @@ export function PlayerSheets(props: PlayerSheetsProps) {
       <StemMeterSheet
         visible={sheet === 'meter'}
         bottomInset={bottomInset}
-        playhead={props.playhead}
+        playhead={props.frame.songSec}
         onClose={onClose}
       />
+      {props.viewing ? null : (
+        <StemSetTempoSheet
+          visible={sheet === 'setTempo'}
+          bottomInset={bottomInset}
+          playhead={props.frame}
+          onClose={onClose}
+        />
+      )}
       <TempoSheet
         visible={sheet === TEMPO_SHEET}
         bottomInset={bottomInset}
