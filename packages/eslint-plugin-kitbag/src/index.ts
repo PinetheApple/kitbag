@@ -18,6 +18,7 @@ const plugin = { meta, rules, configs: { recommended } };
 
 export { boundariesElements, boundariesElementTypes } from './boundaries.ts';
 export {
+  DOWNLOADABLE_IMPORTS,
   downloadablePackages,
   downloadableZoneConfig,
   type ZoneBase,
