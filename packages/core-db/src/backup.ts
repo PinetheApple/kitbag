@@ -2,10 +2,12 @@ import {
   BACKUP_FORMAT,
   BACKUP_VERSION,
   CATEGORIES,
+  importableCategories,
   ImportRejected,
   type BackupFile,
   type Category,
   type CategoryRecords,
+  type ImportCategory,
   type ImportResult,
   type LocalRecords,
 } from './backup-format';
@@ -35,7 +37,7 @@ export interface ApplyOptions {
 }
 
 export interface ApplyReport extends SoundOutcome {
-  counts: Partial<Record<Category, CategoryPlan>>;
+  counts: Partial<Record<ImportCategory, CategoryPlan>>;
 }
 
 const reasonOf = (error: unknown) =>
@@ -175,12 +177,17 @@ interface ServiceContext {
 
 async function keepCurrentData(
   { handle, files, rules }: ServiceContext,
-  categories: Category[],
+  categories: ImportCategory[],
 ) {
   try {
     const contents = await exportBackup(handle, files, CATEGORIES);
-    parseBackup(contents, rules);
-    await keepBeforeReplace(handle.db, { categories, contents });
+    const restorable = importableCategories(parseBackup(contents, rules));
+    await keepBeforeReplace(handle.db, {
+      categories: categories.filter((category) =>
+        restorable.includes(category),
+      ),
+      contents,
+    });
   } catch (error) {
     throw new ImportRejected({
       kind: 'snapshotFailed',

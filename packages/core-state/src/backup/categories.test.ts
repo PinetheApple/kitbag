@@ -63,6 +63,19 @@ describe('toggledCategories', () => {
     ).toEqual([]);
   });
 
+  it('toggles tool data on its own', () => {
+    const inFile = [...ALL, 'toolData'] as const;
+    expect(toggledCategories(['tunings'], 'toolData', 'merge', inFile)).toEqual(
+      ['tunings', 'toolData'],
+    );
+    expect(
+      toggledCategories(['tunings', 'toolData'], 'toolData', 'replace', inFile),
+    ).toEqual(['tunings']);
+    expect(categoriesForMode(['toolData'], 'replace', inFile)).toEqual([
+      'toolData',
+    ]);
+  });
+
   it('never selects a category the file does not carry', () => {
     expect(
       toggledCategories([], 'setlists', 'merge', ['setlists', 'tunings']),

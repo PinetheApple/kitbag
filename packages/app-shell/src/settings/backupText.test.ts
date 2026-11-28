@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyLabel,
   backupSummary,
+  CATEGORY_LABELS,
   categoryValue,
   conflictBanner,
   conflictDetail,
@@ -12,6 +13,7 @@ import {
   modeHint,
   replaceConfirmBody,
   restoredText,
+  restoreCategories,
   restorePrompt,
   sourceDetail,
 } from './backupText.ts';
@@ -81,6 +83,37 @@ describe('category rows', () => {
     expect(
       categoryValue('librarySongs', 17, counts({ incoming: 17, new: 3 })),
     ).toBe('17 · files not included');
+  });
+});
+
+describe('tool data row', () => {
+  const file = (toolData?: ImportPlan['file']['toolData']) =>
+    ({
+      categories: ['tunings', 'appearanceSettings'],
+      ...(toolData === undefined ? {} : { toolData }),
+    }) as unknown as ImportPlan['file'];
+
+  it('lists tool data last, and only when the file carries it', () => {
+    expect(restoreCategories(file())).toEqual([
+      'tunings',
+      'appearanceSettings',
+    ]);
+    expect(restoreCategories(file({ version: 1, records: [] }))).toEqual([
+      'tunings',
+      'appearanceSettings',
+      'toolData',
+    ]);
+  });
+
+  it('labels the row and counts its records like any category', () => {
+    expect(CATEGORY_LABELS.toolData).toBe('Tool data');
+    expect(categoryValue('toolData', 3, undefined)).toBe('3');
+    expect(categoryValue('toolData', 3, counts({ incoming: 3, new: 1 }))).toBe(
+      '3 · 1 new',
+    );
+    expect(restoredText('merge', { toolData: counts({ incoming: 2 }) })).toBe(
+      'Merged 2 tool data entries.',
+    );
   });
 });
 

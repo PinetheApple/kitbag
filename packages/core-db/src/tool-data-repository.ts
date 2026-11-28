@@ -43,7 +43,11 @@ function isJson(value: string): boolean {
   }
 }
 
-function checkWrite(toolId: string, key: string, value: string): void {
+export function checkToolDataWrite(
+  toolId: string,
+  key: string,
+  value: string,
+): void {
   if (toolId === '' || key === '') throw new ToolDataRejected('emptyId');
   if (utf8.encode(key).byteLength > MAX_TOOL_DATA_KEY_BYTES)
     throw new ToolDataRejected('keyTooLong');
@@ -76,7 +80,7 @@ export function createToolDataRepository(
           return found?.value ?? null;
         }),
       set: async (key, value) => {
-        checkWrite(toolId, key, value);
+        checkToolDataWrite(toolId, key, value);
         const updatedAt = now();
         await transactor.serial(async () => {
           await db

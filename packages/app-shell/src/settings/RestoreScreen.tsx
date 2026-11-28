@@ -1,8 +1,9 @@
-import type {
-  Category,
-  Conflict,
-  ImportMode,
-  Resolution,
+import {
+  incomingCount,
+  type Conflict,
+  type ImportCategory,
+  type ImportMode,
+  type Resolution,
 } from '@kitbag/core-db';
 import {
   Button,
@@ -39,7 +40,7 @@ import {
   modeHint,
   PICK_AGAIN,
   replaceConfirmBody,
-  RESTORE_ORDER,
+  restoreCategories,
   restorePrompt,
   RESTORE_TITLE,
   restoredText,
@@ -98,15 +99,15 @@ function CategoryRow({
   review,
   onToggle,
 }: {
-  readonly category: Category;
+  readonly category: ImportCategory;
   readonly review: RestoreReview;
-  readonly onToggle: (category: Category) => void;
+  readonly onToggle: (category: ImportCategory) => void;
 }) {
   const { plan } = review;
   const checked = plan.categories.includes(category);
   const value = categoryValue(
     category,
-    plan.file.records[category].length,
+    incomingCount(plan.file, category),
     checked ? plan.counts[category] : undefined,
   );
   const toggle = useCallback(() => {
@@ -166,7 +167,7 @@ function useReviewEdits() {
     [setMode],
   );
   const toggle = useCallback(
-    (category: Category) => {
+    (category: ImportCategory) => {
       void toggleCategory(category);
     },
     [toggleCategory],
@@ -217,9 +218,7 @@ function Review({ review }: { readonly review: RestoreReview }) {
   const edits = useReviewEdits();
   const sheets = useReviewSheets(review);
   const { plan } = review;
-  const categories = RESTORE_ORDER.filter((category) =>
-    plan.file.categories.includes(category),
-  );
+  const categories = restoreCategories(plan.file);
   return (
     <>
       <SourceCard review={review} />

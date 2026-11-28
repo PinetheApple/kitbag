@@ -23,8 +23,7 @@ const VERSION_1_SECTION = {
   ],
 };
 
-const TOOL_DATA_SHAPES: [string, unknown][] = [
-  ['version 1 records', VERSION_1_SECTION],
+const UNREADABLE_SECTIONS: [string, unknown][] = [
   ['a later version', { version: 99, records: 'opaque' }],
   ['not an object', 'opaque'],
 ];
@@ -50,7 +49,15 @@ async function restore(target: BackupDatabase, text: string, mode: ImportMode) {
 }
 
 describe('a backup carrying toolData', () => {
-  it.each(TOOL_DATA_SHAPES)(
+  it('reads version 1 records into the file', async () => {
+    const { text } = await seededExport();
+    expect(
+      parseBackup(withToolData(text, VERSION_1_SECTION), TEST_BACKUP_RULES)
+        .toolData,
+    ).toEqual(VERSION_1_SECTION);
+  });
+
+  it.each(UNREADABLE_SECTIONS)(
     'parses to the same file as without it, with %s',
     async (_name, toolData) => {
       const { text } = await seededExport();
@@ -61,7 +68,7 @@ describe('a backup carrying toolData', () => {
   );
 
   it.each<ImportMode>(['merge', 'replace'])(
-    'restores every category on %s and ignores the key',
+    'restores every category on %s and leaves tool data unselected',
     async (mode) => {
       const { source, text } = await seededExport();
       const target = openBackupDatabase();

@@ -3,6 +3,7 @@ import { eq, inArray, isNotNull, notInArray } from 'drizzle-orm';
 import { ANALYSIS_STATUS } from './analysis-status';
 import {
   isPreferenceCategory,
+  isRecordCategory,
   PREFERENCE_KEYS,
   recordKey,
   referenceOf,
@@ -17,6 +18,7 @@ import {
   type SongPresetRecord,
   type StemSongRecord,
   type TuningRecord,
+  TOOL_DATA_CATEGORY,
 } from './backup-format';
 import type { ImportPlan, Writes } from './backup-plan';
 import { decodeBase64, nullableBytes, presetBytes } from './base64';
@@ -29,6 +31,7 @@ import {
 import { upsertPreference } from './backup-apply-preference';
 import { upsertRigSetting } from './backup-apply-rig';
 import { restoreStemSong } from './backup-stem-songs';
+import { restoreToolData } from './backup-tool-data';
 import {
   freshClickSoundFileName,
   type ClickSoundFiles,
@@ -285,7 +288,7 @@ async function upsertAll(
   context: Omit<WriteContext, 'mode'>,
 ) {
   const { ids } = context;
-  for (const category of plan.categories)
+  for (const category of plan.categories.filter(isRecordCategory))
     for (const { record, localId } of writes[category] ?? []) {
       const id = await UPSERTS[category](db, record, localId, {
         ...context,
@@ -356,7 +359,7 @@ export async function applyWrites(
   const deviceStemSets = new Map(ids.stemSongs);
   const stemEntries = await loadStemEntries(db);
   if (plan.mode === 'replace') {
-    for (const category of [...plan.categories].reverse()) {
+    for (const category of plan.categories.filter(isRecordCategory).reverse()) {
       await deleteCategory(db, category, deviceRoutes);
       ids[category].clear();
     }
@@ -371,6 +374,8 @@ export async function applyWrites(
     deviceStemSets,
     stemEntries,
   });
+  if (plan.categories.includes(TOOL_DATA_CATEGORY))
+    await restoreToolData(db, plan.mode === 'replace', writes.toolData ?? []);
   if (plan.mode === 'replace') await relinkUntouched(db, plan, snapshot);
   if (plan.categories.includes('setlists'))
     await adoptActiveSetlist(db, plan, ids);
