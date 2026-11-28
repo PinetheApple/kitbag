@@ -110,7 +110,6 @@ export {
   sourceText,
   type BpmSource,
   type LadderRung,
-  type SourceCredit,
 } from './tempoLadder/sources.ts';
 export {
   layoutBeatLeds,
@@ -256,7 +255,9 @@ export {
   type ToolSwitch,
   type ToolSwitchResult,
 } from './tools/switches.ts';
+export { PLAY_ALONG_NAME } from './tools/playAlongName.ts';
 export { createToolStore } from './toolStore/createToolStore.ts';
+export { creditLinkText, type SourceCredit } from './creditLink.ts';
 export { useAppearance } from './appearance/useAppearance.ts';
 export { useGetSongBpmKey } from './getSongBpmKey/useGetSongBpmKey.ts';
 export {
