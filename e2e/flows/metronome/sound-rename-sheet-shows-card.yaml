@@ -5,18 +5,7 @@ tags:
 env:
   ITERATIONS: 50
 ---
-- runFlow: ../../subflows/launch-fresh.yaml
-- runFlow: ../../subflows/open-metronome-first-time.yaml
-- tapOn: 'Practice tools(, \d+ on)?'
-- tapOn: 'Accent sound, Tick'
-- tapOn: 'Import a sound'
-- runFlow:
-    file: ../../subflows/pick-download.yaml
-    env:
-      FILE: '${FIXTURE_SOUND}.wav'
-- extendedWaitUntil:
-    visible: '${FIXTURE_SOUND}, your sound'
-    timeout: 20000
+- runFlow: ../../subflows/import-click-sound.yaml
 - evalScript: ${output.iteration = 0}
 - repeat:
     times: ${ITERATIONS}
