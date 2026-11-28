@@ -1537,9 +1537,25 @@ retrying the same thing.
 
 ### 8.6 Phase lock — the actual feature
 
-- **Tap-to-align.** One tap on a downbeat locks the click. Today's "Tap" is
-  tap-*tempo*, a different thing. Implemented via `kb_metronome_anchor_external`.
-  The tap pad is the biggest thing on the screen.
+- **Tap along to lock.** The pad takes four or more taps on the beat, not one:
+  a single tap often lands early or late, or on the wrong beat. Phase is the
+  median offset of the kept taps from the beat grid. A tap more than 60 ms from
+  the median is ignored, the kept taps must agree within 30 ms (median absolute
+  deviation), and only the newest 8 count, so one early or late tap no longer
+  moves the click. The lock commits when tapping stops (no tap for 2 tapped
+  beats and at least 1 s) or at the 8th kept tap, so the click never starts
+  under a tapping finger. With no tempo from any rung, the same taps set the
+  tempo. Taps at half or double a known tempo (within 4%) keep the song's tempo
+  without asking; more than 6% apart asks once which tempo to use; in between
+  asks for more taps. Taps are stored as song positions: a pause keeps them, a
+  seek or a new track clears them. Today's "Tap" is tap-*tempo*, a different
+  thing. Implemented via `kb_metronome_anchor_external`. The tap pad is the
+  biggest thing on the screen.
+- **Then pick the 1.** Straight after a fresh tap lock the pad asks for one tap
+  on the 1, snapped to the nearest beat of the lock; "The accent is right" skips
+  it. It is not asked after Re-tap, which keeps the 1, nor after a library grid
+  lock, whose downbeats come from analysis. "Set the 1" on the drift meter and
+  "Tap the 1" in the Phase sheet's Downbeat row ask again.
 - **Auto-lock is offered, not taken.** When the playing track matches an analysed
   library song, a card appears with a `Lock` button — **one tap, not zero.** The
   original flow promised zero taps; a tool that starts clicking at you unasked is
@@ -1565,8 +1581,9 @@ retrying the same thing.
   changes from "where's the downbeat" to "is it still right". It is the tuner
   strip's geometry on a ±50 ms full scale with its own colour stops
   (`DRIFT_STRIP_STOPS`): green within ±10 ms, amber by ±30 ms, red at the edges.
-  Under the strip sit the phase stepper, whose value opens the Phase sheet, and
-  Re-tap. Quiet inside ±10 ms; outside, the card ambers, the needle ambers, the
+  Under the strip sit the phase stepper, whose value opens the Phase sheet,
+  Re-tap and Set the 1. Re-tap takes the same taps as the first lock and keeps
+  the tempo and the 1. Quiet inside ±10 ms; outside, the card ambers, the needle ambers, the
   meter moves to the top of the scrolling body and the tap pad grows back into
   its pinned slot. Colour is never the only signal: the needle moves, the number
   changes, the badge text changes. "Locked · 1:12 ago" is the trust signal that
@@ -1587,8 +1604,8 @@ retrying the same thing.
   Route calibration (§12.5) and the per-song nudge add up, and nothing displayed
   the sum. At ±300 ms latency the total stops being intuitive, so one trustworthy
   number with both parts named is worth the line.
-- **Downbeat shift** — `‹ beat 1 ›`. Tap on three instead of one and you are out
-  by beats, not milliseconds; no ms control fixes that, and it is the more common
+- **Downbeat shift** — `‹ beat 1 ›`, the fallback to picking the 1 with a tap.
+  Lock on three instead of one and you are out by beats, not milliseconds; no ms control fixes that, and it is the more common
   mistake. On a library grid lock it moves the bars with
   `kb_metronome_set_grid_downbeats` (§4.2), never by re-sending the grid.
 
@@ -1657,9 +1674,9 @@ playing Spotify is a phone that rings, skips, buffers and serves ads.
 
 | State | Behaviour |
 |---|---|
-| **Drifting** | Lock held, anchor stale. Does not silently unlock — a slightly-off click you can fix beats a click that vanished. One tap restores it. |
-| **Track changed** | Unlocks. New BPM looks up. Saved preset recalls if there is one. Never carries the old lock into a new song — that is a wrong click delivered with confidence. |
-| **Paused / seeked** | Click stops, lock badge stays, resumes on the beat. **Seeking backwards is the test that proves the implementation is real.** |
+| **Drifting** | Lock held, anchor stale. Does not silently unlock — a slightly-off click you can fix beats a click that vanished. Re-tap restores it: tap along again, and the tempo and the 1 stay. |
+| **Track changed** | Unlocks. New BPM looks up. Saved preset recalls if there is one. Never carries the old lock into a new song — that is a wrong click delivered with confidence. Taps not yet locked are cleared too, and a snackbar says so. |
+| **Paused / seeked** | Click stops, lock badge stays, resumes on the beat. **Seeking backwards is the test that proves the implementation is real.** Taps not yet locked are kept through a pause and cleared by a seek. |
 | **Several apps playing** | Source chip shows a count, opens the source sheet. |
 | **Source went away** | Card greys, keeps last title, lock holds 10s, counted down, then drops to Nothing playing. A short grace covers app switches and buffering. |
 | **Nothing playing** | Access granted and no session but Kitbag's own (§8.3). The empty state names the reason and the next action; tap tempo, the pattern controls and the click's own play key still work. |
@@ -1677,7 +1694,9 @@ can see is wrong beats a tool that silently mutes your practice on a guess.
 
 ### 8.11 Acceptance
 
-- Click stays on-beat with Spotify over a 3-minute song after one tap.
+- Click stays on-beat with Spotify over a 3-minute song after tapping along to a
+  few beats; one early or late tap does not move it.
+- Picking the 1 after a tap lock takes one tap.
 - Auto-lock works after one tap for a track matching an analysed song.
 - Permission denial degrades to tap-tempo — never a dead end.
 - Survives Bluetooth latency and pause/resume/skip.
@@ -2018,6 +2037,7 @@ One migration note that is not obvious from the table:
 | `kitbag-ui.html` | **The foundation.** Tokens, components, the 9-screen survey, key flows, and §06 experience rules. Everything below inherits from it. |
 | `kitbag-metronome.html` | Supersedes the metronome section of `kitbag-ui.html`. Adds setlists, setlist detail, preset editor, four sheets, the numpad, practice summary, notification/lock screen. |
 | `kitbag-playalong.html` | Supersedes the Play-along section (owner-approved 2026-11-26; #618). Draws the states and sheets of §8.10, the source sheet and the away mini-player. Recorded in `docs/decisions.md`, 2026-11-26. |
+| `kitbag-playalong-tap-lock.html` | **Tap along to lock** (owner-approved 2026-11-28; #765). Supersedes the tap pad's single-tap align copy in `kitbag-playalong.html`. Draws the tap-along prompt, tapping with per-tap offsets, the lock, picking the 1, Re-tap, the Phase sheet's Tap the 1, and the edge states (uneven taps, half and double time, a tempo that disagrees, pause, track change, font 2.0). The alternatives drawn small in state d are rejected. Everything it does not draw stays `kitbag-playalong.html`'s. |
 | `kitbag-settings.html` | Designs Settings, latency calibration, restore. **Supersedes exactly one §06 card** — "Settings stay contextual" — and nothing else. |
 | `kitbag-data-folder.html` | **The Data folder** (D11; #170). Supersedes, in `kitbag-settings.html`, the Data folder row's value in Settings → Data and the Storage sheet's Location line; the rest of that file stands. Adds the Data folder chooser, and draws the move (confirmation, progress, cancel, the paused banner on Home), its failures, the Songs list during a move, and songs on a missing SD card. Recorded in `docs/decisions.md`, 2026-11-19. |
 | `kitbag-metronome-b.html` ("Chosen") and `kitbag-metronome-status.html` (variant A, Q6 pulse marks, poly row) | Owner-approved layout B (#175). **Supersede the metronome screen in `kitbag-metronome.html` §02, and §03's sheets and numpad, where they differ**, except sizes and vertical layout, which the #243 frame in `kitbag-metronome.html` §02 sets. §02's setlists, setlist detail and preset editor, and §04 onward, stay binding. Recorded in `docs/decisions.md`, 2026-10-30; `docs/research/metronome-b-parity.md` is the value table. |
