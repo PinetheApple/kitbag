@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <ratio>
 
 namespace kitbag {
@@ -33,13 +34,33 @@ inline int64_t BoottimeNs() {
 #endif
 }
 
-// Bracketing the boottime read halves the error a preemption between the
-// reads can add.
+// A bracket this tight errs under a quarter frame at 48 kHz.
+inline constexpr int64_t kSuspendedBracketNs = 10'000;
+inline constexpr int kSuspendedBracketAttempts = 16;
+
+// A preemption between the reads errs by half the bracket, so wide ones retry.
+template <typename Monotonic, typename Boottime>
+int64_t SuspendedNsFrom(Monotonic monotonic, Boottime boottime) {
+  int64_t narrowest = std::numeric_limits<int64_t>::max();
+  int64_t offset = 0;
+  for (int attempt = 0; attempt < kSuspendedBracketAttempts; ++attempt) {
+    const int64_t before = monotonic();
+    const int64_t boot = boottime();
+    const int64_t span = monotonic() - before;
+    if (span < narrowest) {
+      narrowest = span;
+      offset = boot - (before + span / 2);
+    }
+    if (span <= kSuspendedBracketNs) break;
+  }
+  return offset;
+}
+
 inline int64_t SuspendedNs() {
-  const int64_t before = MonotonicNs();
-  const int64_t boottime = BoottimeNs();
-  const int64_t after = MonotonicNs();
-  return boottime - (before + (after - before) / 2);
+  return SuspendedNsFrom(
+      [] { return MonotonicNs(); },
+      [] { return BoottimeNs(); }
+  );
 }
 
 // Whole seconds apart, so a span of days cannot overflow the product.

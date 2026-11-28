@@ -221,6 +221,10 @@ Android builds run from `packages/app-shell/android` via Gradle;
 device. Anything that touches a screen or the native boundary needs verifying on a real device — the
 headless gates cannot see a broken JNI chain.
 
+## Credits
+
+Tempo lookups for Play along use the [GetSongBPM](https://getsongbpm.com) API.
+
 ## License
 
 GPLv3 — see [LICENSE](LICENSE). Native dependencies: miniaudio (public domain),
