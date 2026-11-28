@@ -1,0 +1,1 @@
+• Deletes in the metronome library, Songs and custom click sounds can be undone for a few seconds, and deleting a custom tuning asks first.
