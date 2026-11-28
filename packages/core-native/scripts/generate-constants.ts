@@ -55,6 +55,10 @@ const sources: NativeSources = {
     join(kotlinRoot, 'tools', 'ToolRejected.kt'),
     'utf8',
   ),
+  toolInstallCodes: readFileSync(
+    join(kotlinRoot, 'tools', 'ToolInstallCodes.kt'),
+    'utf8',
+  ),
 };
 
 const outputs: readonly (readonly [string, string])[] = [

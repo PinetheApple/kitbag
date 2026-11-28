@@ -28,6 +28,8 @@ internal object AppChrome {
     )
   }
 
+  fun versionCode(context: Context): Long = PackageInfoCompat.getLongVersionCode(packageInfo(context))
+
   fun setNightMode(context: Context, mode: String) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
       val uiMode = uiModeManagerMode(mode) ?: run {

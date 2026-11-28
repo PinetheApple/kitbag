@@ -549,7 +549,9 @@ in the `github` or `main` source sets.
   ([About releases](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)).
   Tool updates therefore ship with host releases; tool-only releases would need
   cross-version indexes and a compatibility matrix in CI.
-- **URLs**, built from a compile-time repo slug and the host's own versionName:
+- **URLs**, built from `release` in `packages/app-shell/tool-bundle-rules.json` (host,
+  repo, download path, tag prefix; `bundleRules.ts` owns it, Settings' source row reads it)
+  and the versionName in the verified embedded index:
   `https://github.com/<repo>/releases/download/v<versionName>/<asset>` for a `.kbt`,
   and `https://github.com/<repo>/releases/latest/download/tools-status.json`. A host only
   fetches tools built for its own release, so compatibility holds by construction.
@@ -568,13 +570,15 @@ in the `github` or `main` source sets.
   downloads redirect to a storage host. A separate client uses system TLS and proxy
   settings, follows up to five redirects and only to `https` (a release download is one
   hop; the cap stops loops), and stops reading at a byte cap: the signed `size` for a
-  `.kbt`, a fixed cap for the status file (value decided in issue 7).
+  `.kbt`, a fixed cap for the status file (value decided in issue 9).
 - **Storage.** Downloads go to `noBackupFilesDir/tools/.staging/<random>.part` and
   move into place with the `DurableFiles` pattern (`copyAndHash`: part file,
-  `fd.sync()`, rename, directory sync). Installed tools live in
-  `noBackupFilesDir/tools/<id>/<manifestSha256>/` with an atomically replaced
-  `current` pointer; leftover staging and unreferenced directories are deleted at
-  start. `noBackupFilesDir` keeps re-downloadable code out of Auto Backup
+  `fd.sync()`, rename, directory sync). An installed tool is one file,
+  `noBackupFilesDir/tools/<id>/<id>.kbt` (the #726 loader's layout), replaced by an
+  atomic rename. Remove renames `<id>/` into staging, then deletes it. At start,
+  staging and any `<id>/` without its `.kbt` are deleted. The "Tool downloads" switch
+  and the per-tool rollback high-water marks live in
+  `noBackupFilesDir/tools/.installer.json`; an unreadable file counts as downloads off. `noBackupFilesDir` keeps re-downloadable code out of Auto Backup
   ([Context.getNoBackupFilesDir](https://developer.android.com/reference/android/content/Context#getNoBackupFilesDir())),
   which matters because the manifest sets `android:allowBackup="true"`.
 - **Retry, not resume.** Tool JavaScript is about 0.5 to 1.8 MiB in total (feasibility
@@ -655,7 +659,7 @@ in the `github` or `main` source sets.
 - **Converted tools keep their tables** (`songs`, `stem_sets`, `practice_sessions`,
   `tunings` and the rest in `schema.ts`), reached through `ToolHost` domain services
   (8.3). The generic table is for new tools.
-- **Installed state** comes from disk (the `current` pointer and its verified
+- **Installed state** comes from disk (`<id>/<id>.kbt` and its verified
   manifest), not a table, so the database and the files cannot disagree. The on/off
   switch stays the `tool_enabled_<id>` preference (§9.3).
 

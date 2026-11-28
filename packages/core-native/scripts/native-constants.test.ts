@@ -78,6 +78,14 @@ const realSources: NativeSources = {
     ),
     'utf8',
   ),
+  toolInstallCodes: readFileSync(
+    join(
+      import.meta.dirname,
+      '..',
+      'android/src/main/java/com/kitbag/corenative/tools/ToolInstallCodes.kt',
+    ),
+    'utf8',
+  ),
 };
 
 describe('parseDefineInt', () => {
@@ -522,6 +530,22 @@ describe('parseKotlinCodeEnum', () => {
         'PREFIX',
       ),
     ).toThrow();
+  });
+});
+
+describe('collectConstants (tool install codes)', () => {
+  it('reads the install stages and downloads states from ToolInstallCodes.kt', () => {
+    const c = collectConstants(realSources);
+    expect(c.toolInstallStages).toContainEqual({
+      name: 'Installed',
+      value: 'TOOL_STAGE_INSTALLED',
+    });
+    expect(c.toolDownloads.map((d) => d.name)).toEqual([
+      'Unasked',
+      'On',
+      'Off',
+    ]);
+    expect(renderConstants(c)).toContain("  off: 'TOOL_DOWNLOADS_OFF',");
   });
 });
 

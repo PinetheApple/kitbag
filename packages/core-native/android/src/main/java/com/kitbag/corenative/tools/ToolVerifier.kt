@@ -2,7 +2,13 @@ package com.kitbag.corenative.tools
 
 import com.kitbag.corenative.library.DurableFiles
 
-internal class VerifiedTool(val id: String, val bytecode: ByteArray, val bytecodeVersion: Int)
+internal class VerifiedTool(
+  val id: String,
+  val bytecode: ByteArray,
+  val bytecodeVersion: Int,
+  val manifest: ToolManifest,
+  val manifestSha256: String,
+)
 
 internal class ToolVerifier(private val rules: ToolBundleRules, private val keys: ToolKeyRing) {
   private val manifests = ToolManifestParser(rules)
@@ -22,7 +28,7 @@ internal class ToolVerifier(private val rules: ToolBundleRules, private val keys
     if (manifest.id != expectedId) reject(ToolRejection.WRONG_TOOL, "the bundle is ${manifest.id}, not $expectedId")
     checkFiles(entries, manifest)
     val bytecode = entries.first { it.name == rules.entryFile }.data
-    return VerifiedTool(manifest.id, bytecode, manifest.bytecodeVersion)
+    return VerifiedTool(manifest.id, bytecode, manifest.bytecodeVersion, manifest, DurableFiles.sha256(manifestBytes))
   }
 
   private fun single(entries: List<ToolZipEntry>, name: String): ByteArray {

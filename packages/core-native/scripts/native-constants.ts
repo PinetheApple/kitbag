@@ -191,6 +191,16 @@ export function collectConstants(sources: NativeSources): NativeConstants {
       'ToolRejection',
       'CODE_PREFIX',
     ),
+    toolInstallStages: parseKotlinCodeEnum(
+      sources.toolInstallCodes,
+      'ToolInstallStage',
+      'STAGE_PREFIX',
+    ),
+    toolDownloads: parseKotlinCodeEnum(
+      sources.toolInstallCodes,
+      'ToolDownloads',
+      'DOWNLOADS_PREFIX',
+    ),
     toolRefusalKey: parseCString(sources.toolEvalHeader, 'kToolRefusalKey'),
     toolRefusalDetailKey: parseCString(
       sources.toolEvalHeader,

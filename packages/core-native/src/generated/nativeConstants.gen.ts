@@ -1,4 +1,4 @@
-// GENERATED — DO NOT EDIT. Owners: native/audio_core, OutputRoutes.kt, cpp/KitbagToolEval.h, ToolRejected.kt (SPEC §13.7).
+// GENERATED — DO NOT EDIT. Owners: native/audio_core, OutputRoutes.kt, cpp/KitbagToolEval.h, ToolRejected.kt, ToolInstallCodes.kt (SPEC §13.7).
 // Regenerate: pnpm --filter @kitbag/core-native generate
 // Verify (CI drift guard): pnpm --filter @kitbag/core-native generate:check
 //
@@ -327,7 +327,7 @@ export const KB_TOOL_ERROR = {
 } as const;
 export type KB_TOOL_ERROR = (typeof KB_TOOL_ERROR)[keyof typeof KB_TOOL_ERROR];
 
-/** Codes KitbagTools.verifyInstalled rejects with (ToolRejection in ToolRejected.kt). */
+/** Codes KitbagTools rejects with and install events fail with (ToolRejection in ToolRejected.kt). */
 export const KB_TOOL_REJECTION = {
   badId: 'E_TOOL_BAD_ID',
   notInstalled: 'E_TOOL_NOT_INSTALLED',
@@ -342,5 +342,38 @@ export const KB_TOOL_REJECTION = {
   handoff: 'E_TOOL_HANDOFF',
   internal: 'E_TOOL_INTERNAL',
   cancelled: 'E_TOOL_CANCELLED',
+  index: 'E_TOOL_INDEX',
+  otherRelease: 'E_TOOL_OTHER_RELEASE',
+  notInIndex: 'E_TOOL_NOT_IN_INDEX',
+  notAsIndexed: 'E_TOOL_NOT_AS_INDEXED',
+  downloadsOff: 'E_TOOL_DOWNLOADS_OFF',
+  rollback: 'E_TOOL_ROLLBACK',
+  incompatible: 'E_TOOL_INCOMPATIBLE',
+  noSpace: 'E_TOOL_NO_SPACE',
+  offline: 'E_TOOL_OFFLINE',
+  download: 'E_TOOL_DOWNLOAD',
+  notHttps: 'E_TOOL_NOT_HTTPS',
+  tooManyRedirects: 'E_TOOL_TOO_MANY_REDIRECTS',
+  tooLarge: 'E_TOOL_TOO_LARGE',
 } as const;
 export type KB_TOOL_REJECTION = (typeof KB_TOOL_REJECTION)[keyof typeof KB_TOOL_REJECTION];
+
+/** Stages of a KitbagTools install event (ToolInstallStage in ToolInstallCodes.kt). */
+export const KB_TOOL_INSTALL_STAGE = {
+  downloading: 'TOOL_STAGE_DOWNLOADING',
+  retrying: 'TOOL_STAGE_RETRYING',
+  checking: 'TOOL_STAGE_CHECKING',
+  installing: 'TOOL_STAGE_INSTALLING',
+  installed: 'TOOL_STAGE_INSTALLED',
+  failed: 'TOOL_STAGE_FAILED',
+  cancelled: 'TOOL_STAGE_CANCELLED',
+} as const;
+export type KB_TOOL_INSTALL_STAGE = (typeof KB_TOOL_INSTALL_STAGE)[keyof typeof KB_TOOL_INSTALL_STAGE];
+
+/** States of the Tool downloads switch (ToolDownloads in ToolInstallCodes.kt). */
+export const KB_TOOL_DOWNLOADS = {
+  unasked: 'TOOL_DOWNLOADS_UNASKED',
+  on: 'TOOL_DOWNLOADS_ON',
+  off: 'TOOL_DOWNLOADS_OFF',
+} as const;
+export type KB_TOOL_DOWNLOADS = (typeof KB_TOOL_DOWNLOADS)[keyof typeof KB_TOOL_DOWNLOADS];

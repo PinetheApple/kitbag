@@ -48,7 +48,7 @@ function renderFixedRoutes(routes: NativeConstants['fixedOutputRoutes']) {
 /** Deterministic, prettier-free (`.gen.ts` is prettier-ignored) TS source. */
 export function renderConstants(c: NativeConstants): string {
   const soundNames = c.soundNames.map((n) => `'${n}'`).join(', ');
-  return `// GENERATED — DO NOT EDIT. Owners: native/audio_core, OutputRoutes.kt, cpp/KitbagToolEval.h, ToolRejected.kt (SPEC §13.7).
+  return `// GENERATED — DO NOT EDIT. Owners: native/audio_core, OutputRoutes.kt, cpp/KitbagToolEval.h, ToolRejected.kt, ToolInstallCodes.kt (SPEC §13.7).
 // Regenerate: pnpm --filter @kitbag/core-native generate
 // Verify (CI drift guard): pnpm --filter @kitbag/core-native generate:check
 //
@@ -259,6 +259,10 @@ export const KB_TOOL_REFUSAL_DETAIL_KEY = '${c.toolRefusalDetailKey}';
 
 /** Refusal codes, returned under KB_TOOL_REFUSAL_KEY, and eval, thrown as "E_TOOL_EVAL: tool:<id> <detail>" (kToolError*). */
 ${renderStrings('KB_TOOL_ERROR', c.toolErrors)}
-/** Codes KitbagTools.verifyInstalled rejects with (ToolRejection in ToolRejected.kt). */
-${renderStrings('KB_TOOL_REJECTION', c.toolRejections)}`;
+/** Codes KitbagTools rejects with and install events fail with (ToolRejection in ToolRejected.kt). */
+${renderStrings('KB_TOOL_REJECTION', c.toolRejections)}
+/** Stages of a KitbagTools install event (ToolInstallStage in ToolInstallCodes.kt). */
+${renderStrings('KB_TOOL_INSTALL_STAGE', c.toolInstallStages)}
+/** States of the Tool downloads switch (ToolDownloads in ToolInstallCodes.kt). */
+${renderStrings('KB_TOOL_DOWNLOADS', c.toolDownloads)}`;
 }
