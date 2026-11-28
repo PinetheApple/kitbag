@@ -2,7 +2,6 @@ import {
   BridgedProvider,
   createThemedStyles,
   EmptyState,
-  PlayerDock,
   readerHiding,
   SegmentedControl,
   space,
@@ -11,21 +10,17 @@ import {
   type SegmentOption,
 } from '@kitbag/core-design';
 import {
-  loopEndFrames,
   StemSourceContext,
   useFocusedMixerHold,
   useLiveStemPlayer,
-  useStemHeldFrame,
   useStemPlayer,
   useStemSource,
-  useStemViewing,
   type StemPlayerStatus,
 } from '@kitbag/core-state';
 import type { MixerFrameValues } from '@kitbag/core-plugin-api';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
-import { useStemsHost } from '../host.tsx';
 import { useArrivalFollow, useRouteAcquire } from './advanceFollow.ts';
 import { detailTabLabel } from '../logic/detailView.ts';
 import { hasUnsavedRetime } from '../logic/retimeView.ts';
@@ -42,13 +37,11 @@ import { useCarriedSkipNotice, useQueueActions } from './queueActions.tsx';
 import { LeaveDialog, ResetDialog, RetimeBar } from './RetimeBar.tsx';
 import { RetimeBody } from './RetimeMode.tsx';
 import { StemAppBar } from './StemAppBar.tsx';
-import { Scrubber } from './Scrubber.tsx';
+import { Dock, useStemFrame } from './StemDock.tsx';
 import { SongFactChips } from './SongFactChips.tsx';
-import { SpeedKeyControls } from './SpeedKeyControls.tsx';
 import { StemList } from './StemList.tsx';
 import { WAVEFORM_BARS } from './StemRowView.tsx';
-import { StemTransport } from './StemTransport.tsx';
-import { usePlayerRoutes, useStemPresses } from './playerRoutes.ts';
+import { usePlayerRoutes } from './playerRoutes.ts';
 import { usePlayerSheet } from './usePlayerSheet.ts';
 
 export interface StemPlayerScreenProps {
@@ -82,32 +75,6 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-interface DockProps {
-  readonly frame: MixerFrameValues;
-  readonly bottom: number;
-  readonly onOpenUpNext: () => void;
-  readonly onSpeedKey: () => void;
-}
-
-function Dock({ frame, bottom, onOpenUpNext, onSpeedKey }: DockProps) {
-  const { UpNextRow } = useStemsHost().listening;
-  const presses = useStemPresses();
-  const viewing = useStemViewing();
-  return (
-    <PlayerDock bottomInset={bottom}>
-      {viewing ? null : (
-        <UpNextRow
-          songSec={frame.songSec}
-          onOpenSheet={onOpenUpNext}
-          {...presses}
-        />
-      )}
-      <Scrubber frame={frame} />
-      <SpeedKeyControls onOpen={onSpeedKey} />
-      <StemTransport playing={frame.playing} />
-    </PlayerDock>
-  );
-}
 
 interface PlayerTabsProps {
   readonly label: string;
@@ -200,19 +167,6 @@ function NotReady({
       Opening the stems…
     </Text>
   );
-}
-
-function useStemFrame(viewing: boolean): MixerFrameValues {
-  const { useMixerFrame } = useStemsHost().listening;
-  const rate = useStemPlayer((s) => s.engineRate);
-  const frames = useStemPlayer((s) => s.durationFrames);
-  const loopEnd = useStemPlayer(loopEndFrames);
-  const countEnd = useStemPlayer((s) => s.countEndFrame);
-  const held = useStemHeldFrame(viewing);
-  return useMixerFrame(rate, frames, loopEnd, {
-    countEndFrame: countEnd,
-    heldFrame: held,
-  });
 }
 
 interface BodyProps {

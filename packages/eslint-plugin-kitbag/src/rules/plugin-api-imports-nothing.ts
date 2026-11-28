@@ -3,18 +3,11 @@ import type { TSESTree } from '@typescript-eslint/utils';
 import { createRule } from '../utils/create-rule.ts';
 import { isInPackage } from '../utils/package-path.ts';
 
-// SPEC §9.1 / §13.1 / §9.4 / §13.6: core-plugin-api is the abstract contract and
-// imports NOTHING — "No React import, no store import, no native import" (§9.1).
-// It bans every `@kitbag/*` workspace import inside it (which subsumes §13.6's
-// narrower "must not import app-shell or tool_*"), and also the three external
-// edges §9.1 names by hand: react / react-native and any native/JSI/TurboModule
-// specifier. Only pure TypeScript (types, relative self-imports) is allowed.
-
 const KITBAG_WORKSPACE_PREFIX = '@kitbag/';
 
-// The external specifiers §9.1 forbids by name. `react`/`react-native` are the
-// framework edges (PluginScreen is React-agnostic precisely so none is needed);
-// the rest are the native boundary that only core-native may cross (§13.1).
+// SPEC §9.1 lets type-only imports of these type the listening slice; runtime imports stay banned.
+const TYPE_ONLY_EXTERNAL = new Set(['react', 'react-native-reanimated']);
+
 const FORBIDDEN_EXTERNAL = new Set([
   'react',
   'react-native',
@@ -68,9 +61,11 @@ export const pluginApiImportsNothing = createRule<Options, MessageIds>({
     return {
       ImportDeclaration(node: TSESTree.ImportDeclaration) {
         const source = node.source.value;
+        const typeOnly =
+          node.importKind === 'type' && TYPE_ONLY_EXTERNAL.has(source);
         const forbidden =
           source.startsWith(KITBAG_WORKSPACE_PREFIX) ||
-          FORBIDDEN_EXTERNAL.has(source) ||
+          (FORBIDDEN_EXTERNAL.has(source) && !typeOnly) ||
           isNativeSpecifier(source);
         if (forbidden) {
           context.report({

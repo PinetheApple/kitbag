@@ -7,10 +7,8 @@ export const TOOL_ID_PATTERN = new RegExp(`^${TOOL_ID}$`);
 // A bare string so the contract does not retype the icon set core-design owns.
 export type IconName = string;
 
-// React-agnostic, so any component is assignable without a React import here.
-export type PluginScreen = (
-  props: Readonly<Record<string, unknown>>,
-) => unknown;
+// Each screen keeps its own props until the /t/<id> route fixes them; never admits any component.
+export type PluginScreen = ComponentType<never>;
 
 export interface RouteDescriptor {
   readonly path: string;

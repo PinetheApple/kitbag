@@ -24,7 +24,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-
 const NOT_COUNTING = 0;
 
 const useStyles = createThemedStyles((theme) => ({

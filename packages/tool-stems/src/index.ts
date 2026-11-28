@@ -1,7 +1,4 @@
-export {
-  StemPlayerScreen,
-  type StemPlayerScreenProps,
-} from './screen/StemPlayerScreen.tsx';
+export type { StemPlayerScreenProps } from './screen/StemPlayerScreen.tsx';
 export {
   register,
   type StemsPlugin,

@@ -2,11 +2,10 @@ import type { AddedToSetlist, Notice, QueuePresses } from '@kitbag/core-design';
 import type {
   MixerFrameValues,
   PlayOrderRoutes,
-  QueueSheetProps,
 } from '@kitbag/core-plugin-api';
 import type { LeftSetlist } from '@kitbag/core-state';
 
-import { useStemsHost } from '../host.tsx';
+import { useStemsHost } from '../host.ts';
 import { CLICK_SECTION, type ClickSection } from '../logic/clickView.ts';
 import { ClickSheet } from './ClickSheet.tsx';
 import { ExportSheet } from './ExportSheet.tsx';
@@ -28,7 +27,7 @@ export interface PlayerSheetsProps {
   readonly queue: QueuePresses;
   readonly onAddToSetlist: () => void;
   readonly onAddedToSetlist: (added: AddedToSetlist) => void;
-  readonly onLeftSetlist: QueueSheetProps<Notice, LeftSetlist>['onLeftSetlist'];
+  readonly onLeftSetlist: (left: LeftSetlist) => void;
   readonly sheet: OpenSheet | null;
   readonly bottomInset: number;
   readonly frame: MixerFrameValues;
