@@ -4,6 +4,7 @@ import { useCallback, useMemo, type ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import type { ShellMeasuredInsets } from '../screen/MetronomeScreen.tsx';
+import { LibraryUndoSnackbar } from './LibraryUndoSnackbar.tsx';
 
 const useStyles = createThemedStyles((theme) => ({
   screen: {
@@ -59,6 +60,7 @@ export function ScreenFrame({
         {failed ? <LibraryUnavailable /> : children}
       </ScrollView>
       {footer}
+      <LibraryUndoSnackbar bottomInset={insets.bottom} />
     </View>
   );
 }

@@ -66,6 +66,35 @@ async function place(
   return { ...entry, position: placed.position };
 }
 
+export interface LocatedQueueEntry {
+  readonly entry: PlayQueueEntry;
+  readonly index: number;
+}
+
+export async function locateQueueEntry(
+  db: Database,
+  song: QueuedSong,
+): Promise<LocatedQueueEntry | null> {
+  const entries = await orderedEntries(db);
+  const index = entries.findIndex(holds(song));
+  const entry = entries[index];
+  return entry === undefined ? null : { entry, index };
+}
+
+export async function restoreQueueEntry(
+  db: Database,
+  { entry, index }: LocatedQueueEntry,
+): Promise<void> {
+  const inserted = found(
+    await db
+      .insert(playQueue)
+      .values({ ...entry, position: 0 })
+      .returning(),
+    'Play queue restore',
+  );
+  await place(db, inserted, index);
+}
+
 async function queuedEntry(db: Database, song: QueuedSong) {
   const [entry] = await db.select().from(playQueue).where(keyOf(song));
   return entry;

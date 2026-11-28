@@ -4,7 +4,7 @@ import { createStore } from 'zustand/vanilla';
 
 import { createMetronomeStore } from '../metronome/store.ts';
 import { stubMetronomeRuntime } from '../metronome/runtime.test-helper.ts';
-import { releaseRemovedSound } from './released.ts';
+import { releaseRemovedSound, restoreReleasedSound } from './released.ts';
 
 const ENGINE_BPM = 120;
 const BUILT_IN = 2;
@@ -28,6 +28,20 @@ it('puts Tick back on whichever live role used the removed sound', async () => {
     accent: BUILT_IN,
   });
   expect(refresh).toHaveBeenCalledOnce();
+});
+
+it('puts the sound back on the live roles Undo finds unchanged', async () => {
+  const { metronome, library, refresh } = harness();
+  const removed = customSoundId(0);
+  metronome.getState().setSounds(removed, removed);
+  const released = await releaseRemovedSound(removed, metronome, library);
+  metronome.getState().setSounds(KB_DEFAULT_SOUNDS.normal, BUILT_IN);
+  await restoreReleasedSound(removed, released, metronome, library);
+  expect(metronome.getState().sounds).toEqual({
+    normal: removed,
+    accent: BUILT_IN,
+  });
+  expect(refresh).toHaveBeenCalledTimes(2);
 });
 
 it('leaves live sounds alone when neither role used it', async () => {

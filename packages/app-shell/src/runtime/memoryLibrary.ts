@@ -1,5 +1,8 @@
 import type {
+  DeletedPreset,
+  DeletedSetlist,
   LinkedPresetValues,
+  RemovedSetlistItem,
   NewSongPreset,
   Setlist,
   SetlistItem,
@@ -198,10 +201,61 @@ function duplicateSetlist(store: MemoryStore, setlistId: number, name: string) {
   return copy;
 }
 
-function deleteSetlist(store: MemoryStore, setlistId: number): void {
+function deleteSetlist(
+  store: MemoryStore,
+  setlistId: number,
+): DeletedSetlist | undefined {
   const { tables } = store;
+  const setlist = tables.setlists.find((s) => s.id === setlistId);
+  if (setlist === undefined) return undefined;
+  const items = ordered(store, setlistId).map((item) => ({ ...item }));
   tables.setlists = tables.setlists.filter((s) => s.id !== setlistId);
   tables.items = tables.items.filter((item) => item.setlistId !== setlistId);
+  return { setlist: { ...setlist }, items, practiceSessionIds: [] };
+}
+
+function entryExists(store: MemoryStore, item: SetlistItem): boolean {
+  return item.songPresetId === null
+    ? item.stemSetId !== null
+    : store.tables.presets.some((p) => p.id === item.songPresetId);
+}
+
+function restoreSetlist(store: MemoryStore, deleted: DeletedSetlist): void {
+  const { tables } = store;
+  const active =
+    deleted.setlist.active && !tables.setlists.some((s) => s.active);
+  tables.setlists.push({ ...deleted.setlist, active });
+  tables.setlists.sort((a, b) => a.id - b.id);
+  deleted.items
+    .filter((item) => entryExists(store, item))
+    .forEach((item, position) => {
+      tables.items.push({ ...item, position });
+    });
+}
+
+function removeItem(
+  store: MemoryStore,
+  itemId: number,
+): RemovedSetlistItem | undefined {
+  const item = store.tables.items.find((entry) => entry.id === itemId);
+  if (item === undefined) return undefined;
+  const index = ordered(store, item.setlistId).indexOf(item);
+  store.tables.items = store.tables.items.filter((entry) => entry !== item);
+  return { item: { ...item }, index };
+}
+
+function restoreItem(
+  store: MemoryStore,
+  { item, index }: RemovedSetlistItem,
+): boolean {
+  const setlistKept = store.tables.setlists.some(
+    (s) => s.id === item.setlistId,
+  );
+  if (!setlistKept || !entryExists(store, item)) return false;
+  const restored = { ...item };
+  store.tables.items.push(restored);
+  place(store, restored, item.setlistId, index);
+  return true;
 }
 
 function selectActive(store: MemoryStore, setlistId: number | null): void {
@@ -259,11 +313,10 @@ function itemWrites(store: MemoryStore) {
     move: mutating(store, (itemId: number, position: number) => {
       moveItem(store, itemId, undefined, position);
     }),
-    removeItem: mutating(store, (itemId: number) => {
-      store.tables.items = store.tables.items.filter(
-        (item) => item.id !== itemId,
-      );
-    }),
+    removeItem: mutating(store, (itemId: number) => removeItem(store, itemId)),
+    restoreItem: mutating(store, (removed: RemovedSetlistItem) =>
+      restoreItem(store, removed),
+    ),
   };
 }
 
@@ -277,8 +330,9 @@ export function createMemorySetlists(
       const setlist = store.tables.setlists.find((s) => s.id === id);
       if (setlist !== undefined) setlist.name = name;
     }),
-    delete: mutating(store, (id: number) => {
-      deleteSetlist(store, id);
+    delete: mutating(store, (id: number) => deleteSetlist(store, id)),
+    restore: mutating(store, (deleted: DeletedSetlist) => {
+      restoreSetlist(store, deleted);
     }),
     duplicate: mutating(store, (id: number, name: string) =>
       duplicateSetlist(store, id, name),
@@ -333,10 +387,30 @@ function saveLinkedPreset(
   return { ...linked };
 }
 
-function deletePreset(store: MemoryStore, id: number): void {
+function deletePreset(
+  store: MemoryStore,
+  id: number,
+): DeletedPreset | undefined {
   const { tables } = store;
-  tables.presets = tables.presets.filter((p) => p.id !== id);
+  const preset = tables.presets.find((p) => p.id === id);
+  if (preset === undefined) return undefined;
+  const items = tables.items
+    .filter((item) => item.songPresetId === id)
+    .map((item) => ({
+      item: { ...item },
+      index: ordered(store, item.setlistId).indexOf(item),
+    }));
+  tables.presets = tables.presets.filter((p) => p !== preset);
   tables.items = tables.items.filter((item) => item.songPresetId !== id);
+  return { preset: { ...preset }, items };
+}
+
+function restorePreset(store: MemoryStore, deleted: DeletedPreset): void {
+  store.tables.presets.push({ ...deleted.preset });
+  store.tables.presets.sort((a, b) => a.id - b.id);
+  [...deleted.items]
+    .sort((a, b) => a.index - b.index)
+    .forEach((removed) => restoreItem(store, removed));
 }
 
 export function createMemoryPresets(
@@ -361,8 +435,9 @@ export function createMemoryPresets(
       delete copy.id;
       return insertPreset(store, copy as NewSongPreset);
     }),
-    delete: mutating(store, (id: number) => {
-      deletePreset(store, id);
+    delete: mutating(store, (id: number) => deletePreset(store, id)),
+    restore: mutating(store, (deleted: DeletedPreset) => {
+      restorePreset(store, deleted);
     }),
     forLibrarySong: (songId: number) =>
       Promise.resolve(linkedPreset(store, songId)),

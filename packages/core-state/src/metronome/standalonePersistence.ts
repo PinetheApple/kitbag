@@ -3,7 +3,13 @@ import type { StoreApi } from 'zustand/vanilla';
 
 import { libraryStore, type LibraryStore } from '../library/store.ts';
 import { debounce } from '../debounce.ts';
-import { rangeRamp, usesSound, withoutSound } from './config.ts';
+import {
+  rangeRamp,
+  usesSound,
+  withoutSound,
+  withSoundRestored,
+  type PerAccentSounds,
+} from './config.ts';
 import {
   applyMetronomeSettings,
   standaloneMetronomeChanged,
@@ -117,19 +123,45 @@ export function reloadStandaloneMetronomePersistence(): void {
   binding?.flush();
 }
 
-export function releaseStandaloneSound(soundId: number): void {
-  if (configured === undefined) return;
-  binding?.flush();
-  const stored = storedSettings(configured);
-  if (stored?.sounds === undefined || !usesSound(stored.sounds, soundId))
-    return;
+function saveStoredSounds(
+  persistence: StandaloneMetronomePersistence,
+  stored: Partial<MetronomeSettingsInput>,
+  sounds: PerAccentSounds,
+): void {
   const base = standaloneMetronomeOf(initialConfig());
-  configured.save({
+  persistence.save({
     ...base,
     ...stored,
     denominator:
       KB_DENOMINATORS.find((value) => value === stored.denominator) ??
       base.denominator,
-    sounds: withoutSound(stored.sounds, soundId),
+    sounds,
   });
+}
+
+export function releaseStandaloneSound(
+  soundId: number,
+): PerAccentSounds | null {
+  if (configured === undefined) return null;
+  binding?.flush();
+  const stored = storedSettings(configured);
+  if (stored?.sounds === undefined || !usesSound(stored.sounds, soundId))
+    return null;
+  saveStoredSounds(configured, stored, withoutSound(stored.sounds, soundId));
+  return stored.sounds;
+}
+
+export function restoreStandaloneSound(
+  soundId: number,
+  previous: PerAccentSounds,
+): void {
+  if (configured === undefined) return;
+  binding?.flush();
+  const stored = storedSettings(configured);
+  if (stored?.sounds === undefined) return;
+  saveStoredSounds(
+    configured,
+    stored,
+    withSoundRestored(stored.sounds, previous, soundId),
+  );
 }
