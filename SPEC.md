@@ -1547,13 +1547,16 @@ retrying the same thing.
   under a tapping finger. With no tempo from any rung, the same taps set the
   tempo. Taps at half or double a known tempo (within 4%) keep the song's tempo
   without asking; more than 6% apart asks once which tempo to use; in between
-  asks for more taps. Taps are stored as song positions: a pause keeps them, a
+  asks for more taps, and once 8 kept taps agree at their own tempo it asks
+  once which tempo to use too. Taps are stored as song positions: a pause keeps them, a
   seek or a new track clears them. Today's "Tap" is tap-*tempo*, a different
   thing. Implemented via `kb_metronome_anchor_external`. The tap pad is the
   biggest thing on the screen.
 - **Then pick the 1.** Straight after a fresh tap lock the pad asks for one tap
-  on the 1, snapped to the nearest beat of the lock; "The accent is right" skips
-  it. It is not asked after Re-tap, which keeps the 1, nor after a library grid
+  on the 1, snapped to the nearest beat of the lock (on a library grid lock, the
+  nearest grid beat); "The accent is right" skips it. A tap counts as the 1 only
+  after a pause in tapping (2 tapped beats and at least 1 s), so taps that carry
+  on past an 8th-tap lock are not taken as the 1. It is not asked after Re-tap, which keeps the 1, nor after a library grid
   lock, whose downbeats come from analysis. "Set the 1" on the drift meter and
   "Tap the 1" in the Phase sheet's Downbeat row ask again.
 - **Auto-lock is offered, not taken.** When the playing track matches an analysed
@@ -2396,8 +2399,8 @@ milestone.
   → row appears instantly with `ANALYZING` → `GRID ✓` lands in background
   (~10–30s). **User never waits on a spinner screen.**
 - **Spotify → locked click.** Open Play-along → (first time: permission
-  explainer) → now-playing appears → BPM auto-fills → one tap on a downbeat →
-  locked. Library match short-circuits to one tap.
+  explainer) → now-playing appears → BPM auto-fills → tap along to a few beats →
+  locked → one tap on the 1. Library match short-circuits to one tap.
 - **Gig night.** Home → Continue card → setlist chip pages songs with swipe →
   each song recalls tempo/signature/accents/sound. Screen stays awake, controls
   oversized, theme dark.
