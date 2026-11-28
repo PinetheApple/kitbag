@@ -23,6 +23,7 @@ inline constexpr int64_t kOnsetHold = 1200;
 inline constexpr int64_t kOnsetPeakWindow = 240;
 inline constexpr int kOffsetAttempts = 8;
 inline constexpr int64_t kSteadyOffsetNs = 1000;
+inline constexpr int64_t kMaxAttemptSpanNs = 5000;
 inline constexpr int64_t kMeasureOffset = INT64_MIN;
 #ifdef CLOCK_BOOTTIME
 inline constexpr clockid_t kRawBoottime = CLOCK_BOOTTIME;
@@ -89,20 +90,25 @@ struct SongRig {
     }
   }
 
-  // Retries while the boottime offset moved under the call, so a preemption
-  // between the test's reads and the engine's cannot fake a wrong frame.
+  // A preempted clock pair, the engine's included, is off by up to half the stall;
+  // an attempt spanning under a quarter frame, offset steady, cannot misround.
   bool FrameAt(double frame, int64_t* out) const {
     if (forced_offset_ns != kMeasureOffset) {
       const int64_t boottime = MonotonicAt(frame) + forced_offset_ns;
       return kb_engine_frame_at_boottime(engine, boottime, out) == KB_OK;
     }
     for (int attempt = 0; attempt < kOffsetAttempts; ++attempt) {
+      const int64_t start = kitbag::MonotonicNs();
       const int64_t offset = RawSuspendedNs();
       const int64_t boottime = MonotonicAt(frame) + offset;
       if (kb_engine_frame_at_boottime(engine, boottime, out) != KB_OK) {
         return false;
       }
-      if (std::llabs(RawSuspendedNs() - offset) < kSteadyOffsetNs) return true;
+      const bool steady =
+          std::llabs(RawSuspendedNs() - offset) < kSteadyOffsetNs;
+      if (steady && kitbag::MonotonicNs() - start < kMaxAttemptSpanNs) {
+        return true;
+      }
     }
     return false;
   }
