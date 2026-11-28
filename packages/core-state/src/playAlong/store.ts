@@ -1,4 +1,3 @@
-import { MS_PER_SECOND } from '@kitbag/core-db';
 import type { KB_ACCENT, MediaSessionStep } from '@kitbag/core-native';
 
 import { configuredStore, type StoreAccess } from '../configuredStore.ts';
@@ -16,19 +15,11 @@ import {
 import { follower, NO_LOCK_STATE } from './follower.ts';
 import {
   acceptAction,
-  chosenSession,
   libraryOffers,
   type LibraryOfferActions,
   type LibraryOfferState,
 } from './libraryOffer.ts';
-import {
-  LOCK_REFUSAL,
-  LOCKED_OUTCOME,
-  refused,
-  type LockOutcome,
-  type LockRefusal,
-  type UnlockReason,
-} from './lockOutcome.ts';
+import type { LockRefusal, UnlockReason } from './lockOutcome.ts';
 import {
   initialPattern,
   withAccents,
@@ -39,12 +30,10 @@ import {
   type PatternEdit,
   type PlayAlongPattern,
 } from './pattern.ts';
-import { extrapolatedPositionMs } from './position.ts';
 import { nativePlayAlongRuntime, type PlayAlongRuntime } from './runtime.ts';
 import {
   DEFAULT_PHASE_STEP_MS,
   fittedPhase,
-  tapPhase,
   type LockPhase,
   type PhaseActions,
   type PhaseState,
@@ -57,7 +46,7 @@ import {
   type TrackPresetState,
 } from './trackPreset.ts';
 import { songTempo } from './songTempo.ts';
-import { findSession, trackOf, type PlayAlongTrack } from './track.ts';
+import { findSession, type PlayAlongTrack } from './track.ts';
 import { tapAlongActions } from './tapAlongActions.ts';
 import {
   NO_TAPS,
@@ -118,7 +107,6 @@ export interface PlayAlongActions
   readonly halveBpm: () => void;
   readonly doubleBpm: () => void;
   readonly tapTempo: (atMs: number) => void;
-  readonly tap: (atBoottimeMs: number) => LockOutcome;
   readonly unlock: () => void;
   readonly setBeats: (beatsPerBar: number, denominator: number) => void;
   readonly setSubdivision: (subdivision: number) => void;
@@ -197,32 +185,6 @@ function patternSetters(
   };
 }
 
-function tapAction(
-  runtime: PlayAlongRuntime,
-  { getState }: Access,
-  lockOn: ReturnType<typeof follower>['lockOn'],
-) {
-  return (atBoottimeMs: number): LockOutcome => {
-    const { bpm } = getState();
-    if (bpm === undefined) return refused(LOCK_REFUSAL.noBpm);
-    const seen = chosenSession(runtime);
-    if (seen === undefined) return refused(LOCK_REFUSAL.noSession);
-    if (!seen.playing) return refused(LOCK_REFUSAL.paused);
-    const songMs = extrapolatedPositionMs(seen, atBoottimeMs);
-    if (songMs === null) return refused(LOCK_REFUSAL.unknownPosition);
-    lockOn(seen, {
-      sessionId: seen.sessionId,
-      track: trackOf(seen),
-      downbeatSec: songMs / MS_PER_SECOND,
-      bpm,
-      lockedAtBoottimeMs: atBoottimeMs,
-      grid: undefined,
-      ...tapPhase(),
-    });
-    return LOCKED_OUTCOME;
-  };
-}
-
 const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
   'Play along',
   nativePlayAlongRuntime,
@@ -278,6 +240,7 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
       lockOn,
       showBpm,
       moveDownbeat,
+      anchor: follow.anchor,
     });
     const setBpm = (bpm: number) => {
       if (!Number.isFinite(bpm)) return;
@@ -322,7 +285,6 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
       tapTempo,
       startClick: click.start,
       stopClick: click.stop,
-      tap: tapAction(runtime, access, lockOn),
       unlock: follow.unlock,
       ...phase,
       saveForTrack: presets.saveForTrack,

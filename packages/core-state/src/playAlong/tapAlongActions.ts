@@ -3,7 +3,7 @@ import type { MediaSessionSnapshot } from '@kitbag/core-native';
 
 import type { StoreAccess } from '../configuredStore.ts';
 import { median } from '../rig/calibrationStats.ts';
-import { SEEK_JUMP_MS } from './follower.ts';
+import { BPM_SOURCE } from '../tempoLadder/sources.ts';
 import { chosenSession } from './libraryOffer.ts';
 import { lockBeatsPerBar, shiftedDownbeatSec, tapPhase } from './phase.ts';
 import { barSeconds, extrapolatedPositionMs } from './position.ts';
@@ -15,34 +15,32 @@ import {
   TAP_STEP,
   TAP_STOP_BEATS,
   TAP_STOP_MIN_MS,
-  TAPS_CLEARED,
   type TapAlong,
   type TapAlongActions,
   type TappedTempo,
 } from './tapAlongState.ts';
 import {
-  beatsToOne,
+  beatGrid,
   firstTapDownbeatMs,
+  gridBeatsToOne,
   halfOrDoubleBpm,
   keptOneMs,
-  songGrid,
+  oneFromTap,
 } from './tapDownbeat.ts';
 import {
   BEAT_SOURCE,
   beatLengthMs,
+  gaps,
   TAP_LOCK_MISS,
   TAP_LOCK_WINDOW,
   tapLock,
   tapOffsets,
   type SongTempo,
   type TapLocked,
+  type TapLockResult,
 } from './tapLock.ts';
-import {
-  findSession,
-  sameTrack,
-  trackOf,
-  type PlayAlongTrack,
-} from './track.ts';
+import { tapWatch } from './tapWatch.ts';
+import { trackOf } from './track.ts';
 
 type Timer = ReturnType<typeof setTimeout> | undefined;
 
@@ -50,42 +48,48 @@ interface TapAlongDeps {
   readonly lockOn: (seen: MediaSessionSnapshot, lock: PlayAlongLock) => void;
   readonly showBpm: (bpm: number) => void;
   readonly moveDownbeat: (beats: number) => boolean;
+  readonly anchor: () => void;
 }
 
-interface Watch {
-  readonly stop: () => void;
-  readonly track: PlayAlongTrack;
-  seen: MediaSessionSnapshot;
-}
-
-function jumped(
-  before: MediaSessionSnapshot,
-  after: MediaSessionSnapshot,
-  nowMs: number,
-): boolean {
-  const expected = extrapolatedPositionMs(before, nowMs);
-  const reported = extrapolatedPositionMs(after, nowMs);
-  return (
-    expected !== null &&
-    reported !== null &&
-    Math.abs(reported - expected) > SEEK_JUMP_MS
-  );
+interface OneGuard {
+  readonly lastTapMs: number;
+  readonly quietMs: number;
 }
 
 function stopWaitMs(taps: readonly number[]): number {
-  const gaps = taps.slice(1).map((t, i) => t - (taps[i] ?? t));
-  const beatMs = gaps.length === 0 ? 0 : median(gaps);
+  const beatMs = taps.length < 2 ? 0 : median(gaps(taps, 1));
   return Math.max(TAP_STOP_BEATS * beatMs, TAP_STOP_MIN_MS);
 }
 
-function clickDownbeatMs(lock: PlayAlongLock, denominator: number): number {
-  const sec = shiftedDownbeatSec(
+export const shiftedDownbeatMs = (
+  lock: PlayAlongLock,
+  denominator: number,
+): number =>
+  shiftedDownbeatSec(
     lock.downbeatSec,
     lock.downbeatShift,
     lock.bpm,
     denominator,
+  ) * MS_PER_SECOND;
+
+function steadyAtTappedTempo(
+  taps: readonly number[],
+  song: SongTempo,
+): boolean {
+  const own = tapLock(taps, { bpm: null, denominator: song.denominator });
+  return own.locked && own.keptTaps >= TAP_LOCK_WINDOW;
+}
+
+function asksForTempo(
+  result: TapLockResult,
+  taps: readonly number[],
+  song: SongTempo,
+): boolean {
+  if (result.locked) return false;
+  if (result.reason === TAP_LOCK_MISS.disagrees) return true;
+  return (
+    result.reason === TAP_LOCK_MISS.unsure && steadyAtTappedTempo(taps, song)
   );
-  return sec * MS_PER_SECOND - lock.phaseOffsetMs;
 }
 
 export function tapAlongActions(
@@ -95,16 +99,21 @@ export function tapAlongActions(
 ) {
   let stopTimer: Timer;
   let shownTimer: Timer;
-  let watch: Watch | undefined;
+  let firstTapMs: number | undefined;
+  let oneGuard: OneGuard | undefined;
 
   const update = (change: Partial<TapAlong>) => {
     setState({ tapAlong: { ...getState().tapAlong, ...change } });
   };
+  const watch = tapWatch(runtime, (cleared) => {
+    reset({ cleared });
+  });
   const reset = (change: Partial<TapAlong> = {}) => {
     clearTimeout(stopTimer);
     clearTimeout(shownTimer);
-    watch?.stop();
-    watch = undefined;
+    watch.stop();
+    firstTapMs = undefined;
+    oneGuard = undefined;
     setState({ tapAlong: { ...NO_TAPS, ...change } });
   };
   const songNow = (): SongTempo => {
@@ -112,24 +121,8 @@ export function tapAlongActions(
     return { bpm: lock?.bpm ?? bpm ?? null, denominator: pattern.denominator };
   };
   const beatsPerBar = () => getState().pattern.beatsPerBar;
-
-  const onSessions = (sessions: readonly MediaSessionSnapshot[]) => {
-    const current = watch;
-    if (current === undefined) return;
-    const seen = findSession(sessions, current.seen.sessionId);
-    if (seen === undefined || !sameTrack(current.track, seen))
-      reset({ cleared: TAPS_CLEARED.track });
-    else if (jumped(current.seen, seen, runtime.boottimeNowMs()))
-      reset({ cleared: TAPS_CLEARED.seek });
-    else current.seen = seen;
-  };
-
-  const startWatching = (seen: MediaSessionSnapshot) => {
-    if (watch !== undefined) return;
-    const stop = runtime.sessions().subscribe((state, previous) => {
-      if (state.sessions !== previous.sessions) onSessions(state.sessions);
-    });
-    watch = { stop, track: trackOf(seen), seen };
+  const enterTappedTempo = (bpm: number) => {
+    runtime.ladder().getState().enter(bpm, BPM_SOURCE.tap);
   };
 
   const lockFromTaps = (
@@ -150,24 +143,23 @@ export function tapAlongActions(
     });
   };
 
-  const firstTap = (fallbackMs: number) =>
-    getState().tapAlong.taps[0] ?? fallbackMs;
-
   const freshLock = (seen: MediaSessionSnapshot, result: TapLocked) => {
+    const { taps } = getState().tapAlong;
+    const first = firstTapMs ?? result.anchorMs;
+    const guard = {
+      lastTapMs: taps.at(-1) ?? first,
+      quietMs: stopWaitMs(taps),
+    };
     if (result.bpm !== getState().bpm) deps.showBpm(result.bpm);
-    const downbeatMs = firstTapDownbeatMs(
-      result,
-      firstTap(result.anchorMs),
-      beatsPerBar(),
-    );
-    lockFromTaps(seen, result.bpm, downbeatMs, {
-      beatSource: result.beatSource,
-      keptTaps: result.keptTaps,
-    });
+    const downbeatMs = firstTapDownbeatMs(result, first, beatsPerBar());
+    const { beatSource, keptTaps } = result;
+    lockFromTaps(seen, result.bpm, downbeatMs, { beatSource, keptTaps });
+    if (beatSource === BEAT_SOURCE.taps) enterTappedTempo(result.bpm);
     reset({
       step: TAP_STEP.chooseOne,
       halfOrDoubleBpm: halfOrDoubleBpm(result),
     });
+    oneGuard = guard;
   };
 
   const retapped = (
@@ -176,39 +168,33 @@ export function tapAlongActions(
     result: TapLocked,
   ) => {
     const { denominator } = getState().pattern;
-    const oldMs =
-      shiftedDownbeatSec(
-        lock.downbeatSec,
-        lock.downbeatShift,
-        lock.bpm,
-        denominator,
-      ) * MS_PER_SECOND;
+    const oldMs = shiftedDownbeatMs(lock, denominator);
     const barMs =
       barSeconds(lock.bpm, beatsPerBar(), denominator) * MS_PER_SECOND;
     lockFromTaps(seen, lock.bpm, keptOneMs(oldMs, barMs, result), lock.tapped);
     reset();
   };
 
-  const disagreed = (seen: MediaSessionSnapshot, song: SongTempo): boolean => {
+  const askTempo = (seen: MediaSessionSnapshot, song: SongTempo): boolean => {
     const { taps } = getState().tapAlong;
     const tapped = tapLock(taps, { bpm: null, denominator: song.denominator });
     if (!tapped.locked || song.bpm === null) {
       update({ result: tapped });
       return false;
     }
-    const first = firstTap(tapped.anchorMs);
+    const first = firstTapMs ?? tapped.anchorMs;
     const songBeatMs = beatLengthMs(song.bpm, song.denominator);
     const songMs = firstTapDownbeatMs(
-      songGrid(tapped.anchorMs, songBeatMs),
+      beatGrid(tapped.anchorMs, songBeatMs),
       first,
       beatsPerBar(),
     );
-    const keptTaps = tapped.keptTaps;
+    const tappedMs = firstTapDownbeatMs(tapped, first, beatsPerBar());
+    const { keptTaps } = tapped;
     lockFromTaps(seen, song.bpm, songMs, {
       beatSource: BEAT_SOURCE.song,
       keptTaps,
     });
-    const tappedMs = firstTapDownbeatMs(tapped, first, beatsPerBar());
     reset({
       step: TAP_STEP.chooseTempo,
       tempoChoice: {
@@ -234,40 +220,89 @@ export function tapAlongActions(
       else retapped(seen, lock, result);
       return true;
     }
-    if (result.reason === TAP_LOCK_MISS.disagrees && lock === undefined)
-      return disagreed(seen, song);
+    if (lock === undefined && asksForTempo(result, tapAlong.taps, song))
+      return askTempo(seen, song);
     update({ result });
     return false;
   };
 
+  const readyNow = (result: TapLockResult, taps: readonly number[]) => {
+    if (result.locked) return result.keptTaps >= TAP_LOCK_WINDOW;
+    return (
+      getState().lock === undefined &&
+      result.reason === TAP_LOCK_MISS.unsure &&
+      steadyAtTappedTempo(taps, songNow())
+    );
+  };
+
   const collect = (seen: MediaSessionSnapshot, songMs: number): boolean => {
+    firstTapMs ??= songMs;
     const taps = [...getState().tapAlong.taps, songMs].slice(-TAP_LOCK_WINDOW);
     const song = songNow();
     const result = tapLock(taps, song);
-    update({
-      taps,
-      offsets: tapOffsets(taps, song),
-      result,
-      cleared: undefined,
-    });
-    startWatching(seen);
-    if (result.locked && result.keptTaps >= TAP_LOCK_WINDOW) return commit();
+    const offsets = tapOffsets(taps, song, result);
+    update({ taps, offsets, result, cleared: undefined });
+    watch.start(seen);
+    if (readyNow(result, taps)) return commit();
     clearTimeout(stopTimer);
     stopTimer = setTimeout(commit, stopWaitMs(taps));
     return false;
   };
 
-  const chooseOne = (songMs: number): boolean => {
-    const { lock, pattern } = getState();
-    if (lock === undefined) return false;
-    const beats = beatsToOne(
-      clickDownbeatMs(lock, pattern.denominator),
-      beatLengthMs(lock.bpm, pattern.denominator),
-      songMs,
-      lockBeatsPerBar(lock.grid, pattern),
+  const oneOnTapLock = (lock: PlayAlongLock, songMs: number): number => {
+    const { denominator } = getState().pattern;
+    // The click runs phaseOffsetMs ahead of the song (follower placeClick).
+    const onClickMs = songMs + lock.phaseOffsetMs;
+    const picked = oneFromTap(
+      shiftedDownbeatMs(lock, denominator),
+      beatLengthMs(lock.bpm, denominator),
+      onClickMs,
+      beatsPerBar(),
     );
-    if (!deps.moveDownbeat(beats)) return false;
-    update({ step: TAP_STEP.oneSet, movedBeats: beats });
+    setState({
+      lock: {
+        ...lock,
+        downbeatSec: picked.downbeatMs / MS_PER_SECOND,
+        downbeatShift: 0,
+      },
+    });
+    deps.anchor();
+    return picked.movedBeats;
+  };
+
+  const oneOnGridLock = (
+    lock: PlayAlongLock,
+    songMs: number,
+  ): number | undefined => {
+    const { grid } = lock;
+    if (grid === undefined) return undefined;
+    const beats = gridBeatsToOne(
+      grid.beats,
+      lock.gridDownbeats ?? grid.downbeatIndices,
+      (songMs + lock.phaseOffsetMs) / MS_PER_SECOND,
+      lockBeatsPerBar(grid, getState().pattern),
+    );
+    return deps.moveDownbeat(beats) ? beats : undefined;
+  };
+
+  const stillTapping = (songMs: number): boolean => {
+    const guard = oneGuard;
+    if (guard === undefined || songMs - guard.lastTapMs >= guard.quietMs)
+      return false;
+    oneGuard = { ...guard, lastTapMs: songMs };
+    return true;
+  };
+
+  const chooseOne = (songMs: number): boolean => {
+    const { lock } = getState();
+    if (lock === undefined || stillTapping(songMs)) return false;
+    oneGuard = undefined;
+    const moved =
+      lock.grid === undefined
+        ? oneOnTapLock(lock, songMs)
+        : oneOnGridLock(lock, songMs);
+    if (moved === undefined) return false;
+    update({ step: TAP_STEP.oneSet, movedBeats: moved });
     clearTimeout(shownTimer);
     shownTimer = setTimeout(reset, ONE_SET_SHOWN_MS);
     return true;
@@ -283,6 +318,22 @@ export function tapAlongActions(
     return step === TAP_STEP.tapping && collect(seen, songMs);
   };
 
+  const chooseTappedTempo = () => {
+    const { lock, tapAlong } = getState();
+    const choice = tapAlong.tempoChoice;
+    if (lock === undefined || choice === undefined) return;
+    setState({
+      lock: {
+        ...lock,
+        downbeatSec: choice.tappedDownbeatSec,
+        tapped: { beatSource: BEAT_SOURCE.taps, keptTaps: choice.keptTaps },
+      },
+    });
+    deps.showBpm(choice.tappedBpm);
+    enterTappedTempo(choice.tappedBpm);
+    reset({ step: TAP_STEP.chooseOne });
+  };
+
   const actions: TapAlongActions = {
     tapToLock,
     askForOne: () => {
@@ -292,26 +343,22 @@ export function tapAlongActions(
     keepAccent: () => {
       if (getState().tapAlong.step === TAP_STEP.chooseOne) reset();
     },
-    chooseTappedTempo: () => {
-      const { lock, tapAlong } = getState();
-      const choice = tapAlong.tempoChoice;
-      if (lock === undefined || choice === undefined) return;
-      setState({
-        lock: {
-          ...lock,
-          downbeatSec: choice.tappedDownbeatSec,
-          tapped: { beatSource: BEAT_SOURCE.taps, keptTaps: choice.keptTaps },
-        },
-      });
-      deps.showBpm(choice.tappedBpm);
-      reset({ step: TAP_STEP.chooseOne });
-    },
+    chooseTappedTempo,
     chooseSongTempo: () => {
       if (getState().tapAlong.tempoChoice !== undefined)
         reset({ step: TAP_STEP.chooseOne });
     },
     startTapsOver: () => {
       reset();
+    },
+    dropRetapTaps: () => {
+      const { lock, tapAlong } = getState();
+      if (
+        lock !== undefined &&
+        tapAlong.step === TAP_STEP.tapping &&
+        tapAlong.taps.length > 0
+      )
+        reset();
     },
     forgetClearedTaps: () => {
       update({ cleared: undefined });

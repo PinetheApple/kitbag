@@ -18,6 +18,7 @@ import {
   STANDALONE,
   START_MS,
   settle,
+  tapAlongLock,
 } from './store.test-helper.ts';
 
 const MATCH = { kind: 'song', id: 3, bpm: 113 } as const;
@@ -61,6 +62,7 @@ const PICKUP_GRID = {
 };
 const PICKUP_PRESET_DOWNBEATS = [2, 5, 8, 11];
 const DRIFTING_BAR = 4;
+const GRID_BEAT_SIX_FROM_START_MS = 1900;
 const UNGRIDDED_METERS = [
   [6, 8],
   [5, 4],
@@ -329,7 +331,7 @@ describe('accepting the offer', () => {
       ),
     );
     fake.store.getState().setBpm(BPM);
-    fake.store.getState().tap(START_MS);
+    tapAlongLock(fake);
     expect(fake.store.getState().lastRefusal).toBeUndefined();
   });
 
@@ -367,8 +369,15 @@ describe('accepting the offer', () => {
     const fake = await accepted();
     fake.store.getState().unlock();
     expect(fake.calls).toContain('clearGrid()');
-    fake.store.getState().tap(START_MS);
+    tapAlongLock(fake);
     expect(fake.anchors()).toHaveLength(1);
+  });
+
+  it('picks the 1 on the grid beat nearest the tap', async () => {
+    const fake = await accepted();
+    fake.store.getState().askForOne();
+    fake.store.getState().tapToLock(START_MS + GRID_BEAT_SIX_FROM_START_MS);
+    expect(fake.store.getState().lock?.downbeatShift).toBe(1);
   });
 
   it('drops the grid for a typed tempo and follows that tempo', async () => {

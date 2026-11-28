@@ -1,4 +1,6 @@
 import { MS_PER_SECOND } from '@kitbag/core-db';
+
+import { BPM_SOURCE } from '../tempoLadder/sources.ts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ONE_SET_SHOWN_MS, TAP_STEP, TAPS_CLEARED } from './tapAlongState.ts';
@@ -24,6 +26,9 @@ const PAUSE_MS = 5000;
 const SEEK_TO_MS = 60_000;
 const ONE_DECIMAL = 1;
 const FIRST_DOWNBEAT_SONG_MS = 12_300;
+const PAST_EIGHTH = 10;
+const OUTLIER_MS = 100;
+const UNSURE_BPM = 126;
 
 type Fake = ReturnType<typeof fakePlayAlong>;
 
@@ -278,11 +283,12 @@ describe('taps through pauses, seeks and track changes', () => {
 });
 
 describe('choose the 1', () => {
-  it('moves the accent to the beat nearest a tap on the 1', () => {
+  it('moves beat 1 to the beat nearest a tap on the 1', () => {
     const fake = lockedFromTaps();
     tapAt(fake, atSongMs(FIRST_DOWNBEAT_SONG_MS + 2 * BEAT_MS + NEAR_MS));
     const { lock, tapAlong } = fake.store.getState();
-    expect(lock?.downbeatShift).toBe(2);
+    expect(lock?.downbeatShift).toBe(0);
+    expect(downbeatInBar(fake)).toBeCloseTo(LEAD_MS + 2 * BEAT_MS, ONE_DECIMAL);
     expect(tapAlong).toMatchObject({ step: TAP_STEP.oneSet, movedBeats: 2 });
     vi.advanceTimersByTime(ONE_SET_SHOWN_MS);
     expect(fake.store.getState().tapAlong.step).toBe(TAP_STEP.tapping);
@@ -302,10 +308,96 @@ describe('choose the 1', () => {
     expect(fake.store.getState().tapAlong.step).toBe(TAP_STEP.chooseOne);
   });
 
+  it('takes taps that carry on past an eighth-tap lock as tapping, not the 1', () => {
+    const fake = songAt();
+    tapEvery(fake, BEAT_MS, PAST_EIGHTH);
+    const { lock, tapAlong } = fake.store.getState();
+    expect(tapAlong.step).toBe(TAP_STEP.chooseOne);
+    expect(lock?.downbeatShift).toBe(0);
+    expect(downbeatInBar(fake)).toBeCloseTo(LEAD_MS, ONE_DECIMAL);
+  });
+
+  it('takes a tap on the 1 once the tapping has paused', () => {
+    const fake = songAt();
+    tapEvery(fake, BEAT_MS, TAP_LOCK_WINDOW);
+    const lastTapSongMs = songMsAt(Date.now());
+    tapAt(fake, atSongMs(lastTapSongMs + 2 * BAR_MS + 2 * BEAT_MS));
+    expect(fake.store.getState().tapAlong).toMatchObject({
+      step: TAP_STEP.oneSet,
+      movedBeats: 1,
+    });
+  });
+
+  it('keeps beat 1 on the very first tap after the oldest taps are dropped', () => {
+    const fake = songAt();
+    for (let tap = 0; tap < PAST_EIGHTH; tap += 1) {
+      const late = tap === 1 ? OUTLIER_MS : 0;
+      tapAt(fake, START_MS + LEAD_MS + tap * BEAT_MS + late);
+    }
+    expect(fake.store.getState().lock).toBeDefined();
+    expect(downbeatInBar(fake)).toBeCloseTo(LEAD_MS, ONE_DECIMAL);
+  });
+
   it('never asks for the 1 without a lock', () => {
     const fake = songAt();
     fake.store.getState().askForOne();
     expect(fake.store.getState().tapAlong.step).toBe(TAP_STEP.tapping);
+  });
+});
+
+describe('the tempo ladder', () => {
+  it('is told a tempo taken from the taps, as tapped', () => {
+    const fake = songAt(null);
+    tapEvery(fake, DISAGREE_GAP_MS, FOUR);
+    vi.advanceTimersByTime(2 * DISAGREE_GAP_MS);
+    const bpm = fake.store.getState().lock?.bpm;
+    expect(fake.ladder.ladder.getState().enter).toHaveBeenLastCalledWith(
+      bpm,
+      BPM_SOURCE.tap,
+    );
+  });
+
+  it('is told the tapped tempo once it is chosen over the song', () => {
+    const fake = songAt();
+    tapEvery(fake, DISAGREE_GAP_MS, FOUR);
+    vi.advanceTimersByTime(2 * DISAGREE_GAP_MS);
+    fake.store.getState().chooseTappedTempo();
+    expect(fake.ladder.ladder.getState().enter).toHaveBeenLastCalledWith(
+      fake.store.getState().lock?.bpm,
+      BPM_SOURCE.tap,
+    );
+  });
+
+  it('keeps the song tempo credited when the taps only set the phase', () => {
+    const fake = lockedFromTaps();
+    expect(fake.ladder.ladder.getState().enter).not.toHaveBeenCalledWith(
+      BPM,
+      BPM_SOURCE.tap,
+    );
+  });
+});
+
+describe('steady taps a little off the song', () => {
+  it('ask once which tempo to use after eight steady taps', () => {
+    const fake = songAt();
+    tapEvery(fake, UNSURE_GAP_MS, TAP_LOCK_WINDOW);
+    const { lock, tapAlong } = fake.store.getState();
+    expect(lock?.bpm).toBe(BPM);
+    expect(tapAlong.step).toBe(TAP_STEP.chooseTempo);
+    expect(tapAlong.tempoChoice?.tappedBpm).toBeCloseTo(UNSURE_BPM, 0);
+  });
+});
+
+describe('per-tap badges', () => {
+  it('mark the same taps kept as the lock counts', () => {
+    const fake = songAt();
+    for (let tap = 0; tap < FOUR + 1; tap += 1) {
+      const late = tap === 2 ? OUTLIER_MS : 0;
+      tapAt(fake, START_MS + LEAD_MS + tap * BEAT_MS + late);
+    }
+    const { offsets, result } = fake.store.getState().tapAlong;
+    const keptTaps = result?.locked === true ? result.keptTaps : Number.NaN;
+    expect(offsets.filter((offset) => offset.kept)).toHaveLength(keptTaps);
   });
 });
 
@@ -323,5 +415,33 @@ describe('re-tap', () => {
     expect(lock?.downbeatShift).toBe(0);
     expect(downbeatInBar(fake)).toBeCloseTo(LEAD_MS + LATE_MS, ONE_DECIMAL);
     expect(tapAlong.step).toBe(TAP_STEP.tapping);
+  });
+
+  it('keeps a beat 1 moved by Beat ‹ › and Reset leaves it there', () => {
+    const fake = lockedFromTaps();
+    fake.store.getState().keepAccent();
+    fake.store.getState().shiftDownbeat(1);
+    fake.store.getState().shiftDownbeat(1);
+    const from = atSongMs(
+      FIRST_DOWNBEAT_SONG_MS + 2 * BAR_MS + BEAT_MS + LATE_MS,
+    );
+    tapEvery(fake, BEAT_MS, FOUR, from);
+    vi.advanceTimersByTime(STOP_MS);
+    const moved = LEAD_MS + 2 * BEAT_MS + LATE_MS;
+    expect(fake.store.getState().lock?.downbeatShift).toBe(0);
+    expect(downbeatInBar(fake)).toBeCloseTo(moved, ONE_DECIMAL);
+    fake.store.getState().resetPhase();
+    expect(downbeatInBar(fake)).toBeCloseTo(moved, ONE_DECIMAL);
+  });
+
+  it('drops re-tap taps when re-tap ends before they lock', () => {
+    const fake = lockedFromTaps();
+    fake.store.getState().keepAccent();
+    const lockedAt = fake.store.getState().lock?.lockedAtBoottimeMs;
+    tapEvery(fake, BEAT_MS, FOUR, Date.now() + BAR_MS);
+    fake.store.getState().dropRetapTaps();
+    vi.advanceTimersByTime(STOP_MS);
+    expect(fake.store.getState().tapAlong.taps).toEqual([]);
+    expect(fake.store.getState().lock?.lockedAtBoottimeMs).toBe(lockedAt);
   });
 });

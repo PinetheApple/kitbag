@@ -62,5 +62,6 @@ export interface TapAlongActions {
   readonly chooseTappedTempo: () => void;
   readonly chooseSongTempo: () => void;
   readonly startTapsOver: () => void;
+  readonly dropRetapTaps: () => void;
   readonly forgetClearedTaps: () => void;
 }

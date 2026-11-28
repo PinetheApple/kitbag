@@ -105,7 +105,7 @@ export const beatLengthMs = (bpm: number, denominator: number): number =>
 const bpmFromBeatMs = (beatMs: number, denominator: number): number =>
   beatLengthMs(1, denominator) / beatMs;
 
-const gaps = (taps: readonly number[], span: number): number[] =>
+export const gaps = (taps: readonly number[], span: number): number[] =>
   taps.slice(span).map((t, i) => (t - (taps[i] ?? t)) / span);
 
 // Two-tap gaps cancel a finger that alternates early and late, which skews
@@ -296,12 +296,22 @@ function offsetStep(taps: readonly number[], song: SongTempo): number {
   );
 }
 
+function badgeStep(
+  taps: readonly number[],
+  song: SongTempo,
+  result: TapLockResult | undefined,
+): number {
+  if (result?.locked === true) return result.gridMs;
+  return taps.length > 1 ? offsetStep(taps, song) : Number.NaN;
+}
+
 export function tapOffsets(
   songMsTaps: readonly number[],
   song: SongTempo,
+  result?: TapLockResult,
 ): TapOffset[] {
   const taps = songMsTaps.slice(-TAP_LOCK_WINDOW);
-  const stepMs = taps.length > 1 ? offsetStep(taps, song) : Number.NaN;
+  const stepMs = badgeStep(taps, song, result);
   if (!(stepMs > 0)) return taps.map(() => ({ ms: 0, kept: true }));
   const reference = circularCentre(taps, stepMs);
   const raw = taps.map((t) => t - nearest(t, reference, stepMs));

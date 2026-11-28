@@ -91,12 +91,6 @@ export function clampPhase(
 export const wrappedShift = (shift: number, beatsPerBar: number): number =>
   positiveMod(shift, beatsPerBar);
 
-export const nextShift = (
-  shift: number,
-  direction: BeatDirection,
-  beatsPerBar: number,
-): number => wrappedShift(shift + direction, beatsPerBar);
-
 export const lockBeatsPerBar = (
   grid: DetectedGrid | undefined,
   pattern: Pick<PlayAlongPattern, 'beatsPerBar'>,

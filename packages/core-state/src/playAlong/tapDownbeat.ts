@@ -6,7 +6,12 @@ import {
   type TapLocked,
 } from './tapLock.ts';
 
-const beatGrid = (anchorMs: number, beatMs: number): BeatGrid => ({
+export interface PickedOne {
+  readonly downbeatMs: number;
+  readonly movedBeats: number;
+}
+
+export const beatGrid = (anchorMs: number, beatMs: number): BeatGrid => ({
   anchorMs,
   beatMs,
   gridMs: beatMs,
@@ -33,21 +38,36 @@ export function keptOneMs(
   );
 }
 
-export function beatsToOne(
-  clickDownbeatMs: number,
+export function oneFromTap(
+  downbeatMs: number,
   beatMs: number,
   tapMs: number,
   beatsPerBar: number,
-): number {
-  const snapped = downbeatFromTap(beatGrid(clickDownbeatMs, beatMs), tapMs);
-  return positiveMod(
-    Math.round((snapped - clickDownbeatMs) / beatMs),
-    beatsPerBar,
-  );
+): PickedOne {
+  const snapped = downbeatFromTap(beatGrid(downbeatMs, beatMs), tapMs);
+  const beats = Math.round((snapped - downbeatMs) / beatMs);
+  return { downbeatMs: snapped, movedBeats: positiveMod(beats, beatsPerBar) };
 }
 
-export const songGrid = (anchorMs: number, beatMs: number): BeatGrid =>
-  beatGrid(anchorMs, beatMs);
+const nearestBeat = (beats: readonly number[], sec: number): number =>
+  beats.reduce(
+    (best, beat, index) =>
+      Math.abs(beat - sec) < Math.abs((beats[best] ?? beat) - sec)
+        ? index
+        : best,
+    0,
+  );
+
+export function gridBeatsToOne(
+  beats: readonly number[],
+  downbeats: readonly number[],
+  tapSec: number,
+  beatsPerBar: number,
+): number {
+  const index = nearestBeat(beats, tapSec);
+  const bar = downbeats.filter((d) => d <= index).at(-1) ?? downbeats[0];
+  return positiveMod(index - (bar ?? index), beatsPerBar);
+}
 
 export const halfOrDoubleBpm = (lock: TapLocked): number | undefined =>
   lock.gridMs === lock.beatMs
