@@ -110,6 +110,7 @@ export * from './components/NoticeSnackbar.tsx';
 export * from './components/SetlistPickerSheet.tsx';
 export * from './components/SwipeDeleteRow.tsx';
 export * from './components/TapPad.tsx';
+export * from './components/TapBadge.tsx';
 export * from './tapText.ts';
 export * from './components/SheetBridge.tsx';
 export * from './components/SheetHost.tsx';

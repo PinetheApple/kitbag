@@ -79,6 +79,8 @@ export interface TapPadProps {
   readonly onTap: (event: GestureResponderEvent) => void;
   readonly onRelease?: (() => void) | undefined;
   readonly minHeight?: number | null | undefined;
+  readonly active?: boolean | undefined;
+  readonly footer?: ReactNode;
   readonly children: ReactNode;
 }
 
@@ -88,6 +90,8 @@ export function TapPad({
   onTap,
   onRelease,
   minHeight,
+  active = false,
+  footer,
   children,
 }: TapPadProps) {
   const styles = useStyles();
@@ -95,9 +99,9 @@ export function TapPad({
     ({ pressed }: PressableStateCallbackType) => [
       styles.pad,
       typeof minHeight === 'number' && { minHeight },
-      pressed && styles.pressed,
+      (pressed || active) && styles.pressed,
     ],
-    [styles, minHeight],
+    [styles, minHeight, active],
   );
   return (
     <Pressable
@@ -111,6 +115,7 @@ export function TapPad({
       {children}
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.hint}>{hint}</Text>
+      {footer}
     </Pressable>
   );
 }

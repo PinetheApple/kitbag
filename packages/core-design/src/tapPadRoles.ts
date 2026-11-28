@@ -5,6 +5,7 @@ export const tapPad = {
   radius: 20,
   border: 2,
   gap: 8,
+  badgeGap: 6,
 } as const;
 
 export const tapPadMix = { fill: 0.14 } as const;
