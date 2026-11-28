@@ -1,12 +1,13 @@
-import type {
-  Category,
-  CategoryPlan,
-  Conflict,
-  ImportFailure,
-  ImportMode,
-  ImportPlan,
-  Resolution,
-  Resolutions,
+import {
+  importableCategories,
+  type CategoryPlan,
+  type Conflict,
+  type ImportCategory,
+  type ImportFailure,
+  type ImportMode,
+  type ImportPlan,
+  type Resolution,
+  type Resolutions,
 } from '@kitbag/core-db';
 import type { PickedBackup } from '@kitbag/core-native';
 import { createStore } from 'zustand/vanilla';
@@ -23,7 +24,7 @@ import { getBackup, type BackupDeps } from './runtime.ts';
 export type RestoreFailure = ImportFailure | { readonly kind: 'unreadable' };
 
 export interface OpenableBackup extends PickedBackup {
-  readonly replace?: readonly Category[];
+  readonly replace?: readonly ImportCategory[];
 }
 
 export interface RestoreSource {
@@ -48,7 +49,7 @@ export type RestoreState =
   | {
       readonly phase: 'done';
       readonly mode: ImportMode;
-      readonly counts: Partial<Record<Category, CategoryPlan>>;
+      readonly counts: Partial<Record<ImportCategory, CategoryPlan>>;
       readonly soundResets: number;
     };
 
@@ -56,7 +57,7 @@ export interface RestoreActions {
   pick: () => Promise<void>;
   open: (read: () => Promise<OpenableBackup | null>) => Promise<boolean>;
   setMode: (mode: ImportMode) => Promise<void>;
-  toggleCategory: (category: Category) => Promise<void>;
+  toggleCategory: (category: ImportCategory) => Promise<void>;
   resolve: (conflict: Conflict, resolution: Resolution) => Promise<void>;
   apply: (typedConfirmation?: string) => Promise<void>;
   reset: () => void;
@@ -90,7 +91,7 @@ export function commitStep(state: RestoreState): CommitStep {
 
 interface PlanRequest {
   readonly mode: ImportMode;
-  readonly categories?: readonly Category[];
+  readonly categories?: readonly ImportCategory[];
   readonly resolutions: Resolutions;
 }
 
@@ -199,7 +200,7 @@ export function createRestoreStore(
           categories: categoriesForMode(
             plan.categories,
             mode,
-            plan.file.categories,
+            importableCategories(plan.file),
           ),
           resolutions,
         })),
@@ -210,7 +211,7 @@ export function createRestoreStore(
             plan.categories,
             category,
             plan.mode,
-            plan.file.categories,
+            importableCategories(plan.file),
           ),
           resolutions,
         })),

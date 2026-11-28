@@ -1,3 +1,4 @@
+import { TOOL_ID_PATTERN } from '@kitbag/core-plugin-api';
 import { and, asc, eq } from 'drizzle-orm';
 
 import type { Database, DatabaseHandle } from './repository';
@@ -12,7 +13,7 @@ export const MAX_TOOL_DATA_KEY_BYTES = 256;
 export type ToolDataRow = typeof toolData.$inferSelect;
 export type ToolDataEntry = Omit<ToolDataRow, 'toolId'>;
 export type ToolDataRejection =
-  'emptyId' | 'keyTooLong' | 'invalidJson' | 'tooLarge';
+  'emptyId' | 'invalidToolId' | 'keyTooLong' | 'invalidJson' | 'tooLarge';
 
 export class ToolDataRejected extends Error {
   constructor(readonly reason: ToolDataRejection) {
@@ -43,8 +44,14 @@ function isJson(value: string): boolean {
   }
 }
 
-function checkWrite(toolId: string, key: string, value: string): void {
+export function checkToolDataWrite(
+  toolId: string,
+  key: string,
+  value: string,
+): void {
   if (toolId === '' || key === '') throw new ToolDataRejected('emptyId');
+  if (!TOOL_ID_PATTERN.test(toolId))
+    throw new ToolDataRejected('invalidToolId');
   if (utf8.encode(key).byteLength > MAX_TOOL_DATA_KEY_BYTES)
     throw new ToolDataRejected('keyTooLong');
   if (utf8.encode(value).byteLength > MAX_TOOL_DATA_VALUE_BYTES)
@@ -76,7 +83,7 @@ export function createToolDataRepository(
           return found?.value ?? null;
         }),
       set: async (key, value) => {
-        checkWrite(toolId, key, value);
+        checkToolDataWrite(toolId, key, value);
         const updatedAt = now();
         await transactor.serial(async () => {
           await db
