@@ -9,7 +9,7 @@
     "prebuild": "expo prebuild",
     "typegen": "expo customize tsconfig.json",
     "typecheck": "expo customize tsconfig.json && tsc --noEmit",
-    "test": "vitest run --config eval/vitest.config.mjs",
+    "test": "vitest run --config eval/vitest.config.mjs && vitest run --config vitest.ui.config.mjs",
     "generate": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/toolBuild/writeRules.ts",
     "generate:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/toolBuild/writeRules.ts --check"
   },
@@ -55,10 +55,12 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.4",
+    "@types/react-test-renderer": "~19.3.1",
     "eslint": "9.39.5",
     "eslint-plugin-boundaries": "^7.4.0",
     "eslint-plugin-kitbag": "workspace:*",
     "postcss": "^8.5.32",
+    "react-test-renderer": "19.3.0",
     "tailwindcss": "^4.3.4",
     "typescript-eslint": "^8.72.1",
     "vitest": "^5.1.0"

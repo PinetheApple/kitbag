@@ -5,7 +5,7 @@ import {
 } from '@kitbag/core-native';
 
 import { clamp } from '../metronome/config.ts';
-import { DRUMS_STEM } from '../stemDeck/lanes.ts';
+import { DRUMS_STEM } from './lanes.ts';
 
 const PERCENT = 100;
 const SPEED_STEP_PERCENT = 5;

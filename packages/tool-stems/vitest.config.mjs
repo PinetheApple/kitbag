@@ -10,15 +10,13 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.{ts,tsx}'],
     alias: {
-      'react-native': local('src/testing/reactNativeHosts.ts'),
-      'react-native-reanimated': local('src/testing/reanimatedDriver.ts'),
-      'react-native-worklets': local('src/testing/reanimatedDriver.ts'),
-      'react-native-gesture-handler': local('src/testing/nativeLeaves.ts'),
-      'react-native-keyboard-controller': local('src/testing/nativeLeaves.ts'),
-      'react-native-svg': local('src/testing/nativeLeaves.ts'),
-      '@expo/vector-icons/MaterialCommunityIcons': local(
-        'src/testing/iconLeaf.ts',
-      ),
+      'react-native': stateStub('reactNativeHosts'),
+      'react-native-reanimated': stateStub('reanimatedDriver'),
+      'react-native-worklets': stateStub('reanimatedDriver'),
+      'react-native-gesture-handler': stateStub('nativeLeaves'),
+      'react-native-keyboard-controller': stateStub('nativeLeaves'),
+      'react-native-svg': stateStub('nativeLeaves'),
+      '@expo/vector-icons/MaterialCommunityIcons': stateStub('iconLeaf'),
       'expo-haptics': stateStub('expoHapticsStub'),
       '@op-engineering/op-sqlite': stateStub('opSqliteStub'),
     },

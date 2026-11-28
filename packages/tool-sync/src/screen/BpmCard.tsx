@@ -8,10 +8,10 @@ import {
   textStyle,
   useTextScaled,
 } from '@kitbag/core-design';
+import { creditLinkText } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 
-import { creditLinkText } from '../logic/creditLink.ts';
 import {
   NO_TEMPO_NUMERAL,
   shownBpm,

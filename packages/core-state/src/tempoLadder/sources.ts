@@ -1,5 +1,7 @@
 import { BPM_LOOKUP_SOURCE, type BpmLookupSource } from '@kitbag/core-db';
 
+import type { SourceCredit } from '../creditLink.ts';
+
 export const BPM_SOURCE = {
   library: 'library',
   ...BPM_LOOKUP_SOURCE,
@@ -16,11 +18,6 @@ export const BPM_SOURCE_LABEL: Readonly<Record<BpmSource, string>> = {
   tap: 'Tap',
   manual: 'Typed',
 };
-
-export interface SourceCredit {
-  readonly name: string;
-  readonly url: string;
-}
 
 export const BPM_SOURCE_CREDIT: Readonly<
   Record<BpmLookupSource, SourceCredit>

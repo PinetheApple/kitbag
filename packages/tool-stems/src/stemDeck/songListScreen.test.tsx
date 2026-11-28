@@ -5,7 +5,7 @@ import {
 } from '@kitbag/core-state';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { display } from '../testing/reactNativeHosts.ts';
+import { display } from '@kitbag/core-state/src/testing/reactNativeHosts.ts';
 import { SongListScreen } from './SongListScreen.tsx';
 import {
   CATALOG,
