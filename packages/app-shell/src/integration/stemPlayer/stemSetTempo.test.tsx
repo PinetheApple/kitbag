@@ -6,8 +6,11 @@ import { act } from 'react';
 import type { ReactTestInstance } from 'react-test-renderer';
 import { describe, expect, it } from 'vitest';
 
-import { NO_GRID_REASON, UNDO } from '../logic/meterEdit.ts';
-import { SET_TEMPO_UNLOCKS } from '../logic/setTempoView.ts';
+import {
+  NO_GRID_REASON,
+  UNDO,
+} from '@kitbag/tool-stems/src/logic/meterEdit.ts';
+import { SET_TEMPO_UNLOCKS } from '@kitbag/tool-stems/src/logic/setTempoView.ts';
 import {
   at,
   flush,

@@ -13,7 +13,6 @@ vi.mock('@kitbag/tool-library', () => ({
   useMiniPlayerShown: () => shown.song,
 }));
 vi.mock('@kitbag/tool-sync', () => ({
-  PLAY_ALONG_NAME: 'Play along',
   usePlayAlongMiniShown: () => shown.playAlong,
 }));
 vi.mock('@kitbag/core-state', async (original) => ({

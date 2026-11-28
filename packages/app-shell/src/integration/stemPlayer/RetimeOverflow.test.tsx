@@ -10,7 +10,10 @@ import {
   type MockInstance,
 } from 'vitest';
 
-import { display, StyleSheet } from '../testing/reactNativeHosts.ts';
+import {
+  display,
+  StyleSheet,
+} from '@kitbag/core-state/src/testing/reactNativeHosts.ts';
 import {
   fireLayout,
   flush,

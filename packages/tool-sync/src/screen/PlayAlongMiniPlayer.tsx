@@ -1,11 +1,10 @@
 import { MiniPlayerBar } from '@kitbag/core-design';
-import type { PlayAlongLock } from '@kitbag/core-state';
+import { PLAY_ALONG_NAME, type PlayAlongLock } from '@kitbag/core-state';
 
 import {
   lockedSubtext,
   lockedTitle,
   lockedToLine,
-  PLAY_ALONG_NAME,
 } from '../logic/miniPlayer.ts';
 import { useFollowedSession, usePlayAlong } from './playAlongHooks.ts';
 import { useLastSeen } from './useLastSeen.ts';

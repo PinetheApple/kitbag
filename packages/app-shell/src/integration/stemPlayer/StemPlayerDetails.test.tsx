@@ -6,7 +6,7 @@ import {
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { jsHops } from '../testing/reanimatedDriver.ts';
+import { jsHops } from '@kitbag/core-state/src/testing/reanimatedDriver.ts';
 import {
   at,
   INSTRUMENTAL,

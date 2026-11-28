@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   animatedPropsOf,
   animatedStyleOf,
-} from '../testing/reanimatedDriver.ts';
+} from '@kitbag/core-state/src/testing/reanimatedDriver.ts';
 import {
   fireLayout,
   mountPlayer,

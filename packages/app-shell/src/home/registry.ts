@@ -1,6 +1,6 @@
 import type { IconName, ToolStatus, ToolTileSize } from '@kitbag/core-design';
 import type { HomeTileDescriptor, ToolPlugin } from '@kitbag/core-plugin-api';
-import { PLAY_ALONG_NAME } from '@kitbag/tool-sync';
+import { PLAY_ALONG_NAME } from '@kitbag/core-state';
 
 import { TOOL_ID, TOOL_ROUTES } from './toolRoutes.ts';
 

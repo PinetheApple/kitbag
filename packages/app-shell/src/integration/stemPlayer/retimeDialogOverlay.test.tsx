@@ -1,7 +1,7 @@
 import { layout } from '@kitbag/core-design';
 import { describe, expect, it } from 'vitest';
 
-import { StyleSheet } from '../testing/reactNativeHosts.ts';
+import { StyleSheet } from '@kitbag/core-state/src/testing/reactNativeHosts.ts';
 import {
   DIALOG_TITLE,
   hostAncestors,
@@ -9,7 +9,7 @@ import {
   RESET,
   retiming,
 } from './playerHarness.test-helper.tsx';
-import { StemPlayerScreen } from './StemPlayerScreen.tsx';
+import { StemPlayerScreen } from '@kitbag/tool-stems/src/screen/StemPlayerScreen.tsx';
 
 async function askedToReset() {
   const p = await retiming();

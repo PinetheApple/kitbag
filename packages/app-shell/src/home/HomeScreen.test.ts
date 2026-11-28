@@ -97,7 +97,6 @@ vi.mock('@kitbag/tool-tuner', () => ({
 }));
 
 vi.mock('@kitbag/tool-sync', () => ({
-  PLAY_ALONG_NAME: 'Play along',
   useLockedSubtext: () => home.lockedSubtext,
 }));
 
