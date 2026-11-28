@@ -1,4 +1,5 @@
-const ID = '[a-z][a-z0-9-]{1,31}';
+import { TOOL_ID as ID } from '@kitbag/core-plugin-api';
+
 const ASSET_SEGMENT = '[A-Za-z0-9_-][A-Za-z0-9._-]*';
 const ROUTE_SEGMENT = '[A-Za-z0-9\\[\\]._-]+';
 const ROUTE_PREFIX = '/t/';

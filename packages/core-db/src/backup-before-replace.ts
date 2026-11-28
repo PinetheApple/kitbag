@@ -1,13 +1,13 @@
 import { eq } from 'drizzle-orm';
 
-import type { Category } from './backup-format';
+import type { ImportCategory } from './backup-format';
 import type { Database } from './repository';
 import { preferences } from './schema';
 
 const BEFORE_REPLACE_KEY = 'backup_before_replace';
 
 export interface KeptBeforeReplace {
-  categories: Category[];
+  categories: ImportCategory[];
   contents: string;
 }
 
