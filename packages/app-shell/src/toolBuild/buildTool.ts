@@ -8,10 +8,8 @@ import {
 } from 'node:fs';
 import path from 'node:path';
 
-import {
-  TOOL_ENTRY_EXPORT,
-  TOOL_REGISTRY_KEY,
-} from '../toolHost/bundleContract.ts';
+import { TOOL_ENTRY_EXPORT, TOOL_REGISTRY_KEY } from '@kitbag/core-plugin-api';
+
 import { HOST_API } from '../toolHost/hostApi.ts';
 import { probeGlobals, stubModule } from './globalsProbe.ts';
 import {

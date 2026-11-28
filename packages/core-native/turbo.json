@@ -6,14 +6,16 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/native/audio_core/include/**",
-        "$TURBO_ROOT$/native/audio_core/src/**"
+        "$TURBO_ROOT$/native/audio_core/src/**",
+        "$TURBO_ROOT$/packages/app-shell/tool-bundle-rules.json"
       ]
     },
     "generate:check": {
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/native/audio_core/include/**",
-        "$TURBO_ROOT$/native/audio_core/src/**"
+        "$TURBO_ROOT$/native/audio_core/src/**",
+        "$TURBO_ROOT$/packages/app-shell/tool-bundle-rules.json"
       ]
     }
   }

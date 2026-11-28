@@ -2,6 +2,7 @@ import type {
   Bounds,
   EnumMember,
   NativeConstants,
+  StringConstant,
   TunerField,
 } from './native-types.ts';
 
@@ -27,6 +28,17 @@ function renderField(field: TunerField): string {
   );
 }
 
+function renderStrings(name: string, members: readonly StringConstant[]) {
+  const lines = members.map(
+    (m) =>
+      `  ${m.name.charAt(0).toLowerCase()}${m.name.slice(1)}: '${m.value}',`,
+  );
+  return (
+    `export const ${name} = {\n${lines.join('\n')}\n} as const;\n` +
+    `export type ${name} = (typeof ${name})[keyof typeof ${name}];\n`
+  );
+}
+
 function renderFixedRoutes(routes: NativeConstants['fixedOutputRoutes']) {
   return routes
     .map(({ id, kind }) => `  { id: '${id}', kind: '${kind}' },`)
@@ -36,7 +48,7 @@ function renderFixedRoutes(routes: NativeConstants['fixedOutputRoutes']) {
 /** Deterministic, prettier-free (`.gen.ts` is prettier-ignored) TS source. */
 export function renderConstants(c: NativeConstants): string {
   const soundNames = c.soundNames.map((n) => `'${n}'`).join(', ');
-  return `// GENERATED — DO NOT EDIT. Owners: native/audio_core, OutputRoutes.kt (SPEC §13.7).
+  return `// GENERATED — DO NOT EDIT. Owners: native/audio_core, OutputRoutes.kt, cpp/KitbagToolEval.h, ToolRejected.kt (SPEC §13.7).
 // Regenerate: pnpm --filter @kitbag/core-native generate
 // Verify (CI drift guard): pnpm --filter @kitbag/core-native generate:check
 //
@@ -237,5 +249,16 @@ ${renderEnum('KB_TUNER_INSTRUMENT', c.tunerInstrument)}
 /** kb_tuning_status enum. */
 ${renderEnum('KB_TUNING_STATUS', c.tuningStatus)}
 /** kb_wrong_string enum: side of the target the heard string lies on. */
-${renderEnum('KB_WRONG_STRING', c.wrongString)}`;
+${renderEnum('KB_WRONG_STRING', c.wrongString)}
+/** The JSI global that evaluates a verified tool by id (kEvalVerifiedToolKey). */
+export const KB_EVAL_VERIFIED_TOOL_KEY = '${c.evalVerifiedToolKey}';
+
+/** Keys of the object __kitbagEvalVerifiedTool returns when it refuses to evaluate. */
+export const KB_TOOL_REFUSAL_KEY = '${c.toolRefusalKey}';
+export const KB_TOOL_REFUSAL_DETAIL_KEY = '${c.toolRefusalDetailKey}';
+
+/** Refusal codes, returned under KB_TOOL_REFUSAL_KEY, and eval, thrown as "E_TOOL_EVAL: tool:<id> <detail>" (kToolError*). */
+${renderStrings('KB_TOOL_ERROR', c.toolErrors)}
+/** Codes KitbagTools.verifyInstalled rejects with (ToolRejection in ToolRejected.kt). */
+${renderStrings('KB_TOOL_REJECTION', c.toolRejections)}`;
 }

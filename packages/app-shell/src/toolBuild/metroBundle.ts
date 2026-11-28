@@ -1,13 +1,10 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
+import { TOOL_ENTRY_EXPORT, TOOL_REGISTRY_KEY } from '@kitbag/core-plugin-api';
 import { DOWNLOADABLE_IMPORTS } from 'eslint-plugin-kitbag';
 
-import {
-  TOOL_ENTRY_EXPORT,
-  TOOL_REGISTRY_KEY,
-  toolGlobalPrefix,
-} from '../toolHost/bundleContract.ts';
+import { toolGlobalPrefix } from '../toolHost/bundleContract.ts';
 import {
   APP_SHELL_DIR,
   appShellRequire,

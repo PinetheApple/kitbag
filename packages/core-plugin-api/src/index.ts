@@ -78,3 +78,11 @@ export interface ToolHost {
 }
 
 export type RegisterTool = (host: ToolHost) => ToolPlugin;
+
+export const TOOL_REGISTRY_KEY = '__kitbagTools';
+export const TOOL_ENTRY_EXPORT = 'register';
+
+export interface ToolRegistry {
+  readonly module: (specifier: string) => unknown;
+  readonly register: (id: string, register: RegisterTool) => void;
+}
