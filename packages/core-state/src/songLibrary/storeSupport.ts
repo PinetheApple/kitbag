@@ -27,7 +27,7 @@ export async function deleteLeftovers(
   files: LibraryFiles,
   removals: readonly Removal[],
   label: string,
-): Promise<void> {
+): Promise<boolean> {
   try {
     for (const removal of removals) {
       if (removal.kind === 'folder') await files.deleteSongFolder(removal.name);
@@ -35,8 +35,10 @@ export async function deleteLeftovers(
         await files.deleteStemFolder(removal.name);
       else await files.deleteLibraryFile(removal.path);
     }
+    return true;
   } catch (error) {
     warn(`files of ${label} were not all deleted`, error);
+    return false;
   }
 }
 

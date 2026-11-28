@@ -18,7 +18,7 @@ import {
   type BundleRefusalReason,
   type ReplaceChoice,
 } from './stemBundleLogic.ts';
-import type { ImportTracker } from './stemFolderSweep.ts';
+import type { FileWorkTracker } from './stemFolderSweep.ts';
 import { withFittedTempo } from './stemTempoFit.ts';
 import type { LibraryNotice, ReplaceMatch, SongLibraryDeps } from './store.ts';
 import {
@@ -184,7 +184,7 @@ export function stemBundleActions(
   deps: SongLibraryDeps,
   set: SetState,
   get: Get,
-  imports: ImportTracker,
+  imports: FileWorkTracker,
 ) {
   let pending: Pending | null = null;
 

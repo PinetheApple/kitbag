@@ -1,5 +1,6 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 
+import { holdSongFiles, releaseSongFiles } from './held-song-files';
 import {
   locateQueueEntry,
   restoreQueueEntry,
@@ -30,6 +31,24 @@ export async function deleteSong(
   return { row, presetIds: presets.map((preset) => preset.id), queued };
 }
 
+// Held before the row goes, so a kill during Undo leaves a record of the files.
+export async function deleteSongForUndo(
+  db: Database,
+  id: number,
+): Promise<DeletedSong | undefined> {
+  const [files] = await db
+    .select({
+      uuid: songs.uuid,
+      filePath: songs.filePath,
+      waveformPath: songs.waveformPath,
+    })
+    .from(songs)
+    .where(eq(songs.id, id));
+  if (files === undefined) return undefined;
+  await holdSongFiles(db, { songId: id, ...files });
+  return deleteSong(db, id);
+}
+
 export async function restoreSong(db: Database, deleted: DeletedSong) {
   const { row, presetIds, queued } = deleted;
   await db.insert(songs).values(row);
@@ -44,4 +63,5 @@ export async function restoreSong(db: Database, deleted: DeletedSong) {
         ),
       );
   if (queued !== null) await restoreQueueEntry(db, queued);
+  await releaseSongFiles(db, row.id);
 }

@@ -17,6 +17,7 @@ const song = (id: number) =>
   ({ kind: 'song', id }) as SongLibraryStore['rows'][number];
 
 const STEMS_1: QueuedSong = { kind: 'stems', id: 1 };
+const STEMS_2: QueuedSong = { kind: 'stems', id: 2 };
 const SONG_1: QueuedSong = { kind: 'song', id: 1 };
 const NEXT_ID = 9;
 
@@ -209,5 +210,81 @@ describe('deleting the song the mini-player shows', () => {
     expect(player.next).not.toHaveBeenCalled();
     expect(player.close).not.toHaveBeenCalled();
     expect(player.shown()).toEqual(STEMS_1);
+  });
+});
+
+describe('Undo of a deleted song', () => {
+  const deleteSong1 = (songs: ReturnType<typeof setup>['songs']) => {
+    songs.setState({ rows: stems(1, 2) });
+    songs.setState({
+      deletedSong: { song: { row: { id: 1 } } },
+    } as unknown as SongLibraryStore);
+  };
+  const undo = (
+    songs: ReturnType<typeof setup>['songs'],
+    rows = [...stems(1, 2), song(1)],
+  ) => {
+    songs.setState({ deletedSong: null });
+    songs.setState({ rows });
+  };
+
+  it('brings back its place in the songs heard and the repeat round', () => {
+    const { songs, heard, repeat } = setup();
+    const before = {
+      heard: heard.getState().heard,
+      played: repeat.getState().played,
+    };
+    deleteSong1(songs);
+    undo(songs);
+    expect(heard.getState().heard).toEqual(before.heard);
+    expect(repeat.getState().played).toEqual(before.played);
+  });
+
+  it('keeps what was heard during the Undo window after it', () => {
+    const { songs, heard, repeat } = setup();
+    deleteSong1(songs);
+    const next = { song: STEMS_2, setlistItemId: null };
+    heard.setState({ heard: [...heard.getState().heard, next] });
+    repeat.setState({ played: [...repeat.getState().played, STEMS_2] });
+    undo(songs);
+    expect(heard.getState().heard).toEqual([
+      { song: STEMS_1, setlistItemId: null },
+      { song: SONG_1, setlistItemId: null },
+      next,
+    ]);
+    expect(repeat.getState().played).toEqual([STEMS_1, SONG_1, STEMS_2]);
+  });
+
+  it('brings back only the song that came back', () => {
+    const { songs, heard, repeat } = setup();
+    songs.setState({ rows: stems(2) });
+    songs.setState({
+      deletedSong: { song: { row: { id: 1 } } },
+    } as unknown as SongLibraryStore);
+    undo(songs, [...stems(2), song(1)]);
+    expect(heard.getState().heard).toEqual([
+      { song: SONG_1, setlistItemId: null },
+    ]);
+    expect(repeat.getState().played).toEqual([SONG_1]);
+  });
+
+  it('leaves a history cleared during the Undo window cleared', () => {
+    const { songs, heard, repeat } = setup();
+    deleteSong1(songs);
+    heard.setState({ heard: [] });
+    repeat.setState({ played: [] });
+    undo(songs);
+    expect(heard.getState().heard).toEqual([]);
+    expect(repeat.getState().played).toEqual([]);
+  });
+
+  it('brings nothing back when Undo is dismissed', () => {
+    const { songs, heard } = setup();
+    deleteSong1(songs);
+    songs.setState({ deletedSong: null });
+    songs.setState({ rows: [...stems(1, 2, 3)] });
+    expect(heard.getState().heard).toEqual([
+      { song: STEMS_1, setlistItemId: null },
+    ]);
   });
 });

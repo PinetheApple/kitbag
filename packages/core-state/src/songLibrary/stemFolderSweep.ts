@@ -3,7 +3,7 @@ import { stemFolderName } from './stemBundleLogic.ts';
 import type { SongLibraryDeps } from './store.ts';
 import { deleteLeftovers, loadCodes, warn, type Get } from './storeSupport.ts';
 
-export interface ImportTracker {
+export interface FileWorkTracker {
   readonly track: <T>(work: () => Promise<T>) => Promise<T>;
   readonly idleMark: () => number | null;
   readonly stillIdleSince: (mark: number) => boolean;
@@ -11,7 +11,7 @@ export interface ImportTracker {
 
 // A copied folder has no name JS knows until native returns it, so the sweep
 // trusts only a window in which no import ran at all.
-export function importTracker(): ImportTracker {
+export function fileWorkTracker(): FileWorkTracker {
   let active = 0;
   let changes = 0;
   return {
@@ -33,7 +33,7 @@ export function importTracker(): ImportTracker {
 export async function sweepOrphanedStemFolders(
   deps: SongLibraryDeps,
   get: Get,
-  imports: ImportTracker,
+  imports: FileWorkTracker,
 ): Promise<void> {
   const mark = imports.idleMark();
   const codes = loadCodes(deps, get);
