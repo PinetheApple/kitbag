@@ -6,6 +6,7 @@ import {
   FloatingActionButton,
   ListRow,
   SearchField,
+  snackbar,
   space,
   textRoles,
   textStyle,
@@ -23,9 +24,14 @@ import {
   useSetlistsMenu,
   type SetlistsMenu,
 } from './SetlistsMenu.tsx';
+import { useLibraryUndoShown } from './LibraryUndoSnackbar.tsx';
 import { useLibraryRefresh } from './useLibraryRefresh.ts';
 
+// ScreenFrame's bottom padding already supplies the gap above the snackbar.
+const FAB_ABOVE_SNACKBAR = snackbar.aboveSheet + snackbar.minHeight;
+
 const useStyles = createThemedStyles((theme) => ({
+  fabLifted: { marginBottom: FAB_ABOVE_SNACKBAR },
   section: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -192,14 +198,18 @@ function SetlistsBody(
 
 export function SetlistsScreen(props: SetlistsScreenProps) {
   useLibraryRefresh();
+  const styles = useStyles();
   const menu = useSetlistsMenu(props.onOpenSetlist);
+  const lifted = useLibraryUndoShown();
   const header = <AppBar title="Setlists" onBack={props.onBack} />;
   const fab = (
-    <FloatingActionButton
-      icon="add"
-      accessibilityLabel="New setlist"
-      onPress={menu.openCreate}
-    />
+    <View style={lifted && styles.fabLifted}>
+      <FloatingActionButton
+        icon="add"
+        accessibilityLabel="New setlist"
+        onPress={menu.openCreate}
+      />
+    </View>
   );
   return (
     <ScreenFrame insets={props.insets} header={header} footer={fab}>

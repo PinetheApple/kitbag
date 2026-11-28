@@ -15,7 +15,11 @@ export {
   type SetlistRepository,
   type SongPresetRepository,
 } from './client';
-export type { LinkedPresetValues } from './song-preset-repository';
+export type {
+  DeletedPreset,
+  LinkedPresetValues,
+} from './song-preset-repository';
+export type { DeletedSetlist, RemovedSetlistItem } from './setlist-repository';
 export {
   queueColumnsOf,
   queuedSongOf,
@@ -182,6 +186,7 @@ export type {
   SongFiles,
   SongRecord,
 } from './song-library-repository';
+export type { DeletedSong } from './song-deletion';
 export type {
   NewSongPreset,
   NewTuning,
@@ -222,7 +227,9 @@ export type {
   ClickSound,
   ClickSoundRepository,
   RemovedClickSound,
+  RestorableClickSound,
 } from './click-sound-repository';
+export type { PresetSounds } from './click-sound-references';
 export type { CategoryPlan, ImportOptions, ImportPlan } from './backup-plan';
 export { normalizePolyAgainst, TICK_SOUND } from './preset-rules';
 export {

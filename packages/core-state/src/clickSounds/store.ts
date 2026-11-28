@@ -1,4 +1,4 @@
-import type { ClickSound } from '@kitbag/core-db';
+import type { ClickSound, PresetSounds } from '@kitbag/core-db';
 import {
   type PickedDocument,
   customSoundId,
@@ -15,6 +15,7 @@ import {
   type ClickSoundProblem,
 } from './notices.ts';
 import { clickSoundLock, type ClickSoundLock } from './lock.ts';
+import type { ReleasedSounds } from './released.ts';
 import { getClickSounds, type ClickSoundDeps } from './runtime.ts';
 
 export type ClickSoundOutcome =
@@ -23,6 +24,13 @@ export type ClickSoundOutcome =
   | { readonly kind: 'full' }
   | { readonly kind: 'busy' };
 
+export interface RemovedSound {
+  readonly sound: ClickSound;
+  readonly resets: readonly PresetSounds[];
+  readonly released: ReleasedSounds;
+  readonly at: number;
+}
+
 export interface ClickSoundState {
   readonly sounds: readonly ClickSound[];
   readonly importing: boolean;
@@ -30,6 +38,7 @@ export interface ClickSoundState {
   readonly preparing: string | null;
   readonly notice: ClickSoundNotice | null;
   readonly formats: readonly string[];
+  readonly removed: RemovedSound | null;
 }
 
 export interface ClickSoundActions {
@@ -42,6 +51,8 @@ export interface ClickSoundActions {
   ) => Promise<ClickSoundOutcome>;
   rename: (slot: number, name: string) => Promise<void>;
   remove: (slot: number) => Promise<number>;
+  undoRemove: () => Promise<boolean>;
+  dismissRemoved: () => Promise<void>;
   importPicked: (replacing: ClickSound | null) => Promise<ClickSound | null>;
   dismissNotice: () => void;
   sweepOrphans: () => Promise<void>;
@@ -91,6 +102,25 @@ export function createClickSoundStore(
 
     const markAvailable = (slot: number) => {
       set({ unavailable: get().unavailable.filter((gone) => gone !== slot) });
+    };
+
+    const dropRemoved = async () => {
+      const { removed } = get();
+      if (removed === null) return;
+      set({ removed: null });
+      await discard(removed.sound.fileName);
+    };
+
+    const restoreRemoved = async (removed: RemovedSound) => {
+      const { slot } = removed.sound;
+      if (!(await deps().repository().restore(removed))) {
+        await discard(removed.sound.fileName);
+        return false;
+      }
+      if (!(await applyToEngine(slot, removed.sound)))
+        set({ unavailable: [...get().unavailable, slot] });
+      await refresh();
+      return true;
     };
 
     const saved = async (slot: number): Promise<ClickSoundOutcome> => {
@@ -183,6 +213,8 @@ export function createClickSoundStore(
       const { listFiles, repository } = deps();
       const files = await listFiles();
       const named = new Set((await repository().list()).map((s) => s.fileName));
+      const held = get().removed?.sound.fileName;
+      if (held !== undefined) named.add(held);
       for (const file of files) if (!named.has(file)) await discard(file);
     };
 
@@ -282,6 +314,7 @@ export function createClickSoundStore(
       preparing: null,
       notice: null,
       formats: [],
+      removed: null,
       sync: () =>
         lock.run(async () => {
           const sounds = await deps().repository().list();
@@ -301,17 +334,33 @@ export function createClickSoundStore(
           await refresh();
         }),
       remove: async (slot) => {
-        const songsReset = await lock.run(async () => {
-          const removal = await deps().repository().remove(slot);
+        const removal = await lock.run(async () => {
+          const result = await deps().repository().remove(slot);
           deps().clear(slot);
-          if (removal.removed !== null) await discard(removal.removed.fileName);
           markAvailable(slot);
           await refresh();
-          return removal.songsReset;
+          return result;
         });
-        await deps().afterRemove(customSoundId(slot));
+        const released = await deps().afterRemove(customSoundId(slot));
+        const { removed: sound, resets, songsReset } = removal;
+        if (sound === null) return songsReset;
+        await dropRemoved();
+        set({ removed: { sound, resets, released, at: deps().now() } });
         return songsReset;
       },
+      undoRemove: async () => {
+        const { removed } = get();
+        if (removed === null) return false;
+        set({ removed: null });
+        const restored = await lock.run(() => restoreRemoved(removed));
+        if (restored)
+          await deps().afterRestore(
+            customSoundId(removed.sound.slot),
+            removed.released,
+          );
+        return restored;
+      },
+      dismissRemoved: dropRemoved,
       importPicked: async (replacing) => {
         if (picking || get().importing) return null;
         picking = true;

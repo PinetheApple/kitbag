@@ -24,6 +24,12 @@ const shown = vi.hoisted(
   }),
 );
 
+const songs = vi.hoisted(() => ({
+  deleteRowWithUndo: vi.fn(() => Promise.resolve()),
+  undoDeleteSong: vi.fn(() => Promise.resolve()),
+  dismissDeletedSong: vi.fn(() => Promise.resolve()),
+}));
+
 const queue = vi.hoisted(() => ({
   verbs: {
     playNext: vi.fn<(song: QueuedSong) => Promise<boolean>>(() =>
@@ -64,7 +70,7 @@ vi.mock('@kitbag/core-design', async (original) => {
 vi.mock('@kitbag/core-state', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   useSongLibrary: (select: (state: unknown) => unknown) =>
-    select({ codes: {}, replacePrompt: null }),
+    select({ codes: {}, replacePrompt: null, deletedSong: null, ...songs }),
   useQueueRefresh: () => {
     queue.reads.push(true);
   },
@@ -265,6 +271,24 @@ function snack(tree: ReactTestRenderer) {
     | { message: string; action?: { label: string; onPress: () => void } }
     | undefined;
 }
+
+describe('deleting from the actions sheet', () => {
+  it('deletes a song at once, with no confirm', async () => {
+    songs.deleteRowWithUndo.mockClear();
+    const { tree } = openRow(hum, 'present', []);
+    await press(tree, 'Delete song');
+    expect(songs.deleteRowWithUndo).toHaveBeenCalledExactlyOnceWith(hum);
+    expect(tree.root.findAllByType('Sheet' as never)).toEqual([]);
+  });
+
+  it('asks before deleting a stem song', async () => {
+    songs.deleteRowWithUndo.mockClear();
+    const { tree } = openStemRow('present');
+    await press(tree, 'Delete stem song');
+    expect(songs.deleteRowWithUndo).not.toHaveBeenCalled();
+    expect(button(tree, 'Delete').props.variant).toBe('destructive');
+  });
+});
 
 describe('the actions sheet of a stem song', () => {
   it('offers Play next, Add to queue and Add to setlist above Rename', () => {

@@ -12,7 +12,11 @@ import {
 } from '@kitbag/core-state';
 import { useCallback } from 'react';
 
-import { CustomSoundSheets, useCustomSoundMenu } from './CustomSoundSheets.tsx';
+import {
+  CustomSoundSheets,
+  useCustomSoundMenu,
+  useRemovedSoundNotice,
+} from './CustomSoundSheets.tsx';
 import { CustomSounds, useImportHint } from './CustomSounds.tsx';
 
 export interface MetronomeSoundSheetProps {
@@ -38,6 +42,7 @@ export function MetronomeSoundSheet({
   );
   const importHint = useImportHint();
   const menu = useCustomSoundMenu();
+  const notice = useRemovedSoundNotice(menu, onChange);
   const handleRemoved = useCallback(
     (id: number) => {
       onChange((current) => withoutSound(current, id));
@@ -55,6 +60,7 @@ export function MetronomeSoundSheet({
         gridLabel={soundPickerLabel(role)}
         options={SOUND_OPTIONS}
         selected={String(sounds[role])}
+        notice={notice}
         onRole={setRole}
         onPick={pick}
         onDismiss={onDismiss}

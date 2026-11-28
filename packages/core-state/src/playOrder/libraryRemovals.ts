@@ -34,6 +34,21 @@ function lostAny(before: Set<string>, after: Set<string>): boolean {
   return [...before].some((key) => !after.has(key));
 }
 
+function rereadStores(
+  library: StoreApi<LibraryStore>,
+  order: StoreApi<PlayOrderStore>,
+) {
+  return Promise.allSettled([
+    library.getState().refresh(),
+    order
+      .getState()
+      .refresh()
+      .catch((error: unknown) => {
+        console.warn('[kitbag] play queue refresh failed', error);
+      }),
+  ]);
+}
+
 function forget({ heard, repeat }: RemovalFollowers, kept: Set<string>): void {
   heard.setState({
     heard: heard.getState().heard.filter(({ song }) => kept.has(rowKey(song))),
@@ -49,24 +64,25 @@ export function bindLibraryRemovals(
   order: StoreApi<PlayOrderStore>,
   follow: RemovalFollowers = followers,
 ): () => void {
+  let undoing: string | null = null;
   return songs.subscribe((next, prev) => {
+    if (prev.deletedSong !== null && next.deletedSong === null)
+      undoing = rowKey({ kind: 'song', id: prev.deletedSong.song.row.id });
     if (next.rows === prev.rows) return;
     const kept = rowKeys(next.rows);
     const had = rowKeys(prev.rows);
-    if (!lostAny(had, kept)) return;
+    if (!lostAny(had, kept)) {
+      if (undoing !== null && kept.has(undoing)) {
+        undoing = null;
+        void rereadStores(library, order);
+      }
+      return;
+    }
     forget(follow, kept);
     const shown = follow.player.shown();
     const gone = shown !== null && lostNow(had, kept, rowKey(shown));
     const wasPlaying = gone && follow.player.pauseIfSounding(shown.kind);
-    const reread = Promise.allSettled([
-      library.getState().refresh(),
-      order
-        .getState()
-        .refresh()
-        .catch((error: unknown) => {
-          console.warn('[kitbag] play queue refresh failed', error);
-        }),
-    ]);
+    const reread = rereadStores(library, order);
     if (!gone) return;
     void reread.then(() => {
       moveOffDeleted(follow.player, shown, wasPlaying);

@@ -1,6 +1,8 @@
 import type { ReleasedClick } from '@kitbag/core-state';
 
-import { snackbarTimeLeftMs, type SnackbarView } from './unsavedSnackbar.ts';
+import { snackbarTimeLeftMs } from '@kitbag/core-design';
+
+import type { SnackbarView } from './unsavedSnackbar.ts';
 
 export function songClickOffMessage(title: string): string {
   return `Song click off. ${title} keeps playing.`;

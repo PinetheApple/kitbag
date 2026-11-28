@@ -12,6 +12,7 @@ configureSongLibrary({
     listOutdatedAnalyses: () => Promise.resolve([]),
     applyAnalysis: unavailable,
     deleteSong: () => Promise.resolve(undefined),
+    restoreSong: unavailable,
     deleteStemSet: () => Promise.resolve({ folder: null, files: [] }),
     findStemSetByJobId: () => Promise.resolve(undefined),
     findStemSetMatches: () => Promise.resolve([]),

@@ -19,6 +19,11 @@ import {
 } from './presetMapping.ts';
 import { getLibrary, type LibraryRepositories } from './runtime.ts';
 import {
+  deletionActions,
+  type LibraryDeletion,
+  type LibraryDeletionActions,
+} from './deletion.ts';
+import {
   activeSetlistOf,
   followedIndex,
   indexIn,
@@ -37,6 +42,7 @@ import {
 } from './setlistSession.ts';
 
 export type { LeftSetlist, SetlistSession } from './setlistSession.ts';
+export type { LibraryDeletion } from './deletion.ts';
 import {
   isPresetEntry,
   takeSnapshot,
@@ -96,25 +102,24 @@ export interface LibraryState extends LibrarySnapshot {
   readonly presetOverlay: PresetOverlay | null;
   readonly carriedSkip: boolean;
   readonly songLoads: number;
+  readonly deletion: LibraryDeletion | null;
 }
 
 export type PresetEdit = Partial<Omit<NewSongPreset, 'id'>>;
 
-export interface LibraryActions extends SetlistSessionActions {
+export interface LibraryActions
+  extends SetlistSessionActions, LibraryDeletionActions {
   refresh: () => Promise<void>;
   search: (query: string) => Promise<void>;
   createSetlist: (name: string) => Promise<number>;
   renameSetlist: (setlistId: number, name: string) => Promise<void>;
   duplicateSetlist: (setlistId: number) => Promise<number>;
-  deleteSetlist: (setlistId: number) => Promise<void>;
   newSongFromCurrent: (name: string, setlistId?: number) => Promise<number>;
   addToSetlist: (setlistId: number, presetId: number) => Promise<void>;
   addStemToSetlist: (setlistId: number, stemSetId: number) => Promise<void>;
   reorder: (setlistId: number, from: number, to: number) => Promise<void>;
   moveToSetlist: (itemId: number, setlistId: number) => Promise<void>;
-  removeFromSet: (itemId: number) => Promise<void>;
   duplicatePreset: (presetId: number, setlistId?: number) => Promise<number>;
-  deletePreset: (presetId: number) => Promise<void>;
   savePreset: (presetId: number, edit: PresetEdit) => Promise<void>;
   saveCurrentInto: (presetId: number) => Promise<void>;
   saveLoadedSong: () => Promise<void>;
@@ -167,6 +172,7 @@ const EMPTY: LibraryState = {
   presetOverlay: null,
   carriedSkip: false,
   songLoads: 0,
+  deletion: null,
 };
 
 function discardedNow(
@@ -208,10 +214,6 @@ function setlistActions(deps: LibraryDeps, get: Get) {
       await get().refresh();
       return copy.id;
     },
-    deleteSetlist: async (setlistId: number) => {
-      await sets().delete(setlistId);
-      await get().refresh();
-    },
   };
 }
 
@@ -236,10 +238,6 @@ function itemActions(deps: LibraryDeps, get: Get) {
     },
     moveToSetlist: async (itemId: number, setlistId: number) => {
       await sets().moveTo(itemId, setlistId);
-      await get().refresh();
-    },
-    removeFromSet: async (itemId: number) => {
-      await sets().removeItem(itemId);
       await get().refresh();
     },
   };
@@ -270,14 +268,9 @@ function presetActions(deps: LibraryDeps, get: Get) {
   };
 }
 
-function presetEditActions(deps: LibraryDeps, set: SetState, get: Get) {
+function presetEditActions(deps: LibraryDeps, get: Get) {
   const presets = () => deps.repos().presets;
   return {
-    deletePreset: async (presetId: number) => {
-      await presets().delete(presetId);
-      if (get().loaded?.presetId === presetId) set({ loaded: null });
-      await get().refresh();
-    },
     savePreset: async (presetId: number, edit: PresetEdit) => {
       await presets().update(presetId, edit);
       await get().refresh();
@@ -509,7 +502,8 @@ export function createLibraryStore(
     ...setlistActions(deps, get),
     ...itemActions(deps, get),
     ...presetActions(deps, get),
-    ...presetEditActions(deps, set, get),
+    ...presetEditActions(deps, get),
+    ...deletionActions(deps, set, get),
     ...loadActions(deps, set, get),
   }));
 }

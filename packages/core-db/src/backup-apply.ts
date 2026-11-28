@@ -335,9 +335,13 @@ async function resetSongSounds(
     const intended = fromFile.get(slot);
     return intended === undefined || intended !== after.get(slot);
   };
-  const soundResets = await resetStaleSounds(db, (presetUuid, slot) =>
-    restored.has(presetUuid) ? slotMissesBackupSound(slot) : slotChanged(slot),
-  );
+  const soundResets = (
+    await resetStaleSounds(db, (presetUuid, slot) =>
+      restored.has(presetUuid)
+        ? slotMissesBackupSound(slot)
+        : slotChanged(slot),
+    )
+  ).length;
   return {
     soundResets,
     staleSlots: {
