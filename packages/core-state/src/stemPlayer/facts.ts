@@ -1,5 +1,6 @@
 import type { StemSetRecord } from '@kitbag/core-db';
 
+import { MANUAL_TEMPO_LABEL } from '../manualTempo/manualTempo.ts';
 import { UNSHIFTED_KEY } from './mix.ts';
 
 export const STEADY_TEMPO_MIN = 80;
@@ -187,10 +188,18 @@ export function keyFact(
   };
 }
 
+const plainFact = (text: string): SongFact => ({
+  text,
+  spoken: text,
+  muted: false,
+});
+
+export const MANUAL_TEMPO_FACT = plainFact(MANUAL_TEMPO_LABEL);
+export const NO_CLICK_FACT = plainFact('no click');
+
 function stability(tempoStability: number): SongFact {
   const word = tempoStability >= STEADY_TEMPO_MIN ? 'steady' : 'variable';
-  const text = `${word} tempo`;
-  return { text, spoken: text, muted: false };
+  return plainFact(`${word} tempo`);
 }
 
 export function songFacts(

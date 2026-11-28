@@ -125,6 +125,17 @@ describe('previewing a tempo in the Set tempo sheet', () => {
       manualTempo: DRAFT,
     });
   });
+
+  it('keeps the click off after Save when the Preview chip turned it off', async () => {
+    const song = await previewed(NO_GRID);
+    await song.player.getState().toggleClick();
+    await song.player.getState().setManualTempo(DRAFT);
+    song.player.getState().previewTempo(null);
+    expect(song.player.getState()).toMatchObject({
+      click: false,
+      manualTempo: DRAFT,
+    });
+  });
 });
 
 describe('offering the analysed tempo after a re-analysis', () => {

@@ -8,6 +8,9 @@ import {
 import { useStemPlayer } from '@kitbag/core-state';
 import { Text, View } from 'react-native';
 
+import { STEM_TEMPO_ENTRY, stemTempoEntry } from '../logic/setTempoView.ts';
+import { SetTempoButton } from './StemSetTempo.tsx';
+
 const useStyles = createThemedStyles((theme) => ({
   row: {
     flexDirection: 'row',
@@ -40,12 +43,20 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-export function SongFactChips() {
+export function SongFactChips({
+  onSetTempo,
+}: {
+  readonly onSetTempo: () => void;
+}) {
   const styles = useStyles();
   const { bpm, key, tempo } = useStemPlayer((s) => s.facts);
-  if (bpm === null && key === null && tempo === null) return null;
+  const settable = useStemPlayer(
+    (s) => stemTempoEntry(s) === STEM_TEMPO_ENTRY.set,
+  );
+  if (!settable && bpm === null && key === null && tempo === null) return null;
   return (
     <View style={styles.row}>
+      {settable ? <SetTempoButton onPress={onSetTempo} /> : null}
       {bpm === null ? null : (
         <View accessible accessibilityLabel={bpm.spoken} style={styles.chip}>
           <Text style={styles.value}>{bpm.value}</Text>
