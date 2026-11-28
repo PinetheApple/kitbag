@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { loggedSettingsOf } from '@kitbag/core-db';
+import { countLabel } from '@kitbag/core-design';
 
 import {
   pauseText,
@@ -10,6 +11,7 @@ import {
   tempoText,
 } from './timelineText.ts';
 
+const countInLabel = (bars: number) => countLabel(bars, 'bar', 'bars');
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
 
@@ -115,11 +117,11 @@ describe('stretch facts and badges', () => {
   });
 
   it('badges count-in, mute and poly when used', () => {
-    expect(stretchBadges(logged)).toEqual([
+    expect(stretchBadges(logged, countInLabel)).toEqual([
       'Count-in 1 bar',
       'Mute 1 of 4 bars',
       'Poly 3:2',
     ]);
-    expect(stretchBadges(entry())).toEqual([]);
+    expect(stretchBadges(entry(), countInLabel)).toEqual([]);
   });
 });

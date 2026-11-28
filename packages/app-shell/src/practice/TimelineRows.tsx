@@ -11,15 +11,18 @@ import {
   type TimelineEntry,
   type TimelineStretch,
 } from '@kitbag/core-state';
-import { useCustomSoundViews } from '@kitbag/tool-metronome';
 import { Text, View } from 'react-native';
 
+import type { CompiledTools } from '@/compiledTools';
+
+import { useCompiledTools } from '../tools/compiledToolsContext.ts';
 import { CLICK_ONLY } from './historyText.ts';
 import {
   pauseText,
   playClock,
   positionText,
   stretchBadges,
+  type CountInLabel,
   stretchFacts,
 } from './timelineText.ts';
 
@@ -102,16 +105,20 @@ const useStyles = createThemedStyles((theme) => ({
 
 export type SetlistSize = (setlistUuid: string) => number | undefined;
 
-type CustomSounds = ReturnType<typeof useCustomSoundViews>;
+type CustomSounds = ReturnType<
+  CompiledTools['host']['metronome']['useCustomSoundViews']
+>;
 
 function StretchRow({
   entry,
   setlistSize,
   custom,
+  countInLabel,
 }: {
   readonly entry: TimelineStretch;
   readonly setlistSize: SetlistSize;
   readonly custom: CustomSounds;
+  readonly countInLabel: CountInLabel;
 }) {
   const styles = useStyles();
   const { song, setlist } = entry.stretch;
@@ -134,7 +141,7 @@ function StretchRow({
           {place === null ? null : <Text style={styles.place}>{place}</Text>}
         </View>
         <Text style={styles.facts}>{stretchFacts(entry, custom)}</Text>
-        <Badges labels={stretchBadges(entry)} />
+        <Badges labels={stretchBadges(entry, countInLabel)} />
       </View>
       <Text style={styles.length}>{playClock(entry.playedMs)}</Text>
     </View>
@@ -172,7 +179,8 @@ export interface TimelineRowsProps {
 }
 
 export function TimelineRows({ entries, setlistSize }: TimelineRowsProps) {
-  const custom = useCustomSoundViews();
+  const { metronome } = useCompiledTools().host;
+  const custom = metronome.useCustomSoundViews();
   return (
     <View>
       {entries.map((entry, index) =>
@@ -184,6 +192,7 @@ export function TimelineRows({ entries, setlistSize }: TimelineRowsProps) {
             entry={entry}
             setlistSize={setlistSize}
             custom={custom}
+            countInLabel={metronome.countInLabel}
           />
         ),
       )}

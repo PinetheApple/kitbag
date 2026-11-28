@@ -143,10 +143,25 @@ export interface ToolListening<Notice = unknown, LeftSetlist = unknown> {
   readonly QueueSheet: ComponentType<QueueSheetProps<Notice, LeftSetlist>>;
 }
 
-export interface ToolHost<Listening = ToolListening> {
+// Generic over core-native's count-in bars and core-state's PolyRatio and custom sound view.
+export interface ToolMetronome<
+  CountInBars = never,
+  PolyRatio = never,
+  CustomSoundView = unknown,
+> {
+  readonly countInLabel: (bars: CountInBars) => string;
+  readonly polyRatioLabel: (ratio: PolyRatio) => string;
+  readonly useCustomSoundViews: () => readonly CustomSoundView[];
+}
+
+export interface ToolHost<
+  Listening = ToolListening,
+  Metronome = ToolMetronome,
+> {
   readonly engine: ToolEngine;
   readonly store: ToolStoreFactory;
   readonly listening: Listening;
+  readonly metronome: Metronome;
 }
 
 export type RegisterTool = (host: ToolHost) => ToolPlugin;

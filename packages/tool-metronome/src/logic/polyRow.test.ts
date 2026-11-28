@@ -8,7 +8,12 @@ import {
   widestLineWidth,
 } from '@kitbag/core-design';
 import { KB_POLY_AGAINST_BAR, KB_POLY_PHASE_NONE } from '@kitbag/core-native';
-import { effectivePolyAgainst, layoutBeatLeds } from '@kitbag/core-state';
+import {
+  effectivePolyAgainst,
+  layoutBeatLeds,
+  polyRatioLabel,
+  type PolyRatio,
+} from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -21,14 +26,12 @@ import {
   polyLabelLeft,
   polyLabelPlace,
   polyLastDotRight,
-  polyRatioLabel,
   polyStripCaption,
   polyStripSentence,
   polySpanInArea,
   polySpanPlace,
   polyX,
   soundingCycle,
-  type PolyRatio,
 } from './polyRow.ts';
 
 const ROW = { lineWidth: 4 * 56 + 3 * 12, dotSize: 56, dotGap: 12 };

@@ -1,12 +1,6 @@
 import { countLabel, metronome } from '@kitbag/core-design';
 import { KB_POLY_AGAINST_BAR } from '@kitbag/core-native';
-import { effectivePolyAgainst } from '@kitbag/core-state';
-
-export interface PolyRatio {
-  readonly polyBeats: number;
-  readonly against: number;
-  readonly beatsPerBar: number;
-}
+import { effectivePolyAgainst, type PolyRatio } from '@kitbag/core-state';
 
 export interface PolyPulse {
   readonly beat: number;
@@ -171,10 +165,6 @@ export function polyLabelLeft(
   return place === 'right'
     ? lastDotRight + metronome.polyLabelGapRight
     : -(labelWidth + metronome.polyLabelGapLeft);
-}
-
-export function polyRatioLabel(ratio: PolyRatio): string {
-  return `${String(ratio.polyBeats)}:${String(ratio.against)}`;
 }
 
 export interface PolyAgainstLabel {

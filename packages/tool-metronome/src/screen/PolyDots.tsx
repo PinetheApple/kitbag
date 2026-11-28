@@ -10,7 +10,11 @@ import {
   TRANSPARENT,
   useTheme,
 } from '@kitbag/core-design';
-import { effectivePolyAgainst } from '@kitbag/core-state';
+import {
+  effectivePolyAgainst,
+  polyRatioLabel,
+  type PolyRatio,
+} from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { Text, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
@@ -26,11 +30,9 @@ import {
   polyLabelLeft,
   polyLabelPlace,
   polyLastDotRight,
-  polyRatioLabel,
   polySpanInArea,
   polyX,
   soundingCycle,
-  type PolyRatio,
   type PolyRowGeometry,
 } from '../logic/polyRow.ts';
 

@@ -5,13 +5,13 @@ import {
 } from '@kitbag/core-native';
 import {
   effectivePolyAgainst,
+  polyRatioLabel,
   type BarMuteConfig,
   type CountInConfig,
   type RampConfig,
 } from '@kitbag/core-state';
 
 import { countInLabel } from './countIn.ts';
-import { polyRatioLabel } from './polyRow.ts';
 
 export interface PracticeSettings {
   readonly ramp: RampConfig;

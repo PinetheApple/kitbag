@@ -5,22 +5,28 @@ import {
   type LoggedSettings,
 } from '@kitbag/core-db';
 import { countLabel, subdivisionName } from '@kitbag/core-design';
-import { KB_COUNT_IN_OFF, KB_RAMP_UNIT } from '@kitbag/core-native';
+import {
+  KB_COUNT_IN_OFF,
+  KB_RAMP_UNIT,
+  type KbCountInBars,
+} from '@kitbag/core-native';
 import {
   effectivePolyAgainst,
   formatClockSeconds,
   isCountInBars,
   perAccentSoundsOf,
+  polyRatioLabel,
   SECONDS_PER_MINUTE,
   soundChipLabel,
   type TimelineStretch,
 } from '@kitbag/core-state';
-import { countInLabel, polyRatioLabel } from '@kitbag/tool-metronome';
 
 import { SEPARATOR } from '../settings/separator.ts';
 import { bpmText } from './historyText.ts';
 
 type CustomSounds = Parameters<typeof soundChipLabel>[1];
+
+export type CountInLabel = (bars: KbCountInBars) => string;
 
 const RAMP_UNIT_WORDS: Readonly<Record<number, readonly [string, string]>> = {
   [KB_RAMP_UNIT.KB_RAMP_BARS]: ['bar', 'bars'],
@@ -89,7 +95,10 @@ export function stretchFacts(
   ].join(` ${SEPARATOR} `);
 }
 
-function countInBadge(countIn: LoggedCountIn | null): string[] {
+function countInBadge(
+  countIn: LoggedCountIn | null,
+  countInLabel: CountInLabel,
+): string[] {
   if (countIn === null || !isCountInBars(countIn.bars)) return [];
   if (countIn.bars === KB_COUNT_IN_OFF) return [];
   return [`Count-in ${countInLabel(countIn.bars)}`];
@@ -115,11 +124,14 @@ function polyBadge(settings: LoggedSettings): string[] {
   return [`Poly ${ratio}`];
 }
 
-export function stretchBadges(entry: TimelineStretch): readonly string[] {
+export function stretchBadges(
+  entry: TimelineStretch,
+  countInLabel: CountInLabel,
+): readonly string[] {
   const { settings, countIn } = entry.stretch;
   if (settings === null) return [];
   return [
-    ...countInBadge(countIn),
+    ...countInBadge(countIn, countInLabel),
     ...muteBadge(settings),
     ...polyBadge(settings),
   ];

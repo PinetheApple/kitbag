@@ -6,7 +6,7 @@ import {
 import type { ToolHost } from '@kitbag/core-plugin-api';
 import { createToolStore } from '@kitbag/core-state';
 
-export const toolHost: Omit<ToolHost, 'listening'> = {
+export const toolHost: Omit<ToolHost, 'listening' | 'metronome'> = {
   engine: {
     reads: {
       barPhase: readBarPhase,

@@ -123,6 +123,7 @@ export {
   normalizePolyAgainst,
   stepPolyAgainst,
 } from './metronome/polyAgainst.ts';
+export { polyRatioLabel, type PolyRatio } from './metronome/polyRatio.ts';
 export type {
   EngineBpm,
   MetronomeCommands,
