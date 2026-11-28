@@ -4,7 +4,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 export function usePlayingEdge(
   playing: SharedValue<number>,
-  initial: boolean,
+  initial = false,
 ): boolean {
   const [isPlaying, setIsPlaying] = useState(initial);
   useAnimatedReaction(

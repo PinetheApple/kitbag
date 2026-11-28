@@ -188,7 +188,7 @@ export interface PlayPauseButtonProps {
 // Glyphs follow the engine's playing flag on the UI thread; only the spoken
 // label renders, and it changes on a press or at the song's end.
 export function usePlayPauseLayers(playing: SharedValue<number>) {
-  const isPlaying = usePlayingEdge(playing, false);
+  const isPlaying = usePlayingEdge(playing);
   const playStyle = useAnimatedStyle(() => ({
     opacity: playing.value === 0 ? 1 : 0,
   }));

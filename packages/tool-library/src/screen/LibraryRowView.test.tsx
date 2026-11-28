@@ -18,15 +18,6 @@ const display = vi.hoisted(() => ({
   boxes: [] as Record<string, unknown>[],
 }));
 
-vi.mock(
-  'react-native-reanimated',
-  async () => import('../../../core-state/src/testing/reanimatedDriver.ts'),
-);
-vi.mock(
-  'react-native-worklets',
-  async () => import('../../../core-state/src/testing/reanimatedDriver.ts'),
-);
-
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
   const box = (props: Props) => {

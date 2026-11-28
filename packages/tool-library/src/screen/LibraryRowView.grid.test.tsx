@@ -7,15 +7,6 @@ type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const GRID_ICON = 'icon:beatGrid';
 
-vi.mock(
-  'react-native-reanimated',
-  async () => import('../../../core-state/src/testing/reanimatedDriver.ts'),
-);
-vi.mock(
-  'react-native-worklets',
-  async () => import('../../../core-state/src/testing/reanimatedDriver.ts'),
-);
-
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
   const box = (props: Props) => {

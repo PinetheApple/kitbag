@@ -45,7 +45,7 @@ import {
   type NowPlaying,
   type RowPlace,
 } from '../logic/rowText.ts';
-import { useNowPlaying, useShownPlaying } from './nowPlaying.ts';
+import { useIsCurrentRow, useShownPlaying } from './nowPlaying.ts';
 import { useRowFailure, useRowFiles } from './rowFailureHooks.ts';
 
 const MORE_HIT_BOX = hitBoxStyle(
@@ -138,19 +138,19 @@ const TILE_ICON: Record<NowPlaying, IconName> = {
   paused: 'play',
 };
 
-function tileIcon(stems: boolean, now: NowPlaying | null): IconName {
+function tileIcon(stems: boolean, playState: NowPlaying | null): IconName {
   if (stems) return 'stems';
-  return now === null ? 'song' : TILE_ICON[now];
+  return playState === null ? 'song' : TILE_ICON[playState];
 }
 
 function RowTile({
   stems,
   muted,
-  now,
+  playState,
 }: {
   readonly stems: boolean;
   readonly muted: boolean;
-  readonly now: NowPlaying | null;
+  readonly playState: NowPlaying | null;
 }) {
   const styles = useStyles();
   const theme = useTheme();
@@ -159,7 +159,7 @@ function RowTile({
       style={[styles.tile, stems && styles.stemTile, muted && styles.muted]}
     >
       <Icon
-        name={tileIcon(stems, now)}
+        name={tileIcon(stems, playState)}
         size="listTile"
         color={stems ? theme.accentInk : 'text2'}
       />
@@ -195,29 +195,29 @@ function useRowPlace(row: LibraryRow, moving: boolean): RowPlace {
 }
 
 export function LibraryRowView(props: LibraryRowViewProps) {
-  const current = useNowPlaying(props.row);
+  const current = useIsCurrentRow(props.row);
   return current ? (
     <CurrentRow {...props} />
   ) : (
-    <RowView {...props} now={null} />
+    <RowView {...props} playState={null} />
   );
 }
 
 function CurrentRow(props: LibraryRowViewProps) {
   const playing = useShownPlaying(props.row.kind);
-  return <RowView {...props} now={playing ? 'playing' : 'paused'} />;
+  return <RowView {...props} playState={playing ? 'playing' : 'paused'} />;
 }
 
 function RowView({
   row,
   selected,
   moving,
-  now,
+  playState,
   onActions,
   onOpenStemSet,
   onOpenSong,
   onUnavailable,
-}: LibraryRowViewProps & { readonly now: NowPlaying | null }) {
+}: LibraryRowViewProps & { readonly playState: NowPlaying | null }) {
   const styles = useStyles();
   const { fontScale, width } = useWindowDimensions();
   const { dividerInset } = listEdges(width);
@@ -283,12 +283,16 @@ function RowView({
         onLongPress={openActions}
         onPress={open}
       >
-        <RowTile stems={row.kind === 'stems'} muted={away} now={now} />
+        <RowTile
+          stems={row.kind === 'stems'}
+          muted={away}
+          playState={playState}
+        />
         <View style={styles.text}>
           <EllipsizedText
             style={[
               styles.title,
-              now !== null && styles.playingTitle,
+              playState !== null && styles.playingTitle,
               away && styles.muted,
             ]}
             numberOfLines={titleLines}
@@ -296,9 +300,13 @@ function RowView({
             {row.title}
           </EllipsizedText>
           <EllipsizedText style={styles.facts} numberOfLines={factsLines}>
-            {now === null
+            {playState === null
               ? rowSubtitle(row, status, failure)
-              : nowPlayingSubtitle(row, rowSubtitle(row, status, failure), now)}
+              : nowPlayingSubtitle(
+                  row,
+                  rowSubtitle(row, status, failure),
+                  playState,
+                )}
           </EllipsizedText>
           {badgesUnderText && badges}
         </View>

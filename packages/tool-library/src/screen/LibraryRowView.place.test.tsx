@@ -12,15 +12,6 @@ const library = vi.hoisted(() => ({
   song: { status: 'idle', songId: null as number | null },
 }));
 
-vi.mock(
-  'react-native-reanimated',
-  async () => import('../../../core-state/src/testing/reanimatedDriver.ts'),
-);
-vi.mock(
-  'react-native-worklets',
-  async () => import('../../../core-state/src/testing/reanimatedDriver.ts'),
-);
-
 vi.mock('react-native', () => ({
   View: 'View',
   Pressable: 'Pressable',

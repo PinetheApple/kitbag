@@ -1,7 +1,8 @@
+import { KITBAG_HOST_OBJECT_KEY } from '@kitbag/core-native';
 import type { LibraryRow } from '@kitbag/core-state';
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -19,15 +20,6 @@ const now = vi.hoisted(() => ({
   stem: {} as Shown,
   icons: [] as unknown[],
 }));
-
-vi.mock(
-  'react-native-reanimated',
-  async () => import('../../../core-state/src/testing/reanimatedDriver.ts'),
-);
-vi.mock(
-  'react-native-worklets',
-  async () => import('../../../core-state/src/testing/reanimatedDriver.ts'),
-);
 
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
@@ -118,9 +110,16 @@ function render(row: LibraryRow): string {
   );
 }
 
+const hostSlot = globalThis as unknown as Record<string, unknown>;
+
 beforeEach(() => {
+  hostSlot[KITBAG_HOST_OBJECT_KEY] = { mixer_playing: 1, frames_rendered: 0 };
   now.song = { status: 'idle', songId: null };
   now.stem = { status: 'idle', setId: null };
+});
+
+afterEach(() => {
+  Reflect.deleteProperty(hostSlot, KITBAG_HOST_OBJECT_KEY);
 });
 
 describe('the row of the song the mini-player shows', () => {

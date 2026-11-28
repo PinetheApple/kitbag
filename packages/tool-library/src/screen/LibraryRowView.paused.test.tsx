@@ -6,11 +6,15 @@ import { act, createElement, type ReactNode } from 'react';
 import { create, type ReactTestRenderer } from 'react-test-renderer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { runFrame } from '../../../core-state/src/testing/reanimatedDriver.ts';
+import {
+  jsHops,
+  runFrame,
+} from '../../../core-state/src/testing/reanimatedDriver.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const ROW_ID = 4;
+const NEXT_ID = ROW_ID + 1;
 const COUNT_END = 48000;
 const COUNTING = COUNT_END / 2;
 const COUNTED = COUNT_END * 2;
@@ -27,15 +31,6 @@ const now = vi.hoisted(() => ({
   song: {} as Player,
   stem: {} as Player,
 }));
-
-vi.mock(
-  'react-native-reanimated',
-  async () => import('../../../core-state/src/testing/reanimatedDriver.ts'),
-);
-vi.mock(
-  'react-native-worklets',
-  async () => import('../../../core-state/src/testing/reanimatedDriver.ts'),
-);
 
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
@@ -116,6 +111,8 @@ const engine = { mixer_playing: 0, frames_rendered: 0 };
 const hostSlot = globalThis as unknown as Record<string, unknown>;
 let renderer: ReactTestRenderer | undefined;
 
+const NEXT_STEM_ROW = { ...STEM_ROW, id: NEXT_ID } as LibraryRow;
+
 function textOf(node: unknown): string {
   if (typeof node === 'string') return node;
   if (Array.isArray(node)) return node.map(textOf).join('');
@@ -128,20 +125,34 @@ function shown(countEndFrame: number | null = null): void {
   now.stem = { status: 'ready', setId: ROW_ID, countEndFrame };
 }
 
-function mount(row: LibraryRow): void {
+function rows(...shownRows: LibraryRow[]) {
+  return shownRows.map((row) =>
+    createElement(LibraryRowView, {
+      key: row.id,
+      row,
+      selected: false,
+      moving: false,
+      onActions: vi.fn(),
+      onOpenStemSet: vi.fn(),
+      onOpenSong: vi.fn(),
+      onUnavailable: vi.fn(),
+    }),
+  );
+}
+
+function mount(...shownRows: LibraryRow[]): string {
   act(() => {
-    renderer = create(
-      createElement(LibraryRowView, {
-        row,
-        selected: false,
-        moving: false,
-        onActions: vi.fn(),
-        onOpenStemSet: vi.fn(),
-        onOpenSong: vi.fn(),
-        onUnavailable: vi.fn(),
-      }),
-    );
+    renderer = create(createElement('div', null, rows(...shownRows)));
   });
+  return textOf(renderer?.toJSON() ?? null);
+}
+
+function rowTexts(...shownRows: LibraryRow[]): string[] {
+  act(() => {
+    renderer?.update(createElement('div', null, rows(...shownRows)));
+  });
+  const list = renderer?.toJSON() as { children?: unknown[] } | null;
+  return (list?.children ?? []).map(textOf);
 }
 
 function frame(playing: number, rendered = 0): string {
@@ -152,6 +163,8 @@ function frame(playing: number, rendered = 0): string {
 }
 
 beforeEach(() => {
+  engine.mixer_playing = 0;
+  engine.frames_rendered = 0;
   hostSlot[KITBAG_HOST_OBJECT_KEY] = engine;
   now.song = { status: 'idle', songId: null };
   now.stem = { status: 'idle', setId: null };
@@ -219,10 +232,51 @@ describe('a count-in on the current row', () => {
   });
 });
 
+describe('the current row before the first frame', () => {
+  it('says Paused straight away for a stem song paused at mount', () => {
+    shown();
+    expect(mount(STEM_ROW)).toContain('Paused · 0:30');
+  });
+
+  it('shows the play tile straight away for a single song paused at mount', () => {
+    shown();
+    expect(mount(SONG_ROW)).toContain('icon:play');
+  });
+
+  it('says Playing straight away for a song playing at mount', () => {
+    engine.mixer_playing = PLAYING;
+    shown();
+    expect(mount(STEM_ROW)).toContain('Playing · 0:30');
+  });
+
+  it('says Playing straight away for a song counting in at mount', () => {
+    engine.frames_rendered = COUNTING;
+    shown(COUNT_END);
+    expect(mount(STEM_ROW)).toContain('Playing · 0:30');
+  });
+});
+
+describe('a track change', () => {
+  it('moves the label from the old current row to the new one', () => {
+    now.stem = { status: 'ready', setId: ROW_ID };
+    engine.mixer_playing = PLAYING;
+    mount(STEM_ROW, NEXT_STEM_ROW);
+    frame(PLAYING);
+    now.stem = { status: 'ready', setId: NEXT_ID };
+    engine.mixer_playing = STOPPED;
+    const [left, arrived] = rowTexts(STEM_ROW, NEXT_STEM_ROW);
+    expect(left).not.toMatch(/Paused|Playing/);
+    expect(arrived).toContain('Paused · 0:30');
+    expect(frame(PLAYING)).toContain('Playing · 0:30');
+  });
+});
+
 describe('a row that is not current', () => {
   it('reads no play state and shows the plain row', () => {
-    now.song = { status: 'ready', songId: ROW_ID + 1 };
+    now.song = { status: 'ready', songId: NEXT_ID };
+    jsHops.count = 0;
     mount(SONG_ROW);
     expect(frame(PLAYING)).toContain('icon:song');
+    expect(jsHops.count).toBe(0);
   });
 });
