@@ -7,7 +7,7 @@ import java.io.File
 import java.nio.file.Files
 
 class NoShippedTestKeysTest {
-  private val testKeyId = Regex("\"keyId\"\\s*:\\s*\"" + Regex.escape(RULES.testKeyPrefix))
+  private val testKeyId = Regex("\"" + Regex.escape(RULES.pinKeyIdField) + "\"\\s*:\\s*\"" + Regex.escape(RULES.testKeyPrefix))
 
   private fun testKeysUnder(dir: File): List<String> =
     dir.walkTopDown().filter { it.isFile && testKeyId.containsMatchIn(it.readText(Charsets.ISO_8859_1)) }

@@ -71,6 +71,7 @@ export interface NativeSources {
   readonly metronomeSlotHeader: string;
   readonly outputRoutes: string;
   readonly toolEvalHeader: string;
+  readonly toolRejections: string;
 }
 
 export interface NativeConstants {
@@ -136,6 +137,7 @@ export interface NativeConstants {
   readonly tunerIdleSleepMicros: number;
   readonly evalVerifiedToolKey: string;
   readonly toolErrors: readonly StringConstant[];
+  readonly toolRejections: readonly StringConstant[];
   readonly toolRefusalKey: string;
   readonly toolRefusalDetailKey: string;
 }

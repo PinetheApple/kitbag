@@ -11,7 +11,6 @@ internal class ToolManifestFile(val path: String, val sha256: String, val size: 
 
 internal class ToolManifest(
   val id: String,
-  val version: String,
   val bytecodeVersion: Int,
   val files: List<ToolManifestFile>,
 )
@@ -24,17 +23,68 @@ internal class ToolManifestParser(private val rules: ToolBundleRules) {
       if (!ok) list += problem
       return ok
     }
+
+    fun add(problem: String) {
+      list += problem
+    }
   }
 
   fun parse(bytes: ByteArray): JSONObject {
+    val text = String(bytes, Charsets.UTF_8)
     val value = try {
-      JSONTokener(String(bytes, Charsets.UTF_8)).nextValue()
+      duplicateKey(text)?.let { reject(ToolRejection.MANIFEST, "${rules.manifestFile} repeats the key $it") }
+      val tokener = JSONTokener(text)
+      tokener.nextValue().also {
+        if (tokener.nextClean() != END_OF_TEXT) reject(ToolRejection.MANIFEST, "${rules.manifestFile} has text after its object")
+      }
     } catch (error: JSONException) {
       reject(ToolRejection.MANIFEST, "${rules.manifestFile} is not JSON")
     } catch (error: StackOverflowError) {
       reject(ToolRejection.MANIFEST, "${rules.manifestFile} nests too deeply")
     }
     return value as? JSONObject ?: reject(ToolRejection.MANIFEST, "manifest is not a JSON object")
+  }
+
+  // org.json keeps the last of two equal keys on Android and throws on the JVM; refuse both the same way.
+  private fun duplicateKey(text: String): String? {
+    val objects = ArrayDeque<MutableSet<String>?>()
+    var expectingKey = false
+    var at = 0
+    while (at < text.length) {
+      when (text[at]) {
+        '{' -> {
+          objects.addLast(mutableSetOf())
+          expectingKey = true
+        }
+        '[' -> {
+          objects.addLast(null)
+          expectingKey = false
+        }
+        '}', ']' -> {
+          objects.removeLastOrNull()
+          expectingKey = false
+        }
+        ',' -> expectingKey = objects.lastOrNull() != null
+        '"' -> {
+          val end = stringEnd(text, at)
+          if (expectingKey) {
+            val key = JSONTokener(text.substring(at, end + 1)).nextValue() as String
+            if (objects.last()?.add(key) == false) return key
+            expectingKey = false
+          }
+          at = end
+        }
+      }
+      at++
+    }
+    return null
+  }
+
+  private fun stringEnd(text: String, start: Int): Int {
+    var at = start + 1
+    while (at < text.length && text[at] != '"') at += if (text[at] == '\\') 2 else 1
+    if (at >= text.length) throw JSONException("unterminated string")
+    return at
   }
 
   fun signingKeyId(manifest: JSONObject): String {
@@ -54,15 +104,18 @@ internal class ToolManifestParser(private val rules: ToolBundleRules) {
     checkRoutes(m, problems)
     problems.check(m.opt(ENTRY) == rules.entryFile, "entry must be ${rules.entryFile}")
     val files = checkFiles(m.opt(FILES), problems)
-    problems.check(files == null || isInt(m.opt(SIZE)) && whole(m.opt(SIZE)) == files.sumOf { it.size }, "size is not the sum of files[].size")
+    problems.check(files == null || sizeIsSumOfFiles(m.opt(SIZE), files), "size is not the sum of files[].size")
     if (problems.list.isNotEmpty()) reject(ToolRejection.MANIFEST, problems.list.joinToString("; "))
-    val bytecodeVersion = whole(m.getJSONObject(RUNTIME).get(BYTECODE_VERSION))
-    if (bytecodeVersion > Int.MAX_VALUE) reject(ToolRejection.MANIFEST, "runtime.$BYTECODE_VERSION is out of range")
-    return ToolManifest(m.getString(ID), m.getString(VERSION), bytecodeVersion.toInt(), files!!)
+    val bytecodeVersion = asLong(m.getJSONObject(RUNTIME).get(rules.bytecodeVersionField))
+    if (bytecodeVersion > Int.MAX_VALUE) reject(ToolRejection.MANIFEST, "runtime.${rules.bytecodeVersionField} is out of range")
+    return ToolManifest(m.getString(ID), bytecodeVersion.toInt(), files!!)
   }
 
+  private fun sizeIsSumOfFiles(size: Any?, files: List<ToolManifestFile>): Boolean =
+    isInt(size) && asLong(size) == files.sumOf { it.size }
+
   private fun checkIdentity(m: JSONObject, problems: Problems) {
-    problems.check(m.opt(SCHEMA).let { isInt(it) && whole(it) == rules.schemaVersion.toLong() }, "schema must be ${rules.schemaVersion}")
+    problems.check(m.opt(SCHEMA).let { isInt(it) && asLong(it) == rules.schemaVersion.toLong() }, "schema must be ${rules.schemaVersion}")
     problems.check(isText(m.opt(ID), rules.id), "id is not a tool id")
     problems.check(isText(m.opt(NAME), max = rules.nameMax), "name must be text of at most ${rules.nameMax}")
     problems.check(isText(m.opt(VERSION), rules.semver), "version is not semver")
@@ -96,7 +149,8 @@ internal class ToolManifestParser(private val rules: ToolBundleRules) {
     )
     val runtime = m.optJSONObject(RUNTIME)
     problems.check(
-      runtime != null && isInt(runtime.opt(BYTECODE_VERSION), 0) && RUNTIME_PACKAGES.all { isText(runtime.opt(it)) },
+      runtime != null && isInt(runtime.opt(rules.bytecodeVersionField), 0) &&
+        rules.runtimePackageFields.all { isText(runtime.opt(it)) },
       "runtime needs the bytecode version and the React Native, React, Reanimated and worklets versions",
     )
   }
@@ -136,10 +190,8 @@ internal class ToolManifestParser(private val rules: ToolBundleRules) {
   private fun manifestFile(value: Any?): ToolManifestFile? {
     val file = value as? JSONObject ?: return null
     val ok = isText(file.opt(PATH), rules.filePath) && isText(file.opt(SHA256), rules.sha256) && isInt(file.opt(SIZE), 0)
-    return if (ok) ToolManifestFile(file.getString(PATH), file.getString(SHA256), whole(file.get(SIZE))) else null
+    return if (ok) ToolManifestFile(file.getString(PATH), file.getString(SHA256), asLong(file.get(SIZE))) else null
   }
-
-  private fun Problems.add(problem: String) = check(false, problem)
 
   private fun optional(m: JSONObject, key: String, check: (Any?) -> Boolean): Boolean = !m.has(key) || check(m.opt(key))
 
@@ -160,10 +212,11 @@ internal class ToolManifestParser(private val rules: ToolBundleRules) {
     return number.isFinite() && number == floor(number) && abs(number) <= MAX_SAFE_INTEGER && number >= min
   }
 
-  private fun whole(value: Any?): Long = (value as Number).toDouble().toLong()
+  private fun asLong(value: Any?): Long = (value as Number).toDouble().toLong()
 
   private companion object {
     const val MAX_SAFE_INTEGER = 9_007_199_254_740_991L
+    const val END_OF_TEXT = 0.toChar()
     const val SCHEMA = "schema"
     const val ID = "id"
     const val NAME = "name"
@@ -181,8 +234,6 @@ internal class ToolManifestParser(private val rules: ToolBundleRules) {
     const val MAX_VERSION_CODE = "maxVersionCode"
     const val BUILT_WITH = "builtWith"
     const val RUNTIME = "runtime"
-    const val BYTECODE_VERSION = "hermesBytecodeVersion"
-    val RUNTIME_PACKAGES = listOf("reactNative", "react", "reanimated", "worklets")
     const val ROUTES = "routes"
     const val HOME_TILE = "homeTile"
     const val LABEL = "label"

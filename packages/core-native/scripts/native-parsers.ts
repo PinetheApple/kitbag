@@ -256,3 +256,40 @@ export function parseCString(source: string, name: string): string {
   if (match?.[1] === undefined) fail(`string constant ${name}`);
   return match[1];
 }
+
+const KOTLIN_ENTRY = /^[A-Z][A-Z0-9_]*$/;
+
+function pascalCase(entry: string): string {
+  return entry
+    .toLowerCase()
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('');
+}
+
+export function parseKotlinCodeEnum(
+  source: string,
+  enumName: string,
+  prefixName: string,
+): StringConstant[] {
+  const body = new RegExp(`enum class ${enumName}\\s*\\{([^;}]*);`).exec(
+    source,
+  )?.[1];
+  const prefix = new RegExp(`const val ${prefixName} = "([^"]+)"`).exec(
+    source,
+  )?.[1];
+  if (body === undefined || prefix === undefined) {
+    fail(`enum class ${enumName} with ${prefixName}`);
+  }
+  const entries = body
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== '');
+  if (entries.length === 0 || !entries.every((e) => KOTLIN_ENTRY.test(e))) {
+    fail(`the entries of enum class ${enumName}`);
+  }
+  return entries.map((entry) => ({
+    name: pascalCase(entry),
+    value: prefix + entry,
+  }));
+}

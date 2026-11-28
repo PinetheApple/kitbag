@@ -9,7 +9,7 @@ import org.json.JSONObject
 class ToolKeyRingTest {
   private val key = TestToolKey.generate("ring")
 
-  private fun parsed(vararg pins: Pin) = rejection { TestPins.ring(*pins) }
+  private fun parsed(vararg pins: Pin) = rejectedWith { TestPins.ring(*pins) }?.rejection
 
   @Test
   fun `a well-formed pin file yields the tool key for each use its status allows`() {
@@ -47,9 +47,11 @@ class ToolKeyRingTest {
 
   @Test
   fun `a pin file of another schema is refused`() {
-    val json = TestPins.json(TestPins.tool(key, TestPins.CURRENT)).replace("\"schema\":1", "\"schema\":2")
+    val schema = "\"${RULES.pinSchemaField}\":"
+    val json = TestPins.json(TestPins.tool(key, TestPins.CURRENT))
+      .replace(schema + RULES.schemaVersion, schema + (RULES.schemaVersion + 1))
 
-    assertEquals(ToolRejection.PINS, rejection { ToolKeyRing.parse(json, emptySet(), RULES) })
+    assertEquals(ToolRejection.PINS, rejectedWith { ToolKeyRing.parse(json, emptySet(), RULES) }?.rejection)
   }
 
   @Test

@@ -9,10 +9,10 @@ class ToolZipTest {
   private val data = "the same bytes, many times over. ".repeat(64).toByteArray()
   private val item = ZipItem(RULES.entryFile, data)
 
-  private fun rejected(zip: ByteArray) = rejection { ToolZip.read(zip, RULES.inflatedMaxBytes) }
+  private fun rejected(zip: ByteArray) = rejectedWith { ToolZip.read(zip, RULES.inflatedMaxBytes) }?.rejection
 
   private fun rejectedFor(zip: ByteArray, reason: String) {
-    val message = rejectionMessage { ToolZip.read(zip, RULES.inflatedMaxBytes) }
+    val message = rejectedWith { ToolZip.read(zip, RULES.inflatedMaxBytes) }?.message
     assertTrue("$message", message?.contains(reason) == true)
   }
 
@@ -24,6 +24,13 @@ class ToolZipTest {
     assertEquals(listOf(item.name, other.name), entries.map { it.name })
     assertArrayEquals(data, entries[0].data)
     assertArrayEquals(TestTool.ASSET_DATA, entries[1].data)
+  }
+
+  @Test
+  fun `an empty entry reads back empty`() {
+    val entries = ToolZip.read(TestZip.write(listOf(ZipItem(TestTool.ASSET, ByteArray(0)))), RULES.inflatedMaxBytes)
+
+    assertEquals(0, entries.single().data.size)
   }
 
   @Test

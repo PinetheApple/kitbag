@@ -20,6 +20,7 @@ export interface Signed {
 }
 
 const { roles, statuses, signingStatuses, toolRole } = BUNDLE_RULES.keys;
+const PIN = BUNDLE_RULES.pinFields;
 
 function isOneOf<T extends string>(
   value: unknown,
@@ -32,13 +33,17 @@ function pinProblems(pin: unknown, seen: Set<string>): string[] {
   const problems = new Problems();
   if (
     !problems.check(
-      isJsonObject(pin) && typeof pin.keyId === 'string',
-      `pin ${JSON.stringify(pin)} has no keyId`,
+      isJsonObject(pin) && typeof pin[PIN.keyId] === 'string',
+      `pin ${JSON.stringify(pin)} has no ${PIN.keyId}`,
     )
   ) {
     return problems.list;
   }
-  const { keyId, role, status, spkiBase64 } = pin as Record<string, unknown>;
+  const fields = pin as Record<string, unknown>;
+  const keyId = fields[PIN.keyId];
+  const role = fields[PIN.role];
+  const status = fields[PIN.status];
+  const spkiBase64 = fields[PIN.spki];
   const label = `pin ${String(keyId)}`;
   problems.check(KEY_ID.test(String(keyId)), `${label}: keyId is not a key id`);
   problems.check(!seen.has(String(keyId)), `${label}: keyId is pinned twice`);
@@ -69,15 +74,15 @@ export function readKeys(keysFile: string, problems: Problems): PinnedKey[] {
   const pins: unknown = JSON.parse(readFileSync(keysFile, 'utf8'));
   if (
     !isJsonObject(pins) ||
-    pins.schema !== SCHEMA_VERSION ||
-    !Array.isArray(pins.keys)
+    pins[PIN.schema] !== SCHEMA_VERSION ||
+    !Array.isArray(pins[PIN.keys])
   ) {
     throw new BuildError(
       `${keysFile} is not a schema ${String(SCHEMA_VERSION)} pin file`,
     );
   }
   const seen = new Set<string>();
-  return (pins.keys as unknown[]).filter((pin): pin is PinnedKey => {
+  return (pins[PIN.keys] as unknown[]).filter((pin): pin is PinnedKey => {
     const found = pinProblems(pin, seen);
     for (const problem of found) problems.add(problem);
     return found.length === 0;

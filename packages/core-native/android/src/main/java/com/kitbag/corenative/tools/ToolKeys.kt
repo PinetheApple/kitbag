@@ -42,12 +42,6 @@ internal class ToolKeyRing(
     }
 
   companion object {
-    private const val SCHEMA = "schema"
-    private const val KEYS = "keys"
-    private const val KEY_ID = "keyId"
-    private const val ROLE = "role"
-    private const val STATUS = "status"
-    private const val SPKI = "spkiBase64"
     private const val KEY_ALGORITHM = "EC"
     private const val CURVE = "secp256r1"
     private val JCA_ALGORITHMS = mapOf("ES256" to "SHA256withECDSA")
@@ -60,8 +54,8 @@ internal class ToolKeyRing(
     fun parse(pinFile: String, revokedKeyIds: Set<String>, rules: ToolBundleRules): ToolKeyRing {
       val keys = try {
         val json = JSONObject(pinFile)
-        if (json.optInt(SCHEMA) != rules.schemaVersion) fail("is not a schema ${rules.schemaVersion} pin file")
-        val pins = json.getJSONArray(KEYS)
+        if (json.optInt(rules.pinSchemaField) != rules.schemaVersion) fail("is not a schema ${rules.schemaVersion} pin file")
+        val pins = json.getJSONArray(rules.pinKeysField)
         (0 until pins.length()).map { pin(pins.getJSONObject(it), rules) }
       } catch (error: JSONException) {
         fail("is not JSON: ${error.message}")
@@ -71,14 +65,14 @@ internal class ToolKeyRing(
     }
 
     private fun pin(json: JSONObject, rules: ToolBundleRules): PinnedToolKey {
-      val keyId = json.getString(KEY_ID)
+      val keyId = json.getString(rules.pinKeyIdField)
       if (!rules.keyId.matches(keyId)) fail("pin $keyId: keyId is not a key id")
-      val role = json.getString(ROLE)
+      val role = json.getString(rules.pinRoleField)
       if (role !in rules.roles) fail("pin $keyId: role must be one of ${rules.roles}")
-      val status = if (json.has(STATUS)) json.getString(STATUS) else null
+      val status = if (json.has(rules.pinStatusField)) json.getString(rules.pinStatusField) else null
       val statusOk = if (role == rules.toolRole) status != null && status in rules.statuses else status == null
       if (!statusOk) fail("pin $keyId: a tool key needs a status of ${rules.statuses}, any other key none")
-      val key = p256Key(json.getString(SPKI), rules) ?: fail("pin $keyId: spkiBase64 is not a P-256 SubjectPublicKeyInfo")
+      val key = p256Key(json.getString(rules.pinSpkiField), rules) ?: fail("pin $keyId: spkiBase64 is not a P-256 SubjectPublicKeyInfo")
       return PinnedToolKey(keyId, role, status, key)
     }
 

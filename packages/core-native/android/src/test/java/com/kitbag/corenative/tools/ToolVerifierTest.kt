@@ -4,6 +4,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ToolVerifierTest {
@@ -11,11 +12,8 @@ class ToolVerifierTest {
   private val other = TestToolKey.generate("other")
   private val ring = TestPins.ring(TestPins.tool(current, TestPins.CURRENT))
 
-  private fun verify(kbt: ByteArray, keys: ToolKeyRing = ring, use: ToolKeyUse = ToolKeyUse.INSTALL, id: String = TestTool.ID) =
-    ToolVerifier(RULES, keys).verify(kbt, id, use)
-
-  private fun rejected(kbt: ByteArray, keys: ToolKeyRing = ring, use: ToolKeyUse = ToolKeyUse.INSTALL, id: String = TestTool.ID) =
-    rejection { verify(kbt, keys, use, id) }
+  private fun verify(kbt: ByteArray, keys: ToolKeyRing = ring, use: ToolKeyUse = ToolKeyUse.INSTALL) =
+    ToolVerifier(RULES, keys).verify(kbt, TestTool.ID, use)
 
   private fun withFiles(files: List<ZipItem>, listed: List<ZipItem> = files) =
     TestTool.signed(current, TestTool.manifest(current.keyId, listed), files)
@@ -33,7 +31,7 @@ class ToolVerifierTest {
   fun `a signature by another key under a pinned key id is rejected`() {
     val bytes = TestTool.manifest(current.keyId).toString().toByteArray()
 
-    assertEquals(ToolRejection.SIGNATURE, rejected(TestTool.kbt(bytes, other.sign(bytes))))
+    assertEquals(ToolRejection.SIGNATURE, rejectedWith { verify(TestTool.kbt(bytes, other.sign(bytes))) }?.rejection)
   }
 
   @Test
@@ -41,12 +39,12 @@ class ToolVerifierTest {
     val signedBytes = TestTool.manifest(current.keyId).toString().toByteArray()
     val tampered = TestTool.manifest(current.keyId).put("name", "Tampered").toString().toByteArray()
 
-    assertEquals(ToolRejection.SIGNATURE, rejected(TestTool.kbt(tampered, current.sign(signedBytes))))
+    assertEquals(ToolRejection.SIGNATURE, rejectedWith { verify(TestTool.kbt(tampered, current.sign(signedBytes))) }?.rejection)
   }
 
   @Test
   fun `a key the pins do not hold is rejected`() {
-    assertEquals(ToolRejection.UNTRUSTED_KEY, rejected(TestTool.signed(other)))
+    assertEquals(ToolRejection.UNTRUSTED_KEY, rejectedWith { verify(TestTool.signed(other)) }?.rejection)
   }
 
   @Test
@@ -54,8 +52,8 @@ class ToolVerifierTest {
     val revoked = TestPins.ring(TestPins.tool(current, TestPins.RETIRED), revoked = setOf(current.keyId))
     val kbt = TestTool.signed(current)
 
-    assertEquals(ToolRejection.UNTRUSTED_KEY, rejected(kbt, revoked, ToolKeyUse.INSTALL))
-    assertEquals(ToolRejection.UNTRUSTED_KEY, rejected(kbt, revoked, ToolKeyUse.LOAD))
+    assertEquals(ToolRejection.UNTRUSTED_KEY, rejectedWith { verify(kbt, revoked, ToolKeyUse.INSTALL) }?.rejection)
+    assertEquals(ToolRejection.UNTRUSTED_KEY, rejectedWith { verify(kbt, revoked, ToolKeyUse.LOAD) }?.rejection)
   }
 
   @Test
@@ -63,7 +61,7 @@ class ToolVerifierTest {
     val retired = TestPins.ring(TestPins.tool(current, TestPins.RETIRED))
     val kbt = TestTool.signed(current)
 
-    assertEquals(ToolRejection.UNTRUSTED_KEY, rejected(kbt, retired, ToolKeyUse.INSTALL))
+    assertEquals(ToolRejection.UNTRUSTED_KEY, rejectedWith { verify(kbt, retired, ToolKeyUse.INSTALL) }?.rejection)
     assertEquals(TestTool.ID, verify(kbt, retired, ToolKeyUse.LOAD).id)
   }
 
@@ -81,7 +79,7 @@ class ToolVerifierTest {
     )
 
     assertEquals(TestTool.ID, verify(oldBuild, rotated, ToolKeyUse.LOAD).id)
-    assertEquals(ToolRejection.UNTRUSTED_KEY, rejected(oldBuild, rotated, ToolKeyUse.INSTALL))
+    assertEquals(ToolRejection.UNTRUSTED_KEY, rejectedWith { verify(oldBuild, rotated, ToolKeyUse.INSTALL) }?.rejection)
     assertEquals(TestTool.ID, verify(TestTool.signed(next), rotated, ToolKeyUse.INSTALL).id)
     assertEquals(TestTool.ID, verify(TestTool.signed(third), rotated, ToolKeyUse.INSTALL).id)
   }
@@ -95,7 +93,7 @@ class ToolVerifierTest {
       RULES,
     )
 
-    assertEquals(ToolRejection.UNTRUSTED_KEY, rejected(TestTool.signed(current), keys, ToolKeyUse.LOAD))
+    assertEquals(ToolRejection.UNTRUSTED_KEY, rejectedWith { verify(TestTool.signed(current), keys, ToolKeyUse.LOAD) }?.rejection)
   }
 
   @Test
@@ -103,7 +101,7 @@ class ToolVerifierTest {
     val listed = listOf(ZipItem(RULES.entryFile, TestTool.BYTECODE), ZipItem(TestTool.ASSET, "other".toByteArray()))
     val shipped = listOf(listed[0], ZipItem(TestTool.ASSET, "OTHER".toByteArray()))
 
-    assertEquals(ToolRejection.FILES, rejected(withFiles(shipped, listed)))
+    assertEquals(ToolRejection.FILES, rejectedWith { verify(withFiles(shipped, listed)) }?.rejection)
   }
 
   @Test
@@ -113,19 +111,19 @@ class ToolVerifierTest {
     asset.put("size", asset.getInt("size") + 1)
     manifest.put("size", manifest.getInt("size") + 1)
 
-    assertEquals(ToolRejection.FILES, rejected(TestTool.signed(current, manifest)))
+    assertEquals(ToolRejection.FILES, rejectedWith { verify(TestTool.signed(current, manifest)) }?.rejection)
   }
 
   @Test
   fun `an entry the manifest does not list is rejected`() {
     val extra = TestTool.files() + ZipItem("assets/extra.json", "{}".toByteArray())
 
-    assertEquals(ToolRejection.FILES, rejected(withFiles(extra, TestTool.files())))
+    assertEquals(ToolRejection.FILES, rejectedWith { verify(withFiles(extra, TestTool.files())) }?.rejection)
   }
 
   @Test
   fun `a listed file missing from the archive is rejected`() {
-    assertEquals(ToolRejection.FILES, rejected(withFiles(TestTool.files().take(1), TestTool.files())))
+    assertEquals(ToolRejection.FILES, rejectedWith { verify(withFiles(TestTool.files().take(1), TestTool.files())) }?.rejection)
   }
 
   @Test
@@ -140,8 +138,8 @@ class ToolVerifierTest {
       ) + TestTool.files(),
     )
 
-    assertEquals(ToolRejection.FILES, rejected(withFiles(doubled, TestTool.files())))
-    assertEquals(ToolRejection.FILES, rejected(doubledManifest))
+    assertEquals(ToolRejection.FILES, rejectedWith { verify(withFiles(doubled, TestTool.files())) }?.rejection)
+    assertEquals(ToolRejection.FILES, rejectedWith { verify(doubledManifest) }?.rejection)
   }
 
   @Test
@@ -150,10 +148,10 @@ class ToolVerifierTest {
     val listedEscape = TestTool.files() + escaping
     val unlisted = listOf("../evil.js", "/evil.js", "assets/../../evil.js")
 
-    assertEquals(ToolRejection.MANIFEST, rejected(withFiles(listedEscape)))
+    assertEquals(ToolRejection.MANIFEST, rejectedWith { verify(withFiles(listedEscape)) }?.rejection)
     for (name in unlisted) {
       val files = TestTool.files() + ZipItem(name, "x".toByteArray())
-      assertEquals(name, ToolRejection.FILES, rejected(withFiles(files, TestTool.files())))
+      assertEquals(name, ToolRejection.FILES, rejectedWith { verify(withFiles(files, TestTool.files())) }?.rejection)
     }
   }
 
@@ -161,7 +159,7 @@ class ToolVerifierTest {
   fun `a bundle signed for another tool id is rejected`() {
     val kbt = TestTool.signed(current, TestTool.manifest(current.keyId, id = "other"))
 
-    assertEquals(ToolRejection.WRONG_TOOL, rejected(kbt))
+    assertEquals(ToolRejection.WRONG_TOOL, rejectedWith { verify(kbt) }?.rejection)
   }
 
   @Test
@@ -170,8 +168,8 @@ class ToolVerifierTest {
 
     for (version in badVersions) {
       val manifest = TestTool.manifest(current.keyId)
-      manifest.getJSONObject("runtime").put("hermesBytecodeVersion", version)
-      assertEquals(version.toString(), ToolRejection.MANIFEST, rejected(TestTool.signed(current, manifest)))
+      manifest.getJSONObject("runtime").put(RULES.bytecodeVersionField, version)
+      assertEquals(version.toString(), ToolRejection.MANIFEST, rejectedWith { verify(TestTool.signed(current, manifest)) }?.rejection)
     }
   }
 
@@ -188,11 +186,12 @@ class ToolVerifierTest {
       { it.put("size", 1) },
       { it.put("entry", TestTool.ASSET) },
       { it.put("schema", RULES.schemaVersion + 1) },
+      { it.getJSONObject("runtime").remove(RULES.runtimePackageFields.last()) },
     )
 
     for ((index, breakIt) in breaks.withIndex()) {
       val manifest = TestTool.manifest(current.keyId).also(breakIt)
-      assertEquals("break $index", ToolRejection.MANIFEST, rejected(TestTool.signed(current, manifest)))
+      assertEquals("break $index", ToolRejection.MANIFEST, rejectedWith { verify(TestTool.signed(current, manifest)) }?.rejection)
     }
   }
 
@@ -201,6 +200,30 @@ class ToolVerifierTest {
     val manifest = TestTool.manifest(current.keyId)
     manifest.getJSONObject("signature").put("alg", "RS256")
 
-    assertEquals(ToolRejection.MANIFEST, rejected(TestTool.signed(current, manifest)))
+    assertEquals(ToolRejection.MANIFEST, rejectedWith { verify(TestTool.signed(current, manifest)) }?.rejection)
+  }
+
+  private fun signedText(text: String): ByteArray {
+    val bytes = text.toByteArray()
+    return TestTool.kbt(bytes, current.sign(bytes))
+  }
+
+  @Test
+  fun `a manifest that repeats a key is rejected by the verifier itself`() {
+    val repeated = TestTool.manifest(current.keyId).toString().replaceFirst("{", "{\"name\":\"Shadow\",")
+
+    val message = rejectedWith { verify(signedText(repeated)) }?.message
+
+    assertTrue("$message", message?.contains("repeats the key name") == true)
+  }
+
+  @Test
+  fun `a manifest with text after its object is rejected, trailing whitespace is not`() {
+    val text = TestTool.manifest(current.keyId).toString()
+
+    val message = rejectedWith { verify(signedText("$text {}")) }?.message
+
+    assertTrue("$message", message?.contains("text after its object") == true)
+    assertEquals(TestTool.ID, verify(signedText("$text\n")).id)
   }
 }

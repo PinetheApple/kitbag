@@ -13,12 +13,7 @@ const HERMESC_BIN_DIRS: Partial<Record<NodeJS.Platform, string>> = {
 const HBC_MAGIC = Buffer.from(BUNDLE_RULES.hbc.magic, 'hex');
 const HBC_VERSION_BYTES = BUNDLE_RULES.hbc.versionBytes;
 const BYTECODE_VERSION_LINE = /HBC bytecode version: (\d+)/;
-const RUNTIME_PACKAGES = {
-  reactNative: 'react-native',
-  react: 'react',
-  reanimated: 'react-native-reanimated',
-  worklets: 'react-native-worklets',
-} as const;
+const RUNTIME_PACKAGES = BUNDLE_RULES.runtimeFields.packages;
 
 export function hermescPath(): string {
   const binDir = HERMESC_BIN_DIRS[process.platform];

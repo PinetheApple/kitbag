@@ -4,6 +4,7 @@ import {
   parseConstexprInt,
   parseCString,
   parseCStringConstants,
+  parseKotlinCodeEnum,
   parseConstexprIntArray,
   parseDefineInt,
   parseDefineNumber,
@@ -185,6 +186,11 @@ export function collectConstants(sources: NativeSources): NativeConstants {
       'kEvalVerifiedToolKey',
     ),
     toolErrors: parseCStringConstants(sources.toolEvalHeader, 'kToolError'),
+    toolRejections: parseKotlinCodeEnum(
+      sources.toolRejections,
+      'ToolRejection',
+      'CODE_PREFIX',
+    ),
     toolRefusalKey: parseCString(sources.toolEvalHeader, 'kToolRefusalKey'),
     toolRefusalDetailKey: parseCString(
       sources.toolEvalHeader,

@@ -49,13 +49,13 @@ class OpenSslSignedToolTest {
 
     assertEquals(
       ToolRejection.SIGNATURE,
-      rejection { verifier.verify(TestTool.kbt(flippedManifest, signature), TestTool.ID, ToolKeyUse.INSTALL) },
+      rejectedWith { verifier.verify(TestTool.kbt(flippedManifest, signature), TestTool.ID, ToolKeyUse.INSTALL) }?.rejection,
     )
     assertEquals(
       ToolRejection.SIGNATURE,
-      rejection { verifier.verify(TestTool.kbt(manifestBytes, flippedSignature), TestTool.ID, ToolKeyUse.INSTALL) },
+      rejectedWith { verifier.verify(TestTool.kbt(manifestBytes, flippedSignature), TestTool.ID, ToolKeyUse.INSTALL) }?.rejection,
     )
-    assertEquals(ToolRejection.ZIP, rejection { verifier.verify(flippedArchive, TestTool.ID, ToolKeyUse.INSTALL) })
+    assertEquals(ToolRejection.ZIP, rejectedWith { verifier.verify(flippedArchive, TestTool.ID, ToolKeyUse.INSTALL) }?.rejection)
   }
 
   private fun flip(bytes: ByteArray, at: Int): ByteArray =

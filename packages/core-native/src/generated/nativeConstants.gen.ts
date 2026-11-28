@@ -1,4 +1,4 @@
-// GENERATED — DO NOT EDIT. Owners: native/audio_core, OutputRoutes.kt, cpp/KitbagToolEval.h (SPEC §13.7).
+// GENERATED — DO NOT EDIT. Owners: native/audio_core, OutputRoutes.kt, cpp/KitbagToolEval.h, ToolRejected.kt (SPEC §13.7).
 // Regenerate: pnpm --filter @kitbag/core-native generate
 // Verify (CI drift guard): pnpm --filter @kitbag/core-native generate:check
 //
@@ -326,3 +326,21 @@ export const KB_TOOL_ERROR = {
   eval: 'E_TOOL_EVAL',
 } as const;
 export type KB_TOOL_ERROR = (typeof KB_TOOL_ERROR)[keyof typeof KB_TOOL_ERROR];
+
+/** Codes KitbagTools.verifyInstalled rejects with (ToolRejection in ToolRejected.kt). */
+export const KB_TOOL_REJECTION = {
+  badId: 'E_TOOL_BAD_ID',
+  notInstalled: 'E_TOOL_NOT_INSTALLED',
+  zip: 'E_TOOL_ZIP',
+  manifest: 'E_TOOL_MANIFEST',
+  untrustedKey: 'E_TOOL_UNTRUSTED_KEY',
+  signature: 'E_TOOL_SIGNATURE',
+  files: 'E_TOOL_FILES',
+  wrongTool: 'E_TOOL_WRONG_TOOL',
+  pins: 'E_TOOL_PINS',
+  io: 'E_TOOL_IO',
+  handoff: 'E_TOOL_HANDOFF',
+  internal: 'E_TOOL_INTERNAL',
+  cancelled: 'E_TOOL_CANCELLED',
+} as const;
+export type KB_TOOL_REJECTION = (typeof KB_TOOL_REJECTION)[keyof typeof KB_TOOL_REJECTION];

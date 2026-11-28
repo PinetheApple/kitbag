@@ -23,6 +23,7 @@ const SHA256 = new RegExp(patterns.sha256);
 const FILE_PATH = new RegExp(patterns.filePath);
 const ROUTE = new RegExp(patterns.route);
 const ROUTE_PREFIX = BUNDLE_RULES.routePrefix;
+const { runtimeFields } = BUNDLE_RULES;
 const {
   nameMax: NAME_MAX,
   summaryMax: SUMMARY_MAX,
@@ -271,13 +272,10 @@ function checkCompatibility(m: Json, problems: Problems): void {
   );
   problems.check(
     isJsonObject(runtime) &&
-      isInt(runtime.hermesBytecodeVersion, 0) &&
-      [
-        runtime.reactNative,
-        runtime.react,
-        runtime.reanimated,
-        runtime.worklets,
-      ].every((v) => isText(v)),
+      isInt(runtime[runtimeFields.bytecodeVersion], 0) &&
+      Object.keys(runtimeFields.packages).every((field) =>
+        isText(runtime[field]),
+      ),
     'runtime needs the bytecode version and the React Native, React, Reanimated and worklets versions',
   );
 }

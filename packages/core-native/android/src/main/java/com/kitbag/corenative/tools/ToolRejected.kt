@@ -12,6 +12,8 @@ internal enum class ToolRejection {
   PINS,
   IO,
   HANDOFF,
+  INTERNAL,
+  CANCELLED,
   ;
 
   val code: String get() = "$CODE_PREFIX$name"
@@ -21,6 +23,11 @@ internal enum class ToolRejection {
   }
 }
 
-internal class ToolRejected(val rejection: ToolRejection, message: String) : Exception(message)
+internal class ToolRejected(
+  val rejection: ToolRejection,
+  message: String,
+  cause: Throwable? = null,
+) : Exception(message, cause)
 
-internal fun reject(rejection: ToolRejection, message: String): Nothing = throw ToolRejected(rejection, message)
+internal fun reject(rejection: ToolRejection, message: String, cause: Throwable? = null): Nothing =
+  throw ToolRejected(rejection, message, cause)

@@ -13,8 +13,10 @@ internal class InstalledTools(private val root: File, private val rules: ToolBun
   }
 }
 
-internal fun interface BytecodeHandOff {
+internal interface BytecodeHandOff {
   fun handOff(toolId: String, bytecode: ByteArray, bytecodeVersion: Int)
+
+  fun drop(toolId: String): Boolean
 }
 
 internal class InstalledToolLoader(
@@ -25,9 +27,24 @@ internal class InstalledToolLoader(
 ) {
   fun load(id: String) {
     val file = installed.kbtFile(id)
-    if (!file.isFile) reject(ToolRejection.NOT_INSTALLED, "$id is not installed")
-    if (file.length() > rules.inflatedMaxBytes) reject(ToolRejection.ZIP, "$id is larger than any bundle may be")
-    val tool = ToolVerifier(rules, keys()).verify(file.readBytes(), id, ToolKeyUse.LOAD)
-    handOff.handOff(tool.id, tool.bytecode, tool.bytecodeVersion)
+    try {
+      if (!file.isFile) reject(ToolRejection.NOT_INSTALLED, "$id is not installed")
+      if (file.length() > rules.inflatedMaxBytes) reject(ToolRejection.ZIP, "$id is larger than any bundle may be")
+      val tool = ToolVerifier(rules, keys()).verify(file.readBytes(), id, ToolKeyUse.LOAD)
+      handOffVerified(tool)
+    } catch (error: Throwable) {
+      handOff.drop(id)
+      throw error
+    }
+  }
+
+  private fun handOffVerified(tool: VerifiedTool) {
+    try {
+      handOff.handOff(tool.id, tool.bytecode, tool.bytecodeVersion)
+    } catch (error: RuntimeException) {
+      reject(ToolRejection.HANDOFF, "native refused ${tool.id}: ${error.message}", error)
+    } catch (error: OutOfMemoryError) {
+      reject(ToolRejection.HANDOFF, "native cannot hold ${tool.id}", error)
+    }
   }
 }

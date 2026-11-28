@@ -16,6 +16,7 @@ import {
   parseConstexprInt,
   parseCString,
   parseCStringConstants,
+  parseKotlinCodeEnum,
   parseConstexprIntArray,
   parseDefineInt,
   parseDefineNumber,
@@ -67,6 +68,14 @@ const realSources: NativeSources = {
   ),
   toolEvalHeader: readFileSync(
     join(import.meta.dirname, '..', 'cpp', 'KitbagToolEval.h'),
+    'utf8',
+  ),
+  toolRejections: readFileSync(
+    join(
+      import.meta.dirname,
+      '..',
+      'android/src/main/java/com/kitbag/corenative/tools/ToolRejected.kt',
+    ),
     'utf8',
   ),
 };
@@ -491,5 +500,38 @@ describe('collectConstants (tool evaluation)', () => {
     expect(rendered).toContain(
       "export const KB_TOOL_REFUSAL_DETAIL_KEY = 'detail';",
     );
+  });
+});
+
+describe('parseKotlinCodeEnum', () => {
+  const source =
+    'enum class Codes {\n  BAD_ID,\n  ZIP,\n  ;\n  companion object { const val PREFIX = "E_X_" }\n}';
+  it('reads every entry with the prefix, in order', () => {
+    expect(parseKotlinCodeEnum(source, 'Codes', 'PREFIX')).toEqual([
+      { name: 'BadId', value: 'E_X_BAD_ID' },
+      { name: 'Zip', value: 'E_X_ZIP' },
+    ]);
+  });
+  it('throws when the enum, its prefix or a plain entry list is missing', () => {
+    expect(() => parseKotlinCodeEnum(source, 'Other', 'PREFIX')).toThrow();
+    expect(() => parseKotlinCodeEnum(source, 'Codes', 'OTHER')).toThrow();
+    expect(() =>
+      parseKotlinCodeEnum(
+        source.replace('ZIP,', 'ZIP("z"),'),
+        'Codes',
+        'PREFIX',
+      ),
+    ).toThrow();
+  });
+});
+
+describe('collectConstants (tool rejections)', () => {
+  it('reads the Kotlin verifier codes from ToolRejected.kt', () => {
+    const c = collectConstants(realSources);
+    expect(c.toolRejections).toContainEqual({
+      name: 'UntrustedKey',
+      value: 'E_TOOL_UNTRUSTED_KEY',
+    });
+    expect(renderConstants(c)).toContain("  signature: 'E_TOOL_SIGNATURE',");
   });
 });

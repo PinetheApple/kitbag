@@ -16,6 +16,10 @@ internal object ToolZip {
   private const val DEFLATED = 8
   private const val U16_MASK = 0xffff
   private const val U32_MASK = 0xffffffffL
+  private const val RAW_DEFLATE = true
+  private const val INFLATES_SHORT = "inflates short of its declared size"
+  private const val INFLATES_PAST = "inflates past its declared size or is corrupt"
+  private const val CRC_MISMATCH = "CRC does not match"
 
   private object Local {
     const val SIGNATURE = 0x04034b50L
@@ -71,16 +75,16 @@ internal object ToolZip {
   private class Reader(private val bytes: ByteArray) {
     private val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
 
-    fun u16(at: Long): Int = buffer.getShort(index(at, Short.SIZE_BYTES.toLong())).toInt() and U16_MASK
+    fun u16(at: Long): Int = buffer.getShort(checkedIndex(at, Short.SIZE_BYTES.toLong())).toInt() and U16_MASK
 
-    fun u32(at: Long): Long = buffer.getInt(index(at, Int.SIZE_BYTES.toLong())).toLong() and U32_MASK
+    fun u32(at: Long): Long = buffer.getInt(checkedIndex(at, Int.SIZE_BYTES.toLong())).toLong() and U32_MASK
 
     fun slice(at: Long, length: Int): ByteArray {
-      val from = index(at, length.toLong())
+      val from = checkedIndex(at, length.toLong())
       return bytes.copyOfRange(from, from + length)
     }
 
-    fun index(at: Long, length: Long): Int {
+    fun checkedIndex(at: Long, length: Long): Int {
       if (at < 0 || at + length > bytes.size) fail("truncated zip")
       return at.toInt()
     }
@@ -168,26 +172,23 @@ internal object ToolZip {
   private fun inflate(bytes: ByteArray, span: Span): ByteArray {
     val entry = span.entry
     val out = ByteArray(entry.size.toInt())
-    val inflater = Inflater(true)
+    val inflater = Inflater(RAW_DEFLATE)
     try {
       inflater.setInput(bytes, span.dataAt.toInt(), entry.packedSize.toInt())
       var filled = 0
-      while (filled < out.size && !inflater.finished()) {
+      while (!inflater.finished()) {
         val read = inflater.inflate(out, filled, out.size - filled)
-        if (read == 0 && !inflater.finished()) fail("${entry.label}: inflates short of its declared size")
+        if (read == 0) break
         filled += read
       }
-      val overflows = !inflater.finished() && inflater.inflate(ByteArray(1)) > 0
-      if (overflows || !inflater.finished() || inflater.remaining != 0) {
-        fail("${entry.label}: inflates past its declared size or is corrupt")
-      }
-      if (filled != out.size) fail("${entry.label}: inflates short of its declared size")
+      if (filled != out.size) fail("${entry.label}: $INFLATES_SHORT")
+      if (!inflater.finished() || inflater.remaining != 0) fail("${entry.label}: $INFLATES_PAST")
     } catch (error: DataFormatException) {
-      fail("${entry.label}: inflates past its declared size or is corrupt")
+      fail("${entry.label}: $INFLATES_PAST")
     } finally {
       inflater.end()
     }
-    if (CRC32().apply { update(out) }.value != entry.crc) fail("${entry.label}: CRC does not match")
+    if (CRC32().apply { update(out) }.value != entry.crc) fail("${entry.label}: $CRC_MISMATCH")
     return out
   }
 

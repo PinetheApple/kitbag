@@ -8,6 +8,9 @@ internal class ToolBundleRules(json: JSONObject) {
   private val patterns = json.getJSONObject("patterns")
   private val limits = json.getJSONObject("limits")
   private val keys = json.getJSONObject("keys")
+  private val runtimeFields = json.getJSONObject("runtimeFields")
+  private val pinFields = json.getJSONObject("pinFields")
+  private val status = keys.getJSONObject("status")
 
   val schemaVersion = json.getInt("schemaVersion")
   val signatureAlg: String = json.getString("signatureAlg")
@@ -25,6 +28,15 @@ internal class ToolBundleRules(json: JSONObject) {
   val route = Regex(patterns.getString("route"))
   val routePrefix: String = json.getString("routePrefix")
   val manifestFields: Set<String> = json.getJSONArray("manifestFields").strings().toSet()
+  val bytecodeVersionField: String = runtimeFields.getString("bytecodeVersion")
+  val runtimePackageFields: List<String> = runtimeFields.getJSONObject("packages").keys().asSequence().toList()
+
+  val pinSchemaField: String = pinFields.getString("schema")
+  val pinKeysField: String = pinFields.getString("keys")
+  val pinKeyIdField: String = pinFields.getString("keyId")
+  val pinRoleField: String = pinFields.getString("role")
+  val pinStatusField: String = pinFields.getString("status")
+  val pinSpkiField: String = pinFields.getString("spki")
 
   val nameMax = limits.getInt("nameMax")
   val summaryMax = limits.getInt("summaryMax")
@@ -34,6 +46,10 @@ internal class ToolBundleRules(json: JSONObject) {
 
   val testKeyPrefix: String = keys.getString("testPrefix")
   val toolRole: String = keys.getString("toolRole")
+  val revocationRole: String = keys.getString("revocationRole")
+  val currentStatus: String = status.getString("current")
+  val nextStatus: String = status.getString("next")
+  val retiredStatus: String = status.getString("retired")
   val roles: Set<String> = keys.getJSONArray("roles").strings().toSet()
   val statuses: Set<String> = keys.getJSONArray("statuses").strings().toSet()
   val signingStatuses: Set<String> = keys.getJSONArray("signingStatuses").strings().toSet()

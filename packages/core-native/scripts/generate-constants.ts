@@ -51,6 +51,10 @@ const sources: NativeSources = {
     join(pkgRoot, 'cpp', 'KitbagToolEval.h'),
     'utf8',
   ),
+  toolRejections: readFileSync(
+    join(kotlinRoot, 'tools', 'ToolRejected.kt'),
+    'utf8',
+  ),
 };
 
 const outputs: readonly (readonly [string, string])[] = [

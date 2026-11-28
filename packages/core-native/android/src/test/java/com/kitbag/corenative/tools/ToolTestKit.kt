@@ -123,20 +123,21 @@ internal class TestToolKey private constructor(val keyId: String, private val pa
 internal class Pin(val keyId: String, val spkiBase64: String, val role: String = RULES.toolRole, val status: String?)
 
 internal object TestPins {
-  const val CURRENT = "current"
-  const val NEXT = "next"
-  const val RETIRED = "retired"
-  const val REVOCATION_ROLE = "revocation"
+  val CURRENT = RULES.currentStatus
+  val NEXT = RULES.nextStatus
+  val RETIRED = RULES.retiredStatus
+  val REVOCATION_ROLE = RULES.revocationRole
 
   fun json(vararg pins: Pin): String =
     JSONObject()
-      .put("schema", RULES.schemaVersion)
+      .put(RULES.pinSchemaField, RULES.schemaVersion)
       .put(
-        "keys",
+        RULES.pinKeysField,
         JSONArray(
           pins.map {
-            JSONObject().put("keyId", it.keyId).put("role", it.role).put("spkiBase64", it.spkiBase64)
-              .apply { if (it.status != null) put("status", it.status) }
+            JSONObject().put(RULES.pinKeyIdField, it.keyId).put(RULES.pinRoleField, it.role)
+              .put(RULES.pinSpkiField, it.spkiBase64)
+              .apply { if (it.status != null) put(RULES.pinStatusField, it.status) }
           },
         ),
       )
@@ -151,6 +152,7 @@ internal object TestTool {
   const val ID = "sample"
   const val VERSION = "1.2.3"
   const val BYTECODE_VERSION = 96
+  const val PACKAGE_VERSION = "1.0.0"
   const val ASSET = "assets/data.json"
   val BYTECODE = "not really hermes bytecode".toByteArray()
   val ASSET_DATA = "{\"notes\":[60,64,67]}".toByteArray()
@@ -170,11 +172,7 @@ internal object TestTool {
       .put("icon", id)
       .put("hostApi", JSONObject().put("major", 1).put("minMinor", 0))
       .put("host", JSONObject().put("minVersionCode", 10100).put("maxVersionCode", JSONObject.NULL).put("builtWith", "0.101.0"))
-      .put(
-        "runtime",
-        JSONObject().put("hermesBytecodeVersion", BYTECODE_VERSION).put("reactNative", "0.88.1")
-          .put("react", "19.3.0").put("reanimated", "4.7.2").put("worklets", "0.13.0"),
-      )
+      .put("runtime", runtime())
       .put("entry", RULES.entryFile)
       .put("files", listed)
       .put("size", files.sumOf { it.data.size })
@@ -183,6 +181,10 @@ internal object TestTool {
       .put("capabilities", JSONArray())
       .put("signature", JSONObject().put("alg", RULES.signatureAlg).put("keyId", keyId))
   }
+
+  fun runtime(): JSONObject =
+    JSONObject().put(RULES.bytecodeVersionField, BYTECODE_VERSION)
+      .apply { RULES.runtimePackageFields.forEach { put(it, PACKAGE_VERSION) } }
 
   fun kbt(
     manifestBytes: ByteArray,
@@ -203,18 +205,10 @@ internal object TestTool {
   fun sha256(data: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(data).joinToString("") { "%02x".format(it) }
 }
 
-internal fun rejectionMessage(block: () -> Unit): String? =
+internal fun rejectedWith(block: () -> Unit): ToolRejected? =
   try {
     block()
     null
   } catch (error: ToolRejected) {
-    error.message
-  }
-
-internal fun rejection(block: () -> Unit): ToolRejection? =
-  try {
-    block()
-    null
-  } catch (error: ToolRejected) {
-    error.rejection
+    error
   }

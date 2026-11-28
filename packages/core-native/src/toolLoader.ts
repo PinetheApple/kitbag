@@ -9,6 +9,7 @@ import {
 import {
   KB_EVAL_VERIFIED_TOOL_KEY,
   KB_TOOL_ERROR,
+  KB_TOOL_REFUSAL_KEY,
 } from './generated/nativeConstants.gen.ts';
 import { getKitbagTools } from './NativeKitbagTools';
 
@@ -25,6 +26,7 @@ export const TOOL_LOAD_CODE = {
   noEval: 'E_TOOL_NO_EVAL',
   notRegistered: 'E_TOOL_NOT_REGISTERED',
   registerThrew: 'E_TOOL_REGISTER',
+  notPlugin: 'E_TOOL_NOT_PLUGIN',
   wrongPlugin: 'E_TOOL_WRONG_PLUGIN',
 } as const;
 
@@ -49,26 +51,30 @@ export type ToolLoadResult =
   | { readonly ok: true; readonly plugin: ToolPlugin }
   | { readonly ok: false; readonly error: ToolLoadError };
 
-const TOOL_ERROR_CODES = new Set<string>(Object.values(KB_TOOL_ERROR));
-const CODE_SEPARATOR = ':';
-const registrations = new Map<string, RegisterTool>();
+type EvalVerifiedTool = (id: string) => unknown;
 
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
+const registrations = new Map<string, RegisterTool>();
+const loads = new Map<string, Promise<ToolLoadResult>>();
 
 function nativeCode(error: unknown): string {
   const code: unknown = Reflect.get(Object(error), 'code');
   return typeof code === 'string' ? code : TOOL_LOAD_CODE.unverified;
 }
 
-function evalCode(error: unknown): string {
-  const prefix = messageOf(error).split(CODE_SEPARATOR, 1)[0] ?? '';
-  return TOOL_ERROR_CODES.has(prefix) ? prefix : KB_TOOL_ERROR.eval;
+function refusalCode(result: unknown): string | undefined {
+  const code: unknown =
+    typeof result === 'object' && result !== null
+      ? Reflect.get(result, KB_TOOL_REFUSAL_KEY)
+      : undefined;
+  return typeof code === 'string' ? code : undefined;
 }
 
-function isEval(value: unknown): value is (id: string) => void {
+function isEval(value: unknown): value is EvalVerifiedTool {
   return typeof value === 'function';
+}
+
+function isPlugin(value: unknown): value is ToolPlugin {
+  return typeof value === 'object' && value !== null;
 }
 
 function installRegistry(modules: ToolRegistry['module']): void {
@@ -93,10 +99,10 @@ function crashed(
   return failed(error);
 }
 
-function evaluate(
+function evaluateBundle(
   id: string,
   options: ToolLoadOptions,
-): ToolLoadResult | RegisterTool {
+): ToolLoadResult | undefined {
   const evalVerifiedTool: unknown = Reflect.get(
     globalThis,
     KB_EVAL_VERIFIED_TOOL_KEY,
@@ -108,27 +114,25 @@ function evaluate(
   }
   registrations.clear();
   installRegistry(options.modules);
+  let result: unknown;
   try {
-    evalVerifiedTool(id);
+    result = evalVerifiedTool(id);
   } catch (error) {
     return crashed(
       options,
-      new ToolLoadError(id, TOOL_LOAD_STAGE.eval, evalCode(error), error),
+      new ToolLoadError(id, TOOL_LOAD_STAGE.eval, KB_TOOL_ERROR.eval, error),
     );
   }
+  const refusal = refusalCode(result);
+  return refusal === undefined
+    ? undefined
+    : failed(new ToolLoadError(id, TOOL_LOAD_STAGE.eval, refusal, result));
+}
+
+function takeRegistration(id: string): RegisterTool | undefined {
   const register = registrations.get(id);
   registrations.clear();
-  return (
-    register ??
-    crashed(
-      options,
-      new ToolLoadError(
-        id,
-        TOOL_LOAD_STAGE.register,
-        TOOL_LOAD_CODE.notRegistered,
-      ),
-    )
-  );
+  return register;
 }
 
 function register(
@@ -136,23 +140,22 @@ function register(
   registerTool: RegisterTool,
   options: ToolLoadOptions,
 ): ToolLoadResult {
-  let plugin: ToolPlugin;
+  const registerFailed = (code: string, cause?: unknown) =>
+    crashed(
+      options,
+      new ToolLoadError(id, TOOL_LOAD_STAGE.register, code, cause),
+    );
+  let plugin: unknown;
   try {
     plugin = registerTool(options.host);
   } catch (error) {
-    return crashed(
-      options,
-      new ToolLoadError(
-        id,
-        TOOL_LOAD_STAGE.register,
-        TOOL_LOAD_CODE.registerThrew,
-        error,
-      ),
-    );
+    return registerFailed(TOOL_LOAD_CODE.registerThrew, error);
+  }
+  if (!isPlugin(plugin)) {
+    return registerFailed(TOOL_LOAD_CODE.notPlugin, plugin);
   }
   if (plugin.id !== id) {
-    return crashed(
-      options,
+    return failed(
       new ToolLoadError(
         id,
         TOOL_LOAD_STAGE.register,
@@ -163,7 +166,7 @@ function register(
   return { ok: true, plugin };
 }
 
-export async function loadTool(
+async function load(
   id: string,
   options: ToolLoadOptions,
 ): Promise<ToolLoadResult> {
@@ -174,8 +177,31 @@ export async function loadTool(
       new ToolLoadError(id, TOOL_LOAD_STAGE.verify, nativeCode(error), error),
     );
   }
-  const evaluated = evaluate(id, options);
-  return typeof evaluated === 'function'
-    ? register(id, evaluated, options)
-    : evaluated;
+  const evalFailure = evaluateBundle(id, options);
+  if (evalFailure !== undefined) return evalFailure;
+  const registerTool = takeRegistration(id);
+  return registerTool === undefined
+    ? failed(
+        new ToolLoadError(
+          id,
+          TOOL_LOAD_STAGE.register,
+          TOOL_LOAD_CODE.notRegistered,
+        ),
+      )
+    : register(id, registerTool, options);
+}
+
+// Hermes cannot unload evaluated code, so a loaded tool is reused, never re-evaluated.
+export function loadTool(
+  id: string,
+  options: ToolLoadOptions,
+): Promise<ToolLoadResult> {
+  const existing = loads.get(id);
+  if (existing !== undefined) return existing;
+  const loading = load(id, options).then((result) => {
+    if (!result.ok) loads.delete(id);
+    return result;
+  });
+  loads.set(id, loading);
+  return loading;
 }

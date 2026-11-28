@@ -24,6 +24,23 @@
     "magic": "c61fbc03c103191f",
     "versionBytes": 4
   },
+  "runtimeFields": {
+    "bytecodeVersion": "hermesBytecodeVersion",
+    "packages": {
+      "reactNative": "react-native",
+      "react": "react",
+      "reanimated": "react-native-reanimated",
+      "worklets": "react-native-worklets"
+    }
+  },
+  "pinFields": {
+    "schema": "schema",
+    "keys": "keys",
+    "keyId": "keyId",
+    "role": "role",
+    "status": "status",
+    "spki": "spkiBase64"
+  },
   "manifestFields": [
     "schema",
     "id",
@@ -54,10 +71,16 @@
   "keys": {
     "testPrefix": "test-",
     "toolRole": "tools",
+    "revocationRole": "revocation",
     "roles": [
       "tools",
       "revocation"
     ],
+    "status": {
+      "current": "current",
+      "next": "next",
+      "retired": "retired"
+    },
     "statuses": [
       "current",
       "next",
