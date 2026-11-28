@@ -3,7 +3,6 @@ import type { PlayOrderRoutes } from '@kitbag/core-plugin-api';
 import { useLiveStemPlayer } from '@kitbag/core-state';
 import { useMemo } from 'react';
 
-
 export function usePlayerRoutes(
   onOpenStemSet: (stemSetId: number) => void,
   onOpenSong: (songId: number) => void,

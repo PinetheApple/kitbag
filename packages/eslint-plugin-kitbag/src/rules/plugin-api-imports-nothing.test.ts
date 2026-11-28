@@ -20,7 +20,10 @@ ruleTester.run('plugin-api-imports-nothing', pluginApiImportsNothing, {
     // and may import react.
     { code: "import { start } from '@kitbag/core-native';", filename: STATE },
     { code: "import type { ReactNode } from 'react';", filename: STATE },
-    { code: "import type { ComponentType } from 'react';", filename: PLUGIN_API },
+    {
+      code: "import type { ComponentType } from 'react';",
+      filename: PLUGIN_API,
+    },
     {
       code: "import type { SharedValue } from 'react-native-reanimated';",
       filename: PLUGIN_API,

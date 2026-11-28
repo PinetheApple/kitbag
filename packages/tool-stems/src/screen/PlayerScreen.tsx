@@ -75,7 +75,6 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-
 interface PlayerTabsProps {
   readonly label: string;
   readonly picked: Tab;
