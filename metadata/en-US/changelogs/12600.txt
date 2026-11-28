@@ -1,0 +1,1 @@
+• Stem songs with no beat grid can now get a tempo by hand too, the same way as songs.
