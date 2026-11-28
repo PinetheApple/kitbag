@@ -1,4 +1,7 @@
-import type { SourceCredit } from './tempoLadder/sources.ts';
+export interface SourceCredit {
+  readonly name: string;
+  readonly url: string;
+}
 
 export function creditLinkText({ url }: Pick<SourceCredit, 'url'>): string {
   return url.replace(/^https?:\/\//, '');

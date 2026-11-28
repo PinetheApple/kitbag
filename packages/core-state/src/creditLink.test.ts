@@ -1,7 +1,8 @@
 import { expect, it } from 'vitest';
 
 import { creditLinkText } from './creditLink.ts';
-import { BPM_SOURCE_CREDIT } from './tempoLadder/sources.ts';
+
+const CREDIT = { name: 'Example BPM', url: 'https://bpm.example.com' };
 
 it.each([
   ['https://getsongbpm.com', 'getsongbpm.com'],
@@ -10,6 +11,6 @@ it.each([
   expect(creditLinkText({ url })).toBe(shown);
 });
 
-it('shows the GetSongBPM credit as its site', () => {
-  expect(creditLinkText(BPM_SOURCE_CREDIT.getsongbpm)).toBe('getsongbpm.com');
+it('shows a credit as its site', () => {
+  expect(creditLinkText(CREDIT)).toBe('bpm.example.com');
 });
