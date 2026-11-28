@@ -1741,10 +1741,10 @@ manifest that knows two and is consumed by nothing. Do not port that generator.
 **Kitbag keeps one registry**, `HOME_TOOLS`: the compiled-in tools plus, on the
 `github` build, the downloaded tools, listed from their verified manifests
 without evaluating their code (§9.5). Home, Settings and the router read only it.
-Tools are not a fixed set, so one generator is allowed: `compiledTools.ts` in
-`src/app`, the static imports of every tool package that the `fdroid` and debug
-builds compile in. `HOME_TOOLS` is built from it in `src/app`, never kept as a
-second list. It is hand-written until #732 generates it; from then
+Tools are not a fixed set, so one generator is allowed: `src/compiledTools.ts`,
+outside `src/app` because every file there becomes an expo-router route: the
+static imports of every tool package that the `fdroid` and debug builds compile
+in. `HOME_TOOLS` is built from it, never kept as a second list. It is hand-written until #732 generates it; from then
 `generate:check` drift-checks it like every generated file, and no guard is
 loosened meanwhile.
 
@@ -2440,7 +2440,7 @@ Flutter ones, because §9.4 was never about Dart.
 
 | Package | Role | May import |
 |---|---|---|
-| `app-shell` | Expo entrypoint, router, plugin registry, home hub, the `ToolHost` object, the listening UI | everything; only `src/app` (and `runtime/transportRuntime.ts`, for the Metronome) imports tool packages |
+| `app-shell` | Expo entrypoint, router, plugin registry, home hub, the `ToolHost` object, the listening UI | everything; only `src/app`, `src/compiledTools.ts` and `runtime/transportRuntime.ts` (for the Metronome) import tool packages |
 | `core-plugin-api` | Abstract plugin contract and `ToolHost` — types only | nothing |
 | `core-native` | **The only** package that touches JSI/TurboModules | `core-plugin-api` |
 | `core-state` | Zustand stores, tool-owned ones through `createToolStore` (§13.4); the concrete DI layer | `core-native`, `core-db`, `core-plugin-api` |
