@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { pressHardwareBack } from '../testing/reactNativeHosts.ts';
+import { pressHardwareBack } from '@kitbag/core-state/src/testing/reactNativeHosts.ts';
 import {
   CLOSE,
   DIALOG_TITLE,
