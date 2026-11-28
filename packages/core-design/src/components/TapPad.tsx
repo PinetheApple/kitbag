@@ -51,14 +51,16 @@ const useStyles = createThemedStyles((theme) => ({
     borderColor: theme.color.line,
   },
   lit: { backgroundColor: theme.color.accent, borderColor: theme.color.accent },
+  out: { borderColor: theme.color.amber },
 }));
 
 export interface TapLedsProps {
   readonly landed: number;
   readonly total: number;
+  readonly out?: number;
 }
 
-export function TapLeds({ landed, total }: TapLedsProps) {
+export function TapLeds({ landed, total, out = 0 }: TapLedsProps) {
   const styles = useStyles();
   return (
     <View
@@ -67,7 +69,14 @@ export function TapLeds({ landed, total }: TapLedsProps) {
       style={styles.leds}
     >
       {Array.from({ length: total }, (_u, index) => (
-        <View key={index} style={[styles.led, index < landed && styles.lit]} />
+        <View
+          key={index}
+          style={
+            index >= landed && index < landed + out
+              ? [styles.led, styles.out]
+              : [styles.led, index < landed && styles.lit]
+          }
+        />
       ))}
     </View>
   );
