@@ -35,6 +35,10 @@ export interface ToolDataRepository {
 
 const utf8 = new TextEncoder();
 
+export function utf8ByteLength(text: string): number {
+  return utf8.encode(text).byteLength;
+}
+
 function isJson(value: string): boolean {
   try {
     JSON.parse(value);
@@ -52,9 +56,9 @@ export function checkToolDataWrite(
   if (toolId === '' || key === '') throw new ToolDataRejected('emptyId');
   if (!TOOL_ID_PATTERN.test(toolId))
     throw new ToolDataRejected('invalidToolId');
-  if (utf8.encode(key).byteLength > MAX_TOOL_DATA_KEY_BYTES)
+  if (utf8ByteLength(key) > MAX_TOOL_DATA_KEY_BYTES)
     throw new ToolDataRejected('keyTooLong');
-  if (utf8.encode(value).byteLength > MAX_TOOL_DATA_VALUE_BYTES)
+  if (utf8ByteLength(value) > MAX_TOOL_DATA_VALUE_BYTES)
     throw new ToolDataRejected('tooLarge');
   if (!isJson(value)) throw new ToolDataRejected('invalidJson');
 }

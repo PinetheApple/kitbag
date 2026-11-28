@@ -50,7 +50,12 @@ export const toolsManager = {
   introH: 2,
   noteV: 10,
   noteH: 12,
+  pointIconTop: 3,
 } as const;
+
+export const toolsManagerText = {
+  headline: { family: fontFamily.display, weight: 500, size: 22 },
+} as const satisfies Record<string, TypeRole>;
 
 export const dataFolder = {
   volumeRowMinHeight: 58,

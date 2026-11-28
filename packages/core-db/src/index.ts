@@ -71,6 +71,7 @@ export {
   MAX_TOOL_DATA_KEY_BYTES,
   MAX_TOOL_DATA_VALUE_BYTES,
   ToolDataRejected,
+  utf8ByteLength,
   type ToolData,
   type ToolDataEntry,
   type ToolDataRejection,

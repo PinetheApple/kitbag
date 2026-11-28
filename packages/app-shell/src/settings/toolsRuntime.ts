@@ -1,4 +1,6 @@
+import { nativeToolInstaller } from '@kitbag/core-native';
 import {
+  configureToolInstall,
   configureToolsPersistence,
   getPlayAlongStore,
   getToolsStore,
@@ -21,6 +23,11 @@ configureToolsPersistence(
     BUILT_TOOL_IDS,
   ),
 );
+
+configureToolInstall({
+  native: nativeToolInstaller(),
+  toolData: getDatabase().toolData,
+});
 
 stopWhenSwitchedOff(
   getToolsStore(),

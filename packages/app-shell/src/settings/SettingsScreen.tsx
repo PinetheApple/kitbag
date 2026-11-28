@@ -13,11 +13,18 @@ import {
   type SegmentOption,
 } from '@kitbag/core-design';
 import { backupFilesAvailable, getAppVersion } from '@kitbag/core-native';
-import { useAppearance, useTools, type ThemeChoice } from '@kitbag/core-state';
+import {
+  useAppearance,
+  useToolCatalogue,
+  useToolInstall,
+  type ThemeChoice,
+} from '@kitbag/core-state';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BUILT_TOOL_IDS } from '../home/registry.ts';
 import { LICENCE_NAME, LICENCE_URL } from './about.ts';
 import { formatAppVersion } from './appVersion.ts';
 import { BackUpRow, RestoreRow } from './BackupRows.tsx';
@@ -42,7 +49,7 @@ import {
 } from './storageSheetFlow.ts';
 import { STORAGE_LABEL, storageSummary } from './storageText.ts';
 import { usePracticeStats } from './usePracticeStats.ts';
-import { TOOLS_TITLE, toolsOnSummary } from './toolsText.ts';
+import { TOOLS_TITLE, toolsRowSummary } from './toolsText.ts';
 import { useNotificationRow } from './useNotificationRow.ts';
 import { useDataFolderSheets } from './useDataFolderSheets.ts';
 import { useStorage } from './useStorage.ts';
@@ -71,7 +78,15 @@ function PracticeValue() {
 }
 
 function ToolsSection({ onOpenTools }: { readonly onOpenTools: () => void }) {
-  const summary = toolsOnSummary(useTools((s) => s.off));
+  const { counts } = useToolCatalogue(BUILT_TOOL_IDS);
+  const downloads = useToolInstall((s) => s.downloads);
+  const refresh = useToolInstall((s) => s.refresh);
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
+  const summary = toolsRowSummary(counts, downloads);
   return (
     <>
       <SectionHeader label={TOOLS_TITLE} />

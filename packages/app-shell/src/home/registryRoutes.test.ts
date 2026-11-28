@@ -20,6 +20,8 @@ const SHELL_ROUTES: readonly string[] = [
   '/settings/calibrate',
   '/settings/restore',
   '/settings/tools',
+  '/settings/tools/[id]',
+  '/settings/tool-downloads',
 ];
 
 type ToolKey = keyof typeof TOOL_ID;

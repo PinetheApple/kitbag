@@ -102,6 +102,7 @@ export const iconGlyphs = {
   queue: 'playlist-play',
   info: 'information-outline',
   spokenAudio: 'podcast',
+  wifiOff: 'wifi-off',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;
