@@ -660,6 +660,24 @@ export {
 } from './playAlong/phase.ts';
 export { UNLOCK_REASON, type UnlockReason } from './playAlong/lockOutcome.ts';
 export {
+  BEAT_SOURCE,
+  TAP_LOCK_MISS,
+  TAP_LOCK_WINDOW,
+  TAP_OUTLIER_MS,
+  type BeatSource,
+  type TapLockMiss,
+  type TapLockResult,
+  type TapOffset,
+} from './playAlong/tapLock.ts';
+export {
+  TAP_STEP,
+  TAPS_CLEARED,
+  type TapAlong,
+  type TappedTempo,
+  type TapStep,
+  type TempoChoice,
+} from './playAlong/tapAlongState.ts';
+export {
   SAVE_REFUSAL,
   type SaveOutcome,
   type SaveRefusal,

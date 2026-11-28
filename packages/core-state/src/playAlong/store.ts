@@ -58,6 +58,13 @@ import {
 } from './trackPreset.ts';
 import { songTempo } from './songTempo.ts';
 import { findSession, trackOf, type PlayAlongTrack } from './track.ts';
+import { tapAlongActions } from './tapAlongActions.ts';
+import {
+  NO_TAPS,
+  type TapAlongActions,
+  type TapAlongState,
+  type TappedTempo,
+} from './tapAlongState.ts';
 
 export type { PlayAlongTrack } from './track.ts';
 export {
@@ -80,10 +87,16 @@ export interface PlayAlongLock extends LockPhase {
   readonly bpm: number;
   readonly lockedAtBoottimeMs: number;
   readonly grid: DetectedGrid | undefined;
+  readonly tapped?: TappedTempo | undefined;
 }
 
 export interface PlayAlongState
-  extends LibraryOfferState, ClickAloneState, PhaseState, TrackPresetState {
+  extends
+    LibraryOfferState,
+    ClickAloneState,
+    PhaseState,
+    TrackPresetState,
+    TapAlongState {
   readonly pattern: PlayAlongPattern;
   readonly bpm: number | undefined;
   readonly lock: PlayAlongLock | undefined;
@@ -99,7 +112,8 @@ export interface PlayAlongActions
     LibraryOfferActions,
     ClickAloneActions,
     PhaseActions,
-    TrackPresetActions {
+    TrackPresetActions,
+    TapAlongActions {
   readonly setBpm: (bpm: number) => void;
   readonly halveBpm: () => void;
   readonly doubleBpm: () => void;
@@ -223,6 +237,7 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
     );
     const click = clickAlone(runtime, access, slot);
     const follow = follower(runtime, access, slot, () => {
+      taps.reset();
       presets.unlocked();
       offers.refresh();
       tempo.resync();
@@ -247,13 +262,23 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
       follow.anchor();
     };
     const tempo = songTempo(runtime, access, showBpm);
-    const phase = phaseActions(access, follow.anchor, follow.heardSpeed);
+    const { moveDownbeat, ...phase } = phaseActions(
+      access,
+      follow.anchor,
+      follow.heardSpeed,
+    );
     const presets = trackPresets(runtime, access);
     const lockOn: typeof follow.lockOn = (seen, lock) => {
+      taps.reset();
       follow.lockOn(seen, lock);
       const { savedPhaseMs } = access.getState();
       if (savedPhaseMs !== undefined) phase.setPhaseOffset(savedPhaseMs);
     };
+    const taps = tapAlongActions(runtime, access, {
+      lockOn,
+      showBpm,
+      moveDownbeat,
+    });
     const setBpm = (bpm: number) => {
       if (!Number.isFinite(bpm)) return;
       const next = clamp(bpm, BPM_BOUNDS.min, BPM_BOUNDS.max);
@@ -289,6 +314,8 @@ const playAlong = configuredStore<PlayAlongRuntime, PlayAlongStore>(
       phaseStepMs: DEFAULT_PHASE_STEP_MS,
       latencyOffsetMs: initialConfig().latencyOffset,
       ...NO_LOCK_STATE,
+      tapAlong: NO_TAPS,
+      ...taps.actions,
       setBpm,
       halveBpm: stepBpm(halvedBpm),
       doubleBpm: stepBpm(doubledBpm),

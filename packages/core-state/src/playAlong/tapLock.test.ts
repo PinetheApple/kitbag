@@ -1,7 +1,7 @@
 import { TEMPO_MAX_BPM, TEMPO_MIN_BPM } from '@kitbag/core-db';
-import { TAPS_TO_SET_TEMPO } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
+import { TAPS_TO_SET_TEMPO } from '../tapTempo/tapTempo.ts';
 import {
   BEAT_SOURCE,
   downbeatForBeat,

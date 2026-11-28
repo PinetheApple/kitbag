@@ -1,13 +1,9 @@
-import { TEMPO_MAX_BPM, TEMPO_MIN_BPM } from '@kitbag/core-db';
-import {
-  beatSeconds,
-  circularCentre,
-  mean,
-  median,
-  MS_PER_SECOND,
-  positiveMod,
-  TAPS_TO_SET_TEMPO,
-} from '@kitbag/core-state';
+import { MS_PER_SECOND, TEMPO_MAX_BPM, TEMPO_MIN_BPM } from '@kitbag/core-db';
+
+import { positiveMod } from '../metronome/config.ts';
+import { circularCentre, mean, median } from '../rig/calibrationStats.ts';
+import { TAPS_TO_SET_TEMPO } from '../tapTempo/tapTempo.ts';
+import { beatSeconds } from './position.ts';
 
 export const TAP_LOCK_WINDOW = 8;
 export const TAP_OUTLIER_MS = 60;
@@ -60,6 +56,11 @@ export interface TapLockRefused {
 
 export type TapLockResult = TapLocked | TapLockRefused;
 
+export interface TapOffset {
+  readonly ms: number;
+  readonly kept: boolean;
+}
+
 interface Inliers {
   readonly centre: number;
   readonly isKept: readonly boolean[];
@@ -98,7 +99,7 @@ interface PhaseFit {
 const nearest = (ms: number, anchorMs: number, stepMs: number): number =>
   anchorMs + stepMs * Math.round((ms - anchorMs) / stepMs);
 
-const beatLengthMs = (bpm: number, denominator: number): number =>
+export const beatLengthMs = (bpm: number, denominator: number): number =>
   beatSeconds(bpm, denominator) * MS_PER_SECOND;
 
 const bpmFromBeatMs = (beatMs: number, denominator: number): number =>
@@ -284,3 +285,26 @@ export const downbeatForBeat = (
 
 export const downbeatFromTap = (grid: BeatGrid, songMsTap: number): number =>
   nearest(songMsTap, grid.anchorMs, grid.gridMs);
+
+function offsetStep(taps: readonly number[], song: SongTempo): number {
+  const step = tapStep(taps);
+  if (song.bpm === null) return step;
+  const beatMs = beatLengthMs(song.bpm, song.denominator);
+  const grids = TAPS_PER_SONG_BEAT.map((perBeat) => beatMs / perBeat);
+  return grids.reduce((best, grid) =>
+    Math.abs(grid - step) < Math.abs(best - step) ? grid : best,
+  );
+}
+
+export function tapOffsets(
+  songMsTaps: readonly number[],
+  song: SongTempo,
+): TapOffset[] {
+  const taps = songMsTaps.slice(-TAP_LOCK_WINDOW);
+  const stepMs = taps.length > 1 ? offsetStep(taps, song) : Number.NaN;
+  if (!(stepMs > 0)) return taps.map(() => ({ ms: 0, kept: true }));
+  const reference = circularCentre(taps, stepMs);
+  const raw = taps.map((t) => t - nearest(t, reference, stepMs));
+  const { centre, isKept } = inliersNearMedian(raw);
+  return raw.map((ms, i) => ({ ms: ms - centre, kept: isKept[i] ?? false }));
+}
