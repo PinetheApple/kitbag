@@ -11,6 +11,7 @@ import type {
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { fileRemovals } from './logic.ts';
+import { finishHeldSongDeletions } from './heldSongFiles.ts';
 import { cleanName } from '../names.ts';
 import { resultRecord } from './analysisRecord.ts';
 import { documentImports, isBatch } from './importBatch.ts';
@@ -40,11 +41,8 @@ import {
   type BundleRefusal,
   type ReplaceChoice,
 } from './stemBundleLogic.ts';
-import {
-  importTracker,
-  sweepOrphanedStemFolders,
-  type ImportTracker,
-} from './stemFolderSweep.ts';
+import { fileWorkTracker, type FileWorkTracker } from './fileWork.ts';
+import { sweepOrphanedStemFolders } from './stemFolderSweep.ts';
 import {
   deleteLeftovers,
   enqueue,
@@ -189,9 +187,9 @@ function importActions(
   deps: SongLibraryDeps,
   set: SetState,
   get: Get,
-  imports: ImportTracker,
+  fileWork: FileWorkTracker,
 ) {
-  const bundles = stemBundleActions(deps, set, get, imports);
+  const bundles = stemBundleActions(deps, set, get, fileWork);
   const importEach = documentImports(deps, set, get, bundles.importBundle);
   let busy: Promise<void> | null = null;
   const hold = () => {
@@ -257,7 +255,7 @@ function importActions(
 function analysisActions(
   deps: SongLibraryDeps,
   get: Get,
-  imports: ImportTracker,
+  fileWork: FileWorkTracker,
   queue: OutdatedGridQueue,
   refreshAvailability: () => Promise<void>,
 ) {
@@ -305,7 +303,8 @@ function analysisActions(
     await analyzeUnfinished();
     await refreshAvailability();
     await queue.resume();
-    await sweepOrphanedStemFolders(deps, get, imports);
+    await sweepOrphanedStemFolders(deps, get, fileWork);
+    await finishHeldSongDeletions(deps, get, fileWork);
     await fitUntimedStemSets(deps);
     return () => {
       stopResults();
@@ -335,9 +334,10 @@ function rowActions(
   set: SetState,
   get: Get,
   queue: OutdatedGridQueue,
+  fileWork: FileWorkTracker,
 ) {
   return {
-    ...rowDeletion(deps, set, get, queue),
+    ...rowDeletion(deps, set, get, queue, fileWork),
     renameRow: async (row: LibraryRow, name: string) => {
       const title = cleanName(name);
       if (title === null || title === row.title) return;
@@ -368,7 +368,7 @@ export function createSongLibraryStore(
   deps: SongLibraryDeps = defaultDeps,
 ): StoreApi<SongLibraryStore> {
   return createStore<SongLibraryStore>((set, get) => {
-    const imports = importTracker();
+    const fileWork = fileWorkTracker();
     const queue = outdatedGridQueue(deps, get);
     const refreshAvailability = availabilityRefresher(deps, set, async () => {
       await get().analyzeUnfinished();
@@ -377,9 +377,9 @@ export function createSongLibraryStore(
     return {
       ...INITIAL,
       ...readActions(deps, set, get),
-      ...importActions(deps, set, get, imports),
-      ...analysisActions(deps, get, imports, queue, refreshAvailability),
-      ...rowActions(deps, set, get, queue),
+      ...importActions(deps, set, get, fileWork),
+      ...analysisActions(deps, get, fileWork, queue, refreshAvailability),
+      ...rowActions(deps, set, get, queue, fileWork),
       ...songGridSaves(deps, get),
     };
   });

@@ -49,6 +49,10 @@ export interface LibraryFiles {
   readonly onDataFolderChanged: (listener: () => void) => () => void;
 }
 
+export type SongFileRecord = Awaited<
+  ReturnType<SongLibraryRepository['listSongFiles']>
+>[number];
+
 export type SongLibraryRecords = Pick<
   SongLibraryRepository,
   | 'list'
@@ -59,6 +63,8 @@ export type SongLibraryRecords = Pick<
   | 'applyAnalysis'
   | 'deleteSong'
   | 'restoreSong'
+  | 'releaseSongFiles'
+  | 'listHeldSongFiles'
   | 'deleteStemSet'
   | 'findStemSetByJobId'
   | 'findStemSetMatches'

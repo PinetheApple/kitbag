@@ -1,11 +1,11 @@
-import type { LibraryRow } from '@kitbag/core-db';
+import type { LibraryRow, QueuedSong } from '@kitbag/core-db';
 import type { StoreApi } from 'zustand/vanilla';
 
 import type { LibraryStore } from '../library/store.ts';
 import { rowKey } from '../songLibrary/rowKey.ts';
 import type { SongLibraryStore } from '../songLibrary/store.ts';
 import { moveOffDeleted } from './deletedSong.ts';
-import { heardStore, type HeardState } from './heard.ts';
+import { heardStore, type HeardSong, type HeardState } from './heard.ts';
 import { repeatStore, type RepeatState } from './repeat.ts';
 import { shownPlayer, type ShownPlayer } from './shownPlayer.ts';
 import type { PlayOrderStore } from './store.ts';
@@ -49,13 +49,72 @@ function rereadStores(
   ]);
 }
 
-function forget({ heard, repeat }: RemovalFollowers, kept: Set<string>): void {
-  heard.setState({
-    heard: heard.getState().heard.filter(({ song }) => kept.has(rowKey(song))),
-  });
-  repeat.setState({
-    played: repeat.getState().played.filter((song) => kept.has(rowKey(song))),
-  });
+interface Dropped<T> {
+  readonly before: readonly T[];
+  readonly after: readonly T[];
+}
+
+interface Forgotten {
+  readonly heard: Dropped<HeardSong> | null;
+  readonly played: Dropped<QueuedSong> | null;
+}
+
+function dropped<T>(before: readonly T[], keep: (entry: T) => boolean) {
+  return { before, after: before.filter(keep) };
+}
+
+function appendedTo<T>(next: readonly T[], prev: readonly T[]): boolean {
+  if (next === prev) return true;
+  const grew = next.length > prev.length;
+  return grew && prev.every((entry, at) => next[at] === entry);
+}
+
+function restored<T>(
+  { before, after }: Dropped<T>,
+  current: readonly T[],
+  returning: (entry: T) => boolean,
+): readonly T[] {
+  const left = new Set(after);
+  const back = before.filter((entry) => left.has(entry) || returning(entry));
+  return [...back, ...current.slice(after.length)];
+}
+
+function forget(
+  { heard, repeat }: RemovalFollowers,
+  kept: Set<string>,
+): Forgotten {
+  const forgotten = {
+    heard: dropped(heard.getState().heard, ({ song }) =>
+      kept.has(rowKey(song)),
+    ),
+    played: dropped(repeat.getState().played, (song) => kept.has(rowKey(song))),
+  };
+  heard.setState({ heard: forgotten.heard.after });
+  repeat.setState({ played: forgotten.played.after });
+  return forgotten;
+}
+
+function remember(
+  { heard, repeat }: RemovalFollowers,
+  forgotten: Forgotten,
+  key: string,
+): void {
+  if (forgotten.heard !== null)
+    heard.setState({
+      heard: restored(
+        forgotten.heard,
+        heard.getState().heard,
+        ({ song }) => rowKey(song) === key,
+      ),
+    });
+  if (forgotten.played !== null)
+    repeat.setState({
+      played: restored(
+        forgotten.played,
+        repeat.getState().played,
+        (song) => rowKey(song) === key,
+      ),
+    });
 }
 
 export function bindLibraryRemovals(
@@ -65,7 +124,17 @@ export function bindLibraryRemovals(
   follow: RemovalFollowers = followers,
 ): () => void {
   let undoing: string | null = null;
-  return songs.subscribe((next, prev) => {
+  let forgotten: Forgotten | null = null;
+  // Anything but an append starts a new history or round the song was never in.
+  const stopHeard = follow.heard.subscribe((next, prev) => {
+    if (forgotten !== null && !appendedTo(next.heard, prev.heard))
+      forgotten = { ...forgotten, heard: null };
+  });
+  const stopPlayed = follow.repeat.subscribe((next, prev) => {
+    if (forgotten !== null && !appendedTo(next.played, prev.played))
+      forgotten = { ...forgotten, played: null };
+  });
+  const stopSongs = songs.subscribe((next, prev) => {
     if (prev.deletedSong !== null && next.deletedSong === null)
       undoing = rowKey({ kind: 'song', id: prev.deletedSong.song.row.id });
     if (next.rows === prev.rows) return;
@@ -73,12 +142,15 @@ export function bindLibraryRemovals(
     const had = rowKeys(prev.rows);
     if (!lostAny(had, kept)) {
       if (undoing !== null && kept.has(undoing)) {
+        const restoring = forgotten;
+        forgotten = null;
+        if (restoring !== null) remember(follow, restoring, undoing);
         undoing = null;
         void rereadStores(library, order);
       }
       return;
     }
-    forget(follow, kept);
+    forgotten = forget(follow, kept);
     const shown = follow.player.shown();
     const gone = shown !== null && lostNow(had, kept, rowKey(shown));
     const wasPlaying = gone && follow.player.pauseIfSounding(shown.kind);
@@ -88,4 +160,9 @@ export function bindLibraryRemovals(
       moveOffDeleted(follow.player, shown, wasPlaying);
     });
   });
+  return () => {
+    stopSongs();
+    stopHeard();
+    stopPlayed();
+  };
 }
