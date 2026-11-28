@@ -1,0 +1,1 @@
+• Songs deleted just before Kitbag was closed no longer leave their audio files on the phone, and undoing a song delete keeps its place in what you've heard.
