@@ -4,10 +4,16 @@ import { stem } from '@kitbag/core-state/src/stemPlayer/store.test-helper.ts';
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { display } from '../testing/reactNativeHosts.ts';
-import { PlayerMenu, VALUE_STACKED_ID } from './PlayerMenu.tsx';
-import { PER_STEM_STACKED_ID, SpeedKeySheet } from './SpeedKeySheet.tsx';
-import { STACKED_ID } from './StemKeyRows.tsx';
+import { display } from '@kitbag/core-state/src/testing/reactNativeHosts.ts';
+import {
+  PlayerMenu,
+  VALUE_STACKED_ID,
+} from '@kitbag/tool-stems/src/screen/PlayerMenu.tsx';
+import {
+  PER_STEM_STACKED_ID,
+  SpeedKeySheet,
+} from '@kitbag/tool-stems/src/screen/SpeedKeySheet.tsx';
+import { STACKED_ID } from '@kitbag/tool-stems/src/screen/StemKeyRows.tsx';
 import {
   flush,
   mountPlayer,

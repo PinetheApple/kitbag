@@ -31,9 +31,9 @@ import {
   installFakeRuntime,
   SET_ID,
 } from './playerHarness.test-helper.tsx';
-import { StemPlayerScreen } from './StemPlayerScreen.tsx';
-import { WAVEFORM_BARS } from './StemRowView.tsx';
-import { NO_GRID_REASON } from '../logic/meterEdit.ts';
+import { StemPlayerScreen } from '@kitbag/tool-stems/src/screen/StemPlayerScreen.tsx';
+import { WAVEFORM_BARS } from '@kitbag/tool-stems/src/screen/StemRowView.tsx';
+import { NO_GRID_REASON } from '@kitbag/tool-stems/src/logic/meterEdit.ts';
 
 const VIEWED = SET_ID + 1;
 const VIEWED_TITLE = 'Way Maker';
