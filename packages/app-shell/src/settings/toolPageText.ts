@@ -10,10 +10,10 @@ import {
 } from '@kitbag/core-state';
 
 import { formatBytes, formatBytesOf } from './bytes.ts';
+import { PERCENT } from './dataFolderText.ts';
 import { INSTALLED_CARD, type PageCard } from './toolPageModel.ts';
-import { joined } from './toolsText.ts';
+import { joined, NOT_INSTALLED } from './toolsText.ts';
 
-export const NOT_INSTALLED_BADGE = 'Not installed';
 export const INSTALLED_BADGE = 'Installed';
 export const ON_THIS_PHONE_LABEL = 'On this phone';
 export const DETAILS_LABEL = 'Details';
@@ -36,7 +36,6 @@ export const DOWNLOADING = 'Downloading';
 export const CHECKING = 'Checking the signature';
 export const THEN_INSTALLING = 'Then installing';
 export const INSTALLING = 'Installing';
-export const CANCEL = 'Cancel';
 export const TRY_AGAIN = 'Try again';
 export const OPEN_NOW = 'Open now';
 export const DONE = 'Done';
@@ -61,8 +60,6 @@ export function builtForValue(hostVersionName: string): string {
 export function installLabel(sizeBytes: number): string {
   return joined('Install', formatBytes(sizeBytes));
 }
-
-const PERCENT = 100;
 
 export function progressPercent(job: ToolJob): number | null {
   return job.totalBytes > 0
@@ -95,8 +92,8 @@ export function cardText(
       return {
         tone: 'success',
         icon: 'success',
-        title: 'Installed',
-        body: `${name} is on Home, after your other tiles. Move it with Edit on Home.`,
+        title: INSTALLED_BADGE,
+        body: `${name} is installed.`,
       };
     case INSTALL_FAILURE.check:
       return {
@@ -130,7 +127,7 @@ export function cardText(
       return {
         tone: 'danger',
         icon: 'error',
-        title: NOT_INSTALLED_BADGE,
+        title: NOT_INSTALLED,
         body: `Kitbag could not install this tool. ${NOTHING_INSTALLED}`,
       };
   }
@@ -142,11 +139,30 @@ export function removeTitle(name: string): string {
 
 export function removeBody(items: number, deleting: boolean): string {
   const gone = 'It is removed from this phone';
-  if (items === 0) return `${gone} and its tile leaves Home.`;
+  if (items === 0) return `${gone}.`;
   const one = items === 1;
   if (deleting)
-    return `${gone}, its tile leaves Home, and its ${itemCount(items)} ${one ? 'is' : 'are'} deleted.`;
-  return `${gone} and its tile leaves Home. Your ${itemCount(items)} ${one ? 'stays' : 'stay'}, so installing it again brings ${one ? 'it' : 'them'} back.`;
+    return `${gone} and its ${itemCount(items)} ${one ? 'is' : 'are'} deleted.`;
+  return `${gone}. Your ${itemCount(items)} ${one ? 'stays' : 'stay'}, so installing it again brings ${one ? 'it' : 'them'} back.`;
 }
+
+export function deleteDataTitle(name: string): string {
+  return `Delete ${name}'s data?`;
+}
+
+export function deleteDataBody(data: ToolDataUsage): string {
+  const verb = data.items === 1 ? 'is' : 'are';
+  return `Its ${itemCount(data.items)} (${formatBytes(data.bytes)}) ${verb} removed from this phone. This cannot be undone.`;
+}
+
+export function couldNotRemove(name: string): string {
+  return `Could not remove ${name}.`;
+}
+
+export function couldNotInstall(name: string): string {
+  return `Could not install ${name}.`;
+}
+
+export const COULD_NOT_DELETE_DATA = 'Could not delete its data.';
 
 export const DELETED_FOREVER = 'Deleted items cannot be recovered.';

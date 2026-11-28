@@ -19,6 +19,7 @@ import {
   useToolInstall,
   type ThemeChoice,
 } from '@kitbag/core-state';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -80,9 +81,11 @@ function ToolsSection({ onOpenTools }: { readonly onOpenTools: () => void }) {
   const { counts } = useToolCatalogue(BUILT_TOOL_IDS);
   const downloads = useToolInstall((s) => s.downloads);
   const refresh = useToolInstall((s) => s.refresh);
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
   const summary = toolsRowSummary(counts, downloads);
   return (
     <>

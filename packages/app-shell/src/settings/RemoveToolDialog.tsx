@@ -16,10 +16,13 @@ import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatBytes } from './bytes.ts';
+import { CANCEL } from './dataFolderText.ts';
 import {
   ALSO_DELETE_DATA,
-  CANCEL,
+  DELETE_DATA,
   DELETED_FOREVER,
+  deleteDataBody,
+  deleteDataTitle,
   REMOVE,
   REMOVE_AND_DELETE,
   removeBody,
@@ -95,6 +98,46 @@ export function RemoveToolDialog({
           variant="destructive"
           label={deletingData ? REMOVE_AND_DELETE : REMOVE}
           onPress={confirm}
+        />
+      </View>
+    </Sheet>
+  );
+}
+
+export interface DeleteToolDataDialogProps {
+  readonly visible: boolean;
+  readonly name: string;
+  readonly data: ToolDataUsage;
+  readonly onConfirm: () => void;
+  readonly onCancel: () => void;
+}
+
+export function DeleteToolDataDialog({
+  visible,
+  name,
+  data,
+  onConfirm,
+  onCancel,
+}: DeleteToolDataDialogProps) {
+  const styles = useToolScreenStyles();
+  const insets = useSafeAreaInsets();
+  return (
+    <Sheet
+      visible={visible}
+      title={deleteDataTitle(name)}
+      dismissLabel={CANCEL}
+      bottomInset={insets.bottom}
+      onDismiss={onCancel}
+    >
+      <Text style={styles.body}>{deleteDataBody(data)}</Text>
+      <View style={styles.actions}>
+        <Button fill size="sheet" label={CANCEL} onPress={onCancel} />
+        <Button
+          fill
+          size="sheet"
+          variant="destructive"
+          label={DELETE_DATA}
+          onPress={onConfirm}
         />
       </View>
     </Sheet>

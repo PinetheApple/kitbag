@@ -55,10 +55,17 @@ const RUNNING_DOCK: Readonly<Record<string, PageDock>> = {
   [KB_TOOL_INSTALL_STAGE.installing]: PAGE_DOCK.installing,
 };
 
-function failedPage(job: ToolJob): Pick<ToolPageModel, 'card' | 'dock'> {
+function failedPage(
+  job: ToolJob,
+  downloads: KB_TOOL_DOWNLOADS | null,
+  idle: PageDock,
+): Pick<ToolPageModel, 'card' | 'dock'> {
   const failure = installFailure(job.failure);
   if (failure === INSTALL_FAILURE.downloadsOff)
-    return { card: null, dock: PAGE_DOCK.optIn };
+    return {
+      card: null,
+      dock: downloads === KB_TOOL_DOWNLOADS.on ? idle : PAGE_DOCK.optIn,
+    };
   if (failure === INSTALL_FAILURE.offline)
     return { card: failure, dock: PAGE_DOCK.install };
   return { card: failure, dock: PAGE_DOCK.retry };
@@ -87,7 +94,7 @@ function jobPage(
     };
   if (job.stage === KB_TOOL_INSTALL_STAGE.installed)
     return { card: INSTALLED_CARD, dock: PAGE_DOCK.done };
-  return failedPage(job);
+  return failedPage(job, downloads, idleDock(tool, downloads));
 }
 
 export function toolPageModel(

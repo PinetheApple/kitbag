@@ -1,12 +1,12 @@
-import { KB_TOOL_DOWNLOADS } from '@kitbag/core-native';
+import { KB_TOOL_DOWNLOADS, type ToolCatalogueTool } from '@kitbag/core-native';
 import {
   switchTool,
   TOOL_SWITCH,
   type ToolCounts,
   type ToolDataUsage,
 } from '@kitbag/core-state';
-import type { ToolCatalogueTool } from '@kitbag/core-native';
 
+import { BUILT_TOOL_IDS } from '../home/registry.ts';
 import { formatBytes } from './bytes.ts';
 import { SEPARATOR } from './separator.ts';
 
@@ -23,7 +23,7 @@ export const TO_DOWNLOAD_LABEL = 'To download';
 export const DOWNLOADS_OFF_NOTE =
   'Tool downloads are off. These tools are not on this phone. Turn on downloads to install one.';
 
-const NOT_INSTALLED = 'Not installed';
+export const NOT_INSTALLED = 'Not installed';
 
 export function joined(...parts: readonly string[]): string {
   return parts.join(` ${SEPARATOR} `);
@@ -68,11 +68,14 @@ export interface ToolSwitchStep {
 
 export function toolSwitchStep(
   off: readonly string[],
-  roster: readonly string[],
   toolId: string,
   on: boolean,
 ): ToolSwitchStep {
-  const result = switchTool(off, roster, toolId, on);
+  if (!BUILT_TOOL_IDS.includes(toolId)) {
+    const others = off.filter((id) => id !== toolId);
+    return { off: on ? others : [...others, toolId], note: TOOLS_NOTE };
+  }
+  const result = switchTool(off, BUILT_TOOL_IDS, toolId, on);
   return {
     off: result.off,
     note: result.outcome === TOOL_SWITCH.lastOn ? LAST_ON_REASON : TOOLS_NOTE,

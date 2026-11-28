@@ -264,9 +264,9 @@ export {
   findTool,
   isInstalled,
   NO_TOOL_DATA,
+  onToolIds,
   toolCounts,
   toolDataUsage,
-  toolRoster,
   toolSections,
   type ToolCounts,
   type ToolDataUsage,
@@ -289,7 +289,8 @@ export {
   type ToolInstallStore,
   type ToolJob,
 } from './tools/installStore.ts';
-export { useToolCatalogue, useToolInstall } from './tools/useToolCatalogue.ts';
+export { useToolCatalogue } from './tools/useToolCatalogue.ts';
+export { useToolInstall } from './tools/useToolInstall.ts';
 export { PLAY_ALONG_NAME } from './tools/playAlongName.ts';
 export { createToolStore } from './toolStore/createToolStore.ts';
 export { creditLinkText, type SourceCredit } from './creditLink.ts';

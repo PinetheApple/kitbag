@@ -1,7 +1,7 @@
 import { KB_TOOL_DOWNLOADS, type ToolCatalogueTool } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
-import { BUILT_TOOL_IDS, TOOL_ID } from '../home/registry.ts';
+import { TOOL_ID } from '../home/registry.ts';
 
 import {
   downloadedSubtitle,
@@ -81,28 +81,35 @@ it('says whether a removed tool kept its data', () => {
 
 describe('toolSwitchStep', () => {
   it('switches a tool off and keeps the usual note', () => {
-    expect(toolSwitchStep([], BUILT_TOOL_IDS, TOOL_ID.tuner, false)).toEqual({
+    expect(toolSwitchStep([], TOOL_ID.tuner, false)).toEqual({
       off: [TOOL_ID.tuner],
       note: TOOLS_NOTE,
     });
   });
 
-  it('switches a downloaded tool in the roster', () => {
-    const roster = [...BUILT_TOOL_IDS, 'drone'];
-    expect(toolSwitchStep([], roster, 'drone', false).off).toEqual(['drone']);
+  it('switches a downloaded tool on and off', () => {
+    expect(toolSwitchStep([], 'drone', false).off).toEqual(['drone']);
+    expect(toolSwitchStep(['drone'], 'drone', true).off).toEqual([]);
   });
 
-  it('refuses to switch off the last tool on, and says why', () => {
-    const off = [
-      TOOL_ID.metronome,
-      TOOL_ID.library,
-      TOOL_ID.stems,
-      TOOL_ID.sync,
-    ];
-    expect(toolSwitchStep(off, BUILT_TOOL_IDS, TOOL_ID.tuner, false)).toEqual({
-      off,
+  const allButTuner = [
+    TOOL_ID.metronome,
+    TOOL_ID.library,
+    TOOL_ID.stems,
+    TOOL_ID.sync,
+  ];
+
+  it('refuses to switch off the last built-in tool on, and says why', () => {
+    expect(toolSwitchStep(allButTuner, TOOL_ID.tuner, false)).toEqual({
+      off: allButTuner,
       note: LAST_ON_REASON,
     });
+  });
+
+  it('keeps a built-in tool on even while a downloaded tool is on', () => {
+    expect(toolSwitchStep(allButTuner, TOOL_ID.tuner, false).note).toBe(
+      LAST_ON_REASON,
+    );
   });
 });
 

@@ -1,3 +1,4 @@
+import { utf8ByteLength } from '@kitbag/core-db';
 import type { ToolCatalogue, ToolCatalogueTool } from '@kitbag/core-native';
 
 import { toolsOn } from './switches.ts';
@@ -47,8 +48,14 @@ export function toolSections(
   };
 }
 
-export function toolRoster(sections: ToolSections): readonly string[] {
-  return [...sections.builtIn, ...sections.downloaded.map((t) => t.toolId)];
+export function onToolIds(
+  sections: ToolSections,
+  off: readonly string[],
+): readonly string[] {
+  const downloaded = sections.downloaded
+    .map((tool) => tool.toolId)
+    .filter((toolId) => !off.includes(toolId));
+  return [...toolsOn(sections.builtIn, off), ...downloaded];
 }
 
 export function toolCounts(
@@ -56,7 +63,7 @@ export function toolCounts(
   off: readonly string[],
 ): ToolCounts {
   return {
-    on: toolsOn(toolRoster(sections), off).length,
+    on: onToolIds(sections, off).length,
     toDownload: sections.toDownload.length,
   };
 }
@@ -64,10 +71,8 @@ export function toolCounts(
 export function toolDataUsage(
   entries: readonly { readonly key: string; readonly value: string }[],
 ): ToolDataUsage {
-  const utf8 = new TextEncoder();
   const bytes = entries.reduce(
-    (sum, { key, value }) =>
-      sum + utf8.encode(key).byteLength + utf8.encode(value).byteLength,
+    (sum, { key, value }) => sum + utf8ByteLength(key) + utf8ByteLength(value),
     0,
   );
   return { bytes, items: entries.length };

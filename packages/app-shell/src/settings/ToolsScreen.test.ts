@@ -21,6 +21,14 @@ import { DOWNLOADS_OFF_NOTE, TO_DOWNLOAD_LABEL } from './toolsText.ts';
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 vi.mock('react-native', () => ({ View: 'View', Text: 'Text' }));
+vi.mock('expo-router', async () => {
+  const { useEffect } = await import('react');
+  return {
+    useFocusEffect: (effect: () => void) => {
+      useEffect(effect, [effect]);
+    },
+  };
+});
 vi.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -43,10 +51,15 @@ vi.mock('@kitbag/core-design', async (original) => {
     ListRow: host('ListRow'),
     ListSwitchRow: host('ListSwitchRow'),
     SectionHeader: host('SectionHeader'),
-    Snackbar: host('Snackbar'),
     Switch: host('Switch'),
     Sheet: (props: Props) =>
       props.visible === true ? h('Sheet', props, props.children) : null,
+    NoticeSnackbar: (props: {
+      readonly notice: { readonly shown: { readonly message: string } | null };
+    }) =>
+      props.notice.shown === null
+        ? null
+        : h('NoticeSnackbar', { message: props.notice.shown.message }),
     createThemedStyles: () => () => ({}),
   };
 });
@@ -148,6 +161,16 @@ afterEach(() => {
 });
 
 describe('Settings, Tools', () => {
+  it('says so when downloads cannot be turned off', async () => {
+    native.setDownloads.mockRejectedValue(new Error('E_TOOL_IO'));
+    const root = await mount(KB_TOOL_DOWNLOADS.on);
+    await press(downloadsRow(root));
+    await press(
+      root.find((n) => isHost(n, 'Button') && n.props.label === TURN_OFF),
+    );
+    expect(rendered()).toContain('Could not change tool downloads.');
+  });
+
   it('lists what can be downloaded with no Downloads group before anyone asked (0c)', async () => {
     const root = await mount(KB_TOOL_DOWNLOADS.unasked);
     expect(rendered()).toContain(TO_DOWNLOAD_LABEL);
@@ -190,7 +213,8 @@ describe('Settings, Tools', () => {
       );
       await Promise.resolve();
     });
-    const snack = mounted?.root.findAll((n) => isHost(n, 'Snackbar')) ?? [];
+    const snack =
+      mounted?.root.findAll((n) => isHost(n, 'NoticeSnackbar')) ?? [];
     expect(snack.map((n) => n.props.message as unknown)).toEqual([
       'Practice recorder removed. Its data is kept.',
     ]);

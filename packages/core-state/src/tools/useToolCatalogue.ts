@@ -1,13 +1,8 @@
 import { useMemo } from 'react';
-import { useStore } from 'zustand';
 
-import { toolCounts, toolRoster, toolSections } from './catalogue.ts';
-import { getToolInstallStore, type ToolInstallStore } from './installStore.ts';
+import { onToolIds, toolCounts, toolSections } from './catalogue.ts';
+import { useToolInstall } from './useToolInstall.ts';
 import { useTools } from './useTools.ts';
-
-export function useToolInstall<T>(selector: (state: ToolInstallStore) => T): T {
-  return useStore(getToolInstallStore(), selector);
-}
 
 export function useToolCatalogue(builtIds: readonly string[]) {
   const catalogue = useToolInstall((s) => s.catalogue);
@@ -16,7 +11,7 @@ export function useToolCatalogue(builtIds: readonly string[]) {
     const sections = toolSections(builtIds, catalogue);
     return {
       sections,
-      roster: toolRoster(sections),
+      on: onToolIds(sections, off),
       counts: toolCounts(sections, off),
     };
   }, [builtIds, catalogue, off]);

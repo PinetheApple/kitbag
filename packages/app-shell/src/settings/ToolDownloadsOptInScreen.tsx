@@ -9,14 +9,19 @@ import {
   toolsManagerText,
   bodyLineHeight,
   lineRatio,
+  NoticeSnackbar,
+  snackbar,
+  useNotice,
   useTheme,
 } from '@kitbag/core-design';
 import { useToolInstall } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SettingsFrame } from './SettingsFrame.tsx';
 import {
+  COULD_NOT_CHANGE_DOWNLOADS,
   NOT_NOW,
   OPT_IN_HEADLINE,
   OPT_IN_HINT,
@@ -70,20 +75,31 @@ export function ToolDownloadsOptInScreen({
 }: ToolDownloadsOptInScreenProps) {
   const styles = useStyles();
   const shared = useToolScreenStyles();
+  const insets = useSafeAreaInsets();
+  const notice = useNotice();
+  const { showMessage } = notice;
   const turnOn = useToolInstall((s) => s.turnOnFromOptIn);
   const handleTurnOn = useCallback(() => {
-    void turnOn(toolId).then(onBack, () => undefined);
-  }, [turnOn, toolId, onBack]);
+    turnOn(toolId).then(onBack, () => {
+      showMessage(COULD_NOT_CHANGE_DOWNLOADS);
+    });
+  }, [turnOn, toolId, onBack, showMessage]);
   const dock = (
-    <View style={shared.dock}>
-      <Button
-        size="sheet"
-        variant="primary"
-        label={TURN_ON_DOWNLOADS}
-        onPress={handleTurnOn}
+    <>
+      <View style={shared.dock}>
+        <Button
+          size="sheet"
+          variant="primary"
+          label={TURN_ON_DOWNLOADS}
+          onPress={handleTurnOn}
+        />
+        <Button size="sheet" variant="ghost" label={NOT_NOW} onPress={onBack} />
+      </View>
+      <NoticeSnackbar
+        notice={notice}
+        bottom={insets.bottom + snackbar.aboveSheet}
       />
-      <Button size="sheet" variant="ghost" label={NOT_NOW} onPress={onBack} />
-    </View>
+    </>
   );
   return (
     <SettingsFrame title={TOOL_DOWNLOADS_TITLE} onBack={onBack} overlay={dock}>

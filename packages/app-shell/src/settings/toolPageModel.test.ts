@@ -118,8 +118,19 @@ describe('tool page frames', () => {
 
   it('sends a downloads-off failure to the opt-in with no card', () => {
     expect(
-      toolPageModel(TOOL, job(STAGE.failed, R.downloadsOff), ON, NO_TOOL_DATA),
+      toolPageModel(
+        TOOL,
+        job(STAGE.failed, R.downloadsOff),
+        KB_TOOL_DOWNLOADS.off,
+        NO_TOOL_DATA,
+      ),
     ).toMatchObject({ card: null, dock: PAGE_DOCK.optIn });
+  });
+
+  it('offers Install again once downloads are back on after a downloads-off failure', () => {
+    expect(
+      toolPageModel(TOOL, job(STAGE.failed, R.downloadsOff), ON, NO_TOOL_DATA),
+    ).toMatchObject({ card: null, dock: PAGE_DOCK.install });
   });
 
   it('offers Remove for an installed tool (6a)', () => {

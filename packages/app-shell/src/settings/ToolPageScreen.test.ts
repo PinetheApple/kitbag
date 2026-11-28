@@ -19,9 +19,9 @@ import {
 } from 'react-test-renderer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { CANCEL } from './dataFolderText.ts';
 import {
   ALSO_DELETE_DATA,
-  CANCEL,
   CHECKING,
   DELETE_DATA,
   DOWNLOADING,
@@ -33,6 +33,14 @@ import {
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 vi.mock('react-native', () => ({ View: 'View', Text: 'Text' }));
+vi.mock('expo-router', async () => {
+  const { useEffect } = await import('react');
+  return {
+    useFocusEffect: (effect: () => void) => {
+      useEffect(effect, [effect]);
+    },
+  };
+});
 vi.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -62,6 +70,12 @@ vi.mock('@kitbag/core-design', async (original) => {
     SectionHeader: host('SectionHeader'),
     Sheet: (props: Props) =>
       props.visible === true ? h('Sheet', props, props.children) : null,
+    NoticeSnackbar: (props: {
+      readonly notice: { readonly shown: { readonly message: string } | null };
+    }) =>
+      props.notice.shown === null
+        ? null
+        : h('NoticeSnackbar', { message: props.notice.shown.message }),
     createThemedStyles: () => () => ({}),
     useTheme: () => ({ accentInk: 'accent' }),
   };
@@ -269,6 +283,19 @@ describe('removing from the tool page', () => {
     expect(onRemoved).toHaveBeenCalledExactlyOnceWith(ID);
   });
 
+  it('says so when the remove fails, and stays on the page', async () => {
+    native.remove.mockRejectedValue(new Error(KB_TOOL_REJECTION.io));
+    const root = await mount(INSTALLED);
+    await press(button(root, REMOVE));
+    await press(
+      root
+        .find((n) => isHost(n, 'Sheet'))
+        .find((n) => isHost(n, 'Button') && n.props.label === REMOVE),
+    );
+    expect(onRemoved).not.toHaveBeenCalled();
+    expect(rendered()).toContain('Could not remove Practice recorder.');
+  });
+
   it('deletes the data after removing when the box is ticked', async () => {
     list.mockResolvedValue([
       { key: 'take', value: '1', updatedAt: new Date(0) },
@@ -290,14 +317,34 @@ describe('removing from the tool page', () => {
     );
   });
 
-  it('deletes the data a removed tool left without installing it', async () => {
+  it('asks before deleting the data a removed tool left (6e)', async () => {
     list.mockResolvedValue([
       { key: 'take', value: '1', updatedAt: new Date(0) },
     ]);
     const root = await mount(TOOL);
     await press(button(root, DELETE_DATA));
+    expect(clear).not.toHaveBeenCalled();
+    const sheet = root.find((n) => isHost(n, 'Sheet'));
+    expect(sheet.props.title).toBe("Delete Practice recorder's data?");
+    await press(
+      sheet.find((n) => isHost(n, 'Button') && n.props.label === DELETE_DATA),
+    );
     expect(clear).toHaveBeenCalledOnce();
     expect(native.remove).not.toHaveBeenCalled();
     expect(native.install).not.toHaveBeenCalled();
+  });
+
+  it('keeps the data when the delete is cancelled', async () => {
+    list.mockResolvedValue([
+      { key: 'take', value: '1', updatedAt: new Date(0) },
+    ]);
+    const root = await mount(TOOL);
+    await press(button(root, DELETE_DATA));
+    const sheet = root.find((n) => isHost(n, 'Sheet'));
+    await press(
+      sheet.find((n) => isHost(n, 'Button') && n.props.label === CANCEL),
+    );
+    expect(clear).not.toHaveBeenCalled();
+    expect(root.findAll((n) => isHost(n, 'Sheet'))).toHaveLength(0);
   });
 });

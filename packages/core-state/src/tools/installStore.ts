@@ -103,6 +103,12 @@ const NO_INSTALLER: ToolInstallRuntime = {
   },
 };
 
+function nextTick(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
 function jobOf(update: ToolInstallUpdate): ToolJob {
   const { stage, receivedBytes, totalBytes, failure, neededBytes, freeBytes } =
     update;
@@ -192,17 +198,35 @@ function init(
       setJob(update.toolId, jobOf(update));
   });
 
+  const restore = (toolId: string, before: ToolJob | undefined) => {
+    if (getState().jobs[toolId] !== STARTING) return;
+    if (before === undefined) dropJob(toolId);
+    else setJob(toolId, before);
+  };
+
+  // Native frees a job just after its terminal event, so a retry tapped at
+  // once can read as busy; one more try on the next tick covers that.
+  const accepted = async (toolId: string, afterEnd: boolean) => {
+    if (await installer.install(toolId)) return true;
+    if (!afterEnd) return false;
+    await nextTick();
+    return installer.install(toolId);
+  };
+
   const install = async (toolId: string): Promise<InstallStart> => {
     const downloads = await native.downloads();
     setState({ downloads });
     if (downloads !== KB_TOOL_DOWNLOADS.on) return INSTALL_START.optIn;
     const before = getState().jobs[toolId];
     setJob(toolId, STARTING);
-    if (await installer.install(toolId)) return INSTALL_START.started;
-    if (getState().jobs[toolId] === STARTING) {
-      if (before === undefined) dropJob(toolId);
-      else setJob(toolId, before);
+    try {
+      const afterEnd = before !== undefined && isFinished(before);
+      if (await accepted(toolId, afterEnd)) return INSTALL_START.started;
+    } catch (error) {
+      restore(toolId, before);
+      throw error;
     }
+    restore(toolId, before);
     return INSTALL_START.busy;
   };
 

@@ -9,9 +9,9 @@ import {
 } from 'react-test-renderer';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { CANCEL } from './dataFolderText.ts';
 import {
   ALSO_DELETE_DATA,
-  CANCEL,
   DELETED_FOREVER,
   REMOVE,
   REMOVE_AND_DELETE,

@@ -237,6 +237,32 @@ describe('install progress', () => {
     });
   });
 
+  it('puts the job back when native refuses to start the install', async () => {
+    const tools = store();
+    native.install.mockRejectedValueOnce(new Error(KB_TOOL_REJECTION.internal));
+    await expect(tools.getState().install(ID)).rejects.toThrow();
+    expect(tools.getState().jobs[ID]).toBeUndefined();
+
+    await tools.getState().install(ID);
+    emit(STAGE.failed, { failure: KB_TOOL_REJECTION.offline });
+    native.install.mockRejectedValueOnce(new Error(KB_TOOL_REJECTION.internal));
+    await expect(tools.getState().install(ID)).rejects.toThrow();
+    expect(tools.getState().jobs[ID]).toMatchObject({
+      stage: STAGE.failed,
+      failure: KB_TOOL_REJECTION.offline,
+    });
+  });
+
+  it('tries once more when native is still closing the install that just ended', async () => {
+    const tools = store();
+    await tools.getState().install(ID);
+    emit(STAGE.failed, { failure: KB_TOOL_REJECTION.offline });
+    native.install.mockClear();
+    native.install.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    expect(await tools.getState().install(ID)).toBe(INSTALL_START.started);
+    expect(native.install).toHaveBeenCalledTimes(2);
+  });
+
   it('leaves the running job alone when native is already installing it', async () => {
     const tools = store();
     await tools.getState().install(ID);

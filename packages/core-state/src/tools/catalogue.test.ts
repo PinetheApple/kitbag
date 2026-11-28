@@ -5,7 +5,6 @@ import {
   findTool,
   toolCounts,
   toolDataUsage,
-  toolRoster,
   toolSections,
 } from './catalogue.ts';
 
@@ -68,9 +67,13 @@ describe('tool sections', () => {
 
   it('counts downloaded tools among those on, and what is left to download', () => {
     const sections = toolSections(BUILT, MIXED);
-    expect(toolRoster(sections)).toEqual(['metronome', 'tuner', 'drone']);
     expect(toolCounts(sections, [])).toEqual({ on: 3, toDownload: 2 });
     expect(toolCounts(sections, ['drone'])).toEqual({ on: 2, toDownload: 2 });
+  });
+
+  it('applies the one-tool-on rule to built-in tools only', () => {
+    const sections = toolSections(BUILT, MIXED);
+    expect(toolCounts(sections, BUILT).on).toBe(3);
   });
 });
 

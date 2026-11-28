@@ -19,7 +19,7 @@ export interface OptInPoint {
 export const OPT_IN_POINTS: readonly OptInPoint[] = [
   {
     icon: 'saveInto',
-    text: 'Tools download from Kitbag releases on GitHub, and only when you tap Install or Update.',
+    text: 'Tools download from Kitbag releases on GitHub, and only when you tap Install.',
   },
   {
     icon: 'trusted',
@@ -27,24 +27,17 @@ export const OPT_IN_POINTS: readonly OptInPoint[] = [
   },
   {
     icon: 'analyzing',
-    text: 'Installed tools usually keep working when Kitbag updates. Sometimes a Kitbag update needs them updated too; that downloads when you tap Update.',
-  },
-  {
-    icon: 'info',
-    text: 'Once downloads are on, Kitbag checks for updates only when you open Settings, Tools.',
+    text: 'Installed tools usually keep working when Kitbag updates.',
   },
 ];
 
 export const TURN_OFF_TITLE = 'Turn off tool downloads?';
 export const TURN_OFF_BODY =
-  'Kitbag stops downloading tools and checking for updates. Installed tools keep working. If a Kitbag update needs them updated too, that waits until downloads are back on. You can still remove them.';
+  'Kitbag stops downloading tools. Installed tools keep working, and you can still remove them.';
 export const TURN_OFF = 'Turn off';
-export const CANCEL = 'Cancel';
 
-export const DOWNLOADS_ON_HINT =
-  'Kitbag goes online only to install or update.';
-export const DOWNLOADS_OFF_HINT =
-  'Installed tools keep working. If a Kitbag update needs them updated, that waits until downloads are on.';
+export const DOWNLOADS_ON_HINT = 'Kitbag goes online only to install a tool.';
+export const DOWNLOADS_OFF_HINT = 'Installed tools keep working.';
 
 export function downloadsValue(downloads: KB_TOOL_DOWNLOADS): string {
   return downloads === KB_TOOL_DOWNLOADS.on ? 'On' : 'Off';
@@ -55,3 +48,5 @@ export function downloadsHint(downloads: KB_TOOL_DOWNLOADS): string {
     ? DOWNLOADS_ON_HINT
     : DOWNLOADS_OFF_HINT;
 }
+
+export const COULD_NOT_CHANGE_DOWNLOADS = 'Could not change tool downloads.';

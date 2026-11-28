@@ -13,8 +13,8 @@ import { Text, View } from 'react-native';
 import { TURN_ON_DOWNLOADS } from './toolDownloadsText.ts';
 import { PAGE_DOCK, type PageDock } from './toolPageModel.ts';
 import { formatBytesOf } from './bytes.ts';
+import { CANCEL } from './dataFolderText.ts';
 import {
-  CANCEL,
   CHECKING,
   DONE,
   DOWNLOADING,

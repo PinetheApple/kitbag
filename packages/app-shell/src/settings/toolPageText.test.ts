@@ -7,6 +7,7 @@ import {
   builtForValue,
   cardText,
   dataValue,
+  deleteDataBody,
   installLabel,
   progressPercent,
   removeBody,
@@ -57,11 +58,11 @@ describe('tool page values', () => {
 });
 
 describe('status cards', () => {
-  it('says where an installed tool went (4c)', () => {
+  it('says the tool is installed, and nothing yet about Home (4c)', () => {
     expect(cardText(INSTALLED_CARD, NAME, undefined)).toMatchObject({
       tone: 'success',
       title: 'Installed',
-      body: 'Practice recorder is on Home, after your other tiles. Move it with Edit on Home.',
+      body: 'Practice recorder is installed.',
     });
   });
 
@@ -99,19 +100,25 @@ describe('status cards', () => {
 describe('remove text', () => {
   it('says the data stays by default (6b)', () => {
     expect(removeBody(12, false)).toBe(
-      'It is removed from this phone and its tile leaves Home. Your 12 items stay, so installing it again brings them back.',
+      'It is removed from this phone. Your 12 items stay, so installing it again brings them back.',
     );
   });
 
   it('says the data goes when the box is ticked (6c)', () => {
     expect(removeBody(12, true)).toBe(
-      'It is removed from this phone, its tile leaves Home, and its 12 items are deleted.',
+      'It is removed from this phone and its 12 items are deleted.',
     );
   });
 
   it('says nothing about data a tool never had', () => {
-    expect(removeBody(0, false)).toBe(
-      'It is removed from this phone and its tile leaves Home.',
+    expect(removeBody(0, false)).toBe('It is removed from this phone.');
+  });
+});
+
+describe('delete data confirm', () => {
+  it('names what goes and says it cannot be undone', () => {
+    expect(deleteDataBody({ bytes: 38_000_000, items: 12 })).toBe(
+      'Its 12 items (38 MB) are removed from this phone. This cannot be undone.',
     );
   });
 });

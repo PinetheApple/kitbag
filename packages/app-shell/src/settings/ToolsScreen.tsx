@@ -10,26 +10,28 @@ import {
   radii,
   rowLabel,
   SectionHeader,
+  NoticeSnackbar,
   Sheet,
   size,
-  Snackbar,
   snackbar,
   Switch,
   textRoles,
   textStyle,
   toolsManager,
+  useNotice,
+  type Notice,
 } from '@kitbag/core-design';
 import { KB_TOOL_DOWNLOADS, type ToolCatalogueTool } from '@kitbag/core-native';
 import {
   findTool,
   NO_TOOL_DATA,
-  toolsOn,
   useToolCatalogue,
   useToolInstall,
   useTools,
   type ToolDataUsage,
 } from '@kitbag/core-state';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -38,9 +40,10 @@ import {
   BUILT_TOOLS,
   type BuiltTool,
 } from '../home/registry.ts';
+import { CANCEL } from './dataFolderText.ts';
 import { SettingsFrame } from './SettingsFrame.tsx';
 import {
-  CANCEL,
+  COULD_NOT_CHANGE_DOWNLOADS,
   DOWNLOADS_LABEL,
   downloadsHint,
   downloadsValue,
@@ -258,11 +261,11 @@ function TurnOffSheet({
   );
 }
 
-function useRemovedNotice(removedToolId: string | undefined) {
+function useRemovedNotice(removedToolId: string | undefined, notice: Notice) {
   const catalogue = useToolInstall((s) => s.catalogue);
   const data = useToolInstall((s) => s.data);
-  const [notice, setNotice] = useState<string | null>(null);
   const shownFor = useRef<string | undefined>(undefined);
+  const { showMessage } = notice;
   useEffect(() => {
     if (removedToolId === undefined || shownFor.current === removedToolId)
       return;
@@ -270,12 +273,8 @@ function useRemovedNotice(removedToolId: string | undefined) {
     if (tool === undefined) return;
     shownFor.current = removedToolId;
     const kept = (data[removedToolId] ?? NO_TOOL_DATA).items > 0;
-    setNotice(removedNotice(toolName(tool), kept));
-  }, [removedToolId, catalogue, data]);
-  const clear = useCallback(() => {
-    setNotice(null);
-  }, []);
-  return { notice, clear };
+    showMessage(removedNotice(toolName(tool), kept));
+  }, [removedToolId, catalogue, data, showMessage]);
 }
 
 export interface ToolsScreenProps {
@@ -299,21 +298,24 @@ export function ToolsScreen({
   const data = useToolInstall((s) => s.data);
   const refresh = useToolInstall((s) => s.refresh);
   const turnOff = useToolInstall((s) => s.turnOff);
-  const { sections, roster } = useToolCatalogue(BUILT_TOOL_IDS);
+  const { sections, on: onIds } = useToolCatalogue(BUILT_TOOL_IDS);
   const [note, setNote] = useState(TOOLS_NOTE);
   const [askingOff, setAskingOff] = useState(false);
-  const removed = useRemovedNotice(removedToolId);
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-  const onIds = useMemo(() => toolsOn(roster, off), [roster, off]);
+  const notice = useNotice();
+  const { showMessage } = notice;
+  useRemovedNotice(removedToolId, notice);
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
   const handleSwitch = useCallback(
     (toolId: string, on: boolean) => {
-      const step = toolSwitchStep(off, roster, toolId, on);
+      const step = toolSwitchStep(off, toolId, on);
       setNote(step.note);
       setOff(step.off);
     },
-    [off, roster, setOff],
+    [off, setOff],
   );
   const handleDownloads = useCallback(() => {
     if (downloads === KB_TOOL_DOWNLOADS.on) setAskingOff(true);
@@ -324,16 +326,16 @@ export function ToolsScreen({
   }, []);
   const confirmOff = useCallback(() => {
     setAskingOff(false);
-    void turnOff();
-  }, [turnOff]);
-  const overlay =
-    removed.notice === null ? null : (
-      <Snackbar
-        message={removed.notice}
-        bottom={insets.bottom + snackbar.aboveSheet}
-        onTimeout={removed.clear}
-      />
-    );
+    turnOff().catch(() => {
+      showMessage(COULD_NOT_CHANGE_DOWNLOADS);
+    });
+  }, [turnOff, showMessage]);
+  const overlay = (
+    <NoticeSnackbar
+      notice={notice}
+      bottom={insets.bottom + snackbar.aboveSheet}
+    />
+  );
   return (
     <SettingsFrame title={TOOLS_TITLE} onBack={onBack} overlay={overlay}>
       <Text style={styles.body}>{TOOLS_INTRO}</Text>
