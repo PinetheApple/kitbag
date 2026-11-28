@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "signatureAlg": "ES256",
+  "files": {
+    "manifest": "manifest.json",
+    "manifestSig": "manifest.sig",
+    "entry": "bundle.hbc",
+    "assetsDir": "assets",
+    "index": "tools-index.json",
+    "indexSig": "tools-index.json.sig",
+    "kbtExtension": ".kbt"
+  },
+  "patterns": {
+    "id": "^[a-z][a-z0-9-]{1,31}$",
+    "keyId": "^[a-z][a-z0-9-]{1,31}$",
+    "semver": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$",
+    "sha256": "^[0-9a-f]{64}$",
+    "filePath": "^(bundle\\.hbc|assets(/[A-Za-z0-9_-][A-Za-z0-9._-]*)+)$",
+    "route": "^/t/[a-z][a-z0-9-]{1,31}(/[A-Za-z0-9\\[\\]._-]+)*$"
+  },
+  "limits": {
+    "nameMax": 40,
+    "summaryMax": 80,
+    "changelogMax": 500,
+    "labelMax": 40
+  },
+  "keys": {
+    "testPrefix": "test-",
+    "roles": [
+      "tools",
+      "revocation"
+    ],
+    "statuses": [
+      "current",
+      "next",
+      "retired"
+    ],
+    "signingStatuses": [
+      "current",
+      "next"
+    ],
+    "spkiBytes": 91
+  }
+}
