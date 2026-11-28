@@ -1,9 +1,5 @@
 export type { StemPlayerScreenProps } from './screen/StemPlayerScreen.tsx';
-export {
-  register,
-  type StemsPlugin,
-  type StemsScreens,
-} from './register.tsx';
+export { register, type StemsPlugin, type StemsScreens } from './register.tsx';
 export {
   AddStemSongSheet,
   type AddStemSongSheetProps,

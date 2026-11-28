@@ -49,22 +49,46 @@ vi.mock('@kitbag/core-state', async (original) => {
 
 const nothing = () => null;
 vi.mock('@/listening/useMixerFrame.ts', () => ({ useMixerFrame: () => ({}) }));
-vi.mock('@kitbag/tool-stems/src/screen/PlayerMenu.tsx', () => ({ PlayerMenu: () => nothing() }));
-vi.mock('@kitbag/tool-stems/src/screen/ExportSheet.tsx', () => ({ ExportSheet: () => nothing() }));
-vi.mock('@kitbag/tool-stems/src/screen/StemMeterSheet.tsx', () => ({ StemMeterSheet: () => nothing() }));
-vi.mock('@kitbag/tool-stems/src/screen/ClickSheet.tsx', () => ({ ClickSheet: () => nothing() }));
-vi.mock('@kitbag/tool-stems/src/screen/TempoSheet.tsx', () => ({ TempoSheet: () => nothing() }));
+vi.mock('@kitbag/tool-stems/src/screen/PlayerMenu.tsx', () => ({
+  PlayerMenu: () => nothing(),
+}));
+vi.mock('@kitbag/tool-stems/src/screen/ExportSheet.tsx', () => ({
+  ExportSheet: () => nothing(),
+}));
+vi.mock('@kitbag/tool-stems/src/screen/StemMeterSheet.tsx', () => ({
+  StemMeterSheet: () => nothing(),
+}));
+vi.mock('@kitbag/tool-stems/src/screen/ClickSheet.tsx', () => ({
+  ClickSheet: () => nothing(),
+}));
+vi.mock('@kitbag/tool-stems/src/screen/TempoSheet.tsx', () => ({
+  TempoSheet: () => nothing(),
+}));
 vi.mock('@kitbag/tool-stems/src/screen/StemSetTempo.tsx', () => ({
   StemSetTempoSheet: () => nothing(),
   TempoUndoSnackbar: () => nothing(),
 }));
-vi.mock('@kitbag/tool-stems/src/screen/SpeedKeySheet.tsx', () => ({ SpeedKeySheet: () => nothing() }));
-vi.mock('@kitbag/tool-stems/src/screen/StemAppBar.tsx', () => ({ StemAppBar: () => nothing() }));
-vi.mock('@kitbag/tool-stems/src/screen/Scrubber.tsx', () => ({ Scrubber: () => nothing() }));
-vi.mock('@kitbag/tool-stems/src/screen/SongFactChips.tsx', () => ({ SongFactChips: () => nothing() }));
-vi.mock('@kitbag/tool-stems/src/screen/StemList.tsx', () => ({ StemList: () => nothing() }));
-vi.mock('@kitbag/tool-stems/src/screen/StemTransport.tsx', () => ({ StemTransport: () => nothing() }));
-vi.mock('@kitbag/tool-stems/src/screen/StemRowView.tsx', () => ({ WAVEFORM_BARS: spies.bars }));
+vi.mock('@kitbag/tool-stems/src/screen/SpeedKeySheet.tsx', () => ({
+  SpeedKeySheet: () => nothing(),
+}));
+vi.mock('@kitbag/tool-stems/src/screen/StemAppBar.tsx', () => ({
+  StemAppBar: () => nothing(),
+}));
+vi.mock('@kitbag/tool-stems/src/screen/Scrubber.tsx', () => ({
+  Scrubber: () => nothing(),
+}));
+vi.mock('@kitbag/tool-stems/src/screen/SongFactChips.tsx', () => ({
+  SongFactChips: () => nothing(),
+}));
+vi.mock('@kitbag/tool-stems/src/screen/StemList.tsx', () => ({
+  StemList: () => nothing(),
+}));
+vi.mock('@kitbag/tool-stems/src/screen/StemTransport.tsx', () => ({
+  StemTransport: () => nothing(),
+}));
+vi.mock('@kitbag/tool-stems/src/screen/StemRowView.tsx', () => ({
+  WAVEFORM_BARS: spies.bars,
+}));
 vi.mock('@/listening/QueueSheet.tsx', () => ({ QueueSheet: () => nothing() }));
 vi.mock('@/listening/usePlayOrderNav.ts', () => ({
   usePlayOrderNav: () => ({ skip: nothing }),

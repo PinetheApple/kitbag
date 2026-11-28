@@ -7,7 +7,8 @@ export type StemsListening = ToolListening<Notice, LeftSetlist>;
 
 export type StemsHost = ToolHost<StemsListening>;
 
-const NO_HOST = 'Stem songs screens render inside the screen register() returns';
+const NO_HOST =
+  'Stem songs screens render inside the screen register() returns';
 
 export const StemsHostContext = createContext<StemsHost | null>(null);
 
