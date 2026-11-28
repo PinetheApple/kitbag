@@ -19,9 +19,8 @@ constexpr int64_t kNarrowStallNs = 300'011;
 constexpr int64_t kOneFrame = 1;
 constexpr int kReadsPerBracket = 3;
 
-// Stalls the caller after the boottime read of bracket i by stalls[i].
 struct StallingClocks {
-  std::vector<int64_t> stalls;
+  std::vector<int64_t> stall_after_boottime_ns;
   int64_t now = kStartNs;
   size_t bracket = 0;
   int reads = 0;
@@ -36,7 +35,9 @@ struct StallingClocks {
     ++reads;
     now += kReadCostNs;
     const int64_t read = now + kTrueOffsetNs;
-    if (bracket < stalls.size()) now += stalls[bracket];
+    if (bracket < stall_after_boottime_ns.size()) {
+      now += stall_after_boottime_ns[bracket];
+    }
     ++bracket;
     return read;
   }
@@ -51,7 +52,7 @@ struct StallingClocks {
 };
 
 void TestStallOnFirstReadIsRetried() {
-  StallingClocks clocks{.stalls = {kStallNs}};
+  StallingClocks clocks{.stall_after_boottime_ns = {kStallNs}};
   Check(
       clocks.FrameError() <= kOneFrame,
       "suspended: a stall inside the first bracket stays within one frame"
@@ -63,9 +64,12 @@ void TestStallOnFirstReadIsRetried() {
 }
 
 void TestEveryBracketStalledTakesNarrowest() {
-  std::vector<int64_t> stalls(kitbag::kSuspendedBracketAttempts, kStallNs);
-  stalls[stalls.size() / 2] = kNarrowStallNs;
-  StallingClocks clocks{.stalls = stalls};
+  std::vector<int64_t> stall_after_boottime_ns(
+      kitbag::kSuspendedBracketAttempts,
+      kStallNs
+  );
+  stall_after_boottime_ns[stall_after_boottime_ns.size() / 2] = kNarrowStallNs;
+  StallingClocks clocks{.stall_after_boottime_ns = stall_after_boottime_ns};
   const int64_t narrow_error =
       std::llabs(kitbag::NsToFrames(kNarrowStallNs / 2, kRate));
   Check(

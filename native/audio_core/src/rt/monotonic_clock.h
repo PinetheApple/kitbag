@@ -34,12 +34,11 @@ inline int64_t BoottimeNs() {
 #endif
 }
 
-// Half this bracket is the worst error, under a quarter frame at 48 kHz.
+// A bracket this tight errs under a quarter frame at 48 kHz.
 inline constexpr int64_t kSuspendedBracketNs = 10'000;
 inline constexpr int kSuspendedBracketAttempts = 16;
 
-// A preemption between the bracketing reads errs by half its length, so a
-// wide bracket is re-read; the narrowest seen stands if none is tight.
+// A preemption between the reads errs by half the bracket, so wide ones retry.
 template <typename Monotonic, typename Boottime>
 int64_t SuspendedNsFrom(Monotonic monotonic, Boottime boottime) {
   int64_t narrowest = std::numeric_limits<int64_t>::max();
@@ -58,7 +57,10 @@ int64_t SuspendedNsFrom(Monotonic monotonic, Boottime boottime) {
 }
 
 inline int64_t SuspendedNs() {
-  return SuspendedNsFrom(MonotonicNs, BoottimeNs);
+  return SuspendedNsFrom(
+      [] { return MonotonicNs(); },
+      [] { return BoottimeNs(); }
+  );
 }
 
 // Whole seconds apart, so a span of days cannot overflow the product.
