@@ -91,6 +91,25 @@ describe('the copy kept before a replace', () => {
     expect(await records(target)).toEqual(before);
   });
 
+  it('keeps what an undo replaced, so the undo can be undone', async () => {
+    const target = await seededTarget();
+    await replace(target, await backupFile());
+    const replacedIn = await records(target);
+    const { contents } = await keptCopy(target);
+    expect((await replace(target, contents)).ok).toBe(true);
+    expect(portable((await keptCopy(target)).contents)).toEqual(replacedIn);
+  });
+
+  it('holds only the latest replace', async () => {
+    const target = await seededTarget();
+    const file = await backupFile();
+    await replace(target, file);
+    await target.presets.create(presetValues('Added later', null));
+    const beforeSecond = await records(target);
+    expect((await replace(target, file)).ok).toBe(true);
+    expect(portable((await keptCopy(target)).contents)).toEqual(beforeSecond);
+  });
+
   it('is not taken by a merge or an unconfirmed replace', async () => {
     const target = await seededTarget();
     const file = await backupFile();

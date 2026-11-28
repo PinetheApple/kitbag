@@ -35,6 +35,7 @@ import {
   CATEGORY_LABELS,
   categoryValue,
   conflictBanner,
+  copyKeptNote,
   DONE_LABEL,
   failureText,
   modeHint,
@@ -48,8 +49,10 @@ import {
   sourceDetail,
   STALE_NOTICE,
 } from './backupText.ts';
+import { Outcome } from './RestoreOutcome.tsx';
 import { ConflictSheet, ReplaceSheet } from './RestoreSheets.tsx';
 import { SettingsFrame } from './SettingsFrame.tsx';
+import { openUndoReplace } from './undoReplace.ts';
 
 const MODE_OPTIONS: readonly SegmentOption<ImportMode>[] = [
   { value: 'merge', label: 'Merge' },
@@ -270,39 +273,6 @@ function Review({ review }: { readonly review: RestoreReview }) {
   );
 }
 
-function Outcome({
-  text,
-  failed,
-  actionLabel,
-  onAction,
-}: {
-  readonly text: string;
-  readonly failed: boolean;
-  readonly actionLabel: string;
-  readonly onAction: () => void;
-}) {
-  const styles = useStyles();
-  const body = <Text style={styles.banner}>{text}</Text>;
-  return (
-    <>
-      {failed ? (
-        <Card emphasis="danger" statusIcon="error" statusLabel="Failed">
-          {body}
-        </Card>
-      ) : (
-        <Card emphasis="success" statusIcon="success" statusLabel={DONE_LABEL}>
-          {body}
-        </Card>
-      )}
-      <Button
-        label={actionLabel}
-        variant={failed ? 'tonal' : 'primary'}
-        onPress={onAction}
-      />
-    </>
-  );
-}
-
 function PickAgain({
   prompt,
   onPick,
@@ -319,6 +289,10 @@ function PickAgain({
   );
 }
 
+function undoReplace() {
+  void openUndoReplace();
+}
+
 function RestoreBody({ onBack }: { readonly onBack: () => void }) {
   const restore = useRestore((s) => s.restore);
   const pick = useRestore((s) => s.pick);
@@ -329,20 +303,26 @@ function RestoreBody({ onBack }: { readonly onBack: () => void }) {
     case 'review':
     case 'applying':
       return <Review review={restore} />;
-    case 'done':
+    case 'done': {
+      const note = copyKeptNote(restore.mode);
       return (
         <Outcome
           text={restoredText(restore.mode, restore.counts, restore.soundResets)}
+          note={note}
           failed={false}
           actionLabel={DONE_LABEL}
           onAction={onBack}
+          onUndo={note === null ? null : undoReplace}
         />
       );
+    }
     case 'failed':
       return (
         <Outcome
           text={failureText(restore.failure)}
+          note={null}
           failed
+          onUndo={null}
           actionLabel={PICK_AGAIN}
           onAction={pickAgain}
         />

@@ -11,7 +11,10 @@ import type { OutputRoute } from '@kitbag/core-native';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createRouteLatencyStore } from '../rig/routeLatency.ts';
-import { openableBeforeReplace } from './beforeReplace.ts';
+import {
+  beforeReplaceTakenAt,
+  openableBeforeReplace,
+} from './beforeReplace.ts';
 import { createRestoreStore } from './restore.ts';
 import type { BackupDeps } from './runtime.ts';
 
@@ -24,6 +27,7 @@ const EARBUDS: OutputRoute = {
   certain: true,
 };
 const STEP_MS = 5;
+const TAKEN_AT = '2026-11-27T14:32:00.000Z';
 
 function deps(
   service: BackupDeps['service'],
@@ -92,6 +96,20 @@ describe('the copy kept before a replace', () => {
         deps(() => target.backup),
       ),
     ).toBeNull();
+  });
+
+  it('has no date before any replace', async () => {
+    const target = openBackupDatabase();
+    expect(await beforeReplaceTakenAt(deps(() => target.backup))).toBeNull();
+  });
+
+  it('is dated when the replace took it', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(TAKEN_AT) });
+    const { target } = await replacedTarget();
+    vi.useRealTimers();
+    expect(await beforeReplaceTakenAt(deps(() => target.backup))).toBe(
+      TAKEN_AT,
+    );
   });
 
   it('opens in the restore review as a replace of what was replaced', async () => {

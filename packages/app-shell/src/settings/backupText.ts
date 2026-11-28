@@ -10,6 +10,7 @@ import {
 } from '@kitbag/core-db';
 import { countLabel } from '@kitbag/core-design';
 import {
+  clockTime,
   DEFAULT_SOUND_NAME,
   REPLACE_CONFIRMATION,
   type RestoreFailure,
@@ -37,6 +38,10 @@ export const SHARE_FAILED = 'Could not share the backup. Try again.';
 export const SAVE_FAILED = 'Could not save the backup. Try again.';
 export const SAVE_LABEL = 'Save to files';
 export const SHARE_LABEL = 'Share';
+export const BEFORE_REPLACE_NAME = 'Before replace';
+export const UNDO_REPLACE_LABEL = 'Undo replace';
+export const UNDO_LAST_REPLACE_LABEL = 'Undo last replace';
+const COPY_KEPT_NOTE = 'A copy of what was here before is kept on this phone.';
 
 export const RESTORE_ORDER: readonly ImportCategory[] = [
   'setlists',
@@ -98,6 +103,9 @@ const MONTHS = [
   'Dec',
 ] as const;
 
+const dayMonth = (date: Date) =>
+  `${String(date.getDate())} ${MONTHS[date.getMonth()] ?? ''}`;
+
 const MERGE_HINT =
   'Keeps what you have. Items already here are updated, not duplicated.';
 const NOTHING_DELETED = 'Deletes nothing you have';
@@ -134,10 +142,20 @@ export function sourceDetail(
   bytes: number,
 ): string {
   const date = new Date(exportedAt);
-  const day = `${String(date.getDate())} ${MONTHS[date.getMonth()] ?? ''} ${String(date.getFullYear())}`;
+  const day = `${dayMonth(date)} ${String(date.getFullYear())}`;
   return [`v${String(version)}`, day, formatBytes(bytes)].join(
     ` ${SEPARATOR} `,
   );
+}
+
+export function undoReplaceValue(takenAt: string | null): string | null {
+  if (takenAt === null) return null;
+  const date = new Date(takenAt);
+  return `${dayMonth(date)} ${SEPARATOR} ${clockTime(date)}`;
+}
+
+export function copyKeptNote(mode: ImportMode): string | null {
+  return mode === 'replace' ? COPY_KEPT_NOTE : null;
 }
 
 const notOnDevice = (plan: CategoryPlan | undefined) => plan?.notOnDevice ?? 0;

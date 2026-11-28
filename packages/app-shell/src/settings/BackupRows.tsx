@@ -7,6 +7,7 @@ import {
   space,
 } from '@kitbag/core-design';
 import {
+  beforeReplaceTakenAt,
   getBackup,
   restoreStore,
   saveLibraryBackup,
@@ -30,7 +31,10 @@ import {
   RESTORE_LABEL,
   SAVE_LABEL,
   SHARE_LABEL,
+  UNDO_LAST_REPLACE_LABEL,
+  undoReplaceValue,
 } from './backupText.ts';
+import { openUndoReplace } from './undoReplace.ts';
 
 const useStyles = createThemedStyles(() => ({
   actions: { flexDirection: 'row', gap: space.controlGap },
@@ -164,4 +168,50 @@ export function RestoreRow({
       });
   }, [onOpenRestore]);
   return <EditRow label={RESTORE_LABEL} onPress={restore} />;
+}
+
+function useUndoReplaceValue(): string | null {
+  const [value, setValue] = useState<string | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      let live = true;
+      beforeReplaceTakenAt()
+        .then((takenAt) => {
+          if (live) setValue(undoReplaceValue(takenAt));
+        })
+        .catch((error: unknown) => {
+          console.warn(
+            '[kitbag] could not read the copy before replace',
+            error,
+          );
+        });
+      return () => {
+        live = false;
+      };
+    }, []),
+  );
+  return value;
+}
+
+export function UndoReplaceRow({
+  onOpenRestore,
+}: {
+  readonly onOpenRestore: () => void;
+}) {
+  const value = useUndoReplaceValue();
+  const undo = useCallback(() => {
+    void openUndoReplace().then(() => {
+      if (restoreStore.getState().restore.phase !== 'empty') onOpenRestore();
+    });
+  }, [onOpenRestore]);
+  if (value === null) return null;
+  return (
+    <EditRow
+      label={UNDO_LAST_REPLACE_LABEL}
+      accessibilityLabel={`${UNDO_LAST_REPLACE_LABEL}, ${value}`}
+      onPress={undo}
+    >
+      <EditValue muted>{value}</EditValue>
+    </EditRow>
+  );
 }
