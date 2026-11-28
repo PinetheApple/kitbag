@@ -8,7 +8,10 @@ import { GRID_METER, NO_METER_OVERRIDE } from '@kitbag/core-state';
 import { act } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { NO_GRID_REASON, NOT_SAVED } from '@kitbag/tool-stems/src/logic/meterEdit.ts';
+import {
+  NO_GRID_REASON,
+  NOT_SAVED,
+} from '@kitbag/tool-stems/src/logic/meterEdit.ts';
 import {
   at,
   flush,

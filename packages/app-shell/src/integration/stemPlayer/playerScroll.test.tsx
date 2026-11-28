@@ -5,7 +5,10 @@ import type { ReactTestInstance } from 'react-test-renderer';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { AdvanceCountIn } from '@kitbag/tool-stems/src/screen/AdvanceCountIn.tsx';
-import { LYRIC_FLOOR, LYRIC_SLOT_ID } from '@kitbag/tool-stems/src/screen/DetailPane.tsx';
+import {
+  LYRIC_FLOOR,
+  LYRIC_SLOT_ID,
+} from '@kitbag/tool-stems/src/screen/DetailPane.tsx';
 import { OVERLAY_ID } from '@kitbag/tool-stems/src/screen/PlayerLayouts.tsx';
 import {
   mountTracked,
@@ -16,7 +19,11 @@ import {
   withTestId,
   type Player,
 } from './playerHarness.test-helper.tsx';
-import { MIN_VISIBLE_STEMS, MIXER_FLOOR, MIXER_SLOT_ID } from '@kitbag/tool-stems/src/screen/StemList.tsx';
+import {
+  MIN_VISIBLE_STEMS,
+  MIXER_FLOOR,
+  MIXER_SLOT_ID,
+} from '@kitbag/tool-stems/src/screen/StemList.tsx';
 
 afterEach(unmountTracked);
 

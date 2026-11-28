@@ -39,7 +39,11 @@ import {
   withTestId,
   type Player,
 } from './playerHarness.test-helper.tsx';
-import { REPEAT_LINE_ID, UP_NEXT, UP_NEXT_ROW_ID } from '@kitbag/tool-stems/src/screen/UpNextRow.tsx';
+import {
+  REPEAT_LINE_ID,
+  UP_NEXT,
+  UP_NEXT_ROW_ID,
+} from '@kitbag/tool-stems/src/screen/UpNextRow.tsx';
 
 const NIGHT_BUS = 21;
 const TIN_ROOF = 22;
