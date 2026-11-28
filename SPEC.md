@@ -2033,6 +2033,7 @@ One migration note that is not obvious from the table:
 | `kitbag-practice-history.html` | **Practice history** (owner-approved 2026-11-07; #286). Draws the session list with Day, Week and Month grouping and its graph, swipe and menu delete with Undo, the Settings doorway and swipe-direction row, the optional Home tile, and the session timeline with Repeat. The ⋮ menu is built as the app's bottom sheet, not the pop-up drawn. Recorded in `docs/decisions.md`: picks 2026-11-02, mockup approved 2026-11-07. |
 | `kitbag-home-arrange.html` | **Option B only** ("Chosen (owner, 2026-10-31)"; #113). Supersedes the "long-press any tile for edit mode" bullet in `kitbag-ui.html` §04 Home and §12.4's customizable-layout bullet as to *how* editing works: Edit, or a long-press on a tile, opens the Arrange sheet. Options A and C are rejected alternatives, kept as reference in `docs/research/mockups/113/`. Recorded in `docs/decisions.md`, 2026-10-31. Its B1 and B5 frames, which drew the More tools row and sheet (#617), are superseded by `kitbag-tools.html`. |
 | `kitbag-tools.html` | **Downloadable tools** (owner-approved 2026-11-27; #657). Draws Home and the More tools row and sheet with tools to download, Settings → Tools, a tool's page before and after install, installing and its failures, the downloads opt-in and its off confirm, removal with data kept, offline and downloads-off states, the `fdroid` build's Tools screen, tools that need an update after an app update, and the upgrade that moves today's tools out of the app (the one-time notice and the fallback card). Supersedes the More tools row and sheet in `kitbag-home-arrange.html` B1 and B5 and in `kitbag-ui.html` §04, and the Tools manager in `kitbag-settings.html` and `kitbag-ui.html` §04. Versions, sizes and counts in it are illustrative. Recorded in `docs/decisions.md`, 2026-11-27. |
+| `kitbag-undo-replace.html` | **Undo a Replace** (owner-approved 2026-11-28; #718). Adds to `kitbag-settings.html` the Replace done screen's Undo replace button and kept-copy line, the Settings → Data row Undo last replace (shown only while a copy exists), and the kept copy opened in the Restore review as a Replace; draws the failed outcome when the copy cannot be kept. Counts, dates and sizes in it are illustrative. |
 
 ### 12.1 Principles (kitbag-ui §01)
 
@@ -2206,8 +2207,11 @@ Kitbag where it was installed: the app cannot update itself.
   anything, Replace stores a full backup of the current data in the database; a
   copy that cannot be made, or would not restore, refuses the replace and
   nothing changes. One slot: the next Replace overwrites it. The copy opens in
-  the Restore review as a Replace of the categories it replaced. Its entry
-  point is not built yet (#718).
+  the Restore review as a Replace of the categories it replaced, from **Undo
+  replace** on the Replace done screen or **Undo last replace** in Settings →
+  Data, dated when it was taken and shown only while a copy exists
+  (`kitbag-undo-replace.html`; #718). Restoring the copy is a Replace like any
+  other, so it keeps a copy first and the undo can itself be undone.
 - **Selective is per category, not per item.** Practice history and library songs
   default off — history is rarely what you're restoring, and library rows point at
   audio files a JSON backup does not contain. A row that would import 17 broken
