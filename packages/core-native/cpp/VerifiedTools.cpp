@@ -1,55 +1,58 @@
 #include "VerifiedTools.h"
 
 #include <algorithm>
-#include <array>
 #include <utility>
 
 namespace kitbag {
 
 namespace {
 
-constexpr std::array<uint8_t, 8> kHbcMagic =
-    {0xc6, 0x1f, 0xbc, 0x03, 0xc1, 0x03, 0x19, 0x1f};
-constexpr std::size_t kHbcVersionBytes = sizeof(uint32_t);
 constexpr unsigned kBitsPerByte = 8;
+static_assert(kHbcVersionBytes <= sizeof(uint32_t));
 
 }  // namespace
 
 HandOffResult
-VerifiedToolStore::handOff(const std::string& toolId, VerifiedBundle bundle) {
-  if (!toolBytecodeFits(bundle.bytecode.size())) {
+VerifiedToolStore::HandOff(const std::string& tool_id, VerifiedBundle bundle) {
+  if (!ToolBytecodeFits(bundle.bytecode.size())) {
     return HandOffResult::kTooLarge;
   }
   const std::lock_guard lock(mutex_);
-  auto existing = pending_.find(toolId);
+  auto existing = pending_.find(tool_id);
   if (existing != pending_.end()) {
     existing->second = std::move(bundle);
     return HandOffResult::kStored;
   }
   if (pending_.size() >= kMaxPendingTools) return HandOffResult::kStoreFull;
-  pending_.emplace(toolId, std::move(bundle));
+  pending_.emplace(tool_id, std::move(bundle));
   return HandOffResult::kStored;
 }
 
-std::optional<VerifiedBundle> VerifiedToolStore::take(std::string_view toolId) {
+std::optional<VerifiedBundle> VerifiedToolStore::Take(
+    std::string_view tool_id
+) {
   const std::lock_guard lock(mutex_);
-  auto found = pending_.find(toolId);
+  auto found = pending_.find(tool_id);
   if (found == pending_.end()) return std::nullopt;
   VerifiedBundle bundle = std::move(found->second);
   pending_.erase(found);
   return bundle;
 }
 
-std::size_t VerifiedToolStore::pendingCount() const {
+bool VerifiedToolStore::Drop(std::string_view tool_id) {
+  return Take(tool_id).has_value();
+}
+
+std::size_t VerifiedToolStore::pending_count() const {
   const std::lock_guard lock(mutex_);
   return pending_.size();
 }
 
-bool toolBytecodeFits(std::size_t bytes) {
+bool ToolBytecodeFits(std::size_t bytes) {
   return bytes <= kMaxToolBytecodeBytes;
 }
 
-std::optional<uint32_t> hbcVersion(std::span<const uint8_t> bytes) {
+std::optional<uint32_t> HbcVersion(std::span<const uint8_t> bytes) {
   if (bytes.size() < kHbcMagic.size() + kHbcVersionBytes) return std::nullopt;
   if (!std::equal(kHbcMagic.begin(), kHbcMagic.end(), bytes.begin())) {
     return std::nullopt;
@@ -62,17 +65,17 @@ std::optional<uint32_t> hbcVersion(std::span<const uint8_t> bytes) {
 }
 
 BundleCheck
-checkVerifiedBundle(const VerifiedBundle& bundle, uint32_t runtimeVersion) {
-  const auto header = hbcVersion(bundle.bytecode);
+CheckVerifiedBundle(const VerifiedBundle& bundle, uint32_t runtime_version) {
+  const auto header = HbcVersion(bundle.bytecode);
   if (!header) return BundleCheck::kNotHermesBytecode;
-  if (bundle.bytecodeVersion != runtimeVersion) {
+  if (bundle.bytecode_version != runtime_version) {
     return BundleCheck::kManifestVersionMismatch;
   }
-  if (*header != runtimeVersion) return BundleCheck::kBytecodeVersionMismatch;
+  if (*header != runtime_version) return BundleCheck::kBytecodeVersionMismatch;
   return BundleCheck::kOk;
 }
 
-VerifiedToolStore& verifiedTools() {
+VerifiedToolStore& VerifiedTools() {
   static VerifiedToolStore store;
   return store;
 }

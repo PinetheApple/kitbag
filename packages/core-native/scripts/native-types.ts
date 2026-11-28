@@ -136,4 +136,6 @@ export interface NativeConstants {
   readonly tunerIdleSleepMicros: number;
   readonly evalVerifiedToolKey: string;
   readonly toolErrors: readonly StringConstant[];
+  readonly toolRefusalKey: string;
+  readonly toolRefusalDetailKey: string;
 }

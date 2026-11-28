@@ -20,6 +20,10 @@
     "route": "^/t/[a-z][a-z0-9-]{1,31}(/[A-Za-z0-9\\[\\]._-]+)*$"
   },
   "routePrefix": "/t/",
+  "hbc": {
+    "magic": "c61fbc03c103191f",
+    "versionBytes": 4
+  },
   "manifestFields": [
     "schema",
     "id",

@@ -28,6 +28,10 @@ export const BUNDLE_RULES = {
     route: `^${ROUTE_PREFIX}${ID}(/${ROUTE_SEGMENT})*$`,
   },
   routePrefix: ROUTE_PREFIX,
+  hbc: {
+    magic: 'c61fbc03c103191f',
+    versionBytes: 4,
+  },
   manifestFields: [
     'schema',
     'id',

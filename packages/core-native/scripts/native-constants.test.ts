@@ -487,5 +487,9 @@ describe('collectConstants (tool evaluation)', () => {
       "export const KB_EVAL_VERIFIED_TOOL_KEY = '__kitbagEvalVerifiedTool';",
     );
     expect(rendered).toContain("  notVerified: 'E_TOOL_NOT_VERIFIED',");
+    expect(rendered).toContain("export const KB_TOOL_REFUSAL_KEY = 'refused';");
+    expect(rendered).toContain(
+      "export const KB_TOOL_REFUSAL_DETAIL_KEY = 'detail';",
+    );
   });
 });

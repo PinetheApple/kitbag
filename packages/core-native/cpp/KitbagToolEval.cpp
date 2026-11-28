@@ -1,7 +1,10 @@
 #include "KitbagToolEval.h"
 
+#include <jsi/jsi.h>
+
 #include <cmath>
 #include <cstdint>
+#include <exception>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -9,18 +12,16 @@
 #include <utility>
 #include <vector>
 
-#include "VerifiedTools.h"
-
 namespace kitbag {
 
 namespace {
 
 using facebook::jsi::Function;
 using facebook::jsi::JSError;
-using facebook::jsi::JSIException;
 using facebook::jsi::Object;
 using facebook::jsi::PropNameID;
 using facebook::jsi::Runtime;
+using facebook::jsi::String;
 using facebook::jsi::Value;
 
 constexpr unsigned kArgCount = 1;
@@ -28,6 +29,7 @@ constexpr const char* kHermesInternal = "HermesInternal";
 constexpr const char* kRuntimeProperties = "getRuntimeProperties";
 constexpr const char* kBytecodeVersionProperty = "Bytecode Version";
 constexpr const char* kSourceUrlScheme = "tool:";
+constexpr const char* kUnknownThrow = "non-standard exception";
 
 class OwnedBuffer final : public facebook::jsi::Buffer {
  public:
@@ -43,7 +45,7 @@ class OwnedBuffer final : public facebook::jsi::Buffer {
   std::vector<uint8_t> bytes_;
 };
 
-std::optional<uint32_t> asVersion(const Value& value) {
+std::optional<uint32_t> AsVersion(const Value& value) {
   if (!value.isNumber()) return std::nullopt;
   const double number = value.getNumber();
   const bool whole = number == std::floor(number);
@@ -53,114 +55,87 @@ std::optional<uint32_t> asVersion(const Value& value) {
   return static_cast<uint32_t>(number);
 }
 
-std::optional<uint32_t> runtimeBytecodeVersion(Runtime& rt) {
+std::optional<uint32_t> RuntimeBytecodeVersion(Runtime& rt) {
   const Value internal = rt.global().getProperty(rt, kHermesInternal);
   if (!internal.isObject()) return std::nullopt;
-  const Object internalObject = internal.getObject(rt);
-  const Value getter = internalObject.getProperty(rt, kRuntimeProperties);
+  const Object internal_object = internal.getObject(rt);
+  const Value getter = internal_object.getProperty(rt, kRuntimeProperties);
   if (!getter.isObject() || !getter.getObject(rt).isFunction(rt)) {
     return std::nullopt;
   }
   const Value properties =
-      getter.getObject(rt).getFunction(rt).callWithThis(rt, internalObject);
+      getter.getObject(rt).getFunction(rt).callWithThis(rt, internal_object);
   if (!properties.isObject()) return std::nullopt;
-  return asVersion(
+  return AsVersion(
       properties.getObject(rt).getProperty(rt, kBytecodeVersionProperty)
   );
 }
 
-[[noreturn]] void throwToolError(
-    Runtime& rt,
-    const char* code,
-    const std::string& toolId,
-    const std::string& detail
-) {
+std::optional<uint32_t> RuntimeBytecodeVersionOrNone(Runtime& rt) {
+  try {
+    return RuntimeBytecodeVersion(rt);
+  } catch (const std::exception&) {
+    return std::nullopt;
+  }
+}
+
+Value Refusal(Runtime& rt, const char* code, const std::string& detail) {
+  Object refusal(rt);
+  refusal.setProperty(rt, kToolRefusalKey, String::createFromAscii(rt, code));
+  refusal.setProperty(
+      rt,
+      kToolRefusalDetailKey,
+      String::createFromUtf8(rt, detail)
+  );
+  return {rt, refusal};
+}
+
+[[noreturn]] void
+ThrowEvalError(Runtime& rt, const std::string& tool_id, const char* what) {
   throw JSError(
       rt,
-      std::string(code) + ": " + kSourceUrlScheme + toolId + " " + detail
+      std::string(kToolErrorEval) + ": " + kSourceUrlScheme + tool_id + " " +
+          what
   );
 }
 
-std::string versions(uint32_t found, uint32_t runtimeVersion) {
-  return std::to_string(found) + ", runtime " + std::to_string(runtimeVersion);
-}
-
-void requireRunnable(
+Value EvalVerifiedTool(
     Runtime& rt,
-    const std::string& toolId,
-    const VerifiedBundle& bundle,
-    uint32_t runtimeVersion
+    std::optional<uint32_t> runtime_version,
+    const std::string& tool_id
 ) {
-  switch (checkVerifiedBundle(bundle, runtimeVersion)) {
-    case BundleCheck::kOk:
-      return;
-    case BundleCheck::kNotHermesBytecode:
-      throwToolError(rt, kToolErrorNotBytecode, toolId, "has no hbc header");
-    case BundleCheck::kManifestVersionMismatch:
-      throwToolError(
-          rt,
-          kToolErrorManifestVersion,
-          toolId,
-          "manifest pins bytecode " +
-              versions(bundle.bytecodeVersion, runtimeVersion)
-      );
-    case BundleCheck::kBytecodeVersionMismatch:
-      throwToolError(
-          rt,
-          kToolErrorBytecodeVersion,
-          toolId,
-          "bundle is bytecode " +
-              versions(hbcVersion(bundle.bytecode).value_or(0), runtimeVersion)
-      );
-  }
-}
-
-Value evalVerifiedTool(
-    Runtime& rt,
-    std::optional<uint32_t> runtimeVersion,
-    const std::string& toolId
-) {
-  auto bundle = verifiedTools().take(toolId);
-  if (!bundle) {
-    throwToolError(rt, kToolErrorNotVerified, toolId, "has no verified bundle");
-  }
-  if (!runtimeVersion) {
-    throwToolError(
-        rt,
-        kToolErrorRuntimeVersion,
-        toolId,
-        "runtime reports no bytecode version"
-    );
-  }
-  requireRunnable(rt, toolId, *bundle, *runtimeVersion);
-  auto buffer = std::make_shared<OwnedBuffer>(std::move(bundle->bytecode));
+  ToolEvalPlan plan = PlanToolEval(VerifiedTools(), tool_id, runtime_version);
+  if (plan.refusal != nullptr) return Refusal(rt, plan.refusal, plan.detail);
+  auto buffer = std::make_shared<OwnedBuffer>(std::move(plan.bundle.bytecode));
   try {
-    rt.evaluateJavaScript(buffer, kSourceUrlScheme + toolId);
-  } catch (const JSError&) {
-    throw;
-  } catch (const JSIException& error) {
-    throwToolError(rt, kToolErrorEval, toolId, error.what());
+    rt.evaluateJavaScript(buffer, kSourceUrlScheme + tool_id);
+  } catch (const std::exception& error) {
+    ThrowEvalError(rt, tool_id, error.what());
+  } catch (...) {
+    ThrowEvalError(rt, tool_id, kUnknownThrow);
   }
   return Value::undefined();
 }
 
 }  // namespace
 
-void installToolEval(Runtime& rt) {
-  const std::optional<uint32_t> runtimeVersion = runtimeBytecodeVersion(rt);
-  auto eval = [runtimeVersion](
+void InstallToolEval(Runtime& rt) {
+  const std::optional<uint32_t> runtime_version =
+      RuntimeBytecodeVersionOrNone(rt);
+  auto eval = [runtime_version](
                   Runtime& rt,
                   const Value&,
                   const Value* args,
                   size_t count
               ) {
     if (count < kArgCount || !args[0].isString()) {
-      throw JSError(
-          rt,
-          std::string(kToolErrorArgument) + ": expected (toolId)"
-      );
+      return Refusal(rt, kToolErrorArgument, "expected (toolId)");
     }
-    return evalVerifiedTool(rt, runtimeVersion, args[0].getString(rt).utf8(rt));
+    return EvalVerifiedTool(
+        rt,
+        runtime_version,
+        args[0].getString(rt).utf8(rt)
+    );
   };
   rt.global().setProperty(
       rt,

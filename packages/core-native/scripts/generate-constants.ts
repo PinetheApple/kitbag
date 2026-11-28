@@ -9,6 +9,7 @@ import {
   renderConstants,
   type NativeSources,
 } from './native-constants.ts';
+import { renderToolRulesCpp } from './tool-rules-cpp.ts';
 import { renderToolRulesKotlin } from './tool-rules-kotlin.ts';
 
 const pkgRoot = join(import.meta.dirname, '..');
@@ -60,6 +61,10 @@ const outputs: readonly (readonly [string, string])[] = [
   [
     join(kotlinRoot, 'tools', 'ToolBundleRules.gen.kt'),
     renderToolRulesKotlin(readFileSync(rulesFile, 'utf8')),
+  ],
+  [
+    join(pkgRoot, 'cpp', 'ToolBundleRules.gen.h'),
+    renderToolRulesCpp(readFileSync(rulesFile, 'utf8')),
   ],
 ];
 

@@ -18,6 +18,7 @@ it(
       '-std=c++20',
       `-I${cppDir}`,
       join(cppDir, 'VerifiedTools.cpp'),
+      join(cppDir, 'ToolEvalPlan.cpp'),
       join(cppDir, 'test', 'verifiedToolsTest.cpp'),
       '-o',
       binary,

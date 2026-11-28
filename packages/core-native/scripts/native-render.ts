@@ -253,6 +253,10 @@ ${renderEnum('KB_WRONG_STRING', c.wrongString)}
 /** The JSI global that evaluates a verified tool by id (kEvalVerifiedToolKey). */
 export const KB_EVAL_VERIFIED_TOOL_KEY = '${c.evalVerifiedToolKey}';
 
-/** Codes __kitbagEvalVerifiedTool throws as "<code>: tool:<id> <detail>" (kToolError*). */
+/** Keys of the object __kitbagEvalVerifiedTool returns when it refuses to evaluate. */
+export const KB_TOOL_REFUSAL_KEY = '${c.toolRefusalKey}';
+export const KB_TOOL_REFUSAL_DETAIL_KEY = '${c.toolRefusalDetailKey}';
+
+/** Refusal codes, returned under KB_TOOL_REFUSAL_KEY, and eval, thrown as "E_TOOL_EVAL: tool:<id> <detail>" (kToolError*). */
 ${renderStrings('KB_TOOL_ERROR', c.toolErrors)}`;
 }

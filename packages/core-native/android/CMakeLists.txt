@@ -39,6 +39,7 @@ add_library(kitbag_jsi SHARED
   "${KITBAG_GLUE_DIR}/KitbagJniTempo.cpp"
   "${KITBAG_GLUE_DIR}/KitbagJniTools.cpp"
   "${KITBAG_GLUE_DIR}/KitbagToolEval.cpp"
+  "${KITBAG_GLUE_DIR}/ToolEvalPlan.cpp"
   "${KITBAG_GLUE_DIR}/VerifiedTools.cpp")
 
 target_include_directories(kitbag_jsi PRIVATE

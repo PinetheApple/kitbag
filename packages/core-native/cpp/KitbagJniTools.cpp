@@ -17,17 +17,18 @@ constexpr const char* kNullPointer = "java/lang/NullPointerException";
 constexpr const char* kIllegalArgument = "java/lang/IllegalArgumentException";
 constexpr const char* kIllegalState = "java/lang/IllegalStateException";
 constexpr const char* kOutOfMemory = "java/lang/OutOfMemoryError";
+constexpr const char* kOverCap = "tool bytecode exceeds the native cap";
 
-void throwJava(JNIEnv* env, const char* className, const char* message) {
-  jclass cls = env->FindClass(className);
+void ThrowJava(JNIEnv* env, const char* class_name, const char* message) {
+  jclass cls = env->FindClass(class_name);
   if (cls != nullptr) env->ThrowNew(cls, message);
 }
 
 std::optional<std::vector<uint8_t>>
-copyBytecode(JNIEnv* env, jbyteArray bytecode) {
+CopyBytecode(JNIEnv* env, jbyteArray bytecode) {
   const jsize length = env->GetArrayLength(bytecode);
-  if (!kitbag::toolBytecodeFits(static_cast<std::size_t>(length))) {
-    throwJava(env, kIllegalArgument, "tool bytecode exceeds the native cap");
+  if (!kitbag::ToolBytecodeFits(static_cast<std::size_t>(length))) {
+    ThrowJava(env, kIllegalArgument, kOverCap);
     return std::nullopt;
   }
   std::vector<uint8_t> bytes(static_cast<std::size_t>(length));
@@ -40,20 +41,20 @@ copyBytecode(JNIEnv* env, jbyteArray bytecode) {
   return bytes;
 }
 
-void store(
+void Store(
     JNIEnv* env,
-    const char* toolId,
+    const char* tool_id,
     std::vector<uint8_t> bytes,
-    uint32_t bytecodeVersion
+    uint32_t bytecode_version
 ) {
-  const auto result = kitbag::verifiedTools().handOff(
-      toolId,
-      {std::move(bytes), bytecodeVersion}
+  const auto result = kitbag::VerifiedTools().HandOff(
+      tool_id,
+      {std::move(bytes), bytecode_version}
   );
   if (result == kitbag::HandOffResult::kStoreFull) {
-    throwJava(env, kIllegalState, "too many tools awaiting evaluation");
+    ThrowJava(env, kIllegalState, "too many tools awaiting evaluation");
   } else if (result == kitbag::HandOffResult::kTooLarge) {
-    throwJava(env, kIllegalArgument, "tool bytecode exceeds the native cap");
+    ThrowJava(env, kIllegalArgument, kOverCap);
   }
 }
 
@@ -65,32 +66,47 @@ JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_tools_VerifiedToolHandoff_nativeHandOff(
     JNIEnv* env,
     jobject,
-    jstring toolId,
+    jstring tool_id,
     jbyteArray bytecode,
-    jint bytecodeVersion
+    jint bytecode_version
 ) {
-  if (toolId == nullptr || bytecode == nullptr) {
-    throwJava(env, kNullPointer, "toolId and bytecode are required");
+  if (tool_id == nullptr || bytecode == nullptr) {
+    ThrowJava(env, kNullPointer, "toolId and bytecode are required");
     return;
   }
-  if (bytecodeVersion < 0) {
-    throwJava(env, kIllegalArgument, "bytecode version is negative");
+  if (bytecode_version < 0) {
+    ThrowJava(env, kIllegalArgument, "bytecode version is negative");
     return;
   }
-  const kitbag::JniUtf id(env, toolId);
+  const kitbag::JniUtf id(env, tool_id);
   if (id.get() == nullptr) return;
   try {
-    auto bytes = copyBytecode(env, bytecode);
+    auto bytes = CopyBytecode(env, bytecode);
     if (!bytes) return;
-    store(
+    Store(
         env,
         id.get(),
         std::move(*bytes),
-        static_cast<uint32_t>(bytecodeVersion)
+        static_cast<uint32_t>(bytecode_version)
     );
   } catch (const std::bad_alloc&) {
-    throwJava(env, kOutOfMemory, "cannot hold tool bytecode");
+    ThrowJava(env, kOutOfMemory, "cannot hold tool bytecode");
   }
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_kitbag_corenative_tools_VerifiedToolHandoff_nativeDrop(
+    JNIEnv* env,
+    jobject,
+    jstring tool_id
+) {
+  if (tool_id == nullptr) {
+    ThrowJava(env, kNullPointer, "toolId is required");
+    return JNI_FALSE;
+  }
+  const kitbag::JniUtf id(env, tool_id);
+  if (id.get() == nullptr) return JNI_FALSE;
+  return kitbag::VerifiedTools().Drop(id.get()) ? JNI_TRUE : JNI_FALSE;
 }
 
 }  // extern "C"

@@ -185,5 +185,10 @@ export function collectConstants(sources: NativeSources): NativeConstants {
       'kEvalVerifiedToolKey',
     ),
     toolErrors: parseCStringConstants(sources.toolEvalHeader, 'kToolError'),
+    toolRefusalKey: parseCString(sources.toolEvalHeader, 'kToolRefusalKey'),
+    toolRefusalDetailKey: parseCString(
+      sources.toolEvalHeader,
+      'kToolRefusalDetailKey',
+    ),
   };
 }
