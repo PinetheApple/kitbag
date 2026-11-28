@@ -62,6 +62,7 @@ vi.mock('./CustomSounds.tsx', () => ({
 vi.mock('./CustomSoundSheets.tsx', () => ({
   CustomSoundSheets: () => null,
   useCustomSoundMenu: () => ({ open: () => undefined }),
+  useRemovedSoundNotice: () => undefined,
 }));
 vi.mock('./PracticeSection.tsx', () => ({
   PracticeSection: () => null,

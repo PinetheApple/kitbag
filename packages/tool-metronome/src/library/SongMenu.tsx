@@ -1,12 +1,7 @@
 import { useLibrary, type SongPreset } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 
-import {
-  ActionsSheet,
-  ConfirmSheet,
-  guarded,
-  type SheetAction,
-} from './sheets.tsx';
+import { ActionsSheet, guarded, type SheetAction } from './sheets.tsx';
 import { CHANGE_NOT_SAVED, REMOVE_FROM_SET } from './setlistCopy.ts';
 
 export interface SongTarget {
@@ -14,7 +9,7 @@ export interface SongTarget {
   readonly itemId: number | null;
 }
 
-type Kind = 'none' | 'actions' | 'move' | 'delete';
+type Kind = 'none' | 'actions' | 'move';
 
 export function useSongMenu() {
   const [kind, setKind] = useState<Kind>('none');
@@ -110,9 +105,7 @@ function songActions(cmd: SongCommands, menu: SongMenu, inSet: boolean) {
   actions.push({
     label: 'Delete song',
     variant: 'destructive',
-    onPress: () => {
-      menu.go('delete');
-    },
+    onPress: cmd.destroy,
   });
   return actions;
 }
@@ -124,27 +117,6 @@ function useDestinations(props: SongMenuProps, cmd: SongCommands) {
   return setlists
     .filter((s) => s.setlist.id !== props.setlistId)
     .map((s) => ({ label: s.setlist.name, onPress: cmd.moveTo(s.setlist.id) }));
-}
-
-function SongDelete({
-  menu,
-  bottomInset,
-  cmd,
-}: SongMenuProps & { readonly cmd: SongCommands }) {
-  const name = menu.target?.preset.name ?? '';
-  return (
-    <ConfirmSheet
-      error={menu.error}
-      bottomInset={bottomInset}
-      onDismiss={menu.close}
-      visible={menu.kind === 'delete'}
-      title="Delete song?"
-      body={`“${name}” is deleted from All songs and from every setlist. This cannot be undone.`}
-      confirmLabel="Delete song"
-      destructive
-      onConfirm={cmd.destroy}
-    />
-  );
 }
 
 export function SongMenuSheets(props: SongMenuProps) {
@@ -177,7 +149,6 @@ export function SongMenuSheets(props: SongMenuProps) {
         actions={destinations}
         hint={noOther}
       />
-      <SongDelete {...props} cmd={cmd} />
     </>
   );
 }

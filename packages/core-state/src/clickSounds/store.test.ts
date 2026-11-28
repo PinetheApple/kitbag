@@ -148,7 +148,7 @@ describe('managing click sounds', () => {
     expect(h.state().sounds).toMatchObject([{ slot: 0, name: 'Rim click' }]);
   });
 
-  it('removes a sound from the engine, its file and every song, and counts the songs', async () => {
+  it('removes a sound from the engine and every song, counts the songs and deletes its file once Undo is gone', async () => {
     const h = harness();
     await h.state().importSound(SOURCE, 'Rimshot');
     const id = customSoundId(0);
@@ -159,11 +159,57 @@ describe('managing click sounds', () => {
     });
     expect(await h.state().remove(0)).toBe(1);
     expect(h.deps.clear).toHaveBeenCalledWith(0);
-    expect(h.stored.size).toBe(0);
     expect(h.state().sounds).toEqual([]);
     expect(h.deps.afterRemove).toHaveBeenCalledWith(id);
     const [song] = await h.database.presets.list();
     expect(song).toMatchObject({ sound: KB_DEFAULT_SOUNDS.normal });
+    expect(h.stored.size).toBe(1);
+    await h.state().dismissRemoved();
+    expect(h.stored.size).toBe(0);
+    expect(h.state().removed).toBeNull();
+  });
+
+  it('Undo puts a removed sound back in its slot, the engine and every song', async () => {
+    const h = harness();
+    await h.state().importSound(SOURCE, 'Rimshot');
+    const id = customSoundId(0);
+    const song = await h.database.presets.create({
+      ...presetValues('Uses it', null),
+      sound: id,
+      perAccentSounds: new Uint8Array([id, id]),
+    });
+    const released = {
+      metronome: { normal: id, accent: id },
+      standalone: null,
+    };
+    h.deps.afterRemove.mockResolvedValueOnce(released);
+    await h.state().remove(0);
+    h.deps.load.mockClear();
+    await h.state().undoRemove();
+    expect(h.state().sounds).toMatchObject([{ slot: 0, name: 'Rimshot' }]);
+    expect(h.deps.load).toHaveBeenCalledExactlyOnceWith(0, 'file-1.wav');
+    expect(h.stored.has('file-1.wav')).toBe(true);
+    expect(await h.database.presets.get(song.id)).toEqual(song);
+    expect(h.deps.afterRestore).toHaveBeenCalledWith(id, released);
+    expect(h.state().removed).toBeNull();
+  });
+
+  it('keeps a removed sound’s file through an orphan sweep while Undo is offered', async () => {
+    const h = harness();
+    await h.state().importSound(SOURCE, 'Rimshot');
+    await h.state().remove(0);
+    await h.state().sweepOrphans();
+    expect(h.stored.has('file-1.wav')).toBe(true);
+  });
+
+  it('deletes the file of an earlier remove when another sound is removed', async () => {
+    const h = harness();
+    await h.state().importSound(SOURCE, 'Rimshot');
+    await h.state().importSound(SOURCE, 'Hat');
+    await h.state().remove(0);
+    await h.state().remove(1);
+    expect([...h.stored.keys()]).toEqual(['file-2.wav']);
+    expect(h.state().removed?.sound.name).toBe('Hat');
   });
 });
 

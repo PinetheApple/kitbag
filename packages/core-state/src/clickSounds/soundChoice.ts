@@ -70,10 +70,6 @@ export function soundsWith(
     : { ...sounds, normal: id };
 }
 
-export function rolesUsing(sounds: PerAccentSounds, id: number): SoundRole[] {
-  return SOUND_ROLES.filter((role) => sounds[role] === id);
-}
-
 export function soundChipLabel(
   sounds: PerAccentSounds,
   custom: readonly CustomSoundView[] = [],

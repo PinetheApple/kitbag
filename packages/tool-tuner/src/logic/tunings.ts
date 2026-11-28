@@ -2,7 +2,7 @@
 // read-only code constants; only custom tunings are rows in the tunings table
 // (docs/decisions.md, 2026-10-14).
 
-import type { PegItem } from '@kitbag/core-design';
+import { countLabel, type PegItem } from '@kitbag/core-design';
 import { KB_TUNER_INSTRUMENT, KB_TUNER_MAX_STRINGS } from '@kitbag/core-native';
 import {
   isValidTuning,
@@ -143,6 +143,15 @@ export function addString(notes: readonly number[]): readonly number[] {
 export function removeString(notes: readonly number[]): readonly number[] {
   if (notes.length <= STRING_COUNT_BOUNDS.min) return notes;
   return notes.slice(0, -1);
+}
+
+export function deleteTuningTitle(name: string): string {
+  return `Delete “${name}”?`;
+}
+
+export function deleteTuningText(stringCount: number): string {
+  const strings = countLabel(stringCount, 'string', 'strings');
+  return `The tuning and its ${strings} are removed from this phone. This cannot be undone.`;
 }
 
 export function isSavableDraft(draft: TuningDraft): boolean {

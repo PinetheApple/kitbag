@@ -45,6 +45,7 @@ import {
   replaceButtonLabel,
   replaceSheetTitle,
 } from '../logic/viewText.ts';
+import { DeletedSongSnackbar } from './DeletedSongSnackbar.tsx';
 import { useRowFailure, useRowFiles } from './rowFailureHooks.ts';
 
 const useStyles = createThemedStyles(() => ({
@@ -155,6 +156,7 @@ function ActionsSheet({
 }: ActionsSheetProps) {
   const styles = useStyles();
   const reanalyze = useSongLibrary((s) => s.reanalyze);
+  const deleteRowWithUndo = useSongLibrary((s) => s.deleteRowWithUndo);
   const { target, close, openRename, openDelete, openSetlists } = menu;
   const failure = useRowFailure(target);
   const away = useRowFiles(target) === 'unavailable';
@@ -163,6 +165,14 @@ function ActionsSheet({
     close();
     if (target?.kind === 'song') void reanalyze(target.id);
   }, [close, reanalyze, target]);
+  const remove = useCallback(() => {
+    if (target?.kind !== 'song') {
+      openDelete();
+      return;
+    }
+    close();
+    void deleteRowWithUndo(target);
+  }, [target, openDelete, close, deleteRowWithUndo]);
   const row = useMemo(
     () => (target === null ? null : { song: target, title: target.title }),
     [target],
@@ -202,7 +212,7 @@ function ActionsSheet({
               target?.kind === 'stems' ? 'Delete stem song' : 'Delete song'
             }
             variant="destructive"
-            onPress={openDelete}
+            onPress={remove}
           />
         )}
       </View>
@@ -397,6 +407,7 @@ export function LibrarySheets({
         notice={notice}
         bottom={props.bottomInset + snackbar.aboveSheet}
       />
+      <DeletedSongSnackbar bottomInset={props.bottomInset} />
     </>
   );
 }
