@@ -2,6 +2,7 @@ import type { ToolPlugin } from '@kitbag/core-plugin-api';
 import type { ComponentType } from 'react';
 
 import { StemsHostContext, type StemsHost } from './host.ts';
+import { manifest } from './manifest.ts';
 import {
   StemPlayerScreen,
   type StemPlayerScreenProps,
@@ -10,14 +11,6 @@ import { CameraExplainerScreen } from './stemDeck/CameraExplainerScreen.tsx';
 import { ConnectScreen } from './stemDeck/ConnectScreen.tsx';
 import { ImportProgressScreen } from './stemDeck/ImportProgressScreen.tsx';
 import { SongListScreen } from './stemDeck/SongListScreen.tsx';
-
-const STEMS_ROUTES = {
-  stemSet: '/stems/[id]',
-  stemDeck: '/stemdeck',
-  stemDeckCamera: '/stemdeck/camera',
-  stemDeckImport: '/stemdeck/import',
-  stemDeckSongs: '/stemdeck/songs',
-} as const;
 
 export interface StemsScreens {
   readonly player: ComponentType<StemPlayerScreenProps>;
@@ -36,15 +29,15 @@ export function register(host: StemsHost): StemsPlugin {
     );
   }
   return {
-    id: 'stems',
-    name: 'Stem songs',
-    icon: 'stems',
+    id: manifest.id,
+    name: manifest.name,
+    icon: manifest.icon,
     routes: [
-      { path: STEMS_ROUTES.stemSet, screen: StemPlayer },
-      { path: STEMS_ROUTES.stemDeck, screen: ConnectScreen },
-      { path: STEMS_ROUTES.stemDeckCamera, screen: CameraExplainerScreen },
-      { path: STEMS_ROUTES.stemDeckImport, screen: ImportProgressScreen },
-      { path: STEMS_ROUTES.stemDeckSongs, screen: SongListScreen },
+      { path: manifest.routes.stemSet, screen: StemPlayer },
+      { path: manifest.routes.stemDeck, screen: ConnectScreen },
+      { path: manifest.routes.stemDeckCamera, screen: CameraExplainerScreen },
+      { path: manifest.routes.stemDeckImport, screen: ImportProgressScreen },
+      { path: manifest.routes.stemDeckSongs, screen: SongListScreen },
     ],
     screens: { player: StemPlayer },
   };

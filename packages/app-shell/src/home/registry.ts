@@ -1,7 +1,11 @@
 import type { IconName, ToolStatus, ToolTileSize } from '@kitbag/core-design';
-import type { HomeTileDescriptor, ToolPlugin } from '@kitbag/core-plugin-api';
-import { PLAY_ALONG_NAME } from '@kitbag/core-state';
+import type {
+  CompiledToolManifest,
+  HomeTileDescriptor,
+  ToolPlugin,
+} from '@kitbag/core-plugin-api';
 
+import { TOOL_MANIFESTS } from '../toolManifests.ts';
 import { TOOL_ID, TOOL_ROUTES } from './toolRoutes.ts';
 
 export { TOOL_ID };
@@ -31,6 +35,17 @@ const routesOf = (
   group: Readonly<Record<string, string>>,
 ): readonly ToolRoute[] => Object.values(group).map((path) => ({ path }));
 
+function manifestEntry(
+  manifest: CompiledToolManifest & { readonly icon: IconName },
+  layout: HomeLayout,
+): HomeToolEntry {
+  const { id, name, icon, routes, homeTile } = manifest;
+  const entry = { id, name, icon, routes: routesOf(routes), homeTile, layout };
+  return manifest.summary === undefined
+    ? entry
+    : { ...entry, summary: manifest.summary };
+}
+
 export const HOME_TOOLS: readonly HomeToolEntry[] = [
   {
     id: TOOL_ID.metronome,
@@ -41,42 +56,10 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
     layout: '1x1',
     summary: CORE_SUMMARY,
   },
-  {
-    id: TOOL_ID.tuner,
-    name: 'Tuner',
-    icon: 'tuner',
-    routes: routesOf(TOOL_ROUTES.tuner),
-    homeTile: { label: 'Tuner', route: TOOL_ROUTES.tuner.home },
-    layout: '1x1',
-    summary: CORE_SUMMARY,
-  },
-  {
-    id: TOOL_ID.library,
-    name: 'Songs',
-    icon: 'songs',
-    routes: routesOf(TOOL_ROUTES.library),
-    homeTile: { label: 'Songs', route: TOOL_ROUTES.library.home },
-    layout: '1x1',
-    summary: 'Imported songs, beats analyzed',
-  },
-  {
-    id: TOOL_ID.stems,
-    name: 'Stem songs',
-    icon: 'stems',
-    routes: routesOf(TOOL_ROUTES.stems),
-    homeTile: { label: 'Stem songs', route: TOOL_ROUTES.stems.home },
-    layout: '1x1',
-    summary: 'Mix and loop imported stems',
-  },
-  {
-    id: TOOL_ID.sync,
-    name: PLAY_ALONG_NAME,
-    icon: 'playAlong',
-    routes: routesOf(TOOL_ROUTES.sync),
-    homeTile: { label: PLAY_ALONG_NAME, route: TOOL_ROUTES.sync.home },
-    layout: 'row',
-    summary: 'Needs notification access',
-  },
+  { ...manifestEntry(TOOL_MANIFESTS.tuner, '1x1'), summary: CORE_SUMMARY },
+  manifestEntry(TOOL_MANIFESTS.library, '1x1'),
+  manifestEntry(TOOL_MANIFESTS.stems, '1x1'),
+  manifestEntry(TOOL_MANIFESTS.sync, 'row'),
   {
     id: TOOL_ID.practiceHistory,
     name: 'Practice history',

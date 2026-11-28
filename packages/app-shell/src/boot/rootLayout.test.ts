@@ -46,7 +46,6 @@ vi.mock('@kitbag/core-design', () => ({
   useTheme: () => ({ color: { bg: 'bg' } }),
 }));
 vi.mock('@kitbag/core-state', () => ({
-  PLAY_ALONG_NAME: 'Play along',
   useAppearance: (select: (state: { theme: string }) => unknown) =>
     select({ theme: 'system' }),
 }));

@@ -7,5 +7,5 @@
     // the same reason. noEmit makes it safe, as in core-state/app-shell.
     "allowImportingTsExtensions": true
   },
-  "include": ["src"]
+  "include": ["src", "manifest.ts"]
 }

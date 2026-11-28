@@ -1,11 +1,11 @@
 import { clampUnit, FACT_SEPARATOR } from '@kitbag/core-design';
 import {
   extrapolatedPositionMs,
-  PLAY_ALONG_NAME,
   type PlayAlongTrack,
 } from '@kitbag/core-state';
 import type { MediaSessionSnapshot } from '@kitbag/core-native';
 
+import { manifest } from '../manifest.ts';
 import { UNKNOWN_TITLE } from './nowPlaying.ts';
 
 export interface ProgressPlan {
@@ -38,7 +38,7 @@ export function lockedTitle(track: PlayAlongTrack): string {
 
 export function lockedToLine(appLabel: string | undefined): string {
   const lock = appLabel === undefined ? 'locked' : `locked to ${appLabel}`;
-  return PLAY_ALONG_NAME + FACT_SEPARATOR + lock;
+  return manifest.name + FACT_SEPARATOR + lock;
 }
 
 const LOCKED = 'Locked';

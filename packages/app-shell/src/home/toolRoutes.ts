@@ -1,9 +1,13 @@
+import { TOOL_MANIFESTS } from '../toolManifests.ts';
+
+const { library, stems, sync, tuner } = TOOL_MANIFESTS;
+
 export const TOOL_ID = {
   metronome: 'metronome',
-  tuner: 'tuner',
-  library: 'library',
-  stems: 'stems',
-  sync: 'sync',
+  tuner: tuner.id,
+  library: library.id,
+  stems: stems.id,
+  sync: sync.id,
   practiceHistory: 'practiceHistory',
 } as const;
 
@@ -15,17 +19,10 @@ export const TOOL_ROUTES = {
     setlists: '/setlists',
     setlist: '/setlists/[id]',
   },
-  [TOOL_ID.tuner]: { home: '/tuner' },
-  [TOOL_ID.library]: { home: '/library', song: '/library/[id]' },
-  [TOOL_ID.stems]: {
-    home: '/stems',
-    stemSet: '/stems/[id]',
-    stemDeck: '/stemdeck',
-    stemDeckCamera: '/stemdeck/camera',
-    stemDeckImport: '/stemdeck/import',
-    stemDeckSongs: '/stemdeck/songs',
-  },
-  [TOOL_ID.sync]: { home: '/sync' },
+  [TOOL_ID.tuner]: tuner.routes,
+  [TOOL_ID.library]: library.routes,
+  [TOOL_ID.stems]: stems.routes,
+  [TOOL_ID.sync]: sync.routes,
   [TOOL_ID.practiceHistory]: {
     home: '/practice',
     session: '/practice/[uuid]',

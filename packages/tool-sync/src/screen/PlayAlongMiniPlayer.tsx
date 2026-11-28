@@ -1,6 +1,7 @@
 import { MiniPlayerBar } from '@kitbag/core-design';
-import { PLAY_ALONG_NAME, type PlayAlongLock } from '@kitbag/core-state';
+import type { PlayAlongLock } from '@kitbag/core-state';
 
+import { manifest } from '../manifest.ts';
 import {
   lockedSubtext,
   lockedTitle,
@@ -45,7 +46,7 @@ function LockedMiniPlayer({ lock, bottomInset, onOpen }: LockedProps) {
       detail={lockedToLine(lastSeen?.appLabel)}
       progress={progress}
       playing={playing}
-      openLabel={`Open ${PLAY_ALONG_NAME}`}
+      openLabel={`Open ${manifest.name}`}
       playLabel={`Play ${title}`}
       pauseLabel={`Pause ${title}`}
       closeLabel={`Stop following ${title}`}

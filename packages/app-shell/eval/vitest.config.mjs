@@ -12,17 +12,29 @@ export default defineConfig({
     testTimeout: 30000,
     hookTimeout: 30000,
     // These barrels reach react-native UI; tests need only their pure parts.
-    alias: {
-      '@': fileURLToPath(new URL('../src', import.meta.url)),
-      '@kitbag/core-design': fileURLToPath(
-        new URL('../../core-design/src/pure.ts', import.meta.url),
-      ),
-      '@kitbag/tool-metronome': fileURLToPath(
-        new URL('../../tool-metronome/src/pure.ts', import.meta.url),
-      ),
-      '@kitbag/tool-sync': fileURLToPath(
-        new URL('../../tool-sync/src/pure.ts', import.meta.url),
-      ),
-    },
+    alias: [
+      {
+        find: /^@\//,
+        replacement: `${fileURLToPath(new URL('../src', import.meta.url))}/`,
+      },
+      {
+        find: /^@kitbag\/core-design$/,
+        replacement: fileURLToPath(
+          new URL('../../core-design/src/pure.ts', import.meta.url),
+        ),
+      },
+      {
+        find: /^@kitbag\/tool-metronome$/,
+        replacement: fileURLToPath(
+          new URL('../../tool-metronome/src/pure.ts', import.meta.url),
+        ),
+      },
+      {
+        find: /^@kitbag\/tool-sync$/,
+        replacement: fileURLToPath(
+          new URL('../../tool-sync/src/pure.ts', import.meta.url),
+        ),
+      },
+    ],
   },
 });

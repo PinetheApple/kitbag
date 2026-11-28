@@ -20,6 +20,15 @@ export interface HomeTileDescriptor {
   readonly route: string;
 }
 
+export interface CompiledToolManifest {
+  readonly id: string;
+  readonly name: string;
+  readonly icon: IconName;
+  readonly routes: { readonly home: string } & Readonly<Record<string, string>>;
+  readonly homeTile: HomeTileDescriptor;
+  readonly summary?: string;
+}
+
 export type SettingsSchema = Readonly<Record<string, unknown>>;
 
 // Placeholder shapes: the work that first renders each contribution fixes it.
