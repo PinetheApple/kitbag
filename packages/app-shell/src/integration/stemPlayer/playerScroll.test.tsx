@@ -4,9 +4,9 @@ import { PLAYER_SCROLL_ID, QUEUE_TEXT, stemPlayer } from '@kitbag/core-design';
 import type { ReactTestInstance } from 'react-test-renderer';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { AdvanceCountIn } from './AdvanceCountIn.tsx';
-import { LYRIC_FLOOR, LYRIC_SLOT_ID } from './DetailPane.tsx';
-import { OVERLAY_ID } from './PlayerLayouts.tsx';
+import { AdvanceCountIn } from '@kitbag/tool-stems/src/screen/AdvanceCountIn.tsx';
+import { LYRIC_FLOOR, LYRIC_SLOT_ID } from '@kitbag/tool-stems/src/screen/DetailPane.tsx';
+import { OVERLAY_ID } from '@kitbag/tool-stems/src/screen/PlayerLayouts.tsx';
 import {
   mountTracked,
   PLAIN_LYRICS,
@@ -16,7 +16,7 @@ import {
   withTestId,
   type Player,
 } from './playerHarness.test-helper.tsx';
-import { MIN_VISIBLE_STEMS, MIXER_FLOOR, MIXER_SLOT_ID } from './StemList.tsx';
+import { MIN_VISIBLE_STEMS, MIXER_FLOOR, MIXER_SLOT_ID } from '@kitbag/tool-stems/src/screen/StemList.tsx';
 
 afterEach(unmountTracked);
 

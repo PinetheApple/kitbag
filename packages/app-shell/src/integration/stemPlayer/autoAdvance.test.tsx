@@ -16,7 +16,7 @@ import {
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { animatedStyleOf, runFrame } from '../testing/reanimatedDriver.ts';
+import { animatedStyleOf, runFrame } from '@kitbag/core-state/src/testing/reanimatedDriver.ts';
 import {
   at,
   flush,

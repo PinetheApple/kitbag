@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { StemPlayerScreen } from './StemPlayerScreen.tsx';
+import { StemPlayerScreen } from '@kitbag/tool-stems/src/screen/StemPlayerScreen.tsx';
 
 const SET_ID = 7;
 const INSETS = { top: 0, bottom: 0 };
@@ -48,28 +48,28 @@ vi.mock('@kitbag/core-state', async (original) => {
 });
 
 const nothing = () => null;
-vi.mock('./useMixerFrame.ts', () => ({ useMixerFrame: () => ({}) }));
-vi.mock('./PlayerMenu.tsx', () => ({ PlayerMenu: () => nothing() }));
-vi.mock('./ExportSheet.tsx', () => ({ ExportSheet: () => nothing() }));
-vi.mock('./StemMeterSheet.tsx', () => ({ StemMeterSheet: () => nothing() }));
-vi.mock('./ClickSheet.tsx', () => ({ ClickSheet: () => nothing() }));
-vi.mock('./TempoSheet.tsx', () => ({ TempoSheet: () => nothing() }));
-vi.mock('./StemSetTempo.tsx', () => ({
+vi.mock('@kitbag/tool-stems/src/screen/useMixerFrame.ts', () => ({ useMixerFrame: () => ({}) }));
+vi.mock('@kitbag/tool-stems/src/screen/PlayerMenu.tsx', () => ({ PlayerMenu: () => nothing() }));
+vi.mock('@kitbag/tool-stems/src/screen/ExportSheet.tsx', () => ({ ExportSheet: () => nothing() }));
+vi.mock('@kitbag/tool-stems/src/screen/StemMeterSheet.tsx', () => ({ StemMeterSheet: () => nothing() }));
+vi.mock('@kitbag/tool-stems/src/screen/ClickSheet.tsx', () => ({ ClickSheet: () => nothing() }));
+vi.mock('@kitbag/tool-stems/src/screen/TempoSheet.tsx', () => ({ TempoSheet: () => nothing() }));
+vi.mock('@kitbag/tool-stems/src/screen/StemSetTempo.tsx', () => ({
   StemSetTempoSheet: () => nothing(),
   TempoUndoSnackbar: () => nothing(),
 }));
-vi.mock('./SpeedKeySheet.tsx', () => ({ SpeedKeySheet: () => nothing() }));
-vi.mock('./StemAppBar.tsx', () => ({ StemAppBar: () => nothing() }));
-vi.mock('./Scrubber.tsx', () => ({ Scrubber: () => nothing() }));
-vi.mock('./SongFactChips.tsx', () => ({ SongFactChips: () => nothing() }));
-vi.mock('./StemList.tsx', () => ({ StemList: () => nothing() }));
-vi.mock('./StemTransport.tsx', () => ({ StemTransport: () => nothing() }));
-vi.mock('./StemRowView.tsx', () => ({ WAVEFORM_BARS: spies.bars }));
-vi.mock('./QueueSheet.tsx', () => ({ QueueSheet: () => nothing() }));
-vi.mock('./usePlayOrderNav.ts', () => ({
+vi.mock('@kitbag/tool-stems/src/screen/SpeedKeySheet.tsx', () => ({ SpeedKeySheet: () => nothing() }));
+vi.mock('@kitbag/tool-stems/src/screen/StemAppBar.tsx', () => ({ StemAppBar: () => nothing() }));
+vi.mock('@kitbag/tool-stems/src/screen/Scrubber.tsx', () => ({ Scrubber: () => nothing() }));
+vi.mock('@kitbag/tool-stems/src/screen/SongFactChips.tsx', () => ({ SongFactChips: () => nothing() }));
+vi.mock('@kitbag/tool-stems/src/screen/StemList.tsx', () => ({ StemList: () => nothing() }));
+vi.mock('@kitbag/tool-stems/src/screen/StemTransport.tsx', () => ({ StemTransport: () => nothing() }));
+vi.mock('@kitbag/tool-stems/src/screen/StemRowView.tsx', () => ({ WAVEFORM_BARS: spies.bars }));
+vi.mock('@kitbag/tool-stems/src/screen/QueueSheet.tsx', () => ({ QueueSheet: () => nothing() }));
+vi.mock('@kitbag/tool-stems/src/screen/usePlayOrderNav.ts', () => ({
   usePlayOrderNav: () => ({ skip: nothing }),
 }));
-vi.mock('./queueActions.tsx', () => ({
+vi.mock('@kitbag/tool-stems/src/screen/queueActions.tsx', () => ({
   SetlistSheet: () => nothing(),
   useQueueActions: () => ({
     presses: { playNext: nothing, addToQueue: nothing },

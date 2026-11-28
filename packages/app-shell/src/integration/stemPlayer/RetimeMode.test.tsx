@@ -2,7 +2,7 @@ import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
 import { RETIME_PLAYBACK_RATE } from '@kitbag/core-state';
 import { describe, expect, it, vi } from 'vitest';
 
-import { pressHardwareBack } from '../testing/reactNativeHosts.ts';
+import { pressHardwareBack } from '@kitbag/core-state/src/testing/reactNativeHosts.ts';
 import {
   at,
   CLOSE,
