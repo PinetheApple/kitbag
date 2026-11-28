@@ -150,6 +150,21 @@ function lineFit(xs: readonly number[], ys: readonly number[]): Line {
   return { slope, intercept: meanY - slope * meanX };
 }
 
+function pairSlopes(xs: readonly number[], ys: readonly number[]): number[] {
+  return xs.flatMap((x, i) =>
+    xs
+      .slice(i + 1)
+      .filter((later) => later !== x)
+      .map((later, k) => ((ys[i + 1 + k] ?? 0) - (ys[i] ?? 0)) / (later - x)),
+  );
+}
+
+function robustLineFit(xs: readonly number[], ys: readonly number[]): Line {
+  const slope = median(pairSlopes(xs, ys));
+  const intercept = median(ys.map((y, i) => y - slope * (xs[i] ?? 0)));
+  return { slope, intercept };
+}
+
 function withoutDoubleTaps(taps: readonly number[], stepMs: number): number[] {
   return taps.reduce<number[]>((kept, t) => {
     const last = kept.at(-1);
@@ -164,7 +179,7 @@ function tappedBeat(songMsTaps: readonly number[]): TappedBeat | undefined {
   if (!(step > 0)) return undefined;
   const reference = circularCentre(taps, step);
   const beats = taps.map((t) => Math.round((t - reference) / step));
-  const rough = lineFit(beats, taps);
+  const rough = robustLineFit(beats, taps);
   const { isKept, count } = inliersNearMedian(
     taps.map((t, i) => t - rough.intercept - rough.slope * (beats[i] ?? 0)),
   );

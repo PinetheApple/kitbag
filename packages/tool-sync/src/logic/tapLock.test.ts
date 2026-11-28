@@ -123,6 +123,84 @@ describe('tapLock phase', () => {
   });
 });
 
+describe('tapLock with no song tempo and a bad tap at the edge', () => {
+  const truth = START_MS + TRUE_PHASE_MS;
+  const tempoTolerance = BPM * 0.005;
+  const anchorTolerance = 5;
+  const lateTapMs = 90;
+  const adjacentBadMs = 200;
+  const last = JITTER.length - 1;
+  const even = tapsAt(BPM, TRUE_PHASE_MS, steady(TAP_LOCK_WINDOW));
+
+  const withOffset = (taps: readonly number[], index: number, ms: number) =>
+    taps.map((t, i) => (i === index ? t + ms : t));
+
+  const expectTrue = (lock: TapLocked) => {
+    expect(Math.abs(lock.bpm - BPM)).toBeLessThanOrEqual(tempoTolerance);
+    expect(offBeatBy(lock.anchorMs, truth, BEAT_MS)).toBeLessThanOrEqual(
+      anchorTolerance,
+    );
+  };
+
+  const cases: readonly (readonly [string, number, number])[] = [
+    ['last tap +225 ms', last, 225],
+    ['last tap +240 ms', last, 240],
+    ['last tap -225 ms', last, -225],
+    ['first tap -200 ms', 0, -200],
+  ];
+  for (const [name, index, ms] of cases)
+    it(`locks as if the ${name} were never tapped`, () => {
+      const clean = tapsAt(BPM, TRUE_PHASE_MS, JITTER);
+      const bad = expectLocked(
+        tapLock(withOffset(clean, index, ms), NO_SONG_BPM),
+      );
+      const good = expectLocked(
+        tapLock(
+          clean.filter((_t, k) => k !== index),
+          NO_SONG_BPM,
+        ),
+      );
+      expect(Math.abs(bad.bpm - BPM)).toBeLessThanOrEqual(tempoTolerance);
+      expect(Math.abs(bad.anchorMs - good.anchorMs)).toBeLessThanOrEqual(
+        anchorTolerance,
+      );
+    });
+
+  for (const index of [0, last])
+    it(`drops tap ${String(index)} when it is ${String(lateTapMs)} ms late`, () => {
+      const lock = expectLocked(
+        tapLock(withOffset(even, index, lateTapMs), NO_SONG_BPM),
+      );
+      expect(lock.keptTaps).toBe(TAP_LOCK_WINDOW - 1);
+      expectTrue(lock);
+    });
+
+  it('keeps the tap before a bad last tap', () => {
+    const lock = expectLocked(
+      tapLock(withOffset(even, last, 240), NO_SONG_BPM),
+    );
+    expect(lock.keptTaps).toBe(TAP_LOCK_WINDOW - 1);
+    expectTrue(lock);
+  });
+
+  for (const pair of [
+    [0, 1],
+    [last - 1, last],
+  ])
+    it(`never locks a wrong tempo with taps ${pair.join(' and ')} both late`, () => {
+      const taps = even.map((t, i) =>
+        pair.includes(i) ? t + adjacentBadMs : t,
+      );
+      const result = tapLock(taps, NO_SONG_BPM);
+      if (!result.locked) return;
+      const adjacentTolerance = 15;
+      expect(Math.abs(result.bpm - BPM)).toBeLessThanOrEqual(tempoTolerance);
+      expect(offBeatBy(result.anchorMs, truth, BEAT_MS)).toBeLessThanOrEqual(
+        adjacentTolerance,
+      );
+    });
+});
+
 describe('tapLock tempo', () => {
   it('reads the tempo from the taps when the track has none', () => {
     const slower = 96;
