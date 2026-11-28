@@ -8,7 +8,7 @@
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 853;
+constexpr int kExpectedChecks = 857;
 
 void RunGridSuites() {
   metronome_test::RunGridTests();
@@ -58,6 +58,7 @@ void RunAllTests() {
   RunMetronomeTests();
   rt_test::RunPublisherTests();
   rt_test::RunStallDetectorTests();
+  rt_test::RunSuspendedClockTests();
 }
 
 int main() {
