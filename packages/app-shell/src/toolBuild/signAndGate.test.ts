@@ -8,6 +8,7 @@ import type { ToolIndex, ToolManifest } from './manifest';
 import { sha256 } from './signature';
 import {
   ASSET,
+  BUILD_HOOK_TIMEOUT_MS,
   buildTool,
   copyTree,
   EXIT_NO_KEY,
@@ -117,7 +118,7 @@ beforeAll(() => {
   buildTool(built);
   signed = copySet(built, 'signed');
   sign(signed, tools);
-});
+}, BUILD_HOOK_TIMEOUT_MS);
 
 afterAll(() => {
   rmSync(scratch, { recursive: true, force: true });

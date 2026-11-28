@@ -11,6 +11,7 @@ import { hbcBytecodeVersion } from './hermes';
 import { SHADOWED_HOST_GLOBALS } from './metroBundle';
 import {
   ASSET,
+  BUILD_HOOK_TIMEOUT_MS,
   buildTool,
   copyTree,
   EXIT_OK,
@@ -43,7 +44,7 @@ function toolWithEntry(name: string, source: string): string {
 beforeAll(() => {
   built = scratchDir(scratch, 'built');
   builtRun = buildTool(built);
-});
+}, BUILD_HOOK_TIMEOUT_MS);
 
 afterAll(() => {
   rmSync(scratch, { recursive: true, force: true });
