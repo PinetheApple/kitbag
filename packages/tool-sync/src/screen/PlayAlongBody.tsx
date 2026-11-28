@@ -5,7 +5,7 @@ import {
   space,
 } from '@kitbag/core-design';
 import type { MediaSessionSnapshot } from '@kitbag/core-native';
-import type { PlayAlongLock } from '@kitbag/core-state';
+import { TAPS_CLEARED, type PlayAlongLock } from '@kitbag/core-state';
 import type { ReactNode } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 
@@ -26,6 +26,7 @@ import {
   useTempoLine,
 } from './playAlongHooks.ts';
 import { TapPad } from './TapPad.tsx';
+import { TempoChoiceCard } from './TempoChoiceCard.tsx';
 import { useNewTrack, type NewTrack } from './useNewTrack.ts';
 import { usePadFit } from './usePadFit.ts';
 import { useDriftInputs } from './useDriftInputs.ts';
@@ -77,6 +78,7 @@ export interface PlayAlongBodyProps extends SongCardProps {
 }
 
 const NEW_TRACK_NOTICE = 'New track. The click stopped until you tap.';
+const TAPS_CLEARED_NOTICE = 'New track. Your taps were cleared.';
 
 function NoSong({
   view,
@@ -86,8 +88,23 @@ function NoSong({
   return <NotFollowingRow onPress={onExplainAgain} />;
 }
 
+function TapsClearedNotice() {
+  const cleared = usePlayAlong(
+    (s) => s.tapAlong.cleared === TAPS_CLEARED.track,
+  );
+  const forget = usePlayAlong((s) => s.forgetClearedTaps);
+  if (!cleared) return null;
+  return (
+    <Snackbar
+      message={TAPS_CLEARED_NOTICE}
+      bottom={snackbar.aboveDock}
+      onTimeout={forget}
+    />
+  );
+}
+
 function NewTrackNotice({ track }: { readonly track: NewTrack }) {
-  if (!track.noticeShown) return null;
+  if (!track.noticeShown) return <TapsClearedNotice />;
   return (
     <Snackbar
       message={NEW_TRACK_NOTICE}
@@ -118,6 +135,7 @@ function BodyCards(props: BodyCardsProps) {
       ) : (
         <NoSong view={view} onExplainAgain={props.onExplainAgain} />
       )}
+      <TempoChoiceCard />
       <View onLayout={props.onBpmCardLayout}>
         <BpmCard
           bpm={bpm}
@@ -148,6 +166,7 @@ function PinnedPad({ view, session, lock, locked, fit }: PinnedPadProps) {
   const pad = useTapPad({
     following: view === PLAY_ALONG_VIEW.song && session !== undefined,
     locked: lock !== undefined,
+    playing: session?.playing === true,
     retap: locked.retap,
     onLanded: locked.onLanded,
   });

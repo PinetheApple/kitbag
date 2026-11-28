@@ -105,6 +105,7 @@ const useStyles = createThemedStyles((theme) => ({
     columnGap: space.chipGap,
   },
   parts: { ...textStyle(textRoles.rowSubtitle), color: theme.color.text2 },
+  prompt: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
 }));
 
 interface PhaseRangeProps {
@@ -160,17 +161,37 @@ function NudgeGroup({ reading }: { readonly reading: string }) {
   );
 }
 
-function DownbeatGroup({ lock }: { readonly lock: PlayAlongLock }) {
+interface DownbeatGroupProps {
+  readonly lock: PlayAlongLock;
+  readonly onDismiss: () => void;
+}
+
+function DownbeatGroup({ lock, onDismiss }: DownbeatGroupProps) {
   const styles = useStyles();
   const shift = useStepHandlers(usePlayAlong((s) => s.shiftDownbeat));
+  const askForOne = usePlayAlong((s) => s.askForOne);
   const available = lock.downbeatShiftAvailable;
+  const tapTheOne = useCallback(() => {
+    askForOne();
+    onDismiss();
+  }, [askForOne, onDismiss]);
   return (
     <View style={styles.group}>
       <SectionHeader label="Downbeat" />
+      <Text style={styles.prompt}>
+        Accent on the wrong beat? Tap on the 1, or step it.
+      </Text>
       <View style={styles.inline}>
-        <Text style={styles.label}>
-          Tapped on beat 3 by mistake? Shift the bar.
-        </Text>
+        <Button
+          variant="ghost"
+          size="prompt"
+          icon="tapAlong"
+          label="Tap the 1"
+          accessibilityLabel="Tap once on the 1"
+          disabled={!available}
+          disabledLook="faded"
+          onPress={tapTheOne}
+        />
         <Stepper
           value={downbeatLabel(lock.downbeatShift)}
           keys={DOWNBEAT_KEYS}
@@ -258,6 +279,16 @@ function ResetAction() {
   );
 }
 
+function ResetNote() {
+  const styles = useStyles();
+  return (
+    <Text style={styles.parts}>
+      Reset puts the nudge to 0 and beat 1 back where your taps put it. The lock
+      and the tempo stay.
+    </Text>
+  );
+}
+
 export interface PhaseSheetProps {
   readonly visible: boolean;
   readonly route: PlayAlongRoute | undefined;
@@ -284,8 +315,9 @@ export function PhaseSheet({
       {lock === undefined ? null : (
         <>
           <PhaseReadout lock={lock} />
-          <DownbeatGroup lock={lock} />
+          <DownbeatGroup lock={lock} onDismiss={onDismiss} />
           <OffsetGroup phaseOffsetMs={lock.phaseOffsetMs} route={route} />
+          <ResetNote />
         </>
       )}
     </Sheet>

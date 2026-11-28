@@ -61,10 +61,11 @@ const useStyles = createThemedStyles((theme) => ({
   footRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: space.controlGap,
   },
+  fixes: { marginLeft: 'auto', alignItems: 'flex-end', gap: space.controlGap },
 }));
 
 function StatusLine({ view, inline }: { view: DriftView; inline: boolean }) {
@@ -110,7 +111,7 @@ function MeterHead({ view }: { view: DriftView }) {
   );
 }
 
-function PhaseFoot({ view, phase, onRetap }: DriftMeterCardProps) {
+function PhaseFoot({ view, phase, onRetap, onSetOne }: DriftMeterCardProps) {
   const styles = useStyles();
   const nudge = useStepHandlers(phase.onNudge);
   if (!view.controls) return null;
@@ -125,17 +126,30 @@ function PhaseFoot({ view, phase, onRetap }: DriftMeterCardProps) {
           {...nudge}
           onValuePress={phase.onOpen}
         />
-        <Button
-          variant="tonal"
-          size="prompt"
-          icon="tapAlong"
-          iconSize="control"
-          label="Re-tap"
-          accessibilityLabel="Re-tap on a downbeat"
-          disabled={!view.retapEnabled}
-          disabledLook="faded"
-          onPress={onRetap}
-        />
+        <View style={styles.fixes}>
+          <Button
+            variant="tonal"
+            size="prompt"
+            icon="tapAlong"
+            iconSize="control"
+            label="Re-tap"
+            accessibilityLabel="Tap along to re-align"
+            disabled={!view.retapEnabled}
+            disabledLook="faded"
+            onPress={onRetap}
+          />
+          <Button
+            variant="tonal"
+            size="prompt"
+            icon="song"
+            iconSize="control"
+            label="Set the 1"
+            accessibilityLabel="Tap once on the 1"
+            disabled={!view.retapEnabled}
+            disabledLook="faded"
+            onPress={onSetOne}
+          />
+        </View>
       </View>
     </View>
   );
@@ -151,9 +165,15 @@ export interface DriftMeterCardProps {
   readonly view: DriftView;
   readonly phase: PhaseFootProps;
   readonly onRetap: () => void;
+  readonly onSetOne: () => void;
 }
 
-export function DriftMeterCard({ view, phase, onRetap }: DriftMeterCardProps) {
+export function DriftMeterCard({
+  view,
+  phase,
+  onRetap,
+  onSetOne,
+}: DriftMeterCardProps) {
   const styles = useStyles();
   const needle = useSharedValue(view.needle);
   const shown = useSharedValue(NEEDLE_SHOWN);
@@ -173,7 +193,12 @@ export function DriftMeterCard({ view, phase, onRetap }: DriftMeterCardProps) {
             needleColor={drifting ? 'amber' : 'text'}
           />
         </View>
-        <PhaseFoot view={view} phase={phase} onRetap={onRetap} />
+        <PhaseFoot
+          view={view}
+          phase={phase}
+          onRetap={onRetap}
+          onSetOne={onSetOne}
+        />
       </View>
     </Card>
   );
@@ -195,6 +220,7 @@ export function DriftMeter({
   onOpenPhase,
 }: DriftMeterProps) {
   const nudgePhase = usePlayAlong((s) => s.nudgePhase);
+  const askForOne = usePlayAlong((s) => s.askForOne);
   const appLabel = useLastSeen(session?.appLabel);
   const nowMs = useWholeSecondNow(
     drift.sourceGoneAtMs ?? lock.lockedAtBoottimeMs,
@@ -210,5 +236,12 @@ export function DriftMeter({
     onNudge: nudgePhase,
     onOpen: onOpenPhase,
   };
-  return <DriftMeterCard view={view} phase={phase} onRetap={onRetap} />;
+  return (
+    <DriftMeterCard
+      view={view}
+      phase={phase}
+      onRetap={onRetap}
+      onSetOne={askForOne}
+    />
+  );
 }
