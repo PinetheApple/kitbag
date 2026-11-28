@@ -16,10 +16,12 @@ import {
 import { encodeBase64, nullableBase64, presetBase64 } from './base64';
 import { storedManualTempoColumns } from './backup-manual-tempo';
 import { loadStemSongs } from './backup-stem-songs';
+import type { ToolDataRecord } from './backup-tool-data';
 import { meterOverrideOf } from './meter-override';
 import type { Database } from './repository';
 import { storedTempoColumns, storedTempoOf } from './stem-tempo';
 import { storedTempoCorrection, tempoCorrectionOf } from './tempo-correction';
+import { selectAllToolData } from './tool-data-repository';
 import { MS_PER_SECOND } from './units';
 import {
   clickSounds,
@@ -38,12 +40,20 @@ export type IdMaps = Record<Category, Map<string, number>>;
 export interface Snapshot {
   records: LocalRecords;
   ids: IdMaps;
+  toolData: ToolDataRecord[];
 }
 
 export const toSeconds = (date: Date) =>
   Math.floor(date.getTime() / MS_PER_SECOND);
 export const fromSeconds = (seconds: number) =>
   new Date(seconds * MS_PER_SECOND);
+
+export async function loadToolDataRecords(
+  db: Database,
+): Promise<ToolDataRecord[]> {
+  const rows = await selectAllToolData(db);
+  return rows.map((row) => ({ ...row, updatedAt: toSeconds(row.updatedAt) }));
+}
 
 function uuidOf(rows: { id: number; uuid: string }[]) {
   const map = new Map(rows.map((row) => [row.id, row.uuid]));
@@ -259,7 +269,11 @@ export async function loadSnapshot(db: Database): Promise<Snapshot> {
     ],
     appearanceSettings: preferenceRecords(rows.appearanceRows),
   };
-  return { records, ids: idMaps(rows) };
+  return {
+    records,
+    ids: idMaps(rows),
+    toolData: await loadToolDataRecords(db),
+  };
 }
 
 function idMaps(rows: Awaited<ReturnType<typeof loadRows>>): IdMaps {

@@ -2,6 +2,7 @@ import type {
   EnumMember,
   FixedOutputRoute,
   RangeBound,
+  StringConstant,
   TunerField,
   TunerFields,
 } from './native-types.ts';
@@ -229,4 +230,66 @@ export function parseFixedOutputRoutes(
       routes.push({ id: id ?? '', kind: (kind ?? '').toLowerCase() });
   if (routes.length === 0) fail('Family entries keyed FIXED');
   return routes;
+}
+
+const C_STRING = String.raw`inline\s+constexpr\s+const\s+char\*\s+`;
+const C_STRING_VALUE = String.raw`\s*=\s*"([^"]*)"\s*;`;
+
+export function parseCStringConstants(
+  source: string,
+  prefix: string,
+): StringConstant[] {
+  const pattern = new RegExp(
+    `${C_STRING}${prefix}(\\w+)${C_STRING_VALUE}`,
+    'g',
+  );
+  const found = [...source.matchAll(pattern)].map((match) => ({
+    name: match[1] ?? '',
+    value: match[2] ?? '',
+  }));
+  if (found.length === 0) fail(`string constants ${prefix}*`);
+  return found;
+}
+
+export function parseCString(source: string, name: string): string {
+  const match = new RegExp(`${C_STRING}${name}${C_STRING_VALUE}`).exec(source);
+  if (match?.[1] === undefined) fail(`string constant ${name}`);
+  return match[1];
+}
+
+const KOTLIN_ENTRY = /^[A-Z][A-Z0-9_]*$/;
+
+function pascalCase(entry: string): string {
+  return entry
+    .toLowerCase()
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('');
+}
+
+export function parseKotlinCodeEnum(
+  source: string,
+  enumName: string,
+  prefixName: string,
+): StringConstant[] {
+  const body = new RegExp(`enum class ${enumName}\\s*\\{([^;}]*);`).exec(
+    source,
+  )?.[1];
+  const prefix = new RegExp(`const val ${prefixName} = "([^"]+)"`).exec(
+    source,
+  )?.[1];
+  if (body === undefined || prefix === undefined) {
+    fail(`enum class ${enumName} with ${prefixName}`);
+  }
+  const entries = body
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== '');
+  if (entries.length === 0 || !entries.every((e) => KOTLIN_ENTRY.test(e))) {
+    fail(`the entries of enum class ${enumName}`);
+  }
+  return entries.map((entry) => ({
+    name: pascalCase(entry),
+    value: prefix + entry,
+  }));
 }

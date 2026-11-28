@@ -1,3 +1,6 @@
+export const TOOL_ID = '[a-z][a-z0-9-]{1,31}';
+export const TOOL_ID_PATTERN = new RegExp(`^${TOOL_ID}$`);
+
 // A bare string so the contract does not retype the icon set core-design owns.
 export type IconName = string;
 
@@ -75,3 +78,11 @@ export interface ToolHost {
 }
 
 export type RegisterTool = (host: ToolHost) => ToolPlugin;
+
+export const TOOL_REGISTRY_KEY = '__kitbagTools';
+export const TOOL_ENTRY_EXPORT = 'register';
+
+export interface ToolRegistry {
+  readonly module: (specifier: string) => unknown;
+  readonly register: (id: string, register: RegisterTool) => void;
+}

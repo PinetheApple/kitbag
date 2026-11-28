@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { TOOL_ID_PATTERN } from '@kitbag/core-plugin-api';
+
 import { openBackupDatabase } from './backup.test-helper';
+import { TOOL_DATA_SECTION_VERSION } from './backup-tool-data';
 import {
   createToolDataRepository,
   MAX_TOOL_DATA_KEY_BYTES,
@@ -100,6 +103,12 @@ describe('tool data repository', () => {
     );
   });
 
+  it('refuses a tool id the manifest rules refuse', async () => {
+    await expect(open().forTool('a:b').set('k', '1')).rejects.toMatchObject(
+      refused('invalidToolId'),
+    );
+  });
+
   it('refuses an empty tool id or key', async () => {
     const repository = open();
     await expect(repository.forTool('').set('k', '1')).rejects.toMatchObject(
@@ -108,5 +117,25 @@ describe('tool data repository', () => {
     await expect(
       repository.forTool('chords').set('', '1'),
     ).rejects.toMatchObject(refused('emptyId'));
+  });
+});
+
+describe('tool data limits', () => {
+  // A backup reader refuses a record past its own limits, so a change here
+  // needs a new TOOL_DATA_SECTION_VERSION before this snapshot is updated.
+  it('move only with the backup section version', () => {
+    expect({
+      version: TOOL_DATA_SECTION_VERSION,
+      valueBytes: MAX_TOOL_DATA_VALUE_BYTES,
+      keyBytes: MAX_TOOL_DATA_KEY_BYTES,
+      toolId: TOOL_ID_PATTERN.source,
+    }).toMatchInlineSnapshot(`
+      {
+        "keyBytes": 256,
+        "toolId": "^[a-z][a-z0-9-]{1,31}$",
+        "valueBytes": 65536,
+        "version": 1,
+      }
+    `);
   });
 });

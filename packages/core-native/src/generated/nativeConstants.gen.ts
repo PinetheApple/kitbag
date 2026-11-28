@@ -1,4 +1,4 @@
-// GENERATED — DO NOT EDIT. Owners: native/audio_core, OutputRoutes.kt (SPEC §13.7).
+// GENERATED — DO NOT EDIT. Owners: native/audio_core, OutputRoutes.kt, cpp/KitbagToolEval.h, ToolRejected.kt (SPEC §13.7).
 // Regenerate: pnpm --filter @kitbag/core-native generate
 // Verify (CI drift guard): pnpm --filter @kitbag/core-native generate:check
 //
@@ -307,3 +307,40 @@ export const KB_WRONG_STRING = {
   KB_WRONG_STRING_ABOVE: 2,
 } as const;
 export type KB_WRONG_STRING = (typeof KB_WRONG_STRING)[keyof typeof KB_WRONG_STRING];
+
+/** The JSI global that evaluates a verified tool by id (kEvalVerifiedToolKey). */
+export const KB_EVAL_VERIFIED_TOOL_KEY = '__kitbagEvalVerifiedTool';
+
+/** Keys of the object __kitbagEvalVerifiedTool returns when it refuses to evaluate. */
+export const KB_TOOL_REFUSAL_KEY = 'refused';
+export const KB_TOOL_REFUSAL_DETAIL_KEY = 'detail';
+
+/** Refusal codes, returned under KB_TOOL_REFUSAL_KEY, and eval, thrown as "E_TOOL_EVAL: tool:<id> <detail>" (kToolError*). */
+export const KB_TOOL_ERROR = {
+  argument: 'E_TOOL_ARGUMENT',
+  notVerified: 'E_TOOL_NOT_VERIFIED',
+  runtimeVersion: 'E_TOOL_RUNTIME_VERSION',
+  notBytecode: 'E_TOOL_NOT_BYTECODE',
+  manifestVersion: 'E_TOOL_MANIFEST_VERSION',
+  bytecodeVersion: 'E_TOOL_BYTECODE_VERSION',
+  eval: 'E_TOOL_EVAL',
+} as const;
+export type KB_TOOL_ERROR = (typeof KB_TOOL_ERROR)[keyof typeof KB_TOOL_ERROR];
+
+/** Codes KitbagTools.verifyInstalled rejects with (ToolRejection in ToolRejected.kt). */
+export const KB_TOOL_REJECTION = {
+  badId: 'E_TOOL_BAD_ID',
+  notInstalled: 'E_TOOL_NOT_INSTALLED',
+  zip: 'E_TOOL_ZIP',
+  manifest: 'E_TOOL_MANIFEST',
+  untrustedKey: 'E_TOOL_UNTRUSTED_KEY',
+  signature: 'E_TOOL_SIGNATURE',
+  files: 'E_TOOL_FILES',
+  wrongTool: 'E_TOOL_WRONG_TOOL',
+  pins: 'E_TOOL_PINS',
+  io: 'E_TOOL_IO',
+  handoff: 'E_TOOL_HANDOFF',
+  internal: 'E_TOOL_INTERNAL',
+  cancelled: 'E_TOOL_CANCELLED',
+} as const;
+export type KB_TOOL_REJECTION = (typeof KB_TOOL_REJECTION)[keyof typeof KB_TOOL_REJECTION];

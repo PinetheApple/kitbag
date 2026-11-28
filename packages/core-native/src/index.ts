@@ -42,6 +42,15 @@ export type {
   StorageReport,
 } from './NativeKitbagLibrary';
 export { getKitbagStemDeck } from './NativeKitbagStemDeck';
+export {
+  loadTool,
+  ToolLoadError,
+  TOOL_LOAD_CODE,
+  TOOL_LOAD_STAGE,
+  type ToolLoadOptions,
+  type ToolLoadResult,
+  type ToolLoadStage,
+} from './toolLoader.ts';
 export type {
   Spec as KitbagStemDeckSpec,
   StemDeckConstants,

@@ -36,6 +36,7 @@ import { routeLatencyReader } from './backup-rig-read';
 import type { BackupRules } from './backup-rules';
 import { readSongTempo } from './backup-song-tempo';
 import { readStemSong } from './backup-stem-song-read';
+import { readToolDataSection } from './backup-tool-data-read';
 import { decodeBase64, presetBytes } from './base64';
 import { isClickSoundSlot } from './click-sound-repository';
 import {
@@ -429,7 +430,13 @@ export function parseBackup(input: string, rules: BackupRules): BackupFile {
       ),
     ]),
   ) as unknown as CategoryRecords;
-  const file: BackupFile = { ...header, version: BACKUP_VERSION, records };
+  const toolData = readToolDataSection(root.toolData);
+  const file: BackupFile = {
+    ...header,
+    version: BACKUP_VERSION,
+    records,
+    ...(toolData === undefined ? {} : { toolData }),
+  };
   checkIdentities(records);
   checkRelationships(file);
   return file;
