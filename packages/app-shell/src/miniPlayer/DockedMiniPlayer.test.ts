@@ -28,7 +28,6 @@ vi.mock('@kitbag/core-state', async (original) => ({
 }));
 vi.mock('@kitbag/tool-stems', () => ({ useMixerFrame: () => undefined }));
 vi.mock('@kitbag/tool-sync', () => ({
-  PLAY_ALONG_NAME: 'Play along',
   PlayAlongMiniPlayer: recorder('PlayAlongMiniPlayer'),
 }));
 vi.mock('@/runtime/libraryRoutes', () => ({
