@@ -17,7 +17,7 @@ const recorder = vi.hoisted(() => (name: string) => (props: Props) => {
 });
 
 vi.mock('expo-router', () => ({ useRouter: () => ({ push: world.push }) }));
-vi.mock('@kitbag/tool-library', () => ({
+vi.mock('@/listening/MiniPlayer', () => ({
   MiniPlayer: recorder('MiniPlayer'),
   useMiniPlayerShown: () => world.songShown,
 }));

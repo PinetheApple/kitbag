@@ -1,8 +1,8 @@
-import { useMiniPlayerShown } from '@kitbag/tool-library';
 import { usePlayAlongMiniShown } from '@kitbag/tool-sync';
 
 import { TOOL_ID } from '@/home/registry';
 import { useToolOn } from '@/home/toolsOn';
+import { useMiniPlayerShown } from '@/listening/MiniPlayer';
 
 import { useDockSettled } from './useDockSettled';
 

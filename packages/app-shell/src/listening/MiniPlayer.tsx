@@ -3,6 +3,7 @@ import {
   queueKeyLabel,
   type MiniPlayerTile,
 } from '@kitbag/core-design';
+import type { UseMixerFrame } from '@kitbag/core-plugin-api';
 import {
   loopEndFrames,
   songShown,
@@ -25,11 +26,10 @@ import { useCallback, useMemo } from 'react';
 import {
   miniPlayerDetail,
   stemMiniPlayerDetail,
-} from '../logic/miniPlayerDetail.ts';
-import type { UsePlayhead } from './playhead.ts';
+} from './miniPlayerDetail.ts';
 
 export interface MiniPlayerProps {
-  readonly usePlayhead: UsePlayhead;
+  readonly usePlayhead: UseMixerFrame;
   readonly bottomInset: number;
   readonly onOpenSong: (id: number) => void;
   readonly onOpenStemSet: (id: number) => void;

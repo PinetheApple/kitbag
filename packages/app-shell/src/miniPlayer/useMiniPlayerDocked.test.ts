@@ -9,7 +9,7 @@ const shown = vi.hoisted(() => ({
   off: [] as string[],
 }));
 
-vi.mock('@kitbag/tool-library', () => ({
+vi.mock('@/listening/MiniPlayer', () => ({
   useMiniPlayerShown: () => shown.song,
 }));
 vi.mock('@kitbag/tool-sync', () => ({
