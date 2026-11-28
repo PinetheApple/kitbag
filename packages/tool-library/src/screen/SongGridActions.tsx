@@ -2,7 +2,6 @@ import {
   Button,
   createThemedStyles,
   lineRatio,
-  manualTempo,
   minTouchTargetDp,
   space,
   textRoles,
@@ -47,9 +46,7 @@ function SetTempoEntry({ onPress }: { readonly onPress: () => void }) {
         disabledLook="faded"
         onPress={onPress}
       />
-      <Text style={styles.why} numberOfLines={manualTempo.entryReasonLines}>
-        {SET_TEMPO_TEXT.entryReason}
-      </Text>
+      <Text style={styles.why}>{SET_TEMPO_TEXT.entryReason}</Text>
     </View>
   );
 }

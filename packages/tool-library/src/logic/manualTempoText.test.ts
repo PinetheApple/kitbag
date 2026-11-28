@@ -1,40 +1,34 @@
+import { chosenTypedBpm, stepped } from '@kitbag/core-design';
 import { describe, expect, it } from 'vitest';
 
 import {
-  bpmText,
-  nudgedText,
-  nudgeLabel,
   offerAction,
   offerText,
   reanalyseBody,
-  savedText,
-  SET_TEMPO_TEXT,
-  tappedHint,
-  typedHint,
-  wasAnalysedText,
+  SONG_SET_TEMPO,
+  usingAnalysedText,
 } from './manualTempoText.ts';
 
+const { rules, text } = SONG_SET_TEMPO;
 const MANUAL = { bpm: 128, anchor: 2.3, beatsPerBar: 4 } as const;
+const typed = (digits: string) => ({ digits, untouched: false });
 
-describe('manual tempo copy', () => {
-  it('shows a whole tempo bare and a tapped one to a tenth', () => {
-    expect(bpmText(128)).toBe('128 BPM');
-    expect(bpmText(127.64)).toBe('127.6 BPM');
+describe('the song player tempo rules', () => {
+  it('clamps a typed tempo to 30 – 300 BPM', () => {
+    expect(chosenTypedBpm(typed('412'), null, rules)).toBe(300);
+    expect(chosenTypedBpm(typed('12'), null, rules)).toBe(30);
+    expect(text.typedHint(412).text).toBe('Above 300 BPM. Saves as 300.');
   });
 
-  it('names the stepper keys by the step they take', () => {
-    expect(SET_TEMPO_TEXT.slower).toBe('Tempo 0.1 BPM slower');
-    expect(SET_TEMPO_TEXT.faster).toBe('Tempo 0.1 BPM faster');
+  it('steps and shows the tempo by a tenth', () => {
+    const draft = { ...MANUAL, nudgedMs: 0 };
+    expect(stepped(draft, 1, rules).bpm).toBe(128.1);
+    expect(text.slower).toBe('Tempo 0.1 BPM slower');
+    expect(text.bpmText(127.64)).toBe('127.6 BPM');
   });
+});
 
-  it('repeats what was saved', () => {
-    expect(savedText(MANUAL)).toBe('Tempo set: 128 BPM, bar 1 at 0:02.3.');
-  });
-
-  it('names the analysed tempo it was prefilled with', () => {
-    expect(wasAnalysedText(132)).toBe('was 132 from analysis');
-  });
-
+describe('re-analysis copy', () => {
   it('offers a newer analysed tempo without replacing the manual one', () => {
     expect(offerText(132)).toBe(
       'Analysis found 132 BPM. Your manual tempo is still in use.',
@@ -47,39 +41,8 @@ describe('manual tempo copy', () => {
       'Your manual tempo, 128 BPM with bar 1 at 0:02.3, stays in use. If analysis finds a beat, you choose which to keep.',
     );
   });
-});
 
-describe('typedHint', () => {
-  it('shows the range while the typed tempo is inside it', () => {
-    expect(typedHint(128)).toEqual({ text: '30 – 300 BPM', tone: 'plain' });
-    expect(typedHint(undefined)).toEqual({
-      text: '30 – 300 BPM',
-      tone: 'plain',
-    });
-  });
-
-  it('names the clamped value above and below the range', () => {
-    expect(typedHint(412)).toEqual({
-      text: 'Above 300 BPM. Saves as 300.',
-      tone: 'warning',
-    });
-    expect(typedHint(12)).toEqual({
-      text: 'Below 30 BPM. Saves as 30.',
-      tone: 'warning',
-    });
-  });
-});
-
-describe('tap and nudge copy', () => {
-  it('counts the taps behind a settled tempo', () => {
-    expect(tappedHint(9)).toBe('From 9 taps. Keep tapping to refine.');
-  });
-
-  it('signs a nudge with a true minus', () => {
-    expect(nudgeLabel(-10)).toBe('−10 ms');
-    expect(nudgeLabel(10)).toBe('+10 ms');
-    expect(nudgedText(20)).toBe(
-      'Moved +20 ms. Playing with the click: check late in the song for drift.',
-    );
+  it('says when the analysed tempo is back in use', () => {
+    expect(usingAnalysedText(132)).toBe('Back to the analysed tempo: 132 BPM.');
   });
 });

@@ -111,14 +111,18 @@ export function resetScreenState() {
   Object.assign(mixer, { session: 0, opens: 0, displaced: 0, releases: 0 });
 }
 
-function MockSheet(props: Props) {
-  const onShow = useRef(props.onShow as (() => void) | undefined);
+function useShowWhenVisible(visible: unknown, onShow: unknown) {
+  const latest = useRef(onShow as (() => void) | undefined);
   useLayoutEffect(() => {
-    onShow.current = props.onShow as (() => void) | undefined;
+    latest.current = onShow as (() => void) | undefined;
   });
   useEffect(() => {
-    if (props.visible === true) onShow.current?.();
-  }, [props.visible]);
+    if (visible === true) latest.current?.();
+  }, [visible]);
+}
+
+function MockSheet(props: Props) {
+  useShowWhenVisible(props.visible, props.onShow);
   return props.visible === true
     ? createElement(
         'Sheet',
@@ -133,22 +137,17 @@ function MockSheet(props: Props) {
     : null;
 }
 
-const MANUAL_TEMPO_PARTS = [
-  'BeatStrip',
-  'ConfirmDialog',
-  'Icon',
-  'LiveText',
-  'NumpadKeypad',
-  'NumpadReadout',
-  'PlayPauseButton',
-  'PresetButton',
-  'Stepper',
-  'TapLeds',
-  'TapPad',
-];
+function MockSetTempoSheet(props: Props) {
+  useShowWhenVisible(props.visible, (props.tempo as Props).onShow);
+  return props.visible === true ? createElement('SetTempoSheet', props) : null;
+}
+
+const MANUAL_TEMPO_PARTS = ['ConfirmDialog', 'Icon'];
 
 const MANUAL_TEMPO_STATE = [
   'MANUAL_BPM_STEP',
+  'MANUAL_TEMPO_LABEL',
+  'MANUAL_TEMPO_RULES',
   'constantGrid',
   'GRID_METER',
   'manualBpm',
@@ -163,7 +162,7 @@ const MANUAL_TEMPO_STATE = [
   'TEMPO_MIN_ANCHOR_SECONDS',
 ];
 
-const passthroughs = (names: readonly string[]) =>
+export const passthroughs = (names: readonly string[]) =>
   Object.fromEntries(
     names.map((name) => [
       name,
@@ -238,6 +237,7 @@ export async function coreDesignMock(original: <T>() => Promise<T>) {
     Button: (props: Props) => createElement('Button', props),
     Sheet: MockSheet,
     ...passthroughs(MANUAL_TEMPO_PARTS),
+    SetTempoSheet: MockSetTempoSheet,
     SectionHeader: (props: Props) => createElement('SectionHeader', props),
     SegmentedControl: (props: Props) =>
       createElement('SegmentedControl', props),

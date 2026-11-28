@@ -1,4 +1,13 @@
-import { TEMPO_MAX_BPM, TEMPO_MIN_BPM } from '@kitbag/core-db';
+import {
+  GRID_METER,
+  GRID_METERS,
+  isGridMeter,
+  MS_PER_SECOND,
+  SECONDS_PER_MINUTE,
+  TEMPO_MAX_BPM,
+  TEMPO_MIN_ANCHOR_SECONDS,
+  TEMPO_MIN_BPM,
+} from '@kitbag/core-db';
 
 import { clamp, type BpmBounds } from '../metronome/config.ts';
 import {
@@ -6,6 +15,7 @@ import {
   TAPS_TO_SET_TEMPO,
   tapIntervalBpm,
 } from '../tapTempo/tapTempo.ts';
+import { MINUS } from '../text.ts';
 
 export const MANUAL_TEMPO_BOUNDS: BpmBounds = {
   min: TEMPO_MIN_BPM,
@@ -38,3 +48,22 @@ export function tappedManualBpm(taps: readonly number[]): number | null {
   const bpm = tapIntervalBpm(taps);
   return bpm === undefined ? null : manualBpm(bpm);
 }
+
+export const MANUAL_TEMPO_LABEL = 'manual tempo';
+
+export const MANUAL_TEMPO_RULES = {
+  bounds: MANUAL_TEMPO_BOUNDS,
+  bpmStep: MANUAL_BPM_STEP,
+  tapsToSet: TAPS_TO_SET_TEMPO,
+  minAnchorSeconds: TEMPO_MIN_ANCHOR_SECONDS,
+  msPerSecond: MS_PER_SECOND,
+  secondsPerMinute: SECONDS_PER_MINUTE,
+  meters: GRID_METERS,
+  defaultMeter: GRID_METER.quadruple,
+  isMeter: isGridMeter,
+  roundBpm: manualBpm,
+  stepBpm: stepManualBpm,
+  pushTap: pushManualTap,
+  tappedBpm: tappedManualBpm,
+  minus: MINUS,
+};

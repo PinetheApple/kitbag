@@ -1,5 +1,11 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
+import {
+  NUDGE_MS,
+  SET_TEMPO_STEP,
+  type PreviewClickProps,
+  type SetTempo,
+} from '@kitbag/core-design';
 import { act } from 'react';
 import type { ReactTestInstance, ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -29,7 +35,6 @@ vi.mock('./EndedSetlistSnackbar.tsx', () => ({
 vi.mock('./SongClickChips.tsx', async () =>
   (await import('./SongPlayerScreen.mocks.test-helper.ts')).clickChipsMock(),
 );
-vi.mock('./SheetTransport.tsx', () => ({ SheetTransport: () => null }));
 vi.mock('react-native-reanimated', async () =>
   (await import('./SongPlayerScreen.mocks.test-helper.ts')).reanimatedMock(),
 );
@@ -45,8 +50,13 @@ vi.mock('@kitbag/core-state', async (original) =>
 );
 
 const MANUAL = { bpm: 128, anchor: 2.3, beatsPerBar: 4 };
+
+interface SheetProps {
+  readonly tempo: SetTempo;
+  readonly previewClick: PreviewClickProps;
+  readonly onClose: () => void;
+}
 const NO_GRID = { analysisStatus: 'failed', beats: [] };
-const TAP_GAP_MS = 500;
 const NEXT_SONG = 2;
 
 beforeEach(resetScreenState);
@@ -90,14 +100,24 @@ function openMenu(): ReactTestRenderer {
   return tree;
 }
 
-function typeTempo(tree: ReactTestRenderer, digits: readonly number[]) {
-  const pad = byType(tree, 'NumpadKeypad')[0];
-  if (pad === undefined) throw new Error('no numpad');
+function setTempoSheet(tree: ReactTestRenderer): SheetProps {
+  return first(tree, 'SetTempoSheet').props as SheetProps;
+}
+
+function drive(tree: ReactTestRenderer, move: (tempo: SetTempo) => void) {
   act(() => {
-    for (const digit of digits)
-      (pad.props.onDigit as (d: number) => void)(digit);
+    move(setTempoSheet(tree).tempo);
   });
-  press(pad, 'onConfirm');
+}
+
+function typeTempo(tree: ReactTestRenderer, digits: readonly number[]) {
+  for (const digit of digits)
+    drive(tree, (tempo) => {
+      tempo.entry.onDigit(digit);
+    });
+  drive(tree, (tempo) => {
+    tempo.onTyped();
+  });
 }
 
 function confirmReanalyse(tree: ReactTestRenderer) {
@@ -115,9 +135,8 @@ function runAnalysis(tree: ReactTestRenderer, statuses: readonly string[]) {
 }
 
 async function save(tree: ReactTestRenderer) {
-  const button = withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.save);
   await act(async () => {
-    (button.props.onPress as Press)();
+    setTempoSheet(tree).tempo.onSave();
     await Promise.resolve();
   });
 }
@@ -138,6 +157,17 @@ describe('a song with no beat grid', () => {
     });
   });
 
+  it('lets the reason beside Set tempo wrap instead of cutting it off', () => {
+    const tree = mount();
+    const reason = only(
+      byType(tree, 'Text').find((node) =>
+        node.children.includes(SET_TEMPO_TEXT.entryReason),
+      ),
+    );
+    expect(reason.props.numberOfLines).toBeUndefined();
+    expect(reason.props.style).toMatchObject({ flex: 1, minWidth: 0 });
+  });
+
   it('lists Set tempo in the Player sheet and says Meter needs it first', () => {
     const tree = openMenu();
     expect(menuRow(tree, SET_TEMPO_TEXT.title)?.props.detail).toBe(
@@ -147,34 +177,41 @@ describe('a song with no beat grid', () => {
     expect(METER_FAILED).toBe('Needs a beat grid. Set tempo first.');
   });
 
-  it('saves a typed tempo with bar 1 at the playhead, turns the click on, and offers Undo', async () => {
+  it('opens the shared Set tempo sheet at step 1 with nothing to prefill', () => {
     const tree = mount();
     press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.title));
-    expect(
-      withProp(tree, 'Sheet', 'title', SET_TEMPO_TEXT.title).props.titleDetail,
-    ).toBe(SET_TEMPO_TEXT.stepOne);
+    const { tempo } = setTempoSheet(tree);
+    expect(tempo.step).toBe(SET_TEMPO_STEP.tempo);
+    expect(tempo.seed).toMatchObject({ bpm: null, analysed: false });
+  });
+
+  it('saves a typed tempo with bar 1 at the playhead and offers Undo, leaving the click as the Preview chip shows it', async () => {
+    const tree = mount();
+    press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.title));
     typeTempo(tree, [1, 2, 8]);
     manual.playheadSeconds = 2.3;
-    press(withProp(tree, 'Button', 'label', 'Bar 1 here'));
+    drive(tree, (tempo) => {
+      tempo.onBarOneHere();
+    });
     await save(tree);
     expect(manual.setManualTempo).toHaveBeenCalledWith(MANUAL);
-    expect(transport.toggleClick).toHaveBeenCalledOnce();
+    expect(transport.toggleClick).not.toHaveBeenCalled();
+    expect(byType(tree, 'SetTempoSheet')).toHaveLength(0);
     const undo = withProp(tree, 'Snackbar', 'actionLabel', 'Undo');
     expect(undo.props.message).toBe('Tempo set: 128 BPM, bar 1 at 0:02.3.');
     press(undo, 'onAction');
     expect(manual.undoTempo).toHaveBeenCalledOnce();
   });
 
-  it('keeps the sheet open and says so when the tempo is not stored', async () => {
+  it('keeps the sheet open and marks the save failed when the tempo is not stored', async () => {
     manual.setManualTempo.mockResolvedValueOnce(false);
     const tree = mount();
     press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.title));
     typeTempo(tree, [9, 0]);
     await save(tree);
-    expect(
-      withProp(tree, 'Snackbar', 'message', SET_TEMPO_TEXT.saveFailed),
-    ).toBeDefined();
-    expect(byType(tree, 'BeatStrip')).toHaveLength(1);
+    const { tempo } = setTempoSheet(tree);
+    expect(tempo.failed).toBe(true);
+    expect(tempo.step).toBe(SET_TEMPO_STEP.barOne);
   });
 
   it('previews the draft grid while bar 1 is marked, and drops it on Back', () => {
@@ -186,12 +223,16 @@ describe('a song with no beat grid', () => {
     manual.playheadSeconds = 2.3;
     typeTempo(tree, [1, 2, 8]);
     expect(manual.previewTempo).toHaveBeenLastCalledWith(MANUAL);
-    press(withProp(tree, 'PresetButton', 'label', '+10 ms'));
+    drive(tree, (tempo) => {
+      tempo.onNudge(NUDGE_MS);
+    });
     expect(manual.previewTempo).toHaveBeenLastCalledWith({
       ...MANUAL,
       anchor: 2.31,
     });
-    press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.back));
+    drive(tree, (tempo) => {
+      tempo.onBack();
+    });
     expect(manual.previewTempo).toHaveBeenLastCalledWith(null);
     expect(manual.setManualTempo).not.toHaveBeenCalled();
   });
@@ -200,7 +241,11 @@ describe('a song with no beat grid', () => {
     const tree = mount();
     press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.title));
     typeTempo(tree, [1, 2, 8]);
-    press(withProp(tree, 'Chip', 'label', SET_TEMPO_TEXT.previewClick));
+    const { previewClick } = setTempoSheet(tree);
+    expect(previewClick.on).toBe(false);
+    act(() => {
+      previewClick.onToggle();
+    });
     expect(transport.toggleClick).toHaveBeenCalledOnce();
   });
 
@@ -208,7 +253,9 @@ describe('a song with no beat grid', () => {
     const tree = mount();
     press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.title));
     typeTempo(tree, [1, 2, 8]);
-    press(withProp(tree, 'Sheet', 'title', SET_TEMPO_TEXT.title), 'onDismiss');
+    act(() => {
+      setTempoSheet(tree).onClose();
+    });
     expect(manual.previewTempo).toHaveBeenLastCalledWith(null);
   });
 
@@ -231,42 +278,12 @@ describe('a song with no beat grid', () => {
     act(() => {
       tree.update(screen(true, { songId: NEXT_SONG }));
     });
-    expect(byType(tree, 'Sheet')).toHaveLength(0);
+    expect(byType(tree, 'SetTempoSheet')).toHaveLength(0);
     expect(
       byType(tree, 'Snackbar').filter(
         (bar) => bar.props.actionLabel === 'Undo',
       ),
     ).toHaveLength(0);
-  });
-
-  it('sets the tempo from the fourth tap on', () => {
-    const tree = mount();
-    press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.title));
-    act(() => {
-      (
-        byType(tree, 'SegmentedControl')[0]?.props.onSelect as (
-          v: string,
-        ) => void
-      )('tap');
-    });
-    const tapAt = (timestamp: number) => {
-      act(() => {
-        (byType(tree, 'TapPad')[0]?.props.onTap as (e: unknown) => void)({
-          nativeEvent: { timestamp },
-        });
-      });
-    };
-    [0, 1, 2].forEach((tap) => {
-      tapAt(tap * TAP_GAP_MS);
-    });
-    expect(byType(tree, 'TapLeds')[0]?.props.landed).toBe(3);
-    expect(
-      withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.next).props.disabled,
-    ).toBe(true);
-    tapAt(3 * TAP_GAP_MS);
-    expect(byType(tree, 'NumpadReadout')[0]?.props.digits).toBe('120');
-    press(withProp(tree, 'Button', 'label', SET_TEMPO_TEXT.next));
-    expect(byType(tree, 'Stepper')[0]?.props.value).toBe('120');
   });
 });
 
@@ -284,11 +301,18 @@ describe('an analysed song', () => {
   it('prefills the sheet from the analysis and keeps its bar 1', async () => {
     const tree = openMenu();
     press(only(menuRow(tree, SET_TEMPO_TEXT.fix)));
-    expect(
-      withProp(tree, 'Sheet', 'title', SET_TEMPO_TEXT.title).props.titleDetail,
-    ).toBe('was 132 from analysis');
-    press(withProp(tree, 'PresetButton', 'label', '÷2 · 66'));
-    press(first(tree, 'NumpadKeypad'), 'onConfirm');
+    expect(setTempoSheet(tree).tempo.seed).toEqual({
+      bpm: 132,
+      anchor: MANUAL.anchor,
+      beatsPerBar: MANUAL.beatsPerBar,
+      analysed: true,
+    });
+    drive(tree, (tempo) => {
+      tempo.entry.onHalve();
+    });
+    drive(tree, (tempo) => {
+      tempo.onTyped();
+    });
     await save(tree);
     expect(manual.setManualTempo).toHaveBeenCalledWith({ ...MANUAL, bpm: 66 });
     expect(

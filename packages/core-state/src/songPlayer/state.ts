@@ -13,6 +13,7 @@ import {
   type TempoMode,
 } from '@kitbag/core-db';
 
+import type { TempoPreview } from '../manualTempo/previewSession.ts';
 import type { TransportSlice } from '../stemPlayer/actions.ts';
 import { FALLBACK_BEATS_PER_BAR } from '../stemPlayer/barMeter.ts';
 import type { ClickSlice } from '../stemPlayer/clickActions.ts';
@@ -42,10 +43,6 @@ export interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
   readonly analysedOffer: number | null;
   readonly tempoUndoable: boolean;
   readonly tempoPreview: TempoPreview | null;
-}
-
-export interface TempoPreview {
-  readonly savedGrid: boolean;
 }
 
 export const closedState: SongPlayerState = {

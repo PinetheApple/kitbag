@@ -13,7 +13,7 @@ tags:
     env:
       STEM_SONG: ${FIXTURE_STEMS_NO_GRID}
 - assertVisible:
-    text: 'Meter, Needs a beat grid\. This song came without one\.'
+    text: 'Meter, Needs a beat grid\.'
     enabled: false
 - assertVisible:
     text: 'Click grouping, Needs a beat grid\.'
