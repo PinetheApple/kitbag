@@ -30,7 +30,12 @@ import { DetailSheets, useDetailMenu, type DetailMenu } from './DetailMenu.tsx';
 import { ScreenFrame } from './ScreenFrame.tsx';
 import { CHANGE_NOT_SAVED, REMOVE_FROM_SET } from './setlistCopy.ts';
 import { ActionsSheet, guarded } from './sheets.tsx';
-import { SongMenuSheets, useSongMenu, type SongMenu } from './SongMenu.tsx';
+import {
+  isSongTarget,
+  SongMenuSheets,
+  useSongMenu,
+  type SongMenu,
+} from './SongMenu.tsx';
 import { useOpenStemPlayer } from '../screen/useOpenStemPlayer.ts';
 import { useLibraryRefresh } from './useLibraryRefresh.ts';
 
@@ -95,6 +100,7 @@ interface StemEntryRowProps {
   readonly index: number;
   readonly count: number;
   readonly setlistId: number;
+  readonly menuOpen: boolean;
   readonly onOpen: (entry: StemSetlistEntry) => void;
   readonly onActions: (entry: StemSetlistEntry, name: string) => void;
 }
@@ -124,6 +130,7 @@ function StemEntryRow(props: StemEntryRowProps) {
       title={name}
       subtitle={facts}
       active={now}
+      menuOpen={props.menuOpen}
       reorder={drag}
       trailing={
         <View>
@@ -134,6 +141,7 @@ function StemEntryRow(props: StemEntryRowProps) {
       accessibilityLabel={now ? `${spoken}, now loaded` : spoken}
       onPress={open}
       onLongPress={actions}
+      onActions={actions}
     />
   );
 }
@@ -150,11 +158,13 @@ function EntryRow(props: EntryRowProps) {
       title={preset.name}
       subtitle={subtitle}
       active={now}
+      menuOpen={isSongTarget(props.songMenu, { preset, itemId: item.id })}
       reorder={drag}
       trailing={now ? <NowBadge /> : undefined}
       accessibilityLabel={now ? `${spoken}, now loaded` : spoken}
       onPress={load}
       onLongPress={actions}
+      onActions={actions}
     />
   );
 }
@@ -280,6 +290,7 @@ function StemActionsSheet({
 
 interface EntryListProps extends SectionProps {
   readonly songMenu: SongMenu;
+  readonly stemTarget: StemActionsTarget | null;
   readonly onStemActions: StemActions['open'];
 }
 
@@ -306,6 +317,7 @@ function EntryList(props: EntryListProps) {
         {...shared}
         entry={entry}
         index={index}
+        menuOpen={props.stemTarget?.itemId === entry.item.id}
         onOpen={openStem}
         onActions={props.onStemActions}
       />
@@ -372,6 +384,7 @@ export function SetlistDetailScreen(props: SetlistDetailScreenProps) {
       <EntryList
         {...section}
         songMenu={songMenu}
+        stemTarget={stemActions.target}
         onStemActions={stemActions.open}
       />
       <SongMenuSheets {...sheets} menu={songMenu} />

@@ -11,6 +11,7 @@ import {
   type IconSize,
 } from '../roles.ts';
 import { rowLabel } from '../rowLabel.ts';
+import { libraryList } from '../libraryRoles.ts';
 import { switchA11y } from '../switch.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
@@ -18,6 +19,7 @@ import { radii, type ColorToken } from '../tokens.ts';
 import { EllipsizedText } from './EllipsizedText.tsx';
 import { Icon } from './Icon.tsx';
 import { LiveDot } from './LiveDot.tsx';
+import { MenuOpenTint, RowMore } from './RowMore.tsx';
 import { SwitchTrack } from './Switch.tsx';
 
 const useStyles = createThemedStyles((theme) => ({
@@ -34,6 +36,19 @@ const useStyles = createThemedStyles((theme) => ({
   active: {
     borderColor: theme.color.accentDim,
     backgroundColor: theme.activeCardFill,
+  },
+  split: { padding: 0 },
+  splitBody: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.rowGap,
+    paddingVertical: space.cardPadding,
+    paddingLeft: space.cardPadding,
+  },
+  more: {
+    marginLeft: space.rowGap - libraryList.morePull,
+    marginRight: libraryList.rowEnd,
   },
   tile: {
     width: size.toolIcon,
@@ -125,11 +140,42 @@ export interface ListRowProps extends RowTextProps {
   readonly onLongPress?: () => void;
   readonly trailing?: ReactNode;
   readonly active?: boolean;
+  readonly menuOpen?: boolean;
+  readonly onActions?: () => void;
   readonly accessibilityLabel?: string;
+}
+
+function ActionsListRow(
+  props: ListRowProps & { readonly onActions: () => void },
+) {
+  const styles = useStyles();
+  const { icon, title, subtitle, liveDot, active = false } = props;
+  return (
+    <View style={[styles.row, styles.split, active && styles.active]}>
+      {props.menuOpen === true ? (
+        <MenuOpenTint radius={radii.card - size.stroke} />
+      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={props.accessibilityLabel ?? title}
+        accessibilityState={{ selected: active }}
+        style={styles.splitBody}
+        onPress={props.onPress}
+        onLongPress={props.onLongPress}
+      >
+        <RowIcon icon={icon} />
+        <RowText title={title} subtitle={subtitle} liveDot={liveDot} />
+        {props.trailing}
+      </Pressable>
+      <RowMore title={title} onPress={props.onActions} style={styles.more} />
+    </View>
+  );
 }
 
 export function ListRow(props: ListRowProps) {
   const styles = useStyles();
+  if (props.onActions !== undefined)
+    return <ActionsListRow {...props} onActions={props.onActions} />;
   const { icon, title, subtitle, liveDot, trailing, active = false } = props;
   return (
     <Pressable

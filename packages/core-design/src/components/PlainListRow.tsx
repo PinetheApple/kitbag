@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { libraryList } from '../libraryRoles.ts';
 import { inset, radius, size, space } from '../roles.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { RowText } from './ListRow.tsx';
+import { MenuOpenTint, RowMore } from './RowMore.tsx';
 
 export const usePlainRowStyles = createThemedStyles((theme) => ({
   row: {
@@ -27,6 +29,11 @@ export const usePlainRowStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     gap: space.rowGap,
   },
+  more: {
+    marginVertical: -inset.rowV,
+    marginLeft: -libraryList.morePull,
+    marginRight: libraryList.rowEnd - inset.rowH,
+  },
 }));
 
 export interface PlainListRowProps {
@@ -34,8 +41,10 @@ export interface PlainListRowProps {
   readonly subtitle?: string;
   readonly trailing?: ReactNode;
   readonly active?: boolean;
+  readonly menuOpen?: boolean;
   readonly onPress: () => void;
   readonly onLongPress?: () => void;
+  readonly onActions?: () => void;
   readonly accessibilityLabel: string;
 }
 
@@ -56,11 +65,35 @@ export function RowPress(props: PlainListRowProps) {
   );
 }
 
+export function PlainRowTint({
+  menuOpen,
+}: {
+  readonly menuOpen: boolean | undefined;
+}) {
+  return menuOpen === true ? (
+    <MenuOpenTint radius={radius.row - size.stroke} />
+  ) : null;
+}
+
+export function PlainRowMore({
+  title,
+  onActions,
+}: {
+  readonly title: string;
+  readonly onActions: (() => void) | undefined;
+}) {
+  const styles = usePlainRowStyles();
+  if (onActions === undefined) return null;
+  return <RowMore title={title} onPress={onActions} style={styles.more} />;
+}
+
 export function PlainListRow(props: PlainListRowProps) {
   const styles = usePlainRowStyles();
   return (
     <View style={[styles.row, props.active === true && styles.active]}>
+      <PlainRowTint menuOpen={props.menuOpen} />
       <RowPress {...props} />
+      <PlainRowMore title={props.title} onActions={props.onActions} />
     </View>
   );
 }

@@ -29,6 +29,7 @@ export default defineConfig({
       'src/screen/MetronomeAppBar.test.tsx',
       'src/library/songLists.test.tsx',
       'src/library/AllSongsScreen.test.tsx',
+      'src/library/SetlistsScreen.test.tsx',
       'src/screen/PracticeSections.test.tsx',
       'src/screen/PolyStrip.test.tsx',
       'src/screen/SwipeTempoZone.test.tsx',

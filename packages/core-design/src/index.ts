@@ -93,6 +93,7 @@ export * from './textPlaceholder.ts';
 export * from './components/PegSelector.tsx';
 export * from './components/PickerGrid.tsx';
 export * from './components/PlainListRow.tsx';
+export * from './components/RowMore.tsx';
 export * from './components/PresetButton.tsx';
 export * from './components/PrimaryPlayButton.tsx';
 export * from './components/SectionHeader.tsx';

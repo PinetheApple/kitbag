@@ -11,14 +11,20 @@ type Props = Record<string, unknown> & { readonly children?: ReactNode };
 const SETLIST_ID = 4;
 const NIGHT_BUS = 9;
 
-const fake = vi.hoisted(() => ({
-  entries: [] as unknown[],
-  openStemEntry: vi.fn(() => Promise.resolve(true)),
-  reorder: vi.fn(),
-  loadSong: vi.fn(() => Promise.resolve()),
-  start: vi.fn(),
-  stop: vi.fn(),
-}));
+const fake = vi.hoisted(() => {
+  const songMenu: Record<string, unknown> = { kind: 'none', target: null };
+  return {
+    entries: [] as unknown[],
+    openStemEntry: vi.fn(() => Promise.resolve(true)),
+    reorder: vi.fn(),
+    loadSong: vi.fn(() => Promise.resolve()),
+    start: vi.fn(),
+    stop: vi.fn(),
+    openSongActions: vi.fn(),
+    songMenu,
+    sheets: [] as Props[],
+  };
+});
 
 vi.mock('react-native', () => ({ View: 'View' }));
 vi.mock('@kitbag/core-design', () => ({
@@ -68,15 +74,22 @@ vi.mock('./ScreenFrame.tsx', () => ({
 vi.mock('./useLibraryRefresh.ts', () => ({
   useLibraryRefresh: () => undefined,
 }));
-vi.mock('./SongMenu.tsx', () => ({
-  useSongMenu: () => ({ openActions: vi.fn() }),
+vi.mock('./SongMenu.tsx', async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  useSongMenu: () => ({ ...fake.songMenu, openActions: fake.openSongActions }),
   SongMenuSheets: () => null,
 }));
 vi.mock('./DetailMenu.tsx', () => ({
   useDetailMenu: () => ({ openAdd: vi.fn(), openSave: vi.fn() }),
   DetailSheets: () => null,
 }));
-vi.mock('./sheets.tsx', () => ({ ActionsSheet: () => null, guarded: vi.fn() }));
+vi.mock('./sheets.tsx', () => ({
+  ActionsSheet: (props: Props) => {
+    fake.sheets.push(props);
+    return null;
+  },
+  guarded: vi.fn(),
+}));
 
 const { SetlistDetailScreen } = await import('./SetlistDetailScreen.tsx');
 
@@ -118,8 +131,18 @@ function expectStoppedBeforeOpen(): void {
 const rows = (tree: ReactTestRenderer) =>
   tree.root.findAll((node) => node.type === ('DragListRow' as never));
 
+const press = (row: { props: Record<string, unknown> } | undefined) => {
+  act(() => {
+    (row?.props.onActions as () => void)();
+  });
+};
+
+const openSheet = () => fake.sheets.findLast((sheet) => sheet.visible === true);
+
 beforeEach(() => {
   vi.clearAllMocks();
+  fake.songMenu = { kind: 'none', target: null };
+  fake.sheets = [];
 });
 
 describe('setlist detail with stem songs', () => {
@@ -233,5 +256,59 @@ describe('setlist detail with stem songs', () => {
     });
     expect(onOpenStemSet).not.toHaveBeenCalled();
     expect(fake.stop).not.toHaveBeenCalled();
+  });
+});
+
+describe('setlist entry actions button', () => {
+  it('opens the song sheet for a preset entry, naming its place in the set', () => {
+    const ballad = entry(3, 'Ballad');
+    fake.entries = [stem(2, NIGHT_BUS), ballad];
+    const [, row] = rows(mount());
+    press(row);
+    expect(fake.openSongActions).toHaveBeenCalledWith({
+      preset: ballad.preset,
+      itemId: 3,
+    });
+  });
+
+  it('opens the stem sheet with its only action for a stem entry', () => {
+    fake.entries = [entry(1, 'Warm-up'), stem(2, NIGHT_BUS)];
+    const [, stemRow] = rows(mount());
+    press(stemRow);
+    expect(openSheet()?.title).toBe('Night Bus');
+    expect(
+      (openSheet()?.actions as { label: string }[]).map((a) => a.label),
+    ).toEqual(['Remove from set']);
+  });
+
+  it('tints only the entry whose sheet is open', () => {
+    fake.entries = [
+      entry(1, 'Warm-up'),
+      stem(2, NIGHT_BUS),
+      entry(3, 'Ballad'),
+    ];
+    fake.songMenu = { kind: 'actions', target: { itemId: 3 } };
+    const tree = mount();
+    expect(rows(tree).map((row) => (row.props as Props).menuOpen)).toEqual([
+      false,
+      false,
+      true,
+    ]);
+    press(rows(tree)[1]);
+    expect(rows(tree)[1]?.props.menuOpen).toBe(true);
+  });
+
+  it('keeps the actions button and the drag handle apart', () => {
+    fake.entries = [entry(1, 'Warm-up'), entry(3, 'Ballad')];
+    const [warmUp] = rows(mount());
+    press(warmUp);
+    expect(fake.reorder).not.toHaveBeenCalled();
+    expect(fake.loadSong).not.toHaveBeenCalled();
+    fake.openSongActions.mockClear();
+    const { onMove } = warmUp?.props.reorder as {
+      onMove: (from: number, to: number) => void;
+    };
+    onMove(0, 1);
+    expect(fake.openSongActions).not.toHaveBeenCalled();
   });
 });

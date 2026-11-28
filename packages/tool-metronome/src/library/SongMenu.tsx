@@ -40,11 +40,18 @@ export function useSongMenu() {
 
 export type SongMenu = ReturnType<typeof useSongMenu>;
 
+export function isSongTarget(menu: SongMenu, song: SongTarget): boolean {
+  const open = menu.kind === 'none' ? null : menu.target;
+  if (open === null) return false;
+  if (song.itemId !== null) return open.itemId === song.itemId;
+  return open.itemId === null && open.preset.id === song.preset.id;
+}
+
 export interface SongMenuProps {
   readonly menu: SongMenu;
   readonly setlistId: number | null;
   readonly bottomInset: number;
-  readonly onEdit: (presetId: number) => void;
+  readonly onEdit?: ((presetId: number) => void) | undefined;
 }
 
 function useSongActions() {
@@ -68,10 +75,13 @@ function useSongCommands({ menu, setlistId, onEdit }: SongMenuProps) {
     });
   };
   return {
-    edit: () => {
-      close();
-      if (target !== null) onEdit(target.preset.id);
-    },
+    edit:
+      onEdit === undefined
+        ? undefined
+        : () => {
+            close();
+            if (target !== null) onEdit(target.preset.id);
+          },
     duplicate: run(({ preset }) =>
       library.duplicatePreset(preset.id, setlistId ?? undefined),
     ),
@@ -92,7 +102,7 @@ type SongCommands = ReturnType<typeof useSongCommands>;
 
 function songActions(cmd: SongCommands, menu: SongMenu, inSet: boolean) {
   const actions: SheetAction[] = [
-    { label: 'Edit', onPress: cmd.edit },
+    ...(cmd.edit === undefined ? [] : [{ label: 'Edit', onPress: cmd.edit }]),
     { label: 'Duplicate', onPress: cmd.duplicate },
     {
       label: inSet ? 'Move to setlist' : 'Add to setlist',

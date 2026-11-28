@@ -28,6 +28,8 @@ import { minTouchTargetDp, type ColorToken } from '../tokens.ts';
 import { dropTarget, NO_DRAG, reorderTarget } from '../dragReorder.ts';
 import { Icon } from './Icon.tsx';
 import {
+  PlainRowMore,
+  PlainRowTint,
   RowPress,
   usePlainRowStyles,
   type PlainListRowProps,
@@ -214,11 +216,13 @@ export function DragListRow(props: DragListRowProps) {
   const rowStyle = [row.row, props.active === true && row.active];
   const content = (
     <>
+      <PlainRowTint menuOpen={props.menuOpen} />
       <GestureDetector gesture={drag.pan}>
         <Handle reorder={props.reorder} look={props.handle ?? LIST_HANDLE} />
       </GestureDetector>
       <Text style={styles.index}>{props.reorder.index + 1}</Text>
       <RowPress {...props} />
+      <PlainRowMore title={props.title} onActions={props.onActions} />
     </>
   );
   if (props.swipe === undefined)
