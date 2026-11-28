@@ -5,8 +5,10 @@
 
 #include <time.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <vector>
 
@@ -21,9 +23,11 @@ inline constexpr double kOnsetLevel = 0.05;
 // tick any later than this still starts a fresh onset.
 inline constexpr int64_t kOnsetHold = 1200;
 inline constexpr int64_t kOnsetPeakWindow = 240;
-inline constexpr int kOffsetAttempts = 8;
+// A syscall clock_gettime (~0.35us, 11 reads an attempt) leaves little slack
+// under a quarter frame, so preempted attempts need room to retry.
+inline constexpr int kOffsetAttempts = 32;
 inline constexpr int64_t kSteadyOffsetNs = 1000;
-inline constexpr int64_t kMaxAttemptSpanNs = 5000;
+inline constexpr int64_t kWindowsPerFrame = 4;
 inline constexpr int64_t kMeasureOffset = INT64_MIN;
 #ifdef CLOCK_BOOTTIME
 inline constexpr clockid_t kRawBoottime = CLOCK_BOOTTIME;
@@ -90,13 +94,20 @@ struct SongRig {
     }
   }
 
-  // A preempted clock pair, the engine's included, is off by up to half the stall;
-  // an attempt spanning under a quarter frame, offset steady, cannot misround.
+  int64_t QuarterFrameNs() const {
+    return kitbag::kNsPerSecond /
+           (kWindowsPerFrame *
+            static_cast<int64_t>(kb_engine_sample_rate(engine)));
+  }
+
+  // The engine's own clock pair can be preempted too, so the whole attempt
+  // is bounded, not just the test's reads.
   bool FrameAt(double frame, int64_t* out) const {
     if (forced_offset_ns != kMeasureOffset) {
       const int64_t boottime = MonotonicAt(frame) + forced_offset_ns;
       return kb_engine_frame_at_boottime(engine, boottime, out) == KB_OK;
     }
+    int64_t widest = 0;
     for (int attempt = 0; attempt < kOffsetAttempts; ++attempt) {
       const int64_t start = kitbag::MonotonicNs();
       const int64_t offset = RawSuspendedNs();
@@ -106,10 +117,17 @@ struct SongRig {
       }
       const bool steady =
           std::llabs(RawSuspendedNs() - offset) < kSteadyOffsetNs;
-      if (steady && kitbag::MonotonicNs() - start < kMaxAttemptSpanNs) {
-        return true;
-      }
+      const int64_t window = kitbag::MonotonicNs() - start;
+      const bool brief = window < QuarterFrameNs();
+      if (steady && brief) return true;
+      widest = std::max(widest, window);
     }
+    std::fprintf(
+        stderr,
+        "boottime probe: %d attempts rejected, widest window %lld ns\n",
+        kOffsetAttempts,
+        static_cast<long long>(widest)
+    );
     return false;
   }
 };
