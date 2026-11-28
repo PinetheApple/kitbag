@@ -1,5 +1,5 @@
 import { useCallback, useMemo, type ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import type { IconName } from '../icons.ts';
 import {
@@ -10,14 +10,18 @@ import {
   textRoles,
   type IconSize,
 } from '../roles.ts';
+import { libraryList } from '../libraryRoles.ts';
 import { rowLabel } from '../rowLabel.ts';
 import { switchA11y } from '../switch.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { radii, type ColorToken } from '../tokens.ts';
+import { useTextScaled } from '../useTextScaled.ts';
 import { EllipsizedText } from './EllipsizedText.tsx';
 import { Icon } from './Icon.tsx';
 import { LiveDot } from './LiveDot.tsx';
+import { MenuOpenTint } from './MenuOpenTint.tsx';
+import { RowMore } from './RowMore.tsx';
 import { SwitchTrack } from './Switch.tsx';
 
 const useStyles = createThemedStyles((theme) => ({
@@ -34,6 +38,31 @@ const useStyles = createThemedStyles((theme) => ({
   active: {
     borderColor: theme.color.accentDim,
     backgroundColor: theme.activeCardFill,
+  },
+  split: { padding: 0 },
+  splitBody: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.rowGap,
+    paddingVertical: space.cardPadding,
+    paddingLeft: space.cardPadding,
+  },
+  more: {
+    marginLeft: -libraryList.morePull,
+    marginRight: libraryList.rowEnd,
+  },
+  badgesBeside: {
+    alignItems: 'flex-end',
+    gap: libraryList.badgeGap,
+    flexShrink: 0,
+  },
+  badgesUnder: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    gap: libraryList.badgeGap,
+    marginTop: libraryList.badgeGap,
   },
   tile: {
     width: size.toolIcon,
@@ -64,7 +93,11 @@ export function RowText({
   subtitle,
   liveDot = false,
   bodyLines = false,
-}: RowTextProps & { readonly bodyLines?: boolean }) {
+  below,
+}: RowTextProps & {
+  readonly bodyLines?: boolean;
+  readonly below?: ReactNode;
+}) {
   const styles = useStyles();
   const subtitleText =
     subtitle === undefined ? null : (
@@ -89,7 +122,38 @@ export function RowText({
       ) : (
         subtitleText
       )}
+      {below}
     </View>
+  );
+}
+
+function RowBadges({
+  badges,
+  under,
+}: {
+  readonly badges: ReactNode;
+  readonly under: boolean;
+}) {
+  const styles = useStyles();
+  if (badges === undefined) return null;
+  return (
+    <View style={under ? styles.badgesUnder : styles.badgesBeside}>
+      {badges}
+    </View>
+  );
+}
+
+export function RowTextWithBadges({
+  badges,
+  ...text
+}: RowTextProps & { readonly badges?: ReactNode }) {
+  const under = useTextScaled();
+  const placed = <RowBadges badges={badges} under={under} />;
+  return (
+    <>
+      <RowText {...text} below={under ? placed : undefined} />
+      {under ? null : placed}
+    </>
   );
 }
 
@@ -123,27 +187,73 @@ export interface ListRowProps extends RowTextProps {
   readonly icon: IconName;
   readonly onPress: () => void;
   readonly onLongPress?: () => void;
+  readonly badges?: ReactNode;
   readonly trailing?: ReactNode;
   readonly active?: boolean;
+  readonly menuOpen?: boolean;
+  readonly onActions?: () => void;
   readonly accessibilityLabel?: string;
+}
+
+interface RowBodyProps extends ListRowProps {
+  readonly style: StyleProp<ViewStyle>;
+  readonly end: ReactNode;
+}
+
+function RowBody({ style, end, ...props }: RowBodyProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={props.accessibilityLabel ?? props.title}
+      accessibilityState={{ selected: props.active === true }}
+      style={style}
+      onPress={props.onPress}
+      onLongPress={props.onLongPress}
+    >
+      <RowIcon icon={props.icon} />
+      <RowTextWithBadges
+        title={props.title}
+        subtitle={props.subtitle}
+        liveDot={props.liveDot}
+        badges={props.badges}
+      />
+      {end}
+    </Pressable>
+  );
+}
+
+function ActionsListRow(
+  props: ListRowProps & { readonly onActions: () => void },
+) {
+  const styles = useStyles();
+  return (
+    <View
+      style={[styles.row, styles.split, props.active === true && styles.active]}
+    >
+      <MenuOpenTint
+        visible={props.menuOpen}
+        radius={radii.card - size.stroke}
+      />
+      <RowBody {...props} style={styles.splitBody} end={props.trailing} />
+      <RowMore
+        subject={props.title}
+        onPress={props.onActions}
+        style={styles.more}
+      />
+    </View>
+  );
 }
 
 export function ListRow(props: ListRowProps) {
   const styles = useStyles();
-  const { icon, title, subtitle, liveDot, trailing, active = false } = props;
+  if (props.onActions !== undefined)
+    return <ActionsListRow {...props} onActions={props.onActions} />;
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={props.accessibilityLabel ?? title}
-      accessibilityState={{ selected: active }}
-      style={[styles.row, active && styles.active]}
-      onPress={props.onPress}
-      onLongPress={props.onLongPress}
-    >
-      <RowIcon icon={icon} />
-      <RowText title={title} subtitle={subtitle} liveDot={liveDot} />
-      {trailing ?? <Icon name="forward" size="action" />}
-    </Pressable>
+    <RowBody
+      {...props}
+      style={[styles.row, props.active === true && styles.active]}
+      end={props.trailing ?? <Icon name="forward" size="action" />}
+    />
   );
 }
 

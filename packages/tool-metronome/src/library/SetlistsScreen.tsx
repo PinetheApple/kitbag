@@ -20,10 +20,12 @@ import type { ShellMeasuredInsets } from '../screen/MetronomeScreen.tsx';
 import { ScreenFrame } from './ScreenFrame.tsx';
 import { SearchResultsList } from './SearchResultsList.tsx';
 import {
+  isSetlistTarget,
   SetlistsSheets,
   useSetlistsMenu,
   type SetlistsMenu,
 } from './SetlistsMenu.tsx';
+import { SongMenuSheets, useSongMenu, type SongMenu } from './SongMenu.tsx';
 import { useLibraryUndoShown } from './LibraryUndoSnackbar.tsx';
 import { useLibraryRefresh } from './useLibraryRefresh.ts';
 
@@ -51,6 +53,12 @@ export interface SetlistsScreenProps {
   readonly onOpenSetlist: (setlistId: number) => void;
   readonly onOpenAllSongs: () => void;
   readonly onLoaded: () => void;
+  readonly onEditPreset: (presetId: number) => void;
+}
+
+interface Menus {
+  readonly menu: SetlistsMenu;
+  readonly songMenu: SongMenu;
 }
 
 interface SetlistRowProps {
@@ -87,10 +95,12 @@ function SetlistRow(props: SetlistRowProps) {
       title={setlist.name}
       subtitle={subtitle}
       active={onStage}
+      menuOpen={isSetlistTarget(props.menu, setlist.id)}
       accessibilityLabel={`${setlist.name}${stage}, ${subtitle}`}
-      trailing={onStage ? <Badge tone="accent" label="ON STAGE" /> : undefined}
+      badges={onStage ? <Badge tone="accent" label="ON STAGE" /> : undefined}
       onPress={open}
       onLongPress={actions}
+      onActions={actions}
     />
   );
 }
@@ -160,7 +170,7 @@ function useQuery() {
   return { query, onQuery, clear };
 }
 
-function Browse(props: SetlistsScreenProps & { readonly menu: SetlistsMenu }) {
+function Browse(props: SetlistsScreenProps & Menus) {
   return (
     <>
       <SetlistList {...props} />
@@ -169,9 +179,7 @@ function Browse(props: SetlistsScreenProps & { readonly menu: SetlistsMenu }) {
   );
 }
 
-function SetlistsBody(
-  props: SetlistsScreenProps & { readonly menu: SetlistsMenu },
-) {
+function SetlistsBody(props: SetlistsScreenProps & Menus) {
   const { query, onQuery, clear } = useQuery();
   return (
     <>
@@ -190,6 +198,8 @@ function SetlistsBody(
           onClear={clear}
           onOpenSetlist={props.onOpenSetlist}
           onLoaded={props.onLoaded}
+          menu={props.menu}
+          songMenu={props.songMenu}
         />
       )}
     </>
@@ -200,6 +210,7 @@ export function SetlistsScreen(props: SetlistsScreenProps) {
   useLibraryRefresh();
   const styles = useStyles();
   const menu = useSetlistsMenu(props.onOpenSetlist);
+  const songMenu = useSongMenu();
   const lifted = useLibraryUndoShown();
   const header = <AppBar title="Setlists" onBack={props.onBack} />;
   const fab = (
@@ -213,8 +224,14 @@ export function SetlistsScreen(props: SetlistsScreenProps) {
   );
   return (
     <ScreenFrame insets={props.insets} header={header} footer={fab}>
-      <SetlistsBody {...props} menu={menu} />
+      <SetlistsBody {...props} menu={menu} songMenu={songMenu} />
       <SetlistsSheets menu={menu} bottomInset={props.insets.bottom} />
+      <SongMenuSheets
+        menu={songMenu}
+        setlistId={null}
+        bottomInset={props.insets.bottom}
+        onEdit={props.onEditPreset}
+      />
     </ScreenFrame>
   );
 }

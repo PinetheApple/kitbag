@@ -27,7 +27,10 @@ import { createThemedStyles } from '../ThemeProvider.tsx';
 import { minTouchTargetDp, type ColorToken } from '../tokens.ts';
 import { dropTarget, NO_DRAG, reorderTarget } from '../dragReorder.ts';
 import { Icon } from './Icon.tsx';
+import { MenuOpenTint } from './MenuOpenTint.tsx';
 import {
+  PLAIN_ROW_INNER_RADIUS,
+  PlainRowMore,
   RowPress,
   usePlainRowStyles,
   type PlainListRowProps,
@@ -214,11 +217,16 @@ export function DragListRow(props: DragListRowProps) {
   const rowStyle = [row.row, props.active === true && row.active];
   const content = (
     <>
+      <MenuOpenTint visible={props.menuOpen} radius={PLAIN_ROW_INNER_RADIUS} />
       <GestureDetector gesture={drag.pan}>
         <Handle reorder={props.reorder} look={props.handle ?? LIST_HANDLE} />
       </GestureDetector>
       <Text style={styles.index}>{props.reorder.index + 1}</Text>
       <RowPress {...props} />
+      <PlainRowMore
+        subject={`${String(props.reorder.index + 1)}. ${props.title}`}
+        onActions={props.onActions}
+      />
     </>
   );
   if (props.swipe === undefined)

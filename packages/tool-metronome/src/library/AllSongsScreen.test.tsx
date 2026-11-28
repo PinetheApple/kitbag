@@ -1,6 +1,6 @@
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { songPreset } from '../logic/fixtures.test-helper.ts';
 
@@ -9,6 +9,15 @@ type Props = Record<string, unknown> & { readonly children?: ReactNode };
 const library = vi.hoisted((): { state: Record<string, unknown> } => ({
   state: {},
 }));
+const seen = vi.hoisted(() => {
+  const songMenu: Record<string, unknown> = { kind: 'none', target: null };
+  return {
+    rows: [] as Props[],
+    sheets: [] as Props[],
+    openActions: vi.fn(),
+    songMenu,
+  };
+});
 
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
@@ -32,8 +41,10 @@ vi.mock('@kitbag/core-design', async (original) => {
     Chip: () => null,
     ChipRow: () => null,
     EmptyState: () => null,
-    PlainListRow: (props: Props) =>
-      h('li', null, `${String(props.title)}: ${String(props.subtitle)}`),
+    PlainListRow: (props: Props) => {
+      seen.rows.push(props);
+      return h('li', null, `${String(props.title)}: ${String(props.subtitle)}`);
+    },
   };
 });
 
@@ -41,10 +52,15 @@ vi.mock('../screen/CustomSounds.tsx', () => ({
   useCustomSoundViews: () => [],
 }));
 vi.mock('./DetailMenu.tsx', () => ({ NEW_SONG_NAME: 'New song' }));
-vi.mock('./SongMenu.tsx', () => ({
-  SongMenuSheets: () => null,
-  useSongMenu: () => ({}),
+vi.mock('./SongMenu.tsx', async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  SongMenuSheets: (props: Props) => {
+    seen.sheets.push(props);
+    return null;
+  },
+  useSongMenu: () => ({ ...seen.songMenu, openActions: seen.openActions }),
 }));
+vi.mock('./sheets.tsx', () => ({ ActionsSheet: () => null, guarded: vi.fn() }));
 vi.mock('./ScreenFrame.tsx', async () => {
   const { createElement: h } = await import('react');
   return {
@@ -60,6 +76,8 @@ const { AllSongsScreen } = await import('./AllSongsScreen.tsx');
 const ignore = () => undefined;
 
 function rowsOf(standalone: readonly unknown[]): string {
+  seen.rows = [];
+  seen.sheets = [];
   library.state = { ready: true, loaded: null, standalone };
   return renderToStaticMarkup(
     createElement(AllSongsScreen, {
@@ -84,5 +102,30 @@ describe('All songs rows', () => {
   it('shows a saved tempo as before', () => {
     const timed = songPreset({ ...plain, name: 'Timed', bpm: 96 });
     expect(rowsOf([timed])).toContain('Timed: 96 · 3/4 · Woodblock');
+  });
+});
+
+describe('All songs actions button', () => {
+  const song = songPreset({ id: 7, name: 'Blackbird (slow)' });
+
+  beforeEach(() => {
+    seen.openActions.mockClear();
+    seen.songMenu = { kind: 'none', target: null };
+  });
+
+  it('opens the song sheet with no set, so it offers Add to setlist', () => {
+    rowsOf([song]);
+    (seen.rows[0]?.onActions as () => void)();
+    expect(seen.openActions).toHaveBeenCalledWith({
+      preset: song,
+      itemId: null,
+    });
+    expect(seen.sheets[0]?.setlistId).toBeNull();
+  });
+
+  it('tints the row while its sheet is open', () => {
+    seen.songMenu = { kind: 'actions', target: { preset: song, itemId: null } };
+    rowsOf([song, songPreset({ id: 8, name: 'Other' })]);
+    expect(seen.rows.map((row) => row.menuOpen)).toEqual([true, false]);
   });
 });

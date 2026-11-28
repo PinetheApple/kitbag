@@ -40,6 +40,13 @@ export function useSongMenu() {
 
 export type SongMenu = ReturnType<typeof useSongMenu>;
 
+export function isSongTarget(menu: SongMenu, song: SongTarget): boolean {
+  if (menu.kind === 'none' || menu.target === null) return false;
+  const open = menu.target;
+  if (song.itemId !== null) return open.itemId === song.itemId;
+  return open.itemId === null && open.preset.id === song.preset.id;
+}
+
 export interface SongMenuProps {
   readonly menu: SongMenu;
   readonly setlistId: number | null;

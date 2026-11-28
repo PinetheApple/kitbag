@@ -14,7 +14,12 @@ import { useCustomSoundViews } from '../screen/CustomSounds.tsx';
 import type { ShellMeasuredInsets } from '../screen/MetronomeScreen.tsx';
 import { NEW_SONG_NAME } from './DetailMenu.tsx';
 import { ScreenFrame } from './ScreenFrame.tsx';
-import { SongMenuSheets, useSongMenu, type SongMenu } from './SongMenu.tsx';
+import {
+  isSongTarget,
+  SongMenuSheets,
+  useSongMenu,
+  type SongMenu,
+} from './SongMenu.tsx';
 import { useLibraryRefresh } from './useLibraryRefresh.ts';
 
 export interface AllSongsScreenProps {
@@ -54,10 +59,12 @@ function StandaloneRow(props: RowProps) {
       title={preset.name}
       subtitle={subtitle}
       active={now}
-      trailing={now ? <Badge tone="accent" label="NOW" /> : undefined}
+      menuOpen={isSongTarget(props.menu, { preset, itemId: null })}
+      badges={now ? <Badge tone="accent" label="NOW" /> : undefined}
       accessibilityLabel={`${preset.name}, ${subtitle}${now ? ', now loaded' : ''}`}
       onPress={load}
       onLongPress={actions}
+      onActions={actions}
     />
   );
 }

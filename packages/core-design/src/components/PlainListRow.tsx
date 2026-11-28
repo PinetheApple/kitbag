@@ -1,9 +1,14 @@
 import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { libraryList } from '../libraryRoles.ts';
 import { inset, radius, size, space } from '../roles.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
-import { RowText } from './ListRow.tsx';
+import { RowTextWithBadges } from './ListRow.tsx';
+import { MenuOpenTint } from './MenuOpenTint.tsx';
+import { RowMore } from './RowMore.tsx';
+
+export const PLAIN_ROW_INNER_RADIUS = radius.row - size.stroke;
 
 export const usePlainRowStyles = createThemedStyles((theme) => ({
   row: {
@@ -27,15 +32,23 @@ export const usePlainRowStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     gap: space.rowGap,
   },
+  more: {
+    marginVertical: -inset.rowV,
+    marginLeft: -libraryList.morePull,
+    marginRight: libraryList.rowEnd - inset.rowH,
+  },
 }));
 
 export interface PlainListRowProps {
   readonly title: string;
   readonly subtitle?: string;
+  readonly badges?: ReactNode;
   readonly trailing?: ReactNode;
   readonly active?: boolean;
+  readonly menuOpen?: boolean;
   readonly onPress: () => void;
   readonly onLongPress?: () => void;
+  readonly onActions?: () => void;
   readonly accessibilityLabel: string;
 }
 
@@ -50,17 +63,35 @@ export function RowPress(props: PlainListRowProps) {
       onPress={props.onPress}
       onLongPress={props.onLongPress}
     >
-      <RowText title={props.title} subtitle={props.subtitle} />
+      <RowTextWithBadges
+        title={props.title}
+        subtitle={props.subtitle}
+        badges={props.badges}
+      />
       {props.trailing}
     </Pressable>
   );
+}
+
+export function PlainRowMore({
+  subject,
+  onActions,
+}: {
+  readonly subject: string;
+  readonly onActions: (() => void) | undefined;
+}) {
+  const styles = usePlainRowStyles();
+  if (onActions === undefined) return null;
+  return <RowMore subject={subject} onPress={onActions} style={styles.more} />;
 }
 
 export function PlainListRow(props: PlainListRowProps) {
   const styles = usePlainRowStyles();
   return (
     <View style={[styles.row, props.active === true && styles.active]}>
+      <MenuOpenTint visible={props.menuOpen} radius={PLAIN_ROW_INNER_RADIUS} />
       <RowPress {...props} />
+      <PlainRowMore subject={props.title} onActions={props.onActions} />
     </View>
   );
 }

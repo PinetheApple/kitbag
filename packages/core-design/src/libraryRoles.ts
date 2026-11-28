@@ -13,6 +13,7 @@ export const libraryList = {
   badgeV: 4,
   badgeIconGap: 4,
   moreWidth: 40,
+  morePull: 4,
   fab: 56,
   fabEnd: 20,
   fabBottom: 18,
@@ -29,4 +30,5 @@ export const libraryList = {
 export const libraryMix = {
   stemTile: 0.14,
   selectedRow: 0.06,
+  morePressed: 0.12,
 } as const;

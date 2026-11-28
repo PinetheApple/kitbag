@@ -20,17 +20,25 @@ import {
   type SetlistEntry,
   type StemSetlistEntry,
 } from '@kitbag/core-state';
-import { useCallback, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { useCallback, useMemo } from 'react';
 
 import { setlistTitle, songSubtitle } from '../logic/songSummary.ts';
 import { useCustomSoundViews } from '../screen/CustomSounds.tsx';
 import type { ShellMeasuredInsets } from '../screen/MetronomeScreen.tsx';
 import { DetailSheets, useDetailMenu, type DetailMenu } from './DetailMenu.tsx';
 import { ScreenFrame } from './ScreenFrame.tsx';
-import { CHANGE_NOT_SAVED, REMOVE_FROM_SET } from './setlistCopy.ts';
-import { ActionsSheet, guarded } from './sheets.tsx';
-import { SongMenuSheets, useSongMenu, type SongMenu } from './SongMenu.tsx';
+import {
+  isSongTarget,
+  SongMenuSheets,
+  useSongMenu,
+  type SongMenu,
+} from './SongMenu.tsx';
+import {
+  StemActionsSheet,
+  useStemActions,
+  type StemActions,
+  type StemActionsTarget,
+} from './StemActionsSheet.tsx';
 import { useOpenStemPlayer } from '../screen/useOpenStemPlayer.ts';
 import { useLibraryRefresh } from './useLibraryRefresh.ts';
 
@@ -52,6 +60,7 @@ interface EntryRowProps {
   readonly count: number;
   readonly setlistId: number;
   readonly songMenu: SongMenu;
+  readonly menuOpen: boolean;
   readonly onLoaded: () => void;
 }
 
@@ -95,6 +104,7 @@ interface StemEntryRowProps {
   readonly index: number;
   readonly count: number;
   readonly setlistId: number;
+  readonly menuOpen: boolean;
   readonly onOpen: (entry: StemSetlistEntry) => void;
   readonly onActions: (entry: StemSetlistEntry, name: string) => void;
 }
@@ -124,16 +134,18 @@ function StemEntryRow(props: StemEntryRowProps) {
       title={name}
       subtitle={facts}
       active={now}
+      menuOpen={props.menuOpen}
       reorder={drag}
-      trailing={
-        <View>
+      badges={
+        <>
           <Badge label={STEMS_BADGE} />
           {now ? <NowBadge /> : null}
-        </View>
+        </>
       }
       accessibilityLabel={now ? `${spoken}, now loaded` : spoken}
       onPress={open}
       onLongPress={actions}
+      onActions={actions}
     />
   );
 }
@@ -150,11 +162,13 @@ function EntryRow(props: EntryRowProps) {
       title={preset.name}
       subtitle={subtitle}
       active={now}
+      menuOpen={props.menuOpen}
       reorder={drag}
-      trailing={now ? <NowBadge /> : undefined}
+      badges={now ? <NowBadge /> : undefined}
       accessibilityLabel={now ? `${spoken}, now loaded` : spoken}
       onPress={load}
       onLongPress={actions}
+      onActions={actions}
     />
   );
 }
@@ -229,57 +243,9 @@ function EmptySet({ onAdd }: { readonly onAdd: () => void }) {
   );
 }
 
-interface StemActionsTarget {
-  readonly itemId: number;
-  readonly name: string;
-}
-
-function useStemActions() {
-  const [target, setTarget] = useState<StemActionsTarget | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const open = useCallback((entry: StemSetlistEntry, name: string) => {
-    setError(null);
-    setTarget({ itemId: entry.item.id, name });
-  }, []);
-  const close = useCallback(() => {
-    setTarget(null);
-  }, []);
-  return { target, error, setError, open, close };
-}
-
-type StemActions = ReturnType<typeof useStemActions>;
-
-function StemActionsSheet({
-  actions,
-  bottomInset,
-}: {
-  readonly actions: StemActions;
-  readonly bottomInset: number;
-}) {
-  const removeFromSet = useLibrary((s) => s.removeFromSet);
-  const { target, close, setError } = actions;
-  const remove = useCallback(
-    () =>
-      guarded(setError, CHANGE_NOT_SAVED, async () => {
-        if (target !== null) await removeFromSet(target.itemId);
-        close();
-      }),
-    [setError, target, removeFromSet, close],
-  );
-  return (
-    <ActionsSheet
-      visible={target !== null}
-      title={target?.name ?? ''}
-      bottomInset={bottomInset}
-      onDismiss={close}
-      error={actions.error}
-      actions={[{ label: REMOVE_FROM_SET, onPress: remove }]}
-    />
-  );
-}
-
 interface EntryListProps extends SectionProps {
   readonly songMenu: SongMenu;
+  readonly stemTarget: StemActionsTarget | null;
   readonly onStemActions: StemActions['open'];
 }
 
@@ -298,6 +264,10 @@ function EntryList(props: EntryListProps) {
         entry={entry}
         index={index}
         songMenu={props.songMenu}
+        menuOpen={isSongTarget(props.songMenu, {
+          preset: entry.preset,
+          itemId: entry.item.id,
+        })}
         onLoaded={props.onLoaded}
       />
     ) : (
@@ -306,6 +276,7 @@ function EntryList(props: EntryListProps) {
         {...shared}
         entry={entry}
         index={index}
+        menuOpen={props.stemTarget?.itemId === entry.item.id}
         onOpen={openStem}
         onActions={props.onStemActions}
       />
@@ -372,6 +343,7 @@ export function SetlistDetailScreen(props: SetlistDetailScreenProps) {
       <EntryList
         {...section}
         songMenu={songMenu}
+        stemTarget={stemActions.target}
         onStemActions={stemActions.open}
       />
       <SongMenuSheets {...sheets} menu={songMenu} />

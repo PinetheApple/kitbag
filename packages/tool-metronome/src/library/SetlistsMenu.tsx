@@ -55,6 +55,13 @@ export function useSetlistsMenu(onCreated: (setlistId: number) => void) {
 
 export type SetlistsMenu = ReturnType<typeof useSetlistsMenu>;
 
+export function isSetlistTarget(
+  menu: SetlistsMenu,
+  setlistId: number,
+): boolean {
+  return 'setlistId' in menu.open && menu.open.setlistId === setlistId;
+}
+
 function useSetlistCommands(menu: SetlistsMenu) {
   const createSetlist = useLibrary((s) => s.createSetlist);
   const renameSetlist = useLibrary((s) => s.renameSetlist);
