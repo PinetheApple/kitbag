@@ -26,7 +26,7 @@ constexpr uint32_t kBlockFrames[] = {
 constexpr int kBlockRounds = 60;
 constexpr int64_t kProbeDeltas[] = {-7001, 0, 1, 12345, 480000};
 constexpr int64_t kLateNs = 10'000'000;
-constexpr int kSuspendedBracketAttempts = 8;
+constexpr int kSuspendedCheckAttempts = 8;
 constexpr int64_t kSuspendedJitterNs = 50'000;
 constexpr int64_t kHoursSuspendedNs =
     std::chrono::nanoseconds(
@@ -108,7 +108,7 @@ bool SuspendedWithinBracket() {
 
 void TestSuspendedIsBoottimeMinusMonotonic() {
   bool within = false;
-  for (int attempt = 0; attempt < kSuspendedBracketAttempts && !within;
+  for (int attempt = 0; attempt < kSuspendedCheckAttempts && !within;
        ++attempt) {
     within = SuspendedWithinBracket();
   }
