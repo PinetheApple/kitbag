@@ -23,10 +23,7 @@ import {
 } from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
 
-import {
-  miniPlayerDetail,
-  stemMiniPlayerDetail,
-} from './miniPlayerDetail.ts';
+import { miniPlayerDetail, stemMiniPlayerDetail } from './miniPlayerDetail.ts';
 
 export interface MiniPlayerProps {
   readonly usePlayhead: UseMixerFrame;
