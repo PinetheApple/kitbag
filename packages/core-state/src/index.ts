@@ -59,6 +59,7 @@ export {
   resizeAccents,
   usesSound,
   withoutSound,
+  withSound,
 } from './metronome/config.ts';
 export { beatGroupSizes, groupStartAccents } from './metronome/meterGroups.ts';
 export type { BpmBounds } from './metronome/config.ts';
@@ -325,6 +326,7 @@ export {
   loadedPresetOf,
   type DiscardedChanges,
   type LeftSetlist,
+  type LibraryDeletion,
   type LibraryStore,
   type LoadedPreset,
   type LoadedSong,
@@ -968,11 +970,14 @@ export {
   type ClickSoundOutcome,
   type ClickSoundState,
   type ClickSoundStore,
+  type RemovedSound,
 } from './clickSounds/store.ts';
 export {
   releaseRemovedSound,
   releaseSound,
   releaseStaleSounds,
+  restoreReleasedSound,
+  type ReleasedSounds,
 } from './clickSounds/released.ts';
 export { useClickSounds } from './clickSounds/useClickSounds.ts';
 export {
@@ -991,7 +996,6 @@ export {
 } from './clickSounds/soundNames.ts';
 export {
   customSoundViews,
-  rolesUsing,
   SOUND_OPTIONS,
   SOUND_PICKER_HINT,
   SOUND_ROLE,

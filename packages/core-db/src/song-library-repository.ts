@@ -29,6 +29,11 @@ import {
   type ManualTempo,
   type ManualTempoChange,
 } from './manual-tempo';
+import {
+  removedQueueEntry,
+  restoreQueueEntry,
+  type RemovedQueueEntry,
+} from './play-queue-repository';
 import { found, type Database, type DatabaseHandle } from './repository';
 import { setlistItems, songPresets, songs, stems, stemSets } from './schema';
 import {
@@ -122,6 +127,12 @@ export interface SongFiles {
   readonly uuid: string;
   readonly filePath: string;
   readonly waveformPath: string | null;
+}
+
+export interface DeletedSong extends SongFiles {
+  readonly row: typeof songs.$inferSelect;
+  readonly presetIds: readonly number[];
+  readonly queued: RemovedQueueEntry | null;
 }
 
 export type AnalysisResultRecord =
@@ -364,15 +375,35 @@ async function listOutdatedAnalyses(
 async function deleteSong(
   db: Database,
   id: number,
-): Promise<SongFiles | undefined> {
-  const [row] = await db.select(songFiles).from(songs).where(eq(songs.id, id));
+): Promise<DeletedSong | undefined> {
+  const [row] = await db.select().from(songs).where(eq(songs.id, id));
   if (row === undefined) return undefined;
-  await db
+  const queued = await removedQueueEntry(db, { kind: 'song', id });
+  const presets = await db
     .update(songPresets)
     .set({ librarySongId: null })
-    .where(eq(songPresets.librarySongId, id));
+    .where(eq(songPresets.librarySongId, id))
+    .returning({ id: songPresets.id });
   await db.delete(songs).where(eq(songs.id, id));
-  return row;
+  const { uuid, filePath, waveformPath } = row;
+  const presetIds = presets.map((preset) => preset.id);
+  return { uuid, filePath, waveformPath, row, presetIds, queued };
+}
+
+async function restoreSong(db: Database, deleted: DeletedSong) {
+  const { row, presetIds, queued } = deleted;
+  await db.insert(songs).values(row);
+  if (presetIds.length > 0)
+    await db
+      .update(songPresets)
+      .set({ librarySongId: row.id })
+      .where(
+        and(
+          inArray(songPresets.id, [...presetIds]),
+          isNull(songPresets.librarySongId),
+        ),
+      );
+  if (queued !== null) await restoreQueueEntry(db, queued);
 }
 
 async function listSongFiles(db: Database) {
@@ -434,6 +465,8 @@ export function createSongLibraryRepository({
     applyAnalysis: (result: AnalysisResultRecord) =>
       transaction(() => applyAnalysis(db, result)),
     deleteSong: (id: number) => transaction(() => deleteSong(db, id)),
+    restoreSong: (deleted: DeletedSong) =>
+      transaction(() => restoreSong(db, deleted)),
     deleteStemSet: (id: number) => transaction(() => deleteStemSet(db, id)),
     findStemSetByJobId: (jobId: string) =>
       serial(() => findStemSetByJobId(db, jobId)),

@@ -18,6 +18,7 @@ export const STORED = {
   name: 'Stored',
   fileName: 'stored.wav',
 };
+export const NOTHING_RELEASED = { metronome: null, standalone: null };
 export const PICKED: PickedDocument = {
   uri: SOURCE,
   name: 'Rimshot.flac',
@@ -40,7 +41,12 @@ export function harness(database: BackupDatabase = openBackupDatabase()) {
     newUuid: () =>
       `00000000-0000-4000-8000-${String(++uuids).padStart(12, '0')}`,
     freshFileName: () => `file-${String(++names)}.wav`,
-    afterRemove: vi.fn(() => Promise.resolve()),
+    afterRemove: vi.fn<ClickSoundDeps['afterRemove']>(() =>
+      Promise.resolve(NOTHING_RELEASED),
+    ),
+    afterRestore: vi.fn<ClickSoundDeps['afterRestore']>(() =>
+      Promise.resolve(),
+    ),
     pickDocument: vi.fn<ClickSoundDeps['pickDocument']>(() =>
       Promise.resolve(PICKED),
     ),

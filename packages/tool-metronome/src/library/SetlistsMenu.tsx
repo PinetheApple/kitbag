@@ -3,13 +3,13 @@ import { shareSetlist, useLibrary } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 
 import { CHANGE_NOT_SAVED } from './setlistCopy.ts';
-import { ActionsSheet, ConfirmSheet, guarded, NameSheet } from './sheets.tsx';
+import { ActionsSheet, guarded, NameSheet } from './sheets.tsx';
 
 type Open =
   | { readonly kind: 'none' }
   | { readonly kind: 'create' }
   | {
-      readonly kind: 'actions' | 'rename' | 'delete';
+      readonly kind: 'actions' | 'rename';
       readonly setlistId: number;
     };
 
@@ -32,7 +32,7 @@ export function useSetlistsMenu(onCreated: (setlistId: number) => void) {
     setOpen({ kind: 'actions', setlistId });
     setError(null);
   }, []);
-  const to = useCallback((kind: 'rename' | 'delete') => {
+  const to = useCallback((kind: 'rename') => {
     setOpen((o) =>
       'setlistId' in o ? { kind, setlistId: o.setlistId } : NONE,
     );
@@ -115,9 +115,7 @@ function SetlistActions({ menu, bottomInset }: SheetsProps) {
     {
       label: 'Delete setlist',
       variant: 'destructive' as const,
-      onPress: () => {
-        menu.to('delete');
-      },
+      onPress: cmd.remove,
     },
   ];
   return (
@@ -161,29 +159,11 @@ function SetlistNaming({ menu, bottomInset }: SheetsProps) {
   );
 }
 
-function SetlistDelete({ menu, bottomInset }: SheetsProps) {
-  const cmd = useSetlistCommands(menu);
-  return (
-    <ConfirmSheet
-      bottomInset={bottomInset}
-      error={menu.error}
-      onDismiss={menu.close}
-      visible={menu.open.kind === 'delete'}
-      title="Delete setlist?"
-      body={`“${cmd.name}” is deleted. Its songs stay in All songs.`}
-      confirmLabel="Delete setlist"
-      destructive
-      onConfirm={cmd.remove}
-    />
-  );
-}
-
 export function SetlistsSheets(props: SheetsProps) {
   return (
     <>
       <SetlistActions {...props} />
       <SetlistNaming {...props} />
-      <SetlistDelete {...props} />
     </>
   );
 }

@@ -6,8 +6,6 @@ import {
   importHint,
   optionsHint,
   preparingText,
-  removeText,
-  removeTitle,
   tileLabel,
   unavailableText,
 } from './customSoundText.ts';
@@ -88,20 +86,6 @@ describe('the mockup copy', () => {
   it('says what Replace keeps', () => {
     expect(optionsHint('Rimshot')).toBe(
       'Replace keeps the new sound on every beat and song that uses Rimshot.',
-    );
-  });
-
-  it('names the roles a removal puts back to Tick', () => {
-    expect(removeTitle('Rimshot')).toBe('Remove “Rimshot”?');
-    expect(removeText(['normal'])).toBe(
-      'Normal beats go back to Tick, on the metronome and in every saved song that uses it. This cannot be undone.',
-    );
-    expect(removeText(['accent'])).toMatch(/^Accent beats go back to Tick/);
-    expect(removeText(['normal', 'accent'])).toMatch(
-      /^Normal and accent beats go back to Tick/,
-    );
-    expect(removeText([])).toBe(
-      'Every saved song that uses it goes back to Tick. This cannot be undone.',
     );
   });
 

@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 
 import { placeAt } from './ordering';
 import {
@@ -9,7 +9,24 @@ import {
   type Setlist,
   type SetlistItem,
 } from './repository';
-import { setlistItems, setlists } from './schema';
+import {
+  practiceSessions,
+  setlistItems,
+  setlists,
+  songPresets,
+  stemSets,
+} from './schema';
+
+export interface RemovedSetlistItem {
+  readonly item: SetlistItem;
+  readonly index: number;
+}
+
+export interface DeletedSetlist {
+  readonly setlist: Setlist;
+  readonly items: readonly SetlistItem[];
+  readonly practiceSessionIds: readonly number[];
+}
 
 async function orderedItems(
   db: Database,
@@ -154,12 +171,107 @@ async function renameSetlist(db: Database, setlistId: number, name: string) {
   await db.update(setlists).set({ name }).where(eq(setlists.id, setlistId));
 }
 
-async function deleteSetlist(db: Database, setlistId: number) {
-  await db.delete(setlists).where(eq(setlists.id, setlistId));
+async function setlistById(db: Database, setlistId: number) {
+  const [row] = await db
+    .select()
+    .from(setlists)
+    .where(eq(setlists.id, setlistId));
+  return row;
 }
 
-async function removeItem(db: Database, itemId: number) {
+async function deleteSetlist(
+  db: Database,
+  setlistId: number,
+): Promise<DeletedSetlist | undefined> {
+  const setlist = await setlistById(db, setlistId);
+  if (setlist === undefined) return undefined;
+  const items = await orderedItems(db, setlistId);
+  const sessions = await db
+    .select({ id: practiceSessions.id })
+    .from(practiceSessions)
+    .where(eq(practiceSessions.setlistId, setlistId));
+  await db.delete(setlists).where(eq(setlists.id, setlistId));
+  return { setlist, items, practiceSessionIds: sessions.map(({ id }) => id) };
+}
+
+async function entryExists(
+  db: Database,
+  { songPresetId, stemSetId }: SetlistItem,
+): Promise<boolean> {
+  if (songPresetId !== null) {
+    const rows = await db
+      .select({ id: songPresets.id })
+      .from(songPresets)
+      .where(eq(songPresets.id, songPresetId));
+    return rows.length > 0;
+  }
+  if (stemSetId === null) return false;
+  const rows = await db
+    .select({ id: stemSets.id })
+    .from(stemSets)
+    .where(eq(stemSets.id, stemSetId));
+  return rows.length > 0;
+}
+
+async function restoreSetlist(db: Database, deleted: DeletedSetlist) {
+  const { setlist, items, practiceSessionIds } = deleted;
+  const active = setlist.active && (await activeSetlist(db)) === undefined;
+  await db.insert(setlists).values({ ...setlist, active });
+  let position = 0;
+  for (const item of items) {
+    if (!(await entryExists(db, item))) continue;
+    await db.insert(setlistItems).values({ ...item, position });
+    position += 1;
+  }
+  if (practiceSessionIds.length === 0) return;
+  await db
+    .update(practiceSessions)
+    .set({ setlistId: setlist.id })
+    .where(
+      and(
+        inArray(practiceSessions.id, [...practiceSessionIds]),
+        isNull(practiceSessions.setlistId),
+      ),
+    );
+}
+
+export async function indexedItem(
+  db: Database,
+  item: SetlistItem,
+): Promise<RemovedSetlistItem> {
+  const ordered = await orderedItems(db, item.setlistId);
+  return { item, index: ordered.findIndex((entry) => entry.id === item.id) };
+}
+
+async function removeItem(
+  db: Database,
+  itemId: number,
+): Promise<RemovedSetlistItem | undefined> {
+  const [item] = await db
+    .select()
+    .from(setlistItems)
+    .where(eq(setlistItems.id, itemId));
+  if (item === undefined) return undefined;
+  const removed = await indexedItem(db, item);
   await db.delete(setlistItems).where(eq(setlistItems.id, itemId));
+  return removed;
+}
+
+export async function restoreItem(
+  db: Database,
+  { item, index }: RemovedSetlistItem,
+): Promise<boolean> {
+  if ((await setlistById(db, item.setlistId)) === undefined) return false;
+  if (!(await entryExists(db, item))) return false;
+  const inserted = found(
+    await db
+      .insert(setlistItems)
+      .values({ ...item, position: 0 })
+      .returning(),
+    'Setlist item restore',
+  );
+  await placeItem(db, inserted, item.setlistId, index);
+  return true;
 }
 
 function setlistCommands({ db, transactor }: DatabaseHandle) {
@@ -172,7 +284,10 @@ function setlistCommands({ db, transactor }: DatabaseHandle) {
     create: (name: string) => serial(() => insertSetlist(db, name)),
     rename: (setlistId: number, name: string) =>
       serial(() => renameSetlist(db, setlistId, name)),
-    delete: (setlistId: number) => serial(() => deleteSetlist(db, setlistId)),
+    delete: (setlistId: number) =>
+      transaction(() => deleteSetlist(db, setlistId)),
+    restore: (deleted: DeletedSetlist) =>
+      transaction(() => restoreSetlist(db, deleted)),
     duplicate: (setlistId: number, name: string) =>
       transaction(() => duplicateSetlist(db, setlistId, name)),
     selectActive: (setlistId: number | null) =>
@@ -194,7 +309,9 @@ function itemCommands({ db, transactor }: DatabaseHandle) {
       transaction(() => moveItem(db, itemId, setlistId, position)),
     move: (itemId: number, position: number) =>
       transaction(() => moveItem(db, itemId, undefined, position)),
-    removeItem: (itemId: number) => serial(() => removeItem(db, itemId)),
+    removeItem: (itemId: number) => transaction(() => removeItem(db, itemId)),
+    restoreItem: (removed: RemovedSetlistItem) =>
+      transaction(() => restoreItem(db, removed)),
   };
 }
 

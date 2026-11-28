@@ -8,6 +8,7 @@ import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 import { songPresets, songs, stems, stemSets } from './schema';
 import { createSetlistRepository } from './setlist-repository';
 import { packFloat32, packInt32 } from './packing';
+import { createPlayQueueRepository } from './play-queue-repository';
 import { createSongLibraryRepository } from './song-library-repository';
 import { createSongPresetRepository } from './song-preset-repository';
 import { openTestDatabase } from './sqlite.test-helper';
@@ -318,18 +319,48 @@ describe('song library repository', () => {
     const bare = await library.insertSong(song('Bare'));
     const analyzed = await library.insertSong(song('Analyzed'));
     await library.applyAnalysis(okResult('Analyzed', 'Analyzed.kwav'));
-    expect(await library.deleteSong(bare)).toEqual({
+    expect(await library.deleteSong(bare)).toMatchObject({
       uuid: 'uuid-Bare',
       filePath: 'songs/uuid-Bare/Bare.mp3',
       waveformPath: null,
     });
-    expect(await library.deleteSong(analyzed)).toEqual({
+    expect(await library.deleteSong(analyzed)).toMatchObject({
       uuid: 'uuid-Analyzed',
       filePath: 'songs/uuid-Analyzed/Analyzed.mp3',
       waveformPath: 'songs/uuid-Analyzed/Analyzed.kwav',
     });
     expect(await library.deleteSong(analyzed)).toBeUndefined();
     expect(await library.list()).toEqual([]);
+  });
+
+  it('restores a deleted song with its analysis, preset link and queue place', async () => {
+    const { handle, library, presets } = setup();
+    const queue = createPlayQueueRepository(handle);
+    const id = await library.insertSong(song('Everlong'));
+    const other = await library.insertSong(song('Other'));
+    await library.applyAnalysis(okResult('Everlong'));
+    const preset = await presets.saveForLibrarySong(id, {
+      name: 'Everlong',
+      bpm: 158,
+      beatsPerBar: 4,
+      subdivision: 1,
+      accents: new Uint8Array([2, 1, 1, 1]),
+      polyEnabled: false,
+      polyBeats: 0,
+      sound: 0,
+    });
+    await queue.add({ kind: 'song', id });
+    await queue.add({ kind: 'song', id: other });
+    const before = await library.readSong(id);
+    const deleted = await library.deleteSong(id);
+    if (deleted === undefined) throw new Error('song not deleted');
+    await library.restoreSong(deleted);
+    expect(await library.readSong(id)).toEqual(before);
+    expect((await presets.get(preset.id))?.librarySongId).toBe(id);
+    expect((await queue.list()).map((entry) => entry.songId)).toEqual([
+      id,
+      other,
+    ]);
   });
 
   it('deletes a stem song with its stems and returns their files', async () => {

@@ -63,6 +63,19 @@ export const withoutSound = (
   accent: sounds.accent === soundId ? KB_DEFAULT_SOUNDS.accent : sounds.accent,
 });
 
+export const withSound = (
+  current: PerAccentSounds,
+  previous: PerAccentSounds,
+  soundId: number,
+): PerAccentSounds => {
+  const released = withoutSound(previous, soundId);
+  const back = (role: keyof PerAccentSounds) =>
+    previous[role] === soundId && current[role] === released[role]
+      ? soundId
+      : current[role];
+  return { normal: back('normal'), accent: back('accent') };
+};
+
 export interface CountInConfig {
   readonly bars: KbCountInBars;
   readonly distinct: boolean;

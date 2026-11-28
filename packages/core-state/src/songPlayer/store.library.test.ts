@@ -93,6 +93,7 @@ describe('the library changing the song that plays on behind the bar', () => {
   it('pauses the song before its file is deleted', async () => {
     const playing = await playingFromTheLibrary(true);
     await deleteOnSongs(playing);
+    await playing.library.getState().dismissDeletedSong();
     const [paused] = playing.fake.commands.mixerPause.mock.invocationCallOrder;
     const { deleteSongFolder } = playing.files;
     expect(deleteSongFolder).toHaveBeenCalledOnce();

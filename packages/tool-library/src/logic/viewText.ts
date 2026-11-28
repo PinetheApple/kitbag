@@ -17,6 +17,7 @@ export const REPLACE_SHEET_TEXT = {
 
 export const replaceSheetTitle = (title: string) => `Replace “${title}”?`;
 export const replaceButtonLabel = (title: string) => `Replace ${title}`;
+export const deletedSongText = (title: string) => `Deleted “${title}”`;
 
 export interface ViewText {
   readonly title: string;

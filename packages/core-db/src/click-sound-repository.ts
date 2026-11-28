@@ -1,6 +1,10 @@
 import { asc, eq } from 'drizzle-orm';
 
-import { resetStaleSounds } from './click-sound-references';
+import {
+  resetStaleSounds,
+  restoreSlotSounds,
+  type PresetSounds,
+} from './click-sound-references';
 import { CUSTOM_SOUND_SLOTS } from './preset-rules';
 import type { Database, DatabaseHandle } from './repository';
 import { clickSounds } from './schema';
@@ -10,6 +14,12 @@ export type ClickSound = typeof clickSounds.$inferSelect;
 export interface RemovedClickSound {
   removed: ClickSound | null;
   songsReset: number;
+  resets: readonly PresetSounds[];
+}
+
+export interface RestorableClickSound {
+  readonly sound: ClickSound;
+  readonly resets: readonly PresetSounds[];
 }
 
 export const isClickSoundSlot = (slot: number) =>
@@ -83,13 +93,17 @@ export function createClickSoundRepository({ db, transactor }: DatabaseHandle) {
     remove: (slot: number): Promise<RemovedClickSound> =>
       transaction(async () => {
         const removed = await clickSoundIn(db, slot);
-        if (removed === null) return { removed, songsReset: 0 };
+        if (removed === null) return { removed, songsReset: 0, resets: [] };
         await db.delete(clickSounds).where(eq(clickSounds.slot, slot));
-        const songsReset = await resetStaleSounds(
-          db,
-          (_, used) => used === slot,
-        );
-        return { removed, songsReset };
+        const resets = await resetStaleSounds(db, (_, used) => used === slot);
+        return { removed, songsReset: resets.length, resets };
+      }),
+    restore: ({ sound, resets }: RestorableClickSound) =>
+      transaction(async () => {
+        if ((await clickSoundIn(db, sound.slot)) !== null) return false;
+        await putClickSound(db, sound);
+        await restoreSlotSounds(db, sound.slot, resets);
+        return true;
       }),
   };
 }

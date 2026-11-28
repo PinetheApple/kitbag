@@ -17,7 +17,7 @@ import { IdentityGroup, MusicGroup } from './editor/MusicGroup.tsx';
 import { RigGroup } from './editor/RigGroup.tsx';
 import { usePresetEditor } from './editor/usePresetEditor.ts';
 import { ScreenFrame } from './ScreenFrame.tsx';
-import { ConfirmSheet, guarded, useFire } from './sheets.tsx';
+import { guarded, useFire } from './sheets.tsx';
 import { useLibraryRefresh } from './useLibraryRefresh.ts';
 
 const useStyles = createThemedStyles(() => ({
@@ -32,22 +32,11 @@ export interface PresetEditorScreenProps {
   readonly onDirtyChange?: (dirty: boolean) => void;
 }
 
-type Confirm = 'none' | 'delete';
-
 function useEditorCommands(props: PresetEditorScreenProps) {
-  const [confirm, setConfirm] = useState<Confirm>('none');
   const [error, setError] = useState<string | null>(null);
   const duplicatePreset = useLibrary((s) => s.duplicatePreset);
   const deletePreset = useLibrary((s) => s.deletePreset);
   const { presetId, onBack, onOpenPreset } = props;
-  const close = useCallback(() => {
-    setConfirm('none');
-    setError(null);
-  }, []);
-  const askDelete = useCallback(() => {
-    setConfirm('delete');
-    setError(null);
-  }, []);
   const duplicate = useCallback(
     () =>
       guarded(
@@ -63,20 +52,11 @@ function useEditorCommands(props: PresetEditorScreenProps) {
     () =>
       guarded(setError, 'Could not delete this song. Try again.', async () => {
         await deletePreset(presetId);
-        setConfirm('none');
         onBack();
       }),
     [deletePreset, presetId, onBack],
   );
-  return {
-    confirm,
-    error,
-    close,
-    askDelete,
-    duplicate,
-    destroy,
-    setError,
-  };
+  return { error, duplicate, destroy, setError };
 }
 
 function EditorBody(
@@ -104,13 +84,13 @@ function EditorBody(
   );
   const fireSave = useFire(save);
   const fireDuplicate = useFire(cmd.duplicate);
+  const fireDelete = useFire(cmd.destroy);
 
   const trailing = editor.dirty ? (
     <Chip active label="Save" onPress={fireSave} />
   ) : (
     <StatusPill label="Saved" />
   );
-  const common = { bottomInset: props.insets.bottom, onDismiss: cmd.close };
   return (
     <ScreenFrame
       insets={props.insets}
@@ -133,18 +113,8 @@ function EditorBody(
           label="Duplicate"
           onPress={fireDuplicate}
         />
-        <Button fill variant="ghost" label="Delete" onPress={cmd.askDelete} />
+        <Button fill variant="ghost" label="Delete" onPress={fireDelete} />
       </View>
-      <ConfirmSheet
-        {...common}
-        visible={cmd.confirm === 'delete'}
-        title="Delete song?"
-        body={`“${preset.name}” is deleted from All songs and from every setlist. This cannot be undone.`}
-        confirmLabel="Delete song"
-        destructive
-        error={cmd.error}
-        onConfirm={cmd.destroy}
-      />
     </ScreenFrame>
   );
 }

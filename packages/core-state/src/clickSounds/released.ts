@@ -3,28 +3,62 @@ import { customSoundId } from '@kitbag/core-native';
 import type { StoreApi } from 'zustand/vanilla';
 
 import { libraryStore, type LibraryStore } from '../library/store.ts';
-import { usesSound, withoutSound } from '../metronome/config.ts';
-import { releaseStandaloneSound } from '../metronome/standalonePersistence.ts';
+import {
+  usesSound,
+  withoutSound,
+  withSound,
+  type PerAccentSounds,
+} from '../metronome/config.ts';
+import {
+  releaseStandaloneSound,
+  restoreStandaloneSound,
+} from '../metronome/standalonePersistence.ts';
 import { metronomeStore, type MetronomeStore } from '../metronome/store.ts';
+
+export interface ReleasedSounds {
+  readonly metronome: PerAccentSounds | null;
+  readonly standalone: PerAccentSounds | null;
+}
 
 export function releaseSound(
   soundId: number,
   metronome: StoreApi<MetronomeStore> = metronomeStore,
-): void {
+): ReleasedSounds {
   const { sounds, setSounds } = metronome.getState();
-  if (usesSound(sounds, soundId)) {
+  const used = usesSound(sounds, soundId);
+  if (used) {
     const released = withoutSound(sounds, soundId);
     setSounds(released.normal, released.accent);
   }
-  releaseStandaloneSound(soundId);
+  return {
+    metronome: used ? sounds : null,
+    standalone: releaseStandaloneSound(soundId),
+  };
 }
 
 export async function releaseRemovedSound(
   soundId: number,
   metronome: StoreApi<MetronomeStore> = metronomeStore,
   library: StoreApi<Pick<LibraryStore, 'refresh'>> = libraryStore,
+): Promise<ReleasedSounds> {
+  const released = releaseSound(soundId, metronome);
+  await library.getState().refresh();
+  return released;
+}
+
+export async function restoreReleasedSound(
+  soundId: number,
+  released: ReleasedSounds,
+  metronome: StoreApi<MetronomeStore> = metronomeStore,
+  library: StoreApi<Pick<LibraryStore, 'refresh'>> = libraryStore,
 ): Promise<void> {
-  releaseSound(soundId, metronome);
+  if (released.metronome !== null) {
+    const { sounds, setSounds } = metronome.getState();
+    const back = withSound(sounds, released.metronome, soundId);
+    setSounds(back.normal, back.accent);
+  }
+  if (released.standalone !== null)
+    restoreStandaloneSound(soundId, released.standalone);
   await library.getState().refresh();
 }
 

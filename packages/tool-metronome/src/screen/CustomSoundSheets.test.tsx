@@ -1,5 +1,9 @@
 import { customSoundId } from '@kitbag/core-native';
-import type { ClickSound, ClickSoundStore } from '@kitbag/core-state';
+import type {
+  ClickSound,
+  ClickSoundStore,
+  SoundsUpdate,
+} from '@kitbag/core-state';
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -9,6 +13,7 @@ import type { CustomSoundMenu } from './CustomSoundSheets.tsx';
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const buttons = vi.hoisted(() => [] as Props[]);
+const snackbars = vi.hoisted(() => [] as Props[]);
 
 const store = vi.hoisted(() => {
   const state: Partial<ClickSoundStore> = {};
@@ -46,10 +51,15 @@ vi.mock('@kitbag/core-design', async (original) => {
       buttons.push(props);
       return null;
     },
+    Snackbar: (props: Props) => {
+      snackbars.push(props);
+      return h('output', null, props.message as string);
+    },
   };
 });
 
-const { CustomSoundSheets } = await import('./CustomSoundSheets.tsx');
+const { CustomSoundSheets, useRemovedSoundNotice } =
+  await import('./CustomSoundSheets.tsx');
 
 const RIMSHOT: ClickSound = {
   slot: 1,
@@ -59,14 +69,18 @@ const RIMSHOT: ClickSound = {
 };
 const RIM_ID = customSoundId(RIMSHOT.slot);
 
-function menu(kind: CustomSoundMenu['kind']): CustomSoundMenu {
+function menu(
+  kind: CustomSoundMenu['kind'],
+  removedFrom: CustomSoundMenu['removedFrom'] = null,
+): CustomSoundMenu {
   return {
     kind,
     target: RIMSHOT,
+    removedFrom,
     open: vi.fn(),
     openRename: vi.fn(),
-    openRemove: vi.fn(),
     close: vi.fn(),
+    setRemovedFrom: vi.fn(),
   };
 }
 
@@ -89,10 +103,18 @@ function draw(shown: CustomSoundMenu, onRemoved = vi.fn()) {
 
 const remove = vi.fn(() => Promise.resolve(0));
 const importPicked = vi.fn(() => Promise.resolve(null));
+const undoRemove = vi.fn(() => Promise.resolve(true));
+const dismissRemoved = vi.fn(() => Promise.resolve());
 
 beforeEach(() => {
   vi.clearAllMocks();
-  Object.assign(store.state, { remove, importPicked });
+  Object.assign(store.state, {
+    remove,
+    importPicked,
+    undoRemove,
+    dismissRemoved,
+    removed: null,
+  });
 });
 
 describe('the sound options', () => {
@@ -118,22 +140,59 @@ describe('the sound options', () => {
 });
 
 describe('removing a sound', () => {
-  it('names the roles it frees and removes the slot on confirm', async () => {
+  it('removes at once from the options, keeping the sounds it was on', async () => {
     const onRemoved = vi.fn();
-    const { html, press } = draw(menu('remove'), onRemoved);
-    expect(html).toContain('Remove “Rimshot”?');
-    expect(html).toContain('Accent beats go back to Tick');
-    press('Remove');
+    const shown = menu('options');
+    draw(shown, onRemoved).press('Remove sound');
+    expect(shown.close).toHaveBeenCalledOnce();
+    expect(shown.setRemovedFrom).toHaveBeenCalledWith({
+      normal: 1,
+      accent: RIM_ID,
+    });
     expect(remove).toHaveBeenCalledExactlyOnceWith(RIMSHOT.slot);
     await vi.waitFor(() => {
       expect(onRemoved).toHaveBeenCalledExactlyOnceWith(RIM_ID);
     });
   });
+});
 
-  it('removes nothing on cancel', () => {
-    const shown = menu('remove');
-    draw(shown).press('Cancel');
-    expect(shown.close).toHaveBeenCalledOnce();
-    expect(remove).not.toHaveBeenCalled();
+function Notice(props: {
+  readonly menu: CustomSoundMenu;
+  readonly onRestored: (update: SoundsUpdate) => void;
+}) {
+  return useRemovedSoundNotice(props.menu, props.onRestored);
+}
+
+describe('the Undo snackbar over the sound sheet', () => {
+  it('offers Undo and puts the sound back on the beats it left', async () => {
+    Object.assign(store.state, {
+      removed: {
+        sound: RIMSHOT,
+        resets: [],
+        released: { metronome: null, standalone: null },
+        at: Date.now(),
+      },
+    });
+    const onRestored = vi.fn();
+    snackbars.length = 0;
+    const html = renderToStaticMarkup(
+      createElement(Notice, {
+        menu: menu('none', { normal: 1, accent: RIM_ID }),
+        onRestored,
+      }),
+    );
+    expect(html).toContain('Removed “Rimshot”');
+    const [bar] = snackbars;
+    expect(bar).toMatchObject({ inline: true, actionLabel: 'Undo' });
+    (bar?.onAction as () => void)();
+    await vi.waitFor(() => {
+      expect(onRestored).toHaveBeenCalledOnce();
+    });
+    expect(undoRemove).toHaveBeenCalledOnce();
+    const [update] = onRestored.mock.calls[0] as [SoundsUpdate];
+    expect(update({ normal: 1, accent: 4 })).toEqual({
+      normal: 1,
+      accent: RIM_ID,
+    });
   });
 });

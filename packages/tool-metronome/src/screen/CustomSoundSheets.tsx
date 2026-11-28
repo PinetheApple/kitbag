@@ -3,6 +3,7 @@ import {
   createThemedStyles,
   Sheet,
   SheetHint,
+  Snackbar,
   space,
   TextField,
 } from '@kitbag/core-design';
@@ -10,29 +11,30 @@ import { customSoundId } from '@kitbag/core-native';
 import {
   cleanName,
   useClickSounds,
+  withSound,
   type ClickSound,
   type PerAccentSounds,
-  rolesUsing,
+  type SoundsUpdate,
 } from '@kitbag/core-state';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { View, type TextInputInstance } from 'react-native';
 
-import {
-  optionsHint,
-  removeText,
-  removeTitle,
-} from '../logic/customSoundText.ts';
+import { optionsHint } from '../logic/customSoundText.ts';
+import { removedText } from '../logic/deletionText.ts';
+import { snackbarTimeLeftMs } from '../logic/unsavedSnackbar.ts';
+import { useVisibleSince } from './useVisibleSince.ts';
 
 const useStyles = createThemedStyles(() => ({
   stack: { gap: space.controlGap },
   row: { flexDirection: 'row', gap: space.controlGap },
 }));
 
-type MenuKind = 'none' | 'options' | 'rename' | 'remove';
+type MenuKind = 'none' | 'options' | 'rename';
 
 export function useCustomSoundMenu() {
   const [kind, setKind] = useState<MenuKind>('none');
   const [target, setTarget] = useState<ClickSound | null>(null);
+  const [removedFrom, setRemovedFrom] = useState<PerAccentSounds | null>(null);
   const open = useCallback((sound: ClickSound) => {
     setTarget(sound);
     setKind('options');
@@ -40,15 +42,20 @@ export function useCustomSoundMenu() {
   const openRename = useCallback(() => {
     setKind('rename');
   }, []);
-  const openRemove = useCallback(() => {
-    setKind('remove');
-  }, []);
   const close = useCallback(() => {
     setKind('none');
   }, []);
   return useMemo(
-    () => ({ kind, target, open, openRename, openRemove, close }),
-    [kind, target, open, openRename, openRemove, close],
+    () => ({
+      kind,
+      target,
+      removedFrom,
+      open,
+      openRename,
+      close,
+      setRemovedFrom,
+    }),
+    [kind, target, removedFrom, open, openRename, close],
   );
 }
 
@@ -59,15 +66,36 @@ interface SheetProps {
   readonly bottomInset: number;
 }
 
-function OptionsSheet({ menu, bottomInset }: SheetProps) {
+export interface CustomSoundSheetsProps extends SheetProps {
+  readonly sounds: PerAccentSounds;
+  readonly onRemoved?: (id: number) => void;
+}
+
+function useRemoveSound({ menu, sounds, onRemoved }: CustomSoundSheetsProps) {
+  const remove = useClickSounds((s) => s.remove);
+  const { target, close, setRemovedFrom } = menu;
+  return useCallback(() => {
+    close();
+    if (target === null) return;
+    const id = customSoundId(target.slot);
+    setRemovedFrom(sounds);
+    void remove(target.slot).then(() => {
+      onRemoved?.(id);
+    });
+  }, [close, target, setRemovedFrom, sounds, remove, onRemoved]);
+}
+
+function OptionsSheet(props: CustomSoundSheetsProps) {
+  const { menu, bottomInset } = props;
   const styles = useStyles();
   const importPicked = useClickSounds((s) => s.importPicked);
-  const { target, close, openRename, openRemove } = menu;
+  const { target, close, openRename } = menu;
   const name = target?.name ?? '';
   const replace = useCallback(() => {
     close();
     if (target !== null) void importPicked(target);
   }, [close, importPicked, target]);
+  const removeSound = useRemoveSound(props);
   return (
     <Sheet
       visible={menu.kind === 'options'}
@@ -83,7 +111,7 @@ function OptionsSheet({ menu, bottomInset }: SheetProps) {
         <Button
           label="Remove sound"
           variant="destructive"
-          onPress={openRemove}
+          onPress={removeSound}
         />
       </View>
       <SheetHint>{optionsHint(name)}</SheetHint>
@@ -149,61 +177,47 @@ function RenameSheet({ menu, bottomInset }: SheetProps) {
   );
 }
 
-export interface CustomSoundSheetsProps extends SheetProps {
-  readonly sounds: PerAccentSounds;
-  readonly onRemoved?: (id: number) => void;
-}
-
-function RemoveSheet({
-  menu,
-  bottomInset,
-  sounds,
-  onRemoved,
-}: CustomSoundSheetsProps) {
-  const styles = useStyles();
-  const remove = useClickSounds((s) => s.remove);
-  const { target, close } = menu;
-  const name = target?.name ?? '';
-  const confirm = useCallback(() => {
-    close();
-    if (target === null) return;
-    const id = customSoundId(target.slot);
-    void remove(target.slot).then(() => {
-      onRemoved?.(id);
-    });
-  }, [close, target, remove, onRemoved]);
-  const roles =
-    target === null ? [] : rolesUsing(sounds, customSoundId(target.slot));
-  return (
-    <Sheet
-      visible={menu.kind === 'remove'}
-      title={removeTitle(name)}
-      dismissLabel="Cancel remove"
-      bottomInset={bottomInset}
-      dim
-      onDismiss={close}
-    >
-      <SheetHint>{removeText(roles)}</SheetHint>
-      <View style={styles.row}>
-        <Button fill variant="ghost" label="Cancel" onPress={close} />
-        <Button
-          fill
-          variant="destructive"
-          label="Remove"
-          accessibilityLabel={`Remove ${name}`}
-          onPress={confirm}
-        />
-      </View>
-    </Sheet>
-  );
-}
-
 export function CustomSoundSheets(props: CustomSoundSheetsProps) {
   return (
     <>
-      <OptionsSheet menu={props.menu} bottomInset={props.bottomInset} />
+      <OptionsSheet {...props} />
       <RenameSheet menu={props.menu} bottomInset={props.bottomInset} />
-      <RemoveSheet {...props} />
     </>
+  );
+}
+
+export function useRemovedSoundNotice(
+  menu: CustomSoundMenu,
+  onRestored?: (update: SoundsUpdate) => void,
+): ReactNode {
+  const removed = useClickSounds((s) => s.removed);
+  const undoRemove = useClickSounds((s) => s.undoRemove);
+  const dismissRemoved = useClickSounds((s) => s.dismissRemoved);
+  const visibleSince = useVisibleSince();
+  const { removedFrom } = menu;
+  const undo = useCallback(() => {
+    if (removed === null) return;
+    const id = customSoundId(removed.sound.slot);
+    void undoRemove().then((restored) => {
+      if (restored && removedFrom !== null)
+        onRestored?.((current) => withSound(current, removedFrom, id));
+    });
+  }, [removed, undoRemove, removedFrom, onRestored]);
+  const dismiss = useCallback(() => {
+    void dismissRemoved();
+  }, [dismissRemoved]);
+  if (removed === null) return undefined;
+  const timeLeftMs = snackbarTimeLeftMs(removed.at, visibleSince);
+  if (timeLeftMs <= 0) return undefined;
+  return (
+    <Snackbar
+      inline
+      key={`${String(removed.at)}-${String(visibleSince)}`}
+      message={removedText(removed.sound.name)}
+      actionLabel="Undo"
+      durationMs={timeLeftMs}
+      onAction={undo}
+      onTimeout={dismiss}
+    />
   );
 }

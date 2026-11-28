@@ -6,6 +6,8 @@ import type {
   PrepareClickSoundResult,
 } from '@kitbag/core-native';
 
+import type { ReleasedSounds } from './released.ts';
+
 export interface ClickSoundDeps {
   readonly repository: () => ClickSoundRepository;
   readonly prepare: (
@@ -20,7 +22,11 @@ export interface ClickSoundDeps {
   readonly deleteFile: (fileName: string) => Promise<void>;
   readonly newUuid: () => string;
   readonly freshFileName: () => string;
-  readonly afterRemove: (soundId: number) => Promise<void>;
+  readonly afterRemove: (soundId: number) => Promise<ReleasedSounds>;
+  readonly afterRestore: (
+    soundId: number,
+    released: ReleasedSounds,
+  ) => Promise<void>;
   readonly pickDocument: () => Promise<PickedDocument | null>;
   readonly sniffUnsupportedFormat: (uri: string) => Promise<string>;
   readonly constants: () => LibraryConstants;

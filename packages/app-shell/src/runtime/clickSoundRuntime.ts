@@ -12,6 +12,7 @@ import {
   clickSoundStore,
   configureClickSounds,
   releaseRemovedSound,
+  restoreReleasedSound,
 } from '@kitbag/core-state';
 
 import { getDatabase } from './database.ts';
@@ -25,6 +26,7 @@ configureClickSounds({
   newUuid: () => crypto.randomUUID(),
   freshFileName: freshClickSoundFileName,
   afterRemove: releaseRemovedSound,
+  afterRestore: restoreReleasedSound,
   pickDocument: () => getKitbagLibrary().pickDocument(),
   sniffUnsupportedFormat: (uri) =>
     getKitbagLibrary().sniffUnsupportedFormat(uri),
