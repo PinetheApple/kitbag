@@ -8,7 +8,6 @@ import type { ToolIndex, ToolManifest } from './manifest';
 import { sha256 } from './signature';
 import {
   ASSET,
-  BUILD_HOOK_TIMEOUT_MS,
   buildTool,
   copyTree,
   EXIT_NO_KEY,
@@ -25,6 +24,7 @@ import {
   run,
   scratchDir,
   testKey,
+  TWO_SCRIPT_TIMEOUT_MS,
   type Run,
   type TestKey,
 } from './testSupport';
@@ -115,10 +115,12 @@ function copySet(from: string, name: string): string {
 
 beforeAll(() => {
   built = scratchDir(scratch, 'built');
-  buildTool(built);
+  const build = buildTool(built);
+  expect(build.status, build.output).toBe(EXIT_OK);
   signed = copySet(built, 'signed');
-  sign(signed, tools);
-}, BUILD_HOOK_TIMEOUT_MS);
+  const signing = sign(signed, tools);
+  expect(signing.status, signing.output).toBe(EXIT_OK);
+}, TWO_SCRIPT_TIMEOUT_MS);
 
 afterAll(() => {
   rmSync(scratch, { recursive: true, force: true });

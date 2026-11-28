@@ -11,7 +11,6 @@ import { hbcBytecodeVersion } from './hermes';
 import { SHADOWED_HOST_GLOBALS } from './metroBundle';
 import {
   ASSET,
-  BUILD_HOOK_TIMEOUT_MS,
   buildTool,
   copyTree,
   EXIT_OK,
@@ -21,6 +20,7 @@ import {
   HOST_VERSION,
   HOST_VERSION_CODE,
   makeScratch,
+  ONE_SCRIPT_TIMEOUT_MS,
   readManifest,
   run,
   scratchDir,
@@ -44,7 +44,7 @@ function toolWithEntry(name: string, source: string): string {
 beforeAll(() => {
   built = scratchDir(scratch, 'built');
   builtRun = buildTool(built);
-}, BUILD_HOOK_TIMEOUT_MS);
+}, ONE_SCRIPT_TIMEOUT_MS);
 
 afterAll(() => {
   rmSync(scratch, { recursive: true, force: true });
@@ -146,67 +146,85 @@ describe('build-tool.sh', () => {
     expect(SHADOWED_HOST_GLOBALS).toContain(KITBAG_HOST_OBJECT_KEY);
   });
 
-  it('rebuilds byte for byte (unsigned; ECDSA signatures are randomized)', () => {
-    const again = scratchDir(scratch, 'again');
-    const result = buildTool(again);
-    expect(result.status, result.output).toBe(EXIT_OK);
-    expect(
-      readFileSync(path.join(again, BUNDLE_JS)).equals(
-        readFileSync(path.join(built, BUNDLE_JS)),
-      ),
-    ).toBe(true);
-    expect(
-      readFileSync(path.join(again, ASSET)).equals(
-        readFileSync(path.join(built, ASSET)),
-      ),
-    ).toBe(true);
-  });
+  it(
+    'rebuilds byte for byte (unsigned; ECDSA signatures are randomized)',
+    () => {
+      const again = scratchDir(scratch, 'again');
+      const result = buildTool(again);
+      expect(result.status, result.output).toBe(EXIT_OK);
+      expect(
+        readFileSync(path.join(again, BUNDLE_JS)).equals(
+          readFileSync(path.join(built, BUNDLE_JS)),
+        ),
+      ).toBe(true);
+      expect(
+        readFileSync(path.join(again, ASSET)).equals(
+          readFileSync(path.join(built, ASSET)),
+        ),
+      ).toBe(true);
+    },
+    ONE_SCRIPT_TIMEOUT_MS,
+  );
 
-  it('fails a tool whose register() leaks a global through Function', () => {
-    const tool = toolWithEntry(
-      'tool-leaky',
-      [
-        "import type { ToolHost, ToolPlugin } from '@kitbag/core-plugin-api';",
-        'export function register(host: ToolHost): ToolPlugin {',
-        "  (Function('return this')() as Record<string, unknown>).kbtLeak = 1;",
-        "  return { id: 'sample', name: 'Sample', icon: 'metronome', routes: [] };",
-        '}',
-        '',
-      ].join('\n'),
-    );
-    const result = buildTool(scratchDir(scratch, 'out-leaky'), tool);
-    expect(result.status).toBe(EXIT_REJECTED);
-    expect(result.output).toContain('the bundle writes host globals: kbtLeak');
-  });
+  it(
+    'fails a tool whose register() leaks a global through Function',
+    () => {
+      const tool = toolWithEntry(
+        'tool-leaky',
+        [
+          "import type { ToolHost, ToolPlugin } from '@kitbag/core-plugin-api';",
+          'export function register(host: ToolHost): ToolPlugin {',
+          "  (Function('return this')() as Record<string, unknown>).kbtLeak = 1;",
+          "  return { id: 'sample', name: 'Sample', icon: 'metronome', routes: [] };",
+          '}',
+          '',
+        ].join('\n'),
+      );
+      const result = buildTool(scratchDir(scratch, 'out-leaky'), tool);
+      expect(result.status).toBe(EXIT_REJECTED);
+      expect(result.output).toContain(
+        'the bundle writes host globals: kbtLeak',
+      );
+    },
+    ONE_SCRIPT_TIMEOUT_MS,
+  );
 
-  it('fails a tool that imports a package off the allowlist', () => {
-    const tool = copyTree(FIXTURE, path.join(scratch, 'tool-zustand'));
-    writeFileSync(
-      path.join(tool, 'src/store.ts'),
-      "export { create } from 'zustand';\n",
-    );
-    writeFileSync(
-      path.join(tool, 'src/index.tsx'),
-      "export * from './store';\n",
-      { flag: 'a' },
-    );
-    const result = buildTool(scratchDir(scratch, 'out-zustand'), tool);
-    expect(result.status).toBe(EXIT_REJECTED);
-    expect(result.output).toContain(
-      'imports zustand, which is not on the downloadable allowlist',
-    );
-  });
+  it(
+    'fails a tool that imports a package off the allowlist',
+    () => {
+      const tool = copyTree(FIXTURE, path.join(scratch, 'tool-zustand'));
+      writeFileSync(
+        path.join(tool, 'src/store.ts'),
+        "export { create } from 'zustand';\n",
+      );
+      writeFileSync(
+        path.join(tool, 'src/index.tsx'),
+        "export * from './store';\n",
+        { flag: 'a' },
+      );
+      const result = buildTool(scratchDir(scratch, 'out-zustand'), tool);
+      expect(result.status).toBe(EXIT_REJECTED);
+      expect(result.output).toContain(
+        'imports zustand, which is not on the downloadable allowlist',
+      );
+    },
+    ONE_SCRIPT_TIMEOUT_MS,
+  );
 
-  it('fails a tool whose path import leaves its package', () => {
-    const tool = copyTree(FIXTURE, path.join(scratch, 'tool-escape'));
-    const repoFile = path.join(FIXTURE, 'src/routes');
-    writeFileSync(
-      path.join(tool, 'src/index.tsx'),
-      `export * from '${repoFile}';\n`,
-      { flag: 'a' },
-    );
-    const result = buildTool(scratchDir(scratch, 'out-escape'), tool);
-    expect(result.status).toBe(EXIT_REJECTED);
-    expect(result.output).toContain('which is outside the tool package');
-  });
+  it(
+    'fails a tool whose path import leaves its package',
+    () => {
+      const tool = copyTree(FIXTURE, path.join(scratch, 'tool-escape'));
+      const repoFile = path.join(FIXTURE, 'src/routes');
+      writeFileSync(
+        path.join(tool, 'src/index.tsx'),
+        `export * from '${repoFile}';\n`,
+        { flag: 'a' },
+      );
+      const result = buildTool(scratchDir(scratch, 'out-escape'), tool);
+      expect(result.status).toBe(EXIT_REJECTED);
+      expect(result.output).toContain('which is outside the tool package');
+    },
+    ONE_SCRIPT_TIMEOUT_MS,
+  );
 });

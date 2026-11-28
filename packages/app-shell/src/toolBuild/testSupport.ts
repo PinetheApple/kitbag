@@ -19,10 +19,9 @@ export const EXIT_NO_KEY = 2;
 export const EXIT_USAGE = 3;
 
 const SCRIPT_TIMEOUT_MS = 120000;
-const SCRIPTS_PER_BUILD_HOOK = 2;
-const HOOK_OVERHEAD_MS = 10000;
-export const BUILD_HOOK_TIMEOUT_MS =
-  SCRIPTS_PER_BUILD_HOOK * SCRIPT_TIMEOUT_MS + HOOK_OVERHEAD_MS;
+const OVERHEAD_PER_SCRIPT_MS = 10000;
+export const ONE_SCRIPT_TIMEOUT_MS = SCRIPT_TIMEOUT_MS + OVERHEAD_PER_SCRIPT_MS;
+export const TWO_SCRIPT_TIMEOUT_MS = 2 * ONE_SCRIPT_TIMEOUT_MS;
 
 export interface Run {
   readonly status: number | null;
