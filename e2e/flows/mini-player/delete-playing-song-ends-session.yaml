@@ -12,13 +12,10 @@ tags:
     file: ../../subflows/tap-while-playing.yaml
     env:
       TARGET: 'Delete song'
-- runFlow:
-    file: ../../subflows/tap-while-playing.yaml
-    env:
-      TARGET: 'Delete'
 - extendedWaitUntil:
-    notVisible: 'Open ${FIXTURE_SONG}'
+    visible: 'Deleted “${FIXTURE_SONG}”'
     timeout: 5000
+- assertNotVisible: 'Open ${FIXTURE_SONG}'
 - assertNotVisible: '${FIXTURE_SONG}, .*'
 - back
 - extendedWaitUntil:
