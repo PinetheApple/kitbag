@@ -28,6 +28,7 @@ const records: SongLibraryRecords = {
     library().listOutdatedAnalyses(currentVersion),
   applyAnalysis: (result) => library().applyAnalysis(result),
   deleteSong: (id) => library().deleteSong(id),
+  restoreSong: (deleted) => library().restoreSong(deleted),
   deleteStemSet: (id) => library().deleteStemSet(id),
   findStemSetByJobId: (jobId) => library().findStemSetByJobId(jobId),
   findStemSetMatches: (identity) => library().findStemSetMatches(identity),

@@ -6,6 +6,8 @@ import {
   addString,
   BUILT_IN_TUNINGS,
   DEFAULT_TUNING,
+  deleteTuningText,
+  deleteTuningTitle,
   isSavableDraft,
   pegItems,
   removeString,
@@ -15,6 +17,16 @@ import {
 } from './tunings.ts';
 
 const STANDARD = [40, 45, 50, 55, 59, 64];
+
+describe('the delete confirm', () => {
+  it('names the tuning and counts its strings', () => {
+    expect(deleteTuningTitle('Open G')).toBe('Delete “Open G”?');
+    expect(deleteTuningText(STANDARD.length)).toBe(
+      'The tuning and its 6 strings are removed from this phone. This cannot be undone.',
+    );
+    expect(deleteTuningText(1)).toMatch(/its 1 string are removed/);
+  });
+});
 
 describe('built-in tunings', () => {
   it('carry the planned MIDI notes, low string first', () => {

@@ -1,10 +1,9 @@
-import { Snackbar } from '@kitbag/core-design';
+import { Snackbar, useVisibleSince } from '@kitbag/core-design';
 import { useMixerClickNotice } from '@kitbag/core-state';
 
 import { songClickSnackbarView } from '../logic/songClickSnackbar.ts';
 import { ABOVE_TRANSPORT } from './snackbarPlacement.ts';
 import { useUnsavedSnackbarView } from './useUnsavedSnackbarView.ts';
-import { useVisibleSince } from './useVisibleSince.ts';
 
 export function SongClickSnackbar({
   bottomInset,

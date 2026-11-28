@@ -16,6 +16,7 @@ function libraryWithoutDatabase() {
     newUuid: () => 'f1',
     openSong: () => player.openSong,
     fitTempo: () => fakeFitter(),
+    now: () => Date.now(),
   });
 }
 

@@ -28,7 +28,11 @@ import {
 import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { CustomSoundSheets, useCustomSoundMenu } from './CustomSoundSheets.tsx';
+import {
+  CustomSoundSheets,
+  useCustomSoundMenu,
+  useRemovedSoundNotice,
+} from './CustomSoundSheets.tsx';
 import { CustomSounds, useCustomSoundViews } from './CustomSounds.tsx';
 import { PracticeSection, usePracticeStyles } from './PracticeSection.tsx';
 
@@ -130,6 +134,7 @@ export function SoundListSheet({
   const setSounds = useMetronome((s) => s.setSounds);
   const previewSound = useMetronome((s) => s.previewSound);
   const menu = useCustomSoundMenu();
+  const notice = useRemovedSoundNotice(menu);
   const shownRole = role ?? SOUND_ROLE.normal;
   const choose = useCallback(
     (id: number) => {
@@ -161,6 +166,7 @@ export function SoundListSheet({
         dismissLabel={`Close ${soundRoleName(shownRole).toLowerCase()} sound`}
         bottomInset={bottomInset}
         dim
+        notice={notice}
         onDismiss={onDismiss}
       >
         <PickerGrid

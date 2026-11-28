@@ -30,11 +30,10 @@ tags:
     timeout: 5000
 - tapOn: 'Options for Rim'
 - tapOn: 'Remove sound'
-- assertVisible: 'Accent beats go back to Tick.*'
-- tapOn: 'Remove Rim'
 - extendedWaitUntil:
-    notVisible: 'Rim, your sound'
+    visible: 'Removed “Rim”'
     timeout: 5000
+- assertNotVisible: 'Rim, your sound'
 - assertVisible: 'Import a sound'
 - back
 - assertVisible: 'Accent sound, Tick'

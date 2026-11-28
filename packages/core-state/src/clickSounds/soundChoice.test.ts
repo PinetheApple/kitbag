@@ -7,7 +7,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   customSoundViews,
-  rolesUsing,
   SOUND_OPTIONS,
   SOUND_ROLE,
   soundChipLabel,
@@ -66,17 +65,6 @@ describe('custom sound names come from the stored sounds', () => {
     expect(soundChipLabel({ normal: 1, accent: RIM_ID }, custom)).toBe(
       'Woodblock · Rimshot',
     );
-  });
-
-  it('lists the roles a sound is on', () => {
-    expect(rolesUsing({ normal: RIM_ID, accent: RIM_ID }, RIM_ID)).toEqual([
-      'normal',
-      'accent',
-    ]);
-    expect(rolesUsing({ normal: 1, accent: RIM_ID }, RIM_ID)).toEqual([
-      'accent',
-    ]);
-    expect(rolesUsing({ normal: 1, accent: 1 }, RIM_ID)).toEqual([]);
   });
 });
 

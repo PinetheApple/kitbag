@@ -58,6 +58,7 @@ export type SongLibraryRecords = Pick<
   | 'listOutdatedAnalyses'
   | 'applyAnalysis'
   | 'deleteSong'
+  | 'restoreSong'
   | 'deleteStemSet'
   | 'findStemSetByJobId'
   | 'findStemSetMatches'
