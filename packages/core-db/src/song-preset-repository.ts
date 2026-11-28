@@ -3,6 +3,7 @@ import { asc, eq, or } from 'drizzle-orm';
 import {
   escapedLike,
   found,
+  rowExists,
   type Database,
   type DatabaseHandle,
   type NewSongPreset,
@@ -15,7 +16,17 @@ import {
   presetViolation,
   RAMP_UNITS,
 } from './preset-rules';
-import { setlistItems, songPresets } from './schema';
+import { setlistItems, songPresets, songs } from './schema';
+import {
+  indexedItem,
+  restoreItem,
+  type RemovedSetlistItem,
+} from './setlist-repository';
+
+export interface DeletedPreset {
+  readonly preset: SongPreset;
+  readonly items: readonly RemovedSetlistItem[];
+}
 
 function checkPreset(values: NewSongPreset) {
   const violation = presetViolation({
@@ -130,9 +141,30 @@ async function saveLinkedPreset(
   );
 }
 
-async function deletePreset(db: Database, id: number) {
+async function deletePreset(
+  db: Database,
+  id: number,
+): Promise<DeletedPreset | undefined> {
+  const [preset] = await presetById(db, id);
+  if (preset === undefined) return undefined;
+  const rows = await db
+    .select()
+    .from(setlistItems)
+    .where(eq(setlistItems.songPresetId, id));
+  const items: RemovedSetlistItem[] = [];
+  for (const row of rows) items.push(await indexedItem(db, row));
   await db.delete(setlistItems).where(eq(setlistItems.songPresetId, id));
   await db.delete(songPresets).where(eq(songPresets.id, id));
+  return { preset, items };
+}
+
+async function restorePreset(db: Database, { preset, items }: DeletedPreset) {
+  const linked = await rowExists(db, songs, preset.librarySongId);
+  await db
+    .insert(songPresets)
+    .values({ ...preset, librarySongId: linked ? preset.librarySongId : null });
+  const byIndex = [...items].sort((a, b) => a.index - b.index);
+  for (const removed of byIndex) await restoreItem(db, removed);
 }
 
 export function createSongPresetRepository({ db, transactor }: DatabaseHandle) {
@@ -148,6 +180,8 @@ export function createSongPresetRepository({ db, transactor }: DatabaseHandle) {
     duplicate: (id: number, name: string) =>
       serial(() => duplicatePreset(db, id, name)),
     delete: (id: number) => transaction(() => deletePreset(db, id)),
+    restore: (deleted: DeletedPreset) =>
+      transaction(() => restorePreset(db, deleted)),
     forLibrarySong: (songId: number) =>
       serial(async () => (await linkedPreset(db, songId)).at(0)),
     saveForLibrarySong: (songId: number, values: LinkedPresetValues) =>

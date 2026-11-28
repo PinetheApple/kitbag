@@ -10,8 +10,6 @@ import {
   unsupportedImportText,
   type ClickSoundNotice,
   type ClickSoundProblem,
-  soundRoleName,
-  type SoundRole,
 } from '@kitbag/core-state';
 
 const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five'];
@@ -104,21 +102,4 @@ export function optionsLabel(name: string): string {
 
 export function optionsHint(name: string): string {
   return `Replace keeps the new sound on every beat and song that uses ${name}.`;
-}
-
-export function removeTitle(name: string): string {
-  return `Remove “${name}”?`;
-}
-
-const UNDONE = 'This cannot be undone.';
-
-export function removeText(roles: readonly SoundRole[]): string {
-  const [only] = roles;
-  if (only === undefined)
-    return `Every saved song that uses it goes back to ${DEFAULT_SOUND_NAME}. ${UNDONE}`;
-  const beats =
-    roles.length > 1
-      ? 'Normal and accent beats'
-      : `${soundRoleName(only)} beats`;
-  return `${beats} go back to ${DEFAULT_SOUND_NAME}, on the metronome and in every saved song that uses it. ${UNDONE}`;
 }

@@ -358,14 +358,57 @@ describe('song library store', () => {
     expect(store.getState().importing).toEqual([]);
   });
 
-  it('deletes a song: cancels its job, then removes its own folder', async () => {
+  it('deletes a song at once for Settings, with no Undo', async () => {
     const { store, files } = setup();
     const row = await importOne(store);
     await store.getState().deleteRow(row);
+    expect(files.deleteSongFolder.mock.calls).toEqual([['f1']]);
+    expect(store.getState().deletedSong).toBeNull();
+  });
+
+  it('deletes a song with Undo: cancels its job, then removes its own folder once Undo is gone', async () => {
+    const { store, files } = setup();
+    const row = await importOne(store);
+    await store.getState().deleteRowWithUndo(row);
     expect(store.getState().rows).toEqual([]);
     expect(files.cancelAnalysis).toHaveBeenCalledWith(SONG_PATH);
+    expect(files.deleteSongFolder).not.toHaveBeenCalled();
+    await store.getState().dismissDeletedSong();
     expect(files.deleteSongFolder.mock.calls).toEqual([['f1']]);
     expect(files.deleteLibraryFile).not.toHaveBeenCalled();
+    expect(store.getState().deletedSong).toBeNull();
+  });
+
+  it('Undo brings a deleted song back with its files and analysis', async () => {
+    const { store, files } = setup();
+    const row = await importOne(store);
+    await store.getState().deleteRowWithUndo(row);
+    expect(store.getState().deletedSong?.title).toBe(row.title);
+    await store.getState().undoDeleteSong();
+    expect(store.getState().rows).toEqual([row]);
+    expect(store.getState().deletedSong).toBeNull();
+    await store.getState().dismissDeletedSong();
+    expect(files.deleteSongFolder).not.toHaveBeenCalled();
+  });
+
+  it('removes the folder of an earlier delete when another song is deleted', async () => {
+    const { store, records, files } = setup();
+    const first = await importOne(store);
+    await records.insertSong({
+      uuid: 'second',
+      title: 'Second',
+      artist: '',
+      filePath: 'songs/f9/Second.mp3',
+      durationSec: 1,
+      format: 'mp3',
+    });
+    await store.getState().refresh();
+    await store.getState().deleteRowWithUndo(first);
+    const second = store.getState().rows.find((r) => r.title === 'Second');
+    if (second === undefined) throw new Error('no second row');
+    await store.getState().deleteRowWithUndo(second);
+    expect(files.deleteSongFolder.mock.calls).toEqual([['f1']]);
+    expect(store.getState().deletedSong?.title).toBe('Second');
   });
 
   it('deletes a restored row’s files one by one, never a folder it did not create', async () => {

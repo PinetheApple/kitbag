@@ -1,4 +1,4 @@
-import { like, sql } from 'drizzle-orm';
+import { eq, like, sql } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
 import * as schema from './schema';
@@ -12,6 +12,25 @@ export type NewSongPreset = Omit<
   typeof schema.songPresets.$inferInsert,
   'uuid'
 >;
+
+type IdTable =
+  | typeof schema.setlists
+  | typeof schema.songs
+  | typeof schema.songPresets
+  | typeof schema.stemSets;
+
+export async function rowExists(
+  db: Database,
+  table: IdTable,
+  id: number | null,
+): Promise<boolean> {
+  if (id === null) return false;
+  const rows = await db
+    .select({ id: table.id })
+    .from(table)
+    .where(eq(table.id, id));
+  return rows.length > 0;
+}
 
 export interface DatabaseHandle {
   db: Database;
