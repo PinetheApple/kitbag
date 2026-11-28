@@ -20,6 +20,15 @@ const now = vi.hoisted(() => ({
   icons: [] as unknown[],
 }));
 
+vi.mock(
+  'react-native-reanimated',
+  async () => import('../../../core-state/src/testing/reanimatedDriver.ts'),
+);
+vi.mock(
+  'react-native-worklets',
+  async () => import('../../../core-state/src/testing/reanimatedDriver.ts'),
+);
+
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
   const box = (props: Props) => h('div', null, props.children);
@@ -33,8 +42,11 @@ vi.mock('react-native', async () => {
 
 vi.mock('@kitbag/core-design', async (original) => {
   const { createElement: h } = await import('react');
+  const { usePlayingEdge } =
+    await import('../../../core-design/src/components/usePlayingEdge.ts');
   return {
     ...(await original<Record<string, unknown>>()),
+    usePlayingEdge,
     Badge: () => null,
     EllipsizedText: (props: Props) => h('span', null, props.children),
     libraryList: new Proxy({}, { get: () => 0 }),

@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   NO_BREAK_SPACE,
-  playingSubtitle,
+  nowPlayingSubtitle,
   rowBadges,
   rowSubtitle,
   type RowPlace,
@@ -59,14 +59,25 @@ const BARE_STEMS: LibraryStemSetRow = {
   hasGrid: false,
 };
 
-describe('the facts of the playing row', () => {
-  it('start with Playing for a stem song', () => {
-    expect(playingSubtitle(STEMS, '3:10 · Gm')).toBe('Playing · 3:10 · Gm');
+describe('the facts of the current row', () => {
+  it('start with Playing for a playing stem song', () => {
+    expect(nowPlayingSubtitle(STEMS, '3:10 · Gm', 'playing')).toBe(
+      'Playing · 3:10 · Gm',
+    );
   });
 
-  it('stay as they are for a single song', () => {
-    expect(playingSubtitle(SONG, '3:10 · Gm')).toBe('3:10 · Gm');
+  it('start with Paused for a paused stem song', () => {
+    expect(nowPlayingSubtitle(STEMS, '3:10 · Gm', 'paused')).toBe(
+      'Paused · 3:10 · Gm',
+    );
   });
+
+  it.each(['playing', 'paused'] as const)(
+    'stay as they are for a %s single song',
+    (now) => {
+      expect(nowPlayingSubtitle(SONG, '3:10 · Gm', now)).toBe('3:10 · Gm');
+    },
+  );
 });
 
 describe('length', () => {
