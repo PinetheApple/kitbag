@@ -10,6 +10,7 @@ namespace rt_test {
 void RunPublisherTests();
 void RunBulkRingTests();
 void RunStallDetectorTests();
+void RunSuspendedClockTests();
 
 }  // namespace rt_test
 
