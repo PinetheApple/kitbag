@@ -1,17 +1,19 @@
 import {
   Button,
   createThemedStyles,
+  QUEUE_TEXT,
+  removedText,
   Sheet,
   SheetHint,
-  Snackbar,
   space,
   TextField,
+  TimedSnackbar,
 } from '@kitbag/core-design';
 import { customSoundId } from '@kitbag/core-native';
 import {
   cleanName,
   useClickSounds,
-  withSound,
+  withSoundRestored,
   type ClickSound,
   type PerAccentSounds,
   type SoundsUpdate,
@@ -20,9 +22,6 @@ import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { View, type TextInputInstance } from 'react-native';
 
 import { optionsHint } from '../logic/customSoundText.ts';
-import { removedText } from '../logic/deletionText.ts';
-import { snackbarTimeLeftMs } from '../logic/unsavedSnackbar.ts';
-import { useVisibleSince } from './useVisibleSince.ts';
 
 const useStyles = createThemedStyles(() => ({
   stack: { gap: space.controlGap },
@@ -193,29 +192,25 @@ export function useRemovedSoundNotice(
   const removed = useClickSounds((s) => s.removed);
   const undoRemove = useClickSounds((s) => s.undoRemove);
   const dismissRemoved = useClickSounds((s) => s.dismissRemoved);
-  const visibleSince = useVisibleSince();
   const { removedFrom } = menu;
   const undo = useCallback(() => {
     if (removed === null) return;
     const id = customSoundId(removed.sound.slot);
     void undoRemove().then((restored) => {
       if (restored && removedFrom !== null)
-        onRestored?.((current) => withSound(current, removedFrom, id));
+        onRestored?.((current) => withSoundRestored(current, removedFrom, id));
     });
   }, [removed, undoRemove, removedFrom, onRestored]);
   const dismiss = useCallback(() => {
     void dismissRemoved();
   }, [dismissRemoved]);
   if (removed === null) return undefined;
-  const timeLeftMs = snackbarTimeLeftMs(removed.at, visibleSince);
-  if (timeLeftMs <= 0) return undefined;
   return (
-    <Snackbar
+    <TimedSnackbar
       inline
-      key={`${String(removed.at)}-${String(visibleSince)}`}
+      at={removed.at}
       message={removedText(removed.sound.name)}
-      actionLabel="Undo"
-      durationMs={timeLeftMs}
+      actionLabel={QUEUE_TEXT.undo}
       onAction={undo}
       onTimeout={dismiss}
     />

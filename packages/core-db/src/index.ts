@@ -176,7 +176,6 @@ export {
 } from './stem-tempo';
 export type {
   AnalysisResultRecord,
-  DeletedSong,
   LibraryRow,
   LibrarySongRow,
   LibraryStemSetRow,
@@ -187,6 +186,7 @@ export type {
   SongFiles,
   SongRecord,
 } from './song-library-repository';
+export type { DeletedSong } from './song-deletion';
 export type {
   NewSongPreset,
   NewTuning,

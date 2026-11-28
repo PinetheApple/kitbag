@@ -51,7 +51,7 @@ vi.mock('@kitbag/core-design', async (original) => {
       buttons.push(props);
       return null;
     },
-    Snackbar: (props: Props) => {
+    TimedSnackbar: (props: Props) => {
       snackbars.push(props);
       return h('output', null, props.message as string);
     },

@@ -194,6 +194,14 @@ describe('managing click sounds', () => {
     expect(h.state().removed).toBeNull();
   });
 
+  it('keeps a removed sound’s file through an orphan sweep while Undo is offered', async () => {
+    const h = harness();
+    await h.state().importSound(SOURCE, 'Rimshot');
+    await h.state().remove(0);
+    await h.state().sweepOrphans();
+    expect(h.stored.has('file-1.wav')).toBe(true);
+  });
+
   it('deletes the file of an earlier remove when another sound is removed', async () => {
     const h = harness();
     await h.state().importSound(SOURCE, 'Rimshot');

@@ -1,3 +1,4 @@
+import { deletedText, removedText } from '@kitbag/core-design';
 import {
   stemSongTitle,
   type LibraryDeletion,
@@ -11,14 +12,6 @@ export interface DeletionNames {
   readonly presets: readonly SongPreset[];
   readonly setlists: readonly SetlistSummary[];
   readonly stems: StemSongs;
-}
-
-export function deletedText(name: string): string {
-  return `Deleted “${name}”`;
-}
-
-export function removedText(name: string): string {
-  return `Removed “${name}”`;
 }
 
 export function removedFromText(name: string, setName: string): string {

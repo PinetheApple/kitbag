@@ -70,6 +70,14 @@ describe('library deletes with undo', () => {
     expect(library.getState().presets.find((p) => p.id === b.id)).toEqual(b);
   });
 
+  it('restores once when Undo is pressed twice', async () => {
+    const { library, gig } = await twoSets();
+    await library.getState().deleteSetlist(gig);
+    const undo = library.getState().undoDeletion;
+    await Promise.all([undo(), undo()]);
+    expect(setNames(library)).toEqual(['Gig', 'Spare', 'Last']);
+  });
+
   it('keeps the delete when the snackbar is dismissed', async () => {
     const { library, gig } = await twoSets();
     await library.getState().deleteSetlist(gig);

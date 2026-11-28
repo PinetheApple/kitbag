@@ -56,6 +56,7 @@ export function harness(database: BackupDatabase = openBackupDatabase()) {
     constants: () => CODES,
     listFiles: vi.fn(() => Promise.resolve([...stored.keys()])),
     clearPartials: vi.fn(() => Promise.resolve()),
+    now: () => Date.now(),
   } satisfies ClickSoundDeps;
   const lock = createClickSoundLock();
   const store = createClickSoundStore(() => deps, lock);

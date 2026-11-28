@@ -6,7 +6,6 @@ import {
   SetlistPickerSheet,
   Sheet,
   SheetHint,
-  Snackbar,
   snackbar,
   space,
   TextField,
@@ -30,7 +29,7 @@ import {
   type LibraryRow,
   type QueuedSong,
 } from '@kitbag/core-state';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { View, type TextInputInstance } from 'react-native';
 
 import {
@@ -41,12 +40,12 @@ import {
   type FailureText,
 } from '../logic/notices.ts';
 import {
-  deletedSongText,
   REANALYZE_LABEL,
   REPLACE_SHEET_TEXT,
   replaceButtonLabel,
   replaceSheetTitle,
 } from '../logic/viewText.ts';
+import { DeletedSongSnackbar } from './DeletedSongSnackbar.tsx';
 import { useRowFailure, useRowFiles } from './rowFailureHooks.ts';
 
 const useStyles = createThemedStyles(() => ({
@@ -157,7 +156,7 @@ function ActionsSheet({
 }: ActionsSheetProps) {
   const styles = useStyles();
   const reanalyze = useSongLibrary((s) => s.reanalyze);
-  const deleteRow = useSongLibrary((s) => s.deleteRow);
+  const deleteRowWithUndo = useSongLibrary((s) => s.deleteRowWithUndo);
   const { target, close, openRename, openDelete, openSetlists } = menu;
   const failure = useRowFailure(target);
   const away = useRowFiles(target) === 'unavailable';
@@ -172,8 +171,8 @@ function ActionsSheet({
       return;
     }
     close();
-    void deleteRow(target);
-  }, [target, openDelete, close, deleteRow]);
+    void deleteRowWithUndo(target);
+  }, [target, openDelete, close, deleteRowWithUndo]);
   const row = useMemo(
     () => (target === null ? null : { song: target, title: target.title }),
     [target],
@@ -304,30 +303,6 @@ function DeleteSheet({ menu, bottomInset }: SheetProps) {
         <Button fill variant="destructive" label="Delete" onPress={confirm} />
       </View>
     </Sheet>
-  );
-}
-
-function DeletedSongSnackbar({ bottomInset }: Pick<SheetProps, 'bottomInset'>) {
-  const deletedSong = useSongLibrary((s) => s.deletedSong);
-  const undoDeleteSong = useSongLibrary((s) => s.undoDeleteSong);
-  const dismissDeletedSong = useSongLibrary((s) => s.dismissDeletedSong);
-  const undo = useCallback(() => {
-    void undoDeleteSong();
-  }, [undoDeleteSong]);
-  const dismiss = useCallback(() => {
-    void dismissDeletedSong();
-  }, [dismissDeletedSong]);
-  useEffect(() => dismiss, [dismiss]);
-  if (deletedSong === null) return null;
-  return (
-    <Snackbar
-      key={deletedSong.at}
-      message={deletedSongText(deletedSong.title)}
-      actionLabel="Undo"
-      bottom={bottomInset + snackbar.aboveSheet}
-      onAction={undo}
-      onTimeout={dismiss}
-    />
   );
 }
 

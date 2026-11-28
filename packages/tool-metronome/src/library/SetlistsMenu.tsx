@@ -32,9 +32,9 @@ export function useSetlistsMenu(onCreated: (setlistId: number) => void) {
     setOpen({ kind: 'actions', setlistId });
     setError(null);
   }, []);
-  const to = useCallback((kind: 'rename') => {
+  const openRename = useCallback(() => {
     setOpen((o) =>
-      'setlistId' in o ? { kind, setlistId: o.setlistId } : NONE,
+      'setlistId' in o ? { kind: 'rename', setlistId: o.setlistId } : NONE,
     );
     setError(null);
   }, []);
@@ -46,10 +46,10 @@ export function useSetlistsMenu(onCreated: (setlistId: number) => void) {
       close,
       openCreate,
       openActions,
-      to,
+      openRename,
       onCreated,
     }),
-    [open, error, close, openCreate, openActions, to, onCreated],
+    [open, error, close, openCreate, openActions, openRename, onCreated],
   );
 }
 
@@ -104,9 +104,7 @@ function SetlistActions({ menu, bottomInset }: SheetsProps) {
   const actions = [
     {
       label: 'Rename',
-      onPress: () => {
-        menu.to('rename');
-      },
+      onPress: menu.openRename,
     },
     { label: 'Duplicate', onPress: cmd.duplicate },
     ...(backupFilesAvailable()

@@ -25,7 +25,9 @@ const shown = vi.hoisted(
 );
 
 const songs = vi.hoisted(() => ({
-  deleteRow: vi.fn(() => Promise.resolve()),
+  deleteRowWithUndo: vi.fn(() => Promise.resolve()),
+  undoDeleteSong: vi.fn(() => Promise.resolve()),
+  dismissDeletedSong: vi.fn(() => Promise.resolve()),
 }));
 
 const queue = vi.hoisted(() => ({
@@ -272,18 +274,18 @@ function snack(tree: ReactTestRenderer) {
 
 describe('deleting from the actions sheet', () => {
   it('deletes a song at once, with no confirm', async () => {
-    songs.deleteRow.mockClear();
+    songs.deleteRowWithUndo.mockClear();
     const { tree } = openRow(hum, 'present', []);
     await press(tree, 'Delete song');
-    expect(songs.deleteRow).toHaveBeenCalledExactlyOnceWith(hum);
+    expect(songs.deleteRowWithUndo).toHaveBeenCalledExactlyOnceWith(hum);
     expect(tree.root.findAllByType('Sheet' as never)).toEqual([]);
   });
 
   it('asks before deleting a stem song', async () => {
-    songs.deleteRow.mockClear();
+    songs.deleteRowWithUndo.mockClear();
     const { tree } = openStemRow('present');
     await press(tree, 'Delete stem song');
-    expect(songs.deleteRow).not.toHaveBeenCalled();
+    expect(songs.deleteRowWithUndo).not.toHaveBeenCalled();
     expect(button(tree, 'Delete').props.variant).toBe('destructive');
   });
 });

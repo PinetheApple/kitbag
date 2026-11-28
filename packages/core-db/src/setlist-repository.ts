@@ -4,6 +4,7 @@ import { placeAt } from './ordering';
 import {
   escapedLike,
   found,
+  rowExists,
   type Database,
   type DatabaseHandle,
   type Setlist,
@@ -194,23 +195,13 @@ async function deleteSetlist(
   return { setlist, items, practiceSessionIds: sessions.map(({ id }) => id) };
 }
 
-async function entryExists(
+function entryExists(
   db: Database,
   { songPresetId, stemSetId }: SetlistItem,
 ): Promise<boolean> {
-  if (songPresetId !== null) {
-    const rows = await db
-      .select({ id: songPresets.id })
-      .from(songPresets)
-      .where(eq(songPresets.id, songPresetId));
-    return rows.length > 0;
-  }
-  if (stemSetId === null) return false;
-  const rows = await db
-    .select({ id: stemSets.id })
-    .from(stemSets)
-    .where(eq(stemSets.id, stemSetId));
-  return rows.length > 0;
+  return songPresetId === null
+    ? rowExists(db, stemSets, stemSetId)
+    : rowExists(db, songPresets, songPresetId);
 }
 
 async function restoreSetlist(db: Database, deleted: DeletedSetlist) {
@@ -261,7 +252,7 @@ export async function restoreItem(
   db: Database,
   { item, index }: RemovedSetlistItem,
 ): Promise<boolean> {
-  if ((await setlistById(db, item.setlistId)) === undefined) return false;
+  if (!(await rowExists(db, setlists, item.setlistId))) return false;
   if (!(await entryExists(db, item))) return false;
   const inserted = found(
     await db

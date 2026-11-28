@@ -70,6 +70,7 @@ configureClickSounds({
   constants: vi.fn(),
   listFiles: vi.fn(),
   clearPartials: vi.fn(),
+  now: vi.fn(),
 });
 
 await import('./backupRuntime.ts');

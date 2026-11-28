@@ -15,6 +15,8 @@ export * from './databaseErrorRoles.ts';
 export * from './practiceHistoryRoles.ts';
 export * from './swipeDeleteRoles.ts';
 export * from './snackbarTimer.ts';
+export * from './snackbarTimeLeft.ts';
+export * from './deletionText.ts';
 export * from './settingsRoles.ts';
 export * from './playerScroll.ts';
 export * from './listEdges.ts';

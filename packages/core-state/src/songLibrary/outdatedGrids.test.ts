@@ -119,6 +119,7 @@ describe('re-analysing grids from an older analyser', () => {
       newUuid: () => 'unused',
       openSong: () => fakeOpenSong().openSong,
       fitTempo: () => fakeFitter(),
+      now: () => Date.now(),
     });
     await relaunched.getState().start();
     expect(queued(library)).toEqual([path('Broken')]);

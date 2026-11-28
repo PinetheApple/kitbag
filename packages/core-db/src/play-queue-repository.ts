@@ -66,15 +66,15 @@ async function place(
   return { ...entry, position: placed.position };
 }
 
-export interface RemovedQueueEntry {
+export interface LocatedQueueEntry {
   readonly entry: PlayQueueEntry;
   readonly index: number;
 }
 
-export async function removedQueueEntry(
+export async function locateQueueEntry(
   db: Database,
   song: QueuedSong,
-): Promise<RemovedQueueEntry | null> {
+): Promise<LocatedQueueEntry | null> {
   const entries = await orderedEntries(db);
   const index = entries.findIndex(holds(song));
   const entry = entries[index];
@@ -83,7 +83,7 @@ export async function removedQueueEntry(
 
 export async function restoreQueueEntry(
   db: Database,
-  { entry, index }: RemovedQueueEntry,
+  { entry, index }: LocatedQueueEntry,
 ): Promise<void> {
   const inserted = found(
     await db

@@ -33,6 +33,7 @@ configureClickSounds({
   constants: () => getKitbagLibrary().getConstants(),
   listFiles: listClickSounds,
   clearPartials: clearClickSoundPartials,
+  now: Date.now,
 });
 
 const clickSounds = clickSoundStore.getState();

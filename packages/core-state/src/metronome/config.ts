@@ -63,7 +63,7 @@ export const withoutSound = (
   accent: sounds.accent === soundId ? KB_DEFAULT_SOUNDS.accent : sounds.accent,
 });
 
-export const withSound = (
+export const withSoundRestored = (
   current: PerAccentSounds,
   previous: PerAccentSounds,
   soundId: number,

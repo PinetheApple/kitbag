@@ -213,6 +213,8 @@ export function createClickSoundStore(
       const { listFiles, repository } = deps();
       const files = await listFiles();
       const named = new Set((await repository().list()).map((s) => s.fileName));
+      const held = get().removed?.sound.fileName;
+      if (held !== undefined) named.add(held);
       for (const file of files) if (!named.has(file)) await discard(file);
     };
 
@@ -343,7 +345,7 @@ export function createClickSoundStore(
         const { removed: sound, resets, songsReset } = removal;
         if (sound === null) return songsReset;
         await dropRemoved();
-        set({ removed: { sound, resets, released, at: Date.now() } });
+        set({ removed: { sound, resets, released, at: deps().now() } });
         return songsReset;
       },
       undoRemove: async () => {

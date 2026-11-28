@@ -7,7 +7,7 @@ import {
   rangeRamp,
   usesSound,
   withoutSound,
-  withSound,
+  withSoundRestored,
   type PerAccentSounds,
 } from './config.ts';
 import {
@@ -162,6 +162,6 @@ export function restoreStandaloneSound(
   saveStoredSounds(
     configured,
     stored,
-    withSound(stored.sounds, previous, soundId),
+    withSoundRestored(stored.sounds, previous, soundId),
   );
 }

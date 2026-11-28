@@ -6,7 +6,7 @@ import { libraryStore, type LibraryStore } from '../library/store.ts';
 import {
   usesSound,
   withoutSound,
-  withSound,
+  withSoundRestored,
   type PerAccentSounds,
 } from '../metronome/config.ts';
 import {
@@ -54,7 +54,7 @@ export async function restoreReleasedSound(
 ): Promise<void> {
   if (released.metronome !== null) {
     const { sounds, setSounds } = metronome.getState();
-    const back = withSound(sounds, released.metronome, soundId);
+    const back = withSoundRestored(sounds, released.metronome, soundId);
     setSounds(back.normal, back.accent);
   }
   if (released.standalone !== null)

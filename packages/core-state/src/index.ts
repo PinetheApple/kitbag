@@ -59,7 +59,7 @@ export {
   resizeAccents,
   usesSound,
   withoutSound,
-  withSound,
+  withSoundRestored,
 } from './metronome/config.ts';
 export { beatGroupSizes, groupStartAccents } from './metronome/meterGroups.ts';
 export type { BpmBounds } from './metronome/config.ts';

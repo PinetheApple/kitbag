@@ -319,12 +319,12 @@ describe('song library repository', () => {
     const bare = await library.insertSong(song('Bare'));
     const analyzed = await library.insertSong(song('Analyzed'));
     await library.applyAnalysis(okResult('Analyzed', 'Analyzed.kwav'));
-    expect(await library.deleteSong(bare)).toMatchObject({
+    expect((await library.deleteSong(bare))?.row).toMatchObject({
       uuid: 'uuid-Bare',
       filePath: 'songs/uuid-Bare/Bare.mp3',
       waveformPath: null,
     });
-    expect(await library.deleteSong(analyzed)).toMatchObject({
+    expect((await library.deleteSong(analyzed))?.row).toMatchObject({
       uuid: 'uuid-Analyzed',
       filePath: 'songs/uuid-Analyzed/Analyzed.mp3',
       waveformPath: 'songs/uuid-Analyzed/Analyzed.kwav',
@@ -431,7 +431,7 @@ describe('song library over the op-sqlite 17 connection', () => {
         createdAt: expect.any(Date) as Date,
       }),
     ]);
-    expect(await database.songLibrary.deleteSong(id)).toMatchObject({
+    expect((await database.songLibrary.deleteSong(id))?.row).toMatchObject({
       waveformPath: 'songs/uuid-Everlong/Everlong.kwav',
     });
     await database.close();

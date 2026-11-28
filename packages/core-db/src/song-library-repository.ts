@@ -29,11 +29,6 @@ import {
   type ManualTempo,
   type ManualTempoChange,
 } from './manual-tempo';
-import {
-  removedQueueEntry,
-  restoreQueueEntry,
-  type RemovedQueueEntry,
-} from './play-queue-repository';
 import { found, type Database, type DatabaseHandle } from './repository';
 import { setlistItems, songPresets, songs, stems, stemSets } from './schema';
 import {
@@ -61,6 +56,7 @@ import {
   type BundleTempo,
   type StoredTempo,
 } from './stem-tempo';
+import { deleteSong, restoreSong, type DeletedSong } from './song-deletion';
 import { saveSongSpeed } from './song-speed';
 import { saveTempoCorrection } from './song-tempo-correction';
 import { tempoCorrectionOf, type TempoCorrection } from './tempo-correction';
@@ -127,12 +123,6 @@ export interface SongFiles {
   readonly uuid: string;
   readonly filePath: string;
   readonly waveformPath: string | null;
-}
-
-export interface DeletedSong extends SongFiles {
-  readonly row: typeof songs.$inferSelect;
-  readonly presetIds: readonly number[];
-  readonly queued: RemovedQueueEntry | null;
 }
 
 export type AnalysisResultRecord =
@@ -370,40 +360,6 @@ async function listOutdatedAnalyses(
     )
     .orderBy(asc(songs.id));
   return rows.map(({ id }) => id);
-}
-
-async function deleteSong(
-  db: Database,
-  id: number,
-): Promise<DeletedSong | undefined> {
-  const [row] = await db.select().from(songs).where(eq(songs.id, id));
-  if (row === undefined) return undefined;
-  const queued = await removedQueueEntry(db, { kind: 'song', id });
-  const presets = await db
-    .update(songPresets)
-    .set({ librarySongId: null })
-    .where(eq(songPresets.librarySongId, id))
-    .returning({ id: songPresets.id });
-  await db.delete(songs).where(eq(songs.id, id));
-  const { uuid, filePath, waveformPath } = row;
-  const presetIds = presets.map((preset) => preset.id);
-  return { uuid, filePath, waveformPath, row, presetIds, queued };
-}
-
-async function restoreSong(db: Database, deleted: DeletedSong) {
-  const { row, presetIds, queued } = deleted;
-  await db.insert(songs).values(row);
-  if (presetIds.length > 0)
-    await db
-      .update(songPresets)
-      .set({ librarySongId: row.id })
-      .where(
-        and(
-          inArray(songPresets.id, [...presetIds]),
-          isNull(songPresets.librarySongId),
-        ),
-      );
-  if (queued !== null) await restoreQueueEntry(db, queued);
 }
 
 async function listSongFiles(db: Database) {

@@ -358,10 +358,18 @@ describe('song library store', () => {
     expect(store.getState().importing).toEqual([]);
   });
 
-  it('deletes a song: cancels its job, then removes its own folder once Undo is gone', async () => {
+  it('deletes a song at once for Settings, with no Undo', async () => {
     const { store, files } = setup();
     const row = await importOne(store);
     await store.getState().deleteRow(row);
+    expect(files.deleteSongFolder.mock.calls).toEqual([['f1']]);
+    expect(store.getState().deletedSong).toBeNull();
+  });
+
+  it('deletes a song with Undo: cancels its job, then removes its own folder once Undo is gone', async () => {
+    const { store, files } = setup();
+    const row = await importOne(store);
+    await store.getState().deleteRowWithUndo(row);
     expect(store.getState().rows).toEqual([]);
     expect(files.cancelAnalysis).toHaveBeenCalledWith(SONG_PATH);
     expect(files.deleteSongFolder).not.toHaveBeenCalled();
@@ -374,7 +382,7 @@ describe('song library store', () => {
   it('Undo brings a deleted song back with its files and analysis', async () => {
     const { store, files } = setup();
     const row = await importOne(store);
-    await store.getState().deleteRow(row);
+    await store.getState().deleteRowWithUndo(row);
     expect(store.getState().deletedSong?.title).toBe(row.title);
     await store.getState().undoDeleteSong();
     expect(store.getState().rows).toEqual([row]);
@@ -395,10 +403,10 @@ describe('song library store', () => {
       format: 'mp3',
     });
     await store.getState().refresh();
-    await store.getState().deleteRow(first);
+    await store.getState().deleteRowWithUndo(first);
     const second = store.getState().rows.find((r) => r.title === 'Second');
     if (second === undefined) throw new Error('no second row');
-    await store.getState().deleteRow(second);
+    await store.getState().deleteRowWithUndo(second);
     expect(files.deleteSongFolder.mock.calls).toEqual([['f1']]);
     expect(store.getState().deletedSong?.title).toBe('Second');
   });
@@ -417,7 +425,6 @@ describe('song library store', () => {
     const [row] = store.getState().rows;
     if (row === undefined) throw new Error('no row');
     await store.getState().deleteRow(row);
-    await store.getState().dismissDeletedSong();
     expect(files.deleteSongFolder).not.toHaveBeenCalled();
     expect(files.deleteLibraryFile.mock.calls).toEqual([
       ['songs/f9/Restored.mp3'],

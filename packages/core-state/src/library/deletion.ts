@@ -71,8 +71,8 @@ export function deletionActions(
     undoDeletion: async () => {
       const { deletion } = get();
       if (deletion === null) return;
+      set({ deletion: null });
       await restore(deps, deletion);
-      if (get().deletion === deletion) set({ deletion: null });
       await get().refresh();
     },
     dismissDeletion: () => {

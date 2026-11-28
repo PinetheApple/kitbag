@@ -32,6 +32,7 @@ export interface ClickSoundDeps {
   readonly constants: () => LibraryConstants;
   readonly listFiles: () => Promise<readonly string[]>;
   readonly clearPartials: () => Promise<void>;
+  readonly now: () => number;
 }
 
 let configured: ClickSoundDeps | undefined;

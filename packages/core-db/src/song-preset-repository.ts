@@ -3,6 +3,7 @@ import { asc, eq, or } from 'drizzle-orm';
 import {
   escapedLike,
   found,
+  rowExists,
   type Database,
   type DatabaseHandle,
   type NewSongPreset,
@@ -157,17 +158,8 @@ async function deletePreset(
   return { preset, items };
 }
 
-async function librarySongExists(db: Database, songId: number | null) {
-  if (songId === null) return false;
-  const rows = await db
-    .select({ id: songs.id })
-    .from(songs)
-    .where(eq(songs.id, songId));
-  return rows.length > 0;
-}
-
 async function restorePreset(db: Database, { preset, items }: DeletedPreset) {
-  const linked = await librarySongExists(db, preset.librarySongId);
+  const linked = await rowExists(db, songs, preset.librarySongId);
   await db
     .insert(songPresets)
     .values({ ...preset, librarySongId: linked ? preset.librarySongId : null });

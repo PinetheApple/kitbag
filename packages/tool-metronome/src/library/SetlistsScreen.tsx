@@ -27,7 +27,7 @@ import {
 import { useLibraryUndoShown } from './LibraryUndoSnackbar.tsx';
 import { useLibraryRefresh } from './useLibraryRefresh.ts';
 
-// ScreenFrame's bottom padding already supplies the gap above the bar.
+// ScreenFrame's bottom padding already supplies the gap above the snackbar.
 const FAB_ABOVE_SNACKBAR = snackbar.aboveSheet + snackbar.minHeight;
 
 const useStyles = createThemedStyles((theme) => ({

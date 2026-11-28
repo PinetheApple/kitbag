@@ -38,6 +38,8 @@ vi.mock('@kitbag/core-design', async (original) => {
     FloatingActionButton: () => null,
     ListRow: () => null,
     SearchField: () => null,
+    TimedSnackbar: () => null,
+    useSnackbarShown: () => false,
     Badge: (props: Props) => h('output', null, props.label as string),
   };
 });

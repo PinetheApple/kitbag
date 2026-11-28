@@ -1,5 +1,4 @@
 import type {
-  DeletedSong,
   LibraryRow,
   MeterOverridePatch,
   TempoCorrection,
@@ -11,7 +10,7 @@ import type {
 } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
-import { fileRemovals, songRemovals, type Removal } from './logic.ts';
+import { fileRemovals } from './logic.ts';
 import { cleanName } from '../names.ts';
 import { resultRecord } from './analysisRecord.ts';
 import { documentImports, isBatch } from './importBatch.ts';
@@ -32,12 +31,11 @@ import {
   type SongLibraryRecords,
   type TempoFitter,
 } from './runtime.ts';
-import { songDeletion, type DeletedLibrarySong } from './songDeletion.ts';
+import { rowDeletion, type DeletedLibrarySong } from './songDeletion.ts';
 import { songGridSaves } from './songGridSaves.ts';
 import { stemBundleActions, type BundleSource } from './stemBundleImport.ts';
 import { fitUntimedStemSets } from './stemTempoFit.ts';
 import {
-  stemSetRemovals,
   type BundleAddOutcome,
   type BundleRefusal,
   type ReplaceChoice,
@@ -109,6 +107,7 @@ export interface SongLibraryActions {
   importStemFolder: () => Promise<void>;
   reanalyze: (songId: number) => Promise<void>;
   deleteRow: (row: LibraryRow) => Promise<void>;
+  deleteRowWithUndo: (row: LibraryRow) => Promise<void>;
   undoDeleteSong: () => Promise<void>;
   dismissDeletedSong: () => Promise<void>;
   renameRow: (row: LibraryRow, name: string) => Promise<void>;
@@ -139,6 +138,7 @@ export interface SongLibraryDeps {
   readonly newUuid: () => string;
   readonly openSong: () => OpenSong;
   readonly fitTempo: () => TempoFitter;
+  readonly now: () => number;
 }
 
 const defaultDeps: SongLibraryDeps = {
@@ -147,6 +147,7 @@ const defaultDeps: SongLibraryDeps = {
   newUuid: () => crypto.randomUUID(),
   openSong: () => getSongLibrary().openSong,
   fitTempo: () => getSongLibrary().fitTempo,
+  now: Date.now,
 };
 
 const INITIAL: SongLibraryState = {
@@ -253,29 +254,6 @@ function importActions(
   };
 }
 
-interface DeletedRecord {
-  readonly removals: Removal[];
-  readonly song?: DeletedSong;
-}
-
-async function deleteRecord(
-  deps: SongLibraryDeps,
-  queue: OutdatedGridQueue,
-  row: LibraryRow,
-  codes: LibraryConstants | null,
-): Promise<DeletedRecord> {
-  const records = deps.records();
-  if (row.kind === 'stems') {
-    const stemSet = await records.deleteStemSet(row.id);
-    return { removals: stemSetRemovals(stemSet, codes?.stemsDir ?? null) };
-  }
-  const song = await records.deleteSong(row.id);
-  if (song === undefined) return { removals: [] };
-  deps.files().cancelAnalysis(song.filePath);
-  await queue.settled(song.filePath);
-  return { removals: songRemovals(song, codes?.songsDir ?? null), song };
-}
-
 function analysisActions(
   deps: SongLibraryDeps,
   get: Get,
@@ -358,23 +336,8 @@ function rowActions(
   get: Get,
   queue: OutdatedGridQueue,
 ) {
-  const { holdDeletedSong, ...deletion } = songDeletion(deps, set, get);
   return {
-    ...deletion,
-    deleteRow: async (row: LibraryRow) => {
-      let deleted: DeletedRecord;
-      try {
-        deleted = await deleteRecord(deps, queue, row, loadCodes(deps, get));
-      } catch (error) {
-        warn(`delete of ${row.title} failed`, error);
-        set({ notice: { kind: 'deleteFailed', name: row.title } });
-        return;
-      }
-      await get().refresh();
-      if (deleted.song === undefined)
-        await deleteLeftovers(deps.files(), deleted.removals, row.title);
-      else await holdDeletedSong(row.title, deleted.song, deleted.removals);
-    },
+    ...rowDeletion(deps, set, get, queue),
     renameRow: async (row: LibraryRow, name: string) => {
       const title = cleanName(name);
       if (title === null || title === row.title) return;
