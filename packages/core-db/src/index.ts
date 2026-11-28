@@ -186,6 +186,7 @@ export type {
   SongFiles,
   SongRecord,
 } from './song-library-repository';
+export type { HeldSongFiles } from './held-song-files';
 export type { DeletedSong } from './song-deletion';
 export type {
   NewSongPreset,

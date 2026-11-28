@@ -5,6 +5,8 @@ import {
 } from '@kitbag/core-db';
 import type { LibraryConstants } from '@kitbag/core-native';
 
+import type { FileWorkTracker } from './fileWork.ts';
+import { deleteHeldSongFiles } from './heldSongFiles.ts';
 import { songRemovals, type Removal } from './logic.ts';
 import { requeueAndRefresh, type OutdatedGridQueue } from './outdatedGrids.ts';
 import { stemSetRemovals } from './stemBundleLogic.ts';
@@ -57,16 +59,14 @@ export function rowDeletion(
   set: SetState,
   get: Get,
   queue: OutdatedGridQueue,
+  fileWork: FileWorkTracker,
 ) {
   const dropDeletedSong = async () => {
     const { deletedSong } = get();
     if (deletedSong === null) return;
     set({ deletedSong: null });
-    await deleteLeftovers(
-      deps.files(),
-      deletedSong.removals,
-      deletedSong.title,
-    );
+    const { removals, title, song } = deletedSong;
+    await deleteHeldSongFiles(deps, song.row.id, removals, title);
   };
   const remove = async (row: LibraryRow, undoable: boolean) => {
     let deleted: DeletedRecord;
@@ -79,8 +79,12 @@ export function rowDeletion(
     }
     await get().refresh();
     const { song, removals } = deleted;
-    if (!undoable || song === undefined) {
+    if (song === undefined) {
       await deleteLeftovers(deps.files(), removals, row.title);
+      return;
+    }
+    if (!undoable) {
+      await deleteHeldSongFiles(deps, song.row.id, removals, row.title);
       return;
     }
     await dropDeletedSong();
@@ -97,7 +101,7 @@ export function rowDeletion(
       await deps.records().restoreSong(song);
     } catch (error) {
       warn(`restoring ${title} failed`, error);
-      await deleteLeftovers(deps.files(), removals, title);
+      await deleteHeldSongFiles(deps, song.row.id, removals, title);
       await get().refresh();
       return;
     }
@@ -106,9 +110,10 @@ export function rowDeletion(
     else await get().refresh();
   };
   return {
-    deleteRow: (row: LibraryRow) => remove(row, false),
-    deleteRowWithUndo: (row: LibraryRow) => remove(row, true),
-    undoDeleteSong,
+    deleteRow: (row: LibraryRow) => fileWork.track(() => remove(row, false)),
+    deleteRowWithUndo: (row: LibraryRow) =>
+      fileWork.track(() => remove(row, true)),
+    undoDeleteSong: () => fileWork.track(undoDeleteSong),
     dismissDeletedSong: dropDeletedSong,
   };
 }

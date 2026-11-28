@@ -56,6 +56,7 @@ import {
   type BundleTempo,
   type StoredTempo,
 } from './stem-tempo';
+import { listHeldSongFiles, releaseSongFiles } from './held-song-files';
 import { deleteSong, restoreSong, type DeletedSong } from './song-deletion';
 import { saveSongSpeed } from './song-speed';
 import { saveTempoCorrection } from './song-tempo-correction';
@@ -421,6 +422,9 @@ export function createSongLibraryRepository({
     applyAnalysis: (result: AnalysisResultRecord) =>
       transaction(() => applyAnalysis(db, result)),
     deleteSong: (id: number) => transaction(() => deleteSong(db, id)),
+    releaseSongFiles: (songId: number) =>
+      serial(() => releaseSongFiles(db, songId)),
+    listHeldSongFiles: () => serial(() => listHeldSongFiles(db)),
     restoreSong: (deleted: DeletedSong) =>
       transaction(() => restoreSong(db, deleted)),
     deleteStemSet: (id: number) => transaction(() => deleteStemSet(db, id)),

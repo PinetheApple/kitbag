@@ -13,6 +13,8 @@ configureSongLibrary({
     applyAnalysis: unavailable,
     deleteSong: () => Promise.resolve(undefined),
     restoreSong: unavailable,
+    releaseSongFiles: () => Promise.resolve(),
+    listHeldSongFiles: () => Promise.resolve([]),
     deleteStemSet: () => Promise.resolve({ folder: null, files: [] }),
     findStemSetByJobId: () => Promise.resolve(undefined),
     findStemSetMatches: () => Promise.resolve([]),

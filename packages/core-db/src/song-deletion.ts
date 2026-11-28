@@ -1,5 +1,6 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 
+import { holdSongFiles, releaseSongFiles } from './held-song-files';
 import {
   locateQueueEntry,
   restoreQueueEntry,
@@ -14,12 +15,15 @@ export interface DeletedSong {
   readonly queued: LocatedQueueEntry | null;
 }
 
+// Held before the row goes, so a kill before its files are deleted leaves a record.
 export async function deleteSong(
   db: Database,
   id: number,
 ): Promise<DeletedSong | undefined> {
   const [row] = await db.select().from(songs).where(eq(songs.id, id));
   if (row === undefined) return undefined;
+  const { uuid, filePath, waveformPath } = row;
+  await holdSongFiles(db, { songId: id, uuid, filePath, waveformPath });
   const queued = await locateQueueEntry(db, { kind: 'song', id });
   const presets = await db
     .update(songPresets)
@@ -44,4 +48,5 @@ export async function restoreSong(db: Database, deleted: DeletedSong) {
         ),
       );
   if (queued !== null) await restoreQueueEntry(db, queued);
+  await releaseSongFiles(db, row.id);
 }
