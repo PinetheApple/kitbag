@@ -14,6 +14,19 @@ internal enum class ToolRejection {
   HANDOFF,
   INTERNAL,
   CANCELLED,
+  INDEX,
+  OTHER_RELEASE,
+  NOT_IN_INDEX,
+  NOT_AS_INDEXED,
+  DOWNLOADS_OFF,
+  ROLLBACK,
+  INCOMPATIBLE,
+  NO_SPACE,
+  OFFLINE,
+  DOWNLOAD,
+  NOT_HTTPS,
+  TOO_MANY_REDIRECTS,
+  TOO_LARGE,
   ;
 
   val code: String get() = "$CODE_PREFIX$name"

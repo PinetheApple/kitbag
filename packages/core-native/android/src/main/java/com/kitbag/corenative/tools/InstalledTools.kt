@@ -1,15 +1,34 @@
 package com.kitbag.corenative.tools
 
 import java.io.File
+import java.io.IOException
 
-internal class InstalledTools(private val root: File, private val rules: ToolBundleRules) {
-  fun kbtFile(id: String): File {
+internal fun ensureDir(dir: File): File {
+  if (!dir.isDirectory && !dir.mkdirs()) throw IOException("Could not create ${dir.name}")
+  return dir
+}
+
+internal class InstalledTools(root: File, private val rules: ToolBundleRules) {
+  val toolsDir = File(root, TOOLS_DIR)
+  val stagingDir = File(toolsDir, STAGING_DIR)
+
+  fun requireValidId(id: String) {
     if (!rules.id.matches(id)) reject(ToolRejection.BAD_ID, "$id is not a tool id")
-    return File(File(File(root, TOOLS_DIR), id), id + rules.kbtExtension)
   }
+
+  fun toolDir(id: String): File {
+    requireValidId(id)
+    return File(toolsDir, id)
+  }
+
+  fun kbtFile(id: String): File = File(toolDir(id), id + rules.kbtExtension)
+
+  fun installedIds(): List<String> =
+    toolsDir.listFiles().orEmpty().map { it.name }.filter { rules.id.matches(it) && kbtFile(it).isFile }.sorted()
 
   private companion object {
     const val TOOLS_DIR = "tools"
+    const val STAGING_DIR = ".staging"
   }
 }
 

@@ -43,6 +43,16 @@ export type {
 } from './NativeKitbagLibrary';
 export { getKitbagStemDeck } from './NativeKitbagStemDeck';
 export {
+  nativeToolInstaller,
+  type NativeToolInstaller,
+  type ToolInstallUpdate,
+} from './toolInstaller.ts';
+export type {
+  ToolCatalogue,
+  ToolCatalogueTool,
+  ToolInstallEvent,
+} from './NativeKitbagTools';
+export {
   loadTool,
   ToolLoadError,
   TOOL_LOAD_CODE,

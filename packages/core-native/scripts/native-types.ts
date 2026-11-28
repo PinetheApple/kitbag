@@ -72,6 +72,7 @@ export interface NativeSources {
   readonly outputRoutes: string;
   readonly toolEvalHeader: string;
   readonly toolRejections: string;
+  readonly toolInstallCodes: string;
 }
 
 export interface NativeConstants {
@@ -138,6 +139,8 @@ export interface NativeConstants {
   readonly evalVerifiedToolKey: string;
   readonly toolErrors: readonly StringConstant[];
   readonly toolRejections: readonly StringConstant[];
+  readonly toolInstallStages: readonly StringConstant[];
+  readonly toolDownloads: readonly StringConstant[];
   readonly toolRefusalKey: string;
   readonly toolRefusalDetailKey: string;
 }

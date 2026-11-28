@@ -11,8 +11,13 @@ internal class ToolManifestFile(val path: String, val sha256: String, val size: 
 
 internal class ToolManifest(
   val id: String,
+  val version: String,
   val bytecodeVersion: Int,
   val files: List<ToolManifestFile>,
+  val minVersionCode: Long,
+  val maxVersionCode: Long?,
+  val hostApiMajor: Long,
+  val hostApiMinMinor: Long,
 )
 
 internal class ToolManifestParser(private val rules: ToolBundleRules) {
@@ -108,7 +113,19 @@ internal class ToolManifestParser(private val rules: ToolBundleRules) {
     if (problems.list.isNotEmpty()) reject(ToolRejection.MANIFEST, problems.list.joinToString("; "))
     val bytecodeVersion = asLong(m.getJSONObject(RUNTIME).get(rules.bytecodeVersionField))
     if (bytecodeVersion > Int.MAX_VALUE) reject(ToolRejection.MANIFEST, "runtime.${rules.bytecodeVersionField} is out of range")
-    return ToolManifest(m.getString(ID), bytecodeVersion.toInt(), files!!)
+    val host = m.getJSONObject(HOST)
+    val maxVersionCode = if (host.isNull(MAX_VERSION_CODE)) null else asLong(host.get(MAX_VERSION_CODE))
+    val hostApi = m.getJSONObject(HOST_API)
+    return ToolManifest(
+      id = m.getString(ID),
+      version = m.getString(VERSION),
+      bytecodeVersion = bytecodeVersion.toInt(),
+      files = files!!,
+      minVersionCode = asLong(host.get(MIN_VERSION_CODE)),
+      maxVersionCode = maxVersionCode,
+      hostApiMajor = asLong(hostApi.get(MAJOR)),
+      hostApiMinMinor = asLong(hostApi.get(MIN_MINOR)),
+    )
   }
 
   private fun sizeIsSumOfFiles(size: Any?, files: List<ToolManifestFile>): Boolean =

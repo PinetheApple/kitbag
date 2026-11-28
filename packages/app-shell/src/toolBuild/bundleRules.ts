@@ -1,5 +1,7 @@
 import { TOOL_ID as ID } from '@kitbag/core-plugin-api';
 
+import { HOST_API } from '../toolHost/hostApi.ts';
+
 const ASSET_SEGMENT = '[A-Za-z0-9_-][A-Za-z0-9._-]*';
 const ROUTE_SEGMENT = '[A-Za-z0-9\\[\\]._-]+';
 const ROUTE_PREFIX = '/t/';
@@ -12,6 +14,8 @@ const STATUS = {
 } as const;
 const MIB = 1_048_576;
 const MAX_INFLATED_MIB = 64;
+const RELEASE_HOST = 'github.com';
+const RELEASE_REPO = 'PinetheApple/kitbag';
 
 export const BUNDLE_RULES = {
   schemaVersion: 1,
@@ -35,6 +39,13 @@ export const BUNDLE_RULES = {
     route: `^${ROUTE_PREFIX}${ID}(/${ROUTE_SEGMENT})*$`,
   },
   routePrefix: ROUTE_PREFIX,
+  hostApi: HOST_API,
+  release: {
+    host: RELEASE_HOST,
+    repo: RELEASE_REPO,
+    downloadPath: 'releases/download',
+    tagPrefix: 'v',
+  },
   hbc: {
     magic: 'c61fbc03c103191f',
     versionBytes: 4,

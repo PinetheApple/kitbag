@@ -20,6 +20,16 @@
     "route": "^/t/[a-z][a-z0-9-]{1,31}(/[A-Za-z0-9\\[\\]._-]+)*$"
   },
   "routePrefix": "/t/",
+  "hostApi": {
+    "major": 1,
+    "minor": 0
+  },
+  "release": {
+    "host": "github.com",
+    "repo": "PinetheApple/kitbag",
+    "downloadPath": "releases/download",
+    "tagPrefix": "v"
+  },
   "hbc": {
     "magic": "c61fbc03c103191f",
     "versionBytes": 4
