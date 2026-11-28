@@ -15,6 +15,7 @@ function SetlistsRoute() {
       onOpenSetlist={routes.openSetlist}
       onOpenAllSongs={routes.openAllSongs}
       onLoaded={routes.toMetronome}
+      onEditPreset={routes.openPreset}
     />
   );
 }

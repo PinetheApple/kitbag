@@ -68,7 +68,7 @@ vi.mock('./Icon.tsx', () => ({ Icon: () => null }));
 const { DragListRow } = await import('./DragListRow.tsx');
 
 const TITLE = 'Everlong';
-const MORE_LABEL = `Actions for ${TITLE}`;
+const MORE_LABEL = `Actions for 1. ${TITLE}`;
 const DRAGGED_DP = 400;
 
 const calls = {

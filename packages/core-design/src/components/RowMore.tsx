@@ -1,11 +1,5 @@
 import { useMemo } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { Pressable, type StyleProp, type ViewStyle } from 'react-native';
 
 import { libraryList, libraryMix } from '../libraryRoles.ts';
 import { withAlpha } from '../theme.ts';
@@ -13,7 +7,7 @@ import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 import { Icon } from './Icon.tsx';
 
-const useStyles = createThemedStyles((theme) => ({
+const useStyles = createThemedStyles(() => ({
   more: {
     width: libraryList.moreWidth,
     height: minTouchTargetDp,
@@ -21,19 +15,15 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tint: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: withAlpha(theme.color.text, libraryMix.selectedRow),
-  },
 }));
 
 export interface RowMoreProps {
-  readonly title: string;
+  readonly subject: string;
   readonly onPress: () => void;
   readonly style?: StyleProp<ViewStyle>;
 }
 
-export function RowMore({ title, onPress, style }: RowMoreProps) {
+export function RowMore({ subject, onPress, style }: RowMoreProps) {
   const styles = useStyles();
   const theme = useTheme();
   const ripple = useMemo(
@@ -46,7 +36,7 @@ export function RowMore({ title, onPress, style }: RowMoreProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Actions for ${title}`}
+      accessibilityLabel={`Actions for ${subject}`}
       android_ripple={ripple}
       style={[styles.more, style]}
       onPress={onPress}
@@ -54,10 +44,4 @@ export function RowMore({ title, onPress, style }: RowMoreProps) {
       <Icon name="more" size="bar" color="text2" />
     </Pressable>
   );
-}
-
-export function MenuOpenTint({ radius }: { readonly radius: number }) {
-  const styles = useStyles();
-  const corner = useMemo(() => ({ borderRadius: radius }), [radius]);
-  return <View pointerEvents="none" style={[styles.tint, corner]} />;
 }

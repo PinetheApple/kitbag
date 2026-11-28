@@ -18,9 +18,11 @@ const fake = vi.hoisted(() => {
   return {
     openSetlistActions: vi.fn(),
     openSongActions: vi.fn(),
+    closeSongMenu: vi.fn(),
+    onEditPreset: vi.fn(),
     setlistMenu,
     songMenu,
-    songSheets: [] as Props[],
+    sheets: [] as Props[],
     results,
   };
 });
@@ -80,11 +82,18 @@ vi.mock('./SetlistsMenu.tsx', async (original) => ({
 }));
 vi.mock('./SongMenu.tsx', async (original) => ({
   ...(await original<Record<string, unknown>>()),
-  useSongMenu: () => ({ ...fake.songMenu, openActions: fake.openSongActions }),
-  SongMenuSheets: (props: Props) => {
-    fake.songSheets.push(props);
+  useSongMenu: () => ({
+    ...fake.songMenu,
+    openActions: fake.openSongActions,
+    close: fake.closeSongMenu,
+  }),
+}));
+vi.mock('./sheets.tsx', () => ({
+  ActionsSheet: (props: Props) => {
+    fake.sheets.push(props);
     return null;
   },
+  guarded: vi.fn(),
 }));
 
 const { SetlistsScreen } = await import('./SetlistsScreen.tsx');
@@ -101,6 +110,7 @@ function mount(): ReactTestRenderer {
         onOpenSetlist: vi.fn(),
         onOpenAllSongs: vi.fn(),
         onLoaded: vi.fn(),
+        onEditPreset: fake.onEditPreset,
       }),
     );
   });
@@ -137,7 +147,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   fake.setlistMenu = { open: { kind: 'none' } };
   fake.songMenu = { kind: 'none', target: null };
-  fake.songSheets = [];
+  fake.sheets = [];
   fake.results = null;
 });
 
@@ -173,7 +183,21 @@ describe('search results', () => {
     const target = { preset: song, itemId: null };
     expect(fake.openSongActions).toHaveBeenNthCalledWith(1, target);
     expect(fake.openSongActions).toHaveBeenNthCalledWith(2, target);
-    expect(fake.songSheets.at(-1)?.setlistId).toBeNull();
+  });
+
+  it('give a song result the no-set song sheet, whose Edit opens the editor', () => {
+    fake.songMenu = { kind: 'actions', target: { preset: song, itemId: null } };
+    searched();
+    const sheet = fake.sheets.findLast((s) => s.visible === true);
+    const actions = sheet?.actions as { label: string; onPress: () => void }[];
+    expect(actions.map((a) => a.label)).toEqual([
+      'Edit',
+      'Duplicate',
+      'Add to setlist',
+      'Delete song',
+    ]);
+    actions[0]?.onPress();
+    expect(fake.onEditPreset).toHaveBeenCalledWith(song.id);
   });
 
   it('tint the song result whose sheet is open', () => {

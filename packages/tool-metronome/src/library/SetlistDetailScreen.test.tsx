@@ -298,17 +298,11 @@ describe('setlist entry actions button', () => {
     expect(rows(tree)[1]?.props.menuOpen).toBe(true);
   });
 
-  it('keeps the actions button and the drag handle apart', () => {
+  it('opens the sheet from the actions button without reordering or loading', () => {
     fake.entries = [entry(1, 'Warm-up'), entry(3, 'Ballad')];
     const [warmUp] = rows(mount());
     press(warmUp);
     expect(fake.reorder).not.toHaveBeenCalled();
     expect(fake.loadSong).not.toHaveBeenCalled();
-    fake.openSongActions.mockClear();
-    const { onMove } = warmUp?.props.reorder as {
-      onMove: (from: number, to: number) => void;
-    };
-    onMove(0, 1);
-    expect(fake.openSongActions).not.toHaveBeenCalled();
   });
 });

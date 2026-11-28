@@ -60,7 +60,7 @@ function StandaloneRow(props: RowProps) {
       subtitle={subtitle}
       active={now}
       menuOpen={isSongTarget(props.menu, { preset, itemId: null })}
-      trailing={now ? <Badge tone="accent" label="NOW" /> : undefined}
+      badges={now ? <Badge tone="accent" label="NOW" /> : undefined}
       accessibilityLabel={`${preset.name}, ${subtitle}${now ? ', now loaded' : ''}`}
       onPress={load}
       onLongPress={actions}

@@ -128,6 +128,7 @@ describe('song-linked presets on metronome screens', () => {
         onOpenSetlist: ignore,
         onOpenAllSongs: ignore,
         onLoaded: ignore,
+        onEditPreset: ignore,
       }),
     );
     expect(markup).toContain('<output>1</output>');

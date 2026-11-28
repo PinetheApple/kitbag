@@ -53,7 +53,7 @@ export interface SetlistsScreenProps {
   readonly onOpenSetlist: (setlistId: number) => void;
   readonly onOpenAllSongs: () => void;
   readonly onLoaded: () => void;
-  readonly onEditPreset?: (presetId: number) => void;
+  readonly onEditPreset: (presetId: number) => void;
 }
 
 interface Menus {
@@ -97,7 +97,7 @@ function SetlistRow(props: SetlistRowProps) {
       active={onStage}
       menuOpen={isSetlistTarget(props.menu, setlist.id)}
       accessibilityLabel={`${setlist.name}${stage}, ${subtitle}`}
-      trailing={onStage ? <Badge tone="accent" label="ON STAGE" /> : undefined}
+      badges={onStage ? <Badge tone="accent" label="ON STAGE" /> : undefined}
       onPress={open}
       onLongPress={actions}
       onActions={actions}
