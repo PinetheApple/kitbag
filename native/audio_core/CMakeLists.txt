@@ -239,6 +239,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_grid_downbeats.cpp
     tools/rt/rt_publisher_verify.cpp
     tools/rt/stall_detector_test.cpp
+    tools/rt/suspended_clock_test.cpp
     ${KITBAG_METRONOME_SOURCES})
   target_include_directories(metronome_verify PRIVATE src include tools tools/metronome tools/rt)
   # metronome.cpp is compiled again here, outside kitbag_core's options.
