@@ -85,16 +85,29 @@ A detached signature over raw bytes avoids canonical-JSON rules.
   (`node_modules/metro-config/src/defaults/index.js`, lines 77–78) emits a bare
   `__r(id)`; the spike's output ends in one. The build therefore:
   - sets `globalPrefix = '__kbt_<id>_'`;
-  - wraps the output in a function whose `global` parameter is a per-tool object, so
-    the require polyfill's `__r`, `__c` and `__registerSegment` land there, not on
-    the host's global (**inferred**; proven in issue 4);
+  - wraps the output in a function whose `globalThis` and `global` parameters are a
+    per-tool scope object whose prototype is the host global, so the require
+    polyfill's `__r`, `__c`, `__registerSegment` and the prefixed `__d` land on the
+    scope, not on the host's global (issue 4 tests this against the spike's output);
   - sets a custom `getRunModuleStatement` that runs the entry through that object.
+
+  The scope also shadows `ErrorUtils` and `nativeRequire` (read by the require
+  polyfill) and the native entry points: `__turboModuleProxy`, `nativeModuleProxy`,
+  `__fbBatchedBridge`, core-native's HostObject key and the others listed in
+  `packages/app-shell/src/toolBuild/metroBundle.ts`. This is containment against
+  accidental collisions and casual access, not a sandbox: a tool can still reach the
+  host global through the scope's prototype or `Function('return this')()`. The
+  signature is the trust boundary.
 
   The loader keeps the spike's global snapshot
   (`packages/app-shell/src/spike/pluginLoader.ts`, `globalDescriptors`), but as a
   check: any change to the host global other than the registration call fails the
-  load and restores the snapshot. Issue 4 adds a build-time test that evaluates the
-  bundle in a fresh Hermes context and fails on any new global.
+  load and restores the snapshot. Issue 4's build evaluates the bundle, calls its
+  `register()` with a stub host, and fails on any new global or changed property
+  descriptor. That probe runs in a Node `vm` context on the JavaScript handed to
+  `hermesc`, not in Hermes: `hermes-compiler` ships only the compiler, no Hermes VM.
+  The JavaScript is the same, but Hermes's own globals are not, so the loader's
+  snapshot check stays.
 - **Shared-module map.** `resolver.resolveRequest` maps every allowlisted specifier
   (2.3) to a shim that reads the host's copy from the registration object, as the
   spike's `writeShims` does. Any other bare import fails the build.
@@ -208,7 +221,7 @@ Kotlin parses the exact bytes it verified, never a second read. Schema (JSON Sch
       "items": {
         "type": "object", "required": ["path", "sha256", "size"],
         "properties": {
-          "path": { "type": "string", "pattern": "^(bundle\\.hbc|assets/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*)$" },
+          "path": { "type": "string", "pattern": "^(bundle\\.hbc|assets(/[A-Za-z0-9_-][A-Za-z0-9._-]*)+)$" },
           "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
           "size": { "type": "integer", "minimum": 0 }
         }
@@ -450,7 +463,7 @@ done
 ```
 
 Each `.spki.b64` holds a 91-byte P-256 SubjectPublicKeyInfo, so it starts with
-`MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE`.
+`[REDACTED-SECRET-00f7c19c]`.
 
 Where each private key goes:
 
@@ -883,8 +896,8 @@ Ordered, one PR each against main. Estimates in agent-days.
 | 1 | Experience first | **Done**: approved by the owner 2026-11-27; `design/kitbag-tools.html` binds (§12). Any state this doc adds that the file lacks ("Install to open", the bridge notice, the fallback card) is added there before issue 8 | 0 | — |
 | 2 | Spike: open runtime questions | Hermes bytecode version readable from the host runtime and from `hermesc`; a mismatched `.hbc` fails with an error, not a crash; the JS-starved run repeated on the phone with a marker that proves the block ran | 1 | — |
 | 3 | Host surface v1 | `ToolHost` types in core-plugin-api; object in app-shell; `createToolStore` in core-state; worklet engine reads; lint zone for downloadable packages with pass/fail eval scenarios, including the realtime-into-store fail scenario; `hostApi` constant | 2–3 | 0 |
-| 4 | Tool build and signing scripts | `build-tool.sh`, `sign-tools.sh`, `tools-gate.sh` with `-h` and named exit codes; module-system globals rebound and a no-new-globals test that fails on the spike's output; OpenSSL-signed sample verified by the Kotlin verifier in a unit test, and a tampered byte rejected. Tests use `test-` keys only; real keys are the owner's (4.5). | 2–2.5 | 3 |
-| 5 | Native verifier and loader | Kotlin ECDSA and sha256 checks on the exact bytes; bytes handed to C++ once; bytecode version check; no path-based or unsigned eval; debug-only test key in the debug source set; unit tests for each rejection: bad signature, revoked key, wrong hash, extra file, duplicate entry, zip-slip, zip bomb, wrong bytecode, verify after rotation, a build signed by a retired key still loads; unit test that no `test-` key is in the `github` or `main` source sets. Tests use `test-` keys only; real keys are the owner's (4.5). | 2–3 | 2, 4 |
+| 4 | Tool build and signing scripts | `build-tool.sh`, `sign-tools.sh`, `tools-gate.sh` with `-h` and named exit codes; module-system globals rebound and a no-new-globals test that fails on the spike's output; OpenSSL-signed sample verified by a Node verifier, and a tampered byte rejected. Tests use `test-` keys only; real keys are the owner's (4.5). | 2–2.5 | 3 |
+| 5 | Native verifier and loader | Kotlin ECDSA and sha256 checks on the exact bytes; an OpenSSL-signed sample verified by the Kotlin verifier in a unit test, and a tampered byte rejected; manifest rules read from `packages/app-shell/tool-bundle-rules.json`, not retyped; bytes handed to C++ once; bytecode version check; no path-based or unsigned eval; debug-only test key in the debug source set; unit tests for each rejection: bad signature, revoked key, wrong hash, extra file, duplicate entry, zip-slip, zip bomb, wrong bytecode, verify after rotation, a build signed by a retired key still loads; unit test that no `test-` key is in the `github` or `main` source sets. Tests use `test-` keys only; real keys are the owner's (4.5). | 2–3 | 2, 4 |
 | 6 | `tool_data` table and backups | Migration to the next schema version with a seeded test keeping every row; repository; `toolData` root key in v5 files; a test that today's parser restores a file with `toolData` and ignores it; v4 and v5 restore tests still pass | 1.5–2 | — |
 | 7 | Installer | Embedded index verified, own-versionCode check, rollback refusal with tests, HTTPS-only redirect client with byte caps, retry, staging, atomic install, remove (data kept), delete data; no request while "Tool downloads" is off, tested; a test that kills the install midway and finds the old build intact and staging cleaned at start; offline state | 2–2.5 | 5 |
 | 8 | Registry and Tools screen | Installed tools in `HOME_TOOLS`; `/t/[tool]/[...path]` route; local catalogue, tool pages, Get/Add/Remove and states from `design/kitbag-tools.html`; "Tool downloads" switch off on a new install, turned on only from the opt-in screen (2a), off from Settings > Tools > Downloads with a confirm (2b) | 2–3 | 1, 3, 7 |
