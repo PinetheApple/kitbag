@@ -22,6 +22,8 @@ const SEMVER = new RegExp(patterns.semver);
 const SHA256 = new RegExp(patterns.sha256);
 const FILE_PATH = new RegExp(patterns.filePath);
 const ROUTE = new RegExp(patterns.route);
+const ROUTE_PREFIX = BUNDLE_RULES.routePrefix;
+const { runtimeFields } = BUNDLE_RULES;
 const {
   nameMax: NAME_MAX,
   summaryMax: SUMMARY_MAX,
@@ -110,26 +112,7 @@ export interface ToolKeys {
   readonly keys: readonly PinnedKey[];
 }
 
-const MANIFEST_KEYS = new Set([
-  'schema',
-  'id',
-  'name',
-  'version',
-  'icon',
-  'summary',
-  'hostApi',
-  'host',
-  'runtime',
-  'entry',
-  'files',
-  'size',
-  'routes',
-  'homeTile',
-  'capabilities',
-  'requires',
-  'changelog',
-  'signature',
-]);
+const MANIFEST_KEYS = new Set<string>(BUNDLE_RULES.manifestFields);
 
 type Json = Readonly<Record<string, unknown>>;
 
@@ -204,12 +187,12 @@ function checkFiles(files: unknown, problems: Problems): number | undefined {
 }
 
 function checkRoutes(m: Json, problems: Problems): void {
-  const prefix = `/t/${String(m.id)}`;
+  const prefix = `${ROUTE_PREFIX}${String(m.id)}`;
   const routes = m.routes;
   if (
     !problems.check(
       isTextList(routes, ROUTE) && routes.length > 0,
-      'routes must hold at least one /t/ route',
+      `routes must hold at least one ${ROUTE_PREFIX} route`,
     )
   ) {
     return;
@@ -289,13 +272,10 @@ function checkCompatibility(m: Json, problems: Problems): void {
   );
   problems.check(
     isJsonObject(runtime) &&
-      isInt(runtime.hermesBytecodeVersion, 0) &&
-      [
-        runtime.reactNative,
-        runtime.react,
-        runtime.reanimated,
-        runtime.worklets,
-      ].every((v) => isText(v)),
+      isInt(runtime[runtimeFields.bytecodeVersion], 0) &&
+      Object.keys(runtimeFields.packages).every((field) =>
+        isText(runtime[field]),
+      ),
     'runtime needs the bytecode version and the React Native, React, Reanimated and worklets versions',
   );
 }

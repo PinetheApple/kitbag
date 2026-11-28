@@ -16,6 +16,7 @@ class KitbagCorePackage : BaseReactPackage() {
       NativeKitbagLibrarySpec.NAME -> KitbagLibraryModule(reactContext)
       NativeKitbagStemDeckSpec.NAME -> KitbagStemDeckModule(reactContext)
       NativeKitbagMediaSessionsSpec.NAME -> KitbagMediaSessionsModule(reactContext)
+      NativeKitbagToolsSpec.NAME -> KitbagToolsModule(reactContext)
       else -> null
     }
 
@@ -26,6 +27,7 @@ class KitbagCorePackage : BaseReactPackage() {
         NativeKitbagLibrarySpec.NAME to KitbagLibraryModule::class.java,
         NativeKitbagStemDeckSpec.NAME to KitbagStemDeckModule::class.java,
         NativeKitbagMediaSessionsSpec.NAME to KitbagMediaSessionsModule::class.java,
+        NativeKitbagToolsSpec.NAME to KitbagToolsModule::class.java,
       ).associate { (name, type) -> name to turboModule(name, type) }
     }
 
