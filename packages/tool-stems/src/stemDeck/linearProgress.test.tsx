@@ -1,7 +1,7 @@
 import { asPercent, LinearProgress } from '@kitbag/core-design';
 import { describe, expect, it, vi } from 'vitest';
 
-import { AccessibilityInfo } from '../testing/reactNativeHosts.ts';
+import { AccessibilityInfo } from '@kitbag/core-state/src/testing/reactNativeHosts.ts';
 import { mount } from './stemDeckHarness.test-helper.tsx';
 
 const RESTING_START = asPercent(0.28);
