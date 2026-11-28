@@ -1,0 +1,21 @@
+appId: com.kitbag.app
+name: '#609: the click-sound rename sheet, opened again and again, shows its card with the name field focused'
+tags:
+  - issue-609
+env:
+  ITERATIONS: 50
+---
+- runFlow: ../../subflows/import-click-sound.yaml
+- evalScript: ${output.iteration = 0}
+- repeat:
+    times: ${ITERATIONS}
+    commands:
+      - evalScript: ${output.iteration = output.iteration + 1}
+      - tapOn: 'Options for ${FIXTURE_SOUND}'
+      - tapOn: 'Rename'
+      - assertVisible:
+          label: 'Rename field focused, ${output.iteration} of ${ITERATIONS}'
+          text: 'New name for ${FIXTURE_SOUND}'
+          focused: true
+      - tapOn: 'Cancel'
+      - assertNotVisible: 'New name for ${FIXTURE_SOUND}'

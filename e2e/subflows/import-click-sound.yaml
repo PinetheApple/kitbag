@@ -1,0 +1,14 @@
+appId: com.kitbag.app
+---
+- runFlow: launch-fresh.yaml
+- runFlow: open-metronome-first-time.yaml
+- tapOn: 'Practice tools(, \d+ on)?'
+- tapOn: 'Accent sound, Tick'
+- tapOn: 'Import a sound'
+- runFlow:
+    file: pick-download.yaml
+    env:
+      FILE: '${FIXTURE_SOUND}.wav'
+- extendedWaitUntil:
+    visible: '${FIXTURE_SOUND}, your sound'
+    timeout: 20000
