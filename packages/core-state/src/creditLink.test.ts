@@ -1,7 +1,7 @@
-import { BPM_SOURCE_CREDIT } from '@kitbag/core-state';
 import { expect, it } from 'vitest';
 
 import { creditLinkText } from './creditLink.ts';
+import { BPM_SOURCE_CREDIT } from './tempoLadder/sources.ts';
 
 it.each([
   ['https://getsongbpm.com', 'getsongbpm.com'],

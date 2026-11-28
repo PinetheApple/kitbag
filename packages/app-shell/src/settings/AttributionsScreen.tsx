@@ -1,6 +1,5 @@
 import { EditGroup, EditRow, EditValue } from '@kitbag/core-design';
-import type { SourceCredit } from '@kitbag/core-state';
-import { creditLinkText } from '@kitbag/tool-sync';
+import { creditLinkText, type SourceCredit } from '@kitbag/core-state';
 import { useCallback } from 'react';
 
 import { ATTRIBUTIONS, BPM_CREDITS } from './attributions.ts';

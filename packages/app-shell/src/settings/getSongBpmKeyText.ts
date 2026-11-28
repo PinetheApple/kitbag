@@ -1,5 +1,8 @@
-import { BPM_SOURCE_CREDIT, hasGetSongBpmKey } from '@kitbag/core-state';
-import { creditLinkText } from '@kitbag/tool-sync';
+import {
+  BPM_SOURCE_CREDIT,
+  creditLinkText,
+  hasGetSongBpmKey,
+} from '@kitbag/core-state';
 
 export const GET_SONG_BPM_KEY_LABEL = 'GetSongBPM key';
 export const KEY_SET = 'Set';

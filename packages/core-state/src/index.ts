@@ -255,7 +255,9 @@ export {
   type ToolSwitch,
   type ToolSwitchResult,
 } from './tools/switches.ts';
+export { PLAY_ALONG_NAME } from './tools/names.ts';
 export { createToolStore } from './toolStore/createToolStore.ts';
+export { creditLinkText } from './creditLink.ts';
 export { useAppearance } from './appearance/useAppearance.ts';
 export { useGetSongBpmKey } from './getSongBpmKey/useGetSongBpmKey.ts';
 export {
