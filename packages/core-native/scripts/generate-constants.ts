@@ -1,4 +1,4 @@
-// --check byte-diffs a fresh render against the committed .gen.ts, so a header
+// --check byte-diffs a fresh render against the committed outputs, so a header
 // change or a hand edit fails CI instead of shipping (SPEC §13.7).
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -9,11 +9,18 @@ import {
   renderConstants,
   type NativeSources,
 } from './native-constants.ts';
+import { renderToolRulesKotlin } from './tool-rules-kotlin.ts';
 
 const pkgRoot = join(import.meta.dirname, '..');
 const repoRoot = join(pkgRoot, '..', '..');
 const nativeRoot = join(repoRoot, 'native', 'audio_core');
-const outFile = join(pkgRoot, 'src', 'generated', 'nativeConstants.gen.ts');
+const kotlinRoot = join(pkgRoot, 'android/src/main/java/com/kitbag/corenative');
+const rulesFile = join(
+  repoRoot,
+  'packages',
+  'app-shell',
+  'tool-bundle-rules.json',
+);
 
 const read = (...parts: string[]): string =>
   readFileSync(join(nativeRoot, ...parts), 'utf8');
@@ -36,33 +43,49 @@ const sources: NativeSources = {
   constantTempoHeader: read('include', 'kitbag_constant_tempo_api.h'),
   metronomeSlotHeader: read('include', 'kitbag_metronome_slot_api.h'),
   outputRoutes: readFileSync(
-    join(
-      pkgRoot,
-      'android/src/main/java/com/kitbag/corenative/route/OutputRoutes.kt',
-    ),
+    join(kotlinRoot, 'route', 'OutputRoutes.kt'),
+    'utf8',
+  ),
+  toolEvalHeader: readFileSync(
+    join(pkgRoot, 'cpp', 'KitbagToolEval.h'),
     'utf8',
   ),
 };
 
-const rendered = renderConstants(collectConstants(sources));
-const check = process.argv.includes('--check');
+const outputs: readonly (readonly [string, string])[] = [
+  [
+    join(pkgRoot, 'src', 'generated', 'nativeConstants.gen.ts'),
+    renderConstants(collectConstants(sources)),
+  ],
+  [
+    join(kotlinRoot, 'tools', 'ToolBundleRules.gen.kt'),
+    renderToolRulesKotlin(readFileSync(rulesFile, 'utf8')),
+  ],
+];
 
-if (check) {
-  let current = '';
+function readOrEmpty(file: string): string {
   try {
-    current = readFileSync(outFile, 'utf8');
+    return readFileSync(file, 'utf8');
   } catch {
-    current = '';
+    return '';
   }
-  if (current !== rendered) {
-    process.stderr.write(
-      `stale: ${outFile} does not match the engine source.\n` +
-        'Run: pnpm --filter @kitbag/core-native generate\n',
-    );
+}
+
+if (process.argv.includes('--check')) {
+  const stale = outputs.filter(
+    ([file, rendered]) => readOrEmpty(file) !== rendered,
+  );
+  for (const [file] of stale) {
+    process.stderr.write(`stale: ${file} does not match its source.\n`);
+  }
+  if (stale.length > 0) {
+    process.stderr.write('Run: pnpm --filter @kitbag/core-native generate\n');
     process.exit(1);
   }
-  process.stdout.write('nativeConstants.gen.ts is up to date.\n');
+  process.stdout.write('generated constants are up to date.\n');
 } else {
-  writeFileSync(outFile, rendered);
-  process.stdout.write(`wrote ${outFile}\n`);
+  for (const [file, rendered] of outputs) {
+    writeFileSync(file, rendered);
+    process.stdout.write(`wrote ${file}\n`);
+  }
 }

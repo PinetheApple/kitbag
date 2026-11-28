@@ -21,6 +21,11 @@ export interface TunerField {
   readonly scale: number;
 }
 
+export interface StringConstant {
+  readonly name: string;
+  readonly value: string;
+}
+
 export interface FixedOutputRoute {
   readonly id: string;
   readonly kind: string;
@@ -65,6 +70,7 @@ export interface NativeSources {
   /** native/audio_core/include/kitbag_metronome_slot_api.h — kb_metronome_slot. */
   readonly metronomeSlotHeader: string;
   readonly outputRoutes: string;
+  readonly toolEvalHeader: string;
 }
 
 export interface NativeConstants {
@@ -128,4 +134,6 @@ export interface NativeConstants {
     readonly default: number;
   };
   readonly tunerIdleSleepMicros: number;
+  readonly evalVerifiedToolKey: string;
+  readonly toolErrors: readonly StringConstant[];
 }

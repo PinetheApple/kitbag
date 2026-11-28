@@ -2,6 +2,8 @@ import {
   parseConstexprDouble,
   parseConstexprFloat,
   parseConstexprInt,
+  parseCString,
+  parseCStringConstants,
   parseConstexprIntArray,
   parseDefineInt,
   parseDefineNumber,
@@ -178,5 +180,10 @@ export function collectConstants(sources: NativeSources): NativeConstants {
       sources.tunerImplHeader,
       'kIdleSleepMicros',
     ),
+    evalVerifiedToolKey: parseCString(
+      sources.toolEvalHeader,
+      'kEvalVerifiedToolKey',
+    ),
+    toolErrors: parseCStringConstants(sources.toolEvalHeader, 'kToolError'),
   };
 }

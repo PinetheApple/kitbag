@@ -1,4 +1,4 @@
-// GENERATED — DO NOT EDIT. Owners: native/audio_core, OutputRoutes.kt (SPEC §13.7).
+// GENERATED — DO NOT EDIT. Owners: native/audio_core, OutputRoutes.kt, cpp/KitbagToolEval.h (SPEC §13.7).
 // Regenerate: pnpm --filter @kitbag/core-native generate
 // Verify (CI drift guard): pnpm --filter @kitbag/core-native generate:check
 //
@@ -307,3 +307,18 @@ export const KB_WRONG_STRING = {
   KB_WRONG_STRING_ABOVE: 2,
 } as const;
 export type KB_WRONG_STRING = (typeof KB_WRONG_STRING)[keyof typeof KB_WRONG_STRING];
+
+/** The JSI global that evaluates a verified tool by id (kEvalVerifiedToolKey). */
+export const KB_EVAL_VERIFIED_TOOL_KEY = '__kitbagEvalVerifiedTool';
+
+/** Codes __kitbagEvalVerifiedTool throws as "<code>: tool:<id> <detail>" (kToolError*). */
+export const KB_TOOL_ERROR = {
+  argument: 'E_TOOL_ARGUMENT',
+  notVerified: 'E_TOOL_NOT_VERIFIED',
+  runtimeVersion: 'E_TOOL_RUNTIME_VERSION',
+  notBytecode: 'E_TOOL_NOT_BYTECODE',
+  manifestVersion: 'E_TOOL_MANIFEST_VERSION',
+  bytecodeVersion: 'E_TOOL_BYTECODE_VERSION',
+  eval: 'E_TOOL_EVAL',
+} as const;
+export type KB_TOOL_ERROR = (typeof KB_TOOL_ERROR)[keyof typeof KB_TOOL_ERROR];

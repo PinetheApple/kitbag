@@ -1,5 +1,7 @@
 import { crc32, deflateRawSync, inflateRawSync } from 'node:zlib';
 
+import { BUNDLE_RULES } from './bundleRules.ts';
+
 export interface ZipEntry {
   readonly name: string;
   readonly data: Buffer;
@@ -19,9 +21,7 @@ const DEFLATED = 8;
 // Fixed timestamps, so a rebuild writes the same bytes.
 const DOS_MIDNIGHT = 0;
 const DOS_1980_01_01 = 0x21;
-const MIB = 1_048_576;
-const MAX_INFLATED_MIB = 64;
-export const MAX_INFLATED_BYTES = MAX_INFLATED_MIB * MIB;
+export const MAX_INFLATED_BYTES = BUNDLE_RULES.limits.inflatedMaxBytes;
 
 type Width = typeof U16 | typeof U32;
 type Layout = readonly (readonly [string, Width])[];

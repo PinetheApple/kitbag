@@ -19,7 +19,7 @@ export interface Signed {
   readonly keyId: string;
 }
 
-const { roles, statuses, signingStatuses } = BUNDLE_RULES.keys;
+const { roles, statuses, signingStatuses, toolRole } = BUNDLE_RULES.keys;
 
 function isOneOf<T extends string>(
   value: unknown,
@@ -47,7 +47,7 @@ function pinProblems(pin: unknown, seen: Set<string>): string[] {
     isOneOf(role, roles),
     `${label}: role must be one of ${roles.join(', ')}`,
   );
-  if (role === 'tools') {
+  if (role === toolRole) {
     problems.check(
       isOneOf(status, statuses),
       `${label}: a tool key needs a status of ${statuses.join(', ')}`,
@@ -93,7 +93,7 @@ export function verifySigned(
   const key = keys.find(
     (k) =>
       k.keyId === keyId &&
-      k.role === 'tools' &&
+      k.role === toolRole &&
       isOneOf(k.status, signingStatuses),
   );
   if (key === undefined) {

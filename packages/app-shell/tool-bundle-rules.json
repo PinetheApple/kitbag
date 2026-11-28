@@ -8,7 +8,8 @@
     "assetsDir": "assets",
     "index": "tools-index.json",
     "indexSig": "tools-index.json.sig",
-    "kbtExtension": ".kbt"
+    "kbtExtension": ".kbt",
+    "keyPins": "tool-keys.json"
   },
   "patterns": {
     "id": "^[a-z][a-z0-9-]{1,31}$",
@@ -18,14 +19,37 @@
     "filePath": "^(bundle\\.hbc|assets(/[A-Za-z0-9_-][A-Za-z0-9._-]*)+)$",
     "route": "^/t/[a-z][a-z0-9-]{1,31}(/[A-Za-z0-9\\[\\]._-]+)*$"
   },
+  "routePrefix": "/t/",
+  "manifestFields": [
+    "schema",
+    "id",
+    "name",
+    "version",
+    "icon",
+    "summary",
+    "hostApi",
+    "host",
+    "runtime",
+    "entry",
+    "files",
+    "size",
+    "routes",
+    "homeTile",
+    "capabilities",
+    "requires",
+    "changelog",
+    "signature"
+  ],
   "limits": {
     "nameMax": 40,
     "summaryMax": 80,
     "changelogMax": 500,
-    "labelMax": 40
+    "labelMax": 40,
+    "inflatedMaxBytes": 67108864
   },
   "keys": {
     "testPrefix": "test-",
+    "toolRole": "tools",
     "roles": [
       "tools",
       "revocation"

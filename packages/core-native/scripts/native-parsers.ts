@@ -2,6 +2,7 @@ import type {
   EnumMember,
   FixedOutputRoute,
   RangeBound,
+  StringConstant,
   TunerField,
   TunerFields,
 } from './native-types.ts';
@@ -229,4 +230,29 @@ export function parseFixedOutputRoutes(
       routes.push({ id: id ?? '', kind: (kind ?? '').toLowerCase() });
   if (routes.length === 0) fail('Family entries keyed FIXED');
   return routes;
+}
+
+const C_STRING = String.raw`inline\s+constexpr\s+const\s+char\*\s+`;
+const C_STRING_VALUE = String.raw`\s*=\s*"([^"]*)"\s*;`;
+
+export function parseCStringConstants(
+  source: string,
+  prefix: string,
+): StringConstant[] {
+  const pattern = new RegExp(
+    `${C_STRING}${prefix}(\\w+)${C_STRING_VALUE}`,
+    'g',
+  );
+  const found = [...source.matchAll(pattern)].map((match) => ({
+    name: match[1] ?? '',
+    value: match[2] ?? '',
+  }));
+  if (found.length === 0) fail(`string constants ${prefix}*`);
+  return found;
+}
+
+export function parseCString(source: string, name: string): string {
+  const match = new RegExp(`${C_STRING}${name}${C_STRING_VALUE}`).exec(source);
+  if (match?.[1] === undefined) fail(`string constant ${name}`);
+  return match[1];
 }
