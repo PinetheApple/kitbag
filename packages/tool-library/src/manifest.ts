@@ -1,7 +1,5 @@
 import type { CompiledToolManifest } from '@kitbag/core-plugin-api';
 
-const NAME = 'Songs';
-
 const ROUTES = {
   home: '/library',
   song: '/library/[id]',
@@ -9,9 +7,8 @@ const ROUTES = {
 
 export const manifest = {
   id: 'library',
-  name: NAME,
+  name: 'Songs',
   icon: 'songs',
   routes: ROUTES,
-  homeTile: { label: NAME, route: ROUTES.home },
   summary: 'Imported songs, beats analyzed',
 } as const satisfies CompiledToolManifest;

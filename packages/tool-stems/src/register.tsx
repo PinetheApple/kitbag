@@ -21,6 +21,7 @@ export interface StemsPlugin extends ToolPlugin {
 }
 
 export function register(host: StemsHost): StemsPlugin {
+  const { id, name, icon } = manifest;
   function StemPlayer(props: StemPlayerScreenProps) {
     return (
       <StemsHostContext.Provider value={host}>
@@ -29,9 +30,9 @@ export function register(host: StemsHost): StemsPlugin {
     );
   }
   return {
-    id: manifest.id,
-    name: manifest.name,
-    icon: manifest.icon,
+    id,
+    name,
+    icon,
     routes: [
       { path: manifest.routes.stemSet, screen: StemPlayer },
       { path: manifest.routes.stemDeck, screen: ConnectScreen },

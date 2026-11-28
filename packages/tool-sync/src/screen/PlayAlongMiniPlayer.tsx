@@ -1,4 +1,5 @@
 import { MiniPlayerBar } from '@kitbag/core-design';
+import type { MiniPlayerProps } from '@kitbag/core-plugin-api';
 import type { PlayAlongLock } from '@kitbag/core-state';
 
 import { manifest } from '../manifest.ts';
@@ -12,11 +13,6 @@ import { useLastSeen } from './useLastSeen.ts';
 import { usePlayAlongProgress } from './usePlayAlongProgress.ts';
 import { usePlayingValue } from './usePlayingValue.ts';
 
-export interface PlayAlongMiniPlayerProps {
-  readonly bottomInset: number;
-  readonly onOpen: () => void;
-}
-
 export function usePlayAlongMiniShown(): boolean {
   return usePlayAlong((s) => s.lock !== undefined);
 }
@@ -27,7 +23,7 @@ export function useLockedSubtext(): string | undefined {
   return locked ? lockedSubtext(appLabel) : undefined;
 }
 
-interface LockedProps extends PlayAlongMiniPlayerProps {
+interface LockedProps extends MiniPlayerProps {
   readonly lock: PlayAlongLock;
 }
 
@@ -58,7 +54,7 @@ function LockedMiniPlayer({ lock, bottomInset, onOpen }: LockedProps) {
   );
 }
 
-export function PlayAlongMiniPlayer(props: PlayAlongMiniPlayerProps) {
+export function PlayAlongMiniPlayer(props: MiniPlayerProps) {
   const lock = usePlayAlong((s) => s.lock);
   return lock === undefined ? null : (
     <LockedMiniPlayer lock={lock} {...props} />

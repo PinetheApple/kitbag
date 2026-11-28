@@ -20,21 +20,22 @@ export interface MediaSessionContribution {
 
 export interface SyncPlugin extends ToolPlugin {
   readonly miniPlayer: MiniPlayerContribution;
-  readonly homeSubtext: HomeSubtextContribution;
+  readonly useHomeSubtext: HomeSubtextContribution;
   readonly mediaSession: MediaSessionContribution;
 }
 
 export function register(): SyncPlugin {
+  const { id, name, icon } = manifest;
   return {
-    id: manifest.id,
-    name: manifest.name,
-    icon: manifest.icon,
+    id,
+    name,
+    icon,
     routes: [{ path: manifest.routes.home, screen: PlayAlongScreen }],
     miniPlayer: {
       Player: PlayAlongMiniPlayer,
       useShown: usePlayAlongMiniShown,
     },
-    homeSubtext: useLockedSubtext,
+    useHomeSubtext: useLockedSubtext,
     mediaSession: { choose: chooseSession },
   };
 }

@@ -25,13 +25,12 @@ export interface CompiledToolManifest {
   readonly name: string;
   readonly icon: IconName;
   readonly routes: { readonly home: string } & Readonly<Record<string, string>>;
-  readonly homeTile: HomeTileDescriptor;
   readonly summary?: string;
 }
 
 export type SettingsSchema = Readonly<Record<string, unknown>>;
 
-// Placeholder shapes: the work that first renders each contribution fixes it.
+// Placeholder shape: the work that first renders the Settings section fixes it.
 export type SettingsSectionContribution = PluginScreen;
 
 export interface MiniPlayerProps {
@@ -56,7 +55,7 @@ export interface ToolPlugin {
   readonly settingsSchema?: SettingsSchema;
   readonly requires?: readonly string[];
   readonly miniPlayer?: MiniPlayerContribution;
-  readonly homeSubtext?: HomeSubtextContribution;
+  readonly useHomeSubtext?: HomeSubtextContribution;
   readonly settingsSection?: SettingsSectionContribution;
   readonly metronomeEntry?: MetronomeEntryDescriptor;
 }
@@ -143,25 +142,29 @@ export interface ToolListening<Notice = unknown, LeftSetlist = unknown> {
   readonly QueueSheet: ComponentType<QueueSheetProps<Notice, LeftSetlist>>;
 }
 
-// Generic over core-native's count-in bars and core-state's PolyRatio and custom sound view.
-export interface ToolMetronome<
-  CountInBars = never,
-  PolyRatio = never,
-  CustomSoundView = unknown,
-> {
-  readonly countInLabel: (bars: CountInBars) => string;
-  readonly polyRatioLabel: (ratio: PolyRatio) => string;
-  readonly useCustomSoundViews: () => readonly CustomSoundView[];
+export interface PolyRatio {
+  readonly polyBeats: number;
+  readonly against: number;
+  readonly beatsPerBar: number;
 }
 
-export interface ToolHost<
-  Listening = ToolListening,
-  Metronome = ToolMetronome,
-> {
+export interface MetronomeCustomSound {
+  readonly id: number;
+  readonly sound: { readonly name: string };
+  readonly available: boolean;
+}
+
+export interface ToolMetronome {
+  readonly countInLabel: (bars: number) => string;
+  readonly polyRatioLabel: (ratio: PolyRatio) => string;
+  readonly useCustomSoundViews: () => readonly MetronomeCustomSound[];
+}
+
+export interface ToolHost<Listening = ToolListening> {
   readonly engine: ToolEngine;
   readonly store: ToolStoreFactory;
   readonly listening: Listening;
-  readonly metronome: Metronome;
+  readonly metronome: ToolMetronome;
 }
 
 export type RegisterTool = (host: ToolHost) => ToolPlugin;

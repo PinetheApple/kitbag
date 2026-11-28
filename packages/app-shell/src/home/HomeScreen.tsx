@@ -24,12 +24,13 @@ import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useCompiledTools } from '@/tools/compiledToolsContext';
+
 import { MovePausedBanner } from '../dataFolder/MovePausedBanner.tsx';
 import { DockedMiniPlayer } from '../miniPlayer/DockedMiniPlayer.tsx';
 import { useAnyMiniPlayerDocked } from '../miniPlayer/useMiniPlayerDocked.ts';
 import { useQueueSheet } from '../queue/useQueueSheet.tsx';
 import { useSettingsRoutes } from '../settings/settingsRoutes.ts';
-import { useCompiledTools } from '../tools/compiledToolsContext.ts';
 import { ArrangeSheet } from './ArrangeSheet.tsx';
 import { MoreToolsRow } from './MoreToolsRow.tsx';
 import { MoreToolsSheet, type MoreToolsItem } from './MoreToolsSheet.tsx';
@@ -98,10 +99,10 @@ function useMetronomeSummary(): MetronomeSummary {
 function useLiveText(practice: string): Readonly<Record<string, LiveText>> {
   const metronome = useMetronomeSummary();
   const tools = useCompiledTools();
-  const tuning = tools.tuner.homeSubtext();
+  const tuning = tools.tuner.useHomeSubtext();
   const libraryRows = useSongLibrary((s) => s.rows);
   const libraryFailed = useSongLibrary((s) => s.failed);
-  const playAlong = tools.sync.homeSubtext() ?? PLAY_ALONG_SUBTEXT;
+  const playAlong = tools.sync.useHomeSubtext() ?? PLAY_ALONG_SUBTEXT;
   return useMemo(() => {
     const library = summarize(libraryRows);
     const songs = libraryFailed

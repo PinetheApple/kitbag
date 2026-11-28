@@ -5,11 +5,8 @@ import {
   type LoggedSettings,
 } from '@kitbag/core-db';
 import { countLabel, subdivisionName } from '@kitbag/core-design';
-import {
-  KB_COUNT_IN_OFF,
-  KB_RAMP_UNIT,
-  type KbCountInBars,
-} from '@kitbag/core-native';
+import { KB_COUNT_IN_OFF, KB_RAMP_UNIT } from '@kitbag/core-native';
+import type { ToolMetronome } from '@kitbag/core-plugin-api';
 import {
   effectivePolyAgainst,
   formatClockSeconds,
@@ -24,9 +21,9 @@ import {
 import { SEPARATOR } from '../settings/separator.ts';
 import { bpmText } from './historyText.ts';
 
-type CustomSounds = Parameters<typeof soundChipLabel>[1];
+export type CustomSounds = Parameters<typeof soundChipLabel>[1];
 
-export type CountInLabel = (bars: KbCountInBars) => string;
+export type CountInLabel = ToolMetronome['countInLabel'];
 
 const RAMP_UNIT_WORDS: Readonly<Record<number, readonly [string, string]>> = {
   [KB_RAMP_UNIT.KB_RAMP_BARS]: ['bar', 'bars'],

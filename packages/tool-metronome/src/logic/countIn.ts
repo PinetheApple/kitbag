@@ -1,9 +1,5 @@
 import { countLabel } from '@kitbag/core-design';
-import {
-  KB_COUNT_IN_BARS,
-  KB_COUNT_IN_OFF,
-  type KbCountInBars,
-} from '@kitbag/core-native';
+import { KB_COUNT_IN_BARS, KB_COUNT_IN_OFF } from '@kitbag/core-native';
 
 const OFF_LABEL = 'Off';
 
@@ -19,7 +15,7 @@ export function countInMode(distinct: boolean): CountInMode {
   return distinct ? COUNT_IN_MODE.distinct : COUNT_IN_MODE.same;
 }
 
-export function countInLabel(bars: KbCountInBars): string {
+export function countInLabel(bars: number): string {
   if (bars === KB_COUNT_IN_OFF) return OFF_LABEL;
   return countLabel(bars, 'bar', 'bars');
 }

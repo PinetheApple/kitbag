@@ -6,7 +6,7 @@ import { manifest } from './manifest.ts';
 import { TunerScreen } from './screen/TunerScreen.tsx';
 
 export interface TunerPlugin extends ToolPlugin {
-  readonly homeSubtext: () => string;
+  readonly useHomeSubtext: () => string;
 }
 
 function useTuningSubtext(): string {
@@ -14,11 +14,12 @@ function useTuningSubtext(): string {
 }
 
 export function register(): TunerPlugin {
+  const { id, name, icon } = manifest;
   return {
-    id: manifest.id,
-    name: manifest.name,
-    icon: manifest.icon,
+    id,
+    name,
+    icon,
     routes: [{ path: manifest.routes.home, screen: TunerScreen }],
-    homeSubtext: useTuningSubtext,
+    useHomeSubtext: useTuningSubtext,
   };
 }

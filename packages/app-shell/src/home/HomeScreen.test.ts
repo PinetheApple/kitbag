@@ -91,10 +91,10 @@ vi.mock('@kitbag/core-state', async (original) => {
   };
 });
 
-vi.mock('../tools/compiledToolsContext.ts', () => ({
+vi.mock('@/tools/compiledToolsContext', () => ({
   useCompiledTools: () => ({
-    tuner: { homeSubtext: () => 'Standard' },
-    sync: { homeSubtext: () => home.lockedSubtext },
+    tuner: { useHomeSubtext: () => 'Standard' },
+    sync: { useHomeSubtext: () => home.lockedSubtext },
   }),
 }));
 

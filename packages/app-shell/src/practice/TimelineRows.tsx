@@ -13,9 +13,8 @@ import {
 } from '@kitbag/core-state';
 import { Text, View } from 'react-native';
 
-import type { CompiledTools } from '@/compiledTools';
+import { useCompiledTools } from '@/tools/compiledToolsContext';
 
-import { useCompiledTools } from '../tools/compiledToolsContext.ts';
 import { CLICK_ONLY } from './historyText.ts';
 import {
   pauseText,
@@ -23,6 +22,7 @@ import {
   positionText,
   stretchBadges,
   type CountInLabel,
+  type CustomSounds,
   stretchFacts,
 } from './timelineText.ts';
 
@@ -104,10 +104,6 @@ const useStyles = createThemedStyles((theme) => ({
 }));
 
 export type SetlistSize = (setlistUuid: string) => number | undefined;
-
-type CustomSounds = ReturnType<
-  CompiledTools['host']['metronome']['useCustomSoundViews']
->;
 
 function StretchRow({
   entry,

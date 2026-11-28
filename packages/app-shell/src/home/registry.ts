@@ -39,7 +39,8 @@ function manifestEntry(
   manifest: CompiledToolManifest & { readonly icon: IconName },
   layout: HomeLayout,
 ): HomeToolEntry {
-  const { id, name, icon, routes, homeTile } = manifest;
+  const { id, name, icon, routes } = manifest;
+  const homeTile = { label: name, route: routes.home };
   const entry = { id, name, icon, routes: routesOf(routes), homeTile, layout };
   return manifest.summary === undefined
     ? entry

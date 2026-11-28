@@ -1,7 +1,5 @@
 import type { CompiledToolManifest } from '@kitbag/core-plugin-api';
 
-const NAME = 'Stem songs';
-
 const ROUTES = {
   home: '/stems',
   stemSet: '/stems/[id]',
@@ -13,9 +11,8 @@ const ROUTES = {
 
 export const manifest = {
   id: 'stems',
-  name: NAME,
+  name: 'Stem songs',
   icon: 'stems',
   routes: ROUTES,
-  homeTile: { label: NAME, route: ROUTES.home },
   summary: 'Mix and loop imported stems',
 } as const satisfies CompiledToolManifest;
