@@ -56,6 +56,7 @@ import {
   type BundleTempo,
   type StoredTempo,
 } from './stem-tempo';
+import { deleteSong, restoreSong, type DeletedSong } from './song-deletion';
 import { saveSongSpeed } from './song-speed';
 import { saveTempoCorrection } from './song-tempo-correction';
 import { tempoCorrectionOf, type TempoCorrection } from './tempo-correction';
@@ -361,20 +362,6 @@ async function listOutdatedAnalyses(
   return rows.map(({ id }) => id);
 }
 
-async function deleteSong(
-  db: Database,
-  id: number,
-): Promise<SongFiles | undefined> {
-  const [row] = await db.select(songFiles).from(songs).where(eq(songs.id, id));
-  if (row === undefined) return undefined;
-  await db
-    .update(songPresets)
-    .set({ librarySongId: null })
-    .where(eq(songPresets.librarySongId, id));
-  await db.delete(songs).where(eq(songs.id, id));
-  return row;
-}
-
 async function listSongFiles(db: Database) {
   return db
     .select({
@@ -434,6 +421,8 @@ export function createSongLibraryRepository({
     applyAnalysis: (result: AnalysisResultRecord) =>
       transaction(() => applyAnalysis(db, result)),
     deleteSong: (id: number) => transaction(() => deleteSong(db, id)),
+    restoreSong: (deleted: DeletedSong) =>
+      transaction(() => restoreSong(db, deleted)),
     deleteStemSet: (id: number) => transaction(() => deleteStemSet(db, id)),
     findStemSetByJobId: (jobId: string) =>
       serial(() => findStemSetByJobId(db, jobId)),

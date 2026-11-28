@@ -21,6 +21,7 @@ export interface SoundPickerSheetProps<R extends string> {
   readonly options: readonly PickerOption<string>[];
   readonly selected: string;
   readonly children?: ReactNode;
+  readonly notice?: ReactNode;
   readonly onRole: (role: R) => void;
   readonly onPick: (id: number) => void;
   readonly onDismiss: () => void;
@@ -36,6 +37,7 @@ export function SoundPickerSheet<R extends string>({
   options,
   selected,
   children,
+  notice,
   onRole,
   onPick,
   onDismiss,
@@ -54,6 +56,7 @@ export function SoundPickerSheet<R extends string>({
       hint={hint}
       dismissLabel="Close click sound"
       bottomInset={bottomInset}
+      notice={notice}
       onDismiss={onDismiss}
     >
       <SegmentedControl

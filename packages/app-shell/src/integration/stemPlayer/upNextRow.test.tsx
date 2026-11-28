@@ -20,7 +20,7 @@ import {
 import { plain } from '@kitbag/core-state/src/playOrder/heard.test-helper.ts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { display } from '../testing/reactNativeHosts.ts';
+import { display } from '@kitbag/core-state/src/testing/reactNativeHosts.ts';
 import {
   fakeQueue,
   metronomeEntryOnStage,
@@ -39,7 +39,11 @@ import {
   withTestId,
   type Player,
 } from './playerHarness.test-helper.tsx';
-import { REPEAT_LINE_ID, UP_NEXT, UP_NEXT_ROW_ID } from './UpNextRow.tsx';
+import {
+  REPEAT_LINE_ID,
+  UP_NEXT,
+  UP_NEXT_ROW_ID,
+} from '@kitbag/tool-stems/src/screen/UpNextRow.tsx';
 
 const NIGHT_BUS = 21;
 const TIN_ROOF = 22;

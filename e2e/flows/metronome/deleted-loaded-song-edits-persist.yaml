@@ -8,9 +8,8 @@ tags:
 - longPressOn: 'New song, 130 · .*'
 - tapOn: 'Edit'
 - tapOn: 'Delete'
-- tapOn: 'Delete song'
 - extendedWaitUntil:
-    notVisible: 'New song, 130 · .*'
+    visible: 'Deleted “New song”'
     timeout: 10000
 - back
 - back

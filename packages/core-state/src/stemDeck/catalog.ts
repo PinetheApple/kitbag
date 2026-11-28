@@ -1,6 +1,6 @@
 import type { ExistingStemSet } from '@kitbag/core-db';
 
-import { openingLanes, type JobVersion } from './lanes.ts';
+import { openingLanes, type JobVersion } from '../stemPlayer/lanes.ts';
 
 export interface ServerHealth {
   readonly isStemDeck: boolean;

@@ -130,7 +130,7 @@ describe('click sound repository', () => {
     const accent = await presets.create(preset('Accent', BUILT_IN, RIMSHOT_ID));
     const other = await presets.create(preset('Other', HAT_ID, BUILT_IN));
     const result = await sounds.remove(RIMSHOT.slot);
-    expect(result).toEqual({ removed: RIMSHOT, songsReset: 2 });
+    expect(result).toMatchObject({ removed: RIMSHOT, songsReset: 2 });
     expect(await presets.get(normal.id)).toMatchObject({
       sound: TICK_SOUND,
       perAccentSounds: new Uint8Array([TICK_SOUND, BUILT_IN]),
@@ -162,6 +162,45 @@ describe('click sound repository', () => {
     expect(await sounds.remove(HAT.slot)).toEqual({
       removed: null,
       songsReset: 0,
+      resets: [],
     });
+  });
+});
+
+describe('undoing a click sound remove', () => {
+  it('puts the sound back in its slot and on every beat of every song that used it', async () => {
+    const { sounds, presets } = setup();
+    await sounds.put(RIMSHOT);
+    const normal = await presets.create(preset('Normal', RIMSHOT_ID, BUILT_IN));
+    const both = await presets.create(preset('Both', RIMSHOT_ID, RIMSHOT_ID));
+    const { resets } = await sounds.remove(RIMSHOT.slot);
+    expect(await sounds.restore({ sound: RIMSHOT, resets })).toBe(true);
+    expect(await sounds.list()).toEqual([RIMSHOT]);
+    expect(await presets.get(normal.id)).toEqual(normal);
+    expect(await presets.get(both.id)).toEqual(both);
+  });
+
+  it('keeps a beat changed to another sound in the meantime', async () => {
+    const { sounds, presets } = setup();
+    await sounds.put(RIMSHOT);
+    const song = await presets.create(preset('Song', RIMSHOT_ID, RIMSHOT_ID));
+    const { resets } = await sounds.remove(RIMSHOT.slot);
+    await presets.update(song.id, {
+      perAccentSounds: new Uint8Array([TICK_SOUND, BUILT_IN]),
+    });
+    await sounds.restore({ sound: RIMSHOT, resets });
+    expect(await presets.get(song.id)).toMatchObject({
+      sound: RIMSHOT_ID,
+      perAccentSounds: new Uint8Array([RIMSHOT_ID, BUILT_IN]),
+    });
+  });
+
+  it('refuses when another sound took the slot', async () => {
+    const { sounds } = setup();
+    await sounds.put(RIMSHOT);
+    const { resets } = await sounds.remove(RIMSHOT.slot);
+    await sounds.put({ ...HAT, slot: RIMSHOT.slot });
+    expect(await sounds.restore({ sound: RIMSHOT, resets })).toBe(false);
+    expect(await sounds.get(RIMSHOT.slot)).toMatchObject({ name: HAT.name });
   });
 });

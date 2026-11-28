@@ -59,6 +59,7 @@ export {
   resizeAccents,
   usesSound,
   withoutSound,
+  withSoundRestored,
 } from './metronome/config.ts';
 export { beatGroupSizes, groupStartAccents } from './metronome/meterGroups.ts';
 export type { BpmBounds } from './metronome/config.ts';
@@ -109,7 +110,6 @@ export {
   sourceText,
   type BpmSource,
   type LadderRung,
-  type SourceCredit,
 } from './tempoLadder/sources.ts';
 export {
   layoutBeatLeds,
@@ -260,7 +260,9 @@ export {
   type ToolInstaller,
   type ToolInstallerDeps,
 } from './tools/installer.ts';
+export { PLAY_ALONG_NAME } from './tools/playAlongName.ts';
 export { createToolStore } from './toolStore/createToolStore.ts';
+export { creditLinkText, type SourceCredit } from './creditLink.ts';
 export { useAppearance } from './appearance/useAppearance.ts';
 export { useGetSongBpmKey } from './getSongBpmKey/useGetSongBpmKey.ts';
 export {
@@ -330,6 +332,7 @@ export {
   loadedPresetOf,
   type DiscardedChanges,
   type LeftSetlist,
+  type LibraryDeletion,
   type LibraryStore,
   type LoadedPreset,
   type LoadedSong,
@@ -973,11 +976,14 @@ export {
   type ClickSoundOutcome,
   type ClickSoundState,
   type ClickSoundStore,
+  type RemovedSound,
 } from './clickSounds/store.ts';
 export {
   releaseRemovedSound,
   releaseSound,
   releaseStaleSounds,
+  restoreReleasedSound,
+  type ReleasedSounds,
 } from './clickSounds/released.ts';
 export { useClickSounds } from './clickSounds/useClickSounds.ts';
 export {
@@ -996,7 +1002,6 @@ export {
 } from './clickSounds/soundNames.ts';
 export {
   customSoundViews,
-  rolesUsing,
   SOUND_OPTIONS,
   SOUND_PICKER_HINT,
   SOUND_ROLE,

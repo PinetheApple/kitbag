@@ -15,7 +15,7 @@ tags:
       - runFlow:
           file: ../../subflows/tap-while-playing.yaml
           env:
-            TARGET: 'Delete song'
+            TARGET: 'Rename'
       - runFlow:
           file: ../../subflows/tap-while-playing.yaml
           env:

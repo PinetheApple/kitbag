@@ -744,7 +744,9 @@ Each conversion adds its slice and bumps `hostApi` minor (section 6).
 - **Domain services** over the core repositories: songs, stem songs, setlists (read),
   practice sessions, tunings, BPM cache and the GetSongBPM key.
 - **Listening:** the song and stem player stores, the queue and now playing, the mixer
-  frame worklet read.
+  frame worklet read, and the listening UI the core renders and tools reuse: the
+  library lists, the song and stem mini-player, the queue sheet, the up-next row and
+  the mixer frame hook.
 - **Metronome:** `countInLabel`, `polyRatioLabel`, the custom sound views, and the
   pattern commands Play along uses.
 - **Import:** file picking, StemDeck import commands, QR scan, mixdown export.

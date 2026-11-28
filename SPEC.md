@@ -1724,11 +1724,14 @@ A tool package's entry exports `register(host: ToolHost): ToolPlugin`. The
 compiled-in path imports the package and calls it; the downloaded path calls it
 after evaluating the bundle (§9.5). Both pass the same `ToolHost`, the tool's
 only door to the rest of the app: named engine commands and worklet reads,
-`createToolStore` (§13.4), its own data rows, navigation scoped to its routes,
+`createToolStore` (§13.4), the listening slice (the library lists, the song and
+stem mini-player, the queue sheet, the up-next row and the mixer frame hook, which
+the core renders and tools reuse), its own data rows, navigation scoped to its routes,
 its bundle's assets, and the permissions and domain services its manifest names.
 
-`core-plugin-api` depends on nothing but types, `ToolHost`'s included. No React
-import, no store import, no native import. If it needs one, the contract is wrong.
+`core-plugin-api` depends on nothing but types, `ToolHost`'s included. No runtime
+React, no store import, no native import; type-only React imports (`ComponentType`,
+`ReactNode`) may type the listening slice. If it needs more, the contract is wrong.
 
 ### 9.2 One registry
 
@@ -1737,9 +1740,12 @@ manifest that knows two and is consumed by nothing. Do not port that generator.
 **Kitbag keeps one registry**, `HOME_TOOLS`: the compiled-in tools plus, on the
 `github` build, the downloaded tools, listed from their verified manifests
 without evaluating their code (§9.5). Home, Settings and the router read only it.
-Tools are not a fixed set, so one generator is allowed: `compiledTools.ts`, the
+Tools are not a fixed set, so one generator is allowed: `src/compiledTools.ts`,
+outside `src/app` because every file there becomes an expo-router route: the
 static imports of every tool package that the `fdroid` and debug builds compile
-in, drift-checked by `generate:check` like every generated file.
+in. `HOME_TOOLS` is built from it, never kept as a second list. It is hand-written until #732 generates it; from then
+`generate:check` drift-checks it like every generated file, and no guard is
+loosened meanwhile.
 
 ### 9.3 Tools manager
 
@@ -2031,6 +2037,7 @@ One migration note that is not obvious from the table:
 | `kitbag-song-player.html` | **The single-song player** (owner-approved 2026-11-07; #297). Supersedes `kitbag-ui.html` §04's Player. Draws the base player, the mini-player on Home and Songs (Stem songs and the Queue key: `kitbag-queue.html`), the Metronome's click-off snackbar, the click sheet, speed (owner-approved 2026-11-20, #528: speed only, in percent, Reset speed in the overflow menu, the speed on the mini-player off 100%), the no-grid states and the A-B loop. Recorded in `docs/decisions.md`, 2026-11-07. |
 | `kitbag-queue.html` | **The play queue** (owner-approved 2026-11-20; #574). Draws the queue sheet (queued songs, a setlist started this session, swipe to remove, nothing playing, empty), Play next and Add to queue, the mini-player's Queue key and its place on Stem songs, the Stem songs app-bar Queue icon, the stem player's app-bar Queue icon and its Previous · Up next · Repeat · Next row (the single-song player takes the same Queue icon, #613), a mixed setlist, Repeat, and filled Previous and Next keys on the Metronome. Adds the Up next row and the Queue icon to `kitbag-stems.html` variant C (the row was built without a binding design); the single-song player takes the same Up next row with no separate mockup (§6.3). Supersedes the mini-player's keys and placement in `kitbag-song-player.html` §1 and the flat skip keys in `kitbag-metronome-setlist.html` D2. Frames draw stem songs; single songs share the queue (§7.9). §f's Before and §i's Superseded frames are not to build. §g's Up next row with a metronome entry next is superseded: the Repeat chip and Open go on a second line, and the source keeps the setlist position (#632, `docs/research/mockups/632-up-next-metronome-entry.html`). Recorded in `docs/decisions.md`, 2026-11-20 and 2026-11-26. |
 | `kitbag-practice-history.html` | **Practice history** (owner-approved 2026-11-07; #286). Draws the session list with Day, Week and Month grouping and its graph, swipe and menu delete with Undo, the Settings doorway and swipe-direction row, the optional Home tile, and the session timeline with Repeat. The ⋮ menu is built as the app's bottom sheet, not the pop-up drawn. Recorded in `docs/decisions.md`: picks 2026-11-02, mockup approved 2026-11-07. |
+| `kitbag-row-menus-undo.html` | **Row menus and Undo for deletes** (owner-approved 2026-11-28; #656, #761). Draws a visible ⋮ on every metronome library row with long-press actions; deleting a setlist, a song or a custom click sound, and Remove from set, applied at once with a 6 s Undo snackbar; and the confirm sheet over the custom tuning editor. Supersedes the "cannot be undone" confirm sheets for those deletes in `kitbag-metronome.html`. Deleting a single song on the Songs list moves to Undo the same way, while deleting a stem song keeps its confirm sheet; this supersedes the Songs list's "Delete “title”?" confirm for single songs, which no design file draws (`kitbag-ui.html` §04 says only "long-press → delete"). |
 | `kitbag-home-arrange.html` | **Option B only** ("Chosen (owner, 2026-10-31)"; #113). Supersedes the "long-press any tile for edit mode" bullet in `kitbag-ui.html` §04 Home and §12.4's customizable-layout bullet as to *how* editing works: Edit, or a long-press on a tile, opens the Arrange sheet. Options A and C are rejected alternatives, kept as reference in `docs/research/mockups/113/`. Recorded in `docs/decisions.md`, 2026-10-31. Its B1 and B5 frames, which drew the More tools row and sheet (#617), are superseded by `kitbag-tools.html`. |
 | `kitbag-tools.html` | **Downloadable tools** (owner-approved 2026-11-27; #657). Draws Home and the More tools row and sheet with tools to download, Settings → Tools, a tool's page before and after install, installing and its failures, the downloads opt-in and its off confirm, removal with data kept, offline and downloads-off states, the `fdroid` build's Tools screen, tools that need an update after an app update, and the upgrade that moves today's tools out of the app (the one-time notice and the fallback card). Supersedes the More tools row and sheet in `kitbag-home-arrange.html` B1 and B5 and in `kitbag-ui.html` §04, and the Tools manager in `kitbag-settings.html` and `kitbag-ui.html` §04. Versions, sizes and counts in it are illustrative. Recorded in `docs/decisions.md`, 2026-11-27. |
 
@@ -2433,7 +2440,7 @@ Flutter ones, because §9.4 was never about Dart.
 
 | Package | Role | May import |
 |---|---|---|
-| `app-shell` | Expo entrypoint, router, plugin registry, home hub, the `ToolHost` object | everything |
+| `app-shell` | Expo entrypoint, router, plugin registry, home hub, the `ToolHost` object, the listening UI | everything; only `src/app`, `src/compiledTools.ts` and `runtime/transportRuntime.ts` (for the Metronome) import tool packages |
 | `core-plugin-api` | Abstract plugin contract and `ToolHost` — types only | nothing |
 | `core-native` | **The only** package that touches JSI/TurboModules | `core-plugin-api` |
 | `core-state` | Zustand stores, tool-owned ones through `createToolStore` (§13.4); the concrete DI layer | `core-native`, `core-db`, `core-plugin-api` |

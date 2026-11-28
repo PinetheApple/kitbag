@@ -32,7 +32,11 @@ function setup({
   wasPlaying = false,
 }: Given = {}) {
   const songs = createStore(
-    () => ({ rows: [...stems(1, 2), song(1)] }) as unknown as SongLibraryStore,
+    () =>
+      ({
+        rows: [...stems(1, 2), song(1)],
+        deletedSong: null,
+      }) as unknown as SongLibraryStore,
   );
   const libraryRefresh = vi.fn(() => Promise.resolve());
   const orderRefresh = vi.fn(() => Promise.resolve());
@@ -68,6 +72,19 @@ function setup({
 }
 
 describe('library removals', () => {
+  it('rereads the setlists and the queue when a deleted song comes back', () => {
+    const { songs, libraryRefresh, orderRefresh } = setup();
+    const deletedSong = { song: { row: { id: 1 } } };
+    songs.setState({
+      rows: stems(1, 2),
+      deletedSong,
+    } as unknown as SongLibraryStore);
+    songs.setState({ deletedSong: null });
+    songs.setState({ rows: [...stems(1, 2), song(1)] });
+    expect(libraryRefresh).toHaveBeenCalledTimes(2);
+    expect(orderRefresh).toHaveBeenCalledTimes(2);
+  });
+
   it('rereads the setlists and the queue when a stem song leaves the library', () => {
     const { songs, libraryRefresh, orderRefresh } = setup();
     songs.setState({ rows: [...stems(2), song(1)] });

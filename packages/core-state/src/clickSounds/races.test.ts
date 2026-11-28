@@ -36,6 +36,7 @@ describe('a change while a Replace prepares', () => {
     const removing = h.state().remove(0);
     gate.resolve(undefined);
     await Promise.all([replacing, removing]);
+    await h.state().dismissRemoved();
     expect(await h.database.clickSounds.list()).toEqual([]);
     expect(h.stored.size).toBe(0);
     expect(h.deps.clear).toHaveBeenLastCalledWith(0);

@@ -31,6 +31,7 @@ import {
   stringNumber,
   type TuningDraft,
 } from '../logic/tunings.ts';
+import { DeleteTuningSheet } from './DeleteTuningSheet.tsx';
 
 const INSTRUMENT_OPTIONS = Object.values(KB_TUNER_INSTRUMENT).map((value) => ({
   value: String(value),
@@ -113,10 +114,12 @@ export function TuningEditorSheet({
   const theme = useTheme();
   const [draft, setDraft] = useState(initial);
   const [failed, setFailed] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   const handleShow = useCallback(() => {
     setDraft(initial);
     setFailed(false);
+    setConfirming(false);
   }, [initial]);
 
   const handleName = useCallback((name: string) => {
@@ -145,77 +148,96 @@ export function TuningEditorSheet({
     });
   }, [draft, onSave, onDismiss]);
 
+  const askDelete = useCallback(() => {
+    setConfirming(true);
+  }, []);
+
+  const cancelDelete = useCallback(() => {
+    setConfirming(false);
+  }, []);
+
   const handleDelete = useCallback(() => {
+    setConfirming(false);
     onDelete().then(onDismiss, () => {
       setFailed(true);
     });
   }, [onDelete, onDismiss]);
 
   return (
-    <Sheet
-      visible={visible}
-      title={isNew ? 'New tuning' : 'Edit tuning'}
-      dismissLabel="Close tuning editor"
-      bottomInset={bottomInset}
-      onShow={handleShow}
-      onDismiss={onDismiss}
-    >
-      <TextInput
-        accessibilityLabel="Tuning name"
-        placeholder="Name"
-        placeholderTextColor={theme.color.text3}
-        value={draft.name}
-        onChangeText={handleName}
-        style={styles.name}
-      />
-      <SegmentedControl
-        accessibilityLabel="Instrument"
-        options={INSTRUMENT_OPTIONS}
-        selected={String(draft.instrument)}
-        neighbourGapDp={space.sectionGap}
-        onSelect={handleInstrument}
-      />
-      <View style={styles.strings}>
-        {draft.notes.map((_note, index) => (
-          <StringStepper
-            key={index}
-            index={index}
-            notes={draft.notes}
-            onStep={handleStep}
+    <>
+      <Sheet
+        visible={visible}
+        title={isNew ? 'New tuning' : 'Edit tuning'}
+        dismissLabel="Close tuning editor"
+        bottomInset={bottomInset}
+        onShow={handleShow}
+        onDismiss={onDismiss}
+      >
+        <TextInput
+          accessibilityLabel="Tuning name"
+          placeholder="Name"
+          placeholderTextColor={theme.color.text3}
+          value={draft.name}
+          onChangeText={handleName}
+          style={styles.name}
+        />
+        <SegmentedControl
+          accessibilityLabel="Instrument"
+          options={INSTRUMENT_OPTIONS}
+          selected={String(draft.instrument)}
+          neighbourGapDp={space.sectionGap}
+          onSelect={handleInstrument}
+        />
+        <View style={styles.strings}>
+          {draft.notes.map((_note, index) => (
+            <StringStepper
+              key={index}
+              index={index}
+              notes={draft.notes}
+              onStep={handleStep}
+            />
+          ))}
+        </View>
+        <View style={styles.row}>
+          <Button
+            label="Add string"
+            variant="tonal"
+            disabled={draft.notes.length >= STRING_COUNT_BOUNDS.max}
+            neighbourGapDp={space.sectionGap}
+            onPress={handleAdd}
           />
-        ))}
-      </View>
-      <View style={styles.row}>
+          <Button
+            label="Remove string"
+            variant="tonal"
+            disabled={draft.notes.length <= STRING_COUNT_BOUNDS.min}
+            neighbourGapDp={space.sectionGap}
+            onPress={handleRemove}
+          />
+        </View>
+        {failed ? <SheetHint>Couldn&apos;t save that change.</SheetHint> : null}
         <Button
-          label="Add string"
-          variant="tonal"
-          disabled={draft.notes.length >= STRING_COUNT_BOUNDS.max}
+          label="Save"
+          disabled={!isSavableDraft(draft)}
           neighbourGapDp={space.sectionGap}
-          onPress={handleAdd}
+          onPress={handleSave}
         />
-        <Button
-          label="Remove string"
-          variant="tonal"
-          disabled={draft.notes.length <= STRING_COUNT_BOUNDS.min}
-          neighbourGapDp={space.sectionGap}
-          onPress={handleRemove}
-        />
-      </View>
-      {failed ? <SheetHint>Couldn&apos;t save that change.</SheetHint> : null}
-      <Button
-        label="Save"
-        disabled={!isSavableDraft(draft)}
-        neighbourGapDp={space.sectionGap}
-        onPress={handleSave}
+        {isNew ? null : (
+          <Button
+            label="Delete"
+            variant="destructive"
+            neighbourGapDp={space.sectionGap}
+            onPress={askDelete}
+          />
+        )}
+      </Sheet>
+      <DeleteTuningSheet
+        visible={visible && confirming}
+        name={initial.name}
+        stringCount={initial.notes.length}
+        bottomInset={bottomInset}
+        onCancel={cancelDelete}
+        onDelete={handleDelete}
       />
-      {isNew ? null : (
-        <Button
-          label="Delete"
-          variant="destructive"
-          neighbourGapDp={space.sectionGap}
-          onPress={handleDelete}
-        />
-      )}
-    </Sheet>
+    </>
   );
 }

@@ -330,6 +330,7 @@ export function setup(fake = fakeFiles(), fitTempo = fakeFitter()) {
     newUuid: () => `f${String((uuids += 1))}`,
     openSong: () => player.openSong,
     fitTempo: () => fitTempo,
+    now: () => Date.now(),
   });
   return { store, records, handle, ...player, ...fake };
 }
