@@ -32,9 +32,19 @@ export interface CompiledToolManifest {
 export type SettingsSchema = Readonly<Record<string, unknown>>;
 
 // Placeholder shapes: the work that first renders each contribution fixes it.
-export type MiniPlayerContribution = PluginScreen;
-export type HomeSubtextContribution = PluginScreen;
 export type SettingsSectionContribution = PluginScreen;
+
+export interface MiniPlayerProps {
+  readonly bottomInset: number;
+  readonly onOpen: () => void;
+}
+
+export interface MiniPlayerContribution {
+  readonly Player: ComponentType<MiniPlayerProps>;
+  readonly useShown: () => boolean;
+}
+
+export type HomeSubtextContribution = () => string | undefined;
 export type MetronomeEntryDescriptor = HomeTileDescriptor;
 
 export interface ToolPlugin {

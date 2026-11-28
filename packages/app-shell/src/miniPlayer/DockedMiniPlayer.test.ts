@@ -29,8 +29,10 @@ vi.mock('@kitbag/core-state', async (original) => ({
 vi.mock('@/listening/useMixerFrame', () => ({
   useMixerFrame: () => undefined,
 }));
-vi.mock('@kitbag/tool-sync', () => ({
-  PlayAlongMiniPlayer: recorder('PlayAlongMiniPlayer'),
+vi.mock('@/tools/compiledToolsContext', () => ({
+  useCompiledTools: () => ({
+    sync: { miniPlayer: { Player: recorder('PlayAlongMiniPlayer') } },
+  }),
 }));
 vi.mock('@/runtime/libraryRoutes', () => ({
   useLibraryRoutes: () => ({ openSong: vi.fn(), openStemSet: vi.fn() }),

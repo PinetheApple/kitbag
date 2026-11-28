@@ -37,6 +37,7 @@ vi.mock('@/runtime/readerFocusRuntime', () => ({}));
 vi.mock('@/settings/rigRuntime', () => ({}));
 vi.mock('@/settings/toolsRuntime', () => ({}));
 vi.mock('@/global.css', () => ({}));
+vi.mock('@/compiledTools', () => ({ compiledTools: {} }));
 
 vi.mock('@kitbag/core-design', () => ({
   contentColumnStyle: { maxWidth: 'column cap' },

@@ -91,13 +91,11 @@ vi.mock('@kitbag/core-state', async (original) => {
   };
 });
 
-vi.mock('@kitbag/tool-tuner', () => ({
-  DEFAULT_TUNING: {},
-  tuningLabel: () => 'Standard',
-}));
-
-vi.mock('@kitbag/tool-sync', () => ({
-  useLockedSubtext: () => home.lockedSubtext,
+vi.mock('../tools/compiledToolsContext.ts', () => ({
+  useCompiledTools: () => ({
+    tuner: { homeSubtext: () => 'Standard' },
+    sync: { homeSubtext: () => home.lockedSubtext },
+  }),
 }));
 
 vi.mock('expo-router', () => ({

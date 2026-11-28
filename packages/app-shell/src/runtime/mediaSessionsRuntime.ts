@@ -9,7 +9,8 @@ import {
   configureMediaSessions,
   getMediaSessionsStore,
 } from '@kitbag/core-state';
-import { chooseSession } from '@kitbag/tool-sync';
+
+import { compiledTools } from '@/compiledTools';
 
 import { onAppForeground } from './appState.ts';
 import { listenerExplainerFlag } from './listenerExplainerFlag';
@@ -22,7 +23,7 @@ configureMediaSessions({
     openListenerSettings: openNotificationListenerSettings,
     rearm: rearmMediaSessions,
   },
-  choose: chooseSession,
+  choose: compiledTools.sync.mediaSession.choose,
   explainerDeclined: listenerExplainerFlag,
 });
 

@@ -60,6 +60,7 @@ import {
 import { StyleSheet, useColorScheme } from 'react-native';
 
 import { launchDatabaseError } from '@/boot/databaseGate';
+import { compiledTools } from '@/compiledTools';
 import { DatabaseErrorScreen } from '@/boot/DatabaseErrorScreen';
 import { resolveThemeMode } from '@/runtime/appearance';
 import { applyAppearance } from '@/runtime/appearanceRuntime';
@@ -68,6 +69,7 @@ import { NotificationPromptSheet } from '@/notifications/NotificationPromptSheet
 import { useIntake } from '@/intake/useIntake';
 import { designFonts } from '@/runtime/designFonts';
 import { useSongLibraryAnalysis } from '@/runtime/songLibraryRuntime';
+import { CompiledToolsContext } from '@/tools/compiledToolsContext';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -146,11 +148,13 @@ function AppStack({
   useSongLibraryAnalysis();
   const intakeNotice = useIntake();
   return (
-    <InsetSheetHost>
-      <Stack screenOptions={screenOptions} />
-      <NotificationPromptSheet />
-      {intakeNotice}
-    </InsetSheetHost>
+    <CompiledToolsContext.Provider value={compiledTools}>
+      <InsetSheetHost>
+        <Stack screenOptions={screenOptions} />
+        <NotificationPromptSheet />
+        {intakeNotice}
+      </InsetSheetHost>
+    </CompiledToolsContext.Provider>
   );
 }
 

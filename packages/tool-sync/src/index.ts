@@ -1,9 +1,7 @@
-export * from './pure.ts';
 export {
-  PlayAlongMiniPlayer,
-  useLockedSubtext,
-  usePlayAlongMiniShown,
-  type PlayAlongMiniPlayerProps,
-} from './screen/PlayAlongMiniPlayer.tsx';
+  register,
+  type MediaSessionContribution,
+  type SyncPlugin,
+} from './register.ts';
 export { PlayAlongScreen } from './screen/PlayAlongScreen.tsx';
 export type { PlayAlongRoute } from './screen/PhaseSheet.tsx';

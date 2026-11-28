@@ -29,12 +29,6 @@ export default defineConfig({
           new URL('../../tool-metronome/src/pure.ts', import.meta.url),
         ),
       },
-      {
-        find: /^@kitbag\/tool-sync$/,
-        replacement: fileURLToPath(
-          new URL('../../tool-sync/src/pure.ts', import.meta.url),
-        ),
-      },
     ],
   },
 });

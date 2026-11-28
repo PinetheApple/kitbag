@@ -12,8 +12,10 @@ const shown = vi.hoisted(() => ({
 vi.mock('@/listening/MiniPlayer', () => ({
   useMiniPlayerShown: () => shown.song,
 }));
-vi.mock('@kitbag/tool-sync', () => ({
-  usePlayAlongMiniShown: () => shown.playAlong,
+vi.mock('@/tools/compiledToolsContext', () => ({
+  useCompiledTools: () => ({
+    sync: { miniPlayer: { useShown: () => shown.playAlong } },
+  }),
 }));
 vi.mock('@kitbag/core-state', async (original) => ({
   ...(await original<Record<string, unknown>>()),
