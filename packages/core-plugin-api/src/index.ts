@@ -1,3 +1,6 @@
+export const TOOL_ID = '[a-z][a-z0-9-]{1,31}';
+export const TOOL_ID_PATTERN = new RegExp(`^${TOOL_ID}$`);
+
 // A bare string so the contract does not retype the icon set core-design owns.
 export type IconName = string;
 

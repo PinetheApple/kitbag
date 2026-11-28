@@ -1,4 +1,4 @@
-import type { Category } from '@kitbag/core-db';
+import type { Category, ImportCategory } from '@kitbag/core-db';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -15,6 +15,8 @@ const ALL: readonly Category[] = [
   'practiceSessions',
   'countInSettings',
 ];
+
+const WITH_TOOL_DATA: readonly ImportCategory[] = [...ALL, 'toolData'];
 
 describe('toggledCategories', () => {
   it('adds and removes a standalone category in file order', () => {
@@ -63,6 +65,23 @@ describe('toggledCategories', () => {
     ).toEqual([]);
   });
 
+  it('adds tool data on its own, after the categories', () => {
+    expect(
+      toggledCategories(['tunings'], 'toolData', 'merge', WITH_TOOL_DATA),
+    ).toEqual(['tunings', 'toolData']);
+  });
+
+  it('removes tool data on its own', () => {
+    expect(
+      toggledCategories(
+        ['tunings', 'toolData'],
+        'toolData',
+        'replace',
+        WITH_TOOL_DATA,
+      ),
+    ).toEqual(['tunings']);
+  });
+
   it('never selects a category the file does not carry', () => {
     expect(
       toggledCategories([], 'setlists', 'merge', ['setlists', 'tunings']),
@@ -88,6 +107,12 @@ describe('categoriesForMode', () => {
         'tunings',
       ]),
     ).toEqual(['tunings']);
+  });
+
+  it('keeps tool data when switching to replace', () => {
+    expect(categoriesForMode(['toolData'], 'replace', WITH_TOOL_DATA)).toEqual([
+      'toolData',
+    ]);
   });
 
   it('leaves a merge selection alone', () => {

@@ -1,9 +1,12 @@
-import type {
-  Category,
-  CategoryPlan,
-  Conflict,
-  ImportMode,
-  ImportPlan,
+import {
+  importableCategories,
+  TOOL_DATA_CATEGORY,
+  type Category,
+  type CategoryPlan,
+  type Conflict,
+  type ImportCategory,
+  type ImportMode,
+  type ImportPlan,
 } from '@kitbag/core-db';
 import { countLabel } from '@kitbag/core-design';
 import {
@@ -35,7 +38,7 @@ export const SAVE_FAILED = 'Could not save the backup. Try again.';
 export const SAVE_LABEL = 'Save to files';
 export const SHARE_LABEL = 'Share';
 
-export const RESTORE_ORDER: readonly Category[] = [
+export const RESTORE_ORDER: readonly ImportCategory[] = [
   'setlists',
   'songPresets',
   'tunings',
@@ -47,9 +50,10 @@ export const RESTORE_ORDER: readonly Category[] = [
   'clickSounds',
   'rigSettings',
   'appearanceSettings',
+  TOOL_DATA_CATEGORY,
 ];
 
-export const CATEGORY_LABELS: Readonly<Record<Category, string>> = {
+export const CATEGORY_LABELS: Readonly<Record<ImportCategory, string>> = {
   setlists: 'Setlists',
   songPresets: 'Song presets',
   tunings: 'Tunings',
@@ -61,9 +65,10 @@ export const CATEGORY_LABELS: Readonly<Record<Category, string>> = {
   stemSongs: 'Stem songs',
   rigSettings: 'Rig',
   appearanceSettings: 'Appearance and Home',
+  toolData: 'Tool data',
 };
 
-const NOUNS: Readonly<Record<Category, readonly [string, string]>> = {
+const NOUNS: Readonly<Record<ImportCategory, readonly [string, string]>> = {
   setlists: ['setlist', 'setlists'],
   songPresets: ['song', 'songs'],
   tunings: ['tuning', 'tunings'],
@@ -75,6 +80,7 @@ const NOUNS: Readonly<Record<Category, readonly [string, string]>> = {
   stemSongs: STEM_SONG_NOUNS,
   rigSettings: ['rig setting', 'rig settings'],
   appearanceSettings: ['appearance setting', 'appearance settings'],
+  toolData: ['tool data entry', 'tool data entries'],
 };
 
 const MONTHS = [
@@ -102,7 +108,7 @@ const MERGE_NOTHING = 'Merge nothing';
 const MERGE_LABEL_CATEGORIES = 2;
 const NOTHING_CHANGED = 'Nothing was changed.';
 
-const counted = (category: Category, count: number) => {
+const counted = (category: ImportCategory, count: number) => {
   const [one, many] = NOUNS[category];
   return countLabel(count, one, many);
 };
@@ -112,7 +118,7 @@ function joined(parts: readonly string[], last: string): string {
   return `${parts.slice(0, -1).join(', ')} ${last} ${parts.at(-1) ?? ''}`;
 }
 
-function ordered(plan: Pick<ImportPlan, 'categories'>): Category[] {
+function ordered(plan: Pick<ImportPlan, 'categories'>): ImportCategory[] {
   return RESTORE_ORDER.filter((category) => plan.categories.includes(category));
 }
 
@@ -153,8 +159,14 @@ function stemSongsValue(incoming: number, plan: CategoryPlan | undefined) {
   return `${matched} ${SEPARATOR} ${String(missing)} ${NOT_ON_DEVICE}`;
 }
 
+export function restoreCategories(
+  file: Pick<ImportPlan['file'], 'categories' | 'toolData'>,
+): ImportCategory[] {
+  return ordered({ categories: importableCategories(file) });
+}
+
 export function categoryValue(
-  category: Category,
+  category: ImportCategory,
   incoming: number,
   plan: CategoryPlan | undefined,
 ): string {
@@ -187,11 +199,13 @@ export function modeHint(plan: ImportPlan): string {
     : `Deletes your ${joined(deleted, 'and')}`;
 }
 
-const nothingToRestore = (category: Category, counts: ImportPlan['counts']) =>
-  restorable(counts[category]) === 0;
+const nothingToRestore = (
+  category: ImportCategory,
+  counts: ImportPlan['counts'],
+) => restorable(counts[category]) === 0;
 
 function incomingList(
-  categories: readonly Category[],
+  categories: readonly ImportCategory[],
   counts: ImportPlan['counts'],
 ): string {
   return joined(

@@ -34,7 +34,18 @@ export const CATEGORIES = [
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
 
-export const DEFAULT_IMPORT_CATEGORIES: readonly Category[] = [
+export const TOOL_DATA_CATEGORY = 'toolData';
+export type ImportCategory = Category | typeof TOOL_DATA_CATEGORY;
+export const IMPORT_CATEGORIES: readonly ImportCategory[] = [
+  ...CATEGORIES,
+  TOOL_DATA_CATEGORY,
+];
+
+export const isRecordCategory = (
+  category: ImportCategory,
+): category is Category => category !== TOOL_DATA_CATEGORY;
+
+export const DEFAULT_IMPORT_CATEGORIES: readonly ImportCategory[] = [
   'songPresets',
   'setlists',
   'tunings',
@@ -44,6 +55,7 @@ export const DEFAULT_IMPORT_CATEGORIES: readonly Category[] = [
   'stemSongs',
   'rigSettings',
   'appearanceSettings',
+  TOOL_DATA_CATEGORY,
 ];
 
 export interface LibrarySongRecord
@@ -221,9 +233,28 @@ export interface BackupFile {
   toolData?: ToolDataSection;
 }
 
+export function importableCategories(
+  file: Pick<BackupFile, 'categories' | 'toolData'>,
+): ImportCategory[] {
+  return file.toolData === undefined
+    ? [...file.categories]
+    : [...file.categories, TOOL_DATA_CATEGORY];
+}
+
+export function incomingCount(
+  file: Pick<BackupFile, 'records' | 'toolData'>,
+  category: ImportCategory,
+): number {
+  return isRecordCategory(category)
+    ? file.records[category].length
+    : (file.toolData?.records.length ?? 0);
+}
+
 export type ImportMode = 'merge' | 'replace';
 export type Resolution = 'mine' | 'theirs';
-export type Resolutions = Partial<Record<Category, Record<string, Resolution>>>;
+export type Resolutions = Partial<
+  Record<ImportCategory, Record<string, Resolution>>
+>;
 
 export type ImportFailure =
   | { kind: 'malformedFile'; reason: string }
@@ -231,7 +262,7 @@ export type ImportFailure =
   | { kind: 'invalidField'; path: string; reason: string }
   | { kind: 'invalidRelationship'; path: string; reason: string }
   | { kind: 'duplicateIdentity'; category: Category; key: string }
-  | { kind: 'categoryNotInFile'; category: Category }
+  | { kind: 'categoryNotInFile'; category: ImportCategory }
   | { kind: 'missingDependency'; category: Category; requires: Category }
   | { kind: 'unresolvedConflicts'; conflicts: Conflict[] }
   | { kind: 'replaceNotConfirmed' }
@@ -240,7 +271,7 @@ export type ImportFailure =
   | { kind: 'databaseError'; reason: string };
 
 export interface Conflict {
-  category: Category;
+  category: ImportCategory;
   key: string;
   label: string;
 }

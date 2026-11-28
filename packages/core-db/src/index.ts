@@ -194,8 +194,13 @@ export type {
 export {
   CATEGORIES,
   DEFAULT_IMPORT_CATEGORIES,
+  IMPORT_CATEGORIES,
+  importableCategories,
+  incomingCount,
+  TOOL_DATA_CATEGORY,
   type Category,
   type Conflict,
+  type ImportCategory,
   type ImportFailure,
   type ImportMode,
   type Resolution,
@@ -203,6 +208,7 @@ export {
   type ImportResult,
   type TuningRecord,
 } from './backup-format';
+export { TOOL_DATA_SECTION_VERSION } from './backup-tool-data';
 export type { StaleSlots } from './backup-apply';
 export type { ApplyOptions, ApplyReport, BackupService } from './backup';
 export type { KeptBeforeReplace } from './backup-before-replace';

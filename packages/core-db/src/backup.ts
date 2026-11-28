@@ -3,9 +3,11 @@ import {
   BACKUP_VERSION,
   CATEGORIES,
   ImportRejected,
+  TOOL_DATA_CATEGORY,
   type BackupFile,
   type Category,
   type CategoryRecords,
+  type ImportCategory,
   type ImportResult,
   type LocalRecords,
 } from './backup-format';
@@ -35,7 +37,7 @@ export interface ApplyOptions {
 }
 
 export interface ApplyReport extends SoundOutcome {
-  counts: Partial<Record<Category, CategoryPlan>>;
+  counts: Partial<Record<ImportCategory, CategoryPlan>>;
 }
 
 const reasonOf = (error: unknown) =>
@@ -123,10 +125,11 @@ async function exportBackup(
   { db }: DatabaseHandle,
   files: ClickSoundFiles,
   requested: readonly Category[],
+  keepEmptyToolData = false,
 ): Promise<string> {
   const { records } = await loadSnapshot(db);
   const toolData = isFullExport(requested)
-    ? await loadToolDataSection(db)
+    ? await loadToolDataSection(db, keepEmptyToolData)
     : undefined;
   const categories = withDependencies(requested);
   return serializeBackup({
@@ -175,10 +178,15 @@ interface ServiceContext {
 
 async function keepCurrentData(
   { handle, files, rules }: ServiceContext,
-  categories: Category[],
+  categories: ImportCategory[],
 ) {
   try {
-    const contents = await exportBackup(handle, files, CATEGORIES);
+    const contents = await exportBackup(
+      handle,
+      files,
+      CATEGORIES,
+      categories.includes(TOOL_DATA_CATEGORY),
+    );
     parseBackup(contents, rules);
     await keepBeforeReplace(handle.db, { categories, contents });
   } catch (error) {
