@@ -14,6 +14,9 @@ import {
   collectConstants,
   parseConstexprDouble,
   parseConstexprInt,
+  parseCString,
+  parseCStringConstants,
+  parseKotlinCodeEnum,
   parseConstexprIntArray,
   parseDefineInt,
   parseDefineNumber,
@@ -60,6 +63,18 @@ const realSources: NativeSources = {
       import.meta.dirname,
       '..',
       'android/src/main/java/com/kitbag/corenative/route/OutputRoutes.kt',
+    ),
+    'utf8',
+  ),
+  toolEvalHeader: readFileSync(
+    join(import.meta.dirname, '..', 'cpp', 'KitbagToolEval.h'),
+    'utf8',
+  ),
+  toolRejections: readFileSync(
+    join(
+      import.meta.dirname,
+      '..',
+      'android/src/main/java/com/kitbag/corenative/tools/ToolRejected.kt',
     ),
     'utf8',
   ),
@@ -434,4 +449,89 @@ describe('collectConstants (custom click sounds)', () => {
       ).toThrow(name);
     },
   );
+});
+
+describe('parseCStringConstants', () => {
+  const header =
+    'inline constexpr const char* kToolErrorArgument = "E_TOOL_ARGUMENT";\n' +
+    'inline constexpr const char* kToolErrorRuntimeVersion =\n    "E_TOOL_RUNTIME_VERSION";\n' +
+    'inline constexpr const char* kOther = "X";\n';
+  it('reads every prefixed string constant in order, across a line wrap', () => {
+    expect(parseCStringConstants(header, 'kToolError')).toEqual([
+      { name: 'Argument', value: 'E_TOOL_ARGUMENT' },
+      { name: 'RuntimeVersion', value: 'E_TOOL_RUNTIME_VERSION' },
+    ]);
+  });
+  it('throws when no constant carries the prefix', () => {
+    expect(() => parseCStringConstants(header, 'kMissing')).toThrow();
+  });
+});
+
+describe('parseCString', () => {
+  it('reads one named string constant', () => {
+    expect(
+      parseCString('inline constexpr const char* kKey = "__k";', 'kKey'),
+    ).toBe('__k');
+  });
+  it('throws when the constant is absent', () => {
+    expect(() => parseCString('', 'kKey')).toThrow();
+  });
+});
+
+describe('collectConstants (tool evaluation)', () => {
+  it('reads the eval global and every tool error code from KitbagToolEval.h', () => {
+    const c = collectConstants(realSources);
+    expect(c.evalVerifiedToolKey).toBe('__kitbagEvalVerifiedTool');
+    expect(c.toolErrors).toEqual([
+      { name: 'Argument', value: 'E_TOOL_ARGUMENT' },
+      { name: 'NotVerified', value: 'E_TOOL_NOT_VERIFIED' },
+      { name: 'RuntimeVersion', value: 'E_TOOL_RUNTIME_VERSION' },
+      { name: 'NotBytecode', value: 'E_TOOL_NOT_BYTECODE' },
+      { name: 'ManifestVersion', value: 'E_TOOL_MANIFEST_VERSION' },
+      { name: 'BytecodeVersion', value: 'E_TOOL_BYTECODE_VERSION' },
+      { name: 'Eval', value: 'E_TOOL_EVAL' },
+    ]);
+    const rendered = renderConstants(c);
+    expect(rendered).toContain(
+      "export const KB_EVAL_VERIFIED_TOOL_KEY = '__kitbagEvalVerifiedTool';",
+    );
+    expect(rendered).toContain("  notVerified: 'E_TOOL_NOT_VERIFIED',");
+    expect(rendered).toContain("export const KB_TOOL_REFUSAL_KEY = 'refused';");
+    expect(rendered).toContain(
+      "export const KB_TOOL_REFUSAL_DETAIL_KEY = 'detail';",
+    );
+  });
+});
+
+describe('parseKotlinCodeEnum', () => {
+  const source =
+    'enum class Codes {\n  BAD_ID,\n  ZIP,\n  ;\n  companion object { const val PREFIX = "E_X_" }\n}';
+  it('reads every entry with the prefix, in order', () => {
+    expect(parseKotlinCodeEnum(source, 'Codes', 'PREFIX')).toEqual([
+      { name: 'BadId', value: 'E_X_BAD_ID' },
+      { name: 'Zip', value: 'E_X_ZIP' },
+    ]);
+  });
+  it('throws when the enum, its prefix or a plain entry list is missing', () => {
+    expect(() => parseKotlinCodeEnum(source, 'Other', 'PREFIX')).toThrow();
+    expect(() => parseKotlinCodeEnum(source, 'Codes', 'OTHER')).toThrow();
+    expect(() =>
+      parseKotlinCodeEnum(
+        source.replace('ZIP,', 'ZIP("z"),'),
+        'Codes',
+        'PREFIX',
+      ),
+    ).toThrow();
+  });
+});
+
+describe('collectConstants (tool rejections)', () => {
+  it('reads the Kotlin verifier codes from ToolRejected.kt', () => {
+    const c = collectConstants(realSources);
+    expect(c.toolRejections).toContainEqual({
+      name: 'UntrustedKey',
+      value: 'E_TOOL_UNTRUSTED_KEY',
+    });
+    expect(renderConstants(c)).toContain("  signature: 'E_TOOL_SIGNATURE',");
+  });
 });

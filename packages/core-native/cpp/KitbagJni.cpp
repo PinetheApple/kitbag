@@ -9,6 +9,7 @@
 #include "KitbagCommands.h"
 #include "KitbagEngine.h"
 #include "KitbagJniUtf.h"
+#include "KitbagToolEval.h"
 #include "analysis/sidecar_path.h"
 #include "kitbag_api.h"
 
@@ -36,6 +37,7 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeInstall(JNIEnv*, jobject, 
   auto* rt = reinterpret_cast<Runtime*>(runtimePtr);
   if (rt == nullptr) return;
   kitbag::kitbagInstall(*rt);
+  kitbag::InstallToolEval(*rt);
 }
 
 JNIEXPORT jint JNICALL

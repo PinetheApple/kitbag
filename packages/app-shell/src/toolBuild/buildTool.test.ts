@@ -2,9 +2,9 @@ import { readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { KITBAG_HOST_OBJECT_KEY } from '@kitbag/core-native';
+import { TOOL_REGISTRY_KEY } from '@kitbag/core-plugin-api';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { TOOL_REGISTRY_KEY } from '../toolHost/bundleContract';
 import { HOST_API } from '../toolHost/hostApi';
 import { probeGlobals, stubModule } from './globalsProbe';
 import { hbcBytecodeVersion } from './hermes';
