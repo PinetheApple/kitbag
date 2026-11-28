@@ -463,7 +463,7 @@ done
 ```
 
 Each `.spki.b64` holds a 91-byte P-256 SubjectPublicKeyInfo, so it starts with
-`[REDACTED-SECRET-00f7c19c]`.
+`[REDACTED-LITERAL-156298e4]`.
 
 Where each private key goes:
 
@@ -715,8 +715,8 @@ app-shell files that import a tool package today:
 | `app/library/[id].tsx` | `UpNextRow`, `useMixerFrame` (`tool-stems`) | Both move to core (`listening/`; the frame hook beside `stemPlayer`). |
 | `miniPlayer/DockedMiniPlayer.tsx`, `useMiniPlayerDocked.ts` | `MiniPlayer`, `useMiniPlayerShown` (`tool-library`); `useMixerFrame` (`tool-stems`); `PlayAlongMiniPlayer`, `usePlayAlongMiniShown` (`tool-sync`) | Song and stem mini-player move to core; Play along's becomes a `miniPlayer` contribution (8.3). |
 | `queue/useQueueSheet.tsx` | `QueueSheet` (`tool-stems`) | Moves to core. |
-| `home/HomeScreen.tsx` | `useLockedSubtext` (`tool-sync`), `DEFAULT_TUNING`, `tuningLabel` (`tool-tuner`) | `homeSubtext` contributions. |
-| `home/registry.ts` | `PLAY_ALONG_NAME` (`tool-sync`) | Converted tools' entries come from their manifests; the name moves to core. |
+| `home/HomeScreen.tsx` | `useLockedSubtext` (`tool-sync`), `DEFAULT_TUNING`, `tuningLabel` (`tool-tuner`) | `useHomeSubtext` contributions. |
+| `home/registry.ts` | `PLAY_ALONG_NAME` (`tool-sync`) | Converted tools' entries come from their manifests; the name stays with Play along as its manifest's `name`. |
 | `settings/AttributionsScreen.tsx`, `settings/getSongBpmKeyText.ts` | `creditLinkText` (`tool-sync`) | Moves to core-state. |
 | `runtime/mediaSessionsRuntime.ts` | `chooseSession` (`tool-sync`) | Moves with the runtime into the Play along bundle. |
 | `practice/TimelineRows.tsx`, `practice/timelineText.ts` | `useCustomSoundViews`, `countInLabel`, `polyRatioLabel` (`tool-metronome`) | The screens move to the Practice history bundle and read these through `host.metronome` (8.3). |
@@ -751,7 +751,7 @@ Each conversion adds its slice and bumps `hostApi` minor (section 6).
 - **Permissions:** `mic`, `camera`, `notificationListener`.
 
 `ToolPlugin` (§9.1) gains optional contributions the core renders: `miniPlayer`,
-`homeSubtext` and a Settings section. Until a tool has been loaded, Home shows its
+`useHomeSubtext` and a Settings section. Until a tool has been loaded, Home shows its
 manifest `summary`. Issue 0 edits §9.1.
 
 ### 8.4 Coupling between tools, and what the core keeps
@@ -907,7 +907,7 @@ Ordered, one PR each against main. Estimates in agent-days.
 | 10 | CI | `tools` job in `release.yml` before the APK build; the APK embeds the signed index (and the bridge copies during the window, section 9); key handled like the keystore; `tools/status.json` and its signature attached; one `gh release create` with every asset; a failed tool build fails the release; `tools-gate.sh` gates it and refuses `test-` keys. Reads `TOOLS_SIGNING_KEY` and `TOOLS_SIGNING_KEY_ID`; the workflow's own tests use `test-` keys. Live run needs the owner setup (4.5) done | 1–1.5 | 4, 5 |
 | 11 | F-Droid flavour | `github` and `fdroid` flavours; `fdroid` dex has no installer or loader classes and its bundle no downloader code, checked by a script; metadata updated | 1.5–2 | 3, 8 |
 | 12 | First downloadable tool | One pure-JS #656 tool (recommend chord and scale reference) shipped through a real release, installed on the phone, removed and re-added with its data intact; owner setup (4.5) and the first rotation drill done before the release | 1–2 | 9, 10 |
-| 13 | Listening core and UI split | Everything 8.2 moves to core: `LibraryScreen`, the song and stem mini-player, `QueueSheet`, `UpNextRow`, `useMixerFrame`, `stemDeck/lanes.ts`, `creditLinkText`, `PLAY_ALONG_NAME`; `host.metronome` replaces the practice screens' `tool-metronome` imports; `ToolPlugin` contributions (`miniPlayer`, `homeSubtext`, Settings section) used by today's compiled-in tools; no `app-shell` file outside `src/app` imports `@kitbag/tool-*` except the Metronome's (`runtime/transportRuntime.ts`); a test that no tool package or moved core-state directory imports another tool's; the tool-JavaScript split measured with a source map; existing tests pass unchanged | 5–7 | 3 |
+| 13 | Listening core and UI split | Everything 8.2 moves to core: `LibraryScreen`, the song and stem mini-player, `QueueSheet`, `UpNextRow`, `useMixerFrame`, `stemDeck/lanes.ts`, `creditLinkText` (Play along's name stays in its manifest); `host.metronome` replaces the practice screens' `tool-metronome` imports; `ToolPlugin` contributions (`miniPlayer`, `useHomeSubtext`, Settings section) used by today's compiled-in tools; no `app-shell` file outside `src/app` imports `@kitbag/tool-*` except the Metronome's (`runtime/transportRuntime.ts`); a test that no tool package or moved core-state directory imports another tool's; the tool-JavaScript split measured with a source map; existing tests pass unchanged | 5–7 | 3 |
 | 14 | Bridge and absent-tool states | Bundled copies signed by the release's tool key (test keys in tests) installed on first launch for upgrading users with the tool not switched off; one-time notice; fallback card; window rule (section 9); "Install to open" tiles, queue rows and setlist entries; old routes and deep links redirect; restore with the tool absent shows "Install to open" | 2.5–3.5 | 9, 10, 13 |
 | 15 | Convert Practice history | Screens in a bundle; recorder stays core; upgrade test (section 9) including ids and preference keys; runs downloaded on the phone and compiled in on the `fdroid` build | 1.5–2 | 11, 12, 14 |
 | 16 | Convert Tuner | Tuner store and screens in a bundle; mic requested through `host.permissions`; worklet reads drive the needle at 60 fps on the phone; Home subtext contribution; upgrade test | 2–3 | 15 |

@@ -165,8 +165,8 @@ moot. Two entries survive as instructions rather than deletions:
 
 - **Do not port a second plugin registry.** The Flutter build has two —
   a hardcoded list and a generated manifest that knows 2 of 5 tools and is
-  consumed by nothing. §9.2 keeps one registry; its only generator is
-  `compiledTools.ts`.
+  consumed by nothing. §9.2 keeps one registry; its one generator (#732)
+  writes `src/compiledTools.ts` and `src/toolManifests.ts`.
 - **Do not port speculative exports.** `PracticeDao.deleteSession`/`deleteAll`,
   `getSetById`/`getSetCount`/`deleteStemsForSet`, `activeTrackCount`/
   `trackFrames`, the AcousticBrainz stub, `mediaSessionPollerProvider`,
@@ -1711,7 +1711,7 @@ export interface ToolPlugin {
   readonly settingsSchema?: SettingsSchema;
   readonly requires?: readonly string[];
   readonly miniPlayer?: MiniPlayerContribution;
-  readonly homeSubtext?: HomeSubtextContribution;
+  readonly useHomeSubtext?: HomeSubtextContribution;
   readonly settingsSection?: SettingsSectionContribution;
   readonly metronomeEntry?: MetronomeEntryDescriptor;
 }
@@ -1726,7 +1726,8 @@ after evaluating the bundle (§9.5). Both pass the same `ToolHost`, the tool's
 only door to the rest of the app: named engine commands and worklet reads,
 `createToolStore` (§13.4), the listening slice (the library lists, the song and
 stem mini-player, the queue sheet, the up-next row and the mixer frame hook, which
-the core renders and tools reuse), its own data rows, navigation scoped to its routes,
+the core renders and tools reuse), the metronome slice (`countInLabel`,
+`polyRatioLabel`, `useCustomSoundViews`), its own data rows, navigation scoped to its routes,
 its bundle's assets, and the permissions and domain services its manifest names.
 
 `core-plugin-api` depends on nothing but types, `ToolHost`'s included. No runtime
@@ -1740,16 +1741,17 @@ The Flutter build has two: a hardcoded list of five plugins, and a generated
 manifest that knows two and is consumed by nothing. Do not port that generator.
 **Kitbag keeps one registry**, `HOME_TOOLS`: the compiled-in tools plus, on the
 `github` build, the downloaded tools, listed from their verified manifests
-without evaluating their code (§9.5). Home, Settings and the router read only it.
+without evaluating their code (§9.5). Home, Settings and the router read the
+tool list only from it; contributions (`useHomeSubtext`, `miniPlayer`, screens)
+come from `register()` through the compiled-tools context.
 Tools are not a fixed set, so one generator is allowed: `src/compiledTools.ts`,
 outside `src/app` because every file there becomes an expo-router route: the
 static imports of every tool package that the `fdroid` and debug builds compile
 in. `HOME_TOOLS` is built from `src/toolManifests.ts`, which imports only each
 tool's data-only `@kitbag/tool-x/manifest`, so `HOME_TOOLS`' readers load no
-tool UI; it is never kept as a second list. Both are hand-written until #732
-generates them; from then
-`generate:check` drift-checks it like every generated file, and no guard is
-loosened meanwhile.
+tool UI; it is never kept as a second list. Both files are hand-written until
+#732's one generator writes them; from then `generate:check` drift-checks both
+like every generated file, and no guard is loosened meanwhile.
 
 ### 9.3 Tools manager
 
