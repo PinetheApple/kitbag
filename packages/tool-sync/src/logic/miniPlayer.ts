@@ -1,13 +1,12 @@
 import { clampUnit, FACT_SEPARATOR } from '@kitbag/core-design';
 import {
   extrapolatedPositionMs,
+  PLAY_ALONG_NAME,
   type PlayAlongTrack,
 } from '@kitbag/core-state';
 import type { MediaSessionSnapshot } from '@kitbag/core-native';
 
 import { UNKNOWN_TITLE } from './nowPlaying.ts';
-
-export const PLAY_ALONG_NAME = 'Play along';
 
 export interface ProgressPlan {
   readonly from: number;
