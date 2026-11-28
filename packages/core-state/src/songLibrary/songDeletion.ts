@@ -5,11 +5,11 @@ import {
 } from '@kitbag/core-db';
 import type { LibraryConstants } from '@kitbag/core-native';
 
-import { releaseHeldSongFiles } from './heldSongFiles.ts';
+import type { FileWorkTracker } from './fileWork.ts';
+import { deleteHeldSongFiles } from './heldSongFiles.ts';
 import { songRemovals, type Removal } from './logic.ts';
 import { requeueAndRefresh, type OutdatedGridQueue } from './outdatedGrids.ts';
 import { stemSetRemovals } from './stemBundleLogic.ts';
-import type { FileWorkTracker } from './stemFolderSweep.ts';
 import type { SongLibraryDeps } from './store.ts';
 import {
   deleteLeftovers,
@@ -41,16 +41,13 @@ async function deleteRecord(
   queue: OutdatedGridQueue,
   row: LibraryRow,
   codes: LibraryConstants | null,
-  undoable: boolean,
 ): Promise<DeletedRecord> {
   const records = deps.records();
   if (row.kind === 'stems') {
     const stemSet = await records.deleteStemSet(row.id);
     return { removals: stemSetRemovals(stemSet, codes?.stemsDir ?? null) };
   }
-  const song = undoable
-    ? await records.deleteSongForUndo(row.id)
-    : await records.deleteSong(row.id);
+  const song = await records.deleteSong(row.id);
   if (song === undefined) return { removals: [] };
   deps.files().cancelAnalysis(song.row.filePath);
   await queue.settled(song.row.filePath);
@@ -69,19 +66,12 @@ export function rowDeletion(
     if (deletedSong === null) return;
     set({ deletedSong: null });
     const { removals, title, song } = deletedSong;
-    if (await deleteLeftovers(deps.files(), removals, title))
-      await releaseHeldSongFiles(deps, song.row.id);
+    await deleteHeldSongFiles(deps, song.row.id, removals, title);
   };
   const remove = async (row: LibraryRow, undoable: boolean) => {
     let deleted: DeletedRecord;
     try {
-      deleted = await deleteRecord(
-        deps,
-        queue,
-        row,
-        loadCodes(deps, get),
-        undoable,
-      );
+      deleted = await deleteRecord(deps, queue, row, loadCodes(deps, get));
     } catch (error) {
       warn(`delete of ${row.title} failed`, error);
       set({ notice: { kind: 'deleteFailed', name: row.title } });
@@ -89,8 +79,12 @@ export function rowDeletion(
     }
     await get().refresh();
     const { song, removals } = deleted;
-    if (!undoable || song === undefined) {
+    if (song === undefined) {
       await deleteLeftovers(deps.files(), removals, row.title);
+      return;
+    }
+    if (!undoable) {
+      await deleteHeldSongFiles(deps, song.row.id, removals, row.title);
       return;
     }
     await dropDeletedSong();
@@ -107,8 +101,7 @@ export function rowDeletion(
       await deps.records().restoreSong(song);
     } catch (error) {
       warn(`restoring ${title} failed`, error);
-      if (await deleteLeftovers(deps.files(), removals, title))
-        await releaseHeldSongFiles(deps, song.row.id);
+      await deleteHeldSongFiles(deps, song.row.id, removals, title);
       await get().refresh();
       return;
     }

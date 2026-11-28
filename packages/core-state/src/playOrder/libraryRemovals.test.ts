@@ -214,8 +214,11 @@ describe('deleting the song the mini-player shows', () => {
 });
 
 describe('Undo of a deleted song', () => {
-  const deleteSong1 = (songs: ReturnType<typeof setup>['songs']) => {
-    songs.setState({ rows: stems(1, 2) });
+  const deleteSong1 = (
+    songs: ReturnType<typeof setup>['songs'],
+    rows = stems(1, 2),
+  ) => {
+    songs.setState({ rows });
     songs.setState({
       deletedSong: { song: { row: { id: 1 } } },
     } as unknown as SongLibraryStore);
@@ -257,10 +260,7 @@ describe('Undo of a deleted song', () => {
 
   it('brings back only the song that came back', () => {
     const { songs, heard, repeat } = setup();
-    songs.setState({ rows: stems(2) });
-    songs.setState({
-      deletedSong: { song: { row: { id: 1 } } },
-    } as unknown as SongLibraryStore);
+    deleteSong1(songs, stems(2));
     undo(songs, [...stems(2), song(1)]);
     expect(heard.getState().heard).toEqual([
       { song: SONG_1, setlistItemId: null },
@@ -276,6 +276,21 @@ describe('Undo of a deleted song', () => {
     undo(songs);
     expect(heard.getState().heard).toEqual([]);
     expect(repeat.getState().played).toEqual([]);
+  });
+
+  it('leaves a list it was alone in cleared when cleared during the Undo window', () => {
+    const { songs, heard, repeat } = setup();
+    heard.setState({ heard: [{ song: SONG_1, setlistItemId: null }] });
+    repeat.setState({ played: [SONG_1] });
+    deleteSong1(songs);
+    const next = { song: STEMS_2, setlistItemId: null };
+    heard.setState({ heard: [] });
+    heard.setState({ heard: [next] });
+    repeat.setState({ played: [] });
+    repeat.setState({ played: [STEMS_2] });
+    undo(songs);
+    expect(heard.getState().heard).toEqual([next]);
+    expect(repeat.getState().played).toEqual([STEMS_2]);
   });
 
   it('brings nothing back when Undo is dismissed', () => {

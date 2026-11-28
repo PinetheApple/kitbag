@@ -12,7 +12,6 @@ configureSongLibrary({
     listOutdatedAnalyses: () => Promise.resolve([]),
     applyAnalysis: unavailable,
     deleteSong: () => Promise.resolve(undefined),
-    deleteSongForUndo: () => Promise.resolve(undefined),
     restoreSong: unavailable,
     releaseSongFiles: () => Promise.resolve(),
     listHeldSongFiles: () => Promise.resolve([]),

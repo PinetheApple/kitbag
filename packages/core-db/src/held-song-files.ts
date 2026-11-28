@@ -12,6 +12,30 @@ export interface HeldSongFiles extends SongFiles {
 
 const heldKey = eq(preferences.key, HELD_SONG_FILES_KEY);
 
+function isHeld(value: unknown): value is HeldSongFiles {
+  if (typeof value !== 'object' || value === null) return false;
+  const { songId, uuid, filePath, waveformPath } = value as Record<
+    string,
+    unknown
+  >;
+  return (
+    typeof songId === 'number' &&
+    typeof uuid === 'string' &&
+    typeof filePath === 'string' &&
+    (waveformPath === null || typeof waveformPath === 'string')
+  );
+}
+
+// A corrupt value reads as empty, so it never blocks deletes; the next write replaces it.
+function parseHeld(value: string): HeldSongFiles[] {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) && parsed.every(isHeld) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function listHeldSongFiles(
   db: Database,
 ): Promise<HeldSongFiles[]> {
@@ -19,7 +43,7 @@ export async function listHeldSongFiles(
     .select({ value: preferences.value })
     .from(preferences)
     .where(heldKey);
-  return row === undefined ? [] : (JSON.parse(row.value) as HeldSongFiles[]);
+  return row === undefined ? [] : parseHeld(row.value);
 }
 
 async function saveHeld(db: Database, held: readonly HeldSongFiles[]) {

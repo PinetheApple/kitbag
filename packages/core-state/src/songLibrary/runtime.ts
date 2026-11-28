@@ -62,7 +62,6 @@ export type SongLibraryRecords = Pick<
   | 'listOutdatedAnalyses'
   | 'applyAnalysis'
   | 'deleteSong'
-  | 'deleteSongForUndo'
   | 'restoreSong'
   | 'releaseSongFiles'
   | 'listHeldSongFiles'

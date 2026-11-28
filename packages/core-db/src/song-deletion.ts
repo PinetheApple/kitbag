@@ -15,12 +15,15 @@ export interface DeletedSong {
   readonly queued: LocatedQueueEntry | null;
 }
 
+// Held before the row goes, so a kill before its files are deleted leaves a record.
 export async function deleteSong(
   db: Database,
   id: number,
 ): Promise<DeletedSong | undefined> {
   const [row] = await db.select().from(songs).where(eq(songs.id, id));
   if (row === undefined) return undefined;
+  const { uuid, filePath, waveformPath } = row;
+  await holdSongFiles(db, { songId: id, uuid, filePath, waveformPath });
   const queued = await locateQueueEntry(db, { kind: 'song', id });
   const presets = await db
     .update(songPresets)
@@ -29,24 +32,6 @@ export async function deleteSong(
     .returning({ id: songPresets.id });
   await db.delete(songs).where(eq(songs.id, id));
   return { row, presetIds: presets.map((preset) => preset.id), queued };
-}
-
-// Held before the row goes, so a kill during Undo leaves a record of the files.
-export async function deleteSongForUndo(
-  db: Database,
-  id: number,
-): Promise<DeletedSong | undefined> {
-  const [files] = await db
-    .select({
-      uuid: songs.uuid,
-      filePath: songs.filePath,
-      waveformPath: songs.waveformPath,
-    })
-    .from(songs)
-    .where(eq(songs.id, id));
-  if (files === undefined) return undefined;
-  await holdSongFiles(db, { songId: id, ...files });
-  return deleteSong(db, id);
 }
 
 export async function restoreSong(db: Database, deleted: DeletedSong) {

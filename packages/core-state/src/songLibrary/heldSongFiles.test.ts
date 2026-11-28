@@ -34,11 +34,11 @@ async function addSong(env: Env, uuid: string, filePath: string) {
   });
 }
 
-async function killedDuringUndo(env: Env, uuid: string, filePath: string) {
-  await env.records.deleteSongForUndo(await addSong(env, uuid, filePath));
+async function killedBeforeFilesWent(env: Env, uuid: string, filePath: string) {
+  await env.records.deleteSong(await addSong(env, uuid, filePath));
 }
 
-describe('files of a song deleted with Undo', () => {
+describe('files of a deleted song', () => {
   it('are removed at the next start when the app died during Undo', async () => {
     const env = setup();
     const row = await importOne(env.store);
@@ -55,10 +55,10 @@ describe('files of a song deleted with Undo', () => {
 
   it('are never removed while a Library row still points at them', async () => {
     const env = setup();
-    await killedDuringUndo(env, 'gone', 'songs/gone/Gone.mp3');
-    await killedDuringUndo(env, 'shared', 'songs/shared/A.mp3');
+    await killedBeforeFilesWent(env, 'gone', 'songs/gone/Gone.mp3');
+    await killedBeforeFilesWent(env, 'shared', 'songs/shared/A.mp3');
     await addSong(env, 'restored', 'songs/shared/B.mp3');
-    await killedDuringUndo(env, 'loose', 'music/Loose.mp3');
+    await killedBeforeFilesWent(env, 'loose', 'music/Loose.mp3');
     await addSong(env, 'again', 'music/Loose.mp3');
     const next = relaunch(env);
     await next.store.getState().start();
@@ -84,20 +84,26 @@ describe('files of a song deleted with Undo', () => {
     await env.store.getState().deleteRowWithUndo(row);
     const listHeld = env.records.listHeldSongFiles.bind(env.records);
     const listFiles = env.records.listSongFiles.bind(env.records);
-    let heldRead = false;
+    const restore = env.records.restoreSong.bind(env.records);
+    let filesRead: () => void = () => undefined;
+    const read = new Promise<void>((resolve) => {
+      filesRead = resolve;
+    });
     let tapped = false;
     let undoing = Promise.resolve();
+    vi.spyOn(env.records, 'restoreSong').mockImplementation(async (song) => {
+      await read;
+      await restore(song);
+    });
     vi.spyOn(env.records, 'listHeldSongFiles').mockImplementation(async () => {
       const held = await listHeld();
-      heldRead = true;
+      tapped = true;
+      undoing = env.store.getState().undoDeleteSong();
       return held;
     });
     vi.spyOn(env.records, 'listSongFiles').mockImplementation(async () => {
       const files = await listFiles();
-      if (heldRead && !tapped) {
-        tapped = true;
-        undoing = env.store.getState().undoDeleteSong();
-      }
+      if (tapped) filesRead();
       return files;
     });
     await env.store.getState().start();
@@ -109,7 +115,7 @@ describe('files of a song deleted with Undo', () => {
   it('leave stem song folders alone', async () => {
     const env = setup();
     await env.store.getState().importStemFolder();
-    await killedDuringUndo(env, 'gone', 'songs/gone/Gone.mp3');
+    await killedBeforeFilesWent(env, 'gone', 'songs/gone/Gone.mp3');
     const next = relaunch(env);
     next.files.listStemFolders.mockResolvedValue([JOB_ID]);
     await next.store.getState().start();
@@ -120,7 +126,7 @@ describe('files of a song deleted with Undo', () => {
 
   it('are tried again at the next start when they could not be removed', async () => {
     const env = setup();
-    await killedDuringUndo(env, 'gone', 'songs/gone/Gone.mp3');
+    await killedBeforeFilesWent(env, 'gone', 'songs/gone/Gone.mp3');
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const next = relaunch(env);
     next.files.deleteSongFolder.mockRejectedValueOnce(new Error('busy'));
@@ -141,10 +147,34 @@ describe('files of a song deleted with Undo', () => {
     expect(await env.records.listHeldSongFiles()).toEqual([]);
   });
 
-  it('are not held when a song is deleted without Undo', async () => {
+  it('are forgotten once a delete without Undo has removed the folder', async () => {
     const env = setup();
     const row = await importOne(env.store);
     await env.store.getState().deleteRow(row);
+    expect(env.files.deleteSongFolder.mock.calls).toEqual([['f1']]);
+    expect(await env.records.listHeldSongFiles()).toEqual([]);
+  });
+
+  it('of a delete without Undo that could not remove them go at the next start', async () => {
+    const env = setup();
+    const row = await importOne(env.store);
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    env.files.deleteSongFolder.mockRejectedValueOnce(new Error('killed'));
+    await env.store.getState().deleteRow(row);
+    const next = relaunch(env);
+    await next.store.getState().start();
+    expect(next.files.deleteSongFolder.mock.calls).toEqual([['f1']]);
+    expect(await env.records.listHeldSongFiles()).toEqual([]);
+  });
+
+  it('are kept, and the record cleared, when their row came back before the start', async () => {
+    const env = setup();
+    await killedBeforeFilesWent(env, 'back', 'songs/back/Back.mp3');
+    await addSong(env, 'back', 'songs/back/Back.mp3');
+    const next = relaunch(env);
+    await next.store.getState().start();
+    expect(next.files.deleteSongFolder).not.toHaveBeenCalled();
+    expect(next.files.deleteLibraryFile).not.toHaveBeenCalled();
     expect(await env.records.listHeldSongFiles()).toEqual([]);
   });
 });

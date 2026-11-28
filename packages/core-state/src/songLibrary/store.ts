@@ -41,11 +41,8 @@ import {
   type BundleRefusal,
   type ReplaceChoice,
 } from './stemBundleLogic.ts';
-import {
-  fileWorkTracker,
-  sweepOrphanedStemFolders,
-  type FileWorkTracker,
-} from './stemFolderSweep.ts';
+import { fileWorkTracker, type FileWorkTracker } from './fileWork.ts';
+import { sweepOrphanedStemFolders } from './stemFolderSweep.ts';
 import {
   deleteLeftovers,
   enqueue,
@@ -190,9 +187,9 @@ function importActions(
   deps: SongLibraryDeps,
   set: SetState,
   get: Get,
-  imports: FileWorkTracker,
+  fileWork: FileWorkTracker,
 ) {
-  const bundles = stemBundleActions(deps, set, get, imports);
+  const bundles = stemBundleActions(deps, set, get, fileWork);
   const importEach = documentImports(deps, set, get, bundles.importBundle);
   let busy: Promise<void> | null = null;
   const hold = () => {

@@ -18,7 +18,7 @@ import {
   type BundleRefusalReason,
   type ReplaceChoice,
 } from './stemBundleLogic.ts';
-import type { FileWorkTracker } from './stemFolderSweep.ts';
+import type { FileWorkTracker } from './fileWork.ts';
 import { withFittedTempo } from './stemTempoFit.ts';
 import type { LibraryNotice, ReplaceMatch, SongLibraryDeps } from './store.ts';
 import {

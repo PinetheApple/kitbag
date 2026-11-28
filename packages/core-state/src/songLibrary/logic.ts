@@ -215,7 +215,9 @@ export type Removal =
   | { readonly kind: 'stemFolder'; readonly name: string }
   | { readonly kind: 'file'; readonly path: string };
 
-export function fileRemovals(paths: readonly (string | null)[]): Removal[] {
+export type SongRemoval = Exclude<Removal, { readonly kind: 'stemFolder' }>;
+
+export function fileRemovals(paths: readonly (string | null)[]): SongRemoval[] {
   return paths.flatMap((path) =>
     path === null ? [] : [{ kind: 'file' as const, path }],
   );
@@ -228,7 +230,7 @@ const FOLDER_NAME = /^[0-9A-Za-z-]+$/;
 export function songRemovals(
   song: SongFiles,
   songsDir: string | null,
-): Removal[] {
+): SongRemoval[] {
   const folder = `${songFolder(songsDir ?? '', song.uuid)}/`;
   const ownsFolder =
     songsDir !== null &&

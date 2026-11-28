@@ -1,41 +1,17 @@
+import type { FileWorkTracker } from './fileWork.ts';
 import type { Removal } from './logic.ts';
 import { stemFolderName } from './stemBundleLogic.ts';
 import type { SongLibraryDeps } from './store.ts';
 import { deleteLeftovers, loadCodes, warn, type Get } from './storeSupport.ts';
 
-export interface FileWorkTracker {
-  readonly track: <T>(work: () => Promise<T>) => Promise<T>;
-  readonly idleMark: () => number | null;
-  readonly stillIdleSince: (mark: number) => boolean;
-}
-
-// A copied folder has no name JS knows until native returns it, so the sweep
-// trusts only a window in which no import ran at all.
-export function fileWorkTracker(): FileWorkTracker {
-  let active = 0;
-  let changes = 0;
-  return {
-    track: async (work) => {
-      active += 1;
-      changes += 1;
-      try {
-        return await work();
-      } finally {
-        active -= 1;
-        changes += 1;
-      }
-    },
-    idleMark: () => (active === 0 ? changes : null),
-    stillIdleSince: (mark) => active === 0 && changes === mark,
-  };
-}
-
 export async function sweepOrphanedStemFolders(
   deps: SongLibraryDeps,
   get: Get,
-  imports: FileWorkTracker,
+  fileWork: FileWorkTracker,
 ): Promise<void> {
-  const mark = imports.idleMark();
+  // A copied folder has no name JS knows until native returns it, so the sweep
+  // trusts only a window in which no import, delete or Undo ran at all.
+  const mark = fileWork.idleMark();
   const codes = loadCodes(deps, get);
   if (mark === null || codes === null) return;
   let orphans: string[];
@@ -50,7 +26,7 @@ export async function sweepOrphanedStemFolders(
     warn('stem folder sweep skipped', error);
     return;
   }
-  if (!imports.stillIdleSince(mark)) return;
+  if (!fileWork.stillIdleSince(mark)) return;
   await deleteLeftovers(
     deps.files(),
     orphans.map((name): Removal => ({ kind: 'stemFolder', name })),
