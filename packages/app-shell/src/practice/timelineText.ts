@@ -1,4 +1,5 @@
 import {
+  MS_PER_MINUTE,
   MS_PER_SECOND,
   presetFieldsOfLogged,
   type LoggedCountIn,
@@ -11,7 +12,6 @@ import {
   formatClockSeconds,
   isCountInBars,
   perAccentSoundsOf,
-  SECONDS_PER_MINUTE,
   soundChipLabel,
   type TimelineStretch,
 } from '@kitbag/core-state';
@@ -27,8 +27,6 @@ const RAMP_UNIT_WORDS: Readonly<Record<number, readonly [string, string]>> = {
   [KB_RAMP_UNIT.KB_RAMP_SECONDS]: ['second', 'seconds'],
   [KB_RAMP_UNIT.KB_RAMP_MINUTES]: ['minute', 'minutes'],
 };
-
-const MS_PER_MINUTE = MS_PER_SECOND * SECONDS_PER_MINUTE;
 
 export function playClock(ms: number): string {
   return formatClockSeconds(ms / MS_PER_SECOND);

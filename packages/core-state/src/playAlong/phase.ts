@@ -1,6 +1,6 @@
 import { MS_PER_SECOND } from '@kitbag/core-db';
 
-import { clamp } from '../metronome/config.ts';
+import { clamp, positiveMod } from '../metronome/config.ts';
 import type { BeatDirection } from '../stemPlayer/beatStep.ts';
 import { usableDownbeats } from '../stemPlayer/bars.ts';
 import {
@@ -89,7 +89,7 @@ export function clampPhase(
 }
 
 export const wrappedShift = (shift: number, beatsPerBar: number): number =>
-  ((shift % beatsPerBar) + beatsPerBar) % beatsPerBar;
+  positiveMod(shift, beatsPerBar);
 
 export const nextShift = (
   shift: number,

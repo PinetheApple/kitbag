@@ -667,7 +667,7 @@ export {
   type TrackPresetState,
 } from './playAlong/trackPreset.ts';
 export type { PlayAlongPattern } from './playAlong/pattern.ts';
-export { extrapolatedPositionMs } from './playAlong/position.ts';
+export { beatSeconds, extrapolatedPositionMs } from './playAlong/position.ts';
 export type { PlayAlongRuntime } from './playAlong/runtime.ts';
 export { useSwipeHint } from './firstUse/useSwipeHint.ts';
 export {
@@ -877,10 +877,13 @@ export {
   type ClockParts,
 } from './text.ts';
 export { CALIBRATION } from './rig/calibrationRules.ts';
+export { positiveMod } from './metronome/config.ts';
 export {
   analyseTaps,
   BEAT_MS,
+  circularCentre,
   mean,
+  median,
   sampleSd,
   storedOffsetMs,
   unwrapDeviations,

@@ -1,6 +1,13 @@
 import { TEMPO_MAX_BPM, TEMPO_MIN_BPM } from '@kitbag/core-db';
-import { MS_PER_SECOND, TAPS_TO_SET_TEMPO } from '@kitbag/core-state';
-import { beatSeconds } from '@kitbag/core-state/src/playAlong/position.ts';
+import {
+  beatSeconds,
+  circularCentre,
+  mean,
+  median,
+  MS_PER_SECOND,
+  positiveMod,
+  TAPS_TO_SET_TEMPO,
+} from '@kitbag/core-state';
 
 export const TAP_LOCK_WINDOW = 8;
 export const TAP_OUTLIER_MS = 60;
@@ -10,7 +17,6 @@ export const TEMPO_DISAGREE_TOLERANCE = 0.06;
 
 const DOUBLE_TIME = 2;
 const TAPS_PER_SONG_BEAT = [1, DOUBLE_TIME, 1 / DOUBLE_TIME] as const;
-const FULL_TURN = 2 * Math.PI;
 
 export const TAP_LOCK_MISS = {
   tooFew: 'tooFew',
@@ -89,31 +95,8 @@ interface PhaseFit {
   readonly spreadMs: number;
 }
 
-function median(values: readonly number[]): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  const upper = sorted[mid] ?? Number.NaN;
-  if (sorted.length % 2 === 1) return upper;
-  return ((sorted[mid - 1] ?? Number.NaN) + upper) / 2;
-}
-
-const mean = (values: readonly number[]): number =>
-  values.reduce((sum, v) => sum + v, 0) / values.length;
-
-const positiveMod = (value: number, size: number): number =>
-  ((value % size) + size) % size;
-
 const nearest = (ms: number, anchorMs: number, stepMs: number): number =>
   anchorMs + stepMs * Math.round((ms - anchorMs) / stepMs);
-
-function circularCentre(values: readonly number[], period: number): number {
-  const angles = values.map(
-    (v) => (positiveMod(v, period) / period) * FULL_TURN,
-  );
-  const sin = angles.reduce((sum, a) => sum + Math.sin(a), 0);
-  const cos = angles.reduce((sum, a) => sum + Math.cos(a), 0);
-  return (Math.atan2(sin, cos) / FULL_TURN) * period;
-}
 
 const beatLengthMs = (bpm: number, denominator: number): number =>
   beatSeconds(bpm, denominator) * MS_PER_SECOND;
