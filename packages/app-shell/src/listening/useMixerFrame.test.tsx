@@ -6,7 +6,10 @@ import { act } from 'react';
 import { create, type ReactTestRenderer } from 'react-test-renderer';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { FRAME_MS, runFrame } from '@kitbag/core-state/src/testing/reanimatedDriver.ts';
+import {
+  FRAME_MS,
+  runFrame,
+} from '@kitbag/core-state/src/testing/reanimatedDriver.ts';
 import { IDLE_POLL_MS, useMixerFrame } from './useMixerFrame.ts';
 
 const signals = vi.hoisted(() => ({
