@@ -1,0 +1,1 @@
+• Tap and tempo timing stays sample-accurate even when the app is briefly paused mid-call.
