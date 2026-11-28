@@ -7,7 +7,7 @@ import {
   type LibrarySummary,
 } from '@kitbag/core-state';
 
-import { daysAgoText, weekdayDate } from '../practice/dates.ts';
+import { daysAgoText, weekdayDate } from '../dates.ts';
 import { SEPARATOR } from '../settings/separator.ts';
 
 import { SONG_NOUNS, STEM_SONG_NOUNS, TOOL_NOUNS } from '../nouns.ts';

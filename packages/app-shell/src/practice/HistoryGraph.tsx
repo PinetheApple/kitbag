@@ -15,7 +15,7 @@ import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { formatDuration } from '../settings/practiceText.ts';
-import { dayMonth } from './dates.ts';
+import { dayMonth } from '../dates.ts';
 import { graphCaption, graphLabels } from './historyText.ts';
 
 const useStyles = createThemedStyles((theme) => ({

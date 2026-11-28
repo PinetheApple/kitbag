@@ -18,6 +18,7 @@ function deps() {
     plan: vi.fn(),
     apply: vi.fn(),
     keptBeforeReplace: vi.fn(),
+    keptBeforeReplaceAt: vi.fn(),
   };
   return {
     service: () => service,

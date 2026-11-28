@@ -17,6 +17,7 @@ import {
   type RestoreState,
 } from '@kitbag/core-state';
 
+import { dayMonth } from '../dates.ts';
 import { STEM_SONG_NOUNS } from '../nouns.ts';
 import { formatBytes } from './bytes.ts';
 import { SEPARATOR } from './separator.ts';
@@ -87,24 +88,6 @@ const NOUNS: Readonly<Record<ImportCategory, readonly [string, string]>> = {
   appearanceSettings: ['appearance setting', 'appearance settings'],
   toolData: ['tool data entry', 'tool data entries'],
 };
-
-const MONTHS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-] as const;
-
-const dayMonth = (date: Date) =>
-  `${String(date.getDate())} ${MONTHS[date.getMonth()] ?? ''}`;
 
 const MERGE_HINT =
   'Keeps what you have. Items already here are updated, not duplicated.';

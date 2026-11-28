@@ -28,6 +28,12 @@ const EARBUDS: OutputRoute = {
 };
 const STEP_MS = 5;
 const TAKEN_AT = '2026-11-27T14:32:00.000Z';
+const MISSING_SOUND = {
+  slot: 0,
+  uuid: '00000000-0000-4000-8000-0000000000aa',
+  name: 'Rim',
+  fileName: 'missing.wav',
+};
 
 function deps(
   service: BackupDeps['service'],
@@ -120,6 +126,20 @@ describe('the copy kept before a replace', () => {
       source: { name: COPY_NAME },
       plan: { mode: 'replace', categories: PRESETS_AND_SETLISTS },
     });
+  });
+
+  it('stays as it was when restoring it fails', async () => {
+    const { target } = await replacedTarget();
+    const before = await target.backup.keptBeforeReplace();
+    await target.clickSounds.put(MISSING_SOUND);
+    const store = await openCopy(target);
+    await store.getState().apply('replace');
+
+    expect(store.getState().restore).toMatchObject({
+      phase: 'failed',
+      failure: { kind: 'snapshotFailed' },
+    });
+    expect(await target.backup.keptBeforeReplace()).toEqual(before);
   });
 
   it('puts the replaced songs back', async () => {

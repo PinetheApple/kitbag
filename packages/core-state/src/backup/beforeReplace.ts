@@ -16,11 +16,8 @@ export async function openableBeforeReplace(
   };
 }
 
-export async function beforeReplaceTakenAt(
+export function beforeReplaceTakenAt(
   deps: BackupDeps = getBackup(),
 ): Promise<string | null> {
-  const kept = await deps.service().keptBeforeReplace();
-  if (kept === null) return null;
-  const { exportedAt } = JSON.parse(kept.contents) as { exportedAt: string };
-  return exportedAt;
+  return deps.service().keptBeforeReplaceAt();
 }

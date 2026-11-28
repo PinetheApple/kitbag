@@ -1,19 +1,12 @@
-import {
-  Button,
-  Card,
-  createThemedStyles,
-  space,
-  textRoles,
-  textStyle,
-} from '@kitbag/core-design';
+import { Button, Card, createThemedStyles } from '@kitbag/core-design';
 import { Text, View } from 'react-native';
 
 import { DONE_LABEL, UNDO_REPLACE_LABEL } from './backupText.ts';
+import { ACTIONS_ROW, restoreTextStyles } from './restoreStyles.ts';
 
 const useStyles = createThemedStyles((theme) => ({
-  banner: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
-  note: { ...textStyle(textRoles.fieldLabel), color: theme.color.text3 },
-  actions: { flexDirection: 'row', gap: space.controlGap },
+  ...restoreTextStyles(theme),
+  actions: ACTIONS_ROW,
 }));
 
 function OutcomeActions({
@@ -69,7 +62,7 @@ export function Outcome({
   const body = (
     <>
       <Text style={styles.banner}>{text}</Text>
-      {note === null ? null : <Text style={styles.note}>{note}</Text>}
+      {note === null ? null : <Text style={styles.hint}>{note}</Text>}
     </>
   );
   return (

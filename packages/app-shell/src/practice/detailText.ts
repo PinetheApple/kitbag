@@ -8,7 +8,7 @@ import {
 } from '@kitbag/core-state';
 
 import { SEPARATOR } from '../settings/separator.ts';
-import { daysAgoText, weekdayDate } from './dates.ts';
+import { daysAgoText, weekdayDate } from '../dates.ts';
 import { bpmText, sessionName, type SessionNames } from './historyText.ts';
 
 export const LOAD_HINT =

@@ -4,7 +4,6 @@ import {
   EditRow,
   EditValue,
   Sheet,
-  space,
 } from '@kitbag/core-design';
 import {
   beforeReplaceTakenAt,
@@ -13,8 +12,7 @@ import {
   saveLibraryBackup,
   shareLibraryBackup,
 } from '@kitbag/core-state';
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useReducer, useState } from 'react';
+import { useCallback, useMemo, useReducer } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -34,10 +32,12 @@ import {
   UNDO_LAST_REPLACE_LABEL,
   undoReplaceValue,
 } from './backupText.ts';
+import { ACTIONS_ROW } from './restoreStyles.ts';
 import { openUndoReplace } from './undoReplace.ts';
+import { useFocusedText } from './useFocusedText.ts';
 
 const useStyles = createThemedStyles(() => ({
-  actions: { flexDirection: 'row', gap: space.controlGap },
+  actions: ACTIONS_ROW,
 }));
 
 const BACK_UP_ACTIONS: Readonly<Record<BackUpAction, () => Promise<boolean>>> =
@@ -46,26 +46,23 @@ const BACK_UP_ACTIONS: Readonly<Record<BackUpAction, () => Promise<boolean>>> =
     share: () => shareLibraryBackup().then(() => true),
   };
 
+const readSummary = () => getBackup().service().summary();
+const readTakenAt = () => beforeReplaceTakenAt();
+
 function useBackupSummary(): string | null {
-  const [summary, setSummary] = useState<string | null>(null);
-  useFocusEffect(
-    useCallback(() => {
-      let live = true;
-      getBackup()
-        .service()
-        .summary()
-        .then((counts) => {
-          if (live) setSummary(backupSummary(counts));
-        })
-        .catch((error: unknown) => {
-          console.warn('[kitbag] could not count the library', error);
-        });
-      return () => {
-        live = false;
-      };
-    }, []),
+  return useFocusedText(
+    readSummary,
+    backupSummary,
+    'could not count the library',
   );
-  return summary;
+}
+
+function useUndoReplaceValue(): string | null {
+  return useFocusedText(
+    readTakenAt,
+    undoReplaceValue,
+    'could not read the copy before replace',
+  );
 }
 
 function BackUpSheet({
@@ -170,29 +167,6 @@ export function RestoreRow({
   return <EditRow label={RESTORE_LABEL} onPress={restore} />;
 }
 
-function useUndoReplaceValue(): string | null {
-  const [value, setValue] = useState<string | null>(null);
-  useFocusEffect(
-    useCallback(() => {
-      let live = true;
-      beforeReplaceTakenAt()
-        .then((takenAt) => {
-          if (live) setValue(undoReplaceValue(takenAt));
-        })
-        .catch((error: unknown) => {
-          console.warn(
-            '[kitbag] could not read the copy before replace',
-            error,
-          );
-        });
-      return () => {
-        live = false;
-      };
-    }, []),
-  );
-  return value;
-}
-
 export function UndoReplaceRow({
   onOpenRestore,
 }: {
@@ -200,9 +174,13 @@ export function UndoReplaceRow({
 }) {
   const value = useUndoReplaceValue();
   const undo = useCallback(() => {
-    void openUndoReplace().then(() => {
-      if (restoreStore.getState().restore.phase !== 'empty') onOpenRestore();
-    });
+    openUndoReplace()
+      .then((opened) => {
+        if (opened) onOpenRestore();
+      })
+      .catch((error: unknown) => {
+        console.warn('[kitbag] could not open the copy before replace', error);
+      });
   }, [onOpenRestore]);
   if (value === null) return null;
   return (

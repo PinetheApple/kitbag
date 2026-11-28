@@ -10,6 +10,7 @@ export interface BackupDeps {
     | 'plan'
     | 'apply'
     | 'keptBeforeReplace'
+    | 'keptBeforeReplaceAt'
   >;
   readonly pick: () => Promise<PickedBackup | null>;
   readonly share: (fileName: string, contents: string) => Promise<void>;

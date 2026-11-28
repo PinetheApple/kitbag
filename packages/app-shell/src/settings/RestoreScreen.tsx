@@ -52,6 +52,7 @@ import {
 import { Outcome } from './RestoreOutcome.tsx';
 import { ConflictSheet, ReplaceSheet } from './RestoreSheets.tsx';
 import { SettingsFrame } from './SettingsFrame.tsx';
+import { restoreTextStyles } from './restoreStyles.ts';
 import { openUndoReplace } from './undoReplace.ts';
 
 const MODE_OPTIONS: readonly SegmentOption<ImportMode>[] = [
@@ -64,8 +65,7 @@ type OpenSheet = 'none' | 'conflicts' | 'replace';
 const useStyles = createThemedStyles((theme) => ({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.rowGap },
   spacer: { flexGrow: 1 },
-  hint: { ...textStyle(textRoles.fieldLabel), color: theme.color.text3 },
-  banner: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
+  ...restoreTextStyles(theme),
   bannerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -290,7 +290,13 @@ function PickAgain({
 }
 
 function undoReplace() {
-  void openUndoReplace();
+  openUndoReplace()
+    .then((opened) => {
+      if (!opened) console.warn('[kitbag] no copy before replace to open');
+    })
+    .catch((error: unknown) => {
+      console.warn('[kitbag] could not open the copy before replace', error);
+    });
 }
 
 function RestoreBody({ onBack }: { readonly onBack: () => void }) {

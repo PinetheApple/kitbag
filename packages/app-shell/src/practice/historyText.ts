@@ -24,7 +24,7 @@ import {
   monthName,
   weekdayDate,
   weekdayName,
-} from './dates.ts';
+} from '../dates.ts';
 
 const WEEK_LABEL_EVERY = 4;
 const LAST_DAY_OF_WEEK = 6;
