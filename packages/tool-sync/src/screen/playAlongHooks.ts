@@ -1,5 +1,6 @@
 import { boottimeNowMs, type MediaSessionSnapshot } from '@kitbag/core-native';
 import {
+  BEAT_SOURCE,
   extrapolatedPositionMs,
   getMediaSessionsStore,
   getPlayAlongStore,
@@ -70,15 +71,20 @@ export function useTempoLine(): {
 } {
   const bpm = usePlayAlong((s) => s.bpm) ?? null;
   const offered = usePlayAlong((s) => s.offer !== undefined);
+  const tapCount = usePlayAlong((s) =>
+    s.lock?.tapped?.beatSource === BEAT_SOURCE.taps
+      ? s.lock.tapped.keptTaps
+      : null,
+  );
   const source = useTempoLadder((s) => s.source);
   const tried = useTempoLadder((s) => s.tried);
   const looking = useTempoLadder((s) => s.looking);
   return useMemo(
     () => ({
       bpm,
-      line: tempoLine({ bpm, source, tried, looking, offered }),
+      line: tempoLine({ bpm, source, tried, looking, offered, tapCount }),
     }),
-    [bpm, source, tried, looking, offered],
+    [bpm, source, tried, looking, offered, tapCount],
   );
 }
 

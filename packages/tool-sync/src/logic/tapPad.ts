@@ -23,7 +23,7 @@ export type TapPadMode = (typeof TAP_PAD_MODE)[keyof typeof TAP_PAD_MODE];
 
 export interface TapPadInputs {
   readonly following: boolean;
-  readonly locked: boolean;
+  readonly lockBpm: number | null;
   readonly playing: boolean;
   readonly songBpm: number | null;
   readonly tappedBpm: number | null;
@@ -51,7 +51,13 @@ function tempoHint({ tappedBpm, tapsLanded }: TapPadInputs): string {
   return 'Taps light up as they land';
 }
 
-const plain = { leds: null, badges: [], action: null, active: false } as const;
+const plain = {
+  leds: null,
+  ledsOut: 0,
+  badges: [],
+  action: null,
+  active: false,
+} as const;
 
 const tempoCopy = (inputs: TapPadInputs): TapPadCopy => ({
   ...plain,
@@ -76,18 +82,19 @@ function stepCopy({ tapAlong, songBpm }: TapPadInputs): AlongCopy {
 }
 
 function alongCopy(inputs: TapPadInputs): AlongCopy | null {
-  const { tapAlong, songBpm } = inputs;
+  const { tapAlong, songBpm, lockBpm } = inputs;
   if (tapAlong.step !== TAP_STEP.tapping) return stepCopy(inputs);
-  if (inputs.locked && !inputs.retap) return null;
+  if (lockBpm !== null && !inputs.retap) return null;
   if (!inputs.playing && tapAlong.taps.length > 0) return pausedCopy(tapAlong);
-  if (inputs.locked && tapAlong.taps.length < TAPS_TO_SET_TEMPO)
-    return retapCopy(tapAlong, songBpm ?? 0);
+  if (lockBpm !== null && tapAlong.taps.length < TAPS_TO_SET_TEMPO)
+    return retapCopy(tapAlong, lockBpm);
   if (tapAlong.taps.length === 0) return idleCopy(songBpm, inputs.offered);
-  return tappingCopy(tapAlong, songBpm);
+  return tappingCopy(tapAlong, songBpm, lockBpm !== null);
 }
 
 export function tapPadCopy(inputs: TapPadInputs): TapPadCopy {
-  if (!inputs.following) return inputs.locked ? LANDED : tempoCopy(inputs);
+  if (!inputs.following)
+    return inputs.lockBpm === null ? tempoCopy(inputs) : LANDED;
   const copy = alongCopy(inputs);
   return copy === null ? LANDED : { ...copy, mode: TAP_PAD_MODE.along };
 }

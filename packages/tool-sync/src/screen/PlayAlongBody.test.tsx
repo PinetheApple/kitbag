@@ -221,7 +221,7 @@ describe('the tap pad', () => {
     const pad = tapPad(PLAY_ALONG_VIEW.song);
     pad.onTap(touch());
     expect(pad.copy).toMatchObject({
-      hint: 'Your taps set the tempo and the beat. Four or more.',
+      hint: 'Your taps set the tempo and the beat. 4 or more.',
     });
     expect(playAlong.tapToLock).toHaveBeenCalledWith(TOUCHED_AT_MS);
     expect(ladder.state.tap).not.toHaveBeenCalled();

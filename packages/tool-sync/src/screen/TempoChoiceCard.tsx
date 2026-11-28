@@ -8,6 +8,7 @@ import {
 } from '@kitbag/core-design';
 import { View } from 'react-native';
 
+import { tapsVersusSong } from '../logic/tapAlongCopy.ts';
 import { shownBpm } from '../logic/tempoLine.ts';
 import { usePlayAlong } from './playAlongHooks.ts';
 
@@ -31,7 +32,7 @@ export function TempoChoiceCard() {
         <View style={styles.row}>
           <RowIcon icon="error" />
           <RowText
-            title={`Your taps say ${tapped}, the song says ${song}`}
+            title={tapsVersusSong(choice.tappedBpm, choice.songBpm)}
             subtitle="Phase is set from your taps either way."
           />
         </View>

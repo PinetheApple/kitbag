@@ -165,7 +165,7 @@ function PinnedPad({ view, session, lock, locked, fit }: PinnedPadProps) {
   const styles = useStyles();
   const pad = useTapPad({
     following: view === PLAY_ALONG_VIEW.song && session !== undefined,
-    locked: lock !== undefined,
+    lockBpm: lock?.bpm ?? null,
     playing: session?.playing === true,
     retap: locked.retap,
     onLanded: locked.onLanded,

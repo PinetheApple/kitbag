@@ -1,4 +1,4 @@
-import { FACT_SEPARATOR } from '@kitbag/core-design';
+import { FACT_SEPARATOR, type TapBadgeProps } from '@kitbag/core-design';
 import {
   formatOffsetMs,
   MINUS,
@@ -6,6 +6,7 @@ import {
   TAP_OUTLIER_MS,
   TAPS_TO_SET_TEMPO,
   type TapAlong,
+  type TapLockResult,
   type TapOffset,
 } from '@kitbag/core-state';
 
@@ -18,16 +19,12 @@ export const PAD_ACTION = {
 
 export type PadAction = (typeof PAD_ACTION)[keyof typeof PAD_ACTION];
 
-export interface TapBadgeView {
-  readonly label: string;
-  readonly ignored: boolean;
-}
-
 export interface AlongCopy {
   readonly title: string;
   readonly hint: string;
   readonly leds: number | null;
-  readonly badges: readonly TapBadgeView[];
+  readonly ledsOut: number;
+  readonly badges: readonly Required<TapBadgeProps>[];
   readonly action: PadAction | null;
   readonly active: boolean;
 }
@@ -37,12 +34,22 @@ const KICK_DRUM = 'Keep tapping, or follow the kick drum.';
 const SNAP_HINT =
   'Where the bar starts. Near is fine: it snaps to the closest beat.';
 const FOLLOWS = 'The click follows the song from here.';
+const ENOUGH_TAPS = String(TAPS_TO_SET_TEMPO);
 
 const kept = (offsets: readonly TapOffset[]) =>
   offsets.filter((offset) => offset.kept);
 
 const litLeds = (offsets: readonly TapOffset[]) =>
   Math.min(kept(offsets).length, TAPS_TO_SET_TEMPO);
+
+const outLeds = (offsets: readonly TapOffset[]) =>
+  Math.min(
+    offsets.length - kept(offsets).length,
+    TAPS_TO_SET_TEMPO - litLeds(offsets),
+  );
+
+export const tapsVersusSong = (tappedBpm: number, songBpm: number): string =>
+  `Your taps say ${shownBpm(tappedBpm)}, the song says ${shownBpm(songBpm)}`;
 
 const plural = (count: number, word: string) =>
   `${String(count)} ${word}${count === 1 ? '' : 's'}`;
@@ -55,7 +62,9 @@ function plainSigned(ms: number): string {
   return whole < 0 ? `${MINUS}${String(-whole)}` : `+${String(whole)}`;
 }
 
-export function tapBadges(offsets: readonly TapOffset[]): TapBadgeView[] {
+export function tapBadges(
+  offsets: readonly TapOffset[],
+): Required<TapBadgeProps>[] {
   const withUnit = offsets.length < TAPS_TO_SET_TEMPO;
   return offsets.map(({ ms, kept: isKept }) => {
     const shown = withUnit ? formatOffsetMs(Math.round(ms)) : plainSigned(ms);
@@ -80,6 +89,7 @@ const along = (
   title,
   hint,
   leds: null,
+  ledsOut: 0,
   badges: [],
   action: null,
   active: false,
@@ -90,20 +100,20 @@ export function idleCopy(songBpm: number | null, offered: boolean): AlongCopy {
   if (songBpm === null)
     return along(
       'Tap along to the beat',
-      'Your taps set the tempo and the beat. Four or more.',
+      `Your taps set the tempo and the beat. ${ENOUGH_TAPS} or more.`,
     );
   return along(
     'Tap along to the beat',
     offered
       ? 'Or tap along to lock it yourself'
-      : 'Four taps or more. Start on a 1 if you can.',
+      : `${ENOUGH_TAPS} taps or more. Start on a 1 if you can.`,
   );
 }
 
 export function retapCopy(tapAlong: TapAlong, lockBpm: number): AlongCopy {
   const count = tapAlong.taps.length;
   const stays = `tempo stays ${shownBpm(lockBpm)} and the 1 stays put`;
-  const lead = count === 0 ? 'Four taps or more' : counted(count);
+  const lead = count === 0 ? `${ENOUGH_TAPS} taps or more` : counted(count);
   return along('Tap along to re-align', `${lead}${FACT_SEPARATOR}${stays}`, {
     leds: litLeds(tapAlong.offsets),
     active: count > 0,
@@ -137,12 +147,19 @@ function unevenHint(offsets: readonly TapOffset[]): string {
 
 function unsureHint(tappedBpm: number | null, songBpm: number | null): string {
   if (tappedBpm === null || songBpm === null) return KICK_DRUM;
-  return `Your taps say ${shownBpm(tappedBpm)}, the song says ${shownBpm(songBpm)}. A few more will settle it.`;
+  return `${tapsVersusSong(tappedBpm, songBpm)}. A few more will settle it.`;
+}
+
+function asksForMore(result: TapLockResult, retap: boolean): boolean {
+  if (result.locked) return false;
+  if (result.reason === TAP_LOCK_MISS.unsure) return true;
+  return retap && result.reason === TAP_LOCK_MISS.disagrees;
 }
 
 export function tappingCopy(
   tapAlong: TapAlong,
   songBpm: number | null,
+  retap: boolean,
 ): AlongCopy {
   const { offsets, result } = tapAlong;
   const shown = {
@@ -156,12 +173,13 @@ export function tappingCopy(
       `${counted(offsets.length)}${FACT_SEPARATOR}${lastTap(offsets)}`,
       shown,
     );
+  if (!result.locked && asksForMore(result, retap))
+    return along('Keep tapping', unsureHint(result.tappedBpm, songBpm), shown);
   if (result.locked || result.reason === TAP_LOCK_MISS.disagrees)
     return along('Keep tapping, or stop to lock', readyHint(offsets), shown);
-  if (result.reason === TAP_LOCK_MISS.unsure)
-    return along('Keep tapping', unsureHint(result.tappedBpm, songBpm), shown);
   return along('Taps are uneven', unevenHint(offsets), {
     ...shown,
+    ledsOut: outLeds(offsets),
     action: PAD_ACTION.startOver,
   });
 }

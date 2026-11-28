@@ -75,7 +75,7 @@ const noTaps: TapAlong = {
 
 const song: TapPadInputs = {
   following: true,
-  locked: false,
+  lockBpm: null,
   playing: true,
   songBpm: SONG_BPM,
   tappedBpm: null,
@@ -148,7 +148,7 @@ describe('TapPad choosing the 1 (state d)', () => {
   it('shows the tap icon and a skip button wired to the action', () => {
     draw({
       ...song,
-      locked: true,
+      lockBpm: SONG_BPM,
       tapAlong: { ...noTaps, step: TAP_STEP.chooseOne },
     });
     expect(seen.icons[0]).toMatchObject({ name: 'tapAlong' });

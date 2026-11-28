@@ -69,7 +69,7 @@ function tapped(
 
 const idle: TapPadInputs = {
   following: false,
-  locked: false,
+  lockBpm: null,
   playing: true,
   songBpm: null,
   tappedBpm: null,
@@ -86,7 +86,7 @@ describe('the idle pad (state a)', () => {
     expect(tapPadCopy(song)).toMatchObject({
       mode: TAP_PAD_MODE.along,
       title: 'Tap along to the beat',
-      hint: 'Four taps or more. Start on a 1 if you can.',
+      hint: '4 taps or more. Start on a 1 if you can.',
       leds: null,
       active: false,
     });
@@ -94,7 +94,7 @@ describe('the idle pad (state a)', () => {
 
   it('says the taps set the tempo too when no rung found one', () => {
     expect(tapPadCopy({ ...song, songBpm: null }).hint).toBe(
-      'Your taps set the tempo and the beat. Four or more.',
+      'Your taps set the tempo and the beat. 4 or more.',
     );
   });
 
@@ -160,7 +160,7 @@ describe('choosing the 1 (state d)', () => {
   const choosing = { ...noTaps, step: TAP_STEP.chooseOne };
 
   it('asks for one tap on the 1 with a way to skip it', () => {
-    const copy = tapPadCopy({ ...song, locked: true, tapAlong: choosing });
+    const copy = tapPadCopy({ ...song, lockBpm: SONG_BPM, tapAlong: choosing });
     expect(copy).toMatchObject({
       mode: TAP_PAD_MODE.along,
       title: 'Now tap once on the 1',
@@ -173,7 +173,7 @@ describe('choosing the 1 (state d)', () => {
   it('says half-time taps worked and kept the song tempo', () => {
     const copy = tapPadCopy({
       ...song,
-      locked: true,
+      lockBpm: SONG_BPM,
       tapAlong: { ...choosing, halfOrDoubleBpm: HALF_TIME_BPM },
     });
     expect(copy.hint).toBe(
@@ -184,7 +184,7 @@ describe('choosing the 1 (state d)', () => {
   it('says double-time taps worked and kept the song tempo', () => {
     const copy = tapPadCopy({
       ...song,
-      locked: true,
+      lockBpm: SONG_BPM,
       tapAlong: { ...choosing, halfOrDoubleBpm: DOUBLE_TIME_BPM },
     });
     expect(copy.hint).toBe(
@@ -195,7 +195,7 @@ describe('choosing the 1 (state d)', () => {
   it('confirms beat 1 and how far the accent moved', () => {
     const copy = tapPadCopy({
       ...song,
-      locked: true,
+      lockBpm: SONG_BPM,
       tapAlong: { ...noTaps, step: TAP_STEP.oneSet, movedBeats: MOVED_TWO },
     });
     expect(copy).toMatchObject({
@@ -208,7 +208,7 @@ describe('choosing the 1 (state d)', () => {
   it('confirms beat 1 without a move when the accent was right', () => {
     const copy = tapPadCopy({
       ...song,
-      locked: true,
+      lockBpm: SONG_BPM,
       tapAlong: { ...noTaps, step: TAP_STEP.oneSet },
     });
     expect(copy.hint).toBe('The click follows the song from here.');
@@ -216,10 +216,27 @@ describe('choosing the 1 (state d)', () => {
 });
 
 describe('re-tap (state e)', () => {
+  it('asks for more taps when a re-tap disagrees with the locked tempo', () => {
+    const copy = tapPadCopy({
+      ...song,
+      lockBpm: SONG_BPM,
+      retap: true,
+      tapAlong: tapped(
+        [0, 0, 0, 0],
+        [],
+        refused(TAP_LOCK_MISS.disagrees, DISAGREE_BPM),
+      ),
+    });
+    expect(copy.title).toBe('Keep tapping');
+    expect(copy.hint).toBe(
+      'Your taps say 140, the song says 171. A few more will settle it.',
+    );
+  });
+
   it('counts the re-tap and says the tempo and the 1 stay', () => {
     const copy = tapPadCopy({
       ...song,
-      locked: true,
+      lockBpm: SONG_BPM,
       retap: true,
       tapAlong: tapped([0, 0]),
     });
@@ -246,6 +263,19 @@ describe('edges (state f)', () => {
       action: PAD_ACTION.startOver,
     });
     expect(copy.badges.filter((b) => b.ignored)).toHaveLength(3);
+    expect(copy).toMatchObject({ leds: TAPS_TO_SET_TEMPO, ledsOut: 0 });
+  });
+
+  it('outlines the LEDs of ignored taps in amber when too few agree', () => {
+    const copy = tapPadCopy({
+      ...song,
+      tapAlong: tapped(
+        [0, 92, 0, -71, 0],
+        [1, 3],
+        refused(TAP_LOCK_MISS.spread),
+      ),
+    });
+    expect(copy).toMatchObject({ leds: 3, ledsOut: 1 });
   });
 
   it('keeps the taps through a pause and says so', () => {
@@ -265,7 +295,7 @@ describe('edges (state f)', () => {
   it('asks for a tempo before the 1 when the taps disagree', () => {
     const copy = tapPadCopy({
       ...song,
-      locked: true,
+      lockBpm: SONG_BPM,
       tapAlong: {
         ...noTaps,
         step: TAP_STEP.chooseTempo,
@@ -311,14 +341,14 @@ describe('tap tempo and the held pad', () => {
   });
 
   it('holds the lock on the pad while the finger is down', () => {
-    expect(tapPadCopy({ ...song, locked: true })).toMatchObject({
+    expect(tapPadCopy({ ...song, lockBpm: SONG_BPM })).toMatchObject({
       mode: TAP_PAD_MODE.landed,
       title: 'Locked on beat 1',
     });
   });
 
   it('keeps the lock on the pad while the followed app is gone', () => {
-    const copy = tapPadCopy({ ...idle, locked: true, songBpm: SONG_BPM });
+    const copy = tapPadCopy({ ...idle, lockBpm: SONG_BPM, songBpm: SONG_BPM });
     expect(copy.mode).toBe(TAP_PAD_MODE.landed);
   });
 

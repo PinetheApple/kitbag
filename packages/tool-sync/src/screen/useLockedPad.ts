@@ -1,5 +1,9 @@
-import { TAP_STEP, type PlayAlongLock } from '@kitbag/core-state';
-import { useCallback, useState } from 'react';
+import {
+  getPlayAlongStore,
+  TAP_STEP,
+  type PlayAlongLock,
+} from '@kitbag/core-state';
+import { useCallback, useEffect, useState } from 'react';
 
 import {
   DRIFT_STATE,
@@ -27,6 +31,10 @@ export function useLockedPad(
     retapping,
     padHeld: padHeld || (locked && choosing),
   });
+  const retap = drifting || retapping;
+  useEffect(() => {
+    if (!retap) getPlayAlongStore().getState().dropRetapTaps();
+  }, [retap]);
   const onRetap = useCallback(() => {
     setRetapFor(lock);
   }, [lock]);
@@ -38,7 +46,7 @@ export function useLockedPad(
   }, []);
   return {
     layout,
-    retap: drifting || retapping,
+    retap,
     silenced: locked && !sounding,
     onRetap,
     onLanded,

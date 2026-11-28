@@ -14,7 +14,7 @@ import { touchedAtBoottimeMs } from './touchTime.ts';
 
 interface PadInputs {
   readonly following: boolean;
-  readonly locked: boolean;
+  readonly lockBpm: number | null;
   readonly playing: boolean;
   readonly retap: boolean;
   readonly onLanded: () => void;
@@ -22,7 +22,7 @@ interface PadInputs {
 
 export function useTapPad({
   following,
-  locked,
+  lockBpm,
   playing,
   retap,
   onLanded,
@@ -35,7 +35,7 @@ export function useTapPad({
   const tapsLanded = useTempoLadder((s) => s.tapsLanded);
   const copy = tapPadCopy({
     following,
-    locked,
+    lockBpm,
     playing,
     retap,
     offered,

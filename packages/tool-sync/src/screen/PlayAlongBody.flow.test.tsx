@@ -45,6 +45,7 @@ const playAlong = vi.hoisted(() => ({
   },
   tapToLock: vi.fn(() => true),
   forgetClearedTaps: vi.fn(),
+  dropRetapTaps: vi.fn(),
   songAheadOfClickMs: undefined as number | undefined,
   sourceGoneAtBoottimeMs: undefined as number | undefined,
   unlockReason: undefined as string | undefined,
@@ -225,6 +226,14 @@ describe('re-tap from the drift meter', () => {
     await show(firstSong, undefined);
     await show(firstSong, lockOn(firstSong, NOW_MS));
     expect(seen.pads).toHaveLength(0);
+  });
+
+  it('drops unlocked re-tap taps once re-tap ends', async () => {
+    await show(firstSong, lockOn(firstSong, 0));
+    await press(lastMeter(), 'onRetap');
+    playAlong.dropRetapTaps.mockClear();
+    await show(firstSong, lockOn(firstSong, NOW_MS));
+    expect(playAlong.dropRetapTaps).toHaveBeenCalled();
   });
 
   it('never offers the re-tap pad while the song is paused', async () => {

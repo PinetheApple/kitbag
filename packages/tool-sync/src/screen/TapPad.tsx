@@ -9,16 +9,13 @@ import {
   useTextScaled,
   useTheme,
   type IconName,
+  type TapBadgeProps,
 } from '@kitbag/core-design';
 import { TAPS_TO_SET_TEMPO } from '@kitbag/core-state';
 import type { GestureResponderEvent } from 'react-native';
 import { View } from 'react-native';
 
-import {
-  PAD_ACTION,
-  type PadAction,
-  type TapBadgeView,
-} from '../logic/tapAlongCopy.ts';
+import { PAD_ACTION, type PadAction } from '../logic/tapAlongCopy.ts';
 import type { TapPadCopy } from '../logic/tapPad.ts';
 
 const ACTION_LABEL: Record<PadAction, string> = {
@@ -40,11 +37,20 @@ const useStyles = createThemedStyles(() => ({
   },
 }));
 
-export function TapLeds({ landed }: { readonly landed: number }) {
-  return <Leds landed={landed} total={TAPS_TO_SET_TEMPO} />;
+interface TapLedsProps {
+  readonly landed: number;
+  readonly out?: number;
 }
 
-function TapBadges({ badges }: { readonly badges: readonly TapBadgeView[] }) {
+export function TapLeds({ landed, out = 0 }: TapLedsProps) {
+  return <Leds landed={landed} total={TAPS_TO_SET_TEMPO} out={out} />;
+}
+
+function TapBadges({
+  badges,
+}: {
+  readonly badges: readonly Required<TapBadgeProps>[];
+}) {
   const styles = useStyles();
   const scaled = useTextScaled();
   if (scaled || badges.length === 0) return null;
@@ -106,7 +112,7 @@ export function TapPad({
       {copy.leds === null ? (
         <Icon name="tapAlong" size="retimePad" color={theme.accentInk} />
       ) : (
-        <TapLeds landed={copy.leds} />
+        <TapLeds landed={copy.leds} out={copy.ledsOut} />
       )}
     </Pad>
   );
